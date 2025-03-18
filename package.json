@@ -1,25 +1,44 @@
 {
   "name": "v-float",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Vue 3 port of Floating UI - a library for positioning floating elements",
+  "private": false,
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/v-float.umd.js",
+  "module": "./dist/v-float.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/v-float.es.js",
+      "require": "./dist/v-float.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.13",
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@testing-library/vue": "^8.1.0",
     "@tsconfig/node22": "^22.0.0",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.13.4",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vitest/ui": "3.0.8",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
     "jsdom": "^26.0.0",
@@ -27,7 +46,13 @@
     "typescript": "~5.7.3",
     "vite": "^6.1.0",
     "vite-plugin-vue-devtools": "^7.7.2",
+    "vitepress": "^1.6.3",
     "vitest": "^3.0.5",
     "vue-tsc": "^2.2.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
