@@ -14,7 +14,7 @@ hero:
       link: /guide/
     - theme: alt
       text: View on GitHub
-      link: https://github.com/yourusername/v-float
+      link: https://github.com/sherif414/v-float
     - theme: alt
       text: Examples
       link: /examples/
@@ -36,47 +36,5 @@ features:
     title: Accessibility Built-in
     details: ARIA attributes, keyboard navigation, and focus management for inclusive UIs.
   - icon: 📱
-    title: Device & Framework Agnostic
-    details: Works on all screen sizes and within any Vue 3 project.
----
-
-## Quick Example
-
-```vue
-<script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useHover } from "v-float";
-
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
-
-const floating = useFloating(referenceRef, floatingRef, {
-  placement: "top",
-  open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
-
-const hover = useHover(floating.context);
-
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
-</script>
-
-<template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Hover me</button>
-
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="{
-      position: floating.strategy,
-      top: '0px',
-      left: '0px',
-      transform: `translate(${floating.x}px, ${floating.y}px)`,
-    }"
-  >
-    This is a tooltip
-  </div>
-</template>
-```
+    title: Responsive Design
+    details: Adapts smoothly across desktop and mobile devices.

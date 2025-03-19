@@ -108,12 +108,12 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: "github", link: "https://github.com/yourusername/v-float" },
+      { icon: "github", link: "https://github.com/sherif414/v-float" },
     ],
 
     footer: {
       message: "Released under the MIT License.",
-      copyright: "Copyright © 2023-present V-Float Contributors",
+      copyright: "Copyright © 2025-present Shareef Hassan",
     },
   },
   ignoreDeadLinks: true,
