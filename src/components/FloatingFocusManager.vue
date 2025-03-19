@@ -1,7 +1,7 @@
 <script lang="ts">
 export interface FloatingFocusManagerProps {
   /** The floating context */
-  context: any;
+  context: FloatingContext;
 
   /** Whether the focus manager is disabled */
   disabled?: boolean;
@@ -24,6 +24,7 @@ export interface FloatingFocusManagerProps {
 </script>
 
 <script setup lang="ts">
+import type { FloatingContext } from '@/composables';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = withDefaults(defineProps<FloatingFocusManagerProps>(), {
@@ -94,7 +95,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       ) {
         // Tab+Shift on first element focuses reference
         event.preventDefault();
-        reference.focus();
+        (reference as HTMLElement).focus();
       } else if (
         isFocusInsideFloating &&
         !event.shiftKey &&
@@ -102,7 +103,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       ) {
         // Tab on last element focuses reference
         event.preventDefault();
-        reference.focus();
+        (reference as HTMLElement).focus();
       }
     } else {
       // Modal behavior
@@ -146,7 +147,7 @@ const getFocusableElements = () => {
   if (!floatingRef.value) return [];
   
   return Array.from(
-    floatingRef.value.querySelectorAll(
+    floatingRef.value.querySelectorAll<HTMLElement>(
       'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])'
     )
   ).filter(
@@ -218,7 +219,7 @@ watch(() => [props.disabled, props.context.open], ([disabled, open]) => {
           for (let i = 0; i < order.length; i++) {
             const type = order[i];
             
-            if (type === 'reference' && props.context.refs.reference.value) {
+            if (type === 'reference' && props.context.refs.reference.value && props.context.refs.reference.value instanceof HTMLElement) {
               props.context.refs.reference.value.focus();
               return;
             }
@@ -239,24 +240,22 @@ watch(() => [props.disabled, props.context.open], ([disabled, open]) => {
   }
 }, { immediate: true });
 
-// Dismiss handler for the hidden button
 const handleDismiss = () => {
   if (props.context.onOpenChange) {
     props.context.onOpenChange(false);
   }
 };
 
-// Visually hidden styles
-const hiddenStyles = {
-  border: 0,
+const visuallyHiddenStyles = {
+  border: "0",
   clip: 'rect(0 0 0 0)',
   height: '1px',
   margin: '-1px',
   overflow: 'hidden',
-  padding: 0,
+  padding: "0",
   position: 'absolute',
   width: '1px'
-};
+} as const;
 </script>
 
 <template>
@@ -264,7 +263,7 @@ const hiddenStyles = {
   <button 
     v-if="visuallyHiddenDismiss"
     type="button"
-    :style="hiddenStyles"
+    :style="visuallyHiddenStyles"
     aria-label="Dismiss"
     @click="handleDismiss"
   >
