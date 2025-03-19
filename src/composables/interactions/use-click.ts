@@ -1,4 +1,4 @@
-import { MaybeRefOrGetter, Ref, computed, toValue } from "vue";
+import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue";
 import type { UseFloatingReturn } from "../use-floating";
 
 export interface UseClickOptions {
@@ -50,23 +50,14 @@ export function useClick(
 ): UseClickReturn {
   const { open, onOpenChange } = context;
 
-  const {
-    enabled = true,
-    toggle = true,
-    event = "click",
-    ignoreMouse = false,
-  } = options;
+  const { enabled = true, toggle = true, event = "click", ignoreMouse = false } = options;
 
   const isEnabled = computed(() => toValue(enabled));
 
   const eventHandler = (event: MouseEvent) => {
     if (!isEnabled.value) return;
 
-    if (
-      toValue(ignoreMouse) &&
-      event.type.includes("mouse") &&
-      event.button !== 0
-    ) {
+    if (toValue(ignoreMouse) && event.type.includes("mouse") && event.button !== 0) {
       return;
     }
 

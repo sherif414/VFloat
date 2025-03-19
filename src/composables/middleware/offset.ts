@@ -1,5 +1,5 @@
-import { MaybeRefOrGetter, toValue } from "vue";
-import { Middleware, offset as offsetMiddleware } from "@floating-ui/dom";
+import { type Middleware, offset as offsetMiddleware } from "@floating-ui/dom";
+import { type MaybeRefOrGetter, toValue } from "vue";
 
 /**
  * Options for the offset middleware

@@ -1,14 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { defineComponent, nextTick, ref, toRef, type Ref } from "vue";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/vue";
-import type {
-  Middleware,
-  Placement,
-  Strategy,
-  ArrowOptions,
-} from "@floating-ui/dom";
+import type { ArrowOptions, Middleware, Placement, Strategy } from "@floating-ui/dom";
 import { arrow, offset } from "@floating-ui/dom";
-import { useFloating, type UseFloatingOptions } from "../use-floating";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/vue";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { type Ref, defineComponent, nextTick, ref, toRef } from "vue";
+import { type UseFloatingOptions, useFloating } from "../use-floating";
 
 // Test utilities
 function setup(options?: UseFloatingOptions & { visible?: Ref<boolean> }) {
@@ -101,9 +96,7 @@ describe("useFloating", () => {
 
       await nextTick();
       await waitFor(() => {
-        expect(getByTestId("default-placement").textContent).toBe(
-          "bottom-start"
-        );
+        expect(getByTestId("default-placement").textContent).toBe("bottom-start");
       });
     });
   });
@@ -528,11 +521,7 @@ describe("useFloating", () => {
           const floating = ref<HTMLElement | null>(null);
           const visible = ref(true);
 
-          const { x, y } = useFloating(
-            () => reference.value?.el ?? null,
-            floating,
-            visible
-          );
+          const { x, y } = useFloating(() => reference.value?.el ?? null, floating, visible);
 
           return { reference, floating, x, y };
         },

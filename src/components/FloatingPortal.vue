@@ -2,10 +2,10 @@
 export interface FloatingPortalProps {
   /** The root element to render the portal into */
   root?: string | HTMLElement | null;
-  
+
   /** A unique ID for the portal container */
   id?: string;
-  
+
   /** Whether to preserve tab order with the reference element */
   preserveTabOrder?: boolean;
 }

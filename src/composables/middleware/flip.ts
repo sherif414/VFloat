@@ -1,10 +1,10 @@
-import { MaybeRefOrGetter, toValue } from "vue";
 import {
-  Boundary,
-  Middleware,
-  RootBoundary,
+  type Boundary,
+  type Middleware,
+  type RootBoundary,
   flip as flipMiddleware,
 } from "@floating-ui/dom";
+import { type MaybeRefOrGetter, toValue } from "vue";
 
 /**
  * Options for the flip middleware

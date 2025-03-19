@@ -2,25 +2,25 @@
 export interface FloatingArrowProps {
   /** The floating context */
   context: any;
-  
+
   /** Width of the arrow */
   width?: number;
-  
+
   /** Height of the arrow */
   height?: number;
-  
+
   /** Radius of the arrow tip */
   tipRadius?: number;
-  
+
   /** Fill color of the arrow */
   fill?: string;
-  
+
   /** Stroke color of the arrow */
   stroke?: string;
-  
+
   /** Stroke width of the arrow */
   strokeWidth?: number;
-  
+
   /** Static offset for the arrow */
   staticOffset?: number | null;
 }

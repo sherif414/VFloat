@@ -1,4 +1,4 @@
-import { MaybeRefOrGetter, Ref, computed, onScopeDispose, toValue } from "vue";
+import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, toValue } from "vue";
 import type { UseFloatingReturn } from "../use-floating";
 
 export interface UseClientPointOptions {
@@ -64,18 +64,7 @@ export function useClientPoint(
     // Create a virtual reference element
     const virtualReference = refs.reference.value as any;
 
-    if (!virtualReference.getBoundingClientRect) {
-      virtualReference.getBoundingClientRect = () => ({
-        x,
-        y,
-        width: 0,
-        height: 0,
-        top: y,
-        right: x,
-        bottom: y,
-        left: x,
-      });
-    } else {
+    if (virtualReference.getBoundingClientRect) {
       const rect = virtualReference.getBoundingClientRect();
 
       const newX = toValue(axis) === "y" ? rect.x : x;
@@ -89,6 +78,17 @@ export function useClientPoint(
         right: newX,
         bottom: newY,
         left: newX,
+      });
+    } else {
+      virtualReference.getBoundingClientRect = () => ({
+        x,
+        y,
+        width: 0,
+        height: 0,
+        top: y,
+        right: x,
+        bottom: y,
+        left: x,
       });
     }
   };

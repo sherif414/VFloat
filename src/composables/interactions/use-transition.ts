@@ -1,6 +1,6 @@
 import {
-  MaybeRefOrGetter,
-  Ref,
+  type MaybeRefOrGetter,
+  type Ref,
   computed,
   nextTick,
   onScopeDispose,
@@ -173,13 +173,7 @@ export function useTransitionStyles(
 ): UseTransitionStylesReturn {
   const { open } = context;
 
-  const {
-    enabled = true,
-    duration = 250,
-    easing = "ease",
-    onStart,
-    onComplete,
-  } = options;
+  const { enabled = true, duration = 250, easing = "ease", onStart, onComplete } = options;
 
   const isEnabled = computed(() => toValue(enabled));
   const styles = ref<{
@@ -196,12 +190,10 @@ export function useTransitionStyles(
     const easingValue = toValue(easing);
 
     // Get duration value
-    const durationMs =
-      typeof durationValue === "number" ? durationValue : durationValue[state];
+    const durationMs = typeof durationValue === "number" ? durationValue : durationValue[state];
 
     // Get easing value
-    const easingFunction =
-      typeof easingValue === "string" ? easingValue : easingValue[state];
+    const easingFunction = typeof easingValue === "string" ? easingValue : easingValue[state];
 
     return `all ${durationMs}ms ${easingFunction}`;
   };
@@ -221,17 +213,15 @@ export function useTransitionStyles(
         state === "open"
           ? defaultTransitionStyles.open
           : state === "close"
-          ? defaultTransitionStyles.close
-          : {};
+            ? defaultTransitionStyles.close
+            : {};
       return;
     }
 
     const transitionStyles = {
       ...defaultTransitionStyles[state],
       transition:
-        state === "initial"
-          ? "none"
-          : getTransitionProperty(state === "open" ? "open" : "close"),
+        state === "initial" ? "none" : getTransitionProperty(state === "open" ? "open" : "close"),
     };
 
     styles.value = transitionStyles;
@@ -259,9 +249,7 @@ export function useTransitionStyles(
 
           // Calculate completion time
           const openDuration =
-            typeof toValue(duration) === "number"
-              ? toValue(duration)
-              : toValue(duration).open;
+            typeof toValue(duration) === "number" ? toValue(duration) : toValue(duration).open;
 
           timeoutId = window.setTimeout(() => {
             if (onComplete) onComplete("open");
@@ -274,9 +262,7 @@ export function useTransitionStyles(
 
         // Calculate completion time
         const closeDuration =
-          typeof toValue(duration) === "number"
-            ? toValue(duration)
-            : toValue(duration).close;
+          typeof toValue(duration) === "number" ? toValue(duration) : toValue(duration).close;
 
         timeoutId = window.setTimeout(() => {
           if (onComplete) onComplete("close");

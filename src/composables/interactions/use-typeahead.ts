@@ -1,6 +1,6 @@
 import {
-  MaybeRefOrGetter,
-  Ref,
+  type MaybeRefOrGetter,
+  type Ref,
   computed,
   onScopeDispose,
   ref,
@@ -34,10 +34,7 @@ export interface UseTypeaheadOptions {
   /**
    * Custom function to find a match based on the typeahead string
    */
-  findMatch?: (
-    list: Array<HTMLElement | null>,
-    typedString: string
-  ) => number | null;
+  findMatch?: (list: Array<HTMLElement | null>, typedString: string) => number | null;
 
   /**
    * Amount of time in ms to reset the typeahead string
@@ -188,10 +185,7 @@ export function useTypeahead(
 
     // Sort the items by their index
     listItems.sort((a, b) => {
-      return (
-        Number(a.dataset.floatingIndex || 0) -
-        Number(b.dataset.floatingIndex || 0)
-      );
+      return Number(a.dataset.floatingIndex || 0) - Number(b.dataset.floatingIndex || 0);
     });
 
     let matchedIndex: number | null = null;
@@ -201,8 +195,7 @@ export function useTypeahead(
       matchedIndex = findMatch(listItems, typedString.value);
     } else {
       // Default matching logic
-      const startingIndex =
-        toValue(activeIndex) !== null ? toValue(activeIndex)! + 1 : 0;
+      const startingIndex = toValue(activeIndex) !== null ? toValue(activeIndex)! + 1 : 0;
       const wrappedIndex = startingIndex % listItems.length;
 
       // First, try to find a match starting from the current active index

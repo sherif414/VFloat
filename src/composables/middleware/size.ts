@@ -1,10 +1,10 @@
-import { MaybeRefOrGetter, toValue } from "vue";
 import {
-  Boundary,
-  Middleware,
-  RootBoundary,
+  type Boundary,
+  type Middleware,
+  type RootBoundary,
   size as sizeMiddleware,
 } from "@floating-ui/dom";
+import { type MaybeRefOrGetter, toValue } from "vue";
 
 /**
  * Options for the size middleware

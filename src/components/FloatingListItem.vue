@@ -2,22 +2,22 @@
 export interface FloatingListItemProps {
   /** The index of the item */
   index: number;
-  
+
   /** Whether the item is disabled */
   disabled?: boolean;
-  
+
   /** The active state of the item */
   active?: boolean;
-  
+
   /** Whether the item should be selected on pointer up instead of pointer down */
   selectOnPointerUp?: boolean;
-  
+
   /** Whether the item has a selected state */
   selected?: boolean;
-  
+
   /** Optional label for the item */
   label?: string;
-  
+
   /** Optional ARIA role for the item */
   role?: string;
 }

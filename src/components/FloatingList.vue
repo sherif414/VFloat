@@ -2,22 +2,22 @@
 export interface FloatingListProps {
   /** The floating context */
   context: any;
-  
+
   /** The list navigation context */
-  listRef: ReturnType<typeof import('../composables').useListNavigation>;
-  
+  listRef: ReturnType<typeof import("../composables").useListNavigation>;
+
   /** Function to handle list item selection */
   onSelect?: (index: number) => void;
-  
+
   /** Whether to use role="presentation" on list items */
   rolePresentation?: boolean;
-  
+
   /** Tag name for the list element */
   listTag?: string;
-  
+
   /** Tag name for the list item elements */
   itemTag?: string;
-  
+
   /** Whether to auto-focus the first enabled item */
   autoFocusFirstEnabled?: boolean;
 }

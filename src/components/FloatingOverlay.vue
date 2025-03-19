@@ -2,13 +2,13 @@
 export interface FloatingOverlayProps {
   /** Whether to lock scroll when overlay is visible */
   lockScroll?: boolean;
-  
+
   /** Overlay z-index */
   zIndex?: number;
-  
+
   /** Background color */
   background?: string;
-  
+
   /** Custom CSS class */
   class?: string;
 }

@@ -1,6 +1,6 @@
 import {
-  MaybeRefOrGetter,
-  Ref,
+  type MaybeRefOrGetter,
+  type Ref,
   computed,
   onMounted,
   onScopeDispose,
@@ -249,12 +249,7 @@ export function useListNavigation(
   watch(
     () => toValue(activeIndex),
     (newIndex, prevIndex) => {
-      if (
-        toValue(enabled) &&
-        open.value &&
-        newIndex != null &&
-        newIndex !== prevIndex
-      ) {
+      if (toValue(enabled) && open.value && newIndex != null && newIndex !== prevIndex) {
         indexRef.value = newIndex;
       }
     },
@@ -315,9 +310,7 @@ export function useListNavigation(
     }
 
     // Calculate the next index
-    const nextIndex =
-      current +
-      (skipCurrent ? iteration + 1 : iteration) * (increment ? 1 : -1);
+    const nextIndex = current + (skipCurrent ? iteration + 1 : iteration) * (increment ? 1 : -1);
 
     if (nextIndex < 0) {
       return isLooping ? total - 1 : 0;
@@ -355,8 +348,7 @@ export function useListNavigation(
   const handleKeyDown = (event: KeyboardEvent) => {
     if (!isEnabled.value) return;
 
-    const currentIndex =
-      indexRef.value != null ? indexRef.value : toValue(selectedIndex) ?? -1;
+    const currentIndex = indexRef.value != null ? indexRef.value : (toValue(selectedIndex) ?? -1);
 
     const currentOrientation = toValue(orientation);
     const currentRTL = toValue(rtl);
@@ -388,8 +380,7 @@ export function useListNavigation(
       toValue(openOnArrowKeyDown) &&
       (event.key === "ArrowUp" ||
         event.key === "ArrowDown" ||
-        (usingGrid &&
-          (event.key === "ArrowLeft" || event.key === "ArrowRight")))
+        (usingGrid && (event.key === "ArrowLeft" || event.key === "ArrowRight")))
     ) {
       stopEvent(event);
       onOpenChange(true);
@@ -411,17 +402,12 @@ export function useListNavigation(
   };
 
   // Handle vertical navigation
-  const handleVerticalNavigation = (
-    event: KeyboardEvent,
-    currentIndex: number
-  ) => {
+  const handleVerticalNavigation = (event: KeyboardEvent, currentIndex: number) => {
     if (event.key === "ArrowUp") {
       stopEvent(event);
 
       if (currentIndex === -1) {
-        navigate(
-          findNonDisabledIndex(listContentRef.value.length - 1, false, false)
-        );
+        navigate(findNonDisabledIndex(listContentRef.value.length - 1, false, false));
       } else {
         navigate(findNonDisabledIndex(currentIndex, false));
       }
@@ -438,25 +424,17 @@ export function useListNavigation(
       navigate(findNonDisabledIndex(0, true, false));
     } else if (event.key === "End") {
       stopEvent(event);
-      navigate(
-        findNonDisabledIndex(listContentRef.value.length - 1, false, false)
-      );
+      navigate(findNonDisabledIndex(listContentRef.value.length - 1, false, false));
     }
   };
 
   // Handle horizontal navigation
-  const handleHorizontalNavigation = (
-    event: KeyboardEvent,
-    currentIndex: number,
-    rtl: boolean
-  ) => {
+  const handleHorizontalNavigation = (event: KeyboardEvent, currentIndex: number, rtl: boolean) => {
     if (event.key === (rtl ? "ArrowRight" : "ArrowLeft")) {
       stopEvent(event);
 
       if (currentIndex === -1) {
-        navigate(
-          findNonDisabledIndex(listContentRef.value.length - 1, false, false)
-        );
+        navigate(findNonDisabledIndex(listContentRef.value.length - 1, false, false));
       } else {
         navigate(findNonDisabledIndex(currentIndex, false));
       }
@@ -516,13 +494,7 @@ export function useListNavigation(
       if (currentIndex % cols < cols - 1 && currentIndex < totalItems - 1) {
         navigate(findNonDisabledIndex(currentIndex + 1, true, false));
       } else if (toValue(loop)) {
-        navigate(
-          findNonDisabledIndex(
-            currentIndex - (currentIndex % cols),
-            true,
-            false
-          )
-        );
+        navigate(findNonDisabledIndex(currentIndex - (currentIndex % cols), true, false));
       }
     } else if (event.key === "Home") {
       stopEvent(event);
@@ -535,8 +507,7 @@ export function useListNavigation(
 
   // Scroll active item into view
   const scrollIntoView = () => {
-    if (!toValue(scrollItemIntoView) || !open.value || indexRef.value === null)
-      return;
+    if (!toValue(scrollItemIntoView) || !open.value || indexRef.value === null) return;
 
     const activeItem = listContentRef.value[indexRef.value];
     if (activeItem && listRef.value) {
@@ -569,10 +540,7 @@ export function useListNavigation(
       ) as HTMLElement[];
 
       items.sort((a, b) => {
-        return (
-          Number(a.dataset.floatingIndex || 0) -
-          Number(b.dataset.floatingIndex || 0)
-        );
+        return Number(a.dataset.floatingIndex || 0) - Number(b.dataset.floatingIndex || 0);
       });
 
       listContentRef.value = items;
@@ -585,11 +553,7 @@ export function useListNavigation(
       });
 
       // Focus the first non-disabled item when opening
-      if (
-        toValue(focusItemOnOpen) &&
-        focusItemOnOpenRef.value &&
-        activeIndex !== null
-      ) {
+      if (toValue(focusItemOnOpen) && focusItemOnOpenRef.value && activeIndex !== null) {
         const activeItem = items[toValue(activeIndex) || 0];
         if (activeItem) {
           activeItem.focus();
@@ -611,19 +575,14 @@ export function useListNavigation(
       onKeyDown: handleKeyDown,
       tabIndex: 0,
       "aria-activedescendant":
-        indexRef.value !== null && open.value
-          ? `floating-item-${indexRef.value}`
-          : undefined,
+        indexRef.value !== null && open.value ? `floating-item-${indexRef.value}` : undefined,
     }),
 
     getFloatingProps: () => ({
       onKeyDown: handleKeyDown,
       onBlur: (event: FocusEvent) => {
         // The reference element should capture returning focus
-        if (
-          open.value &&
-          !event.currentTarget.contains(event.relatedTarget as Element)
-        ) {
+        if (open.value && !event.currentTarget.contains(event.relatedTarget as Element)) {
           blurTimeoutId = window.setTimeout(() => {
             onOpenChange(false);
           });

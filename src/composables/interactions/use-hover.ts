@@ -1,6 +1,6 @@
 import {
-  MaybeRefOrGetter,
-  Ref,
+  type MaybeRefOrGetter,
+  type Ref,
   computed,
   onScopeDispose,
   toValue,
@@ -77,12 +77,7 @@ export function useHover(
     elements: { floating, reference },
   } = context;
 
-  const {
-    enabled = true,
-    delay = 0,
-    handleFloatingHover = true,
-    move = false,
-  } = options;
+  const { enabled = true, delay = 0, handleFloatingHover = true, move = false } = options;
 
   let timeoutId: number | null = null;
   let handlerRef: ((event: MouseEvent) => void) | null = null;
@@ -207,10 +202,7 @@ export function useHover(
           return;
         }
 
-        if (
-          event.relatedTarget &&
-          floating.contains(event.relatedTarget as Node)
-        ) {
+        if (event.relatedTarget && floating.contains(event.relatedTarget as Node)) {
           return;
         }
 

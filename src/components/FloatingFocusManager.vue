@@ -2,22 +2,22 @@
 export interface FloatingFocusManagerProps {
   /** The floating context */
   context: any;
-  
+
   /** Whether the focus manager is disabled */
   disabled?: boolean;
-  
+
   /** Initial element to focus (ref, selector, or index) */
   initialFocus?: number | string | HTMLElement | null;
-  
+
   /** Whether to return focus to the reference element on close */
   returnFocus?: boolean;
-  
+
   /** Whether the focus behavior is modal or non-modal */
   modal?: boolean;
-  
+
   /** Order of elements to try focusing */
-  order?: ('reference' | 'floating' | 'content')[];
-  
+  order?: ("reference" | "floating" | "content")[];
+
   /** Whether to render a visually hidden dismiss button */
   visuallyHiddenDismiss?: boolean;
 }

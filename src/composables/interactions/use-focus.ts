@@ -1,4 +1,4 @@
-import { MaybeRefOrGetter, Ref, computed, toValue } from "vue";
+import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue";
 import type { UseFloatingReturn } from "../use-floating";
 
 export interface UseFocusOptions {
@@ -53,8 +53,7 @@ export function useFocus(
         // Only focus events originating from keyboard navigation, not clicks
         const isKeyboardFocus =
           !toValue(visibleOnly) ||
-          (event.target === event.currentTarget &&
-            event.relatedTarget !== null);
+          (event.target === event.currentTarget && event.relatedTarget !== null);
 
         if (isKeyboardFocus) {
           onOpenChange(true);
@@ -69,10 +68,7 @@ export function useFocus(
         }
 
         // Don't close if focus moved to floating element
-        if (
-          event.relatedTarget &&
-          floating.contains(event.relatedTarget as Node)
-        ) {
+        if (event.relatedTarget && floating.contains(event.relatedTarget as Node)) {
           return;
         }
 

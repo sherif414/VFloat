@@ -1,4 +1,4 @@
-import { MaybeRefOrGetter, Ref, computed, onScopeDispose, toValue } from "vue";
+import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, toValue } from "vue";
 import type { UseFloatingReturn } from "../use-floating";
 
 export interface UseRoleOptions {
@@ -13,14 +13,7 @@ export interface UseRoleOptions {
    * @default 'dialog'
    */
   role?: MaybeRefOrGetter<
-    | "tooltip"
-    | "dialog"
-    | "alertdialog"
-    | "menu"
-    | "listbox"
-    | "grid"
-    | "tree"
-    | null
+    "tooltip" | "dialog" | "alertdialog" | "menu" | "listbox" | "grid" | "tree" | null
   >;
 }
 
@@ -41,15 +34,7 @@ export interface UseRoleReturn {
    */
   getFloatingProps: () => {
     id?: string;
-    role?:
-      | "tooltip"
-      | "dialog"
-      | "alertdialog"
-      | "menu"
-      | "listbox"
-      | "grid"
-      | "tree"
-      | null;
+    role?: "tooltip" | "dialog" | "alertdialog" | "menu" | "listbox" | "grid" | "tree" | null;
   };
 
   /**
@@ -89,14 +74,8 @@ export function useRole(
 
       const referenceProps: Record<string, any> = {};
 
-      if (
-        roleValue === "tooltip" ||
-        roleValue === "dialog" ||
-        roleValue === "alertdialog"
-      ) {
-        referenceProps["aria-describedby"] = open.value
-          ? floatingId
-          : undefined;
+      if (roleValue === "tooltip" || roleValue === "dialog" || roleValue === "alertdialog") {
+        referenceProps["aria-describedby"] = open.value ? floatingId : undefined;
       } else {
         referenceProps["aria-controls"] = open.value ? floatingId : undefined;
         referenceProps["aria-expanded"] = open.value;

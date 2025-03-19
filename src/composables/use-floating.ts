@@ -9,23 +9,15 @@ import type {
 } from "@floating-ui/dom";
 import {
   arrow,
-  autoUpdate as floatingUIAutoUpdate,
   computePosition,
   flip,
+  autoUpdate as floatingUIAutoUpdate,
   offset,
   shift,
   size,
 } from "@floating-ui/dom";
 import type { ComputedRef, MaybeRefOrGetter, Ref, StyleValue } from "vue";
-import {
-  computed,
-  onScopeDispose,
-  ref,
-  shallowRef,
-  toRef,
-  toValue,
-  watch,
-} from "vue";
+import { computed, onScopeDispose, ref, shallowRef, toRef, toValue, watch } from "vue";
 
 export interface FloatingStyles {
   position: Strategy;
@@ -128,9 +120,7 @@ export interface UseFloatingReturn {
   };
 }
 
-export function useFloating(
-  options: UseFloatingOptions = {}
-): UseFloatingReturn {
+export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn {
   const {
     placement: initialPlacement = "bottom",
     strategy: initialStrategy = "absolute",
@@ -183,15 +173,11 @@ export function useFloating(
   const update = async () => {
     if (!referenceRef.value || !floatingRef.value) return;
 
-    const result = await computePosition(
-      referenceRef.value,
-      floatingRef.value,
-      {
-        placement: toValue(initialPlacement),
-        strategy: toValue(initialStrategy),
-        middleware: toValue(middlewareOption),
-      }
-    );
+    const result = await computePosition(referenceRef.value, floatingRef.value, {
+      placement: toValue(initialPlacement),
+      strategy: toValue(initialStrategy),
+      middleware: toValue(middlewareOption),
+    });
 
     x.value = result.x;
     y.value = result.y;

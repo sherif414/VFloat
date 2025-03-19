@@ -5,16 +5,12 @@ export interface UseInteractionsReturn {
   /**
    * A function that returns merged props for the reference element
    */
-  getReferenceProps: (
-    additionalProps?: Record<string, any>
-  ) => Record<string, any>;
+  getReferenceProps: (additionalProps?: Record<string, any>) => Record<string, any>;
 
   /**
    * A function that returns merged props for the floating element
    */
-  getFloatingProps: (
-    additionalProps?: Record<string, any>
-  ) => Record<string, any>;
+  getFloatingProps: (additionalProps?: Record<string, any>) => Record<string, any>;
 
   /**
    * A function that returns merged props for list items
@@ -62,17 +58,13 @@ export function useInteractions(
       const eventHandlerKeys = allProps
         .flatMap((props) => Object.keys(props))
         .filter((key) => key.startsWith("on"))
-        .filter((eventKey) =>
-          allProps.some((props) => typeof props[eventKey] === "function")
-        );
+        .filter((eventKey) => allProps.some((props) => typeof props[eventKey] === "function"));
 
       // Create merged event handlers
       for (const eventKey of eventHandlerKeys) {
         const handlers = allProps
           .map((props) => props[eventKey])
-          .filter(
-            (handler): handler is Function => typeof handler === "function"
-          );
+          .filter((handler): handler is Function => typeof handler === "function");
 
         if (handlers.length > 1) {
           mergedProps[eventKey] = (event: any) => {
@@ -112,17 +104,13 @@ export function useInteractions(
       const eventHandlerKeys = allProps
         .flatMap((props) => Object.keys(props))
         .filter((key) => key.startsWith("on"))
-        .filter((eventKey) =>
-          allProps.some((props) => typeof props[eventKey] === "function")
-        );
+        .filter((eventKey) => allProps.some((props) => typeof props[eventKey] === "function"));
 
       // Create merged event handlers
       for (const eventKey of eventHandlerKeys) {
         const handlers = allProps
           .map((props) => props[eventKey])
-          .filter(
-            (handler): handler is Function => typeof handler === "function"
-          );
+          .filter((handler): handler is Function => typeof handler === "function");
 
         if (handlers.length > 1) {
           mergedProps[eventKey] = (event: any) => {
@@ -149,9 +137,7 @@ export function useInteractions(
       const mergedProps = { ...userProps };
       const propGetters = validInteractionProps
         .map((interaction) => interaction.getItemProps)
-        .filter(Boolean) as Array<
-        (props: Record<string, any>) => Record<string, any>
-      >;
+        .filter(Boolean) as Array<(props: Record<string, any>) => Record<string, any>>;
 
       if (propGetters.length === 0) {
         return mergedProps;
@@ -168,17 +154,13 @@ export function useInteractions(
       const eventHandlerKeys = allProps
         .flatMap((props) => Object.keys(props))
         .filter((key) => key.startsWith("on"))
-        .filter((eventKey) =>
-          allProps.some((props) => typeof props[eventKey] === "function")
-        );
+        .filter((eventKey) => allProps.some((props) => typeof props[eventKey] === "function"));
 
       // Create merged event handlers
       for (const eventKey of eventHandlerKeys) {
         const handlers = allProps
           .map((props) => props[eventKey])
-          .filter(
-            (handler): handler is Function => typeof handler === "function"
-          );
+          .filter((handler): handler is Function => typeof handler === "function");
 
         if (handlers.length > 1) {
           mergedProps[eventKey] = (event: any) => {

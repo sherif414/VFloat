@@ -1,11 +1,4 @@
-import {
-  MaybeRefOrGetter,
-  Ref,
-  computed,
-  onMounted,
-  onScopeDispose,
-  toValue,
-} from "vue";
+import { type MaybeRefOrGetter, type Ref, computed, onMounted, onScopeDispose, toValue } from "vue";
 import type { UseFloatingReturn } from "../use-floating";
 
 export interface UseDismissOptions {
@@ -117,13 +110,7 @@ export function useDismiss(
   };
 
   const closeOnPressOutside = (event: MouseEvent) => {
-    if (
-      !isEnabled.value ||
-      !toValue(outsidePress) ||
-      !open.value ||
-      !floating ||
-      !reference
-    )
+    if (!isEnabled.value || !toValue(outsidePress) || !open.value || !floating || !reference)
       return;
 
     const target = event.target as Node | null;
@@ -227,8 +214,8 @@ export function useDismiss(
         [refPressEvent === "pointerdown"
           ? "onPointerdown"
           : refPressEvent === "mousedown"
-          ? "onMousedown"
-          : "onClick"]: closeOnReferencePress,
+            ? "onMousedown"
+            : "onClick"]: closeOnReferencePress,
       };
     },
     getFloatingProps: () => ({}),
