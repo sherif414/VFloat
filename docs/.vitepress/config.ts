@@ -115,5 +115,5 @@ export default defineConfig({
       message: "Released under the MIT License.",
       copyright: "Copyright © 2023-present V-Float Contributors",
     },
-  },
+  },ignoreDeadLinks: true
 });

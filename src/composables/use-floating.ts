@@ -1,3 +1,4 @@
+import { getDPR, roundByDPR } from "@/utils";
 import type {
   Middleware,
   MiddlewareData,
@@ -118,6 +119,12 @@ export interface UseFloatingReturn {
     reference: Element | VirtualElement | null;
     floating: HTMLElement | null;
   };
+
+  /** Whether the floating element is open */
+  open: Readonly<Ref<boolean>>;
+
+  /** Function to update the open state */
+  onOpenChange: (open: boolean) => void;
 }
 
 export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn {
@@ -294,6 +301,8 @@ export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn
         return floatingRef.value;
       },
     },
+    open,
+    onOpenChange: handleOpenChange,
   };
 }
 
@@ -315,55 +324,9 @@ export function arrowMiddleware(options: ArrowOptions) {
   const { element, padding } = options;
 
   return arrow({
-    element: toValue(element) as Element | null,
+    element: toValue(element),
     padding,
   });
-}
-
-/**
- * Composable for getting arrow position styles
- */
-export function useArrow(options: {
-  element?: MaybeRefOrGetter<HTMLElement | null>;
-  middlewareData: MaybeRefOrGetter<MiddlewareData>;
-  placement: MaybeRefOrGetter<Placement>;
-}) {
-  const { element, middlewareData, placement } = options;
-
-  const arrowX = computed(() => {
-    const data = toValue(middlewareData)?.arrow;
-    return data?.x ?? 0;
-  });
-
-  const arrowY = computed(() => {
-    const data = toValue(middlewareData)?.arrow;
-    return data?.y ?? 0;
-  });
-
-  const arrowStyles = computed(() => {
-    const staticSide = {
-      top: "bottom",
-      right: "left",
-      bottom: "top",
-      left: "right",
-    }[toValue(placement).split("-")[0]] as string;
-
-    const el = toValue(element);
-    const x = arrowX.value != null ? `${arrowX.value}px` : "";
-    const y = arrowY.value != null ? `${arrowY.value}px` : "";
-
-    return {
-      left: x,
-      top: y,
-      [staticSide]: "-4px", // Default offset
-    };
-  });
-
-  return {
-    arrowX,
-    arrowY,
-    arrowStyles,
-  };
 }
 
 /**
@@ -376,19 +339,4 @@ export function autoUpdate(
   options = {}
 ) {
   return floatingUIAutoUpdate(reference, floating, update, options);
-}
-
-// ----------------------------------------------------------------------------------------------------
-// 📌 Utility functions
-// ----------------------------------------------------------------------------------------------------
-
-function roundByDPR(el: HTMLElement, value: number) {
-  const dpr = getDPR(el);
-  return Math.round(value * dpr) / dpr;
-}
-
-function getDPR(el: HTMLElement) {
-  if (typeof window === "undefined") return 1;
-  const win = el.ownerDocument.defaultView || window;
-  return win.devicePixelRatio || 1;
 }

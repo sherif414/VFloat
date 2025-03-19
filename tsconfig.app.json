@@ -1,7 +1,12 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue"],
+  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "docs/**/*.md", "docs/**/*.ts", "docs/**/*.vue"],
   "exclude": ["src/**/__tests__/*"],
+  "vueCompilerOptions": {
+    "vitePressExtensions": [
+      ".md"
+    ]
+  },
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
 

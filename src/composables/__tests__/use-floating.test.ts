@@ -1,5 +1,5 @@
-import type { ArrowOptions, Middleware, Placement, Strategy } from "@floating-ui/dom";
-import { arrow, offset } from "@floating-ui/dom";
+import type { Middleware, Placement, Strategy } from "@floating-ui/dom";
+import { offset } from "@floating-ui/dom";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { type Ref, defineComponent, nextTick, ref, toRef } from "vue";
@@ -11,12 +11,14 @@ function setup(options?: UseFloatingOptions & { visible?: Ref<boolean> }) {
   const floating = ref<HTMLElement | null>(null);
   const visible = options?.visible ?? ref(true);
 
-  const { middlewareData, placement, x, y, strategy, update } = useFloating(
-    reference,
-    floating,
-    visible,
-    options
-  );
+  const { middlewareData, placement, x, y, strategy, update } = useFloating({
+    elements: {
+      reference: reference,
+      floating,
+    },
+    open: visible,
+    ...options
+  });
 
   return {
     middlewareData,
@@ -37,7 +39,6 @@ describe("useFloating", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.useRealTimers();
   });
 
@@ -79,7 +80,7 @@ describe("useFloating", () => {
       });
     });
 
-    test("uses bottom-start as default placement", async () => {
+    test("uses bottom as default placement", async () => {
       const App = defineComponent({
         name: "App",
         setup() {
@@ -96,7 +97,7 @@ describe("useFloating", () => {
 
       await nextTick();
       await waitFor(() => {
-        expect(getByTestId("default-placement").textContent).toBe("bottom-start");
+        expect(getByTestId("default-placement").textContent).toBe("bottom");
       });
     });
   });
@@ -467,11 +468,11 @@ describe("useFloating", () => {
         name: "App",
         components: { Reference, Floating },
         setup() {
-          const reference = ref<HTMLElement | null>(null);
-          const floating = ref<HTMLElement | null>(null);
-          const visible = ref(true);
+          const reference = ref<InstanceType<typeof Reference> | null>(null);
+          const floating = ref<InstanceType<typeof Floating> | null>(null);
+          const open = ref(true);
 
-          const { x, y } = useFloating(reference, floating, visible);
+          const { x, y } = useFloating({ elements: { reference: () => reference.value?.$el, floating: () => floating.value?.$el }, open });
 
           return { reference, floating, x, y };
         },
@@ -495,7 +496,7 @@ describe("useFloating", () => {
     test("works with exposed refs", async () => {
       const Reference = defineComponent({
         name: "Reference",
-        setup(props, { expose }) {
+        setup(_, { expose }) {
           const el = ref<HTMLElement | null>(null);
           expose({ el });
           return { el };
@@ -507,21 +508,23 @@ describe("useFloating", () => {
 
       const Floating = defineComponent({
         name: "Floating",
-        setup() {
-          return {};
+        setup(_, {expose}) {
+          const el = ref<HTMLElement | null>(null);
+          expose({ el });
+          return { el };
         },
-        template: /* HTML */ `<div data-testid="floating-el" />`,
+        template: /* HTML */ `<div ref="el" data-testid="floating-el" />`,
       });
 
       const App = defineComponent({
         name: "App",
         components: { Reference, Floating },
         setup() {
-          const reference = ref<{ el: HTMLElement } | null>(null);
-          const floating = ref<HTMLElement | null>(null);
-          const visible = ref(true);
+          const reference = ref<InstanceType<typeof Reference> | null>(null);
+          const floating = ref<InstanceType<typeof Floating> | null>(null);
+          const open = ref(true);
 
-          const { x, y } = useFloating(() => reference.value?.el ?? null, floating, visible);
+          const { x, y } = useFloating({ elements: { reference: () => reference.value?.el ?? null, floating: () => floating.value?.el ?? null }, open });
 
           return { reference, floating, x, y };
         },

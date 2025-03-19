@@ -1,4 +1,3 @@
-import { Ref, computed, reactive, toValue } from "vue";
 import { useMergeRefs } from "./use-merge-refs";
 
 export interface UseInteractionsReturn {
