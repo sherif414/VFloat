@@ -1,23 +1,14 @@
 import { getDPR, roundByDPR } from "@/utils";
 import type {
+  AutoUpdateOptions,
   Middleware,
   MiddlewareData,
-  MiddlewareState,
-  Padding,
   Placement,
   Strategy,
   VirtualElement,
 } from "@floating-ui/dom";
-import {
-  arrow,
-  computePosition,
-  flip,
-  autoUpdate as floatingUIAutoUpdate,
-  offset,
-  shift,
-  size,
-} from "@floating-ui/dom";
-import type { ComputedRef, MaybeRefOrGetter, Ref, StyleValue } from "vue";
+import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom";
+import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { computed, onScopeDispose, ref, shallowRef, toRef, toValue, watch } from "vue";
 
 export interface FloatingStyles {
@@ -53,7 +44,7 @@ export interface UseFloatingOptions {
   transform?: MaybeRefOrGetter<boolean | undefined>;
 
   /**
-   * These are plain objects that modify the positioning coordinates in some fashion, or provide useful data for the consumer to use.
+   * Middlewares modify the positioning coordinates in some fashion, or provide useful data for the consumer to use.
    */
   middleware?: MaybeRefOrGetter<Middleware[]>;
 
@@ -69,7 +60,7 @@ export interface UseFloatingOptions {
     reference: Element | VirtualElement,
     floating: HTMLElement,
     update: () => void
-  ) => void | (() => void);
+  ) => undefined | (() => void);
 
   /**
    * Whether the floating element is open
@@ -83,7 +74,7 @@ export interface UseFloatingOptions {
   onOpenChange?: (open: boolean) => void;
 }
 
-export interface UseFloatingReturn {
+export interface FloatingContext {
   /** The x-coordinate of the floating element */
   x: Readonly<Ref<number>>;
 
@@ -103,7 +94,7 @@ export interface UseFloatingReturn {
   isPositioned: Readonly<Ref<boolean>>;
 
   /** Computed styles to apply to the floating element */
-  floatingStyles: ComputedRef<Record<string, any>>;
+  floatingStyles: ComputedRef<FloatingStyles>;
 
   /** Function to manually update the position */
   update: () => void;
@@ -127,7 +118,7 @@ export interface UseFloatingReturn {
   onOpenChange: (open: boolean) => void;
 }
 
-export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn {
+export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
   const {
     placement: initialPlacement = "bottom",
     strategy: initialStrategy = "absolute",
@@ -136,33 +127,12 @@ export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn
     whileElementsMounted,
     open: controlledOpen,
     onOpenChange,
-    elements: elementsOption,
+    elements,
   } = options;
 
   // Element refs
-  const referenceRef = ref<Element | VirtualElement | null>(null);
-  const floatingRef = ref<HTMLElement | null>(null);
-
-  // Get elements from options if provided
-  if (elementsOption?.reference) {
-    watch(
-      () => toValue(elementsOption.reference),
-      (el) => {
-        if (el) referenceRef.value = el;
-      },
-      { immediate: true }
-    );
-  }
-
-  if (elementsOption?.floating) {
-    watch(
-      () => toValue(elementsOption.floating),
-      (el) => {
-        if (el) floatingRef.value = el;
-      },
-      { immediate: true }
-    );
-  }
+  const referenceRef = computed(() => toValue(elements?.reference ?? null));
+  const floatingRef = computed(() => toValue(elements?.floating ?? null));
 
   // Position state
   const x = ref(0);
@@ -201,8 +171,7 @@ export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn
       () => toValue(initialStrategy),
       () => toValue(middlewareOption),
     ],
-    update,
-    { deep: true }
+    update
   );
 
   // Auto-update when both elements are mounted and open
@@ -306,29 +275,6 @@ export function useFloating(options: UseFloatingOptions = {}): UseFloatingReturn
   };
 }
 
-// ----------------------------------------------------------------------------------------------------
-// 📌 arrow
-// ----------------------------------------------------------------------------------------------------
-
-export interface ArrowOptions {
-  element: MaybeRefOrGetter<HTMLElement | null>;
-  padding?: Padding;
-}
-
-/**
- * Creates an arrow middleware to position an arrow element
- * @param options Options for the arrow middleware
- * @see https://floating-ui.com/docs/arrow
- */
-export function arrowMiddleware(options: ArrowOptions) {
-  const { element, padding } = options;
-
-  return arrow({
-    element: toValue(element),
-    padding,
-  });
-}
-
 /**
  * Auto-update function to use with `whileElementsMounted` option
  */
@@ -336,7 +282,7 @@ export function autoUpdate(
   reference: Element | VirtualElement,
   floating: HTMLElement,
   update: () => void,
-  options = {}
+  options: AutoUpdateOptions = {}
 ) {
   return floatingUIAutoUpdate(reference, floating, update, options);
 }
