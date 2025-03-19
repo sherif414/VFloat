@@ -117,5 +117,5 @@ export default defineConfig({
     },
   },
   ignoreDeadLinks: true,
-  base : "/v-float/",
+  base : "/",
 });
