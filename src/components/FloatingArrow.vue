@@ -1,7 +1,7 @@
 <script lang="ts">
 export interface FloatingArrowProps {
   /** The floating context */
-  context: any;
+  context: FloatingContext;
 
   /** Width of the arrow */
   width?: number;
@@ -29,6 +29,7 @@ export interface FloatingArrowProps {
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useArrow } from '../composables/use-arrow';
+import type { FloatingContext } from '@/composables';
 
 const props = withDefaults(defineProps<FloatingArrowProps>(), {
   width: 14,
@@ -44,10 +45,9 @@ const props = withDefaults(defineProps<FloatingArrowProps>(), {
 const arrowRef = ref<HTMLElement | null>(null);
 
 // Use arrow positioning
-const { arrowX, arrowY, arrowStyles } = useArrow({
-  element: arrowRef,
+const { arrowStyles } = useArrow({
   middlewareData: computed(() => props.context.middlewareData),
-  placement: computed(() => props.context.placement)
+  placement: computed(() => props.context.placement.value)
 });
 
 // Static offset takes precedence over dynamic positioning
@@ -59,65 +59,53 @@ const finalStyles = computed(() => {
       right: 'left',
       bottom: 'top',
       left: 'right',
-    } as const)[placement.split('-')[0] as 'top' | 'right' | 'bottom' | 'left'];
-    
+    } as const)[placement.value.split('-')[0] as 'top' | 'right' | 'bottom' | 'left'];
+
     return {
       ...arrowStyles.value,
-      left: placement.includes('end') 
-        ? `${props.staticOffset}px` 
-        : placement.includes('start')
+      left: placement.value.includes('end')
+        ? `${props.staticOffset}px`
+        : placement.value.includes('start')
           ? undefined
           : '50%',
-      right: placement.includes('start') 
-        ? `${props.staticOffset}px` 
+      right: placement.value.includes('start')
+        ? `${props.staticOffset}px`
         : undefined,
-      top: placement.includes('bottom')
-        ? undefined 
-        : placement.includes('top')
+      top: placement.value.includes('bottom')
+        ? undefined
+        : placement.value.includes('top')
           ? undefined
           : '50%',
-      bottom: placement.includes('top')
+      bottom: placement.value.includes('top')
         ? undefined
         : undefined,
       transform: 'rotate(45deg)',
       [staticSide]: '-4px'
     };
   }
-  
+
   return arrowStyles.value;
 });
 
 // Generate path for the arrow
 const pathData = computed(() => {
   const { width, height, tipRadius } = props;
-  
+
   if (tipRadius > 0) {
     const halfWidth = width / 2;
     const arcRadius = tipRadius;
-    const arcX = halfWidth;
-    const arcStartY = 0;
-    
+
     return `M0,${height} L${halfWidth - arcRadius},0 Q${halfWidth},0 ${halfWidth + arcRadius},0 L${width},${height}`;
   }
-  
+
   return `M0,${height} L${width / 2},0 L${width},${height}`;
 });
 </script>
 
 <template>
-  <div 
-    ref="arrowRef" 
-    :style="finalStyles"
-    class="floating-arrow"
-  >
-    <svg 
-      :width="width" 
-      :height="height" 
-      :viewBox="`0 0 ${width} ${height}`" 
-      :fill="fill"
-      :stroke="stroke"
-      :stroke-width="strokeWidth"
-    >
+  <div ref="arrowRef" :style="finalStyles" class="floating-arrow">
+    <svg :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`" :fill="fill" :stroke="stroke"
+      :stroke-width="strokeWidth">
       <path :d="pathData" />
     </svg>
   </div>
@@ -130,4 +118,4 @@ const pathData = computed(() => {
   width: max-content;
   height: max-content;
 }
-</style> 
+</style>
