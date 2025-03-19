@@ -52,5 +52,6 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": ["@biomejs/biome", "core-js", "esbuild"]
-  }
+  },
+  "packageManager": "pnpm@10.6.0"
 }
