@@ -54,12 +54,12 @@ const { arrowX, arrowY, arrowStyles } = useArrow({
 const finalStyles = computed(() => {
   if (props.staticOffset != null) {
     const placement = props.context.placement;
-    const staticSide = {
+    const staticSide = ({
       top: 'bottom',
       right: 'left',
       bottom: 'top',
       left: 'right',
-    }[placement.split('-')[0]];
+    } as const)[placement.split('-')[0] as 'top' | 'right' | 'bottom' | 'left'];
     
     return {
       ...arrowStyles.value,
