@@ -27,8 +27,8 @@ export interface FloatingArrowProps {
 </script>
 
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue';
-import { useArrow } from '../composables/use-floating';
+import { computed, ref } from 'vue';
+import { useArrow } from '../composables/use-arrow';
 
 const props = withDefaults(defineProps<FloatingArrowProps>(), {
   width: 14,
