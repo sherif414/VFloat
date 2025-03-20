@@ -1,5 +1,5 @@
 import { type MaybeRefOrGetter, type Ref, computed, onMounted, onScopeDispose, toValue } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseDismissOptions {
   /**
@@ -60,19 +60,19 @@ export interface UseDismissReturn {
   /**
    * Reference element props related to dismissal
    */
-  getReferenceProps: () => Record<string, (event: any) => void>;
+  getReferenceProps: () => Record<string, (event: PointerEvent | MouseEvent | Event) => void>;
 
   /**
    * Floating element props related to dismissal
    */
-  getFloatingProps: () => Record<string, (event: any) => void>;
+  getFloatingProps: () => Record<string, (event: PointerEvent | MouseEvent | Event) => void>;
 }
 
 /**
  * Enables dismissing the floating element
  */
 export function useDismiss(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
     onOpenChange: (open: boolean) => void;
   },
@@ -82,7 +82,6 @@ export function useDismiss(
     open,
     onOpenChange,
     elements: { reference, floating },
-    refs,
   } = context;
 
   const {
@@ -126,7 +125,7 @@ export function useDismiss(
     }
 
     // Check for potential bubbling
-    if (reference.contains(target)) {
+    if (reference instanceof HTMLElement && reference.contains(target)) {
       return;
     }
 
@@ -138,7 +137,7 @@ export function useDismiss(
     onOpenChange(false);
   };
 
-  const closeOnReferencePress = (event: MouseEvent) => {
+  const closeOnReferencePress = (_event: MouseEvent) => {
     if (!isEnabled.value || !toValue(referencePress) || !open.value) return;
 
     onOpenChange(false);

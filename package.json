@@ -4,7 +4,9 @@
   "description": "Vue 3 port of Floating UI - a library for positioning floating elements",
   "private": false,
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "types": "./dist/index.d.ts",
   "main": "./dist/v-float.umd.js",
   "module": "./dist/v-float.es.js",
@@ -19,12 +21,15 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "test:unit": "vitest",
+    "test:unit": "vitest --no-watch",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "lint": "biome check --apply --write",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.13",
@@ -32,6 +37,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@chromatic-com/storybook": "3",
+    "@storybook/addon-essentials": "8.6.7",
+    "@storybook/addon-interactions": "8.6.7",
+    "@storybook/addon-onboarding": "8.6.7",
+    "@storybook/blocks": "8.6.7",
+    "@storybook/test": "8.6.7",
+    "@storybook/vue3": "8.6.7",
+    "@storybook/vue3-vite": "8.6.7",
     "@testing-library/vue": "^8.1.0",
     "@tsconfig/node22": "^22.0.0",
     "@types/jsdom": "^21.1.7",
@@ -42,6 +55,7 @@
     "@vue/tsconfig": "^0.7.0",
     "jsdom": "^26.0.0",
     "npm-run-all2": "^7.0.2",
+    "storybook": "8.6.7",
     "typescript": "~5.7.3",
     "vite": "^6.1.0",
     "vite-plugin-dts": "^4.5.3",
@@ -51,7 +65,11 @@
     "vue-tsc": "^2.2.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "core-js", "esbuild"]
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "core-js",
+      "esbuild"
+    ]
   },
   "packageManager": "pnpm@10.6.0"
 }

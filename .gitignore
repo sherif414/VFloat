@@ -32,3 +32,4 @@ playground
 
 docs/.vitepress/dist
 docs/.vitepress/cache
+*storybook.log
