@@ -7,9 +7,9 @@ type PossibleRef<T> = Ref<T> | ((el: T) => void) | null | undefined;
  * @param refs Array of refs to merge
  * @returns A merged ref function that can be used as a ref
  */
-export function useMergeRefs<T>(...refs: PossibleRef<T>[]): (instance: T) => void {
+export function useMergeRefs<T>(refs: PossibleRef<T>[]): (instance: T) => void {
   return (instance: T) => {
-    refs.forEach((ref) => {
+    for (const ref of refs) {
       if (ref === null || ref === undefined) return;
 
       if (typeof ref === "function") {
@@ -17,7 +17,7 @@ export function useMergeRefs<T>(...refs: PossibleRef<T>[]): (instance: T) => voi
       } else if (isRef(ref)) {
         (ref as Ref<UnwrapRef<T>>).value = instance as UnwrapRef<T>;
       }
-    });
+    }
   };
 }
 

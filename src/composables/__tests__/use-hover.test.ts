@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { defineComponent, nextTick, ref } from "vue";
-import { useFloating } from "../use-floating";
 import { useHover } from "../interactions/use-hover";
+import { useFloating } from "../use-floating";
 
 function setup(options = {}) {
   const reference = ref<HTMLElement | null>(null);
@@ -12,10 +12,10 @@ function setup(options = {}) {
   const context = useFloating({
     elements: {
       reference,
-      floating
+      floating,
     },
     open: isOpen,
-    ...options
+    ...options,
   });
   const hover = useHover(context, options);
 

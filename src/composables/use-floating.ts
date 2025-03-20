@@ -57,7 +57,7 @@ export interface UseFloatingOptions {
    * Function called when both the reference and floating elements are mounted
    */
   whileElementsMounted?: (
-    reference: Element | VirtualElement,
+    reference: HTMLElement | VirtualElement,
     floating: HTMLElement,
     update: () => void
   ) => undefined | (() => void);
@@ -101,13 +101,13 @@ export interface FloatingContext {
 
   /** The refs object containing reference to reference and floating elements */
   refs: {
-    reference: Ref<Element | VirtualElement | null>;
+    reference: Ref<HTMLElement | VirtualElement | null>;
     floating: Ref<HTMLElement | null>;
   };
 
   /** The current elements if they exist */
   elements: {
-    reference: Element | VirtualElement | null;
+    reference: HTMLElement | VirtualElement | null;
     floating: HTMLElement | null;
   };
 
@@ -279,7 +279,7 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
  * Auto-update function to use with `whileElementsMounted` option
  */
 export function autoUpdate(
-  reference: Element | VirtualElement,
+  reference: HTMLElement | VirtualElement,
   floating: HTMLElement,
   update: () => void,
   options: AutoUpdateOptions = {}

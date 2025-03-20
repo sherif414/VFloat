@@ -133,7 +133,7 @@ export function useHover(
 
   return {
     getReferenceProps: () => ({
-      onMouseenter: (event: MouseEvent) => {
+      onMouseenter: (_event: MouseEvent) => {
         if (!isEnabled.value) return;
 
         clearTimeout(timeoutId!);
@@ -189,7 +189,7 @@ export function useHover(
           handlerRef(event);
         },
       }),
-      onFocus: (event: FocusEvent) => {
+      onFocus: (_event: FocusEvent) => {
         if (!isEnabled.value) return;
 
         onOpenChange(true);
@@ -211,12 +211,12 @@ export function useHover(
     }),
 
     getFloatingProps: () => ({
-      onMouseenter: (event: MouseEvent) => {
+      onMouseenter: (_event: MouseEvent) => {
         if (!isEnabled.value || !handleFloatingHover) return;
 
         clearTimeout(timeoutId!);
       },
-      onMouseleave: (event: MouseEvent) => {
+      onMouseleave: (_event: MouseEvent) => {
         if (!isEnabled.value || !handleFloatingHover) return;
 
         closeWithDelay();

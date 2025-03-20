@@ -17,7 +17,7 @@ function setup(options?: UseFloatingOptions & { visible?: Ref<boolean> }) {
       floating,
     },
     open: visible,
-    ...options
+    ...options,
   });
 
   return {
@@ -410,7 +410,7 @@ describe("useFloating", () => {
       const App = defineComponent({
         name: "App",
         props: ["middleware"],
-        setup(props: { middleware?: Middleware[] }) {
+        setup(_props: { middleware?: Middleware[] }) {
           const middleware = [offset(offsetData)];
           const { update, middlewareData, ...rest } = setup({ middleware });
           return { update, middlewareData, ...rest };
@@ -472,7 +472,13 @@ describe("useFloating", () => {
           const floating = ref<InstanceType<typeof Floating> | null>(null);
           const open = ref(true);
 
-          const { x, y } = useFloating({ elements: { reference: () => reference.value?.$el, floating: () => floating.value?.$el }, open });
+          const { x, y } = useFloating({
+            elements: {
+              reference: () => reference.value?.$el,
+              floating: () => floating.value?.$el,
+            },
+            open,
+          });
 
           return { reference, floating, x, y };
         },
@@ -508,7 +514,7 @@ describe("useFloating", () => {
 
       const Floating = defineComponent({
         name: "Floating",
-        setup(_, {expose}) {
+        setup(_, { expose }) {
           const el = ref<HTMLElement | null>(null);
           expose({ el });
           return { el };
@@ -524,7 +530,13 @@ describe("useFloating", () => {
           const floating = ref<InstanceType<typeof Floating> | null>(null);
           const open = ref(true);
 
-          const { x, y } = useFloating({ elements: { reference: () => reference.value?.el ?? null, floating: () => floating.value?.el ?? null }, open });
+          const { x, y } = useFloating({
+            elements: {
+              reference: () => reference.value?.el ?? null,
+              floating: () => floating.value?.el ?? null,
+            },
+            open,
+          });
 
           return { reference, floating, x, y };
         },

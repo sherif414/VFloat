@@ -1,19 +1,19 @@
 import { cleanup, fireEvent, render } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { defineComponent, nextTick, ref } from "vue";
-import { useFloating } from "../use-floating";
 import { useClick } from "../interactions/use-click";
+import { type UseFloatingOptions, useFloating } from "../use-floating";
 
-function setup(options = {}) {
+function setup(options: UseFloatingOptions = {}) {
   const reference = ref<HTMLElement | null>(null);
   const floating = ref<HTMLElement | null>(null);
   const isOpen = ref(false);
 
-  const floating = useFloating(reference, floating, isOpen);
-  const click = useClick(floating.context, options);
+  const context = useFloating({ elements: { reference, floating }, open: isOpen, ...options });
+  const click = useClick(context);
 
   return {
-    ...floating,
+    ...context,
     click,
     reference,
     floating,

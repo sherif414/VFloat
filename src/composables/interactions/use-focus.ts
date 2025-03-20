@@ -1,5 +1,5 @@
 import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseFocusOptions {
   /**
@@ -29,16 +29,15 @@ export interface UseFocusReturn {
  * Enables showing/hiding the floating element when focusing the reference element
  */
 export function useFocus(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
     onOpenChange: (open: boolean) => void;
   },
   options: UseFocusOptions = {}
 ): UseFocusReturn {
   const {
-    open,
     onOpenChange,
-    elements: { floating, reference },
+    elements: { floating },
   } = context;
 
   const { enabled = true, visibleOnly = false } = options;

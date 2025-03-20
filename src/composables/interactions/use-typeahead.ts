@@ -253,7 +253,7 @@ export function useTypeahead(
 function getItemText(item: HTMLElement): string {
   // Try to find text content in elements with common text attributes
   const label = item.querySelector("[aria-label]");
-  if (label && label.getAttribute("aria-label")) {
+  if (label?.getAttribute("aria-label")) {
     return label.getAttribute("aria-label") || "";
   }
 
