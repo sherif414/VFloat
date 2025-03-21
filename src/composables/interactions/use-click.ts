@@ -68,20 +68,18 @@ export function useClick(
     }
   };
 
-  const getProps = (): UseClickReturn["getReferenceProps"] => {
-    const clickEvent = toValue(event);
-
-    switch (clickEvent) {
-      case "mousedown":
-        return { onMousedown: eventHandler };
-      case "mouseup":
-        return { onMouseup: eventHandler };
-      default:
-        return { onClick: eventHandler };
-    }
-  };
-
   return {
-    getReferenceProps: getProps,
+    getReferenceProps: () => {
+      const clickEvent = toValue(event);
+
+      switch (clickEvent) {
+        case "mousedown":
+          return { onMousedown: eventHandler };
+        case "mouseup":
+          return { onMouseup: eventHandler };
+        default:
+          return { onClick: eventHandler };
+      }
+    },
   };
 }
