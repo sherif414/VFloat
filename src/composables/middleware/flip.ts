@@ -1,6 +1,7 @@
 import {
   type Boundary,
   type Middleware,
+  type Placement,
   type RootBoundary,
   flip as flipMiddleware,
 } from "@floating-ui/dom";
@@ -25,7 +26,7 @@ export interface FlipOptions {
   /**
    * Placements that are allowed when flipping
    */
-  fallbackPlacements?: MaybeRefOrGetter<string[]>;
+  fallbackPlacements?: MaybeRefOrGetter<Placement[]>;
 
   /**
    * Placements to try sequentially if the preferred placement doesn't fit
