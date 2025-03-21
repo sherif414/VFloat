@@ -1,6 +1,8 @@
 import {
   type Boundary,
+  type Coords,
   type Middleware,
+  type MiddlewareState,
   type RootBoundary,
   shift as shiftMiddleware,
 } from "@floating-ui/dom";
@@ -26,8 +28,8 @@ export interface ShiftOptions {
    * Limit shifting to this many pixels
    */
   limiter?: MaybeRefOrGetter<{
-    fn: (state: any) => any;
-    options?: any;
+    fn: (state: MiddlewareState) => Coords;
+    options?: unknown;
   }>;
 
   /**
