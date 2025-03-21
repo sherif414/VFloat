@@ -1,5 +1,5 @@
 import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, toValue } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseRoleOptions {
   /**
@@ -50,7 +50,7 @@ export interface UseRoleReturn {
  * Manages the accessibility roles of floating elements
  */
 export function useRole(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
   },
   options: UseRoleOptions = {}

@@ -1,5 +1,5 @@
 import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, toValue } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseClientPointOptions {
   /**
@@ -40,7 +40,7 @@ export interface UseClientPointReturn {
  * Positions the floating element at a specified client point (mouse/touch position)
  */
 export function useClientPoint(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
     onOpenChange: (open: boolean) => void;
   },

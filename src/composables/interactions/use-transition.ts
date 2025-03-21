@@ -8,7 +8,7 @@ import {
   toValue,
   watch,
 } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseTransitionOptions {
   /**
@@ -93,7 +93,7 @@ const defaultTransitionStyles = {
  * Provides the current transition status
  */
 export function useTransitionStatus(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
   },
   options: UseTransitionOptions = {}
@@ -166,7 +166,7 @@ export function useTransitionStatus(
  * Provides styles for transitions
  */
 export function useTransitionStyles(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
   },
   options: UseTransitionOptions = {}

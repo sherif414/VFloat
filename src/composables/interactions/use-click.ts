@@ -1,5 +1,5 @@
 import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseClickOptions {
   /**
@@ -42,7 +42,7 @@ export interface UseClickReturn {
  * Enables showing/hiding the floating element when clicking the reference element
  */
 export function useClick(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
     onOpenChange: (open: boolean) => void;
   },

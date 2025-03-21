@@ -7,7 +7,7 @@ import {
   toValue,
   watch,
 } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseTypeaheadOptions {
   /**
@@ -88,7 +88,7 @@ export interface UseTypeaheadReturn {
  * Enables typeahead search within a floating list element
  */
 export function useTypeahead(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
   },
   options: UseTypeaheadOptions

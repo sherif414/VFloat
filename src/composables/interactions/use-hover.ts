@@ -6,7 +6,7 @@ import {
   toValue,
   watchEffect,
 } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseHoverOptions {
   /**
@@ -64,7 +64,7 @@ export interface UseHoverReturn {
  * Enables showing/hiding the floating element when hovering the reference element
  */
 export function useHover(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
     onOpenChange: (open: boolean) => void;
   },

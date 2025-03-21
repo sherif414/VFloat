@@ -8,7 +8,7 @@ import {
   toValue,
   watch,
 } from "vue";
-import type { UseFloatingReturn } from "../use-floating";
+import type { FloatingContext } from "../use-floating";
 
 export interface UseListNavigationOptions {
   /**
@@ -166,7 +166,7 @@ export interface UseListNavigationReturn {
  * Enables keyboard navigation in a list of items
  */
 export function useListNavigation(
-  context: UseFloatingReturn & {
+  context: FloatingContext & {
     open: Ref<boolean>;
     onOpenChange: (open: boolean) => void;
   },
