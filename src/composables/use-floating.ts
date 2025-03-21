@@ -3,13 +3,22 @@ import type {
   AutoUpdateOptions,
   Middleware,
   MiddlewareData,
+  Padding,
   Placement,
   Strategy,
   VirtualElement,
 } from "@floating-ui/dom";
-import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom";
-import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
-import { computed, onScopeDispose, ref, shallowRef, toRef, toValue, watch } from "vue";
+import {
+  arrow as FloatingUIArrow,
+  computePosition,
+  autoUpdate as floatingUIAutoUpdate,
+} from "@floating-ui/dom";
+import type { ComputedRef, InjectionKey, MaybeRefOrGetter, Ref } from "vue";
+import { computed, onScopeDispose, provide, ref, shallowRef, toRef, toValue, watch } from "vue";
+
+export interface ArrowContext extends Pick<FloatingContext, "middlewareData" | "placement"> {
+  arrowRef: Ref<HTMLElement | SVGAElement | null>;
+}
 
 export interface FloatingStyles {
   position: Strategy;
@@ -103,6 +112,7 @@ export interface FloatingContext {
   refs: {
     reference: Ref<HTMLElement | VirtualElement | null>;
     floating: Ref<HTMLElement | null>;
+    arrow: Ref<HTMLElement | null>;
   };
 
   /** The current elements if they exist */
@@ -116,6 +126,9 @@ export interface FloatingContext {
 
   /** Function to update the open state */
   onOpenChange: (open: boolean) => void;
+
+  /** FloatingArrow context key */
+  arrowContext: InjectionKey<ArrowContext>;
 }
 
 export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
@@ -133,12 +146,17 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
   // Element refs
   const referenceRef = computed(() => toValue(elements?.reference ?? null));
   const floatingRef = computed(() => toValue(elements?.floating ?? null));
+  const arrowRef = ref<HTMLElement | null>(null);
 
   // Position state
   const x = ref(0);
   const y = ref(0);
   const strategy = ref(toValue(initialStrategy) as Strategy);
   const placement = ref(toValue(initialPlacement) as Placement);
+  const middleware = computed(() => [
+    ...toValue(middlewareOption),
+    arrowRef.value && arrow({ element: arrowRef }),
+  ]);
   const middlewareData = shallowRef<MiddlewareData>({});
   const isPositioned = ref(false);
 
@@ -153,7 +171,7 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
     const result = await computePosition(referenceRef.value, floatingRef.value, {
       placement: toValue(initialPlacement),
       strategy: toValue(initialStrategy),
-      middleware: toValue(middlewareOption),
+      middleware: middleware.value,
     });
 
     x.value = result.x;
@@ -165,14 +183,7 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
   };
 
   // Watch for changes that should trigger an update
-  watch(
-    [
-      () => toValue(initialPlacement),
-      () => toValue(initialStrategy),
-      () => toValue(middlewareOption),
-    ],
-    update
-  );
+  watch([() => toValue(initialPlacement), () => toValue(initialStrategy), middleware], update);
 
   // Auto-update when both elements are mounted and open
   let cleanup: (() => void) | undefined;
@@ -249,6 +260,14 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
     };
   });
 
+  const ARROW_CONTEXT_INJECTION_KEY = Symbol() as InjectionKey<ArrowContext>;
+
+  provide(ARROW_CONTEXT_INJECTION_KEY, {
+    arrowRef,
+    middlewareData,
+    placement,
+  });
+
   return {
     x,
     y,
@@ -261,6 +280,7 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
     refs: {
       reference: referenceRef,
       floating: floatingRef,
+      arrow: arrowRef,
     },
     elements: {
       get reference() {
@@ -272,6 +292,7 @@ export function useFloating(options: UseFloatingOptions = {}): FloatingContext {
     },
     open,
     onOpenChange: handleOpenChange,
+    arrowContext: ARROW_CONTEXT_INJECTION_KEY,
   };
 }
 
@@ -285,4 +306,30 @@ export function autoUpdate(
   options: AutoUpdateOptions = {}
 ) {
   return floatingUIAutoUpdate(reference, floating, update, options);
+}
+
+export interface ArrowOptions {
+  padding?: Padding;
+  element: Ref<HTMLElement | null>;
+}
+
+/**
+ * Positions an inner element of the floating element such that it is centered to the reference element.
+ * @param options The arrow options.
+ * @see https://floating-ui.com/docs/arrow
+ */
+export function arrow(options: ArrowOptions): Middleware {
+  return {
+    name: "arrow",
+    options,
+    fn(args) {
+      const element = toValue(options.element);
+
+      if (element == null) {
+        return {};
+      }
+
+      return FloatingUIArrow({ element, padding: options.padding }).fn(args);
+    },
+  };
 }
