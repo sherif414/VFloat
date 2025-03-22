@@ -1,4 +1,4 @@
-import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, toValue } from "vue";
+import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue";
 import type { FloatingContext } from "../use-floating";
 
 export interface UseRoleOptions {
@@ -55,7 +55,7 @@ export function useRole(
   },
   options: UseRoleOptions = {}
 ): UseRoleReturn {
-  const { open, refs } = context;
+  const { open } = context;
 
   const { enabled = true, role = "dialog" } = options;
 
