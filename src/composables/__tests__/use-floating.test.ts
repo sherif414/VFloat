@@ -1,24 +1,20 @@
-import type { Middleware, Placement, Strategy } from "@floating-ui/dom";
-import { offset } from "@floating-ui/dom";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/vue";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { type Ref, defineComponent, nextTick, ref, toRef } from "vue";
-import { type UseFloatingOptions, useFloating } from "../use-floating";
+import type { Middleware, Placement, Strategy } from "@floating-ui/dom"
+import { offset } from "@floating-ui/dom"
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/vue"
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
+import { type Ref, defineComponent, nextTick, ref, toRef } from "vue"
+import { type UseFloatingOptions, useFloating } from "../use-floating"
 
 // Test utilities
 function setup(options?: UseFloatingOptions & { visible?: Ref<boolean> }) {
-  const reference = ref<HTMLElement | null>(null);
-  const floating = ref<HTMLElement | null>(null);
-  const visible = options?.visible ?? ref(true);
+  const reference = ref<HTMLElement | null>(null)
+  const floating = ref<HTMLElement | null>(null)
+  const visible = options?.visible ?? ref(true)
 
-  const { middlewareData, placement, x, y, strategy, update } = useFloating({
-    elements: {
-      reference: reference,
-      floating,
-    },
+  const { middlewareData, placement, x, y, strategy, update } = useFloating(reference, floating, {
     open: visible,
     ...options,
-  });
+  })
 
   return {
     middlewareData,
@@ -30,17 +26,17 @@ function setup(options?: UseFloatingOptions & { visible?: Ref<boolean> }) {
     reference,
     floating,
     visible,
-  };
+  }
 }
 
 describe("useFloating", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-  });
+    vi.useFakeTimers()
+  })
 
   afterEach(() => {
-    vi.useRealTimers();
-  });
+    vi.useRealTimers()
+  })
 
   // =========================================================
   // Basic Placement Tests
@@ -51,7 +47,7 @@ describe("useFloating", () => {
         name: "App",
         props: ["placement"],
         setup(props: { placement?: Placement }) {
-          return setup({ placement: props.placement });
+          return setup({ placement: props.placement })
         },
         template: /* HTML */ `
           <div ref="reference" style="width: 30px;height: 30px;" />
@@ -59,48 +55,48 @@ describe("useFloating", () => {
           <div data-testid="placement-x">{{x}}</div>
           <div data-testid="placement-y">{{y}}</div>
         `,
-      });
+      })
 
       const { rerender, getByTestId } = render(App, {
         props: { placement: "bottom" },
-      });
+      })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("placement-x").textContent).toBe("8");
-        expect(getByTestId("placement-y").textContent).toBe("0");
-      });
+        expect(getByTestId("placement-x").textContent).toBe("8")
+        expect(getByTestId("placement-y").textContent).toBe("0")
+      })
 
-      await rerender({ placement: "right" });
+      await rerender({ placement: "right" })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("placement-x").textContent).toBe("8");
-        expect(getByTestId("placement-y").textContent).toBe("0");
-      });
-    });
+        expect(getByTestId("placement-x").textContent).toBe("8")
+        expect(getByTestId("placement-y").textContent).toBe("0")
+      })
+    })
 
     test("uses bottom as default placement", async () => {
       const App = defineComponent({
         name: "App",
         setup() {
-          return setup();
+          return setup()
         },
         template: /* HTML */ `
           <div ref="reference" />
           <div ref="floating" />
           <div data-testid="default-placement">{{placement}}</div>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("default-placement").textContent).toBe("bottom");
-      });
-    });
-  });
+        expect(getByTestId("default-placement").textContent).toBe("bottom")
+      })
+    })
+  })
 
   // =========================================================
   // Middleware Tests
@@ -111,8 +107,8 @@ describe("useFloating", () => {
         name: "App",
         props: ["middleware"],
         setup(props: { middleware?: Middleware[] }) {
-          const middleware = () => props.middleware || [];
-          return setup({ middleware: middleware() });
+          const middleware = ref(props.middleware || [])
+          return setup({ middleware })
         },
         template: /* HTML */ `
           <div ref="reference" />
@@ -120,30 +116,30 @@ describe("useFloating", () => {
           <div data-testid="middleware-x">{{x}}</div>
           <div data-testid="middleware-y">{{y}}</div>
         `,
-      });
+      })
 
-      const { rerender, getByTestId } = render(App);
+      const { rerender, getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("middleware-x").textContent).toBe("0");
-        expect(getByTestId("middleware-y").textContent).toBe("0");
-      });
+        expect(getByTestId("middleware-x").textContent).toBe("0")
+        expect(getByTestId("middleware-y").textContent).toBe("0")
+      })
 
-      await rerender({ middleware: [offset(10)] });
+      await rerender({ middleware: [offset(10)] })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("middleware-x").textContent).toBe("0");
-        expect(getByTestId("middleware-y").textContent).toBe("10");
-      });
-    });
+        expect(getByTestId("middleware-x").textContent).toBe("0")
+        expect(getByTestId("middleware-y").textContent).toBe("10")
+      })
+    })
 
     test("middleware can be an empty array", async () => {
       const App = defineComponent({
         name: "App",
         setup() {
-          return setup({ middleware: [] });
+          return setup({ middleware: ref([]) })
         },
         template: /* HTML */ `
           <div ref="reference" />
@@ -151,17 +147,17 @@ describe("useFloating", () => {
           <div data-testid="empty-middleware-x">{{x}}</div>
           <div data-testid="empty-middleware-y">{{y}}</div>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("empty-middleware-x").textContent).toBe("0");
-        expect(getByTestId("empty-middleware-y").textContent).toBe("0");
-      });
-    });
-  });
+        expect(getByTestId("empty-middleware-x").textContent).toBe("0")
+        expect(getByTestId("empty-middleware-y").textContent).toBe("0")
+      })
+    })
+  })
 
   // =========================================================
   // Strategy Tests
@@ -172,53 +168,53 @@ describe("useFloating", () => {
         name: "App",
         props: ["strategy"],
         setup(props: { strategy?: Strategy }) {
-          return setup({ strategy: props.strategy });
+          return setup({ strategy: props.strategy })
         },
         template: /* HTML */ `
           <div ref="reference" />
           <div ref="floating" />
           <div data-testid="strategy-value">{{strategy}}</div>
         `,
-      });
+      })
 
       const { rerender, getByTestId } = render(App, {
         props: { strategy: "absolute" },
-      });
+      })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("strategy-value").textContent).toBe("absolute");
-      });
+        expect(getByTestId("strategy-value").textContent).toBe("absolute")
+      })
 
-      await rerender({ strategy: "fixed" });
+      await rerender({ strategy: "fixed" })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("strategy-value").textContent).toBe("fixed");
-      });
-    });
+        expect(getByTestId("strategy-value").textContent).toBe("fixed")
+      })
+    })
 
     test("uses absolute as default strategy", async () => {
       const App = defineComponent({
         name: "App",
         setup() {
-          return setup();
+          return setup()
         },
         template: /* HTML */ `
           <div ref="reference" />
           <div ref="floating" />
           <div data-testid="default-strategy">{{strategy}}</div>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("default-strategy").textContent).toBe("absolute");
-      });
-    });
-  });
+        expect(getByTestId("default-strategy").textContent).toBe("absolute")
+      })
+    })
+  })
 
   // =========================================================
   // Visibility Tests
@@ -229,44 +225,42 @@ describe("useFloating", () => {
         name: "App",
         props: ["visible"],
         setup(props: { visible?: boolean }) {
-          const visible = ref(props.visible ?? false);
-          return { ...setup({ visible: visible }), visible };
+          const visible = ref(props.visible ?? false)
+          return { ...setup({ visible: visible }), visible }
         },
         template: /* HTML */ `
           <div ref="reference" />
           <div ref="floating" />
           <div data-testid="visibility-x">{{x}}</div>
           <div data-testid="visibility-y">{{y}}</div>
-          <button data-testid="toggle" @click="visible = !visible">
-            Toggle
-          </button>
+          <button data-testid="toggle" @click="visible = !visible">Toggle</button>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("visibility-x").textContent).toBe("0");
-        expect(getByTestId("visibility-y").textContent).toBe("0");
-      });
+        expect(getByTestId("visibility-x").textContent).toBe("0")
+        expect(getByTestId("visibility-y").textContent).toBe("0")
+      })
 
-      await fireEvent.click(getByTestId("toggle"));
+      await fireEvent.click(getByTestId("toggle"))
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("visibility-x").textContent).toBe("0");
-        expect(getByTestId("visibility-y").textContent).toBe("0");
-      });
-    });
+        expect(getByTestId("visibility-x").textContent).toBe("0")
+        expect(getByTestId("visibility-y").textContent).toBe("0")
+      })
+    })
 
     test("does not update floating coords when visible changes to false", async () => {
       const App = defineComponent({
         name: "App",
         props: ["visible"],
         setup(props: { visible?: boolean }) {
-          const visible = () => props.visible ?? true;
-          return setup({ visible: toRef(visible) });
+          const visible = () => props.visible ?? true
+          return setup({ visible: toRef(visible) })
         },
         template: /* HTML */ `
           <div ref="reference" />
@@ -274,65 +268,63 @@ describe("useFloating", () => {
           <div data-testid="hide-x">{{x}}</div>
           <div data-testid="hide-y">{{y}}</div>
         `,
-      });
+      })
 
       const { rerender, getByTestId } = render(App, {
         props: { visible: true },
-      });
+      })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("hide-x").textContent).toBe("0");
-        expect(getByTestId("hide-y").textContent).toBe("0");
-      });
+        expect(getByTestId("hide-x").textContent).toBe("0")
+        expect(getByTestId("hide-y").textContent).toBe("0")
+      })
 
-      await rerender({ visible: false });
+      await rerender({ visible: false })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("hide-x").textContent).toBe("0");
-        expect(getByTestId("hide-y").textContent).toBe("0");
-      });
-    });
+        expect(getByTestId("hide-x").textContent).toBe("0")
+        expect(getByTestId("hide-y").textContent).toBe("0")
+      })
+    })
 
     test("updates strategy when visible changes", async () => {
       const App = defineComponent({
         name: "App",
         props: ["visible", "strategy"],
         setup(props: { visible?: boolean; strategy?: Strategy }) {
-          const visible = ref(props.visible ?? false);
+          const visible = ref(props.visible ?? false)
           return {
             ...setup({ strategy: props.strategy, visible }),
             visible,
-          };
+          }
         },
         template: /* HTML */ `
           <div ref="reference" />
           <div ref="floating" />
           <div data-testid="strategy-visibility">{{strategy}}</div>
-          <button data-testid="toggle-visibility" @click="visible = !visible">
-            Toggle
-          </button>
+          <button data-testid="toggle-visibility" @click="visible = !visible">Toggle</button>
         `,
-      });
+      })
 
       const { getByTestId } = render(App, {
         props: { strategy: "fixed" },
-      });
+      })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("strategy-visibility").textContent).toBe("fixed");
-      });
+        expect(getByTestId("strategy-visibility").textContent).toBe("fixed")
+      })
 
-      await fireEvent.click(getByTestId("toggle-visibility"));
+      await fireEvent.click(getByTestId("toggle-visibility"))
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("strategy-visibility").textContent).toBe("fixed");
-      });
-    });
-  });
+        expect(getByTestId("strategy-visibility").textContent).toBe("fixed")
+      })
+    })
+  })
 
   // =========================================================
   // Manual Update Tests
@@ -343,8 +335,8 @@ describe("useFloating", () => {
         name: "App",
         props: ["placement"],
         setup(props: { placement?: Placement }) {
-          const { update, ...rest } = setup({ placement: props.placement });
-          return { update, ...rest };
+          const { update, ...rest } = setup({ placement: props.placement })
+          return { update, ...rest }
         },
         template: /* HTML */ `
           <div ref="reference" />
@@ -352,32 +344,32 @@ describe("useFloating", () => {
           <div data-testid="update-placement">{{placement}}</div>
           <button data-testid="update" @click="update">Update</button>
         `,
-      });
+      })
 
       const { getByTestId } = render(App, {
         props: { placement: "top" },
-      });
+      })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("update-placement").textContent).toBe("top");
-      });
+        expect(getByTestId("update-placement").textContent).toBe("top")
+      })
 
-      await fireEvent.click(getByTestId("update"));
+      await fireEvent.click(getByTestId("update"))
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("update-placement").textContent).toBe("top");
-      });
-    });
+        expect(getByTestId("update-placement").textContent).toBe("top")
+      })
+    })
 
     test("can manually update when strategy changes", async () => {
       const App = defineComponent({
         name: "App",
         props: ["strategy"],
         setup(props: { strategy?: Strategy }) {
-          const { update, ...rest } = setup({ strategy: props.strategy });
-          return { update, ...rest };
+          const { update, ...rest } = setup({ strategy: props.strategy })
+          return { update, ...rest }
         },
         template: /* HTML */ `
           <div ref="reference" />
@@ -385,35 +377,35 @@ describe("useFloating", () => {
           <div data-testid="update-strategy">{{strategy}}</div>
           <button data-testid="update-strat" @click="update">Update</button>
         `,
-      });
+      })
 
       const { getByTestId } = render(App, {
         props: { strategy: "fixed" },
-      });
+      })
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("update-strategy").textContent).toBe("fixed");
-      });
+        expect(getByTestId("update-strategy").textContent).toBe("fixed")
+      })
 
-      await fireEvent.click(getByTestId("update-strat"));
+      await fireEvent.click(getByTestId("update-strat"))
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("update-strategy").textContent).toBe("fixed");
-      });
-    });
+        expect(getByTestId("update-strategy").textContent).toBe("fixed")
+      })
+    })
 
     test("can manually update with middleware", async () => {
-      const offsetData = { mainAxis: 10, crossAxis: 0, alignmentAxis: null };
+      const offsetData = { mainAxis: 10, crossAxis: 0, alignmentAxis: null }
 
       const App = defineComponent({
         name: "App",
         props: ["middleware"],
         setup(_props: { middleware?: Middleware[] }) {
-          const middleware = [offset(offsetData)];
-          const { update, middlewareData, ...rest } = setup({ middleware });
-          return { update, middlewareData, ...rest };
+          const middleware = ref([offset(offsetData)])
+          const { update, middlewareData, ...rest } = setup({ middleware })
+          return { update, middlewareData, ...rest }
         },
         template: /* HTML */ `
           <div ref="reference" />
@@ -421,26 +413,26 @@ describe("useFloating", () => {
           <div data-testid="middleware-data">{{middlewareData.offset?.y}}</div>
           <button data-testid="update" @click="update">Update</button>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("middleware-data").textContent).toBe("10");
-      });
+        expect(getByTestId("middleware-data").textContent).toBe("10")
+      })
 
       // Update offset value
-      offsetData.mainAxis = 20;
+      offsetData.mainAxis = 20
 
-      await fireEvent.click(getByTestId("update"));
+      await fireEvent.click(getByTestId("update"))
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("middleware-data").textContent).toBe("20");
-      });
-    });
-  });
+        expect(getByTestId("middleware-data").textContent).toBe("20")
+      })
+    })
+  })
 
   // =========================================================
   // Component Integration Tests
@@ -450,111 +442,103 @@ describe("useFloating", () => {
       const Reference = defineComponent({
         name: "Reference",
         setup() {
-          return {};
+          return {}
         },
         template: ` <div data-testid="reference" />`,
-      });
+      })
 
       const Floating = defineComponent({
         name: "Floating",
         setup() {
-          return {};
+          return {}
         },
         template: `
         <div data-testid="floating" />`,
-      });
+      })
 
       const App = defineComponent({
         name: "App",
         components: { Reference, Floating },
         setup() {
-          const reference = ref<InstanceType<typeof Reference> | null>(null);
-          const floating = ref<InstanceType<typeof Floating> | null>(null);
-          const open = ref(true);
+          const reference = ref<HTMLElement | null>(null)
+          const floating = ref<HTMLElement | null>(null)
+          const open = ref(true)
 
-          const { x, y } = useFloating({
-            elements: {
-              reference: () => reference.value?.$el,
-              floating: () => floating.value?.$el,
-            },
+          const { x, y } = useFloating(reference, floating, {
             open,
-          });
+          })
 
-          return { reference, floating, x, y };
+          return { reference, floating, x, y }
         },
         template: /* HTML */ `
-          <Reference ref="reference" />
-          <Floating ref="floating" />
+          <Reference :ref="(vm)=> reference = vm?.$el" />
+          <Floating :ref="(vm)=> floating = vm?.$el" />
           <div data-testid="component-x">{{x}}</div>
           <div data-testid="component-y">{{y}}</div>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("component-x").textContent).toBe("0");
-        expect(getByTestId("component-y").textContent).toBe("0");
-      });
-    });
+        expect(getByTestId("component-x").textContent).toBe("0")
+        expect(getByTestId("component-y").textContent).toBe("0")
+      })
+    })
 
     test("works with exposed refs", async () => {
       const Reference = defineComponent({
         name: "Reference",
         setup(_, { expose }) {
-          const el = ref<HTMLElement | null>(null);
-          expose({ el });
-          return { el };
+          const el = ref<HTMLElement | null>(null)
+          expose({ el })
+          return { el }
         },
         template: `
            <div ref="el" data-testid="reference-el" />
         `,
-      });
+      })
 
       const Floating = defineComponent({
         name: "Floating",
         setup(_, { expose }) {
-          const el = ref<HTMLElement | null>(null);
-          expose({ el });
-          return { el };
+          const el = ref<HTMLElement | null>(null)
+          expose({ el })
+          return { el }
         },
         template: /* HTML */ `<div ref="el" data-testid="floating-el" />`,
-      });
+      })
 
       const App = defineComponent({
         name: "App",
         components: { Reference, Floating },
         setup() {
-          const reference = ref<InstanceType<typeof Reference> | null>(null);
-          const floating = ref<InstanceType<typeof Floating> | null>(null);
-          const open = ref(true);
+          const reference = ref<HTMLElement | null>(null)
+          const floating = ref<HTMLElement | null>(null)
+          const open = ref(true)
 
-          const { x, y } = useFloating({
-            elements: {
-              reference: () => reference.value?.el ?? null,
-              floating: () => floating.value?.el ?? null,
-            },
+          const { x, y } = useFloating(reference, floating, {
             open,
-          });
+          })
 
-          return { reference, floating, x, y };
+          return { reference, floating, x, y }
         },
         template: /* HTML */ `
-          <Reference ref="reference" />
-          <Floating ref="floating" />
+          <Reference :ref="(vm)=> reference = vm?.$el" />
+          <Floating :ref="(vm)=> floating = vm?.$el" />
           <div data-testid="exposed-x">{{x}}</div>
           <div data-testid="exposed-y">{{y}}</div>
         `,
-      });
+      })
 
-      const { getByTestId } = render(App);
+      const { getByTestId } = render(App)
 
-      await nextTick();
+      await nextTick()
       await waitFor(() => {
-        expect(getByTestId("exposed-x").textContent).toBe("0");
-        expect(getByTestId("exposed-y").textContent).toBe("0");
-      });
-    });
-  });
-});
+        expect(getByTestId("exposed-x").textContent).toBe("0")
+        expect(getByTestId("exposed-y").textContent).toBe("0")
+      })
+    })
+  })
+})
