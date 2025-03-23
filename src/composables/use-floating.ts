@@ -3,33 +3,55 @@ import type {
   AutoUpdateOptions,
   Middleware,
   MiddlewareData,
-  Padding,
   Placement,
   Strategy,
 } from "@floating-ui/dom"
-import {
-  arrow as FloatingUIArrow,
-  computePosition,
-  autoUpdate as floatingUIAutoUpdate,
-} from "@floating-ui/dom"
+import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { ComputedRef, InjectionKey, MaybeRefOrGetter, Ref } from "vue"
 import {
   computed,
+  inject,
   onScopeDispose,
   provide,
   ref,
   shallowRef,
   toRef,
   toValue,
+  useId,
   watch,
-  inject,
 } from "vue"
+import { FLOATING_TREE_INJECTION_KEY } from "./use-floating-tree"
+import { arrow, type ArrowContext, type ArrowOptions } from "./use-arrow"
+
+//=======================================================================================
+// 📌 Constants
+//=======================================================================================
+
+export const ARROW_INJECTION_KEY = Symbol() as InjectionKey<ArrowContext>
+
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
- * Provides positioning for a floating element relative to a reference element
- * @param reference The reference element or a reactive reference to it
- * @param floating The floating element or a reactive reference to it
- * @param options Additional options for the floating behavior
+ * Composable function that provides positioning for a floating element relative to a reference element
+ *
+ * This composable handles the positioning logic for floating elements (like tooltips, popovers, etc.)
+ * relative to their reference elements. It uses Floating UI under the hood and provides reactive
+ * positioning data and styles.
+ *
+ * @param reference - The reference element or a reactive reference to it
+ * @param floating - The floating element or a reactive reference to it
+ * @param options - Additional options for the floating behavior
+ * @returns A FloatingContext object containing positioning data and methods
+ *
+ * @example
+ * ```ts
+ * const { floatingStyles, refs } = useFloating(referenceRef, floatingRef, {
+ *   placement: 'bottom',
+ *   strategy: 'absolute'
+ * })
+ * ```
  */
 export function useFloating(
   reference: Ref<HTMLElement | null>,
@@ -42,10 +64,12 @@ export function useFloating(
     transform = true,
     middleware: middlewareOption = [],
     whileElementsMounted,
-    open: controlledOpen,
-    onOpenChange,
-    nodeId,
-    arrow: useArrow = false,
+    nodeId = useId(),
+    arrow: withArrow = false,
+    open = ref(false),
+    onOpenChange = (value: boolean) => {
+      open.value = value
+    },
   } = options
 
   // Element refs
@@ -58,17 +82,12 @@ export function useFloating(
   const placement = ref(toValue(initialPlacement) as Placement)
   const middleware = computed(() => {
     const middlewares = toValue(middlewareOption)
-    return useArrow ? [...middlewares, arrow({ element: arrowRef })] : middlewares
+    return withArrow ? [...middlewares, arrow({ element: arrowRef })] : middlewares
   })
 
   const middlewareData = shallowRef<MiddlewareData>({})
   const isPositioned = ref(false)
 
-  // Open state handling
-  const internalOpen = ref(toValue(controlledOpen) ?? false)
-  const open = controlledOpen ? toRef(controlledOpen) : internalOpen
-
-  // Update function
   const update = async () => {
     if (!reference.value || !floating.value) return
 
@@ -78,15 +97,14 @@ export function useFloating(
       middleware: middleware.value,
     })
 
-    x.value = result.x
-    y.value = result.y
+    x.value = Math.round(result.x)
+    y.value = Math.round(result.y)
     placement.value = result.placement
     strategy.value = result.strategy
     middlewareData.value = result.middlewareData
     isPositioned.value = open.value
   }
 
-  // Watch for changes that should trigger an update
   watch(
     [
       () => toValue(initialPlacement),
@@ -98,7 +116,6 @@ export function useFloating(
     update
   )
 
-  // Auto-update when both elements are mounted and open
   let cleanup: (() => void) | undefined
 
   watch(
@@ -120,7 +137,7 @@ export function useFloating(
 
   // Handle floating tree for nested elements
   if (nodeId) {
-    const floatingTree = inject(FloatingTreeContext, null)
+    const floatingTree = inject(FLOATING_TREE_INJECTION_KEY, null)
 
     if (floatingTree) {
       // Create a simplified context with only the necessary properties for the tree
@@ -150,7 +167,6 @@ export function useFloating(
     }
   }
 
-  // Cleanup on scope dispose
   onScopeDispose(() => cleanup?.())
 
   // Reset isPositioned when closed
@@ -160,16 +176,6 @@ export function useFloating(
     }
   })
 
-  // Handle controlled open state
-  const handleOpenChange = (value: boolean) => {
-    if (onOpenChange) {
-      onOpenChange(value)
-    } else {
-      internalOpen.value = value
-    }
-  }
-
-  // Computed floating styles
   const floatingStyles = computed(() => {
     const initialStyles = {
       position: strategy.value,
@@ -196,14 +202,14 @@ export function useFloating(
 
     return {
       ...initialStyles,
-      left: `${x.value}px`,
-      top: `${y.value}px`,
+      left: `${Math.round(x.value)}px`,
+      top: `${Math.round(y.value)}px`,
     }
   })
 
   // Provide arrow context only if arrow is enabled
-  if (useArrow) {
-    provide(ARROW_CONTEXT, {
+  if (withArrow) {
+    provide(ARROW_INJECTION_KEY, {
       arrowRef,
       middlewareData,
       placement,
@@ -225,13 +231,22 @@ export function useFloating(
       arrow: arrowRef,
     },
     open,
-    onOpenChange: handleOpenChange,
-    arrowContext: ARROW_CONTEXT,
+    onOpenChange,
+    arrowContext: ARROW_INJECTION_KEY,
   }
 }
 
 /**
  * Auto-update function to use with `whileElementsMounted` option
+ *
+ * This function provides automatic position updates for floating elements.
+ * It's a wrapper around Floating UI's autoUpdate function.
+ *
+ * @param reference - The reference element
+ * @param floating - The floating element
+ * @param update - The update function to call
+ * @param options - Additional options for auto-updating
+ * @returns A cleanup function to stop auto-updating
  */
 export function autoUpdate(
   reference: HTMLElement,
@@ -242,75 +257,43 @@ export function autoUpdate(
   return floatingUIAutoUpdate(reference, floating, update, options)
 }
 
-export interface ArrowOptions {
-  padding?: Padding
-  element: Ref<HTMLElement | null>
-}
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
 
 /**
- * Positions an inner element of the floating element such that it is centered to the reference element.
- * @param options The arrow options.
- * @see https://floating-ui.com/docs/arrow
+ * CSS styles for positioning floating elements
  */
-export function arrow(options: ArrowOptions): Middleware {
-  return {
-    name: "arrow",
-    options,
-    fn(args) {
-      const element = toValue(options.element)
-
-      if (element == null) {
-        return {}
-      }
-
-      return FloatingUIArrow({ element, padding: options.padding }).fn(args)
-    },
-  }
-}
-
-/**
- * Creates a floating tree context for managing nested floating elements
- */
-export function useFloatingTree(): FloatingTreeType {
-  const tree = inject(FloatingTreeContext, null)
-  if (tree) return tree
-
-  // Use type assertion to fix the type error
-  const treeData: FloatingTreeData = {
-    nodesRef: ref([]),
-    parent: ref(null),
-  }
-
-  provide(FloatingTreeContext, treeData)
-
-  return treeData
-}
-
-// types
-
-export interface ArrowContext extends Pick<FloatingContext, "middlewareData" | "placement"> {
-  arrowRef: Ref<HTMLElement | SVGAElement | null>
-}
-
 export interface FloatingStyles {
+  /**
+   * CSS position property
+   */
   position: Strategy
+
+  /**
+   * CSS top property
+   */
   top: string
+
+  /**
+   * CSS left property
+   */
   left: string
+
+  /**
+   * CSS transform property
+   */
   transform?: string
+
+  /**
+   * CSS will-change property
+   */
   "will-change"?: "transform"
 }
 
-export interface FloatingTreeData {
-  nodesRef: Ref<Array<{ id: string; parentId: string | null; context: FloatingContext | null }>>
-  parent: Ref<HTMLElement | null>
-  nodeId?: string
-}
-
-export type FloatingTreeType = FloatingTreeData | null
-
-export const FloatingTreeContext = Symbol("FloatingTree") as InjectionKey<FloatingTreeType>
-export const ARROW_CONTEXT = Symbol("ArrowContext") as InjectionKey<ArrowContext>
-
+/**
+ * Options for configuring floating element behavior
+ */
 export interface UseFloatingOptions {
   /**
    * Where to place the floating element relative to its reference element.
@@ -325,7 +308,7 @@ export interface UseFloatingOptions {
   strategy?: MaybeRefOrGetter<Strategy | undefined>
 
   /**
-   * Whether to use CSS transform instead of top/left positioning
+   * Whether to use CSS transform instead of top/left positioning.
    * @default true
    */
   transform?: MaybeRefOrGetter<boolean | undefined>
@@ -336,7 +319,7 @@ export interface UseFloatingOptions {
   middleware?: Ref<Middleware[]>
 
   /**
-   * Function called when both the reference and floating elements are mounted
+   * Function called when both the reference and floating elements are mounted.
    */
   whileElementsMounted?: (
     reference: HTMLElement,
@@ -345,71 +328,98 @@ export interface UseFloatingOptions {
   ) => undefined | (() => void)
 
   /**
-   * Whether the floating element is open
+   * Whether the floating element is open.
    * @default false
    */
   open?: Ref<boolean>
 
   /**
-   * Function called when the open state changes
+   * Function called when the open state changes.
    */
   onOpenChange?: (open: boolean) => void
 
   /**
-   * Unique ID for this floating element, used in floating tree context
+   * Unique ID for this floating element, used in floating tree context.
    */
   nodeId?: string
 
   /**
-   * Root context for the floating element tree
+   * Root context for the floating element tree.
    */
   rootContext?: Partial<FloatingContext>
 
   /**
-   * Whether to enable the arrow middleware
+   * Whether to enable the arrow middleware.
    * @default false
    */
   arrow?: boolean
 }
 
+/**
+ * Context object returned by useFloating containing all necessary data and methods
+ */
 export interface FloatingContext {
-  /** The x-coordinate of the floating element */
+  /**
+   * The x-coordinate of the floating element
+   */
   x: Readonly<Ref<number>>
 
-  /** The y-coordinate of the floating element */
+  /**
+   * The y-coordinate of the floating element
+   */
   y: Readonly<Ref<number>>
 
-  /** The strategy used for positioning */
+  /**
+   * The strategy used for positioning
+   */
   strategy: Readonly<Ref<Strategy>>
 
-  /** The placement of the floating element */
+  /**
+   * The placement of the floating element
+   */
   placement: Readonly<Ref<Placement>>
 
-  /** Data from middleware for additional customization */
+  /**
+   * Data from middleware for additional customization
+   */
   middlewareData: Readonly<Ref<MiddlewareData>>
 
-  /** Whether the floating element has been positioned */
+  /**
+   * Whether the floating element has been positioned
+   */
   isPositioned: Readonly<Ref<boolean>>
 
-  /** Computed styles to apply to the floating element */
+  /**
+   * Computed styles to apply to the floating element
+   */
   floatingStyles: ComputedRef<FloatingStyles>
 
-  /** Function to manually update the position */
+  /**
+   * Function to manually update the position
+   */
   update: () => void
 
-  /** The refs object containing reference to reference and floating elements */
+  /**
+   * The refs object containing reference to reference and floating elements
+   */
   refs: {
     reference: Ref<HTMLElement | null>
     floating: Ref<HTMLElement | null>
     arrow: Ref<HTMLElement | null>
   }
 
-  /** Whether the floating element is open */
+  /**
+   * Whether the floating element is open
+   */
   open: Readonly<Ref<boolean>>
 
-  /** Function to update the open state */
+  /**
+   * Function to update the open state
+   */
   onOpenChange: (open: boolean) => void
 
-  /** FloatingArrow context key */
+  /**
+   * FloatingArrow context key
+   */
   arrowContext: InjectionKey<ArrowContext>
 }
