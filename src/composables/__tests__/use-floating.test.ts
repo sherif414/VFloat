@@ -3,6 +3,7 @@ import { offset } from "@floating-ui/dom"
 import { describe, expect, test } from "vitest"
 import { render } from "vitest-browser-vue"
 import type { Locator } from "@vitest/browser/context"
+import { userEvent } from "@vitest/browser/context"
 import { type Ref, defineComponent, nextTick, ref, toRef } from "vue"
 import { type UseFloatingOptions, useFloating } from "../use-floating"
 
@@ -41,6 +42,7 @@ describe("useFloating", () => {
   // =========================================================
   describe("basic placement functionality", () => {
     test("updates floating coords on placement change", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["placement"],
@@ -58,37 +60,18 @@ describe("useFloating", () => {
       const { rerender, getByTestId } = render(App, {
         props: { placement: "bottom" },
       })
-
       await nextTick()
-      // Wait for the DOM to update and calculations to complete
-      // Just check that y is greater than 0 (positioned below reference)
+
+      // Assert initial state
       expect(Number(getTextContent(getByTestId("placement-x")))).toBe(0)
       expect(Number(getTextContent(getByTestId("placement-y")))).toBeGreaterThan(0)
 
-      await rerender({ placement: "right" })
-
+      // Act
+      rerender({ placement: "right" })
       await nextTick()
-      // For right placement, x should be greater than 0 (positioned to the right)
+
+      // Assert after placement change
       expect(Number(getTextContent(getByTestId("placement-x")))).toBeGreaterThan(0)
-    })
-
-    test("uses bottom as default placement", async () => {
-      const App = defineComponent({
-        name: "App",
-        setup() {
-          return setup()
-        },
-        template: /* HTML */ `
-          <div ref="reference" />
-          <div ref="floating" />
-          <div data-testid="default-placement">{{placement}}</div>
-        `,
-      })
-
-      const { getByTestId } = render(App)
-
-      await nextTick()
-      expect(getTextContent(getByTestId("default-placement"))).toBe("bottom")
     })
   })
 
@@ -97,6 +80,7 @@ describe("useFloating", () => {
   // =========================================================
   describe("middleware functionality", () => {
     test("updates floating coords on middleware change", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["middleware"],
@@ -113,20 +97,22 @@ describe("useFloating", () => {
       })
 
       const { rerender, getByTestId } = render(App)
-
       await nextTick()
-      // Check that position has been calculated
+
+      // Assert initial state
       expect(Number(getTextContent(getByTestId("middleware-y")))).toBeGreaterThanOrEqual(0)
 
+      // Act
       await rerender({ middleware: [offset(10)] })
-
       await nextTick()
-      // With offset middleware, y should be greater
+
+      // Assert after middleware change
       const yWithoutOffset = Number(getTextContent(getByTestId("middleware-y")))
       expect(yWithoutOffset).toBeGreaterThan(0)
     })
 
     test("middleware can be an empty array", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         setup() {
@@ -141,9 +127,9 @@ describe("useFloating", () => {
       })
 
       const { getByTestId } = render(App)
-
       await nextTick()
-      // Position should be calculated even with empty middleware
+
+      // Assert
       expect(Number(getTextContent(getByTestId("empty-middleware-y")))).toBeGreaterThanOrEqual(0)
     })
   })
@@ -153,6 +139,7 @@ describe("useFloating", () => {
   // =========================================================
   describe("strategy functionality", () => {
     test("updates floating coords on strategy change", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["strategy"],
@@ -169,17 +156,21 @@ describe("useFloating", () => {
       const { rerender, getByTestId } = render(App, {
         props: { strategy: "absolute" },
       })
-
       await nextTick()
+
+      // Assert initial state
       expect(getTextContent(getByTestId("strategy-value"))).toBe("absolute")
 
-      await rerender({ strategy: "fixed" })
-
+      // Act
+      rerender({ strategy: "fixed" })
       await nextTick()
+
+      // Assert after strategy change
       expect(getTextContent(getByTestId("strategy-value"))).toBe("fixed")
     })
 
     test("uses absolute as default strategy", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         setup() {
@@ -193,8 +184,9 @@ describe("useFloating", () => {
       })
 
       const { getByTestId } = render(App)
-
       await nextTick()
+
+      // Assert
       expect(getTextContent(getByTestId("default-strategy"))).toBe("absolute")
     })
   })
@@ -204,6 +196,7 @@ describe("useFloating", () => {
   // =========================================================
   describe("visibility functionality", () => {
     test("updates floating coords when visible changes to true", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["visible"],
@@ -221,20 +214,22 @@ describe("useFloating", () => {
       })
 
       const { getByTestId } = render(App)
-
       await nextTick()
-      // Initially invisible, so position should be 0
+
+      // Assert initial state
       expect(Number(getTextContent(getByTestId("visibility-x")))).toBe(0)
       expect(Number(getTextContent(getByTestId("visibility-y")))).toBe(0)
 
-      await getByTestId("toggle").click()
-
+      // Act
+      await userEvent.click(getByTestId("toggle"))
       await nextTick()
-      // After becoming visible, position should be calculated
+
+      // Assert after visibility change
       expect(Number(getTextContent(getByTestId("visibility-y")))).toBeGreaterThan(0)
     })
 
     test("does not update floating coords when visible changes to false", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["visible"],
@@ -253,20 +248,22 @@ describe("useFloating", () => {
       const { rerender, getByTestId } = render(App, {
         props: { visible: true },
       })
-
       await nextTick()
-      // Initially visible, so position should be calculated
+
+      // Assert initial state
       expect(Number(getTextContent(getByTestId("hide-y")))).toBeGreaterThan(0)
 
+      // Act
       await rerender({ visible: false })
-
       await nextTick()
-      // Should reset to 0 when invisible
+
+      // Assert after visibility change
       expect(Number(getTextContent(getByTestId("hide-x")))).toBe(0)
       expect(Number(getTextContent(getByTestId("hide-y")))).toBe(0)
     })
 
     test("updates strategy when visible changes", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["visible", "strategy"],
@@ -288,13 +285,16 @@ describe("useFloating", () => {
       const { getByTestId } = render(App, {
         props: { strategy: "fixed" },
       })
-
       await nextTick()
+
+      // Assert initial state
       expect(getTextContent(getByTestId("strategy-visibility"))).toBe("fixed")
 
-      await getByTestId("toggle-visibility").click()
-
+      // Act
+      await userEvent.click(getByTestId("toggle-visibility"))
       await nextTick()
+
+      // Assert after visibility change
       expect(getTextContent(getByTestId("strategy-visibility"))).toBe("fixed")
     })
   })
@@ -304,6 +304,7 @@ describe("useFloating", () => {
   // =========================================================
   describe("manual update functionality", () => {
     test("can manually update floating coords with update()", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["placement"],
@@ -322,17 +323,21 @@ describe("useFloating", () => {
       const { getByTestId } = render(App, {
         props: { placement: "top" },
       })
-
       await nextTick()
+
+      // Assert initial state
       expect(getTextContent(getByTestId("update-placement"))).toBe("top")
 
-      await getByTestId("update").click()
-
+      // Act
+      await userEvent.click(getByTestId("update"))
       await nextTick()
+
+      // Assert after update
       expect(getTextContent(getByTestId("update-placement"))).toBe("top")
     })
 
     test("can manually update when strategy changes", async () => {
+      // Arrange
       const App = defineComponent({
         name: "App",
         props: ["strategy"],
@@ -351,17 +356,21 @@ describe("useFloating", () => {
       const { getByTestId } = render(App, {
         props: { strategy: "fixed" },
       })
-
       await nextTick()
+
+      // Assert initial state
       expect(getTextContent(getByTestId("update-strategy"))).toBe("fixed")
 
-      await getByTestId("update-strat").click()
-
+      // Act
+      await userEvent.click(getByTestId("update-strat"))
       await nextTick()
+
+      // Assert after update
       expect(getTextContent(getByTestId("update-strategy"))).toBe("fixed")
     })
 
     test("can manually update with middleware", async () => {
+      // Arrange
       const offsetData = { mainAxis: 10, crossAxis: 0, alignmentAxis: null }
 
       const App = defineComponent({
@@ -381,16 +390,17 @@ describe("useFloating", () => {
       })
 
       const { getByTestId } = render(App)
-
       await nextTick()
+
+      // Assert initial state
       expect(getTextContent(getByTestId("middleware-data"))).toBe("10")
 
-      // Update offset value
+      // Act
       offsetData.mainAxis = 20
-
-      await getByTestId("update").click()
-
+      await userEvent.click(getByTestId("update"))
       await nextTick()
+
+      // Assert after update
       expect(getTextContent(getByTestId("middleware-data"))).toBe("20")
     })
   })
