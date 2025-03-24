@@ -1,12 +1,5 @@
-import {
-  type MaybeRefOrGetter,
-  type Ref,
-  computed,
-  onMounted,
-  onScopeDispose,
-  toValue,
-  ref,
-} from "vue"
+import { onClickOutside, useEventListener } from "@vueuse/core"
+import { type MaybeRefOrGetter, computed, onScopeDispose, toValue } from "vue"
 import type { FloatingContext } from "../use-floating"
 
 //=======================================================================================
@@ -33,10 +26,7 @@ import type { FloatingContext } from "../use-floating"
  * })
  * ```
  */
-export function useDismiss(
-  context: FloatingContext,
-  options: UseDismissOptions = {}
-): UseDismissReturn {
+export function useDismiss(context: FloatingContext, options: UseDismissOptions = {}) {
   const {
     open,
     onOpenChange,
@@ -56,15 +46,15 @@ export function useDismiss(
   } = options
 
   const isEnabled = computed(() => toValue(enabled))
-  const isComposing = ref(false)
-  const endedOrStartedInside = ref(false)
+  const { isComposing } = useComposition()
+  let endedOrStartedInside = false
 
   // Event handlers
   const dismissOnEscapeKeyDown = (event: KeyboardEvent) => {
     if (!isEnabled.value || !toValue(escapeKey) || !open.value) return
 
     // Wait until IME is settled
-    if (isComposing.value) {
+    if (isComposing()) {
       return
     }
 
@@ -74,204 +64,65 @@ export function useDismiss(
     }
   }
 
-  const dismissOnPressOutside = (event: MouseEvent) => {
-    if (
-      !isEnabled.value ||
-      !toValue(outsidePress) ||
-      !open.value ||
-      !floating.value ||
-      !reference.value
-    )
-      return
+  useEventListener(document, "keydown", dismissOnEscapeKeyDown)
 
-    // When click outside is lazy (`click` event), handle dragging
-    if (toValue(outsidePressEvent) === "click" && endedOrStartedInside.value) {
-      endedOrStartedInside.value = false
-      return
-    }
-
-    const target = event.target as Node | null
-
-    if (target && floating.value?.contains(target)) {
-      return
-    }
-
-    const outsidePressValue = toValue(outsidePress)
-
-    if (typeof outsidePressValue === "function" && !outsidePressValue(event)) {
-      return
-    }
-
-    // Check for potential bubbling
-    if (reference.value?.contains(target)) {
-      return
-    }
-
-    // Check if the click occurred on the scrollbar
-    if (isHTMLElement(target) && floating.value) {
-      const style = window.getComputedStyle(target)
-      const scrollRe = /auto|scroll/
-      const isScrollableX = scrollRe.test(style.overflowX)
-      const isScrollableY = scrollRe.test(style.overflowY)
-
-      const canScrollX =
-        isScrollableX && target.clientWidth > 0 && target.scrollWidth > target.clientWidth
-      const canScrollY =
-        isScrollableY && target.clientHeight > 0 && target.scrollHeight > target.clientHeight
-
-      const isRTL = style.direction === "rtl"
-
-      // Check click position relative to scrollbar
-      const pressedVerticalScrollbar =
-        canScrollY &&
-        (isRTL
-          ? event.offsetX <= target.offsetWidth - target.clientWidth
-          : event.offsetX > target.clientWidth)
-
-      const pressedHorizontalScrollbar = canScrollX && event.offsetY > target.clientHeight
-
-      if (pressedVerticalScrollbar || pressedHorizontalScrollbar) {
+  onClickOutside(
+    floating.value,
+    (e: PointerEvent) => {
+      if (!isEnabled.value || !toValue(outsidePress) || !open.value) {
         return
       }
-    }
 
-    // Handle event bubbling
-    if (toValue(bubbles) === false) {
-      event.stopPropagation()
-    }
-
-    onOpenChange(false)
-    endedOrStartedInside.value = false
-  }
-
-  const dismissOnReferencePress = (_event: MouseEvent | PointerEvent | Event) => {
-    if (!isEnabled.value || !toValue(referencePress) || !open.value) return
-
-    onOpenChange(false)
-  }
-
-  const dismissOnScroll = () => {
-    if (!isEnabled.value || !toValue(ancestorScroll) || !open.value) return
-
-    onOpenChange(false)
-  }
-
-  // Setup document event listeners
-  let cleanup: (() => void) | undefined
-  let compositionTimeout: number | undefined
-
-  const handleCompositionStart = () => {
-    window.clearTimeout(compositionTimeout)
-    isComposing.value = true
-  }
-
-  const handleCompositionEnd = () => {
-    // Safari fires `compositionend` before `keydown`, wait until next tick
-    compositionTimeout = window.setTimeout(() => {
-      isComposing.value = false
-    }, 5)
-  }
-
-  const addDocumentEvents = () => {
-    if (!isEnabled.value || !floating.value) return
-
-    const doc = floating.value?.ownerDocument
-    // Ensure useCapture is strictly a boolean
-    const useCapture = typeof toValue(capture) === "boolean" ? (toValue(capture) as boolean) : true
-
-    doc.addEventListener("keydown", dismissOnEscapeKeyDown)
-
-    // Cast the event type to string to avoid type issues
-    doc.addEventListener(
-      toValue(outsidePressEvent) as string,
-      dismissOnPressOutside as EventListener,
-      { capture: useCapture }
-    )
-
-    // Add composition event handlers
-    doc.addEventListener("compositionstart", handleCompositionStart)
-    doc.addEventListener("compositionend", handleCompositionEnd)
-
-    if (toValue(ancestorScroll)) {
-      for (const ancestor of scrollAncestors(floating.value)) {
-        ancestor.addEventListener("scroll", dismissOnScroll, { passive: true })
+      if (toValue(outsidePressEvent) === "click" && endedOrStartedInside) {
+        endedOrStartedInside = false
+        return
       }
 
-      if (reference.value) {
-        for (const ancestor of scrollAncestors(reference.value)) {
-          ancestor.addEventListener("scroll", dismissOnScroll, { passive: true })
-        }
-      }
-    }
-
-    return () => {
-      doc.removeEventListener("keydown", dismissOnEscapeKeyDown)
-
-      // Cast the event type to string to avoid type issues
-      doc.removeEventListener(
-        toValue(outsidePressEvent) as string,
-        dismissOnPressOutside as EventListener,
-        { capture: useCapture }
-      )
-
-      // Remove composition event handlers
-      doc.removeEventListener("compositionstart", handleCompositionStart)
-      doc.removeEventListener("compositionend", handleCompositionEnd)
-
-      if (toValue(ancestorScroll)) {
-        if (floating.value) {
-          for (const ancestor of scrollAncestors(floating.value)) {
-            ancestor.removeEventListener("scroll", dismissOnScroll)
-          }
-        }
-
-        if (reference.value) {
-          for (const ancestor of scrollAncestors(reference.value)) {
-            ancestor.removeEventListener("scroll", dismissOnScroll)
-          }
-        }
+      if (isHTMLElement(e.target) && floating.value && isClickOnScrollbar(e)) {
+        return
       }
 
-      window.clearTimeout(compositionTimeout)
+      const shouldBubble = toValue(bubbles)
+      if (typeof shouldBubble === "boolean" ? shouldBubble : shouldBubble?.outsidePress) {
+        e.stopPropagation()
+      }
+      onOpenChange(false)
+      endedOrStartedInside = false
+    },
+    {
+      ignore: [reference],
+      capture: typeof capture === "boolean" ? capture : capture.outsidePress,
     }
-  }
+  )
 
-  onMounted(() => {
-    cleanup = addDocumentEvents()
+  useEventListener(reference, referencePressEvent, () => {
+    if (isEnabled.value && toValue(referencePress) && open.value) {
+      onOpenChange(false)
+    }
   })
 
-  onScopeDispose(() => {
-    cleanup?.()
-  })
-
-  return {
-    getReferenceProps: () => {
-      const eventName = toVueEventHandler(toValue(referencePressEvent))
-      return {
-        [eventName]: dismissOnReferencePress,
+  useEventListener(
+    "scroll",
+    () => {
+      if (isEnabled.value && toValue(ancestorScroll) && open.value) {
+        onOpenChange(false)
       }
     },
-    getFloatingProps: () => ({
-      onMousedown: () => {
-        endedOrStartedInside.value = true
-      },
-      onMouseup: () => {
-        endedOrStartedInside.value = true
-      },
-    }),
-  }
+    { passive: true }
+  )
+
+  useEventListener(floating.value, "mousedown", () => {
+    endedOrStartedInside = true
+  })
+
+  useEventListener(floating.value, "mouseup", () => {
+    endedOrStartedInside = true
+  })
 }
 
 //=======================================================================================
 // 📌 Utilities
 //=======================================================================================
-
-/**
- * Converts a DOM event name to the corresponding Vue event handler prop name
- */
-function toVueEventHandler(eventType: string): string {
-  return `on${eventType.charAt(0).toUpperCase()}${eventType.slice(1)}`
-}
 
 /**
  * Gets all scroll ancestor elements for a given element
@@ -282,7 +133,7 @@ function scrollAncestors(element: Element): Element[] {
   function getScrollParent(node: Node | null): Element | null {
     if (!node || node === document.body) return document.body
 
-    if (node.nodeType === 1) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as Element
       const { overflow, overflowX, overflowY } = window.getComputedStyle(el)
       if (/auto|scroll|overlay/.test(overflow + overflowY + overflowX)) {
@@ -308,8 +159,77 @@ function scrollAncestors(element: Element): Element[] {
 /**
  * Checks if a node is an HTML element
  */
-function isHTMLElement(node: Node | null): node is HTMLElement {
-  return node !== null && node.nodeType === 1
+function isHTMLElement(node: unknown | null): node is HTMLElement {
+  return (
+    node !== null &&
+    typeof node === "object" &&
+    "nodeType" in node &&
+    node.nodeType === Node.ELEMENT_NODE
+  )
+}
+
+/**
+ * Helper to handle IME composition state
+ * @returns Object containing isComposing state and cleanup function
+ */
+function useComposition() {
+  let isComposing = false
+  let compositionTimeout: number | undefined
+
+  useEventListener(document, "compositionstart", () => {
+    window.clearTimeout(compositionTimeout)
+    isComposing = true
+  })
+
+  useEventListener(document, "compositionend", () => {
+    // Safari fires `compositionend` before `keydown`, wait until next tick
+    compositionTimeout = window.setTimeout(() => {
+      isComposing = false
+    }, 5)
+  })
+
+  const cleanup = () => {
+    window.clearTimeout(compositionTimeout)
+  }
+
+  onScopeDispose(cleanup)
+
+  return {
+    isComposing: () => isComposing,
+    cleanup,
+  }
+}
+
+/**
+ * Checks if a click occurred on a scrollbar
+ * @param event - The pointer event
+ * @param target - The target element
+ * @returns True if the click occurred on a scrollbar, false otherwise
+ */
+function isClickOnScrollbar(event: PointerEvent): boolean {
+  const target = event.target as HTMLElement
+  const style = window.getComputedStyle(target)
+  const scrollRe = /auto|scroll/
+  const isScrollableX = scrollRe.test(style.overflowX)
+  const isScrollableY = scrollRe.test(style.overflowY)
+
+  const canScrollX =
+    isScrollableX && target.clientWidth > 0 && target.scrollWidth > target.clientWidth
+  const canScrollY =
+    isScrollableY && target.clientHeight > 0 && target.scrollHeight > target.clientHeight
+
+  const isRTL = style.direction === "rtl"
+
+  // Check click position relative to scrollbar
+  const pressedVerticalScrollbar =
+    canScrollY &&
+    (isRTL
+      ? event.offsetX <= target.offsetWidth - target.clientWidth
+      : event.offsetX > target.clientWidth)
+
+  const pressedHorizontalScrollbar = canScrollX && event.offsetY > target.clientHeight
+
+  return pressedVerticalScrollbar || pressedHorizontalScrollbar
 }
 
 //=======================================================================================
@@ -342,7 +262,7 @@ export interface UseDismissOptions {
    * Whether to dismiss when clicking outside the floating element
    * @default true
    */
-  outsidePress?: MaybeRefOrGetter<boolean | ((event: MouseEvent) => boolean)>
+  outsidePress?: MaybeRefOrGetter<boolean>
 
   /**
    * Whether to dismiss when scrolling outside the floating element
@@ -353,13 +273,13 @@ export interface UseDismissOptions {
   /**
    * Whether click events should bubble
    */
-  bubbles?: MaybeRefOrGetter<boolean | { escapeKey?: boolean; outsidePress?: boolean }>
+  bubbles?: boolean | { escapeKey?: boolean; outsidePress?: boolean }
 
   /**
    * Whether to use capture phase for document event listeners
    * @default true
    */
-  capture?: MaybeRefOrGetter<boolean | { escapeKey?: boolean; outsidePress?: boolean }>
+  capture?: boolean | { escapeKey?: boolean; outsidePress?: boolean }
 
   /**
    * The event name to use for reference press
