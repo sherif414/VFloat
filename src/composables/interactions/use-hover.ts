@@ -5,68 +5,37 @@ import {
   onScopeDispose,
   toValue,
   watchEffect,
-} from "vue";
-import type { FloatingContext } from "../use-floating";
+} from "vue"
+import type { FloatingContext } from "../use-floating"
 
-export interface UseHoverOptions {
-  /**
-   * Whether hover event listeners are enabled
-   * @default true
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Delay in milliseconds before showing/hiding the floating element
-   */
-  delay?: MaybeRefOrGetter<number | { open?: number; close?: number }>;
-
-  /**
-   * Whether to keep the floating element open when hovering over it
-   * @default true
-   */
-  handleFloatingHover?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether to register move events
-   * @default false
-   */
-  move?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * For use with FloatingDelayGroup
-   * @internal
-   */
-  restMs?: number;
-}
-
-export interface UseHoverReturn {
-  /**
-   * Reference element props that enable hover functionality
-   */
-  getReferenceProps: () => {
-    onMouseenter: (event: MouseEvent) => void;
-    onMouseleave: (event: MouseEvent) => void;
-    onMousemove?: (event: MouseEvent) => void;
-    onFocus: (event: FocusEvent) => void;
-    onBlur: (event: FocusEvent) => void;
-  };
-
-  /**
-   * Floating element props that enable hover functionality
-   */
-  getFloatingProps: () => {
-    onMouseenter: (event: MouseEvent) => void;
-    onMouseleave: (event: MouseEvent) => void;
-  };
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Enables showing/hiding the floating element when hovering the reference element
+ *
+ * This composable provides event handlers for mouse enter/leave events to control
+ * the visibility of floating elements with optional delay and hover behavior
+ * for both reference and floating elements.
+ *
+ * @param context - The floating context with open state and change handler
+ * @param options - Configuration options for hover behavior
+ * @returns Event handler props for reference and floating elements
+ *
+ * @example
+ * ```ts
+ * const { getReferenceProps, getFloatingProps } = useHover({
+ *   open: floating.open,
+ *   onOpenChange: floating.onOpenChange,
+ *   delay: 200
+ * })
+ * ```
  */
 export function useHover(
   context: FloatingContext & {
-    open: Ref<boolean>;
-    onOpenChange: (open: boolean) => void;
+    open: Ref<boolean>
+    onOpenChange: (open: boolean) => void
   },
   options: UseHoverOptions = {}
 ): UseHoverReturn {
@@ -75,152 +44,214 @@ export function useHover(
     onOpenChange,
     refs,
     elements: { floating, reference },
-  } = context;
+  } = context
 
-  const { enabled = true, delay = 0, handleFloatingHover = true, move = false } = options;
+  const { enabled = true, delay = 0, handleFloatingHover = true, move = false } = options
 
-  let timeoutId: number | null = null;
-  let handlerRef: ((event: MouseEvent) => void) | null = null;
+  let timeoutId: number | null = null
+  let handlerRef: ((event: MouseEvent) => void) | null = null
 
   const closeWithDelay = (runCallback = true) => {
-    const closeDelay = getDelay("close");
+    const closeDelay = getDelay("close")
 
     if (closeDelay) {
-      clearTimeout(timeoutId!);
+      clearTimeout(timeoutId!)
       timeoutId = window.setTimeout(() => {
         if (runCallback) {
-          onOpenChange(false);
+          onOpenChange(false)
         }
-      }, closeDelay);
+      }, closeDelay)
     } else if (runCallback) {
-      onOpenChange(false);
+      onOpenChange(false)
     }
-  };
+  }
 
   const clearPointerEvents = () => {
     if (handlerRef && reference) {
-      reference.removeEventListener("mousemove", handlerRef);
-      handlerRef = null;
+      reference.removeEventListener("mousemove", handlerRef)
+      handlerRef = null
     }
-  };
+  }
 
   const getDelay = (type: "open" | "close"): number => {
-    const delayValue = toValue(delay);
+    const delayValue = toValue(delay)
 
     if (typeof delayValue === "number") {
-      return delayValue;
+      return delayValue
     }
 
-    return delayValue?.[type] ?? 0;
-  };
+    return delayValue?.[type] ?? 0
+  }
 
   // Cleanup timeouts on unmount
   onScopeDispose(() => {
-    clearTimeout(timeoutId!);
-    clearPointerEvents();
-  });
+    clearTimeout(timeoutId!)
+    clearPointerEvents()
+  })
 
   // Determine if the component is enabled
-  const isEnabled = computed(() => toValue(enabled));
+  const isEnabled = computed(() => toValue(enabled))
 
   // Reset timeout when component is disabled
   watchEffect(() => {
     if (!isEnabled.value && timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
+      clearTimeout(timeoutId)
+      timeoutId = null
     }
-  });
+  })
 
   return {
     getReferenceProps: () => ({
       onMouseenter: (_event: MouseEvent) => {
-        if (!isEnabled.value) return;
+        if (!isEnabled.value) return
 
-        clearTimeout(timeoutId!);
+        clearTimeout(timeoutId!)
 
-        const openDelay = getDelay("open");
+        const openDelay = getDelay("open")
 
         if (openDelay) {
           timeoutId = window.setTimeout(() => {
-            onOpenChange(true);
-          }, openDelay);
+            onOpenChange(true)
+          }, openDelay)
         } else {
-          onOpenChange(true);
+          onOpenChange(true)
         }
 
         if (toValue(move) && !handlerRef) {
           handlerRef = () => {
-            if (open.value) return;
+            if (open.value) return
 
-            onOpenChange(true);
-          };
+            onOpenChange(true)
+          }
 
-          reference?.addEventListener("mousemove", handlerRef);
+          reference?.addEventListener("mousemove", handlerRef)
         }
       },
       onMouseleave: (event: MouseEvent) => {
-        if (!isEnabled.value) return;
+        if (!isEnabled.value) return
 
-        clearPointerEvents();
+        clearPointerEvents()
 
         if (!handleFloatingHover || !floating || !event.relatedTarget) {
-          closeWithDelay();
-          return;
+          closeWithDelay()
+          return
         }
 
         // Check if hovered element is the floating element or its children
-        let targetIsNotInsideFloating = true;
-        let node = event.relatedTarget as Node | null;
+        let targetIsNotInsideFloating = true
+        let node = event.relatedTarget as Node | null
         while (node) {
           if (node === floating) {
-            targetIsNotInsideFloating = false;
-            break;
+            targetIsNotInsideFloating = false
+            break
           }
-          node = node.parentNode;
+          node = node.parentNode
         }
 
         if (targetIsNotInsideFloating) {
-          closeWithDelay();
+          closeWithDelay()
         }
       },
       ...(toValue(move) && {
         onMousemove: (event: MouseEvent) => {
-          if (!isEnabled.value || !handlerRef) return;
-          handlerRef(event);
+          if (!isEnabled.value || !handlerRef) return
+          handlerRef(event)
         },
       }),
       onFocus: (_event: FocusEvent) => {
-        if (!isEnabled.value) return;
+        if (!isEnabled.value) return
 
-        onOpenChange(true);
+        onOpenChange(true)
       },
       onBlur: (event: FocusEvent) => {
-        if (!isEnabled.value) return;
+        if (!isEnabled.value) return
 
         if (!floating) {
-          onOpenChange(false);
-          return;
+          onOpenChange(false)
+          return
         }
 
         if (event.relatedTarget && floating.contains(event.relatedTarget as Node)) {
-          return;
+          return
         }
 
-        onOpenChange(false);
+        onOpenChange(false)
       },
     }),
 
     getFloatingProps: () => ({
       onMouseenter: (_event: MouseEvent) => {
-        if (!isEnabled.value || !handleFloatingHover) return;
+        if (!isEnabled.value || !handleFloatingHover) return
 
-        clearTimeout(timeoutId!);
+        clearTimeout(timeoutId!)
       },
       onMouseleave: (_event: MouseEvent) => {
-        if (!isEnabled.value || !handleFloatingHover) return;
+        if (!isEnabled.value || !handleFloatingHover) return
 
-        closeWithDelay();
+        closeWithDelay()
       },
     }),
-  };
+  }
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for configuring hover behavior
+ */
+export interface UseHoverOptions {
+  /**
+   * Whether hover event listeners are enabled
+   * @default true
+   */
+  enabled?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Delay in milliseconds before showing/hiding the floating element
+   */
+  delay?: MaybeRefOrGetter<number | { open?: number; close?: number }>
+
+  /**
+   * Whether to keep the floating element open when hovering over it
+   * @default true
+   */
+  handleFloatingHover?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to register move events
+   * @default false
+   */
+  move?: MaybeRefOrGetter<boolean>
+
+  /**
+   * For use with FloatingDelayGroup
+   * @internal
+   */
+  restMs?: number
+}
+
+/**
+ * Return value of the useHover composable
+ */
+export interface UseHoverReturn {
+  /**
+   * Reference element props that enable hover functionality
+   */
+  getReferenceProps: () => {
+    onMouseenter: (event: MouseEvent) => void
+    onMouseleave: (event: MouseEvent) => void
+    onMousemove?: (event: MouseEvent) => void
+    onFocus: (event: FocusEvent) => void
+    onBlur: (event: FocusEvent) => void
+  }
+
+  /**
+   * Floating element props that enable hover functionality
+   */
+  getFloatingProps: () => {
+    onMouseenter: (event: MouseEvent) => void
+    onMouseleave: (event: MouseEvent) => void
+  }
 }

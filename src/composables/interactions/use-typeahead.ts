@@ -1,241 +1,154 @@
-import {
-  type MaybeRefOrGetter,
-  type Ref,
-  computed,
-  onScopeDispose,
-  ref,
-  toValue,
-  watch,
-} from "vue";
-import type { FloatingContext } from "../use-floating";
+import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, ref, toValue, watch } from "vue"
+import type { FloatingContext } from "../use-floating"
 
-export interface UseTypeaheadOptions {
-  /**
-   * Whether typeahead is enabled
-   * @default true
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Ref to the list container element
-   */
-  listRef: Ref<HTMLElement | null>;
-
-  /**
-   * The active index in the list
-   */
-  activeIndex: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Callback for when typeahead matches an index
-   */
-  onMatch?: (index: number) => void;
-
-  /**
-   * Custom function to find a match based on the typeahead string
-   */
-  findMatch?: (list: Array<HTMLElement | null>, typedString: string) => number | null;
-
-  /**
-   * Amount of time in ms to reset the typeahead string
-   * @default 1000
-   */
-  resetMs?: MaybeRefOrGetter<number>;
-
-  /**
-   * Array of keys to ignore for typeahead
-   */
-  ignoreKeys?: MaybeRefOrGetter<string[]>;
-
-  /**
-   * Currently selected index (if different from active)
-   */
-  selectedIndex?: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Callback for when the typing state changes
-   */
-  onTypingChange?: (isTyping: boolean) => void;
-}
-
-export interface UseTypeaheadReturn {
-  /**
-   * Reference element props for typeahead
-   */
-  getReferenceProps: () => {
-    onKeyDown: (event: KeyboardEvent) => void;
-  };
-
-  /**
-   * Floating element props for typeahead
-   */
-  getFloatingProps: () => {
-    onKeyDown: (event: KeyboardEvent) => void;
-  };
-
-  /**
-   * The current typeahead string
-   */
-  typedString: Ref<string>;
-
-  /**
-   * The amount of time to reset the typeahead string
-   */
-  resetMs: MaybeRefOrGetter<number>;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
- * Enables typeahead search within a floating list element
+ * Enables typeahead functionality for list navigation
+ *
+ * This composable provides keyboard typeahead functionality to find and select
+ * items in a list based on their text content, useful for dropdown menus,
+ * select components, and other list-based UIs.
+ *
+ * @param context - The floating context with open state
+ * @param options - Configuration options for typeahead behavior
+ * @returns Event handlers and state for typeahead functionality
+ *
+ * @example
+ * ```ts
+ * const { getReferenceProps, getFloatingProps, typedString } = useTypeahead({
+ *   open: floating.open,
+ *   listRef: listRef,
+ *   activeIndex: activeIndex,
+ *   onMatch: setActiveIndex
+ * })
+ * ```
  */
 export function useTypeahead(
   context: FloatingContext & {
-    open: Ref<boolean>;
+    open: Ref<boolean>
   },
   options: UseTypeaheadOptions
 ): UseTypeaheadReturn {
-  const { open, refs } = context;
-
   const {
+    enabled = true,
     listRef,
     activeIndex,
-    selectedIndex = null,
+    selectedIndex,
     onMatch,
-    enabled = true,
     findMatch,
     resetMs = 1000,
     ignoreKeys = [],
     onTypingChange,
-  } = options;
+  } = options
 
-  const isEnabled = computed(() => toValue(enabled));
-  const typedString = ref("");
-  let timeoutId: number | null = null;
+  const isEnabled = computed(() => toValue(enabled))
 
-  onScopeDispose(() => {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
-  });
+  const typedString = ref("")
+  let typingTimeoutId: number | null = null
+  let isTyping = false
 
-  // Reset timeout for the typed string
+  // Get list items from the list container
+  const listContentRef = computed(() => {
+    if (!listRef.value) return []
+
+    return Array.from(listRef.value.querySelectorAll("[data-floating-index]")) as HTMLElement[]
+  })
+
+  // Reset the typed string after a delay
   const resetTypedStringAfterDelay = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+    if (typingTimeoutId) {
+      window.clearTimeout(typingTimeoutId)
     }
 
-    if (onTypingChange && typedString.value) {
-      onTypingChange(true);
-    }
-
-    timeoutId = window.setTimeout(() => {
-      typedString.value = "";
-      if (onTypingChange) {
-        onTypingChange(false);
+    typingTimeoutId = window.setTimeout(() => {
+      typedString.value = ""
+      if (isTyping) {
+        isTyping = false
+        onTypingChange?.(false)
       }
-    }, toValue(resetMs));
-  };
+    }, toValue(resetMs))
+  }
 
-  // Handle keypresses for typeahead
+  // Cleanup on unmount
+  onScopeDispose(() => {
+    if (typingTimeoutId) {
+      window.clearTimeout(typingTimeoutId)
+    }
+  })
+
+  // Handle key presses for typeahead
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (
-      !open.value ||
-      !isEnabled.value ||
-      event.defaultPrevented ||
-      !event.key ||
-      event.key.length !== 1 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.altKey
-    ) {
-      return;
+    if (!isEnabled.value || !context.open.value) return
+
+    // Get the key as a string
+    const key = event.key.length === 1 ? event.key.toLowerCase() : ""
+
+    // Ignore if key is in the ignore list or not a printable character
+    if (key === "" || toValue(ignoreKeys).includes(key)) return
+
+    // Don't handle if modifier keys are pressed (except shift)
+    if (event.ctrlKey || event.altKey || event.metaKey) return
+
+    // Update typed string and reset timeout
+    typedString.value += key
+
+    if (!isTyping) {
+      isTyping = true
+      onTypingChange?.(true)
     }
 
-    // Ignore specific keys
-    const ignoreKeysValue = toValue(ignoreKeys);
-    if (ignoreKeysValue.includes(event.key)) {
-      return;
-    }
+    resetTypedStringAfterDelay()
 
-    // Keys that clearly aren't typeahead
-    if (
-      event.key === " " ||
-      event.key === "Enter" ||
-      event.key === "Escape" ||
-      event.key === "Tab" ||
-      event.key.startsWith("Arrow")
-    ) {
-      return;
-    }
-
-    // Update typed string
-    event.preventDefault();
-    typedString.value += event.key.toLowerCase();
-
-    // Reset timeout
-    resetTypedStringAfterDelay();
-
-    // Find a match in the list
-    if (!listRef.value) return;
-
-    const listItems = Array.from(
-      listRef.value.querySelectorAll<HTMLElement>("[data-floating-index]")
-    ) as HTMLElement[];
-
-    if (listItems.length === 0) return;
-
-    // Sort the items by their index
-    listItems.sort((a, b) => {
-      return Number(a.dataset.floatingIndex || 0) - Number(b.dataset.floatingIndex || 0);
-    });
-
-    let matchedIndex: number | null = null;
-
-    // Use custom match finder if provided
+    // Custom find function or default behavior
     if (findMatch) {
-      matchedIndex = findMatch(listItems, typedString.value);
-    } else {
-      // Default matching logic
-      const startingIndex = toValue(activeIndex) !== null ? toValue(activeIndex)! + 1 : 0;
-      const wrappedIndex = startingIndex % listItems.length;
-
-      // First, try to find a match starting from the current active index
-      for (let i = 0; i < listItems.length; i++) {
-        const index = (wrappedIndex + i) % listItems.length;
-        const item = listItems[index];
-
-        if (!item) continue;
-
-        const text = getItemText(item).toLowerCase();
-
-        if (text.startsWith(typedString.value)) {
-          matchedIndex = index;
-          break;
-        }
-      }
-
-      // If no match was found, and we have multiple letters typed,
-      // try to find a match from the beginning
-      if (matchedIndex === null && typedString.value.length === 1) {
-        for (let i = 0; i < listItems.length; i++) {
-          const item = listItems[i];
-
-          if (!item) continue;
-
-          const text = getItemText(item).toLowerCase();
-
-          if (text.startsWith(typedString.value)) {
-            matchedIndex = i;
-            break;
-          }
-        }
+      const index = findMatch(listContentRef.value, typedString.value)
+      if (index !== null && index >= 0) {
+        event.preventDefault()
+        onMatch?.(index)
+        return
       }
     }
 
-    // Call the onMatch callback if we found a match
-    if (matchedIndex !== null && onMatch) {
-      onMatch(matchedIndex);
+    // Default search behavior - first match only
+    const currentIndex = toValue(selectedIndex) ?? toValue(activeIndex)
+    const startingIndex = currentIndex !== null ? currentIndex + 1 : 0
+    const items = listContentRef.value
+    const totalItems = items.length
+
+    // If we have no items, don't try to search
+    if (totalItems === 0) return
+
+    // Try to find a match, starting from the next item after current
+    // and wrapping around to the beginning
+    for (let i = 0; i < totalItems; i++) {
+      const index = (startingIndex + i) % totalItems
+      const item = items[index]
+      const itemText = getItemText(item).trim().toLowerCase()
+
+      if (itemText.startsWith(typedString.value.toLowerCase())) {
+        event.preventDefault()
+        onMatch?.(index)
+        return
+      }
     }
-  };
+
+    // If no match is found with prefix, try to find a match anywhere in the strings
+    // (less precise but better than nothing)
+    for (let i = 0; i < totalItems; i++) {
+      const index = (startingIndex + i) % totalItems
+      const item = items[index]
+      const itemText = getItemText(item).trim().toLowerCase()
+
+      if (itemText.includes(typedString.value.toLowerCase())) {
+        event.preventDefault()
+        onMatch?.(index)
+        return
+      }
+    }
+  }
 
   return {
     getReferenceProps: () => ({
@@ -246,26 +159,107 @@ export function useTypeahead(
     }),
     typedString,
     resetMs,
-  };
+  }
 }
 
-// Helper to get text content from a list item
+//=======================================================================================
+// 📌 Utilities
+//=======================================================================================
+
+/**
+ * Gets the text content of an HTML element
+ */
 function getItemText(item: HTMLElement): string {
-  // Try to find text content in elements with common text attributes
-  const label = item.querySelector("[aria-label]");
-  if (label?.getAttribute("aria-label")) {
-    return label.getAttribute("aria-label") || "";
+  // Try to use aria-label first
+  const ariaLabel = item.getAttribute("aria-label")
+  if (ariaLabel) return ariaLabel
+
+  // Then look for inner text
+  const textContent = item.textContent
+  return textContent || ""
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for configuring typeahead behavior
+ */
+export interface UseTypeaheadOptions {
+  /**
+   * Whether typeahead is enabled
+   * @default true
+   */
+  enabled?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Ref to the list container element
+   */
+  listRef: Ref<HTMLElement | null>
+
+  /**
+   * The active index in the list
+   */
+  activeIndex: MaybeRefOrGetter<number | null>
+
+  /**
+   * Callback for when typeahead matches an index
+   */
+  onMatch?: (index: number) => void
+
+  /**
+   * Custom function to find a match based on the typeahead string
+   */
+  findMatch?: (list: Array<HTMLElement | null>, typedString: string) => number | null
+
+  /**
+   * Amount of time in ms to reset the typeahead string
+   * @default 1000
+   */
+  resetMs?: MaybeRefOrGetter<number>
+
+  /**
+   * Array of keys to ignore for typeahead
+   */
+  ignoreKeys?: MaybeRefOrGetter<string[]>
+
+  /**
+   * Currently selected index (if different from active)
+   */
+  selectedIndex?: MaybeRefOrGetter<number | null>
+
+  /**
+   * Callback for when the typing state changes
+   */
+  onTypingChange?: (isTyping: boolean) => void
+}
+
+/**
+ * Return value of the useTypeahead composable
+ */
+export interface UseTypeaheadReturn {
+  /**
+   * Reference element props for typeahead
+   */
+  getReferenceProps: () => {
+    onKeyDown: (event: KeyboardEvent) => void
   }
 
-  // Look for a label ID
-  const labelledby = item.getAttribute("aria-labelledby");
-  if (labelledby) {
-    const labelElement = document.getElementById(labelledby);
-    if (labelElement) {
-      return labelElement.textContent || "";
-    }
+  /**
+   * Floating element props for typeahead
+   */
+  getFloatingProps: () => {
+    onKeyDown: (event: KeyboardEvent) => void
   }
 
-  // Default to the element's text content
-  return item.textContent || "";
+  /**
+   * The current typeahead string
+   */
+  typedString: Ref<string>
+
+  /**
+   * The amount of time to reset the typeahead string
+   */
+  resetMs: MaybeRefOrGetter<number>
 }
