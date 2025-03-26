@@ -4,6 +4,7 @@ import type { FloatingContext } from "../use-floating"
 
 //=======================================================================================
 // 📌 Main
+// TODO: use floating tree to handle nested and parent floating elements.
 //=======================================================================================
 
 /**
