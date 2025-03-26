@@ -15,13 +15,11 @@ import {
   provide,
   ref,
   shallowRef,
-  toRef,
   toValue,
   useId,
   watch,
 } from "vue"
-import { FLOATING_TREE_INJECTION_KEY } from "./use-floating-tree"
-import { arrow, type ArrowContext, type ArrowOptions } from "./use-arrow"
+import { type ArrowContext, arrow } from "./use-arrow"
 
 //=======================================================================================
 // 📌 Constants
@@ -64,7 +62,6 @@ export function useFloating(
     transform = true,
     middleware: middlewareOption = [],
     whileElementsMounted,
-    nodeId = useId(),
     arrow: withArrow = false,
     open = ref(false),
     onOpenChange = (value: boolean) => {
@@ -134,38 +131,6 @@ export function useFloating(
     },
     { immediate: true }
   )
-
-  // Handle floating tree for nested elements
-  if (nodeId) {
-    const floatingTree = inject(FLOATING_TREE_INJECTION_KEY, null)
-
-    if (floatingTree) {
-      // Create a simplified context with only the necessary properties for the tree
-      const treeNodeContext = {
-        refs: { reference: reference, floating: floating },
-        x,
-        y,
-        strategy,
-        placement,
-        middlewareData,
-        isPositioned,
-      } as FloatingContext
-
-      // Register the node in the tree
-      if (!floatingTree.nodesRef.value.some((n) => n.id === nodeId)) {
-        floatingTree.nodesRef.value.push({
-          id: nodeId,
-          parentId: null,
-          context: treeNodeContext,
-        })
-      }
-
-      // Cleanup when the component is unmounted
-      onScopeDispose(() => {
-        floatingTree.nodesRef.value = floatingTree.nodesRef.value.filter((n) => n.id !== nodeId)
-      })
-    }
-  }
 
   onScopeDispose(() => cleanup?.())
 
