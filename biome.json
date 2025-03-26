@@ -15,7 +15,8 @@
       },
       "style": {
         "useConst": "error",
-        "noNegationElse": "error"
+        "noNegationElse": "error",
+        "noNonNullAssertion": "info"
       }
     }
   },
@@ -29,7 +30,7 @@
     "formatter": {
       "quoteStyle": "double",
       "trailingCommas": "es5",
-      "semicolons": "always"
+      "semicolons": "asNeeded"
     }
   },
   "files": {
