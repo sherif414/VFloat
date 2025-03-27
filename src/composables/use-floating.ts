@@ -8,17 +8,7 @@ import type {
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { ComputedRef, InjectionKey, MaybeRefOrGetter, Ref } from "vue"
-import {
-  computed,
-  inject,
-  onScopeDispose,
-  provide,
-  ref,
-  shallowRef,
-  toValue,
-  useId,
-  watch,
-} from "vue"
+import { computed, onScopeDispose, provide, ref, shallowRef, toValue, watch } from "vue"
 import { type ArrowContext, arrow } from "./use-arrow"
 
 //=======================================================================================
