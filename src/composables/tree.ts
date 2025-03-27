@@ -197,13 +197,13 @@ export class TreeNode<T> {
  * const childNode = addNode({ name: 'Child' }, root.id)
  * ```
  */
-export function useTree<T>(initialRootData: T, options: UseTreeOptions = {}): UseTreeReturn<T> {
-  const { deleteStrategy = "recursive", useIdMap = true } = options
+export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
+  initialRootData: T,
+  options?: TOptions
+): UseTreeReturn<T, TOptions> {
+  const { deleteStrategy = "recursive", useIdMap } = options ?? {}
 
-  // Internal map for fast ID lookup (optional)
   const nodeMap = useIdMap ? shallowRef(new Map<string, TreeNode<T>>()) : undefined
-
-  // Initialize root node, passing the map if used
   const root = new TreeNode<T>(initialRootData, null, {}, nodeMap)
 
   // --- Internal Recursive Helper for Deletion/Cleanup ---
@@ -374,8 +374,8 @@ export function useTree<T>(initialRootData: T, options: UseTreeOptions = {}): Us
     findNodeById,
     traverse,
     flattenNodes,
-    getNodeMap: () => nodeMap?.value,
-  }
+    nodeMap,
+  } as UseTreeReturn<T, TOptions> // Assert the return type matches the conditional interface
 }
 
 //=======================================================================================
@@ -405,7 +405,11 @@ export interface UseTreeOptions {
   useIdMap?: boolean
 }
 
-export interface UseTreeReturn<T> {
+// Make UseTreeReturn generic over TOptions to enable conditional typing
+export interface UseTreeReturn<
+  T,
+  TOptions extends UseTreeOptions = UseTreeOptions, // Default to base options
+> {
   /** The root node of the tree. */
   root: TreeNode<T>
   /** Adds a new node to the tree. If parentId is null/undefined, adds to the root. */
@@ -420,6 +424,9 @@ export interface UseTreeReturn<T> {
   traverse(strategy?: "dfs" | "bfs", startNode?: TreeNode<T>): TreeNode<T>[]
   /** Gets all nodes in the tree as a flat list. */
   flattenNodes(startNode?: TreeNode<T>): TreeNode<T>[]
-  /** Provides direct access to the internal ID map if enabled (use with caution). */
-  getNodeMap: () => ReadonlyMap<string, TreeNode<T>> | undefined
+  /**
+   * Provides direct access to the internal ID map if enabled.
+   * The type is conditional: `Ref<Map<...>>` if `useIdMap` is true (or default), `undefined` if `useIdMap` is false.
+   */
+  nodeMap: TOptions["useIdMap"] extends false ? undefined : Readonly<Ref<Map<string, TreeNode<T>>>>
 }
