@@ -7,15 +7,8 @@ import type {
   Strategy,
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
-import type { ComputedRef, InjectionKey, MaybeRefOrGetter, Ref } from "vue"
-import { computed, onScopeDispose, provide, ref, shallowRef, toValue, watch } from "vue"
-import { type ArrowContext, arrow } from "./use-arrow"
-
-//=======================================================================================
-// 📌 Constants
-//=======================================================================================
-
-export const ARROW_INJECTION_KEY = Symbol() as InjectionKey<ArrowContext>
+import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue"
+import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from "vue"
 
 //=======================================================================================
 // 📌 Main
@@ -50,27 +43,19 @@ export function useFloating(
     placement: initialPlacement = "bottom",
     strategy: initialStrategy = "absolute",
     transform = true,
-    middleware: middlewareOption = [],
+    middlewares,
     whileElementsMounted,
-    arrow: withArrow = false,
     open = ref(false),
     onOpenChange = (value: boolean) => {
       open.value = value
     },
   } = options
 
-  // Element refs
-  const arrowRef = ref<HTMLElement | null>(null)
-
   // Position state
   const x = ref(0)
   const y = ref(0)
   const strategy = ref(toValue(initialStrategy) as Strategy)
   const placement = ref(toValue(initialPlacement) as Placement)
-  const middleware = computed(() => {
-    const middlewares = toValue(middlewareOption)
-    return withArrow ? [...middlewares, arrow({ element: arrowRef })] : middlewares
-  })
 
   const middlewareData = shallowRef<MiddlewareData>({})
   const isPositioned = ref(false)
@@ -81,7 +66,7 @@ export function useFloating(
     const result = await computePosition(reference.value, floating.value, {
       placement: toValue(initialPlacement),
       strategy: toValue(initialStrategy),
-      middleware: middleware.value,
+      middleware: middlewares,
     })
 
     x.value = Math.round(result.x)
@@ -93,13 +78,7 @@ export function useFloating(
   }
 
   watch(
-    [
-      () => toValue(initialPlacement),
-      () => toValue(initialStrategy),
-      middleware,
-      reference,
-      floating,
-    ],
+    [() => toValue(initialPlacement), () => toValue(initialStrategy), reference, floating],
     update
   )
 
@@ -162,15 +141,6 @@ export function useFloating(
     }
   })
 
-  // Provide arrow context only if arrow is enabled
-  if (withArrow) {
-    provide(ARROW_INJECTION_KEY, {
-      arrowRef,
-      middlewareData,
-      placement,
-    })
-  }
-
   return {
     x,
     y,
@@ -183,11 +153,9 @@ export function useFloating(
     refs: {
       reference: reference,
       floating: floating,
-      arrow: arrowRef,
     },
     open,
     onOpenChange,
-    arrowContext: ARROW_INJECTION_KEY,
   }
 }
 
@@ -271,7 +239,7 @@ export interface UseFloatingOptions {
   /**
    * Middlewares modify the positioning coordinates in some fashion, or provide useful data for the consumer to use.
    */
-  middleware?: Ref<Middleware[]>
+  middlewares?: Middleware[]
 
   /**
    * Function called when both the reference and floating elements are mounted.
@@ -302,12 +270,6 @@ export interface UseFloatingOptions {
    * Root context for the floating element tree.
    */
   rootContext?: Partial<FloatingContext>
-
-  /**
-   * Whether to enable the arrow middleware.
-   * @default false
-   */
-  arrow?: boolean
 }
 
 /**
@@ -360,7 +322,6 @@ export interface FloatingContext {
   refs: {
     reference: Ref<HTMLElement | null>
     floating: Ref<HTMLElement | null>
-    arrow: Ref<HTMLElement | null>
   }
 
   /**
@@ -372,9 +333,4 @@ export interface FloatingContext {
    * Function to update the open state
    */
   onOpenChange: (open: boolean) => void
-
-  /**
-   * FloatingArrow context key
-   */
-  arrowContext: InjectionKey<ArrowContext>
 }
