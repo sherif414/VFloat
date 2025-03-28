@@ -2,12 +2,10 @@ import { type PointerType, useEventListener } from "@vueuse/core"
 import {
   type MaybeRefOrGetter,
   computed,
-  ref,
-  toValue,
-  watch,
-  onUnmounted,
   onScopeDispose,
   onWatcherCleanup,
+  toValue,
+  watch,
 } from "vue"
 import type { FloatingContext } from "../use-floating"
 
