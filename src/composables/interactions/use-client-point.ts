@@ -1,5 +1,6 @@
 import { type MaybeRefOrGetter, type Ref, computed, onScopeDispose, toValue } from "vue"
 import type { FloatingContext } from "../use-floating"
+import { useEventListener } from "@vueuse/core"
 
 //=======================================================================================
 // 📌 Main
@@ -17,25 +18,17 @@ import type { FloatingContext } from "../use-floating"
  *
  * @example
  * ```ts
- * const { getReferenceProps } = useClientPoint({
- *   open: floating.open,
- *   onOpenChange: floating.onOpenChange
+ * const { getReferenceProps } = useClientPoint(context, {
+ *   enabled: true,
+ *   axis: "x",
  * })
  * ```
  */
 export function useClientPoint(
-  context: FloatingContext & {
-    open: Ref<boolean>
-    onOpenChange: (open: boolean) => void
-  },
+  context: FloatingContext,
   options: UseClientPointOptions = {}
 ): UseClientPointReturn {
-  const {
-    open,
-    onOpenChange,
-    refs,
-    elements: { floating, reference },
-  } = context
+  const { open, onOpenChange, refs } = context
 
   const { enabled = true, axis = null, x: externalX, y: externalY } = options
 
@@ -110,12 +103,12 @@ export function useClientPoint(
     onOpenChange(!open.value)
   }
 
+  useEventListener("pointermove", handlePointerMove)
+  useEventListener("pointerdown", handlePointerDown)
+  useEventListener("click", handleClick)
+
   return {
-    getReferenceProps: () => ({
-      onPointerMove: handlePointerMove,
-      onPointerDown: handlePointerDown,
-      onClick: handleClick,
-    }),
+    setReference,
   }
 }
 
@@ -155,11 +148,9 @@ export interface UseClientPointOptions {
  */
 export interface UseClientPointReturn {
   /**
-   * Reference element props for client point positioning
+   * Function to manually set the reference point coordinates for positioning the floating element
+   * @param x - The x-coordinate to set
+   * @param y - The y-coordinate to set
    */
-  getReferenceProps: () => {
-    onPointerMove?: (event: PointerEvent) => void
-    onPointerDown?: (event: PointerEvent) => void
-    onClick?: (event: MouseEvent) => void
-  }
+  setReference: (x: number, y: number) => void
 }
