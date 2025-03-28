@@ -5,6 +5,7 @@ import type {
   MiddlewareData,
   Placement,
   Strategy,
+  VirtualElement,
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue"
@@ -35,7 +36,7 @@ import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from "vue"
  * ```
  */
 export function useFloating(
-  reference: Ref<HTMLElement | null>,
+  reference: Ref<HTMLElement | VirtualElement | null>,
   floating: Ref<HTMLElement | null>,
   options: UseFloatingOptions = {}
 ): FloatingContext {
@@ -245,7 +246,7 @@ export interface UseFloatingOptions {
    * Function called when both the reference and floating elements are mounted.
    */
   whileElementsMounted?: (
-    reference: HTMLElement,
+    reference: HTMLElement | VirtualElement,
     floating: HTMLElement,
     update: () => void
   ) => undefined | (() => void)
@@ -320,7 +321,7 @@ export interface FloatingContext {
    * The refs object containing reference to reference and floating elements
    */
   refs: {
-    reference: Ref<HTMLElement | null>
+    reference: Ref<HTMLElement | VirtualElement | null>
     floating: Ref<HTMLElement | null>
   }
 
