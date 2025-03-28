@@ -24,14 +24,14 @@ import type { FloatingContext } from "../use-floating"
  */
 export function useClick(context: FloatingContext, options: UseClickOptions = {}): UseClickReturn {
   const { open, onOpenChange } = context
-  const { enabled = true, toggle = true, event = "click", ignoreMouse = false } = options
+  const { enabled = true, toggle = true, event = "click", ignoreNonPrimaryClick = false } = options
 
   const isEnabled = computed(() => toValue(enabled))
 
   const eventHandler = (event: MouseEvent) => {
     if (!isEnabled.value) return
 
-    if (toValue(ignoreMouse) && event.type.includes("mouse") && event.button !== 0) {
+    if (toValue(ignoreNonPrimaryClick) && event.button !== 0) {
       return
     }
 
@@ -88,7 +88,7 @@ export interface UseClickOptions {
    * Whether to ignore mouse button events other than left click
    * @default false
    */
-  ignoreMouse?: MaybeRefOrGetter<boolean>
+  ignoreNonPrimaryClick?: MaybeRefOrGetter<boolean>
 }
 
 /**
