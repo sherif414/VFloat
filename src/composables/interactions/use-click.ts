@@ -17,9 +17,8 @@ import type { FloatingContext } from "../use-floating"
  *
  * @example
  * ```ts
- * const { getReferenceProps } = useClick({
- *   open: floating.open,
- *   onOpenChange: floating.onOpenChange
+ * const { getReferenceProps } = useClick(context,{
+ *   event: "mousedown",
  * })
  * ```
  */
