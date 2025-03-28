@@ -6,7 +6,7 @@ import {
   provide,
   watch,
 } from "vue"
-import { type TreeNode, type UseTreeOptions, type UseTreeReturn, useTree } from "./tree"
+import { type TreeNode, type UseTreeOptions, type UseTreeReturn, useTree } from "./use-tree"
 import { type FloatingContext, type UseFloatingOptions, useFloating } from "./use-floating"
 
 //=======================================================================================
