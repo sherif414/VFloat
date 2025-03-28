@@ -8,6 +8,7 @@ import {
 } from "vue"
 import { type TreeNode, type UseTreeOptions, type UseTreeReturn, useTree } from "./use-tree"
 import { type FloatingContext, type UseFloatingOptions, useFloating } from "./use-floating"
+import type { VirtualElement } from "@floating-ui/dom"
 
 //=======================================================================================
 // 📌 Constants
@@ -67,7 +68,7 @@ export function useFloatingTree(
 
   const registerNode = (
     parentId: string | null,
-    reference: Ref<HTMLElement | null>,
+    reference: Ref<HTMLElement | VirtualElement | null>,
     floating: Ref<HTMLElement | null>,
     options: UseFloatingOptions = {}
   ): { nodeId: string; context: FloatingContext } | null => {
@@ -171,7 +172,7 @@ export interface FloatingTreeContext {
   /** Registers a floating node with the tree */
   registerNode: (
     parentId: string | null,
-    reference: Ref<HTMLElement | null>,
+    reference: Ref<HTMLElement | VirtualElement | null>,
     floating: Ref<HTMLElement | null>,
     options?: UseFloatingOptions
   ) => { nodeId: string; context: FloatingContext } | null

@@ -4,7 +4,6 @@ import type { FloatingContext } from "../use-floating"
 
 //=======================================================================================
 // 📌 Main
-// TODO: use floating tree to handle nested and parent floating elements.
 //=======================================================================================
 
 /**
@@ -27,13 +26,7 @@ import type { FloatingContext } from "../use-floating"
  * })
  * ```
  */
-export function useDismiss(context: FloatingContext, options: UseDismissOptions = {}) {
-  const {
-    open,
-    onOpenChange,
-    refs: { floating, reference },
-  } = context
-
+export function useDismiss(context: FloatingContext, options: UseDismissOptions = {}): void {
   const {
     enabled = true,
     escapeKey = true,
@@ -46,13 +39,16 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
     outsidePressEvent = "pointerdown",
   } = options
 
+  const reference = computed(() =>
+    context.refs.reference.value instanceof HTMLElement ? context.refs.reference.value : null
+  )
   const isEnabled = computed(() => toValue(enabled))
   const { isComposing } = useComposition()
   let endedOrStartedInside = false
 
   // Event handlers
   const dismissOnEscapeKeyDown = (event: KeyboardEvent) => {
-    if (!isEnabled.value || !toValue(escapeKey) || !open.value) return
+    if (!isEnabled.value || !toValue(escapeKey) || !context.open.value) return
 
     // Wait until IME is settled
     if (isComposing()) {
@@ -61,16 +57,16 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
 
     if (event.key === "Escape") {
       event.preventDefault()
-      onOpenChange(false)
+      context.onOpenChange(false)
     }
   }
 
   useEventListener(document, "keydown", dismissOnEscapeKeyDown)
 
   onClickOutside(
-    floating.value,
+    context.refs.floating.value,
     (e: PointerEvent) => {
-      if (!isEnabled.value || !toValue(outsidePress) || !open.value) {
+      if (!isEnabled.value || !toValue(outsidePress) || !context.open.value) {
         return
       }
 
@@ -79,7 +75,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
         return
       }
 
-      if (isHTMLElement(e.target) && floating.value && isClickOnScrollbar(e)) {
+      if (isHTMLElement(e.target) && context.refs.floating.value && isClickOnScrollbar(e)) {
         return
       }
 
@@ -87,7 +83,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
       if (typeof shouldBubble === "boolean" ? shouldBubble : shouldBubble?.outsidePress) {
         e.stopPropagation()
       }
-      onOpenChange(false)
+      context.onOpenChange(false)
       endedOrStartedInside = false
     },
     {
@@ -97,26 +93,26 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
   )
 
   useEventListener(reference, referencePressEvent, () => {
-    if (isEnabled.value && toValue(referencePress) && open.value) {
-      onOpenChange(false)
+    if (isEnabled.value && toValue(referencePress) && context.open.value) {
+      context.onOpenChange(false)
     }
   })
 
   useEventListener(
     "scroll",
     () => {
-      if (isEnabled.value && toValue(ancestorScroll) && open.value) {
-        onOpenChange(false)
+      if (isEnabled.value && toValue(ancestorScroll) && context.open.value) {
+        context.onOpenChange(false)
       }
     },
     { passive: true }
   )
 
-  useEventListener(floating.value, "mousedown", () => {
+  useEventListener(context.refs.floating.value, "mousedown", () => {
     endedOrStartedInside = true
   })
 
-  useEventListener(floating.value, "mouseup", () => {
+  useEventListener(context.refs.floating.value, "mouseup", () => {
     endedOrStartedInside = true
   })
 }
@@ -293,19 +289,4 @@ export interface UseDismissOptions {
    * @default 'pointerdown'
    */
   outsidePressEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
-}
-
-/**
- * Return value of the useDismiss composable
- */
-export interface UseDismissReturn {
-  /**
-   * Reference element props related to dismissal
-   */
-  getReferenceProps: () => Record<string, (event: MouseEvent | PointerEvent | Event) => void>
-
-  /**
-   * Floating element props related to dismissal
-   */
-  getFloatingProps: () => Record<string, (event: PointerEvent | MouseEvent | Event) => void>
 }

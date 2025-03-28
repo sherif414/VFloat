@@ -1,6 +1,7 @@
 import { type InjectionKey, type Ref, inject, onScopeDispose, provide } from "vue"
 import type { FloatingContext, UseFloatingOptions } from "./use-floating"
 import { FLOATING_TREE_INJECTION_KEY, type FloatingParentNodeContext } from "./use-floating-tree"
+import type { VirtualElement } from "@floating-ui/dom"
 
 //=======================================================================================
 // 📌 Constants
@@ -24,7 +25,7 @@ export const FLOATING_PARENT_NODE_INJECTION_KEY = Symbol(
  * @returns The `FloatingContext` for this specific node, or null if registration fails.
  */
 export function useFloatingNode(
-  reference: Ref<HTMLElement | null>,
+  reference: Ref<HTMLElement | VirtualElement | null>,
   floating: Ref<HTMLElement | null>,
   options: UseFloatingOptions = {}
 ): { nodeId: string; context: FloatingContext } {

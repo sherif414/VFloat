@@ -1,4 +1,5 @@
-import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue"
+import { useEventListener } from "@vueuse/core"
+import { type MaybeRefOrGetter, computed, toValue } from "vue"
 import type { FloatingContext } from "../use-floating"
 
 //=======================================================================================
@@ -22,7 +23,7 @@ import type { FloatingContext } from "../use-floating"
  * })
  * ```
  */
-export function useClick(context: FloatingContext, options: UseClickOptions = {}): UseClickReturn {
+export function useClick(context: FloatingContext, options: UseClickOptions = {}): void {
   const { open, onOpenChange } = context
   const { enabled = true, toggle = true, event = "click", ignoreNonPrimaryClick = false } = options
 
@@ -42,20 +43,10 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     }
   }
 
-  return {
-    getReferenceProps: () => {
-      const clickEvent = toValue(event)
-
-      switch (clickEvent) {
-        case "mousedown":
-          return { onMousedown: eventHandler }
-        case "mouseup":
-          return { onMouseup: eventHandler }
-        default:
-          return { onClick: eventHandler }
-      }
-    },
-  }
+  const reference = computed(() =>
+    context.refs.reference.value instanceof HTMLElement ? context.refs.reference.value : null
+  )
+  useEventListener(reference, event, eventHandler)
 }
 
 //=======================================================================================
@@ -89,18 +80,4 @@ export interface UseClickOptions {
    * @default false
    */
   ignoreNonPrimaryClick?: MaybeRefOrGetter<boolean>
-}
-
-/**
- * Return value of the useClick composable
- */
-export interface UseClickReturn {
-  /**
-   * Reference element props that enable click functionality
-   */
-  getReferenceProps: () => {
-    onClick?: (event: MouseEvent) => void
-    onMousedown?: (event: MouseEvent) => void
-    onMouseup?: (event: MouseEvent) => void
-  }
 }
