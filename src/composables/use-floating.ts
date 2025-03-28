@@ -70,8 +70,8 @@ export function useFloating(
       middleware: middlewares,
     })
 
-    x.value = Math.round(result.x)
-    y.value = Math.round(result.y)
+    x.value = result.x
+    y.value = result.y
     placement.value = result.placement
     strategy.value = result.strategy
     middlewareData.value = result.middlewareData
@@ -122,10 +122,10 @@ export function useFloating(
       return initialStyles
     }
 
-    if (transform) {
-      const xVal = roundByDPR(floating.value, x.value)
-      const yVal = roundByDPR(floating.value, y.value)
+    const xVal = roundByDPR(floating.value, x.value)
+    const yVal = roundByDPR(floating.value, y.value)
 
+    if (transform) {
       return {
         ...initialStyles,
         transform: `translate(${xVal}px, ${yVal}px)`,
@@ -137,8 +137,8 @@ export function useFloating(
 
     return {
       ...initialStyles,
-      left: `${Math.round(x.value)}px`,
-      top: `${Math.round(y.value)}px`,
+      left: `${xVal}px`,
+      top: `${yVal}px`,
     }
   })
 
