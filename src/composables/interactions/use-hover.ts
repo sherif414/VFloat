@@ -27,20 +27,11 @@ import type { FloatingContext } from "../use-floating"
  *
  * @example
  * ```ts
- * const { getReferenceProps, getFloatingProps } = useHover({
- *   open: floating.open,
- *   onOpenChange: floating.onOpenChange,
- *   delay: 200
- * })
+ * const context = useFloating(...)
+ * useHover(context)
  * ```
  */
-export function useHover(
-  context: FloatingContext & {
-    open: Ref<boolean>
-    onOpenChange: (open: boolean) => void
-  },
-  options: UseHoverOptions = {}
-): void {
+export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
   const { open, onOpenChange, refs } = context
   const { floating } = refs
 
