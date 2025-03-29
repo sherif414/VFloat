@@ -263,27 +263,3 @@ export interface UseHoverOptions {
    */
   restMs?: number
 }
-
-/**
- * Return value of the useHover composable
- */
-export interface UseHoverReturn {
-  /**
-   * Reference element props that enable hover functionality
-   */
-  getReferenceProps: () => {
-    onMouseenter: (event: MouseEvent) => void
-    onMouseleave: (event: MouseEvent) => void
-    onMousemove?: (event: MouseEvent) => void
-    onFocus: (event: FocusEvent) => void
-    onBlur: (event: FocusEvent) => void
-  }
-
-  /**
-   * Floating element props that enable hover functionality
-   */
-  getFloatingProps: () => {
-    onMouseenter: (event: MouseEvent) => void
-    onMouseleave: (event: MouseEvent) => void
-  }
-}
