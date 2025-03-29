@@ -20,6 +20,7 @@ import type { VirtualElement } from "@floating-ui/dom"
  * Positions the floating element relative to a client point (mouse position).
  *
  * This composable tracks pointer movements and positions the floating element
+ * @version 2.0
  * accordingly, with options for axis locking and controlled coordinates.
  *
  * @param context - The floating context with open state and position reference
@@ -32,12 +33,14 @@ import type { VirtualElement } from "@floating-ui/dom"
  *   axis: "x",
  *   enabled: true
  * })
+ * const { coordinates, isActive } = useClientPoint(context)
  * ```
  */
 export function useClientPoint(
   context: FloatingContext,
   options: UseClientPointOptions = {}
-): void {
+  // Changed return type to include more functionality
+): UseClientPointReturn {
   const { open, refs } = context
   const setPositionReference = (reference: VirtualElement | HTMLElement | null) => {
     refs.reference.value = reference
@@ -47,9 +50,11 @@ export function useClientPoint(
 
   // Tracking state
   let stopPointerMoveListener: (() => void) | null = null
+  const isActive = ref(false)
   const pointerType = ref<PointerType | undefined>()
   const clientCoords = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
   const isMoving = ref(false)
+  const debug = ref(false)
 
   // Computed options
   const isEnabled = computed(() => toValue(enabled))
@@ -190,6 +195,7 @@ export function useClientPoint(
         passive: true,
       })
       isMoving.value = true
+      isActive.value = true
     } else {
       setPositionReference(referenceEl.value)
     }
@@ -199,6 +205,7 @@ export function useClientPoint(
     stopPointerMoveListener?.()
     stopPointerMoveListener = null
     isMoving.value = false
+    isActive.value = false
   }
 
   watch(
@@ -250,24 +257,6 @@ export function useClientPoint(
     }
   })
 
-  onScopeDispose(cleanup)
-
-  watch(referenceEl, (el) => {
-    if (!el) return
-
-    el.addEventListener("pointerenter", onPointerenter)
-    el.addEventListener("pointerdown", onPointerdown)
-    el.addEventListener("mouseenter", onMouseenter)
-    el.addEventListener("mousemove", onMousemove)
-
-    onWatcherCleanup(() => {
-      el?.removeEventListener("pointerenter", onPointerenter)
-      el?.removeEventListener("pointerdown", onPointerdown)
-      el?.removeEventListener("mouseenter", onMouseenter)
-      el?.removeEventListener("mousemove", onMousemove)
-    })
-  })
-
   const onPointerdown = (e: PointerEvent) => {
     if (!isEnabled.value) return
     setPointerType(e)
@@ -287,6 +276,37 @@ export function useClientPoint(
   const onMouseenter = (e: MouseEvent) => {
     if (!isEnabled.value) return
     handleReferenceEnterOrMove(e)
+  }
+
+  watch(referenceEl, (el) => {
+    if (!el) return
+
+    el.addEventListener("pointerenter", onPointerenter)
+    el.addEventListener("pointerdown", onPointerdown)
+    el.addEventListener("mouseenter", onMouseenter)
+    el.addEventListener("mousemove", onMousemove)
+
+    onWatcherCleanup(() => {
+      el?.removeEventListener("pointerenter", onPointerenter)
+      el?.removeEventListener("pointerdown", onPointerdown)
+      el?.removeEventListener("mouseenter", onMouseenter)
+      el?.removeEventListener("mousemove", onMousemove)
+    })
+  })
+
+  onScopeDispose(cleanup)
+
+  const updatePosition = (x: number, y: number) => {
+    clientCoords.value = { x, y }
+    setPositionReference(createVirtualElement())
+  }
+
+  return {
+    cleanup,
+    coordinates: clientCoords,
+    isActive,
+    debug,
+    updatePosition,
   }
 }
 
@@ -346,9 +366,25 @@ export interface UseClientPointOptions {
   y?: MaybeRefOrGetter<number | null>
 }
 
-export interface ClientPointReferenceProps {
-  onPointerdown: (event: PointerEvent) => void
-  onPointerenter: (event: PointerEvent) => void
-  onMousemove: (event: MouseEvent) => void
-  onMouseenter: (event: MouseEvent) => void
+export interface UseClientPointReturn {
+  /**
+   * Function to manually clean up event listeners and reset state
+   */
+  cleanup: () => void
+  /**
+   * Reactive object containing the current client coordinates (x/y)
+   */
+  coordinates: Ref<{ x: number | null; y: number | null }>
+  /**
+   * Whether the pointer tracking is currently active
+   */
+  isActive: Ref<boolean>
+  /**
+   * Whether debug logging is enabled
+   */
+  debug: Ref<boolean>
+  /**
+   * Function to manually update the floating element's position
+   */
+  updatePosition: (x: number, y: number) => void
 }
