@@ -3,7 +3,9 @@ import {
   type Ref,
   computed,
   onScopeDispose,
+  onWatcherCleanup,
   toValue,
+  watch,
   watchEffect,
 } from "vue"
 import type { FloatingContext } from "../use-floating"
@@ -38,18 +40,17 @@ export function useHover(
     onOpenChange: (open: boolean) => void
   },
   options: UseHoverOptions = {}
-): UseHoverReturn {
-  const {
-    open,
-    onOpenChange,
-    refs,
-    elements: { floating, reference },
-  } = context
+): void {
+  const { open, onOpenChange, refs } = context
+  const { floating } = refs
 
   const { enabled = true, delay = 0, handleFloatingHover = true, move = false } = options
 
   let timeoutId: number | null = null
   let handlerRef: ((event: MouseEvent) => void) | null = null
+  const reference = computed(() =>
+    refs.reference.value instanceof HTMLElement ? refs.reference.value : null
+  )
 
   const closeWithDelay = (runCallback = true) => {
     const closeDelay = getDelay("close")
@@ -67,8 +68,8 @@ export function useHover(
   }
 
   const clearPointerEvents = () => {
-    if (handlerRef && reference) {
-      reference.removeEventListener("mousemove", handlerRef)
+    if (handlerRef && reference.value) {
+      reference.value.removeEventListener("mousemove", handlerRef)
       handlerRef = null
     }
   }
@@ -100,98 +101,129 @@ export function useHover(
     }
   })
 
-  return {
-    getReferenceProps: () => ({
-      onMouseenter: (_event: MouseEvent) => {
-        if (!isEnabled.value) return
+  const onMouseenter = (_event: MouseEvent) => {
+    if (!isEnabled.value) return
 
-        clearTimeout(timeoutId!)
+    clearTimeout(timeoutId!)
 
-        const openDelay = getDelay("open")
+    const openDelay = getDelay("open")
 
-        if (openDelay) {
-          timeoutId = window.setTimeout(() => {
-            onOpenChange(true)
-          }, openDelay)
-        } else {
-          onOpenChange(true)
-        }
+    if (openDelay) {
+      timeoutId = window.setTimeout(() => {
+        onOpenChange(true)
+      }, openDelay)
+    } else {
+      onOpenChange(true)
+    }
 
-        if (toValue(move) && !handlerRef) {
-          handlerRef = () => {
-            if (open.value) return
-
-            onOpenChange(true)
-          }
-
-          reference?.addEventListener("mousemove", handlerRef)
-        }
-      },
-      onMouseleave: (event: MouseEvent) => {
-        if (!isEnabled.value) return
-
-        clearPointerEvents()
-
-        if (!handleFloatingHover || !floating || !event.relatedTarget) {
-          closeWithDelay()
-          return
-        }
-
-        // Check if hovered element is the floating element or its children
-        let targetIsNotInsideFloating = true
-        let node = event.relatedTarget as Node | null
-        while (node) {
-          if (node === floating) {
-            targetIsNotInsideFloating = false
-            break
-          }
-          node = node.parentNode
-        }
-
-        if (targetIsNotInsideFloating) {
-          closeWithDelay()
-        }
-      },
-      ...(toValue(move) && {
-        onMousemove: (event: MouseEvent) => {
-          if (!isEnabled.value || !handlerRef) return
-          handlerRef(event)
-        },
-      }),
-      onFocus: (_event: FocusEvent) => {
-        if (!isEnabled.value) return
+    if (toValue(move) && !handlerRef) {
+      handlerRef = () => {
+        if (open.value) return
 
         onOpenChange(true)
-      },
-      onBlur: (event: FocusEvent) => {
-        if (!isEnabled.value) return
+      }
 
-        if (!floating) {
-          onOpenChange(false)
-          return
-        }
-
-        if (event.relatedTarget && floating.contains(event.relatedTarget as Node)) {
-          return
-        }
-
-        onOpenChange(false)
-      },
-    }),
-
-    getFloatingProps: () => ({
-      onMouseenter: (_event: MouseEvent) => {
-        if (!isEnabled.value || !handleFloatingHover) return
-
-        clearTimeout(timeoutId!)
-      },
-      onMouseleave: (_event: MouseEvent) => {
-        if (!isEnabled.value || !handleFloatingHover) return
-
-        closeWithDelay()
-      },
-    }),
+      reference.value?.addEventListener("mousemove", handlerRef)
+    }
   }
+
+  const onMouseleave = (event: MouseEvent) => {
+    if (!isEnabled.value) return
+
+    clearPointerEvents()
+
+    if (!handleFloatingHover || !floating || !event.relatedTarget) {
+      closeWithDelay()
+      return
+    }
+
+    let targetIsNotInsideFloating = true
+    let node = event.relatedTarget as Node | null
+    while (node) {
+      if (node === floating.value) {
+        targetIsNotInsideFloating = false
+        break
+      }
+      node = node.parentNode
+    }
+
+    if (targetIsNotInsideFloating) {
+      closeWithDelay()
+    }
+  }
+
+  const onMousemove = (event: MouseEvent) => {
+    if (!isEnabled.value || !handlerRef) return
+    handlerRef(event)
+  }
+
+  const onFocus = (_event: FocusEvent) => {
+    if (!isEnabled.value) return
+
+    onOpenChange(true)
+  }
+
+  const onBlur = (event: FocusEvent) => {
+    if (!isEnabled.value) return
+
+    if (!floating) {
+      onOpenChange(false)
+      return
+    }
+
+    if (event.relatedTarget && floating.value?.contains(event.relatedTarget as Node)) {
+      return
+    }
+
+    onOpenChange(false)
+  }
+
+  const onFloatingMouseenter = (_event: MouseEvent) => {
+    if (!isEnabled.value || !handleFloatingHover) return
+
+    clearTimeout(timeoutId!)
+  }
+
+  const onFloatingMouseleave = (_event: MouseEvent) => {
+    if (!isEnabled.value || !handleFloatingHover) return
+
+    closeWithDelay()
+  }
+
+  watchEffect(() => {
+    const el = reference.value
+    if (!el) return
+
+    el.addEventListener("mouseenter", onMouseenter)
+    el.addEventListener("mouseleave", onMouseleave)
+    el.addEventListener("focus", onFocus)
+    el.addEventListener("blur", onBlur)
+
+    if (toValue(move)) {
+      el.addEventListener("mousemove", onMousemove)
+    }
+
+    onWatcherCleanup(() => {
+      el.removeEventListener("mouseenter", onMouseenter)
+      el.removeEventListener("mouseleave", onMouseleave)
+      el.removeEventListener("focus", onFocus)
+      el.removeEventListener("blur", onBlur)
+      el.removeEventListener("mousemove", onMousemove)
+    })
+  })
+
+  watchEffect(() => {
+    const el = floating.value
+    if (!el || !toValue(handleFloatingHover)) return
+
+    el.addEventListener("mouseenter", onFloatingMouseenter)
+    el.addEventListener("mouseleave", onFloatingMouseleave)
+
+    onWatcherCleanup(() => {
+      el.removeEventListener("mouseenter", onFloatingMouseenter)
+      el.removeEventListener("mouseleave", onFloatingMouseleave)
+    })
+  })
 }
 
 //=======================================================================================
