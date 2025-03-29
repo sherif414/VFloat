@@ -36,8 +36,8 @@ import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from "vue"
  * ```
  */
 export function useFloating(
-  reference: Ref<HTMLElement | VirtualElement | null>,
-  floating: Ref<HTMLElement | null>,
+  reference: Ref<ReferenceElement>,
+  floating: Ref<FloatingElement>,
   options: UseFloatingOptions = {}
 ): FloatingContext {
   const {
@@ -185,6 +185,9 @@ export function autoUpdate(
 // 📌 Types
 //=======================================================================================
 
+export type ReferenceElement = HTMLElement | VirtualElement | null
+export type FloatingElement = HTMLElement | null
+
 /**
  * CSS styles for positioning floating elements
  */
@@ -246,8 +249,8 @@ export interface UseFloatingOptions {
    * Function called when both the reference and floating elements are mounted.
    */
   whileElementsMounted?: (
-    reference: HTMLElement | VirtualElement,
-    floating: HTMLElement,
+    reference: NonNullable<ReferenceElement>,
+    floating: NonNullable<FloatingElement>,
     update: () => void
   ) => undefined | (() => void)
 
@@ -321,8 +324,8 @@ export interface FloatingContext {
    * The refs object containing reference to reference and floating elements
    */
   refs: {
-    reference: Ref<HTMLElement | VirtualElement | null>
-    floating: Ref<HTMLElement | null>
+    reference: Ref<ReferenceElement>
+    floating: Ref<FloatingElement>
   }
 
   /**
