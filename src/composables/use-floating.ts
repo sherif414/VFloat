@@ -12,176 +12,6 @@ import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue"
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from "vue"
 
 //=======================================================================================
-// 📌 Main
-//=======================================================================================
-
-/**
- * Composable function that provides positioning for a floating element relative to a reference element
- *
- * This composable handles the positioning logic for floating elements (like tooltips, popovers, etc.)
- * relative to their reference elements. It uses Floating UI under the hood and provides reactive
- * positioning data and styles.
- *
- * @param reference - The reference element or a reactive reference to it
- * @param floating - The floating element or a reactive reference to it
- * @param options - Additional options for the floating behavior
- * @returns A FloatingContext object containing positioning data and methods
- *
- * @example
- * ```ts
- * const { floatingStyles, refs } = useFloating(referenceRef, floatingRef, {
- *   placement: 'bottom',
- *   strategy: 'absolute'
- * })
- * ```
- */
-export function useFloating(
-  reference: Ref<ReferenceElement>,
-  floating: Ref<FloatingElement>,
-  options: UseFloatingOptions = {}
-): FloatingContext {
-  const {
-    placement: initialPlacement = "bottom",
-    strategy: initialStrategy = "absolute",
-    transform = true,
-    middlewares,
-    whileElementsMounted,
-    open = ref(false),
-    onOpenChange = (value: boolean) => {
-      open.value = value
-    },
-  } = options
-
-  // Position state
-  const x = ref(0)
-  const y = ref(0)
-  const strategy = ref(toValue(initialStrategy) as Strategy)
-  const placement = ref(toValue(initialPlacement) as Placement)
-
-  const middlewareData = shallowRef<MiddlewareData>({})
-  const isPositioned = ref(false)
-
-  const update = async () => {
-    if (!reference.value || !floating.value) return
-
-    const result = await computePosition(reference.value, floating.value, {
-      placement: toValue(initialPlacement),
-      strategy: toValue(initialStrategy),
-      middleware: middlewares,
-    })
-
-    x.value = result.x
-    y.value = result.y
-    placement.value = result.placement
-    strategy.value = result.strategy
-    middlewareData.value = result.middlewareData
-    isPositioned.value = open.value
-  }
-
-  watch(
-    [() => toValue(initialPlacement), () => toValue(initialStrategy), reference, floating],
-    update
-  )
-
-  let cleanup: (() => void) | undefined
-
-  watch(
-    [reference, floating, open],
-    ([reference, floating, isOpen]) => {
-      cleanup?.()
-      cleanup = undefined
-
-      if (!isOpen || !reference || !floating) return
-
-      if (whileElementsMounted) {
-        cleanup = whileElementsMounted(reference, floating, update)
-      } else {
-        cleanup = floatingUIAutoUpdate(reference, floating, update)
-      }
-    },
-    { immediate: true }
-  )
-
-  onScopeDispose(() => cleanup?.())
-
-  // Reset isPositioned when closed
-  watch(open, (isOpen) => {
-    if (!isOpen) {
-      isPositioned.value = false
-    }
-  })
-
-  const floatingStyles = computed(() => {
-    const initialStyles = {
-      position: strategy.value,
-      left: "0",
-      top: "0",
-    }
-
-    if (!isPositioned.value || !floating.value) {
-      return initialStyles
-    }
-
-    const xVal = roundByDPR(floating.value, x.value)
-    const yVal = roundByDPR(floating.value, y.value)
-
-    if (transform) {
-      return {
-        ...initialStyles,
-        transform: `translate(${xVal}px, ${yVal}px)`,
-        ...(getDPR(floating.value) >= 1.5 && {
-          willChange: "transform",
-        }),
-      }
-    }
-
-    return {
-      ...initialStyles,
-      left: `${xVal}px`,
-      top: `${yVal}px`,
-    }
-  })
-
-  return {
-    x,
-    y,
-    strategy,
-    placement,
-    middlewareData,
-    isPositioned,
-    floatingStyles,
-    update,
-    refs: {
-      reference: reference,
-      floating: floating,
-    },
-    open,
-    onOpenChange,
-  }
-}
-
-/**
- * Auto-update function to use with `whileElementsMounted` option
- *
- * This function provides automatic position updates for floating elements.
- * It's a wrapper around Floating UI's autoUpdate function.
- *
- * @param reference - The reference element
- * @param floating - The floating element
- * @param update - The update function to call
- * @param options - Additional options for auto-updating
- * @returns A cleanup function to stop auto-updating
- */
-export function autoUpdate(
-  reference: HTMLElement,
-  floating: HTMLElement,
-  update: () => void,
-  options: AutoUpdateOptions = {}
-) {
-  return floatingUIAutoUpdate(reference, floating, update, options)
-}
-
-//=======================================================================================
 // 📌 Types
 //=======================================================================================
 
@@ -337,4 +167,178 @@ export interface FloatingContext {
    * Function to update the open state
    */
   onOpenChange: (open: boolean) => void
+}
+
+//=======================================================================================
+// 📌 Main Logic / Primary Export(s)
+//=======================================================================================
+
+/**
+ * Composable function that provides positioning for a floating element relative to a reference element
+ *
+ * This composable handles the positioning logic for floating elements (like tooltips, popovers, etc.)
+ * relative to their reference elements. It uses Floating UI under the hood and provides reactive
+ * positioning data and styles.
+ *
+ * @param reference - The reference element or a reactive reference to it
+ * @param floating - The floating element or a reactive reference to it
+ * @param options - Additional options for the floating behavior
+ * @returns A FloatingContext object containing positioning data and methods
+ *
+ * @example
+ * ```ts
+ * const { floatingStyles, refs } = useFloating(referenceRef, floatingRef, {
+ *   placement: 'bottom',
+ *   strategy: 'absolute'
+ * })
+ * ```
+ */
+export function useFloating(
+  reference: Ref<ReferenceElement>,
+  floating: Ref<FloatingElement>,
+  options: UseFloatingOptions = {}
+): FloatingContext {
+  const {
+    placement: initialPlacement = "bottom",
+    strategy: initialStrategy = "absolute",
+    transform = true,
+    middlewares,
+    whileElementsMounted,
+    open = ref(false),
+    onOpenChange = (value: boolean) => {
+      open.value = value
+    },
+  } = options
+
+  // Position state
+  const x = ref(0)
+  const y = ref(0)
+  const strategy = ref(toValue(initialStrategy) as Strategy)
+  const placement = ref(toValue(initialPlacement) as Placement)
+
+  const middlewareData = shallowRef<MiddlewareData>({})
+  const isPositioned = ref(false)
+
+  const update = async () => {
+    if (!reference.value || !floating.value) return
+
+    const result = await computePosition(reference.value, floating.value, {
+      placement: toValue(initialPlacement),
+      strategy: toValue(initialStrategy),
+      middleware: middlewares,
+    })
+
+    x.value = result.x
+    y.value = result.y
+    placement.value = result.placement
+    strategy.value = result.strategy
+    middlewareData.value = result.middlewareData
+    isPositioned.value = open.value
+  }
+
+  watch(
+    [() => toValue(initialPlacement), () => toValue(initialStrategy), reference, floating],
+    update
+  )
+
+  let cleanup: (() => void) | undefined
+
+  watch(
+    [reference, floating, open],
+    ([reference, floating, isOpen]) => {
+      cleanup?.()
+      cleanup = undefined
+
+      if (!isOpen || !reference || !floating) return
+
+      if (whileElementsMounted) {
+        cleanup = whileElementsMounted(reference, floating, update)
+      } else {
+        cleanup = floatingUIAutoUpdate(reference, floating, update)
+      }
+    },
+    { immediate: true }
+  )
+
+  onScopeDispose(() => cleanup?.())
+
+  // Reset isPositioned when closed
+  watch(open, (isOpen) => {
+    if (!isOpen) {
+      isPositioned.value = false
+    }
+  })
+
+  const floatingStyles = computed(() => {
+    const initialStyles = {
+      position: strategy.value,
+      left: "0",
+      top: "0",
+    }
+
+    if (!isPositioned.value || !floating.value) {
+      return initialStyles
+    }
+
+    const xVal = roundByDPR(floating.value, x.value)
+    const yVal = roundByDPR(floating.value, y.value)
+
+    if (transform) {
+      return {
+        ...initialStyles,
+        transform: `translate(${xVal}px, ${yVal}px)`,
+        ...(getDPR(floating.value) >= 1.5 && {
+          willChange: "transform",
+        }),
+      }
+    }
+
+    return {
+      ...initialStyles,
+      left: `${xVal}px`,
+      top: `${yVal}px`,
+    }
+  })
+
+  return {
+    x,
+    y,
+    strategy,
+    placement,
+    middlewareData,
+    isPositioned,
+    floatingStyles,
+    update,
+    refs: {
+      reference: reference,
+      floating: floating,
+    },
+    open,
+    onOpenChange,
+  }
+}
+
+//=======================================================================================
+// 📌 Internal Helpers / Utilities
+//=======================================================================================
+
+/**
+ * Auto-update function to use with `whileElementsMounted` option
+ *
+ * This function provides automatic position updates for floating elements.
+ * It's a wrapper around Floating UI's autoUpdate function.
+ *
+ * @param reference - The reference element
+ * @param floating - The floating element
+ * @param update - The update function to call
+ * @param options - Additional options for auto-updating
+ * @returns A cleanup function to stop auto-updating
+ */
+export function autoUpdate(
+  reference: HTMLElement,
+  floating: HTMLElement,
+  update: () => void,
+  options: AutoUpdateOptions = {}
+) {
+  return floatingUIAutoUpdate(reference, floating, update, options)
 }
