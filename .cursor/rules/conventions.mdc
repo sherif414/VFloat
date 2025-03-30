@@ -134,6 +134,7 @@ function formatData(data: any): string {
     *   **Export Types:** Export types/interfaces alongside the functions or components that use them, or group them in dedicated `types.ts` files if they are shared across many files.
     *   **Readonly:** Use `Readonly<T>` or `readonly` modifiers where appropriate to enforce immutability, especially for props and shared state.
 *   **Constants:** Define constants using `const`. Use `as const` for literal types or arrays where the values should be treated as readonly literals.
+*   **Reactive State Management:** Use Vue's reactivity primitives (`ref`, `reactive`, `computed`) only when the value needs to be reactive (will change and trigger updates). For constants, utility values, or variables that don't affect the template or other reactive state, use regular JavaScript variables (`const`, `let`) to avoid unnecessary reactivity overhead and improve performance.
 
 ## 6. Documentation (JSDoc)
 
