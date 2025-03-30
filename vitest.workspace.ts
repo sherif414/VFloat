@@ -9,9 +9,10 @@ export default defineWorkspace([
     test: {
       browser: {
         enabled: true,
-        provider: "preview",
-        instances: [{ browser: "chrome" }],
+        provider: "playwright",
+        instances: [{ browser: "chromium" }],
       },
+      includeTaskLocation: true,
     },
   },
 ])
