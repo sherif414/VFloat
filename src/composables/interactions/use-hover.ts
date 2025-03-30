@@ -143,9 +143,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   // State
   //-------------------------
   const pointerType = ref<PointerType>(null)
-  const openTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
-  const closeTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
-  const restTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
+  // Change from refs to regular variables for timeout IDs
+  let openTimeoutId: ReturnType<typeof setTimeout> | null = null
+  let closeTimeoutId: ReturnType<typeof setTimeout> | null = null
+  let restTimeoutId: ReturnType<typeof setTimeout> | null = null
   const isPointerInside = ref(false) // Tracks if pointer is over reference OR floating
   const isPointerInsideReference = ref(false) // Tracks specifically reference
   const isResting = ref(false) // Tracks if restMs condition was met
@@ -153,10 +154,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   const isHoverLogicBlocked = ref(false) // Prevents hover close if opened by non-hover
   const restCoords = ref<{ x: number; y: number } | null>(null)
 
-  // HandleClose state
-  const handleCloseCleanup = ref<(() => void) | undefined>(undefined)
+  // HandleClose state - use regular variables for non-reactive state
+  let handleCloseCleanup: (() => void) | undefined = undefined
   const isHandleCloseLogicActive = ref(false)
-  const latestLeaveEvent = ref<PointerEvent | MouseEvent | null>(null)
+  let latestLeaveEvent: PointerEvent | MouseEvent | null = null
 
   // One-time move listener state
   let oneTimeMoveListenerAttached = false
@@ -187,27 +188,27 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   // Timeout Management
   //-------------------------
   function clearTimeouts() {
-    if (openTimeoutId.value) clearTimeout(openTimeoutId.value)
-    if (closeTimeoutId.value) clearTimeout(closeTimeoutId.value)
-    if (restTimeoutId.value) clearTimeout(restTimeoutId.value)
-    openTimeoutId.value = null
-    closeTimeoutId.value = null
-    restTimeoutId.value = null
+    if (openTimeoutId) clearTimeout(openTimeoutId)
+    if (closeTimeoutId) clearTimeout(closeTimeoutId)
+    if (restTimeoutId) clearTimeout(restTimeoutId)
+    openTimeoutId = null
+    closeTimeoutId = null
+    restTimeoutId = null
   }
 
   function clearOpenTimeout() {
-    if (openTimeoutId.value) clearTimeout(openTimeoutId.value)
-    openTimeoutId.value = null
+    if (openTimeoutId) clearTimeout(openTimeoutId)
+    openTimeoutId = null
   }
 
   function clearCloseTimeout() {
-    if (closeTimeoutId.value) clearTimeout(closeTimeoutId.value)
-    closeTimeoutId.value = null
+    if (closeTimeoutId) clearTimeout(closeTimeoutId)
+    closeTimeoutId = null
   }
 
   function clearRestTimeout() {
-    if (restTimeoutId.value) clearTimeout(restTimeoutId.value)
-    restTimeoutId.value = null
+    if (restTimeoutId) clearTimeout(restTimeoutId)
+    restTimeoutId = null
     isResting.value = false
     restCoords.value = null
   }
@@ -217,16 +218,16 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   //-------------------------
   function openWithDelay(isFromPointerEnter = true) {
     clearCloseTimeout()
-    if (open.value || openTimeoutId.value) return
+    if (open.value || openTimeoutId) return
 
     if (isFromPointerEnter && isHoverLogicBlocked.value) return
 
     const effectiveOpenDelay = isMouseLikePointerType(pointerType.value) ? openDelay : 0
 
     if (effectiveOpenDelay > 0) {
-      openTimeoutId.value = setTimeout(() => {
+      openTimeoutId = setTimeout(() => {
         onOpenChange(true)
-        openTimeoutId.value = null
+        openTimeoutId = null
       }, effectiveOpenDelay)
     } else {
       onOpenChange(true)
@@ -236,16 +237,16 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   function closeWithDelay() {
     clearOpenTimeout()
     clearRestTimeout()
-    if (!open.value || closeTimeoutId.value) return
+    if (!open.value || closeTimeoutId) return
 
     const effectiveCloseDelay = isMouseLikePointerType(pointerType.value) ? closeDelay : 0
 
     if (effectiveCloseDelay > 0) {
-      closeTimeoutId.value = setTimeout(() => {
+      closeTimeoutId = setTimeout(() => {
         if (!isPointerInside.value) {
           onOpenChange(false)
         }
-        closeTimeoutId.value = null
+        closeTimeoutId = null
       }, effectiveCloseDelay)
     } else {
       onOpenChange(false)
@@ -261,12 +262,12 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
     restCoords.value = { x: event.clientX, y: event.clientY }
 
-    restTimeoutId.value = setTimeout(() => {
+    restTimeoutId = setTimeout(() => {
       if (restCoords.value) {
         isResting.value = true
         openWithDelay()
       }
-      restTimeoutId.value = null
+      restTimeoutId = null
     }, restMs.value)
   }
 
@@ -302,16 +303,16 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   }
 
   function cleanupHandleClose() {
-    if (handleCloseCleanup.value) {
-      handleCloseCleanup.value()
-      handleCloseCleanup.value = undefined
+    if (handleCloseCleanup) {
+      handleCloseCleanup()
+      handleCloseCleanup = undefined
     }
     unblockBodyPointerEvents()
     document.removeEventListener("pointermove", NATIVE_onPointerMoveForHandleClose)
     document.removeEventListener("scroll", NATIVE_onScrollOrLeaveForHandleClose, true)
     document.removeEventListener("pointerleave", NATIVE_onScrollOrLeaveForHandleClose)
     isHandleCloseLogicActive.value = false
-    latestLeaveEvent.value = null
+    latestLeaveEvent = null
   }
 
   function createHandleCloseContext(event: PointerEvent | MouseEvent): HandleCloseContext {
@@ -350,14 +351,11 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   }
 
   const NATIVE_onScrollOrLeaveForHandleClose = (event: Event) => {
-    if (handleClose.value && isHandleCloseLogicActive.value && latestLeaveEvent.value) {
-      const contextSnapshot: HandleCloseContext = createHandleCloseContext(latestLeaveEvent.value)
+    if (handleClose.value && isHandleCloseLogicActive.value && latestLeaveEvent) {
+      const contextSnapshot: HandleCloseContext = createHandleCloseContext(latestLeaveEvent)
       contextSnapshot.originalEvent = event
 
-      handleCloseCleanup.value = handleClose.value(
-        contextSnapshot,
-        NATIVE_triggerCloseFromHandleClose
-      )
+      handleCloseCleanup = handleClose.value(contextSnapshot, NATIVE_triggerCloseFromHandleClose)
     } else {
       cleanupHandleClose()
       closeWithDelay()
@@ -422,7 +420,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
     if (handleClose.value) {
       clearCloseTimeout()
-      latestLeaveEvent.value = event
+      latestLeaveEvent = event
 
       nextTick(() => {
         if (!isPointerInside.value && handleClose.value && !isHandleCloseLogicActive.value) {
@@ -430,7 +428,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
           blockBodyPointerEvents()
 
           const contextSnapshot = createHandleCloseContext(event)
-          handleCloseCleanup.value = handleClose.value(
+          handleCloseCleanup = handleClose.value(
             contextSnapshot,
             NATIVE_triggerCloseFromHandleClose
           )
@@ -477,14 +475,14 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
     if (handleClose.value) {
       clearCloseTimeout()
-      latestLeaveEvent.value = event
+      latestLeaveEvent = event
 
       nextTick(() => {
         if (!isPointerInside.value && handleClose.value && !isHandleCloseLogicActive.value) {
           isHandleCloseLogicActive.value = true
           blockBodyPointerEvents()
           const contextSnapshot = createHandleCloseContext(event)
-          handleCloseCleanup.value = handleClose.value(
+          handleCloseCleanup = handleClose.value(
             contextSnapshot,
             NATIVE_triggerCloseFromHandleClose
           )
@@ -517,8 +515,8 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     if (
       move.value &&
       !open.value &&
-      !openTimeoutId.value &&
-      !restTimeoutId.value &&
+      !openTimeoutId &&
+      !restTimeoutId &&
       isPointerInsideReference.value
     ) {
       clearCloseTimeout()
@@ -528,7 +526,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   }
 
   const onPointerMoveReferenceOnce = (event: PointerEvent) => {
-    if (move.value && !open.value && !openTimeoutId.value && !restTimeoutId.value) {
+    if (move.value && !open.value && !openTimeoutId && !restTimeoutId) {
       pointerType.value = event.pointerType as PointerType
       isHoverLogicBlocked.value = false
       openWithDelay()
@@ -545,7 +543,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
       move.value &&
       !oneTimeMoveListenerAttached &&
       !open.value &&
-      !openTimeoutId.value &&
+      !openTimeoutId &&
       isPointerInsideReference.value
     ) {
       const el = reference.value
