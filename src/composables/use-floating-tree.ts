@@ -1,3 +1,4 @@
+import type { VirtualElement } from "@floating-ui/dom"
 import {
   type InjectionKey,
   type Ref,
@@ -6,31 +7,88 @@ import {
   provide,
   watch,
 } from "vue"
-import { type TreeNode, type UseTreeOptions, type UseTreeReturn, useTree } from "./use-tree"
 import { type FloatingContext, type UseFloatingOptions, useFloating } from "./use-floating"
-import type { VirtualElement } from "@floating-ui/dom"
+import { type TreeNode, type UseTreeOptions, type UseTreeReturn, useTree } from "./use-tree"
 
 //=======================================================================================
 // 📌 Constants
 //=======================================================================================
 
-/** Injection key for the main tree context */
+/**
+ * Injection key for the main tree context
+ */
 export const FLOATING_TREE_INJECTION_KEY = Symbol(
   "FloatingTreeContext"
 ) as InjectionKey<FloatingTreeContext>
 
-/** Injection key for the parent node context */
+//=======================================================================================
+// 📌 Types & Interfaces
+//=======================================================================================
+
+/**
+ * Data associated with each node in the floating tree
+ */
+export interface FloatingNodeData extends FloatingContext {}
+
+/**
+ * Context provided by useFloatingTree
+ */
+export interface FloatingTreeContext {
+  /** Tree management instance */
+  tree: UseTreeReturn<FloatingNodeData>
+
+  /** Registers a floating node with the tree */
+  registerNode: (
+    parentId: string | null,
+    reference: Ref<HTMLElement | VirtualElement | null>,
+    floating: Ref<HTMLElement | null>,
+    options?: UseFloatingOptions
+  ) => { nodeId: string; context: FloatingContext } | null
+
+  /** Unregister a floating node from the tree */
+  unregisterNode: (nodeId: string) => void
+
+  /** Retrieves the FloatingContext for a given node ID */
+  getNodeContext: (nodeId: string) => FloatingNodeData | undefined
+
+  /** Retrieves the TreeNode for a given node ID */
+  getTreeNode: (nodeId: string) => TreeNode<FloatingNodeData> | null
+}
+
+/**
+ * Context provided by a node for its children
+ */
+export interface FloatingParentNodeContext {
+  /** The ID of the parent floating node */
+  parentId: string
+}
+
+/**
+ * Configuration options for the floating tree
+ */
+export interface UseFloatingTreeOptions extends UseTreeOptions {}
+
+/**
+ * Return value of useFloatingTree
+ */
+export interface UseFloatingTreeReturn extends FloatingTreeContext {
+  /** The tree's node map */
+  nodeMap: Readonly<Ref<Map<string, TreeNode<FloatingNodeData>>>>
+}
 
 //=======================================================================================
-// 📌 Main
+// 📌 Main Logic / Primary Export(s)
 //=======================================================================================
 
 /**
  * Manages a hierarchical tree of floating elements.
  * Handles cascading close behavior (closing a parent closes its descendants).
  *
- * @param options Options for the underlying `useTree` instance.
- * @returns Methods and state for managing the floating tree.
+ * @param reference - Reference element for the root floating element
+ * @param floating - Root floating element
+ * @param floatingOptions - Options for the root floating element
+ * @param options - Options for the underlying tree structure
+ * @returns Methods and state for managing the floating tree
  */
 export function useFloatingTree(
   reference: Ref<HTMLElement | null>,
@@ -157,42 +215,4 @@ export function useFloatingTree(
     ...treeContext,
     nodeMap: tree.nodeMap,
   }
-}
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-export interface FloatingNodeData extends FloatingContext {}
-
-/** Context provided by useFloatingTree */
-export interface FloatingTreeContext {
-  /** Tree management instance */
-  tree: UseTreeReturn<FloatingNodeData>
-  /** Registers a floating node with the tree */
-  registerNode: (
-    parentId: string | null,
-    reference: Ref<HTMLElement | VirtualElement | null>,
-    floating: Ref<HTMLElement | null>,
-    options?: UseFloatingOptions
-  ) => { nodeId: string; context: FloatingContext } | null
-  /** Unregister a floating node from the tree */
-  unregisterNode: (nodeId: string) => void
-  /** Retrieves the FloatingContext for a given node ID */
-  getNodeContext: (nodeId: string) => FloatingNodeData | undefined
-  /** Retrieves the TreeNode for a given node ID */
-  getTreeNode: (nodeId: string) => TreeNode<FloatingNodeData> | null
-}
-
-/** Context provided by a node for its children */
-export interface FloatingParentNodeContext {
-  /** The ID of the parent floating node */
-  parentId: string
-}
-
-export interface UseFloatingTreeOptions extends UseTreeOptions {}
-
-export interface UseFloatingTreeReturn extends FloatingTreeContext {
-  /** The tree's node map */
-  nodeMap: Readonly<Ref<Map<string, TreeNode<FloatingNodeData>>>>
 }

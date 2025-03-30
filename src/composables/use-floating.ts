@@ -12,10 +12,17 @@ import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue"
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from "vue"
 
 //=======================================================================================
-// 📌 Types
+// 📌 Types & Interfaces
 //=======================================================================================
 
+/**
+ * Type for reference element in floating UI
+ */
 export type ReferenceElement = HTMLElement | VirtualElement | null
+
+/**
+ * Type for floating element in floating UI
+ */
 export type FloatingElement = HTMLElement | null
 
 /**
@@ -319,7 +326,7 @@ export function useFloating(
 }
 
 //=======================================================================================
-// 📌 Internal Helpers / Utilities
+// 📌 Utility Functions
 //=======================================================================================
 
 /**

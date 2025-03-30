@@ -1,18 +1,40 @@
+import type { VirtualElement } from "@floating-ui/dom"
 import { type InjectionKey, type Ref, inject, onScopeDispose, provide } from "vue"
 import type { FloatingContext, UseFloatingOptions } from "./use-floating"
 import { FLOATING_TREE_INJECTION_KEY, type FloatingParentNodeContext } from "./use-floating-tree"
-import type { VirtualElement } from "@floating-ui/dom"
 
 //=======================================================================================
 // 📌 Constants
 //=======================================================================================
 
+/**
+ * Injection key for providing floating parent node context to children
+ */
 export const FLOATING_PARENT_NODE_INJECTION_KEY = Symbol(
   "FloatingParentNodeContext"
 ) as InjectionKey<FloatingParentNodeContext>
 
 //=======================================================================================
-// 📌 Main
+// 📌 Types & Interfaces
+//=======================================================================================
+
+/**
+ * Return value of the useFloatingNode composable
+ */
+export interface UseFloatingNodeReturn {
+  /**
+   * Unique ID for this floating node
+   */
+  nodeId: string
+
+  /**
+   * Floating context for this node
+   */
+  context: FloatingContext
+}
+
+//=======================================================================================
+// 📌 Main Logic / Primary Export(s)
 //=======================================================================================
 
 /**
@@ -22,13 +44,14 @@ export const FLOATING_PARENT_NODE_INJECTION_KEY = Symbol(
  * @param reference The reference element Ref for this floating node.
  * @param floating The floating element Ref for this node.
  * @param options Options for the `useFloating` instance specific to this node.
- * @returns The `FloatingContext` for this specific node, or null if registration fails.
+ * @returns The nodeId and context for this specific floating node.
+ * @throws Error if not used within a useFloatingTree context.
  */
 export function useFloatingNode(
   reference: Ref<HTMLElement | VirtualElement | null>,
   floating: Ref<HTMLElement | null>,
   options: UseFloatingOptions = {}
-): { nodeId: string; context: FloatingContext } {
+): UseFloatingNodeReturn {
   const tree = inject(FLOATING_TREE_INJECTION_KEY, null)
   const parentNode = inject(FLOATING_PARENT_NODE_INJECTION_KEY, null)
 

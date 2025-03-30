@@ -1,7 +1,16 @@
 import { type Ref, type UnwrapRef, isRef, ref } from "vue"
 
 //=======================================================================================
-// 📌 Main
+// 📌 Types & Interfaces
+//=======================================================================================
+
+/**
+ * Type representing possible ref values that can be merged
+ */
+type PossibleRef<T> = Ref<T> | ((el: T) => void) | null | undefined
+
+//=======================================================================================
+// 📌 Main Logic / Primary Export(s)
 //=======================================================================================
 
 /**
@@ -22,7 +31,7 @@ import { type Ref, type UnwrapRef, isRef, ref } from "vue"
 export function useMergeRefs<T>(refs: PossibleRef<T>[]): (instance: T) => void {
   return (instance: T) => {
     for (const ref of refs) {
-      if (ref === null || ref === undefined) return
+      if (ref === null || ref === undefined) continue
 
       if (typeof ref === "function") {
         ref(instance)
@@ -55,12 +64,3 @@ export function createCallbackRef<T>(): [Ref<T | null>, (node: T | null) => void
 
   return [refValue, setRef]
 }
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-/**
- * Type representing possible ref values that can be merged
- */
-type PossibleRef<T> = Ref<T> | ((el: T) => void) | null | undefined

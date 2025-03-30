@@ -1,7 +1,43 @@
 import { mergeProps } from "vue"
 
 //=======================================================================================
-// 📌 Main
+// 📌 Types & Interfaces
+//=======================================================================================
+
+/**
+ * Shared interface for prop getter functions
+ */
+export type PropGetter<T extends Record<string, any> = Record<string, any>> = (
+  props?: T
+) => Record<string, any>
+
+/**
+ * Interface for interaction props returned by interaction composables
+ */
+export interface Interaction {
+  /**
+   * A function that returns merged props for the reference element
+   */
+  getReferenceProps?: PropGetter
+
+  /**
+   * A function that returns merged props for the floating element
+   */
+  getFloatingProps?: PropGetter
+
+  /**
+   * A function that returns merged props for list items
+   */
+  getItemProps?: PropGetter
+}
+
+/**
+ * Return value of the useInteractions composable
+ */
+export interface UseInteractionsReturn extends Required<Interaction> {}
+
+//=======================================================================================
+// 📌 Main Logic / Primary Export(s)
 //=======================================================================================
 
 /**
@@ -47,39 +83,3 @@ export function useInteractions(interactions: Interaction[]): UseInteractionsRet
     }
   }, initialInteractions)
 }
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-/**
- * Shared interface for prop getter functions
- */
-export type PropGetter<T extends Record<string, any> = Record<string, any>> = (
-  props?: T
-) => Record<string, any>
-
-/**
- * Interface for interaction props returned by interaction composables
- */
-export interface Interaction {
-  /**
-   * A function that returns merged props for the reference element
-   */
-  getReferenceProps?: PropGetter
-
-  /**
-   * A function that returns merged props for the floating element
-   */
-  getFloatingProps?: PropGetter
-
-  /**
-   * A function that returns merged props for list items
-   */
-  getItemProps?: PropGetter
-}
-
-/**
- * Return value of the useInteractions composable
- */
-export interface UseInteractionsReturn extends Required<Interaction> {}

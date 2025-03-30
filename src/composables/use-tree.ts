@@ -1,6 +1,64 @@
 import { type Ref, onScopeDispose, ref, shallowRef, useId } from "vue"
 
 //=======================================================================================
+// 📌 Types & Interfaces
+//=======================================================================================
+
+/**
+ * Options for creating a TreeNode
+ */
+export interface TreeNodeOptions<T> {
+  /** Optional ID for the node. If not provided, one will be generated. */
+  id?: string
+  /** Optional initial children data to populate the node with. */
+  children?: T[]
+}
+
+/**
+ * Options for configuring tree behavior
+ */
+export interface UseTreeOptions {
+  /** Strategy for deleting child nodes when a parent is deleted.
+   * - 'orphan': Children are detached from the tree (parent becomes null).
+   * - 'recursive': Children are also deleted recursively.
+   * @default 'recursive'
+   */
+  deleteStrategy?: "orphan" | "recursive"
+  /**
+   * Maintain an internal Map for O(1) node lookup by ID.
+   * Recommended for large trees where frequent ID lookups occur.
+   * Adds slight overhead on node creation/deletion.
+   * @default true
+   */
+  useIdMap?: boolean
+}
+
+/**
+ * Return value from the useTree composable
+ */
+export interface UseTreeReturn<T, TOptions extends UseTreeOptions = UseTreeOptions> {
+  /** The root node of the tree. */
+  root: TreeNode<T>
+  /** Adds a new node to the tree. If parentId is null/undefined, adds to the root. */
+  addNode(data: T, parentId?: string | null, options?: TreeNodeOptions<T>): TreeNode<T> | null
+  /** Removes a node by its ID. Handles recursive deletion based on options. */
+  removeNode(nodeId: string): boolean
+  /** Moves a node to become a child of a new parent. Set newParentId to null to move to root level. */
+  moveNode(nodeId: string, newParentId: string | null): boolean
+  /** Finds a node anywhere in the tree by its ID. Uses Map if enabled, otherwise traverses. */
+  findNodeById(id: string): TreeNode<T> | null
+  /** Traverses the tree starting from a given node (or root). */
+  traverse(strategy?: "dfs" | "bfs", startNode?: TreeNode<T>): TreeNode<T>[]
+  /** Gets all nodes in the tree as a flat list. */
+  flattenNodes(startNode?: TreeNode<T>): TreeNode<T>[]
+  /**
+   * Provides direct access to the internal ID map if enabled.
+   * The type is conditional: `Ref<Map<...>>` if `useIdMap` is true (or default), `undefined` if `useIdMap` is false.
+   */
+  nodeMap: TOptions["useIdMap"] extends false ? undefined : Readonly<Ref<Map<string, TreeNode<T>>>>
+}
+
+//=======================================================================================
 // 📌 TreeNode Class
 //=======================================================================================
 
@@ -177,7 +235,7 @@ export class TreeNode<T> {
 }
 
 //=======================================================================================
-// 📌 Main
+// 📌 Main Logic / Primary Export(s)
 //=======================================================================================
 
 /**
@@ -376,57 +434,4 @@ export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
     flattenNodes,
     nodeMap,
   } as UseTreeReturn<T, TOptions> // Assert the return type matches the conditional interface
-}
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-export interface TreeNodeOptions<T> {
-  /** Optional ID for the node. If not provided, one will be generated. */
-  id?: string
-  /** Optional initial children data to populate the node with. */
-  children?: T[]
-}
-
-export interface UseTreeOptions {
-  /** Strategy for deleting child nodes when a parent is deleted.
-   * - 'orphan': Children are detached from the tree (parent becomes null).
-   * - 'recursive': Children are also deleted recursively.
-   * @default 'recursive'
-   */
-  deleteStrategy?: "orphan" | "recursive"
-  /**
-   * Maintain an internal Map for O(1) node lookup by ID.
-   * Recommended for large trees where frequent ID lookups occur.
-   * Adds slight overhead on node creation/deletion.
-   * @default true
-   */
-  useIdMap?: boolean
-}
-
-// Make UseTreeReturn generic over TOptions to enable conditional typing
-export interface UseTreeReturn<
-  T,
-  TOptions extends UseTreeOptions = UseTreeOptions, // Default to base options
-> {
-  /** The root node of the tree. */
-  root: TreeNode<T>
-  /** Adds a new node to the tree. If parentId is null/undefined, adds to the root. */
-  addNode(data: T, parentId?: string | null, options?: TreeNodeOptions<T>): TreeNode<T> | null
-  /** Removes a node by its ID. Handles recursive deletion based on options. */
-  removeNode(nodeId: string): boolean
-  /** Moves a node to become a child of a new parent. Set newParentId to null to move to root level. */
-  moveNode(nodeId: string, newParentId: string | null): boolean
-  /** Finds a node anywhere in the tree by its ID. Uses Map if enabled, otherwise traverses. */
-  findNodeById(id: string): TreeNode<T> | null
-  /** Traverses the tree starting from a given node (or root). */
-  traverse(strategy?: "dfs" | "bfs", startNode?: TreeNode<T>): TreeNode<T>[]
-  /** Gets all nodes in the tree as a flat list. */
-  flattenNodes(startNode?: TreeNode<T>): TreeNode<T>[]
-  /**
-   * Provides direct access to the internal ID map if enabled.
-   * The type is conditional: `Ref<Map<...>>` if `useIdMap` is true (or default), `undefined` if `useIdMap` is false.
-   */
-  nodeMap: TOptions["useIdMap"] extends false ? undefined : Readonly<Ref<Map<string, TreeNode<T>>>>
 }

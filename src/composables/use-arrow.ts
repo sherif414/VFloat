@@ -3,7 +3,37 @@ import { computed, toValue } from "vue"
 import type { FloatingContext } from "./use-floating"
 
 //=======================================================================================
-// 📌 Main
+// 📌 Types & Interfaces
+//=======================================================================================
+
+/**
+ * Return value of the useArrow composable
+ */
+export interface UseArrowReturn {
+  /**
+   * The computed X position of the arrow
+   */
+  arrowX: ComputedRef<number>
+
+  /**
+   * The computed Y position of the arrow
+   */
+  arrowY: ComputedRef<number>
+
+  /**
+   * The computed CSS styles for positioning the arrow
+   */
+  arrowStyles: ComputedRef<Record<string, string>>
+}
+
+//=======================================================================================
+// 📌 Constants
+//=======================================================================================
+
+const DEFAULT_ARROW_OFFSET = "-12px"
+
+//=======================================================================================
+// 📌 Main Logic / Primary Export(s)
 //=======================================================================================
 
 /**
@@ -12,15 +42,12 @@ import type { FloatingContext } from "./use-floating"
  * This composable calculates the position and styles for an arrow element
  * based on the placement and middleware data from a floating element.
  *
- * @param options - Configuration options for the arrow positioning
+ * @param context - The floating context containing middleware data and placement information
  * @returns Computed arrow positions and CSS styles
  *
  * @example
  * ```ts
- * const { arrowStyles } = useArrow({
- *   middlewareData: floating.middlewareData,
- *   placement: floating.placement
- * })
+ * const { arrowStyles } = useArrow(floatingContext)
  * ```
  */
 export function useArrow(context: FloatingContext): UseArrowReturn {
@@ -43,7 +70,7 @@ export function useArrow(context: FloatingContext): UseArrowReturn {
     return {
       "inset-inline-start": x,
       "inset-block-start": y,
-      [staticSide]: "-12px", //FIXME: Default offset
+      [staticSide]: DEFAULT_ARROW_OFFSET,
     }
   })
 
@@ -52,28 +79,4 @@ export function useArrow(context: FloatingContext): UseArrowReturn {
     arrowY,
     arrowStyles,
   }
-}
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-/**
- * Return value of the useArrow composable
- */
-export interface UseArrowReturn {
-  /**
-   * The computed X position of the arrow
-   */
-  arrowX: ComputedRef<number>
-
-  /**
-   * The computed Y position of the arrow
-   */
-  arrowY: ComputedRef<number>
-
-  /**
-   * The computed CSS styles for positioning the arrow
-   */
-  arrowStyles: ComputedRef<Record<string, string>>
 }
