@@ -1,5 +1,4 @@
 import {
-  type ComputedRef,
   type MaybeRef,
   type Ref,
   computed,
@@ -405,7 +404,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   }
 
   const onPointerLeaveReference = (event: PointerEvent) => {
-    if (!enabled.value) return
+    if (!enabled.value || (mouseOnly.value && event.pointerType !== "mouse")) return
     isPointerInsideReference.value = false
     pointerType.value = event.pointerType as PointerType
 
