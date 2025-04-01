@@ -264,11 +264,6 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     }
   }
 
-  //-------------------------
-  // Event Listener Management
-  //-------------------------
-
-  // Attach/detach pointer enter/leave listeners for reference element
   watchPostEffect(() => {
     const el = reference.value
     if (!el || !enabled.value) return
@@ -282,7 +277,6 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     })
   })
 
-  // Attach/detach pointer enter/leave listeners for floating element
   watchPostEffect(() => {
     const el = floating.value
     if (!el || !enabled.value) return
