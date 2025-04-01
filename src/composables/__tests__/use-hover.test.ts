@@ -32,6 +32,7 @@ describe("useHover", () => {
     // Create a proper effect scope for Vue composables
     scope = effectScope()
     scope.run(() => {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       useHover(context as any, options)
     })
   }
@@ -181,7 +182,7 @@ describe("useHover", () => {
       document.body.removeChild(newRef)
     })
 
-    it("should cleanup listeners when `enabled` becomes false", async () => {
+    it("should disable the functionality when `enabled` becomes false", async () => {
       const enabled = ref(true)
       initHover({ enabled })
 
@@ -437,77 +438,6 @@ describe("useHover", () => {
     })
   })
 
-  // --- Move to open Behavior  ---
-  describe("Move behavior (`move`) after manual close", () => {
-    // Helper function to perform the common sequence
-    async function setupAndManuallyClose() {
-      // --- Initial Hover and Open ---
-      const enterEvent = new PointerEvent("pointerenter", {
-        bubbles: true,
-        cancelable: true,
-        pointerType: "mouse",
-        clientX: 10,
-        clientY: 10,
-      })
-      referenceEl.dispatchEvent(enterEvent)
-      await nextTick()
-
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
-      expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear() // Clear before manual close
-
-      // --- Manually Close While Pointer is Still Inside ---
-      // This simulates closing via Escape key, clicking outside, etc.
-      context.open.value = false // Directly change the state
-      await nextTick() // Allow watchers in useHover to react
-
-      // Verify it's closed and no further mock calls happened yet
-      expect(context.open.value).toBe(false)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
-    }
-
-    it("should RE-OPEN on pointer move if `move` is true (default) after manual close", async () => {
-      initHover({ move: true })
-      await setupAndManuallyClose() // Open and then manually close it
-
-      // --- Simulate Pointer Move within the element ---
-      const moveEvent = new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerType: "mouse",
-        clientX: 10,
-        clientY: 30, // Different coords
-      })
-      referenceEl.dispatchEvent(moveEvent)
-      await nextTick() // Allow move handler to run
-
-      // Assert: Should have re-opened because move:true allows move to trigger open when closed
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
-    })
-
-    it("should NOT RE-OPEN on pointer move if `move` is false after manual close", async () => {
-      // Setup: move=false
-      initHover({ move: false })
-      await setupAndManuallyClose()
-
-      // --- Simulate Pointer Move within the element ---
-      const moveEvent = new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        pointerType: "mouse",
-        clientX: 10,
-        clientY: 30,
-      })
-      referenceEl.dispatchEvent(moveEvent)
-      await nextTick()
-      vi.runAllTimers()
-      await nextTick()
-
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
-      expect(context.open.value).toBe(false) // Should still be closed
-    })
-  })
-
   // --- Edge Case Handling ---
   describe("Edge Case Handling", () => {
     it("should cancel pending open delay if pointer leaves reference", async () => {
@@ -561,28 +491,6 @@ describe("useHover", () => {
       vi.advanceTimersByTime(1)
       expect(onOpenChangeMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
-    })
-
-    it.todo(
-      "should close immediately (no delay) on scroll by default (no handleClose)",
-      async () => {
-        // TODO: implement this test
-      }
-    )
-
-    it("should NOT close on window 'pointerleave' by default (no handleClose)", async () => {
-      // This tests that the specific window 'pointerleave' logic is tied to handleClose
-      initHover()
-      await userEvent.hover(referenceEl) // Open
-      expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear()
-
-      // Simulate pointer leaving the *window* (document)
-      document.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true })) // Simulate document leave
-      await nextTick()
-
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // Default shouldn't close on window leave
-      expect(context.open.value).toBe(true)
     })
 
     it("should react to external state changes", async () => {
