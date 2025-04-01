@@ -1,17 +1,14 @@
 import type { Fn } from "@/types"
+import type { Coords } from "@floating-ui/dom"
 import {
   type MaybeRef,
   computed,
   onScopeDispose,
   onWatcherCleanup,
-  ref,
   toValue,
-  watch,
   watchPostEffect,
 } from "vue"
 import type { FloatingContext, FloatingElement, ReferenceElement } from "../use-floating"
-import type { Coords } from "@floating-ui/dom"
-import { useEventListener } from "@vueuse/core"
 
 //=======================================================================================
 // 📌 Types & Interfaces
