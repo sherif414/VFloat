@@ -187,7 +187,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   let restTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined
   const isRestMsEnabled = computed<boolean>(() => showDelay.value === 0 && restMs.value > 0)
 
-  function onPointerMoveReference(e: PointerEvent): void {
+  function onPointerMoveForRest(e: PointerEvent): void {
     if (!enabled.value || !isValidPointerType(e) || !isRestMsEnabled.value) return
     if (!restCoords) return
     const newCoords = { x: e.clientX, y: e.clientY }
@@ -199,18 +199,35 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
       restCoords = newCoords
       clearTimeout(restTimeoutId)
       restTimeoutId = setTimeout(() => {
-        show(0) // should be called immediately because we already waited for restMs timeout
+        show(0)
       }, restMs.value)
     }
+  }
+
+  function onPointerEnterForRest(e: PointerEvent) {
+    if (!enabled.value || !isValidPointerType(e) || !isRestMsEnabled.value) return
+    restCoords = { x: e.clientX, y: e.clientY }
+    restTimeoutId = setTimeout(() => {
+      show(0)
+    }, restMs.value)
+  }
+
+  function onPointerLeaveForRest() {
+    clearTimeout(restTimeoutId)
+    restCoords = null
   }
 
   watchPostEffect(() => {
     const el = reference.value
     if (!el || !enabled.value || !isRestMsEnabled.value) return
-    el.addEventListener("pointermove", onPointerMoveReference)
+    el.addEventListener("pointerenter", onPointerEnterForRest)
+    el.addEventListener("pointermove", onPointerMoveForRest)
+    el.addEventListener("pointerleave", onPointerLeaveForRest)
 
     onWatcherCleanup(() => {
-      el.removeEventListener("pointermove", onPointerMoveReference)
+      el.removeEventListener("pointerenter", onPointerEnterForRest)
+      el.removeEventListener("pointermove", onPointerMoveForRest)
+      el.removeEventListener("pointerleave", onPointerLeaveForRest)
     })
   })
 
