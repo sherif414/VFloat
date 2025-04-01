@@ -60,8 +60,7 @@ export interface UseHoverOptions {
   restMs?: MaybeRef<number>
 
   /**
-   * Whether hover events should only trigger for mouse pointers.
-   * When false, touch interactions will also trigger hover.
+   * Whether hover events should only trigger for mouse like pointers (mouse, pen ,stylus ..etc).
    * @default false
    */
   mouseOnly?: MaybeRef<boolean>
