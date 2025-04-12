@@ -1,12 +1,5 @@
-import { type PointerType, useEventListener } from "@vueuse/core"
-import {
-  type MaybeRefOrGetter,
-  computed,
-  onScopeDispose,
-  onWatcherCleanup,
-  toValue,
-  watch,
-} from "vue"
+import type { PointerType } from "@vueuse/core"
+import { type MaybeRefOrGetter, computed, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "../use-floating"
 
 //=======================================================================================
@@ -42,22 +35,16 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
   let pointerType: PointerType | undefined
   let didKeyDown = false
-  let stopFunctions: (() => void)[] = [] // Array to hold cleanup functions
 
   const isEnabled = computed(() => toValue(enabled))
-  const eventOpt = computed(() => toValue(eventOption))
-  const shouldToggle = computed(() => toValue(toggle))
-  const shouldIgnoreMouse = computed(() => toValue(ignoreMouse))
-  const handleKeyboard = computed(() => toValue(keyboardHandlers))
-
-  const referenceEl = computed(() =>
+  const reference = computed(() =>
     refs.reference.value instanceof HTMLElement ? refs.reference.value : null
   )
 
   // --- Event Handlers --- //
 
   function handleOpenChange() {
-    if (open.value && shouldToggle.value) {
+    if (open.value && toValue(toggle)) {
       onOpenChange(false)
     } else {
       onOpenChange(true)
@@ -71,13 +58,13 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   const onMouseDown = (e: MouseEvent) => {
     // Ignore non-primary buttons
     if (e.button !== 0) return
-    if (eventOpt.value === "click") return
-    if (isMouseLikePointerType(pointerType, true) && shouldIgnoreMouse.value) return
+    if (toValue(eventOption) === "click") return
+    if (isMouseLikePointerType(pointerType, true) && toValue(ignoreMouse)) return
 
     // Prevent stealing focus from the floating element if it's already open
     // and reference is not the target (e.g. clicking scrollbar).
     const target = e.target as HTMLElement | null
-    if (!open.value && target === referenceEl.value) {
+    if (!open.value && target === reference.value) {
       e.preventDefault()
     }
 
@@ -85,13 +72,13 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   }
 
   const onClick = () => {
-    if (eventOpt.value === "mousedown" && pointerType) {
+    if (toValue(eventOption) === "mousedown" && pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
       pointerType = undefined
       return
     }
 
-    if (isMouseLikePointerType(pointerType, true) && shouldIgnoreMouse.value) {
+    if (isMouseLikePointerType(pointerType, true) && toValue(ignoreMouse)) {
       pointerType = undefined
       return
     }
@@ -100,77 +87,66 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     pointerType = undefined
   }
 
-  const onKeyDown = (evt: KeyboardEvent) => {
+  const onKeyDown = (e: KeyboardEvent) => {
     pointerType = undefined
 
-    if (evt.defaultPrevented || !handleKeyboard.value || isButtonTarget(evt)) {
+    if (e.defaultPrevented || !toValue(keyboardHandlers) || isButtonTarget(e)) {
       return
     }
 
-    const el = referenceEl.value
+    const el = reference.value
     if (!el) return
 
-    if (evt.key === " " && !isSpaceIgnored(el)) {
+    if (e.key === " " && !isSpaceIgnored(el)) {
       // Prevent scrolling
-      evt.preventDefault()
+      e.preventDefault()
       didKeyDown = true
     }
 
-    if (evt.key === "Enter") {
+    if (e.key === "Enter") {
       handleOpenChange()
     }
   }
 
-  const onKeyUp = (evt: KeyboardEvent) => {
-    const el = referenceEl.value // Get current element inside handler
+  const onKeyUp = (e: KeyboardEvent) => {
+    const el = reference.value // Get current element inside handler
     if (!el) return
 
     if (
-      evt.defaultPrevented ||
-      !handleKeyboard.value ||
-      isButtonTarget(evt) ||
+      e.defaultPrevented ||
+      !toValue(keyboardHandlers) ||
+      isButtonTarget(e) ||
       isSpaceIgnored(el)
     ) {
       return
     }
 
-    if (evt.key === " " && didKeyDown) {
+    if (e.key === " " && didKeyDown) {
       didKeyDown = false
       handleOpenChange()
     }
   }
 
-  // --- Cleanup Logic ---
-
-  const cleanup = () => {
-    for (const stop of stopFunctions) {
-      stop()
-    }
-    stopFunctions = []
-    pointerType = undefined
-    didKeyDown = false
-  }
-
   // --- Watch for changes in enabled state or reference element ---
 
-  watch(
-    isEnabled,
-    (isEnabled) => {
-      if (!isEnabled) return
+  watchPostEffect(() => {
+    const el = reference.value
+    if (!isEnabled.value || !el) return
 
-      stopFunctions.push(useEventListener(referenceEl, "pointerdown", onPointerDown))
-      stopFunctions.push(useEventListener(referenceEl, "mousedown", onMouseDown))
-      stopFunctions.push(useEventListener(referenceEl, "click", onClick))
-      stopFunctions.push(useEventListener(referenceEl, "keydown", onKeyDown))
-      stopFunctions.push(useEventListener(referenceEl, "keyup", onKeyUp))
+    el.addEventListener("pointerdown", onPointerDown)
+    el.addEventListener("mousedown", onMouseDown)
+    el.addEventListener("click", onClick)
+    el.addEventListener("keydown", onKeyDown)
+    el.addEventListener("keyup", onKeyUp)
 
-      onWatcherCleanup(cleanup)
-    },
-    { immediate: true } // Run immediately to attach listeners initially
-  )
-
-  // --- Component Unmount Cleanup ---
-  onScopeDispose(cleanup)
+    onWatcherCleanup(() => {
+      el.removeEventListener("pointerdown", onPointerDown)
+      el.removeEventListener("mousedown", onMouseDown)
+      el.removeEventListener("click", onClick)
+      el.removeEventListener("keydown", onKeyDown)
+      el.removeEventListener("keyup", onKeyUp)
+    })
+  })
 }
 
 //=======================================================================================
