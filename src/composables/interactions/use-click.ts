@@ -1,5 +1,5 @@
 import type { PointerType } from "@vueuse/core"
-import { type MaybeRefOrGetter, computed, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "../use-floating"
 
 //=======================================================================================
@@ -44,18 +44,18 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   // --- Event Handlers --- //
 
   function handleOpenChange() {
-    if (open.value && toValue(toggle)) {
-      onOpenChange(false)
+    if (open.value) {
+      toValue(toggle) && onOpenChange(false)
     } else {
       onOpenChange(true)
     }
   }
 
-  const onPointerDown = (e: PointerEvent) => {
+  function onPointerDown(e: PointerEvent) {
     pointerType = e.pointerType as PointerType
   }
 
-  const onMouseDown = (e: MouseEvent) => {
+  function onMouseDown(e: MouseEvent) {
     // Ignore non-primary buttons
     if (e.button !== 0) return
     if (toValue(eventOption) === "click") return
@@ -71,7 +71,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     handleOpenChange()
   }
 
-  const onClick = () => {
+  function onClick(): void {
     if (toValue(eventOption) === "mousedown" && pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
       pointerType = undefined
@@ -87,7 +87,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     pointerType = undefined
   }
 
-  const onKeyDown = (e: KeyboardEvent) => {
+  function onKeyDown(e: KeyboardEvent) {
     pointerType = undefined
 
     if (e.defaultPrevented || !toValue(keyboardHandlers) || isButtonTarget(e)) {
@@ -108,7 +108,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     }
   }
 
-  const onKeyUp = (e: KeyboardEvent) => {
+  function onKeyUp(e: KeyboardEvent) {
     const el = reference.value // Get current element inside handler
     if (!el) return
 
