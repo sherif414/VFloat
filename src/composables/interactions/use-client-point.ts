@@ -8,6 +8,7 @@ import {
   ref,
   toValue,
   watch,
+  watchEffect,
 } from "vue"
 import type { FloatingContext } from "../use-floating"
 import type { VirtualElement } from "@floating-ui/dom"
@@ -20,7 +21,6 @@ import type { VirtualElement } from "@floating-ui/dom"
  * Positions the floating element relative to a client point (mouse position).
  *
  * This composable tracks pointer movements and positions the floating element
- * @version 2.0
  * accordingly, with options for axis locking and controlled coordinates.
  *
  * @param context - The floating context with open state and position reference
@@ -39,12 +39,8 @@ import type { VirtualElement } from "@floating-ui/dom"
 export function useClientPoint(
   context: FloatingContext,
   options: UseClientPointOptions = {}
-  // Changed return type to include more functionality
 ): UseClientPointReturn {
   const { open, refs } = context
-  const setPositionReference = (reference: VirtualElement | HTMLElement | null) => {
-    refs.reference.value = reference
-  }
 
   const { enabled = true, axis = "both", x: externalX = null, y: externalY = null } = options
 
@@ -61,94 +57,16 @@ export function useClientPoint(
   const currentAxis = computed(() => toValue(axis))
   const controlledX = computed(() => toValue(externalX))
   const controlledY = computed(() => toValue(externalY))
-
   const referenceEl = computed(() =>
     refs.reference.value instanceof HTMLElement ? refs.reference.value : null
   )
-
-  //=======================================================================================
-  // Core Functions
-  //=======================================================================================
-
-  function createVirtualElement(): VirtualElement {
-    let offsetX: number | null = null
-    let offsetY: number | null = null
-    const domElement = referenceEl.value
-
-    return {
-      contextElement: domElement || undefined,
-      getBoundingClientRect: () => {
-        const domRect = domElement?.getBoundingClientRect() ?? {
-          width: 0,
-          height: 0,
-          x: 0,
-          y: 0,
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
-        }
-
-        const isXAxis = currentAxis.value === "x" || currentAxis.value === "both"
-        const isYAxis = currentAxis.value === "y" || currentAxis.value === "both"
-
-        // Calculate coordinates
-        let width = 0
-        let height = 0
-        let x = domRect.x
-        let y = domRect.y
-
-        if (domElement) {
-          if (offsetX == null && clientCoords.value.x != null && isXAxis) {
-            offsetX = domRect.x - clientCoords.value.x
-          }
-          if (offsetY == null && clientCoords.value.y != null && isYAxis) {
-            offsetY = domRect.y - clientCoords.value.y
-          }
-          x -= offsetX || 0
-          y -= offsetY || 0
-        }
-
-        // Apply axis locking
-        if (isXAxis && clientCoords.value.x != null) {
-          x = clientCoords.value.x
-        } else {
-          offsetX = null
-          width = domRect.width
-        }
-
-        if (isYAxis && clientCoords.value.y != null) {
-          y = clientCoords.value.y
-        } else {
-          offsetY = null
-          height = domRect.height
-        }
-
-        if (currentAxis.value === "both") {
-          width = 0
-          height = 0
-        }
-
-        return {
-          width,
-          height,
-          x,
-          y,
-          top: y,
-          right: x + width,
-          bottom: y + height,
-          left: x,
-        }
-      },
-    }
-  }
 
   const setPointerType = (event: PointerEvent) => {
     pointerType.value = event.pointerType as PointerType
   }
 
   const handlePointerMove = (event: PointerEvent | MouseEvent) => {
-    if (!isEnabled.value || controlledX.value != null || controlledY.value != null) return
+    if (controlledX.value != null || controlledY.value != null) return
 
     clientCoords.value = {
       x: event.clientX,
@@ -156,19 +74,27 @@ export function useClientPoint(
     }
 
     if (open.value) {
-      setPositionReference(createVirtualElement())
+      refs.reference.value = createVirtualElement(
+        referenceEl.value,
+        currentAxis.value,
+        clientCoords.value
+      )
     }
   }
 
   const handleReferenceEnterOrMove = (event: MouseEvent) => {
-    if (!isEnabled.value || controlledX.value != null || controlledY.value != null) return
+    if (controlledX.value != null || controlledY.value != null) return
 
     if (!open.value && isMouseLikePointerType(pointerType.value, true)) {
       clientCoords.value = {
         x: event.clientX,
         y: event.clientY,
       }
-      setPositionReference(createVirtualElement())
+      refs.reference.value = createVirtualElement(
+        referenceEl.value,
+        currentAxis.value,
+        clientCoords.value
+      )
     }
 
     if (open.value && !isMoving.value) {
@@ -187,8 +113,7 @@ export function useClientPoint(
   }
 
   const startPointerMoveListener = () => {
-    if (!isEnabled.value || controlledX.value != null || controlledY.value != null || !open.value)
-      return
+    if (controlledX.value != null || controlledY.value != null || !open.value) return
 
     if (isMouseLikePointerType(pointerType.value, true)) {
       stopPointerMoveListener = useEventListener(window, "pointermove", handleWindowPointerMove, {
@@ -197,7 +122,7 @@ export function useClientPoint(
       isMoving.value = true
       isActive.value = true
     } else {
-      setPositionReference(referenceEl.value)
+      refs.reference.value = referenceEl.value
     }
   }
 
@@ -213,7 +138,11 @@ export function useClientPoint(
     ([x, y, enabled]) => {
       if (enabled && x != null && y != null) {
         clientCoords.value = { x, y }
-        setPositionReference(createVirtualElement())
+        refs.reference.value = createVirtualElement(
+          referenceEl.value,
+          currentAxis.value,
+          clientCoords.value
+        )
         cleanup()
       } else if (enabled && open.value) {
         startPointerMoveListener()
@@ -229,7 +158,11 @@ export function useClientPoint(
 
       if (isOpen) {
         if (clientCoords.value.x != null || clientCoords.value.y != null) {
-          setPositionReference(createVirtualElement())
+          refs.reference.value = createVirtualElement(
+            referenceEl.value,
+            currentAxis.value,
+            clientCoords.value
+          )
         }
         startPointerMoveListener()
       } else {
@@ -245,41 +178,42 @@ export function useClientPoint(
   watch(isEnabled, (enabled) => {
     if (!enabled) {
       cleanup()
-      setPositionReference(referenceEl.value)
+      refs.reference.value = referenceEl.value
       if (controlledX.value == null && controlledY.value == null) {
         clientCoords.value = { x: null, y: null }
       }
     } else if (open.value) {
       if (clientCoords.value.x != null || clientCoords.value.y != null) {
-        setPositionReference(createVirtualElement())
+        refs.reference.value = createVirtualElement(
+          referenceEl.value,
+          currentAxis.value,
+          clientCoords.value
+        )
       }
       startPointerMoveListener()
     }
   })
 
   const onPointerdown = (e: PointerEvent) => {
-    if (!isEnabled.value) return
     setPointerType(e)
     if (controlledX.value == null && controlledY.value == null) {
       handlePointerMove(e)
     }
   }
   const onPointerenter = (e: PointerEvent) => {
-    if (!isEnabled.value) return
     setPointerType(e)
     handleReferenceEnterOrMove(e)
   }
   const onMousemove = (e: MouseEvent) => {
-    if (!isEnabled.value) return
     handleReferenceEnterOrMove(e)
   }
   const onMouseenter = (e: MouseEvent) => {
-    if (!isEnabled.value) return
     handleReferenceEnterOrMove(e)
   }
 
-  watch(referenceEl, (el) => {
-    if (!el) return
+  watchEffect(() => {
+    const el = referenceEl.value
+    if (!el || !isEnabled.value) return
 
     el.addEventListener("pointerenter", onPointerenter)
     el.addEventListener("pointerdown", onPointerdown)
@@ -298,7 +232,11 @@ export function useClientPoint(
 
   const updatePosition = (x: number, y: number) => {
     clientCoords.value = { x, y }
-    setPositionReference(createVirtualElement())
+    refs.reference.value = createVirtualElement(
+      referenceEl.value,
+      currentAxis.value,
+      clientCoords.value
+    )
   }
 
   return {
@@ -313,6 +251,90 @@ export function useClientPoint(
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
+
+/**
+ * Creates a virtual element based on client coordinates and axis constraints.
+ * @param referenceEl - The DOM element used as context, if available.
+ * @param currentAxis - The axis ('x', 'y', 'both') to consider for positioning.
+ * @param clientCoords - The current client coordinates (x, y).
+ * @returns A VirtualElement object for Floating UI.
+ */
+function createVirtualElement(
+  referenceEl: HTMLElement | null,
+  currentAxis: "x" | "y" | "both",
+  clientCoords: { x: number | null; y: number | null }
+): VirtualElement {
+  let offsetX: number | null = null
+  let offsetY: number | null = null
+  const domElement = referenceEl
+
+  return {
+    contextElement: domElement || undefined,
+    getBoundingClientRect: () => {
+      const domRect = domElement?.getBoundingClientRect() ?? {
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      }
+
+      const isXAxis = currentAxis === "x" || currentAxis === "both"
+      const isYAxis = currentAxis === "y" || currentAxis === "both"
+
+      // Calculate coordinates
+      let width = 0
+      let height = 0
+      let x = domRect.x
+      let y = domRect.y
+
+      if (domElement) {
+        if (offsetX == null && clientCoords.x != null && isXAxis) {
+          offsetX = domRect.x - clientCoords.x
+        }
+        if (offsetY == null && clientCoords.y != null && isYAxis) {
+          offsetY = domRect.y - clientCoords.y
+        }
+        x -= offsetX || 0
+        y -= offsetY || 0
+      }
+
+      // Apply axis locking
+      if (isXAxis && clientCoords.x != null) {
+        x = clientCoords.x
+      } else {
+        offsetX = null
+        width = domRect.width
+      }
+
+      if (isYAxis && clientCoords.y != null) {
+        y = clientCoords.y
+      } else {
+        offsetY = null
+        height = domRect.height
+      }
+
+      if (currentAxis === "both") {
+        width = 0
+        height = 0
+      }
+
+      return {
+        width,
+        height,
+        x,
+        y,
+        top: y,
+        right: x + width,
+        bottom: y + height,
+        left: x,
+      }
+    },
+  }
+}
 
 function contains(parent: HTMLElement | null, child: HTMLElement | null): boolean {
   if (!parent || !child) return false
