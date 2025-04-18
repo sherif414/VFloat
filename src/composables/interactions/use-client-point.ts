@@ -42,8 +42,6 @@ export function useClientPoint(
 ): UseClientPointReturn {
   const { open, refs } = context
 
-  const { enabled = true, axis = "both", x: externalX = null, y: externalY = null } = options
-
   // Tracking state
   let stopPointerMoveListener: (() => void) | null = null
   const isActive = ref(false)
@@ -53,16 +51,16 @@ export function useClientPoint(
   const debug = ref(false)
 
   // Computed options
-  const isEnabled = computed(() => toValue(enabled))
-  const currentAxis = computed(() => toValue(axis))
-  const controlledX = computed(() => toValue(externalX))
-  const controlledY = computed(() => toValue(externalY))
+  const axis = computed(() => toValue(options.axis ?? "both"))
+  const enabled = computed(() => toValue(options.enabled ?? true))
+  const externalX = computed(() => toValue(options.x ?? null))
+  const externalY = computed(() => toValue(options.y ?? null))
   const referenceEl = computed(() =>
     refs.reference.value instanceof HTMLElement ? refs.reference.value : null
   )
 
   const handlePointerMove = (event: PointerEvent | MouseEvent) => {
-    if (controlledX.value != null || controlledY.value != null) return
+    if (externalX.value != null || externalY.value != null) return
 
     clientCoords.value = {
       x: event.clientX,
@@ -70,27 +68,19 @@ export function useClientPoint(
     }
 
     if (open.value) {
-      refs.reference.value = createVirtualElement(
-        referenceEl.value,
-        currentAxis.value,
-        clientCoords.value
-      )
+      refs.reference.value = createVirtualElement(referenceEl.value, axis.value, clientCoords.value)
     }
   }
 
   const handleReferenceEnterOrMove = (event: MouseEvent) => {
-    if (controlledX.value != null || controlledY.value != null) return
+    if (externalX.value != null || externalY.value != null) return
 
     if (!open.value && isMouseLikePointerType(pointerType.value, true)) {
       clientCoords.value = {
         x: event.clientX,
         y: event.clientY,
       }
-      refs.reference.value = createVirtualElement(
-        referenceEl.value,
-        currentAxis.value,
-        clientCoords.value
-      )
+      refs.reference.value = createVirtualElement(referenceEl.value, axis.value, clientCoords.value)
     }
 
     if (open.value && !isMoving.value) {
@@ -109,7 +99,7 @@ export function useClientPoint(
   }
 
   const startPointerMoveListener = () => {
-    if (controlledX.value != null || controlledY.value != null || !open.value) return
+    if (externalX.value != null || externalY.value != null || !open.value) return
 
     if (isMouseLikePointerType(pointerType.value, true)) {
       stopPointerMoveListener = useEventListener(window, "pointermove", handleWindowPointerMove, {
@@ -130,13 +120,13 @@ export function useClientPoint(
   }
 
   watch(
-    [controlledX, controlledY, isEnabled],
+    [externalX, externalY, enabled],
     ([x, y, enabled]) => {
       if (enabled && x != null && y != null) {
         clientCoords.value = { x, y }
         refs.reference.value = createVirtualElement(
           referenceEl.value,
-          currentAxis.value,
+          axis.value,
           clientCoords.value
         )
         cleanup()
@@ -150,20 +140,20 @@ export function useClientPoint(
   watch(
     open,
     (isOpen) => {
-      if (!isEnabled.value) return
+      if (!enabled.value) return
 
       if (isOpen) {
         if (clientCoords.value.x != null || clientCoords.value.y != null) {
           refs.reference.value = createVirtualElement(
             referenceEl.value,
-            currentAxis.value,
+            axis.value,
             clientCoords.value
           )
         }
         startPointerMoveListener()
       } else {
         cleanup()
-        if (controlledX.value == null && controlledY.value == null) {
+        if (externalX.value == null && externalY.value == null) {
           clientCoords.value = { x: null, y: null }
         }
       }
@@ -171,18 +161,18 @@ export function useClientPoint(
     { flush: "post" }
   )
 
-  watch(isEnabled, (enabled) => {
+  watch(enabled, (enabled) => {
     if (!enabled) {
       cleanup()
       refs.reference.value = referenceEl.value
-      if (controlledX.value == null && controlledY.value == null) {
+      if (externalX.value == null && externalY.value == null) {
         clientCoords.value = { x: null, y: null }
       }
     } else if (open.value) {
       if (clientCoords.value.x != null || clientCoords.value.y != null) {
         refs.reference.value = createVirtualElement(
           referenceEl.value,
-          currentAxis.value,
+          axis.value,
           clientCoords.value
         )
       }
@@ -192,7 +182,7 @@ export function useClientPoint(
 
   const onPointerdown = (e: PointerEvent) => {
     pointerType.value = e.pointerType as PointerType
-    if (controlledX.value == null && controlledY.value == null) {
+    if (externalX.value == null && externalY.value == null) {
       handlePointerMove(e)
     }
   }
@@ -209,7 +199,7 @@ export function useClientPoint(
 
   watchEffect(() => {
     const el = referenceEl.value
-    if (!el || !isEnabled.value) return
+    if (!el || !enabled.value) return
 
     el.addEventListener("pointerenter", onPointerenter)
     el.addEventListener("pointerdown", onPointerdown)
@@ -228,11 +218,7 @@ export function useClientPoint(
 
   const updatePosition = (x: number, y: number) => {
     clientCoords.value = { x, y }
-    refs.reference.value = createVirtualElement(
-      referenceEl.value,
-      currentAxis.value,
-      clientCoords.value
-    )
+    refs.reference.value = createVirtualElement(referenceEl.value, axis.value, clientCoords.value)
   }
 
   return {
