@@ -1,7 +1,7 @@
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { type Ref, effectScope, nextTick, ref } from "vue"
-import { type UseHoverOptions, useHover } from "../interactions/use-hover"
+import { effectScope, nextTick, type Ref, ref } from "vue"
+import { useHover, type UseHoverOptions } from "@/composables"
 
 // Define a minimal FloatingContext type for the tests
 interface FloatingContext {
