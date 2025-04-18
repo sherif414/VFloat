@@ -61,10 +61,6 @@ export function useClientPoint(
     refs.reference.value instanceof HTMLElement ? refs.reference.value : null
   )
 
-  const setPointerType = (event: PointerEvent) => {
-    pointerType.value = event.pointerType as PointerType
-  }
-
   const handlePointerMove = (event: PointerEvent | MouseEvent) => {
     if (controlledX.value != null || controlledY.value != null) return
 
@@ -195,13 +191,13 @@ export function useClientPoint(
   })
 
   const onPointerdown = (e: PointerEvent) => {
-    setPointerType(e)
+    pointerType.value = e.pointerType as PointerType
     if (controlledX.value == null && controlledY.value == null) {
       handlePointerMove(e)
     }
   }
   const onPointerenter = (e: PointerEvent) => {
-    setPointerType(e)
+    pointerType.value = e.pointerType as PointerType
     handleReferenceEnterOrMove(e)
   }
   const onMousemove = (e: MouseEvent) => {
