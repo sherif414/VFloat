@@ -1,7 +1,7 @@
 import { URL, fileURLToPath } from "node:url"
 import vue from "@vitejs/plugin-vue"
 import { defineConfig } from "vite"
-import dts from "vite-plugin-dts"
+// import dts from "vite-plugin-dts"
 // import tailwind from "@tailwindcss/vite"
 import unocss from "unocss/vite"
 
@@ -9,15 +9,15 @@ export default defineConfig({
   plugins: [
     vue(),
     unocss(),
-    dts({
-      include: ["src/**/*.ts", "src/**/*.vue"],
-      beforeWriteFile: (filePath, content) => {
-        return {
-          filePath,
-          content,
-        }
-      },
-    }),
+    // dts({
+    //   include: ["src/**/*.ts", "src/**/*.vue"],
+    //   beforeWriteFile: (filePath, content) => {
+    //     return {
+    //       filePath,
+    //       content,
+    //     }
+    //   },
+    // }),
   ],
   resolve: {
     alias: {

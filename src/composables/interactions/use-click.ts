@@ -1,6 +1,6 @@
 import type { PointerType } from "@vueuse/core"
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
-import type { FloatingContext } from "../use-floating"
+import type { FloatingContext } from "@/composables"
 
 //=======================================================================================
 // 📌 Main
