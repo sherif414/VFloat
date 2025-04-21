@@ -9,7 +9,7 @@ import type {
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue"
-import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from "vue"
+import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -252,17 +252,19 @@ export function useFloating(
 
   watch(
     [reference, floating, open],
-    ([reference, floating, isOpen]) => {
-      cleanup?.()
-      cleanup = undefined
-
-      if (!isOpen || !reference || !floating) return
+    ([reference, floating, open]) => {
+      if (!open || !reference || !floating) return
 
       if (whileElementsMounted) {
         cleanup = whileElementsMounted(reference, floating, update)
       } else {
         cleanup = floatingUIAutoUpdate(reference, floating, update)
       }
+
+      onWatcherCleanup(() => {
+        cleanup?.()
+        cleanup = undefined
+      })
     },
     { immediate: true }
   )

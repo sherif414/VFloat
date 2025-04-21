@@ -1,16 +1,15 @@
-import { type PointerType, useEventListener } from "@vueuse/core"
+import { type PointerType } from "@vueuse/core"
 import {
-  type MaybeRefOrGetter,
-  type Ref,
   computed,
-  onScopeDispose,
+  type MaybeRefOrGetter,
   onWatcherCleanup,
+  type Ref,
   ref,
   toValue,
   watch,
   watchEffect,
 } from "vue"
-import type { FloatingContext } from "../use-floating"
+import type { FloatingContext } from "@/composables"
 import type { VirtualElement } from "@floating-ui/dom"
 
 //=======================================================================================
@@ -23,6 +22,7 @@ import type { VirtualElement } from "@floating-ui/dom"
  * This composable tracks pointer movements and positions the floating element
  * accordingly, with options for axis locking and controlled coordinates.
  *
+ * @param pointerTarget - The DOM element whose bounding box is used as the reference for pointer event listeners and initial positioning.
  * @param context - The floating context with open state and position reference
  * @param options - Configuration options for client point behavior
  *
@@ -33,199 +33,96 @@ import type { VirtualElement } from "@floating-ui/dom"
  *   axis: "x",
  *   enabled: true
  * })
- * const { coordinates, isActive } = useClientPoint(context)
+ * const { coordinates } = useClientPoint(context)
  * ```
  */
 export function useClientPoint(
+  pointerTarget: Ref<HTMLElement | null>,
   context: FloatingContext,
   options: UseClientPointOptions = {}
 ): UseClientPointReturn {
   const { open, refs } = context
 
   // Tracking state
-  let stopPointerMoveListener: (() => void) | null = null
-  const isActive = ref(false)
-  const pointerType = ref<PointerType | undefined>()
+  let pointerType: PointerType | undefined = undefined
   const clientCoords = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
-  const isMoving = ref(false)
-  const debug = ref(false)
 
   // Computed options
   const axis = computed(() => toValue(options.axis ?? "both"))
   const enabled = computed(() => toValue(options.enabled ?? true))
   const externalX = computed(() => toValue(options.x ?? null))
   const externalY = computed(() => toValue(options.y ?? null))
-  const referenceEl = computed(() =>
-    refs.reference.value instanceof HTMLElement ? refs.reference.value : null
-  )
 
-  const handlePointerMove = (event: PointerEvent | MouseEvent) => {
-    if (externalX.value != null || externalY.value != null) return
-
+  const updateCoords = (newX: number, newY: number) => {
     clientCoords.value = {
-      x: event.clientX,
-      y: event.clientY,
+      x: newX,
+      y: newY,
     }
 
     if (open.value) {
-      refs.reference.value = createVirtualElement(referenceEl.value, axis.value, clientCoords.value)
+      refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
     }
-  }
-
-  const handleReferenceEnterOrMove = (event: MouseEvent) => {
-    if (externalX.value != null || externalY.value != null) return
-
-    if (!open.value && isMouseLikePointerType(pointerType.value, true)) {
-      clientCoords.value = {
-        x: event.clientX,
-        y: event.clientY,
-      }
-      refs.reference.value = createVirtualElement(referenceEl.value, axis.value, clientCoords.value)
-    }
-
-    if (open.value && !isMoving.value) {
-      startPointerMoveListener()
-    }
-  }
-
-  const handleWindowPointerMove = (event: PointerEvent) => {
-    const target = event.target as HTMLElement | null
-    if (contains(refs.floating.value, target)) {
-      stopPointerMoveListener?.()
-      isMoving.value = false
-    } else {
-      handlePointerMove(event)
-    }
-  }
-
-  const startPointerMoveListener = () => {
-    if (externalX.value != null || externalY.value != null || !open.value) return
-
-    if (isMouseLikePointerType(pointerType.value, true)) {
-      stopPointerMoveListener = useEventListener(window, "pointermove", handleWindowPointerMove, {
-        passive: true,
-      })
-      isMoving.value = true
-      isActive.value = true
-    } else {
-      refs.reference.value = referenceEl.value
-    }
-  }
-
-  const cleanup = () => {
-    stopPointerMoveListener?.()
-    stopPointerMoveListener = null
-    isMoving.value = false
-    isActive.value = false
   }
 
   watch(
     [externalX, externalY, enabled],
     ([x, y, enabled]) => {
       if (enabled && x != null && y != null) {
-        clientCoords.value = { x, y }
-        refs.reference.value = createVirtualElement(
-          referenceEl.value,
-          axis.value,
-          clientCoords.value
-        )
-        cleanup()
-      } else if (enabled && open.value) {
-        startPointerMoveListener()
+        updateCoords(x, y)
       }
     },
     { immediate: true }
   )
 
-  watch(
-    open,
-    (isOpen) => {
-      if (!enabled.value) return
-
-      if (isOpen) {
-        if (clientCoords.value.x != null || clientCoords.value.y != null) {
-          refs.reference.value = createVirtualElement(
-            referenceEl.value,
-            axis.value,
-            clientCoords.value
-          )
-        }
-        startPointerMoveListener()
-      } else {
-        cleanup()
-        if (externalX.value == null && externalY.value == null) {
-          clientCoords.value = { x: null, y: null }
-        }
-      }
-    },
-    { flush: "post" }
-  )
-
-  watch(enabled, (enabled) => {
-    if (!enabled) {
-      cleanup()
-      refs.reference.value = referenceEl.value
-      if (externalX.value == null && externalY.value == null) {
-        clientCoords.value = { x: null, y: null }
-      }
-    } else if (open.value) {
-      if (clientCoords.value.x != null || clientCoords.value.y != null) {
-        refs.reference.value = createVirtualElement(
-          referenceEl.value,
-          axis.value,
-          clientCoords.value
-        )
-      }
-      startPointerMoveListener()
-    }
-  })
-
   const onPointerdown = (e: PointerEvent) => {
-    pointerType.value = e.pointerType as PointerType
-    if (externalX.value == null && externalY.value == null) {
-      handlePointerMove(e)
-    }
-  }
-  const onPointerenter = (e: PointerEvent) => {
-    pointerType.value = e.pointerType as PointerType
-    handleReferenceEnterOrMove(e)
-  }
-  const onMousemove = (e: MouseEvent) => {
-    handleReferenceEnterOrMove(e)
-  }
-  const onMouseenter = (e: MouseEvent) => {
-    handleReferenceEnterOrMove(e)
+    pointerType = e.pointerType as PointerType
+    updateCoords(e.clientX, e.clientY)
   }
 
+  const onPointerenter = (e: PointerEvent) => {
+    pointerType = e.pointerType as PointerType
+
+    if (!open.value && isMouseLikePointerType(pointerType, true)) {
+      clientCoords.value = {
+        x: e.clientX,
+        y: e.clientY,
+      }
+      refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
+    }
+  }
+
+  const onPointermove = (e: MouseEvent) => {
+    if (open.value && isMouseLikePointerType(pointerType, true)) {
+      clientCoords.value = {
+        x: e.clientX,
+        y: e.clientY,
+      }
+      refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
+    }
+  }
   watchEffect(() => {
-    const el = referenceEl.value
+    if (externalX.value != null || externalY.value != null) return
+    const el = pointerTarget.value
     if (!el || !enabled.value) return
 
     el.addEventListener("pointerenter", onPointerenter)
     el.addEventListener("pointerdown", onPointerdown)
-    el.addEventListener("mouseenter", onMouseenter)
-    el.addEventListener("mousemove", onMousemove)
+    el.addEventListener("pointermove", onPointermove)
 
     onWatcherCleanup(() => {
       el?.removeEventListener("pointerenter", onPointerenter)
       el?.removeEventListener("pointerdown", onPointerdown)
-      el?.removeEventListener("mouseenter", onMouseenter)
-      el?.removeEventListener("mousemove", onMousemove)
+      el?.removeEventListener("pointermove", onPointermove)
     })
   })
 
-  onScopeDispose(cleanup)
-
   const updatePosition = (x: number, y: number) => {
     clientCoords.value = { x, y }
-    refs.reference.value = createVirtualElement(referenceEl.value, axis.value, clientCoords.value)
+    refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
   }
 
   return {
-    cleanup,
     coordinates: clientCoords,
-    isActive,
-    debug,
     updatePosition,
   }
 }
@@ -318,22 +215,6 @@ function createVirtualElement(
   }
 }
 
-function contains(parent: HTMLElement | null, child: HTMLElement | null): boolean {
-  if (!parent || !child) return false
-  if (parent.contains(child)) return true
-
-  const rootNode = child.getRootNode()
-  if (rootNode instanceof ShadowRoot && rootNode.host === parent) return true
-
-  let node: Node | null = child
-  while (node) {
-    if (node === parent) return true
-    node = node.parentNode
-  }
-
-  return false
-}
-
 function isMouseLikePointerType(pointerType: PointerType | undefined, strict?: boolean): boolean {
   if (pointerType === undefined) return false
   const isMouse = pointerType === "mouse"
@@ -372,21 +253,9 @@ export interface UseClientPointOptions {
 
 export interface UseClientPointReturn {
   /**
-   * Function to manually clean up event listeners and reset state
-   */
-  cleanup: () => void
-  /**
    * Reactive object containing the current client coordinates (x/y)
    */
   coordinates: Ref<{ x: number | null; y: number | null }>
-  /**
-   * Whether the pointer tracking is currently active
-   */
-  isActive: Ref<boolean>
-  /**
-   * Whether debug logging is enabled
-   */
-  debug: Ref<boolean>
   /**
    * Function to manually update the floating element's position
    */
