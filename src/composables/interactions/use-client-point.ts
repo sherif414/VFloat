@@ -1,4 +1,4 @@
-import { type PointerType } from "@vueuse/core"
+import type { PointerType } from "@vueuse/core"
 import {
   computed,
   type MaybeRefOrGetter,
@@ -60,19 +60,22 @@ export function useClientPoint(
     }
 
     if (open.value) {
-      refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
+      refs.reference.value = createVirtualElement(
+        pointerTarget.value,
+        axis.value,
+        clientCoords.value
+      )
     }
   }
 
-  watch(
-    [externalX, externalY, enabled],
-    ([x, y, enabled]) => {
-      if (enabled && x != null && y != null) {
-        updateCoords(x, y)
-      }
-    },
-    { immediate: true }
-  )
+  watchEffect(() => {
+    const x = externalX.value
+    const y = externalY.value
+    
+    if (enabled.value && x != null && y != null) {
+      updateCoords(x, y)
+    }
+  })
 
   const onPointerdown = (e: PointerEvent) => {
     pointerType = e.pointerType as PointerType
@@ -83,23 +86,16 @@ export function useClientPoint(
     pointerType = e.pointerType as PointerType
 
     if (!open.value && isMouseLikePointerType(pointerType, true)) {
-      clientCoords.value = {
-        x: e.clientX,
-        y: e.clientY,
-      }
-      refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
+      updateCoords(e.clientX, e.clientY)
     }
   }
 
   const onPointermove = (e: MouseEvent) => {
     if (open.value && isMouseLikePointerType(pointerType, true)) {
-      clientCoords.value = {
-        x: e.clientX,
-        y: e.clientY,
-      }
-      refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
+      updateCoords(e.clientX, e.clientY)
     }
   }
+
   watchEffect(() => {
     if (externalX.value != null || externalY.value != null) return
     const el = pointerTarget.value
@@ -116,14 +112,9 @@ export function useClientPoint(
     })
   })
 
-  const updatePosition = (x: number, y: number) => {
-    clientCoords.value = { x, y }
-    refs.reference.value = createVirtualElement(pointerTarget.value, axis.value, clientCoords.value)
-  }
-
   return {
     coordinates: clientCoords,
-    updatePosition,
+    updatePosition: updateCoords,
   }
 }
 

@@ -1,42 +1,15 @@
-import { type MaybeRefOrGetter, type Ref, computed, toValue } from "vue"
-import type { FloatingContext } from "../use-floating"
+import {
+  type MaybeRefOrGetter,
+  type Ref,
+  computed,
+  onWatcherCleanup,
+  toValue,
+  watchPostEffect,
+} from "vue"
+import type { FloatingContext } from "@/composables"
 
 //=======================================================================================
-// 📌 Types & Interfaces
-//=======================================================================================
-
-/**
- * Options for configuring focus behavior
- */
-export interface UseFocusOptions {
-  /**
-   * Whether focus event listeners are enabled
-   * @default true
-   */
-  enabled?: MaybeRefOrGetter<boolean>
-
-  /**
-   * Only show the floating element when the reference element has keyboard focus
-   * @default false
-   */
-  visibleOnly?: MaybeRefOrGetter<boolean>
-}
-
-/**
- * Return value of the useFocus composable
- */
-export interface UseFocusReturn {
-  /**
-   * Reference element props that enable focus functionality
-   */
-  getReferenceProps: () => {
-    onFocus: (event: FocusEvent) => void
-    onBlur: (event: FocusEvent) => void
-  }
-}
-
-//=======================================================================================
-// 📌 Main Logic / Primary Export(s)
+// 📌 Main
 //=======================================================================================
 
 /**
@@ -65,46 +38,83 @@ export function useFocus(
 ): UseFocusReturn {
   const {
     onOpenChange,
-    refs: { floating },
+    refs: { floating, reference },
   } = context
 
-  const { enabled = true, visibleOnly = false } = options
+  const { enabled = true, visibleOnly = true } = options
 
-  const isEnabled = computed(() => toValue(enabled))
+  // --- Event Handlers --- //
 
-  return {
-    getReferenceProps: () => ({
-      onFocus: (event: FocusEvent) => {
-        if (!isEnabled.value) return
+  function onFocus(event: FocusEvent): void {
+    const target = event.target as Element | null
 
-        // Only focus events originating from keyboard navigation, not clicks
-        const isKeyboardFocus =
-          !toValue(visibleOnly) ||
-          (event.target === event.currentTarget && event.relatedTarget !== null)
+    // Check if focus should trigger open based on visibleOnly option
+    const shouldOpen =
+      !toValue(visibleOnly) || (target instanceof Element && target.matches(":focus-visible"))
 
-        if (isKeyboardFocus) {
-          onOpenChange(true)
-        }
-      },
-      onBlur: (event: FocusEvent) => {
-        if (!isEnabled.value) return
-
-        if (!floating.value) {
-          onOpenChange(false)
-          return
-        }
-
-        // Don't close if focus moved to floating element
-        if (
-          event.relatedTarget &&
-          floating.value &&
-          floating.value.contains(event.relatedTarget as Node)
-        ) {
-          return
-        }
-
-        onOpenChange(false)
-      },
-    }),
+    if (shouldOpen) {
+      onOpenChange(true)
+    }
   }
+
+  function onBlur(event: FocusEvent): void {
+    // If the floating element doesn't exist or is detached, close immediately.
+    if (!floating.value) {
+      onOpenChange(false)
+      return
+    }
+
+    // Don't close if focus moved to the floating element itself or one of its descendants.
+    if (
+      event.relatedTarget &&
+      floating.value &&
+      floating.value.contains(event.relatedTarget as Node)
+    ) {
+      return
+    }
+
+    // Otherwise, close the floating element.
+    onOpenChange(false)
+  }
+
+  watchPostEffect(() => {
+    if (toValue(enabled)) return
+    const el = reference.value
+    if (!el || !(el instanceof HTMLElement)) return
+
+    el.addEventListener("focus", onFocus)
+    el.addEventListener("blur", onBlur)
+
+    onWatcherCleanup(() => {
+      el.removeEventListener("focus", onFocus)
+      el.removeEventListener("blur", onBlur)
+    })
+  })
 }
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for configuring focus behavior
+ */
+export interface UseFocusOptions {
+  /**
+   * Whether focus event listeners are enabled
+   * @default true
+   */
+  enabled?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether the open state only changes if the focus event is considered
+   * visible (`:focus-visible` CSS selector).
+   * @default true
+   */
+  visibleOnly?: MaybeRefOrGetter<boolean>
+}
+
+/**
+ * Return value of the useFocus composable
+ */
+export type UseFocusReturn = undefined

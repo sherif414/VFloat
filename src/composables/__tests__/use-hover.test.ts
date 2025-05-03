@@ -1,18 +1,26 @@
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { effectScope, nextTick, type Ref, ref } from "vue"
+import { effectScope, nextTick, type Ref, ref, computed } from "vue"
 import { useHover, type UseHoverOptions } from "@/composables"
+import type { FloatingStyles } from "../use-floating"
+import type { Strategy } from "@floating-ui/dom"
 
 // Define a minimal FloatingContext type for the tests
 interface FloatingContext {
   refs: {
-    reference: Ref<HTMLElement | null>
-    floating: Ref<HTMLElement | null>
+    anchorEl: Ref<HTMLElement | null>
+    floatingEl: Ref<HTMLElement | null>
   }
+  placement: Ref<string>
+  strategy: Ref<Strategy>
+  middlewareData: Ref<Record<string, any>>
+  x: Ref<number>
+  y: Ref<number>
+  isPositioned: Ref<boolean>
   open: Ref<boolean>
   onOpenChange: (open: boolean, event?: Event) => void
-  // Add other properties if your useHover implementation actually uses them
-  // e.g., dataRef?: Ref<Record<string, any>>
+  update: () => void
+  floatingStyles: ComputedRef<FloatingStyles>
 }
 
 // Mock useHover implementation (if not importing the real one)
@@ -60,19 +68,31 @@ describe("useHover", () => {
 
     context = {
       refs: {
-        reference: ref(null), // Start as null, set after mount
-        floating: ref(null),
+        anchorEl: ref(null), // Start as null, set after mount
+        floatingEl: ref(null),
       },
+      placement: ref("bottom" as const),
+      strategy: ref("absolute" as Strategy),
+      middlewareData: ref({}),
+      x: ref(0),
+      y: ref(0),
+      isPositioned: ref(true),
       open: ref(false),
       onOpenChange: (v) => {
         context.open.value = v
         onOpenChangeMock(v)
       },
+      update: () => {},
+      floatingStyles: computed<FloatingStyles>(() => ({
+        position: "absolute" as Strategy,
+        top: "0px",
+        left: "0px",
+      })),
     }
 
     // Assign elements after mount (simulates Vue template refs)
-    context.refs.reference.value = referenceEl
-    context.refs.floating.value = floatingEl
+    context.refs.anchorEl.value = referenceEl
+    context.refs.floatingEl.value = floatingEl
 
     await nextTick()
     vi.useFakeTimers()
@@ -159,7 +179,7 @@ describe("useHover", () => {
 
       // Detach original element
       const oldRef = referenceEl
-      context.refs.reference.value = null
+      context.refs.anchorEl.value = null
       await nextTick() // Allow watcher to potentially clean up old listeners
 
       // Hovering old ref should do nothing now
@@ -171,7 +191,7 @@ describe("useHover", () => {
       newRef.innerText = "reference2"
       newRef.id = "reference2"
       document.body.appendChild(newRef)
-      context.refs.reference.value = newRef
+      context.refs.anchorEl.value = newRef
       await nextTick() // Allow watcher to attach new listeners
 
       // Hovering new ref should work
@@ -572,5 +592,16 @@ describe("useHover", () => {
       vi.runAllTimers()
       expect(onOpenChangeMock).not.toHaveBeenCalled() // No close call expected
     })
+  })
+
+  it("should handle hover events", () => {
+    const { getReferenceProps, getFloatingProps } = useHover(context)
+    const referenceProps = getReferenceProps()
+    const floatingProps = getFloatingProps()
+
+    expect(referenceProps.onMouseEnter).toBeDefined()
+    expect(referenceProps.onMouseLeave).toBeDefined()
+    expect(floatingProps.onMouseEnter).toBeDefined()
+    expect(floatingProps.onMouseLeave).toBeDefined()
   })
 })

@@ -13,19 +13,16 @@ const ArrowDemo = defineComponent({
   },
   setup() {
     // Create a floating context
-    const referenceRef = ref<HTMLElement | null>(null);
-    const floatingRef = ref<HTMLElement | null>(null);
+    const anchorElRef = ref<HTMLElement | null>(null);
+    const floatingElRef = ref<HTMLElement | null>(null);
     const arrowRef = ref<InstanceType<typeof FloatingArrow> | null>(null);
     const placement = ref<Placement>("bottom");
     // Setup floating positioning with arrow middleware
     const context = useFloating({
-      elements: {
-        reference: referenceRef,
-        floating: floatingRef,
-      },
-      open: true,
-      placement,
-      middleware: computed(() => [arrow({ element: arrowRef.value?.$el })]),
+      placement: "bottom",
+      anchorEl: anchorElRef,
+      floatingEl: floatingElRef,
+      middlewares: [arrow({ element: arrowRef.value?.$el })],
     });
 
     // Placement options for the demo
@@ -40,8 +37,8 @@ const ArrowDemo = defineComponent({
     };
 
     return {
-      referenceRef,
-      floatingRef,
+      anchorElRef,
+      floatingElRef,
       context,
       placements,
       currentPlacement,
@@ -79,33 +76,23 @@ const ArrowDemo = defineComponent({
       </div>
       
       <div style="display: flex; justify-content: center; align-items: center; height: 300px;">
-        <div 
-          ref="referenceRef"
-          style="
-            width: 100px;
-            height: 100px;
-            background: #4f46e5;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-          "
+        <button
+          ref="anchorElRef"
+          class="px-4 py-2 bg-blue-500 text-white rounded"
         >
           Reference
-        </div>
+        </button>
         
         <div
-          ref="floatingRef"
+          ref="floatingElRef"
+          class="p-4 bg-white shadow-lg rounded"
           :style="style"
         >
           Floating Element
           <FloatingArrow
             ref="arrowRef"
-            :context="context" 
-            :width="14" 
-            :height="7"
-            :fill="'#f0f0f0'"
+            :context="context"
+            class="fill-white"
           />
         </div>
       </div>
@@ -133,23 +120,20 @@ export const CustomStyling: Story = {
       FloatingArrow,
     },
     setup() {
-      const referenceRef = ref<HTMLElement | null>(null);
-      const floatingRef = ref<HTMLElement | null>(null);
+      const anchorElRef = ref<HTMLElement | null>(null);
+      const floatingElRef = ref<HTMLElement | null>(null);
       const arrowRef = ref<InstanceType<typeof FloatingArrow> | null>(null);
 
       const floating = useFloating({
-        elements: {
-          reference: referenceRef,
-          floating: floatingRef,
-        },
-        open: true,
-        placement: ref("top"),
-        middleware: computed(() => [arrow({ element: arrowRef.value?.$el })]),
+        placement: "top",
+        anchorEl: anchorElRef,
+        floatingEl: floatingElRef,
+        middlewares: [arrow({ element: arrowRef.value?.$el })],
       });
 
       return {
-        referenceRef,
-        floatingRef,
+        anchorElRef,
+        floatingElRef,
         floating,
         style: {
           position: floating.strategy.value,
@@ -167,24 +151,15 @@ export const CustomStyling: Story = {
     },
     template: `
       <div style="display: flex; justify-content: center; align-items: center; height: 300px;">
-        <div 
-          ref="referenceRef"
-          style="
-            width: 100px;
-            height: 100px;
-            background: #16a34a;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-          "
+        <button
+          ref="anchorElRef"
+          class="px-4 py-2 bg-blue-500 text-white rounded"
         >
           Reference
-        </div>
+        </button>
         
         <div
-          ref="floatingRef"
+          ref="floatingElRef"
           :style="style"
         >
           Custom Arrow Styling
@@ -208,23 +183,20 @@ export const WithStaticOffset: Story = {
       FloatingArrow,
     },
     setup() {
-      const referenceRef = ref<HTMLElement | null>(null);
-      const floatingRef = ref<HTMLElement | null>(null);
+      const anchorElRef = ref<HTMLElement | null>(null);
+      const floatingElRef = ref<HTMLElement | null>(null);
       const arrowRef = ref<InstanceType<typeof FloatingArrow> | null>(null);
 
       const floating = useFloating({
-        elements: {
-          reference: referenceRef,
-          floating: floatingRef,
-        },
-        open: true,
-        placement: ref("bottom"),
-        middleware: computed(() => [arrow({ element: arrowRef.value?.$el })]),
+        placement: "bottom",
+        anchorEl: anchorElRef,
+        floatingEl: floatingElRef,
+        middlewares: [arrow({ element: arrowRef.value?.$el })],
       });
 
       return {
-        referenceRef,
-        floatingRef,
+        anchorElRef,
+        floatingElRef,
         floating,
         style: {
           position: floating.strategy.value,
@@ -242,24 +214,15 @@ export const WithStaticOffset: Story = {
     },
     template: `
       <div style="display: flex; justify-content: center; align-items: center; height: 300px;">
-        <div 
-          ref="referenceRef"
-          style="
-            width: 150px;
-            height: 100px;
-            background: #dc2626;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-          "
+        <button
+          ref="anchorElRef"
+          class="px-4 py-2 bg-blue-500 text-white rounded"
         >
           Reference
-        </div>
+        </button>
         
         <div
-          ref="floatingRef"
+          ref="floatingElRef"
           :style="style"
         >
           Arrow with Static Offset
