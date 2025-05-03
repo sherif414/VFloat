@@ -24,19 +24,12 @@ export interface UseTreeOptions {
    * @default 'recursive'
    */
   deleteStrategy?: "orphan" | "recursive"
-  /**
-   * Maintain an internal Map for O(1) node lookup by ID.
-   * Recommended for large trees where frequent ID lookups occur.
-   * Adds slight overhead on node creation/deletion.
-   * @default true
-   */
-  useIdMap?: boolean
 }
 
 /**
  * Return value from the useTree composable
  */
-export interface UseTreeReturn<T, TOptions extends UseTreeOptions = UseTreeOptions> {
+export interface UseTreeReturn<T> {
   /** The root node of the tree. */
   root: TreeNode<T>
   /** Adds a new node to the tree. If parentId is null/undefined, adds to the root. */
@@ -55,7 +48,7 @@ export interface UseTreeReturn<T, TOptions extends UseTreeOptions = UseTreeOptio
    * Provides direct access to the internal ID map if enabled.
    * The type is conditional: `Ref<Map<...>>` if `useIdMap` is true (or default), `undefined` if `useIdMap` is false.
    */
-  nodeMap: TOptions["useIdMap"] extends false ? undefined : Readonly<Ref<Map<string, TreeNode<T>>>>
+  nodeMap: Readonly<Ref<Map<string, TreeNode<T>>>>
 }
 
 //=======================================================================================
@@ -235,7 +228,7 @@ export class TreeNode<T> {
 }
 
 //=======================================================================================
-// 📌 Main Logic / Primary Export(s)
+// 📌 useTree
 //=======================================================================================
 
 /**
@@ -258,10 +251,10 @@ export class TreeNode<T> {
 export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
   initialRootData: T,
   options?: TOptions
-): UseTreeReturn<T, TOptions> {
-  const { deleteStrategy = "recursive", useIdMap } = options ?? {}
+): UseTreeReturn<T> {
+  const { deleteStrategy = "recursive" } = options ?? {}
 
-  const nodeMap = useIdMap ? shallowRef(new Map<string, TreeNode<T>>()) : undefined
+  const nodeMap =shallowRef(new Map<string, TreeNode<T>>())
   const root = new TreeNode<T>(initialRootData, null, {}, nodeMap)
 
   // --- Internal Recursive Helper for Deletion/Cleanup ---
@@ -423,7 +416,6 @@ export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
     }
   })
 
-  // Return the reactive root and utility functions
   return {
     root,
     addNode,
@@ -433,5 +425,5 @@ export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
     traverse,
     flattenNodes,
     nodeMap,
-  } as UseTreeReturn<T, TOptions> // Assert the return type matches the conditional interface
+  }
 }
