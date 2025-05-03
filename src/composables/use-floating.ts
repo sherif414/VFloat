@@ -86,8 +86,8 @@ export interface UseFloatingOptions {
    * Function called when both the reference and floating elements are mounted.
    */
   whileElementsMounted?: (
-    reference: NonNullable<ReferenceElement>,
-    floating: NonNullable<FloatingElement>,
+    anchorEl: NonNullable<ReferenceElement>,
+    floatingEl: NonNullable<FloatingElement>,
     update: () => void
   ) => undefined | (() => void)
 
@@ -161,8 +161,8 @@ export interface FloatingContext {
    * The refs object containing reference to reference and floating elements
    */
   refs: {
-    reference: Ref<ReferenceElement>
-    floating: Ref<FloatingElement>
+    anchorEl: Ref<ReferenceElement>
+    floatingEl: Ref<FloatingElement>
   }
 
   /**
@@ -187,8 +187,8 @@ export interface FloatingContext {
  * relative to their reference elements. It uses Floating UI under the hood and provides reactive
  * positioning data and styles.
  *
- * @param reference - The reference element or a reactive reference to it
- * @param floating - The floating element or a reactive reference to it
+ * @param anchorEl - The reference element or a reactive reference to it
+ * @param floatingEl - The floating element or a reactive reference to it
  * @param options - Additional options for the floating behavior
  * @returns A FloatingContext object containing positioning data and methods
  *
@@ -201,8 +201,8 @@ export interface FloatingContext {
  * ```
  */
 export function useFloating(
-  reference: Ref<ReferenceElement>,
-  floating: Ref<FloatingElement>,
+  anchorEl: Ref<ReferenceElement>,
+  floatingEl: Ref<FloatingElement>,
   options: UseFloatingOptions = {}
 ): FloatingContext {
   const {
@@ -227,9 +227,9 @@ export function useFloating(
   const isPositioned = ref(false)
 
   const update = async () => {
-    if (!reference.value || !floating.value) return
+    if (!anchorEl.value || !floatingEl.value) return
 
-    const result = await computePosition(reference.value, floating.value, {
+    const result = await computePosition(anchorEl.value, floatingEl.value, {
       placement: toValue(initialPlacement),
       strategy: toValue(initialStrategy),
       middleware: middlewares,
@@ -244,21 +244,21 @@ export function useFloating(
   }
 
   watch(
-    [() => toValue(initialPlacement), () => toValue(initialStrategy), reference, floating],
+    [() => toValue(initialPlacement), () => toValue(initialStrategy), anchorEl, floatingEl],
     update
   )
 
   let cleanup: (() => void) | undefined
 
   watch(
-    [reference, floating, open],
-    ([reference, floating, open]) => {
-      if (!open || !reference || !floating) return
+    [anchorEl, floatingEl, open],
+    ([anchorEl, floatingEl, open]) => {
+      if (!open || !anchorEl || !floatingEl) return
 
       if (whileElementsMounted) {
-        cleanup = whileElementsMounted(reference, floating, update)
+        cleanup = whileElementsMounted(anchorEl, floatingEl, update)
       } else {
-        cleanup = floatingUIAutoUpdate(reference, floating, update)
+        cleanup = floatingUIAutoUpdate(anchorEl, floatingEl, update)
       }
 
       onWatcherCleanup(() => {
@@ -285,18 +285,18 @@ export function useFloating(
       top: "0",
     }
 
-    if (!isPositioned.value || !floating.value) {
+    if (!isPositioned.value || !floatingEl.value) {
       return initialStyles
     }
 
-    const xVal = roundByDPR(floating.value, x.value)
-    const yVal = roundByDPR(floating.value, y.value)
+    const xVal = roundByDPR(floatingEl.value, x.value)
+    const yVal = roundByDPR(floatingEl.value, y.value)
 
     if (transform) {
       return {
         ...initialStyles,
         transform: `translate(${xVal}px, ${yVal}px)`,
-        ...(getDPR(floating.value) >= 1.5 && {
+        ...(getDPR(floatingEl.value) >= 1.5 && {
           willChange: "transform",
         }),
       }
@@ -319,8 +319,8 @@ export function useFloating(
     floatingStyles,
     update,
     refs: {
-      reference: reference,
-      floating: floating,
+      anchorEl: anchorEl,
+      floatingEl: floatingEl,
     },
     open,
     onOpenChange,
@@ -337,17 +337,17 @@ export function useFloating(
  * This function provides automatic position updates for floating elements.
  * It's a wrapper around Floating UI's autoUpdate function.
  *
- * @param reference - The reference element
- * @param floating - The floating element
+ * @param anchorEl - The reference element
+ * @param floatingEl - The floating element
  * @param update - The update function to call
  * @param options - Additional options for auto-updating
  * @returns A cleanup function to stop auto-updating
  */
 export function autoUpdate(
-  reference: HTMLElement,
-  floating: HTMLElement,
+  anchorEl: HTMLElement,
+  floatingEl: HTMLElement,
   update: () => void,
   options: AutoUpdateOptions = {}
 ) {
-  return floatingUIAutoUpdate(reference, floating, update, options)
+  return floatingUIAutoUpdate(anchorEl, floatingEl, update, options)
 }
