@@ -1,6 +1,5 @@
-import type { Ref } from "vue"
 import type { FloatingContext } from "./use-floating"
-import { Tree, type TreeNode, type TreeOptions, type TreeNodeOptions } from "./use-tree"
+import { Tree, type TreeOptions } from "./use-tree"
 
 //=======================================================================================
 // 📌 Types & Interfaces
