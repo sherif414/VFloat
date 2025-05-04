@@ -7,16 +7,6 @@ import { Tree, type TreeNode, type TreeOptions, type TreeNodeOptions } from "./u
 //=======================================================================================
 
 /**
- * Context returned by FloatingTree public methods
- */
-export interface FloatingTreeNodeInfo {
-  /** The ID of the added node */
-  nodeId: string
-  /** The floating context associated with the node */
-  context: FloatingContext
-}
-
-/**
  * Configuration options for the floating tree
  */
 export interface FloatingTreeOptions extends TreeOptions {}
