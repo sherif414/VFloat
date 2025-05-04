@@ -52,42 +52,25 @@ export class TreeNode<T> {
     data: T,
     parent: TreeNode<T> | null = null,
     options: TreeNodeOptions<T> = {},
-    // Accept the map directly instead of a ref to it
+    // Accept the map directly
     nodeMap?: Readonly<Ref<Map<string, TreeNode<T>>>>
   ) {
     this.id = options.id ?? useId()
     this.data = ref(data) as Ref<T>
     this.parent = shallowRef(parent) // Use shallowRef for parent link
-    this.children = ref([])
+    this.children = shallowRef([])
     this._nodeMap = nodeMap
 
     // Add self to map if provided
     this._nodeMap?.value.set(this.id, this)
-
-    // Initialize children if provided
-    if (options.children) {
-      for (const childData of options.children) {
-        this.addChild(childData)
-      }
-    }
   }
 
   /**
-   * Adds a new child node.
-   * @param childData The data for the new child node.
-   * @param options Optional TreeNodeOptions for the new child.
-   * @returns The newly created child TreeNode.
+   * Adds an existing node instance to this node's children array.
+   * @param childNode The TreeNode instance to add.
    */
-  addChild(childData: T, options: TreeNodeOptions<T> = {}): TreeNode<T> {
-    // Ensure child ID is unique if provided, otherwise generate
-    if (options.id && this._nodeMap?.value.has(options.id)) {
-      console.warn(`TreeNode addChild: ID ${options.id} already exists. Generating a new one.`)
-      options.id = undefined
-    }
-    // Pass the map ref down
-    const childNode = new TreeNode<T>(childData, this, options, this._nodeMap)
-    this.children.value.push(childNode)
-    return childNode
+  addChild(childNode: TreeNode<T>): void {
+    this.children.value = [...this.children.value, childNode];
   }
 
   /**
@@ -265,7 +248,7 @@ export class Tree<T> {
    */
   addNode(
     data: T,
-    parentId: string | null = null, // Default to root if null/undefined
+    parentId: string | null = null,
     nodeOptions: TreeNodeOptions<T> = {}
   ): TreeNode<T> | null {
     const parentNode = parentId ? this.findNodeById(parentId) : this.root
@@ -273,8 +256,16 @@ export class Tree<T> {
       console.error(`Tree addNode: Parent node with ID ${parentId} not found.`)
       return null
     }
-    // Pass the map reference down to the new node's constructor
-    return parentNode.addChild(data, { ...nodeOptions }) // Pass map ref via constructor
+
+    // Ensure child ID is unique if provided, otherwise generate
+    if (nodeOptions.id && this.nodeMap.value.has(nodeOptions.id)) {
+      console.warn(`Tree addNode: ID ${nodeOptions.id} already exists. Generating a new one.`)
+      nodeOptions.id = undefined
+    }
+
+    const newNode = new TreeNode<T>(data, parentNode, nodeOptions, this.nodeMap)
+    parentNode.addChild(newNode)
+    return newNode
   }
 
   /**
