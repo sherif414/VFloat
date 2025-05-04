@@ -18,7 +18,7 @@ import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, w
 /**
  * Type for reference element in floating UI
  */
-export type ReferenceElement = HTMLElement | VirtualElement | null
+export type AnchorElement = HTMLElement | VirtualElement | null
 
 /**
  * Type for floating element in floating UI
@@ -86,7 +86,7 @@ export interface UseFloatingOptions {
    * Function called when both the reference and floating elements are mounted.
    */
   whileElementsMounted?: (
-    anchorEl: NonNullable<ReferenceElement>,
+    anchorEl: NonNullable<AnchorElement>,
     floatingEl: NonNullable<FloatingElement>,
     update: () => void
   ) => undefined | (() => void)
@@ -161,7 +161,7 @@ export interface FloatingContext {
    * The refs object containing reference to reference and floating elements
    */
   refs: {
-    anchorEl: Ref<ReferenceElement>
+    anchorEl: Ref<AnchorElement>
     floatingEl: Ref<FloatingElement>
   }
 
@@ -201,7 +201,7 @@ export interface FloatingContext {
  * ```
  */
 export function useFloating(
-  anchorEl: Ref<ReferenceElement>,
+  anchorEl: Ref<AnchorElement>,
   floatingEl: Ref<FloatingElement>,
   options: UseFloatingOptions = {}
 ): FloatingContext {

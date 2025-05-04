@@ -8,7 +8,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
-import type { FloatingContext, FloatingElement, ReferenceElement } from "../use-floating"
+import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -22,7 +22,7 @@ export interface HandleCloseContext {
   pointerType: PointerType
   x: number
   y: number
-  referenceEl: ReferenceElement
+  referenceEl: AnchorElement
   floatingEl: FloatingElement
   isPointInFloating(event: PointerEvent | MouseEvent | TouchEvent): boolean
   originalEvent?: Event
