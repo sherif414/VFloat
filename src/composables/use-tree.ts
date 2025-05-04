@@ -17,7 +17,8 @@ export interface TreeNodeOptions<T> {
 /**
  * Options for configuring tree behavior
  */
-export interface UseTreeOptions {
+export interface TreeOptions {
+  // Renamed from UseTreeOptions
   /** Strategy for deleting child nodes when a parent is deleted.
    * - 'orphan': Children are detached from the tree (parent becomes null).
    * - 'recursive': Children are also deleted recursively.
@@ -26,30 +27,7 @@ export interface UseTreeOptions {
   deleteStrategy?: "orphan" | "recursive"
 }
 
-/**
- * Return value from the useTree composable
- */
-export interface UseTreeReturn<T> {
-  /** The root node of the tree. */
-  root: TreeNode<T>
-  /** Adds a new node to the tree. If parentId is null/undefined, adds to the root. */
-  addNode(data: T, parentId?: string | null, options?: TreeNodeOptions<T>): TreeNode<T> | null
-  /** Removes a node by its ID. Handles recursive deletion based on options. */
-  removeNode(nodeId: string): boolean
-  /** Moves a node to become a child of a new parent. Set newParentId to null to move to root level. */
-  moveNode(nodeId: string, newParentId: string | null): boolean
-  /** Finds a node anywhere in the tree by its ID. Uses Map if enabled, otherwise traverses. */
-  findNodeById(id: string): TreeNode<T> | null
-  /** Traverses the tree starting from a given node (or root). */
-  traverse(strategy?: "dfs" | "bfs", startNode?: TreeNode<T>): TreeNode<T>[]
-  /** Gets all nodes in the tree as a flat list. */
-  flattenNodes(startNode?: TreeNode<T>): TreeNode<T>[]
-  /**
-   * Provides direct access to the internal ID map if enabled.
-   * The type is conditional: `Ref<Map<...>>` if `useIdMap` is true (or default), `undefined` if `useIdMap` is false.
-   */
-  nodeMap: Readonly<Ref<Map<string, TreeNode<T>>>>
-}
+// Removed UseTreeReturn interface as the class itself serves this purpose
 
 //=======================================================================================
 // 📌 TreeNode Class
@@ -67,23 +45,24 @@ export class TreeNode<T> {
   parent: Ref<TreeNode<T> | null>
   children: Ref<TreeNode<T>[]>
 
-  // Internal reference for the composable's map (if used)
-  private _internalMapRef?: Ref<Map<string, TreeNode<T>>>
+  // Reference to the owning Tree instance's node map
+  private _nodeMap?: Readonly<Ref<Map<string, TreeNode<T>>>>
 
   constructor(
     data: T,
     parent: TreeNode<T> | null = null,
     options: TreeNodeOptions<T> = {},
-    internalMapRef?: Ref<Map<string, TreeNode<T>>>
+    // Accept the map directly instead of a ref to it
+    nodeMap?: Readonly<Ref<Map<string, TreeNode<T>>>>
   ) {
     this.id = options.id ?? useId()
     this.data = ref(data) as Ref<T>
     this.parent = shallowRef(parent) // Use shallowRef for parent link
     this.children = ref([])
-    this._internalMapRef = internalMapRef
+    this._nodeMap = nodeMap
 
     // Add self to map if provided
-    this._internalMapRef?.value.set(this.id, this)
+    this._nodeMap?.value.set(this.id, this)
 
     // Initialize children if provided
     if (options.children) {
@@ -101,18 +80,19 @@ export class TreeNode<T> {
    */
   addChild(childData: T, options: TreeNodeOptions<T> = {}): TreeNode<T> {
     // Ensure child ID is unique if provided, otherwise generate
-    if (options.id && this._internalMapRef?.value.has(options.id)) {
+    if (options.id && this._nodeMap?.value.has(options.id)) {
       console.warn(`TreeNode addChild: ID ${options.id} already exists. Generating a new one.`)
       options.id = undefined
     }
-    const childNode = new TreeNode<T>(childData, this, options, this._internalMapRef)
+    // Pass the map ref down
+    const childNode = new TreeNode<T>(childData, this, options, this._nodeMap)
     this.children.value.push(childNode)
     return childNode
   }
 
   /**
    * Removes a specific child node instance from this node's children.
-   * Note: This only removes the direct child link. Use the composable's `removeNode` for full removal including map updates and recursive deletion.
+   * Note: This only removes the direct child link. Use the Tree's `removeNode` method for full removal including map updates and recursive deletion.
    * @param childNode The child node instance to remove.
    * @returns True if the child was found and removed, false otherwise.
    */
@@ -221,99 +201,110 @@ export class TreeNode<T> {
   /** Cleans up node references, removing from ID map if applicable. Internal use. */
   _cleanup(): void {
     // Remove from map if it exists
-    this._internalMapRef?.value.delete(this.id)
+    this._nodeMap?.value.delete(this.id)
     // Nullify parent ref to help GC, though Vue's shallowRef helps
     // this.parent.value = null; // Already done in _removeChildInstance or move
   }
 }
 
 //=======================================================================================
-// 📌 useTree
+// 📌 Tree Class
 //=======================================================================================
 
 /**
- * Creates and manages a reactive tree structure.
+ * Manages a reactive tree structure.
  *
- * This composable provides a complete tree data structure with reactive nodes,
+ * This class provides a complete tree data structure with reactive nodes,
  * supporting operations like adding, removing, and moving nodes, as well as
  * traversal and search functionality.
  *
- * @param initialRootData Data for the root node.
- * @param options Configuration options for the tree behavior.
- * @returns An object with the reactive root node and tree management utilities.
- *
- * @example
- * ```ts
- * const { root, addNode, removeNode } = useTree({ name: 'Root' })
- * const childNode = addNode({ name: 'Child' }, root.id)
- * ```
+ * @template T The type of data stored in the tree nodes.
  */
-export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
-  initialRootData: T,
-  options?: TOptions
-): UseTreeReturn<T> {
-  const { deleteStrategy = "recursive" } = options ?? {}
+export class Tree<T> {
+  /** The root node of the tree. */
+  readonly root: TreeNode<T>
+  /** Readonly reactive map of node IDs to TreeNode instances for quick lookups. */
+  readonly nodeMap: Readonly<Ref<Map<string, TreeNode<T>>>>
 
-  const nodeMap =shallowRef(new Map<string, TreeNode<T>>())
-  const root = new TreeNode<T>(initialRootData, null, {}, nodeMap)
+  private readonly deleteStrategy: "orphan" | "recursive"
 
-  // --- Internal Recursive Helper for Deletion/Cleanup ---
-  const cleanupNodeRecursive = (node: TreeNode<T>) => {
-    // Recursively cleanup children first (Post-order)
-    for (const child of node.children.value) {
-      cleanupNodeRecursive(child)
-    }
-    // Cleanup the node itself (remove from map)
-    node._cleanup()
+  /**
+   * Creates a new Tree instance.
+   * @param initialRootData Data for the root node.
+   * @param options Configuration options for the tree behavior.
+   *
+   * @example
+   * ```ts
+   * const myTree = new Tree({ name: 'Root' });
+   * const childNode = myTree.addNode({ name: 'Child' }, myTree.root.id);
+   * ```
+   */
+  constructor(initialRootData: T, options?: TreeOptions) {
+    this.deleteStrategy = options?.deleteStrategy ?? "recursive"
+    // Use shallowRef for the map itself to avoid deep reactivity on the Map structure
+    const map = shallowRef(new Map<string, TreeNode<T>>())
+    this.nodeMap = map as Readonly<Ref<Map<string, TreeNode<T>>>> // Provide readonly access externally
+    this.root = new TreeNode<T>(initialRootData, null, {}, this.nodeMap)
   }
 
-  // --- Core Utility Functions ---
-
-  const findNodeById = (id: string): TreeNode<T> | null => {
-    if (nodeMap) {
-      return nodeMap.value.get(id) ?? null
-    }
-    // Fallback to traversal if map is disabled
-    return root.findDescendant((node) => node.id === id)
+  /**
+   * Finds a node anywhere in the tree by its ID.
+   * @param id The ID of the node to find.
+   * @returns The node if found, otherwise null.
+   */
+  findNodeById(id: string): TreeNode<T> | null {
+    return this.nodeMap.value.get(id) ?? null
   }
 
-  const addNode = (
+  /**
+   * Adds a new node to the tree.
+   * @param data The data for the new node.
+   * @param parentId The ID of the parent node. If null or undefined, adds to the root.
+   * @param nodeOptions Optional configuration for the new node (e.g., custom ID).
+   * @returns The newly created TreeNode, or null if the parent was not found.
+   */
+  addNode(
     data: T,
     parentId: string | null = null, // Default to root if null/undefined
     nodeOptions: TreeNodeOptions<T> = {}
-  ): TreeNode<T> | null => {
-    const parentNode = parentId ? findNodeById(parentId) : root
+  ): TreeNode<T> | null {
+    const parentNode = parentId ? this.findNodeById(parentId) : this.root
     if (!parentNode) {
-      console.error(`useTree addNode: Parent node with ID ${parentId} not found.`)
+      console.error(`Tree addNode: Parent node with ID ${parentId} not found.`)
       return null
     }
-    return parentNode.addChild(data, nodeOptions)
+    // Pass the map reference down to the new node's constructor
+    return parentNode.addChild(data, { ...nodeOptions }) // Pass map ref via constructor
   }
 
-  const removeNode = (nodeId: string): boolean => {
-    const nodeToRemove = findNodeById(nodeId)
+  /**
+   * Removes a node from the tree by its ID.
+   * Handles deletion of descendants based on the `deleteStrategy` option.
+   * @param nodeId The ID of the node to remove.
+   * @returns True if the node was successfully removed, false otherwise.
+   */
+  removeNode(nodeId: string): boolean {
+    const nodeToRemove = this.findNodeById(nodeId)
     if (!nodeToRemove) {
       return false
     }
     if (nodeToRemove.isRoot) {
-      console.error("useTree removeNode: Cannot remove the root node.")
+      console.error("Tree removeNode: Cannot remove the root node.")
       return false
     }
 
     const parent = nodeToRemove.parent.value! // Root case is handled, so parent must exist
 
     // 1. Handle children based on strategy
-    if (deleteStrategy === "recursive") {
+    if (this.deleteStrategy === "recursive") {
       // Cleanup children (removes from map) and the node itself
-      cleanupNodeRecursive(nodeToRemove)
+      this._cleanupNodeRecursive(nodeToRemove)
     } else {
       // 'orphan'
       // Detach children from the node being removed
       for (const child of nodeToRemove.children.value) {
         child.parent.value = null // Orphan the children
-        // Note: Orphans are now detached but still exist in the map if used.
-        // Consider if orphans should also be removed from the map, or if they might be re-parented later.
-        // For simplicity here, they remain in the map unless explicitly removed later.
+        // Note: Orphans remain in the map unless explicitly removed later.
       }
       nodeToRemove.children.value = [] // Clear children array of the removed node
       nodeToRemove._cleanup() // Clean up the node itself (remove from map)
@@ -323,44 +314,51 @@ export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
     return parent._removeChildInstance(nodeToRemove)
   }
 
-  const moveNode = (nodeId: string, newParentId: string | null): boolean => {
-    const nodeToMove = findNodeById(nodeId)
+  /**
+   * Moves a node to become a child of a new parent.
+   * @param nodeId The ID of the node to move.
+   * @param newParentId The ID of the new parent node. Set to null to move to the root level.
+   * @returns True if the node was successfully moved, false otherwise.
+   */
+  moveNode(nodeId: string, newParentId: string | null): boolean {
+    const nodeToMove = this.findNodeById(nodeId)
     if (!nodeToMove) {
-      console.error(`useTree moveNode: Node with ID ${nodeId} not found.`)
+      console.error(`Tree moveNode: Node with ID ${nodeId} not found.`)
       return false
     }
     if (nodeToMove.isRoot) {
-      console.error("useTree moveNode: Cannot move the root node.")
+      console.error("Tree moveNode: Cannot move the root node.")
       return false
     }
     if (nodeId === newParentId) {
-      console.error("useTree moveNode: Cannot move a node to be a child of itself.")
+      console.error("Tree moveNode: Cannot move a node to be a child of itself.")
       return false
     }
 
-    const newParent = newParentId ? findNodeById(newParentId) : root // Allow moving to root theoretically? Revisit if needed.
+    const newParent = newParentId ? this.findNodeById(newParentId) : this.root
     if (!newParent) {
-      console.error(`useTree moveNode: New parent node with ID ${newParentId} not found.`)
+      console.error(`Tree moveNode: New parent node with ID ${newParentId} not found.`)
       return false
     }
 
     // Check for cyclic move (moving a node into one of its own descendants)
     if (newParent.isDescendantOf(nodeToMove)) {
-      console.error("useTree moveNode: Cannot move a node to become its own descendant.")
+      console.error("Tree moveNode: Cannot move a node to become its own descendant.")
       return false
     }
 
     const oldParent = nodeToMove.parent.value
 
     if (!oldParent) {
-      console.error("useTree moveNode: Node unexpectedly has no parent.") // Should not happen
+      // Should not happen for non-root nodes if internal logic is correct
+      console.error("Tree moveNode: Node to move unexpectedly lacks a parent.")
       return false
     }
 
     // 1. Remove from old parent
     if (!oldParent._removeChildInstance(nodeToMove)) {
-      console.error("useTree moveNode: Failed to remove node from its original parent.")
-      return false
+      console.error("Tree moveNode: Failed to remove node from its original parent.")
+      return false // Indicates an inconsistency
     }
 
     // 2. Add to new parent
@@ -372,12 +370,22 @@ export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
     return true
   }
 
-  const traverse = (
+  /**
+   * Traverses the tree using either Depth-First Search (DFS) or Breadth-First Search (BFS).
+   * @param strategy The traversal strategy ('dfs' or 'bfs'). Defaults to 'dfs'.
+   * @param startNode The node to start traversal from. Defaults to the root node.
+   * @returns An array of nodes in the order they were visited.
+   */
+  traverse(
     strategy: "dfs" | "bfs" = "dfs",
-    startNode: TreeNode<T> = root
-  ): TreeNode<T>[] => {
+    startNode: TreeNode<T> | null = this.root // Allow potentially null startNode
+  ): TreeNode<T>[] {
     const result: TreeNode<T>[] = []
-    if (!startNode) return result // Handle case where startNode might be null
+    if (!startNode) {
+      // If startNode is explicitly null or root was somehow nullified
+      console.warn("Tree traverse: Start node is null, returning empty array.")
+      return result
+    }
 
     if (strategy === "dfs") {
       const stack: TreeNode<T>[] = [startNode]
@@ -403,27 +411,38 @@ export function useTree<T, TOptions extends UseTreeOptions = UseTreeOptions>(
     return result
   }
 
-  const flattenNodes = (startNode: TreeNode<T> = root): TreeNode<T>[] => {
+  /**
+   * Gets all nodes in the subtree starting from `startNode` as a flat list (using DFS traversal).
+   * @param startNode The node to start flattening from. Defaults to the root node.
+   * @returns A flat array of all descendant nodes (including the start node).
+   */
+  flattenNodes(startNode: TreeNode<T> | null = this.root): TreeNode<T>[] {
     // DFS traversal is suitable for flattening
-    return traverse("dfs", startNode)
+    return this.traverse("dfs", startNode)
   }
 
-  // Cleanup on component unmount (important if using the ID map)
-  onScopeDispose(() => {
-    if (nodeMap) {
-      // Clear the map to allow nodes to be garbage collected
-      nodeMap.value.clear()
-    }
-  })
+  /**
+   * Clears the internal node map. This is crucial for allowing garbage collection
+   * when the Tree instance is no longer needed, especially in scenarios like
+   * Vue components where the instance might be tied to the component lifecycle.
+   * Call this method when you are finished with the Tree instance (e.g., in `onScopeDispose`).
+   */
+  dispose(): void {
+    this.nodeMap.value.clear()
+    // Potentially add more cleanup if needed in the future
+  }
 
-  return {
-    root,
-    addNode,
-    removeNode,
-    moveNode,
-    findNodeById,
-    traverse,
-    flattenNodes,
-    nodeMap,
+  // --- Internal Recursive Helper for Deletion/Cleanup ---
+  private _cleanupNodeRecursive(node: TreeNode<T>): void {
+    // Recursively cleanup children first (Post-order)
+    // Iterate over a copy of the array in case of modifications? Shallow copy is enough here.
+    const childrenCopy = [...node.children.value]
+    for (const child of childrenCopy) {
+      this._cleanupNodeRecursive(child) // This will handle removal from map
+    }
+    // Cleanup the node itself (remove from map)
+    node._cleanup() // Calls this.nodeMap.value.delete(node.id)
+    // Explicitly clear children array after recursive cleanup
+    node.children.value = []
   }
 }
