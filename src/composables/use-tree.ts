@@ -1,4 +1,4 @@
-import { type Ref, onScopeDispose, ref, shallowRef, useId } from "vue"
+import { type Ref, shallowRef, useId } from "vue"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -47,7 +47,7 @@ export class TreeNode<T> {
 
   constructor(data: T, parent: TreeNode<T> | null = null, options: TreeNodeOptions<T> = {}) {
     this.id = options.id ?? useId()
-    this.data = ref(data) as Ref<T>
+    this.data = shallowRef(data)
     this.parent = shallowRef(parent) // Use shallowRef for parent link
     this.children = shallowRef([])
   }
