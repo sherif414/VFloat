@@ -67,13 +67,10 @@ export class TreeNode<T> {
    * @returns True if the child was found and removed, false otherwise.
    */
   _removeChildInstance(childNode: TreeNode<T>): boolean {
-    const index = this.children.value.findIndex((child) => child.id === childNode.id)
-    if (index !== -1) {
-      this.children.value.splice(index, 1)
-      childNode.parent.value = null // Break the parent link reactively
-      return true
-    }
-    return false
+    if (!this.children.value.includes(childNode)) return false
+    this.children.value = this.children.value.filter((node) => node.id !== childNode.id)
+    childNode.parent.value = null // Break the parent link reactively
+    return true
   }
 
   /**
