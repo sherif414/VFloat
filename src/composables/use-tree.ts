@@ -384,16 +384,6 @@ export class Tree<T> {
   }
 
   /**
-   * Gets all nodes in the subtree starting from `startNode` as a flat list (using DFS traversal).
-   * @param startNode The node to start flattening from. Defaults to the root node.
-   * @returns A flat array of all descendant nodes (including the start node).
-   */
-  flattenNodes(startNode: TreeNode<T> | null = this.root): TreeNode<T>[] {
-    // DFS traversal is suitable for flattening
-    return this.traverse("dfs", startNode)
-  }
-
-  /**
    * Clears the internal node map. This is crucial for allowing garbage collection
    * when the Tree instance is no longer needed, especially in scenarios like
    * Vue components where the instance might be tied to the component lifecycle.
