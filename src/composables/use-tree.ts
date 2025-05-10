@@ -339,7 +339,7 @@ export class Tree<T> {
     }
 
     // 2. Add to new parent
-    newParent.children.value.push(nodeToMove)
+    newParent.addChild(nodeToMove)
 
     // 3. Update node's parent reference
     nodeToMove.parent.value = newParent
