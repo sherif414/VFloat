@@ -40,16 +40,21 @@ export interface TreeOptions {
 export class TreeNode<T> {
   readonly id: string
   data: Ref<T>
-  // Use shallowRef for parent to avoid potential deep reactivity issues/cycles if parent data changes triggering child updates unnecessarily.
-  // The relationship itself (parent pointer) changing is what we usually care about reactively at this level.
   parent: Ref<TreeNode<T> | null>
   children: Ref<TreeNode<T>[]>
+  #isRoot: boolean
 
-  constructor(data: T, parent: TreeNode<T> | null = null, options: TreeNodeOptions<T> = {}) {
+  constructor(
+    data: T,
+    parent: TreeNode<T> | null = null,
+    options: TreeNodeOptions<T> = {},
+    isRoot = false
+  ) {
     this.id = options.id ?? useId()
     this.data = shallowRef(data)
-    this.parent = shallowRef(parent) // Use shallowRef for parent link
+    this.parent = shallowRef(parent)
     this.children = shallowRef([])
+    this.#isRoot = isRoot
   }
 
   /**
@@ -155,9 +160,9 @@ export class TreeNode<T> {
     return path.reverse() // Reverse to get root -> node order
   }
 
-  /** Checks if the node is the root of the tree. */
+  /** Checks if the node is the true root of the tree, distinct from an orphaned node. */
   get isRoot(): boolean {
-    return this.parent.value === null
+    return this.#isRoot
   }
 
   /** Checks if the node is a leaf node (has no children). */
@@ -185,7 +190,7 @@ export class Tree<T> {
   /** Readonly reactive map of node IDs to TreeNode instances for quick lookups. */
   readonly nodeMap: Readonly<Ref<Map<string, TreeNode<T>>>>
 
-  private readonly deleteStrategy: "orphan" | "recursive"
+  #deleteStrategy: "orphan" | "recursive"
 
   /**
    * Creates a new Tree instance.
@@ -199,11 +204,11 @@ export class Tree<T> {
    * ```
    */
   constructor(initialRootData: T, options?: TreeOptions) {
-    this.deleteStrategy = options?.deleteStrategy ?? "recursive"
+    this.#deleteStrategy = options?.deleteStrategy ?? "recursive"
     // Use shallowRef for the map itself to avoid deep reactivity on the Map structure
     const map = shallowRef(new Map<string, TreeNode<T>>())
     this.nodeMap = map as Readonly<Ref<Map<string, TreeNode<T>>>> // Provide readonly access externally
-    this.root = new TreeNode<T>(initialRootData, null, {})
+    this.root = new TreeNode<T>(initialRootData, null, {}, true) // Set _isTrueRoot to true for the actual root
     this.nodeMap.value.set(this.root.id, this.root)
   }
 
@@ -267,9 +272,9 @@ export class Tree<T> {
     const parent = nodeToRemove.parent.value! // Root case is handled, so parent must exist
 
     // 1. Handle children based on strategy
-    if (this.deleteStrategy === "recursive") {
+    if (this.#deleteStrategy === "recursive") {
       // Cleanup children (removes from map) and the node itself
-      this._cleanupNodeRecursive(nodeToRemove)
+      this.#cleanupNodeRecursive(nodeToRemove)
     } else {
       // 'orphan'
       // Detach children from the node being removed
@@ -396,12 +401,12 @@ export class Tree<T> {
   }
 
   // --- Internal Recursive Helper for Deletion/Cleanup ---
-  private _cleanupNodeRecursive(node: TreeNode<T>): void {
+  #cleanupNodeRecursive(node: TreeNode<T>): void {
     // Recursively cleanup children first (Post-order)
     // Iterate over a copy of the array in case of modifications? Shallow copy is enough here.
     const childrenCopy = [...node.children.value]
     for (const child of childrenCopy) {
-      this._cleanupNodeRecursive(child) // This will handle removal from map
+      this.#cleanupNodeRecursive(child) // This will handle removal from map
     }
     // Cleanup the node itself (remove from map)
     this.nodeMap.value.delete(node.id)
