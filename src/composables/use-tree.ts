@@ -239,7 +239,9 @@ export class Tree<T> {
 
     // Ensure child ID is unique if provided, otherwise generate
     if (nodeOptions.id && this.nodeMap.value.has(nodeOptions.id)) {
-      console.warn(`Tree addNode: ID ${nodeOptions.id} already exists. Generating a new one.`)
+      if (import.meta.env.DEV) {
+        console.warn(`Tree addNode: ID ${nodeOptions.id} already exists. Generating a new one.`)
+      }
       nodeOptions.id = undefined
     }
 
@@ -321,16 +323,19 @@ export class Tree<T> {
 
     const oldParent = nodeToMove.parent.value
 
-    if (!oldParent) {
-      // Should not happen for non-root nodes if internal logic is correct
-      console.error("Tree moveNode: Node to move unexpectedly lacks a parent.")
+    // 1. Remove from old parent if it exists
+    if (oldParent) {
+      if (!oldParent._removeChildInstance(nodeToMove)) {
+        console.error("Tree moveNode: Failed to remove node from its original parent.")
+        return false // Indicates an inconsistency
+      }
+    } else if (!nodeToMove.isRoot) {
+      // If it's an orphan (not root and no parent), it's okay to proceed to re-parent it.
+      // No removal needed from a non-existent parent.
+    } else if (nodeToMove.isRoot) {
+      // This case should have been caught earlier, but as a safeguard:
+      console.error("Tree moveNode: Attempting to move the root node, which is not allowed.")
       return false
-    }
-
-    // 1. Remove from old parent
-    if (!oldParent._removeChildInstance(nodeToMove)) {
-      console.error("Tree moveNode: Failed to remove node from its original parent.")
-      return false // Indicates an inconsistency
     }
 
     // 2. Add to new parent
