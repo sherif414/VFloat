@@ -100,14 +100,98 @@ export function useFloatingTree(
   ): void => {
     const { relationship = "self-and-children", applyToMatching = true } = options
     const targetNode = tree.findNodeById(nodeId)
-    if (!targetNode) return
+    if (!targetNode) {
+      return
+    }
 
-    const allNodes = Array.from(tree.nodeMap.values())
-    for (const node of allNodes) {
-      const matches = matchNodeRelationship(node, targetNode, relationship)
+    const relevantNodes: TreeNode<FloatingContext>[] = []
+    const relevantNodeIds = new Set<string>() // For quick lookups and deduplication
 
-      if (matches === applyToMatching) {
+    const addNodeToRelevant = (node: TreeNode<FloatingContext> | null) => {
+      if (node && !relevantNodeIds.has(node.id)) {
+        relevantNodes.push(node)
+        relevantNodeIds.add(node.id)
+      }
+    }
+
+    const addNodesToRelevant = (nodes: (TreeNode<FloatingContext> | null)[]) => {
+      for (const node of nodes) {
+        addNodeToRelevant(node)
+      }
+    }
+
+    if (relationship === "ancestors-only") {
+      for (const ancestor of targetNode.getPath()) {
+        if (ancestor.id !== targetNode.id) {
+          addNodeToRelevant(ancestor)
+        }
+      }
+    } else if (relationship === "siblings-only") {
+      if (targetNode.parent.value) {
+        for (const sibling of targetNode.parent.value.children.value) {
+          if (sibling.id !== targetNode.id) {
+            addNodeToRelevant(sibling)
+          }
+        }
+      }
+    } else if (relationship === "descendants-only") {
+      for (const descendant of tree.traverse("dfs", targetNode)) {
+        if (descendant.id !== targetNode.id) {
+          addNodeToRelevant(descendant)
+        }
+      }
+    } else if (relationship === "children-only") {
+      addNodesToRelevant(targetNode.children.value)
+    } else if (relationship === "self-and-ancestors") {
+      addNodesToRelevant(targetNode.getPath())
+    } else if (relationship === "self-and-children") {
+      addNodeToRelevant(targetNode)
+      addNodesToRelevant(targetNode.children.value)
+    } else if (relationship === "self-and-descendants") {
+      addNodesToRelevant(tree.traverse("dfs", targetNode))
+    } else if (relationship === "self-and-siblings") {
+      addNodeToRelevant(targetNode)
+      if (targetNode.parent.value) {
+        addNodesToRelevant(targetNode.parent.value.children.value)
+      }
+    } else if (relationship === "self-ancestors-and-children") {
+      addNodesToRelevant(targetNode.getPath())
+      addNodesToRelevant(targetNode.children.value)
+    } else if (relationship === "full-branch") {
+      addNodesToRelevant(targetNode.getPath())
+      addNodesToRelevant(tree.traverse("dfs", targetNode))
+    } else if (relationship === "all-except-branch") {
+      const branchNodes = new Set<string>()
+      for (const n of targetNode.getPath()) {
+        branchNodes.add(n.id)
+      }
+      for (const n of tree.traverse("dfs", targetNode)) {
+        branchNodes.add(n.id)
+      }
+
+      for (const node of tree.nodeMap.values()) {
+        const isMatch = !branchNodes.has(node.id)
+        if (isMatch === applyToMatching) {
+          callback(node)
+        }
+      }
+      return // Exit early as iteration and callback are handled
+    } else {
+      // Default case for unknown relationship
+      console.warn(`forEach: Unknown relationship "${relationship}".`)
+      return
+    }
+
+    // Apply the callback based on applyToMatching
+    if (applyToMatching) {
+      for (const node of relevantNodes) {
         callback(node)
+      }
+    } else {
+      for (const node of tree.nodeMap.values()) {
+        if (!relevantNodeIds.has(node.id)) {
+          callback(node)
+        }
       }
     }
   }
@@ -119,9 +203,7 @@ export function useFloatingTree(
    */
   const getAllOpenNodes = (): TreeNode<FloatingContext>[] => {
     const openNodes: TreeNode<FloatingContext>[] = []
-    const allNodes = tree.nodeMap.values()
-
-    for (const node of allNodes) {
+    for (const node of tree.nodeMap.values()) {
       if (node.data.value.open.value) {
         openNodes.push(node)
       }
@@ -166,96 +248,4 @@ export function useFloatingTree(
     getAllOpenNodes,
     forEach,
   }
-}
-
-//=======================================================================================
-// 📌 Helper Functions
-//=======================================================================================
-
-/**
- * Determines the relationship between two nodes based on the selected relationship
- */
-function matchNodeRelationship<T>(
-  node: TreeNode<T>,
-  target: TreeNode<T>,
-  relationship: NodeRelationship
-): boolean {
-  // Fast path for self check
-  if (node.id === target.id) {
-    // If the node is the target itself, it matches unless the relationship is strictly exclusive of self.
-    return (
-      relationship !== "ancestors-only" &&
-      relationship !== "descendants-only" &&
-      relationship !== "siblings-only" &&
-      relationship !== "children-only"
-    )
-  }
-
-  // Calculate relationships on demand based on relationship
-  switch (relationship) {
-    case "ancestors-only":
-      return target.isDescendantOf(node)
-
-    case "siblings-only":
-      // Ensure they share the same parent and are not the same node
-      return hasSameParent(node, target)
-
-    case "descendants-only":
-      return node.isDescendantOf(target)
-
-    case "children-only":
-      return node.parent.value?.id === target.id
-
-    case "self-and-ancestors":
-      // 'self' is handled by the initial check if node === target.
-      // For 'ancestors', target must be a descendant of node.
-      return target.isDescendantOf(node)
-
-    case "self-and-children":
-      // 'self' is handled by the initial check if node === target.
-      // For 'children', node must be a child of target.
-      return node.parent.value?.id === target.id
-
-    case "self-and-descendants":
-      // 'self' is handled by the initial check if node === target.
-      // For 'descendants', node must be a descendant of target.
-      return node.isDescendantOf(target)
-
-    case "self-ancestors-and-children":
-      // 'self' is handled by the initial check if node === target.
-      // For 'ancestors', target must be a descendant of node.
-      return target.isDescendantOf(node) || node.parent.value?.id === target.id
-
-    case "self-and-siblings":
-      // 'self' is handled by the initial check if node === target.
-      // For 'siblings', they must share the same parent.
-      return hasSameParent(node, target)
-
-    case "full-branch": {
-      if (node.isDescendantOf(target)) return true
-      if (target.isDescendantOf(node)) return true
-      return node.id === target.id
-    }
-
-    case "all-except-branch": {
-      if (node.id === target.id) return false
-      if (node.isDescendantOf(target)) return false
-      if (target.isDescendantOf(node)) return false
-      return true
-    }
-
-    default:
-      return false
-  }
-}
-
-/**
- * Helper function to check if two nodes have the same parent
- */
-function hasSameParent<T>(node1: TreeNode<T>, node2: TreeNode<T>): boolean {
-  const parent1 = node1.parent.value
-  const parent2 = node2.parent.value
-
-  if (!parent1 || !parent2) return false
-  return parent1.id === parent2.id
 }
