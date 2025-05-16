@@ -40,7 +40,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
   } = options
 
   const reference = computed(() =>
-    context.refs.reference.value instanceof HTMLElement ? context.refs.reference.value : null
+    context.refs.anchorEl.value instanceof HTMLElement ? context.refs.anchorEl.value : null
   )
   const isEnabled = computed(() => toValue(enabled))
   const { isComposing } = useComposition()
@@ -64,7 +64,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
   useEventListener(document, "keydown", dismissOnEscapeKeyDown)
 
   onClickOutside(
-    context.refs.floating.value,
+    context.refs.floatingEl.value,
     (e: PointerEvent) => {
       if (!isEnabled.value || !toValue(outsidePress) || !context.open.value) {
         return
@@ -75,7 +75,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
         return
       }
 
-      if (isHTMLElement(e.target) && context.refs.floating.value && isClickOnScrollbar(e)) {
+      if (isHTMLElement(e.target) && context.refs.floatingEl.value && isClickOnScrollbar(e)) {
         return
       }
 
@@ -108,11 +108,11 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
     { passive: true }
   )
 
-  useEventListener(context.refs.floating.value, "mousedown", () => {
+  useEventListener(context.refs.floatingEl.value, "mousedown", () => {
     endedOrStartedInside = true
   })
 
-  useEventListener(context.refs.floating.value, "mouseup", () => {
+  useEventListener(context.refs.floatingEl.value, "mouseup", () => {
     endedOrStartedInside = true
   })
 }

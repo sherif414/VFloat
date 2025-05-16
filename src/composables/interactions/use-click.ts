@@ -38,7 +38,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
   const isEnabled = computed(() => toValue(enabled))
   const reference = computed(() =>
-    refs.reference.value instanceof HTMLElement ? refs.reference.value : null
+    refs.anchorEl.value instanceof HTMLElement ? refs.anchorEl.value : null
   )
 
   // --- Event Handlers --- //
