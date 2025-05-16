@@ -1,4 +1,5 @@
-import { type Ref, shallowRef, useId } from "vue"
+import { type Ref, shallowReactive, shallowRef } from "vue"
+import { useId } from "@/utils";
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -188,7 +189,7 @@ export class Tree<T> {
   /** The root node of the tree. */
   readonly root: TreeNode<T>
   /** Readonly reactive map of node IDs to TreeNode instances for quick lookups. */
-  readonly nodeMap: Readonly<Ref<Map<string, TreeNode<T>>>>
+  readonly nodeMap: Readonly<Map<string, TreeNode<T>>>
 
   #deleteStrategy: "orphan" | "recursive"
 
@@ -206,10 +207,9 @@ export class Tree<T> {
   constructor(initialRootData: T, options?: TreeOptions) {
     this.#deleteStrategy = options?.deleteStrategy ?? "recursive"
     // Use shallowRef for the map itself to avoid deep reactivity on the Map structure
-    const map = shallowRef(new Map<string, TreeNode<T>>())
-    this.nodeMap = map as Readonly<Ref<Map<string, TreeNode<T>>>> // Provide readonly access externally
+    this.nodeMap= shallowReactive(new Map<string, TreeNode<T>>())
     this.root = new TreeNode<T>(initialRootData, null, {}, true) // Set _isTrueRoot to true for the actual root
-    this.nodeMap.value.set(this.root.id, this.root)
+    this.nodeMap.set(this.root.id, this.root)
   }
 
   /**
@@ -218,7 +218,7 @@ export class Tree<T> {
    * @returns The node if found, otherwise null.
    */
   findNodeById(id: string): TreeNode<T> | null {
-    return this.nodeMap.value.get(id) ?? null
+    return this.nodeMap.get(id) ?? null
   }
 
   /**
@@ -240,7 +240,7 @@ export class Tree<T> {
     }
 
     // Ensure child ID is unique if provided, otherwise generate
-    if (nodeOptions.id && this.nodeMap.value.has(nodeOptions.id)) {
+    if (nodeOptions.id && this.nodeMap.has(nodeOptions.id)) {
       if (import.meta.env.DEV) {
         console.warn(`Tree addNode: ID ${nodeOptions.id} already exists. Generating a new one.`)
       }
@@ -248,7 +248,7 @@ export class Tree<T> {
     }
 
     const newNode = new TreeNode<T>(data, parentNode, nodeOptions)
-    this.nodeMap.value.set(newNode.id, newNode)
+    this.nodeMap.set(newNode.id, newNode)
     parentNode.addChild(newNode)
     return newNode
   }
@@ -283,7 +283,7 @@ export class Tree<T> {
         // Note: Orphans remain in the map unless explicitly removed later.
       }
       nodeToRemove.children.value = [] // Clear children array of the removed node
-      this.nodeMap.value.delete(nodeToRemove.id)
+      this.nodeMap.delete(nodeToRemove.id)
     }
 
     // 2. Remove node from its parent's children array
@@ -397,7 +397,7 @@ export class Tree<T> {
    * Call this method when you are finished with the Tree instance (e.g., in `onScopeDispose`).
    */
   dispose(): void {
-    this.nodeMap.value.clear()
+    this.nodeMap.clear()
   }
 
   // --- Internal Recursive Helper for Deletion/Cleanup ---
@@ -409,7 +409,7 @@ export class Tree<T> {
       this.#cleanupNodeRecursive(child) // This will handle removal from map
     }
     // Cleanup the node itself (remove from map)
-    this.nodeMap.value.delete(node.id)
+    this.nodeMap.delete(node.id)
     // Explicitly clear children array after recursive cleanup
     node.children.value = []
   }
