@@ -6,7 +6,6 @@ import {
   type Ref,
   ref,
   toValue,
-  watch,
   watchEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables"
@@ -29,11 +28,10 @@ import type { VirtualElement } from "@floating-ui/dom"
  * @example
  * ```ts
  * const context = useFloating(...)
- * const { getReferenceProps } = useClientPoint(context, {
+ * useClientPoint(context, {
  *   axis: "x",
  *   enabled: true
  * })
- * const { coordinates } = useClientPoint(context)
  * ```
  */
 export function useClientPoint(
@@ -60,7 +58,7 @@ export function useClientPoint(
     }
 
     if (open.value) {
-      refs.reference.value = createVirtualElement(
+      refs.anchorEl.value = createVirtualElement(
         pointerTarget.value,
         axis.value,
         clientCoords.value
@@ -71,7 +69,7 @@ export function useClientPoint(
   watchEffect(() => {
     const x = externalX.value
     const y = externalY.value
-    
+
     if (enabled.value && x != null && y != null) {
       updateCoords(x, y)
     }

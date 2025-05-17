@@ -1,13 +1,6 @@
-import { useEventListener } from "@vueuse/core"
 import type { FloatingContext } from "@/composables"
-import {
-  type MaybeRefOrGetter,
-  type Ref,
-  onWatcherCleanup,
-  ref,
-  toValue,
-  watchPostEffect,
-} from "vue"
+import { useEventListener } from "@vueuse/core"
+import { type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 
 //=======================================================================================
 // 📌 Main

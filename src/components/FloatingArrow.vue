@@ -1,7 +1,7 @@
 <script lang="ts">
 export interface FloatingArrowProps {
   /** The floating context */
-  context: InjectionKey<ArrowContext>
+  context: FloatingContext
 
   /** Width of the arrow */
   width?: number
@@ -27,9 +27,9 @@ export interface FloatingArrowProps {
 </script>
 
 <script setup lang="ts">
-import { computed, inject, ref, type InjectionKey } from "vue"
-import { useArrow } from "../composables/use-arrow"
-import type { ArrowContext, FloatingContext } from "@/composables"
+import { computed } from "vue"
+import { useArrow } from "@/composables"
+import type { FloatingContext } from "@/composables"
 
 const props = withDefaults(defineProps<FloatingArrowProps>(), {
   width: 14,
@@ -41,14 +41,7 @@ const props = withDefaults(defineProps<FloatingArrowProps>(), {
   staticOffset: null,
 })
 
-const context = inject(props.context)
-
-if (!context) {
-  throw new Error("Arrow component is missing context")
-}
-
-const { arrowRef } = context
-const { arrowStyles } = useArrow(context)
+const { arrowStyles } = useArrow(props.context)
 
 // Generate path for the arrow
 const pathData = computed(() => {
@@ -66,25 +59,13 @@ const pathData = computed(() => {
 </script>
 
 <template>
-  <div ref="arrowRef" :style="arrowStyles" class="floating-arrow">
-    <svg
-      :width="width"
-      :height="height"
-      :viewBox="`0 0 ${width} ${height}`"
-      :fill="fill"
-      :stroke="stroke"
-      :stroke-width="strokeWidth"
-    >
+  <div :style="{
+    position: 'absolute', 'pointer-events': 'none', 'width': 'max-content', 'height': 'max-content'
+    , ...arrowStyles
+  }" class="floating-arrow">
+    <svg :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`" :fill="fill" :stroke="stroke"
+      :stroke-width="strokeWidth">
       <path :d="pathData" />
     </svg>
   </div>
 </template>
-
-<style scoped>
-.floating-arrow {
-  position: absolute;
-  pointer-events: none;
-  width: max-content;
-  height: max-content;
-}
-</style>

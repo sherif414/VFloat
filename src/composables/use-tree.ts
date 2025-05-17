@@ -1,5 +1,5 @@
 import { type Ref, shallowReactive, shallowRef } from "vue"
-import { useId } from "@/utils";
+import { useId } from "@/utils"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -207,7 +207,7 @@ export class Tree<T> {
   constructor(initialRootData: T, options?: TreeOptions) {
     this.#deleteStrategy = options?.deleteStrategy ?? "recursive"
     // Use shallowRef for the map itself to avoid deep reactivity on the Map structure
-    this.nodeMap= shallowReactive(new Map<string, TreeNode<T>>())
+    this.nodeMap = shallowReactive(new Map<string, TreeNode<T>>())
     this.root = new TreeNode<T>(initialRootData, null, {}, true) // Set _isTrueRoot to true for the actual root
     this.nodeMap.set(this.root.id, this.root)
   }

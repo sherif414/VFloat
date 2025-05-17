@@ -6,7 +6,9 @@
     "src/**/*.vue",
     "docs/**/*.md",
     "docs/**/*.ts",
-    "docs/**/*.vue"
+    "docs/**/*.vue",
+    "playground/**/*.vue",
+    "playground/**/*.ts"
   ],
   "exclude": ["src/**/__tests__/*"],
   "vueCompilerOptions": {

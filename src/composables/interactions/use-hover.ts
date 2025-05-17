@@ -148,7 +148,11 @@ function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
  * ```
  */
 export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
-  const { open, onOpenChange, refs } = context
+  const {
+    open,
+    onOpenChange,
+    refs: { anchorEl, floatingEl },
+  } = context
   const {
     enabled: enabledOption = true,
     delay = 0,
@@ -158,9 +162,8 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
   const enabled = computed(() => toValue(enabledOption))
   const restMs = computed(() => toValue(restMsOption))
-  const floating = computed(() => refs.floating.value)
   const reference = computed(() => {
-    const el = refs.reference.value
+    const el = anchorEl.value
     if (!el || el instanceof HTMLElement) return el
     return (el.contextElement as HTMLElement) ?? null
   })
@@ -251,7 +254,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   function onPointerLeaveReference(e: PointerEvent): void {
     if (!enabled.value || !isValidPointerType(e)) return
 
-    if (!floating.value?.contains(e.relatedTarget as Node)) {
+    if (!floatingEl.value?.contains(e.relatedTarget as Node)) {
       hide()
     }
   }
@@ -278,7 +281,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   })
 
   watchPostEffect(() => {
-    const el = floating.value
+    const el = floatingEl.value
     if (!el || !enabled.value) return
 
     el.addEventListener("pointerenter", onPointerEnterFloating)
