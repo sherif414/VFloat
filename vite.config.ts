@@ -1,24 +1,12 @@
 import { URL, fileURLToPath } from "node:url"
 import vue from "@vitejs/plugin-vue"
 import { defineConfig } from "vite"
-// import dts from "vite-plugin-dts"
+import dts from "vite-plugin-dts"
 // import tailwind from "@tailwindcss/vite"
 import unocss from "unocss/vite"
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    unocss(),
-    // dts({
-    //   include: ["src/**/*.ts", "src/**/*.vue"],
-    //   beforeWriteFile: (filePath, content) => {
-    //     return {
-    //       filePath,
-    //       content,
-    //     }
-    //   },
-    // }),
-  ],
+  plugins: [vue(), unocss(), dts({ tsconfigPath: "./tsconfig.app.json" })],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -30,16 +18,12 @@ export default defineConfig({
       name: "VFloat",
       fileName: (format) => `v-float.${format}.js`,
     },
-    minify: "terser",
-    sourcemap: true,
-    cssCodeSplit: true,
     rollupOptions: {
-      external: ["vue", "@floating-ui/dom"],
+      external: ["vue"],
       output: {
         exports: "named",
         globals: {
           vue: "Vue",
-          "@floating-ui/dom": "FloatingUIDom",
         },
       },
     },

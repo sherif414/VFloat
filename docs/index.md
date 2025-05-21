@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: V-Float
-  text: Vue 3 Floating UI Library
+  text: Vue 3 Positioning Library
   tagline: A comprehensive toolkit for creating perfectly positioned and interactive floating elements
   image:
     src: /logo.svg

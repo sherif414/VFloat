@@ -3,6 +3,7 @@ import {
   computed,
   type MaybeRefOrGetter,
   onWatcherCleanup,
+  readonly,
   type Ref,
   ref,
   toValue,
@@ -111,7 +112,7 @@ export function useClientPoint(
   })
 
   return {
-    coordinates: clientCoords,
+    coordinates: readonly(clientCoords),
     updatePosition: updateCoords,
   }
 }
@@ -244,7 +245,7 @@ export interface UseClientPointReturn {
   /**
    * Reactive object containing the current client coordinates (x/y)
    */
-  coordinates: Ref<{ x: number | null; y: number | null }>
+  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>
   /**
    * Function to manually update the floating element's position
    */
