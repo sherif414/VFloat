@@ -1,419 +1,523 @@
+---
+description: The core composable for positioning floating elements using Floating UI
+---
+
 # useFloating
 
-The `useFloating` composable is the core positioning engine of the V-Float library. It's responsible for calculating the position of a floating element relative to a reference element. This composable leverages the underlying Floating UI DOM positioning logic and provides a Vue-friendly reactive interface.
+The `useFloating` composable is the foundation of V-Float, providing precise positioning logic for floating elements like tooltips, popovers, dropdowns, and modals. It wraps Floating UI's `computePosition` function with Vue 3's reactivity system to create a seamless positioning solution.
 
-## Basic Usage
+## Overview
+
+`useFloating` handles the complex calculations needed to position a floating element relative to an anchor element. It automatically updates positions when elements move, resize, or when configuration changes, ensuring your floating elements stay perfectly aligned.
+
+### Key Features
+
+- **Reactive positioning** - Automatically updates when anchor or floating elements change
+- **Flexible placement** - Supports 12 different placement options
+- **Middleware support** - Extensible with offset, flip, shift, and custom middleware
+- **Performance optimized** - Uses CSS transforms by default for better performance
+- **Auto-update** - Automatically repositions on scroll, resize, and DOM changes
+- **TypeScript support** - Fully typed for better developer experience
+
+## API Reference
+
+### Parameters
+
+```typescript
+useFloating(
+  anchorEl: Ref<AnchorElement>,
+  floatingEl: Ref<FloatingElement>,
+  options?: UseFloatingOptions
+): FloatingContext
+```
+
+#### `anchorEl`
+- **Type**: `Ref<AnchorElement>`
+- **Required**: Yes
+- **Description**: A Vue ref containing the reference element that the floating element will be positioned relative to. Can be an HTMLElement, VirtualElement, or null.
+
+#### `floatingEl`
+- **Type**: `Ref<FloatingElement>`
+- **Required**: Yes
+- **Description**: A Vue ref containing the floating element to be positioned. Can be an HTMLElement or null.
+
+#### `options`
+- **Type**: `UseFloatingOptions`
+- **Required**: No
+- **Description**: Configuration options for positioning behavior.
+
+### Options Interface
+
+```typescript
+interface UseFloatingOptions {
+  placement?: MaybeRefOrGetter<Placement | undefined>
+  strategy?: MaybeRefOrGetter<Strategy | undefined>
+  transform?: MaybeRefOrGetter<boolean | undefined>
+  middlewares?: Middleware[]
+  whileElementsMounted?: (
+    anchorEl: NonNullable<AnchorElement>,
+    floatingEl: NonNullable<FloatingElement>,
+    update: () => void
+  ) => undefined | (() => void)
+  open?: Ref<boolean>
+  onOpenChange?: (open: boolean) => void
+  nodeId?: string
+  rootContext?: Partial<FloatingContext>
+}
+```
+
+#### Option Details
+
+**`placement`**
+- **Type**: `MaybeRefOrGetter<Placement | undefined>`
+- **Default**: `'bottom'`
+- **Description**: Where to place the floating element relative to the anchor element.
+- **Values**: `'top'`, `'top-start'`, `'top-end'`, `'right'`, `'right-start'`, `'right-end'`, `'bottom'`, `'bottom-start'`, `'bottom-end'`, `'left'`, `'left-start'`, `'left-end'`
+
+**`strategy`**
+- **Type**: `MaybeRefOrGetter<Strategy | undefined>`
+- **Default**: `'absolute'`
+- **Description**: The CSS positioning strategy to use.
+- **Values**: `'absolute'`, `'fixed'`
+
+**`transform`**
+- **Type**: `MaybeRefOrGetter<boolean | undefined>`
+- **Default**: `true`
+- **Description**: Whether to use CSS transform for positioning instead of top/left properties. Transform is generally more performant.
+
+**`middlewares`**
+- **Type**: `Middleware[]`
+- **Default**: `[]`
+- **Description**: Array of middleware functions that modify positioning behavior. Common middleware include `offset`, `flip`, `shift`, and `arrow`.
+
+**`whileElementsMounted`**
+- **Type**: Function
+- **Description**: Custom function called when both elements are mounted. Should return a cleanup function. If not provided, uses Floating UI's `autoUpdate`.
+
+**`open`**
+- **Type**: `Ref<boolean>`
+- **Default**: `ref(false)`
+- **Description**: Reactive boolean controlling whether the floating element is open/visible.
+
+**`onOpenChange`**
+- **Type**: `(open: boolean) => void`
+- **Description**: Callback function called when the open state changes.
+
+### Return Value
+
+The composable returns a `FloatingContext` object with the following properties:
+
+```typescript
+interface FloatingContext {
+  x: Readonly<Ref<number>>
+  y: Readonly<Ref<number>>
+  strategy: Ref<Strategy>
+  placement: Ref<Placement>
+  middlewareData: Ref<MiddlewareData>
+  isPositioned: Ref<boolean>
+  floatingStyles: ComputedRef<FloatingStyles>
+  update: () => Promise<void>
+  refs: {
+    anchorEl: Ref<AnchorElement>
+    floatingEl: Ref<FloatingElement>
+  }
+  open: Ref<boolean>
+  onOpenChange: (open: boolean) => void
+}
+```
+
+#### Return Properties
+
+**`x`** / **`y`**
+- **Type**: `Readonly<Ref<number>>`
+- **Description**: The computed x and y coordinates for positioning the floating element.
+
+**`strategy`**
+- **Type**: `Ref<Strategy>`
+- **Description**: The current positioning strategy being used.
+
+**`placement`**
+- **Type**: `Ref<Placement>`
+- **Description**: The actual placement being used (may differ from requested placement due to middleware).
+
+**`middlewareData`**
+- **Type**: `Ref<MiddlewareData>`
+- **Description**: Data returned by middleware functions, useful for additional positioning logic.
+
+**`isPositioned`**
+- **Type**: `Ref<boolean>`
+- **Description**: Whether the floating element has been positioned.
+
+**`floatingStyles`**
+- **Type**: `ComputedRef<FloatingStyles>`
+- **Description**: Computed CSS styles object ready to apply to the floating element.
+
+**`update`**
+- **Type**: `() => Promise<void>`
+- **Description**: Function to manually trigger position recalculation.
+
+**`refs`**
+- **Type**: Object with `anchorEl` and `floatingEl` refs
+- **Description**: References to the anchor and floating elements.
+
+**`open`** / **`onOpenChange`**
+- **Type**: `Ref<boolean>` / Function
+- **Description**: State and handler for controlling floating element visibility.
+
+## Usage Examples
+
+### Basic Usage
+
+Simple tooltip positioning:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating } from "v-float";
+import { ref } from 'vue'
+import { useFloating } from '@/composables/use-floating'
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const anchorEl = ref<HTMLElement>()
+const floatingEl = ref<HTMLElement>()
 
-// Basic usage with default options
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+const { floatingStyles, isPositioned } = useFloating(anchorEl, floatingEl, {
+  placement: 'top'
+})
 </script>
 
 <template>
-  <button ref="referenceRef" @click="isOpen = !isOpen">
-    Toggle Floating Element
-  </button>
-
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    :style="{
-      position: floating.strategy,
-      top: '0px',
-      left: '0px',
-      transform: `translate(${floating.x}px, ${floating.y}px)`,
-    }"
+  <button ref="anchorEl">Hover me</button>
+  <div 
+    ref="floatingEl" 
+    :style="floatingStyles"
+    v-show="isPositioned"
+    class="tooltip"
   >
-    This is a floating element
+    Tooltip content
   </div>
 </template>
 ```
 
-## Arguments & Return Values
+### With Middleware
 
-### Arguments
+Using middleware for enhanced positioning:
 
-<script setup>
+```vue
+<script setup lang="ts">
 import { ref } from 'vue'
-</script>
+import { offset, flip, shift } from '@floating-ui/dom'
+import { useFloating } from '@/composables/use-floating'
 
-The `useFloating` composable can be used in two forms:
+const anchorEl = ref<HTMLElement>()
+const floatingEl = ref<HTMLElement>()
+const isOpen = ref(false)
 
-**Form 1: Provide the refs as separate arguments**
-
-```ts
-const floating = useFloating(
-  referenceRef, // Ref<HTMLElement | VirtualElement | null>
-  floatingRef, // Ref<HTMLElement | null>
-  options // UseFloatingOptions
-);
-```
-
-**Form 2: Provide the refs in the options object**
-
-```ts
-const floating = useFloating({
-  elements: {
-    reference: referenceRef,
-    floating: floatingRef,
-  },
-  // ... other options
-});
-```
-
-### Options
-
-<table>
-  <thead>
-    <tr>
-      <th>Option</th>
-      <th>Type</th>
-      <th>Default</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>placement</td>
-      <td>MaybeRefOrGetter&lt;Placement&gt;</td>
-      <td>'bottom'</td>
-      <td>
-        The placement of the floating element relative to the reference. Can be 'top', 'right', 'bottom', 'left', or their variations with '-start' or '-end' suffixes.
-      </td>
-    </tr>
-    <tr>
-      <td>strategy</td>
-      <td>MaybeRefOrGetter&lt;Strategy&gt;</td>
-      <td>'absolute'</td>
-      <td>
-        The positioning strategy. Can be 'absolute' or 'fixed'.
-      </td>
-    </tr>
-    <tr>
-      <td>transform</td>
-      <td>MaybeRefOrGetter&lt;boolean&gt;</td>
-      <td>true</td>
-      <td>
-        Whether to use CSS transform for positioning instead of top/left.
-      </td>
-    </tr>
-    <tr>
-      <td>middleware</td>
-      <td>MaybeRefOrGetter&lt;Middleware[]&gt;</td>
-      <td>[]</td>
-      <td>
-        Array of middleware functions that modify the positioning behavior.
-      </td>
-    </tr>
-    <tr>
-      <td>open</td>
-      <td>MaybeRefOrGetter&lt;boolean&gt;</td>
-      <td>false</td>
-      <td>
-        Whether the floating element is currently open/visible.
-      </td>
-    </tr>
-    <tr>
-      <td>onOpenChange</td>
-      <td>(open: boolean) => void</td>
-      <td>undefined</td>
-      <td>
-        Callback function invoked when the open state should change.
-      </td>
-    </tr>
-    <tr>
-      <td>whileElementsMounted</td>
-      <td>Function</td>
-      <td>undefined</td>
-      <td>
-        Function called when both elements are mounted. Can return a cleanup function.
-      </td>
-    </tr>
-  </tbody>
-</table>
-
-### Return Value
-
-<table>
-  <thead>
-    <tr>
-      <th>Property</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>x</td>
-      <td>Readonly&lt;Ref&lt;number&gt;&gt;</td>
-      <td>The x-coordinate of the floating element</td>
-    </tr>
-    <tr>
-      <td>y</td>
-      <td>Readonly&lt;Ref&lt;number&gt;&gt;</td>
-      <td>The y-coordinate of the floating element</td>
-    </tr>
-    <tr>
-      <td>strategy</td>
-      <td>Readonly&lt;Ref&lt;Strategy&gt;&gt;</td>
-      <td>The positioning strategy ('absolute' or 'fixed')</td>
-    </tr>
-    <tr>
-      <td>placement</td>
-      <td>Readonly&lt;Ref&lt;Placement&gt;&gt;</td>
-      <td>The actual placement after middleware processing</td>
-    </tr>
-    <tr>
-      <td>middlewareData</td>
-      <td>Readonly&lt;Ref&lt;MiddlewareData&gt;&gt;</td>
-      <td>Data from middleware for additional customization</td>
-    </tr>
-    <tr>
-      <td>isPositioned</td>
-      <td>Readonly&lt;Ref&lt;boolean&gt;&gt;</td>
-      <td>Whether the floating element has been positioned</td>
-    </tr>
-    <tr>
-      <td>floatingStyles</td>
-      <td>ComputedRef&lt;Record&lt;string, any&gt;&gt;</td>
-      <td>Computed styles to apply to the floating element</td>
-    </tr>
-    <tr>
-      <td>update</td>
-      <td>() => void</td>
-      <td>Function to manually update the position</td>
-    </tr>
-    <tr>
-      <td>refs</td>
-      <td>{ reference, floating }</td>
-      <td>The refs object containing reference to both elements</td>
-    </tr>
-    <tr>
-      <td>elements</td>
-      <td>{ reference, floating }</td>
-      <td>The current elements if they exist</td>
-    </tr>
-    <tr>
-      <td>context</td>
-      <td>Object</td>
-      <td>Context object passed to other composables like useInteractions</td>
-    </tr>
-  </tbody>
-</table>
-
-## Reactive Options
-
-All options in `useFloating` can be provided as reactive values (refs, computed, or getters), allowing you to dynamically change the behavior:
-
-```vue
-<script setup>
-import { ref, computed } from "vue";
-import { useFloating, offset } from "v-float";
-
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
-const placementState = ref("bottom"); // Can be changed dynamically
-const offsetDistance = ref(8); // Can be changed dynamically
-
-// Reactive middleware array
-const middleware = computed(() => [offset(offsetDistance.value)]);
-
-const floating = useFloating(referenceRef, floatingRef, {
-  placement: placementState,
-  middleware,
+const { floatingStyles, placement } = useFloating(anchorEl, floatingEl, {
+  placement: 'bottom',
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
-
-// Later you can change these reactive values
-function changePlacement(newPlacement) {
-  placementState.value = newPlacement; // The floating position will update automatically
-}
-
-function changeOffset(newOffset) {
-  offsetDistance.value = newOffset; // The middleware will update and position will recalculate
-}
+  middlewares: [
+    offset(10), // Add 10px distance
+    flip(), // Flip when no space
+    shift({ padding: 8 }) // Shift to stay in viewport
+  ]
+})
 </script>
-```
 
-## Using the Returned Values
-
-### Basic Positioning
-
-The simplest way to position your floating element is by using the `x` and `y` values:
-
-```vue
-<div
-  ref="floatingRef"
-  :style="{
-    position: floating.strategy,
-    top: '0px',
-    left: '0px',
-    transform: `translate(${floating.x}px, ${floating.y}px)`,
-  }"
->
-  Floating content
-</div>
-```
-
-### Using the Computed Styles
-
-For convenience, `useFloating` returns a `floatingStyles` object that you can directly apply to your element:
-
-```vue
-<div ref="floatingRef" :style="floating.floatingStyles">
-  Floating content
-</div>
-```
-
-### Manually Updating the Position
-
-Sometimes you need to manually update the position of the floating element, such as when its content changes:
-
-```vue
-<script setup>
-const { update } = useFloating(referenceRef, floatingRef);
-
-function updateContent() {
-  // Change content...
-  // Then update the position
-  update();
-}
-</script>
-```
-
-## Middleware Integration
-
-To modify the positioning behavior, you can use middleware functions:
-
-```vue
-<script setup>
-import { useFloating, offset, flip, shift, arrow } from "v-float";
-
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const arrowRef = ref(null);
-
-const floating = useFloating(referenceRef, floatingRef, {
-  middleware: [
-    offset(10), // Add 10px of distance
-    flip(), // Flip to the opposite side if there's not enough space
-    shift({ padding: 5 }), // Shift to stay within viewport with 5px padding
-    arrow({ element: arrowRef }), // Position the arrow
-  ],
-});
-</script>
-```
-
-## Advanced Usage
-
-### Auto-Updating Position
-
-To automatically update the position when the reference or floating elements change, resize, or scroll, use the `whileElementsMounted` option:
-
-```vue
-<script setup>
-import { useFloating, autoUpdate } from "v-float";
-
-const floating = useFloating(referenceRef, floatingRef, {
-  whileElementsMounted: (reference, floating, update) => {
-    // autoUpdate handles scroll, resize, and mutations
-    const cleanup = autoUpdate(reference, floating, update, {
-      animationFrame: true, // Use requestAnimationFrame for smoother updates
-    });
-    return cleanup; // Returned function will be called for cleanup
-  },
-});
-</script>
-```
-
-### Virtual Elements
-
-Sometimes you need to position a floating element relative to a point or rectangle rather than a DOM element. You can do this with virtual elements:
-
-```vue
-<script setup>
-import { ref } from "vue";
-import { useFloating } from "v-float";
-
-const floatingRef = ref(null);
-const virtualRef = ref({
-  getBoundingClientRect() {
-    return {
-      x: 100,
-      y: 100,
-      width: 0,
-      height: 0,
-      top: 100,
-      left: 100,
-      right: 100,
-      bottom: 100,
-    };
-  },
-});
-
-const floating = useFloating({
-  elements: {
-    reference: virtualRef, // Virtual element reference
-    floating: floatingRef,
-  },
-});
-</script>
-```
-
-### Conditional Rendering
-
-When conditionally rendering the floating element, ensure the reference is updated when it appears:
-
-```vue
-<script setup>
-import { ref, watch, nextTick } from "vue";
-import { useFloating } from "v-float";
-
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
-
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
-
-// Force an update when the floating element becomes visible
-watch(isOpen, (newValue) => {
-  if (newValue) {
-    // Use nextTick to ensure the DOM has updated
-    nextTick(() => floating.update());
-  }
-});
-</script>
-```
-
-## Accessibility Considerations
-
-- Use the proper ARIA attributes (like `aria-haspopup`, `aria-expanded`, etc.) on the reference element.
-- Ensure keyboard users can open, navigate, and close the floating element.
-- For popovers and dropdowns, handle Escape key presses to close them.
-- For tooltips, ensure they are properly announced by screen readers.
-
-```vue
 <template>
-  <button ref="referenceRef" aria-haspopup="true" :aria-expanded="isOpen">
-    Toggle Menu
+  <button 
+    ref="anchorEl" 
+    @click="isOpen = !isOpen"
+  >
+    Toggle Popover
   </button>
-
-  <!-- Floating element with proper attributes -->
+  
+  <div 
+    ref="floatingEl" 
+    :style="floatingStyles"
+    v-show="isOpen"
+    class="popover"
+    :data-placement="placement"
+  >
+    <p>Popover content with smart positioning</p>
+    <p>Current placement: {{ placement }}</p>
+  </div>
 </template>
+```
+
+### Advanced Usage with Custom Auto-Update
+
+Custom positioning update logic:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useFloating } from '@/composables/use-floating'
+
+const anchorEl = ref<HTMLElement>()
+const floatingEl = ref<HTMLElement>()
+const isOpen = ref(false)
+
+// Custom auto-update function
+const customWhileElementsMounted = (
+  anchor: HTMLElement,
+  floating: HTMLElement,
+  update: () => void
+) => {
+  // Custom logic for when to update positioning
+  const handleUpdate = () => {
+    // Add custom conditions or throttling
+    update()
+  }
+  
+  // Listen to custom events
+  window.addEventListener('resize', handleUpdate)
+  anchor.addEventListener('scroll', handleUpdate)
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('resize', handleUpdate)
+    anchor.removeEventListener('scroll', handleUpdate)
+  }
+}
+
+const { floatingStyles, middlewareData, update } = useFloating(
+  anchorEl, 
+  floatingEl, 
+  {
+    placement: 'right',
+    open: isOpen,
+    whileElementsMounted: customWhileElementsMounted,
+    onOpenChange: (open) => {
+      console.log('Floating element is now:', open ? 'open' : 'closed')
+    }
+  }
+)
+
+// Manual update trigger
+const handleManualUpdate = async () => {
+  await update()
+  console.log('Position updated manually')
+}
+</script>
+
+<template>
+  <div class="container">
+    <button ref="anchorEl" @click="isOpen = !isOpen">
+      Toggle with Custom Logic
+    </button>
+    
+    <button @click="handleManualUpdate">
+      Manual Update
+    </button>
+    
+    <div 
+      ref="floatingEl" 
+      :style="floatingStyles"
+      v-show="isOpen"
+      class="floating-panel"
+    >
+      <h3>Advanced Floating Panel</h3>
+      <p>This panel uses custom auto-update logic.</p>
+      <pre>{{ JSON.stringify(middlewareData, null, 2) }}</pre>
+    </div>
+  </div>
+</template>
+```
+
+### Reactive Placement
+
+Dynamic placement based on user interaction:
+
+```vue
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useFloating } from '@/composables/use-floating'
+import type { Placement } from '@floating-ui/dom'
+
+const anchorEl = ref<HTMLElement>()
+const floatingEl = ref<HTMLElement>()
+const selectedPlacement = ref<Placement>('bottom')
+const isOpen = ref(true)
+
+const { floatingStyles, placement } = useFloating(anchorEl, floatingEl, {
+  placement: computed(() => selectedPlacement.value),
+  open: isOpen
+})
+
+const placements: Placement[] = [
+  'top', 'top-start', 'top-end',
+  'right', 'right-start', 'right-end', 
+  'bottom', 'bottom-start', 'bottom-end',
+  'left', 'left-start', 'left-end'
+]
+</script>
+
+<template>
+  <div class="demo">
+    <div class="controls">
+      <label>Choose placement:</label>
+      <select v-model="selectedPlacement">
+        <option v-for="p in placements" :key="p" :value="p">
+          {{ p }}
+        </option>
+      </select>
+      
+      <label>
+        <input type="checkbox" v-model="isOpen" />
+        Show floating element
+      </label>
+    </div>
+    
+    <div class="demo-area">
+      <button ref="anchorEl" class="anchor">
+        Anchor Element
+      </button>
+      
+      <div 
+        ref="floatingEl" 
+        :style="floatingStyles"
+        v-show="isOpen"
+        class="floating"
+      >
+        <strong>Requested:</strong> {{ selectedPlacement }}<br>
+        <strong>Actual:</strong> {{ placement }}
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+## Integration with Other Composables
+
+`useFloating` works seamlessly with other V-Float composables:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { 
+  useFloating, 
+  useHover, 
+  useFocus, 
+  useInteractions 
+} from '@/composables'
+import { offset, flip, shift } from '@floating-ui/dom'
+
+const anchorEl = ref<HTMLElement>()
+const floatingEl = ref<HTMLElement>()
+const isOpen = ref(false)
+
+// Core positioning
+const floating = useFloating(anchorEl, floatingEl, {
+  placement: 'top',
+  open: isOpen,
+  onOpenChange: (open) => { isOpen.value = open },
+  middlewares: [offset(8), flip(), shift()]
+})
+
+// Interaction behaviors
+const hover = useHover(floating, { delay: { open: 100, close: 200 } })
+const focus = useFocus(floating)
+
+// Combine interactions
+const { getReferenceProps, getFloatingProps } = useInteractions([
+  hover,
+  focus
+])
+</script>
+
+<template>
+  <button 
+    ref="anchorEl" 
+    v-bind="getReferenceProps()"
+  >
+    Hover or focus me
+  </button>
+  
+  <div 
+    ref="floatingEl" 
+    :style="floating.floatingStyles.value"
+    v-show="isOpen"
+    v-bind="getFloatingProps()"
+    class="tooltip"
+  >
+    Interactive tooltip with hover and focus
+  </div>
+</template>
+```
+
+## Best Practices
+
+### Performance Optimization
+
+1. **Use CSS transforms**: Keep `transform: true` (default) for better performance
+2. **Minimize middleware**: Only use necessary middleware to reduce computation
+3. **Custom auto-update**: Implement custom `whileElementsMounted` for specific use cases
+
+### Accessibility
+
+1. **Proper ARIA attributes**: Use with `useRole` for semantic markup
+2. **Focus management**: Combine with `useFocus` for keyboard navigation
+3. **Screen reader support**: Ensure floating content is properly announced
+
+### Common Patterns
+
+```typescript
+// Tooltip pattern
+const tooltip = useFloating(anchor, floating, {
+  placement: 'top',
+  middlewares: [offset(8), flip(), shift({ padding: 8 })]
+})
+
+// Dropdown pattern  
+const dropdown = useFloating(trigger, menu, {
+  placement: 'bottom-start',
+  middlewares: [offset(4), flip(), shift()]
+})
+
+// Modal pattern
+const modal = useFloating(trigger, dialog, {
+  strategy: 'fixed',
+  placement: 'bottom'
+})
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Floating element not positioning correctly**
+- Ensure both `anchorEl` and `floatingEl` refs are properly assigned
+- Check that elements are mounted before positioning
+- Verify CSS positioning context (relative/absolute parents)
+
+**Position not updating automatically**
+- Confirm `open` state is properly managed
+- Check if custom `whileElementsMounted` returns cleanup function
+- Ensure elements remain in DOM during positioning
+
+**Performance issues**
+- Use `transform: true` for better performance
+- Implement custom auto-update logic if default is too aggressive
+- Consider throttling position updates for complex scenarios
+
+## Related Composables
+
+- [`useHover`](/composables/use-hover) - Add hover interactions
+- [`useFocus`](/composables/use-focus) - Add focus interactions  
+- [`useClick`](/composables/use-click) - Add click interactions
+- [`useInteractions`](/composables/use-interactions) - Combine multiple interactions
+- [`useRole`](/composables/use-role) - Add ARIA roles and attributes
+- [`FloatingPortal`](/composables/floating-portal) - Render floating elements in portals
+- [`FloatingArrow`](/composables/floating-arrow) - Add arrows to floating elements
+
+## TypeScript Support
+
+`useFloating` is fully typed with TypeScript. All interfaces and types are exported for use in your applications:
+
+```typescript
+import type { 
+  UseFloatingOptions,
+  FloatingContext,
+  FloatingStyles,
+  AnchorElement,
+  FloatingElement
+} from '@/composables/use-floating'
 ```
