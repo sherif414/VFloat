@@ -1,17 +1,24 @@
 import { defineConfig } from "vitepress";
-
+import { containerPreview, componentPreview } from "@vitepress-demo-preview/plugin"
+import { transformerTwoslash } from "@shikijs/vitepress-twoslash"
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  markdown: {
+    config(md) {
+      md.use(containerPreview)
+      md.use(componentPreview)
+    },
+    codeTransformers: [transformerTwoslash()],
+    languages: ["js", "ts"],
+  },
   title: "V-Float",
-  description:
-    "Vue 3 port of Floating UI - a library for positioning floating elements",
+  description: "Vue 3 port of Floating UI - a library for positioning floating elements",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: "/logo.svg",
     nav: [
       { text: "Home", link: "/" },
       { text: "Guide", link: "/guide/" },
-      { text: "Components", link: "/components/" },
       { text: "Composables", link: "/composables/" },
       { text: "Examples", link: "/examples/" },
     ],
@@ -28,32 +35,11 @@ export default defineConfig({
           ],
         },
         {
-          text: "Basic Usage",
+          text: "Advanced",
           collapsed: false,
           items: [
-            { text: "Positioning", link: "/guide/positioning" },
-            { text: "Interactions", link: "/guide/interactions" },
             { text: "Middleware", link: "/guide/middleware" },
-          ],
-        },
-      ],
-      "/components/": [
-        {
-          text: "Components",
-          items: [
-            { text: "Overview", link: "/components/" },
-            { text: "FloatingArrow", link: "/components/floating-arrow" },
-            { text: "FloatingPortal", link: "/components/floating-portal" },
-            { text: "FloatingOverlay", link: "/components/floating-overlay" },
-            {
-              text: "FloatingFocusManager",
-              link: "/components/floating-focus-manager",
-            },
-            { text: "FloatingList", link: "/components/floating-list" },
-            {
-              text: "FloatingListItem",
-              link: "/components/floating-list-item",
-            },
+            { text: "Virtual Elements", link: "/guide/virtual-elements" },
           ],
         },
       ],
@@ -63,23 +49,16 @@ export default defineConfig({
           items: [
             { text: "Overview", link: "/composables/" },
             { text: "useFloating", link: "/composables/use-floating" },
-            { text: "useMergeRefs", link: "/composables/use-merge-refs" },
+            { text: "useFloatingTree", link: "/composables/use-floating-tree" },
           ],
         },
         {
           text: "Interactions",
           items: [
-            { text: "useInteractions", link: "/composables/use-interactions" },
             { text: "useHover", link: "/composables/use-hover" },
-            { text: "useFocus", link: "/composables/use-focus" },
             { text: "useClick", link: "/composables/use-click" },
             { text: "useDismiss", link: "/composables/use-dismiss" },
-            { text: "useRole", link: "/composables/use-role" },
-            {
-              text: "useListNavigation",
-              link: "/composables/use-list-navigation",
-            },
-            { text: "useTypeahead", link: "/composables/use-typeahead" },
+            { text: "useClientPoint", link: "/composables/use-client-point" },
           ],
         },
         {
@@ -95,27 +74,18 @@ export default defineConfig({
       "/examples/": [
         {
           text: "Examples",
-          items: [
-            { text: "Overview", link: "/examples/" },
-            { text: "Tooltip", link: "/examples/tooltip" },
-            { text: "Dropdown", link: "/examples/dropdown" },
-            { text: "Popover", link: "/examples/popover" },
-            { text: "Menu", link: "/examples/menu" },
-            { text: "Modal", link: "/examples/modal" },
-          ],
+          items: [{ text: "Overview", link: "/examples/" }],
         },
       ],
     },
 
-    socialLinks: [
-      { icon: "github", link: "https://github.com/sherif414/v-float" },
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/sherif414/v-float" }],
 
     footer: {
       message: "Released under the MIT License.",
-      copyright: "Copyright © 2025-present Shareef Hassan",
+      copyright: "Copyright 2025-present Shareef Hassan",
     },
   },
   ignoreDeadLinks: true,
-  base : "/",
-});
+  base: "/",
+})

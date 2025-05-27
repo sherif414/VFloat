@@ -45,21 +45,18 @@ const floating = useFloating(referenceRef, floatingRef, {
 });
 
 // Add hover interaction
-const hover = useHover(floating.context, {
+useHover(floating.context, {
   delay: { open: 100, close: 200 },
 });
 
-// Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Hover me</button>
+  <button ref="referenceRef">Hover me</button>
 
   <div
     v-if="isOpen"
     ref="floatingRef"
-    v-bind="getFloatingProps()"
     :style="{
       position: floating.strategy,
       top: '0px',
@@ -69,67 +66,6 @@ const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
   >
     This is a tooltip
   </div>
-</template>
-```
-
-### Using Built-in Components
-
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  FloatingArrow,
-  FloatingPortal,
-} from "v-float";
-
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const arrowRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
-
-// Set up the floating element with arrow middleware
-const floating = useFloating(referenceRef, floatingRef, {
-  placement: "top",
-  open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-  middleware: [offset(8), arrow({ element: arrowRef })],
-});
-
-// Add hover interaction
-const hover = useHover(floating.context);
-
-// Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
-</script>
-
-<template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Hover me</button>
-
-  <FloatingPortal>
-    <div
-      v-if="isOpen"
-      ref="floatingRef"
-      v-bind="getFloatingProps()"
-      :style="{
-        position: floating.strategy,
-        top: '0px',
-        left: '0px',
-        transform: `translate(${floating.x}px, ${floating.y}px)`,
-      }"
-    >
-      This is a tooltip
-      <FloatingArrow
-        ref="arrowRef"
-        :context="floating.context"
-        :fill="'white'"
-        :stroke="'#ccc'"
-        :stroke-width="1"
-      />
-    </div>
-  </FloatingPortal>
 </template>
 ```
 
@@ -150,19 +86,6 @@ const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
 - `useFocus`: Focus/blur events
 - `useClick`: Click events
 - `useDismiss`: Close on outside click, ESC key press
-- `useRole`: Manage ARIA role attributes
-- `useListNavigation`: Keyboard navigation for lists
-- `useTypeahead`: Type to select in a list
-- `useInteractions`: Combine multiple interaction hooks
-
-## Components
-
-- `FloatingArrow`: Render an arrow pointing to the reference element
-- `FloatingPortal`: Render content in a different DOM location
-- `FloatingOverlay`: Display an overlay behind floating elements
-- `FloatingFocusManager`: Manage focus trapping within floating elements
-- `FloatingList`: List container with keyboard navigation
-- `FloatingListItem`: List item for use with `FloatingList`
 
 ## Documentation
 

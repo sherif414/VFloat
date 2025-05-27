@@ -8,7 +8,7 @@ import type {
   VirtualElement,
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
-import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue"
+import type { ComputedRef, CSSProperties, MaybeRefOrGetter, Ref } from "vue"
 import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
 
 //=======================================================================================
@@ -16,7 +16,7 @@ import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, w
 //=======================================================================================
 
 /**
- * Type for reference element in floating UI
+ * Type for anchor element in floating UI
  */
 export type AnchorElement = HTMLElement | VirtualElement | null
 
@@ -28,7 +28,7 @@ export type FloatingElement = HTMLElement | null
 /**
  * CSS styles for positioning floating elements
  */
-export interface FloatingStyles {
+export interface FloatingStyles extends CSSProperties {
   /**
    * CSS position property
    */
@@ -60,7 +60,7 @@ export interface FloatingStyles {
  */
 export interface UseFloatingOptions {
   /**
-   * Where to place the floating element relative to its reference element.
+   * Where to place the floating element relative to its anchor element.
    * @default 'bottom'
    */
   placement?: MaybeRefOrGetter<Placement | undefined>
@@ -83,7 +83,7 @@ export interface UseFloatingOptions {
   middlewares?: Middleware[]
 
   /**
-   * Function called when both the reference and floating elements are mounted.
+   * Function called when both the anchor and floating elements are mounted.
    */
   whileElementsMounted?: (
     anchorEl: NonNullable<AnchorElement>,
@@ -158,7 +158,7 @@ export interface FloatingContext {
   update: () => void
 
   /**
-   * The refs object containing reference to reference and floating elements
+   * The refs object containing references to anchor and floating elements
    */
   refs: {
     anchorEl: Ref<AnchorElement>
@@ -181,20 +181,20 @@ export interface FloatingContext {
 //=======================================================================================
 
 /**
- * Composable function that provides positioning for a floating element relative to a reference element
+ * Composable function that provides positioning for a floating element relative to an anchor element
  *
  * This composable handles the positioning logic for floating elements (like tooltips, popovers, etc.)
- * relative to their reference elements. It uses Floating UI under the hood and provides reactive
+ * relative to their anchor elements. It uses Floating UI under the hood and provides reactive
  * positioning data and styles.
  *
- * @param anchorEl - The reference element or a reactive reference to it
+ * @param anchorEl - The anchor element or a reactive reference to it
  * @param floatingEl - The floating element or a reactive reference to it
  * @param options - Additional options for the floating behavior
  * @returns A FloatingContext object containing positioning data and methods
  *
  * @example
  * ```ts
- * const { floatingStyles, refs } = useFloating(referenceRef, floatingRef, {
+ * const { floatingStyles, refs } = useFloating(anchorEl, floatingEl, {
  *   placement: 'bottom',
  *   strategy: 'absolute'
  * })
@@ -337,7 +337,7 @@ export function useFloating(
  * This function provides automatic position updates for floating elements.
  * It's a wrapper around Floating UI's autoUpdate function.
  *
- * @param anchorEl - The reference element
+ * @param anchorEl - The anchor element
  * @param floatingEl - The floating element
  * @param update - The update function to call
  * @param options - Additional options for auto-updating

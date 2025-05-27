@@ -170,219 +170,827 @@ interface FloatingContext {
 
 Simple tooltip positioning:
 
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating } from '@/composables/use-floating'
+:::preview
 
-const anchorEl = ref<HTMLElement>()
-const floatingEl = ref<HTMLElement>()
+demo-preview=../demos/use-floating/BasicUsage.vue
 
-const { floatingStyles, isPositioned } = useFloating(anchorEl, floatingEl, {
-  placement: 'top'
-})
-</script>
-
-<template>
-  <button ref="anchorEl">Hover me</button>
-  <div 
-    ref="floatingEl" 
-    :style="floatingStyles"
-    v-show="isPositioned"
-    class="tooltip"
-  >
-    Tooltip content
-  </div>
-</template>
-```
+:::
 
 ### With Middleware
 
 Using middleware for enhanced positioning:
 
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { offset, flip, shift } from '@floating-ui/dom'
-import { useFloating } from '@/composables/use-floating'
+<preview>
+  <WithMiddleware />
+</preview>
 
-const anchorEl = ref<HTMLElement>()
-const floatingEl = ref<HTMLElement>()
+### Reactive Placement
+
+Dynamic placement based on user interaction:
+
+:::preview
+
+demo-preview=../demos/use-floating/PlacementDemo.vue
+
+:::
+
+```vue
+<script setup>
+import { ref, computed } from 'vue'
+import { useFloating, offset } from 'v-float'
+
+type Placement = 
+  | 'top' | 'top-start' | 'top-end'
+  | 'right' | 'right-start' | 'right-end'
+  | 'bottom' | 'bottom-start' | 'bottom-end'
+  | 'left' | 'left-start' | 'left-end'
+
+const anchorEl = ref()
+const floatingEl = ref()
+const isOpen = ref(true)
+const currentPlacement = ref<Placement>('top')
+
+const placements: Placement[] = [
+  'top', 'top-start', 'top-end',
+  'right', 'right-start', 'right-end',
+  'bottom', 'bottom-start', 'bottom-end',
+  'left', 'left-start', 'left-end'
+]
+
+const { floatingStyles, update } = useFloating(anchorEl, floatingEl, {
+  placement: currentPlacement,
+  open: isOpen,
+  middlewares: [offset(10)]
+})
+
+function selectPlacement(placement: Placement) {
+  currentPlacement.value = placement
+  update()
+}
+</script>
+
+<template>
+  <div class="placement-demo">
+    <div class="controls">
+      <h3>Placement Options</h3>
+      <div class="placement-grid">
+        <button
+          v-for="placement in placements"
+          :key="placement"
+          @click="selectPlacement(placement)"
+          :class="['placement-button', { active: currentPlacement === placement }]"
+        >
+          {{ placement }}
+        </button>
+      </div>
+    </div>
+
+    <div class="demo-area">
+      <div class="anchor-container">
+        <div ref="anchorEl" class="anchor">
+          Anchor Element
+        </div>
+        
+        <div
+          v-if="isOpen"
+          ref="floatingEl"
+          :style="floatingStyles"
+          class="floating"
+        >
+          {{ currentPlacement }}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+### Complex Positioning
+
+Advanced positioning with multiple middleware and dynamic content:
+
+<demo-preview>
+  <ComplexPositioning />
+</demo-preview>
+
+```vue
+<script setup>
+import { ref, computed } from 'vue'
+import { 
+  useFloating, 
+  offset, 
+  flip, 
+  shift, 
+  autoPlacement, 
+  size, 
+  arrow 
+} from 'v-float'
+
+const anchorEl = ref()
+const floatingEl = ref()
+const arrowRef = ref()
+const isOpen = ref(false)
+const useAutoPlacement = ref(false)
+const offsetValue = ref(8)
+const content = ref('Short content')
+
+const middlewares = computed(() => {
+  const mw = [
+    offset(offsetValue.value),
+    shift({ padding: 8 })
+  ]
+  
+  if (useAutoPlacement.value) {
+    mw.push(autoPlacement())
+  } else {
+    mw.push(flip())
+  }
+  
+  mw.push(
+    size({
+      apply({ availableWidth, availableHeight, elements }) {
+        Object.assign(elements.floating.style, {
+          maxWidth: `${Math.min(availableWidth, 300)}px`,
+          maxHeight: `${availableHeight}px`,
+        })
+      },
+    }),
+    arrow({ element: arrowRef })
+  )
+  
+  return mw
+})
+
+const { 
+  floatingStyles, 
+  placement, 
+  middlewareData,
+  update 
+} = useFloating(anchorEl, floatingEl, {
+  placement: 'top',
+  open: isOpen,
+  middlewares
+})
+
+const arrowStyles = computed(() => {
+  const arrowData = middlewareData.value.arrow
+  if (!arrowData) return {}
+  
+  const { x, y } = arrowData
+  const staticSide = {
+    top: 'bottom',
+    right: 'left',
+    bottom: 'top',
+    left: 'right',
+  }[placement.value.split('-')[0]]
+  
+  return {
+    left: x != null ? `${x}px` : '',
+    top: y != null ? `${y}px` : '',
+    right: '',
+    bottom: '',
+    [staticSide]: '-4px',
+  }
+})
+
+const contentOptions = [
+  'Short content',
+  'This is a longer piece of content that will test how the floating element handles text wrapping and sizing.',
+  'Very long content that goes on and on and should definitely cause the floating element to reach its maximum width and potentially wrap to multiple lines, demonstrating the size middleware in action.'
+]
+
+const toggleFloating = () => {
+  isOpen.value = !isOpen.value
+}
+
+const handleUpdate = async () => {
+  await update()
+}
+</script>
+
+<template>
+  <div class="complex-demo">
+    <div class="controls">
+      <h3>Configuration</h3>
+      
+      <label>
+        <input 
+          type="checkbox" 
+          v-model="useAutoPlacement"
+          @change="handleUpdate"
+        />
+        Use auto-placement instead of flip
+      </label>
+      
+      <label>
+        Offset: 
+        <input 
+          type="range" 
+          v-model.number="offsetValue" 
+          min="0" 
+          max="50"
+          @input="handleUpdate"
+        />
+        {{ offsetValue }}px
+      </label>
+      
+      <label>
+        Content:
+        <select v-model="content" @change="handleUpdate">
+          <option v-for="option in contentOptions" :key="option" :value="option">
+            {{ option.slice(0, 30) }}{{ option.length > 30 ? '...' : '' }}
+          </option>
+        </select>
+      </label>
+    </div>
+    
+    <div class="demo-area">
+      <button 
+        ref="anchorEl"
+        @click="toggleFloating"
+        class="complex-trigger"
+      >
+        {{ isOpen ? 'Hide' : 'Show' }} Complex Floating
+      </button>
+      
+      <div 
+        v-if="isOpen"
+        ref="floatingEl" 
+        :style="floatingStyles"
+        class="complex-floating"
+      >
+        <div class="floating-content">
+          {{ content }}
+        </div>
+        
+        <div class="floating-info">
+          <small>
+            <strong>Placement:</strong> {{ placement }}<br>
+            <strong>Middleware:</strong> 
+            {{ useAutoPlacement ? 'autoPlacement' : 'flip' }}, 
+            offset({{ offsetValue }}), shift, size, arrow
+          </small>
+        </div>
+        
+        <div 
+          ref="arrowRef"
+          class="floating-arrow"
+          :style="arrowStyles"
+        ></div>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+### Interactive Examples
+
+These interactive examples demonstrate real-world usage scenarios that you can copy and use immediately in your projects.
+
+### Tooltip Example
+
+A complete tooltip implementation with hover interactions:
+
+<demo-preview>
+  <TooltipExample />
+</demo-preview>
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import { useFloating } from 'v-float'
+import { offset, flip, shift } from '@floating-ui/dom'
+
+const anchorEl = ref()
+const floatingEl = ref()
 const isOpen = ref(false)
 
 const { floatingStyles, placement } = useFloating(anchorEl, floatingEl, {
-  placement: 'bottom',
+  placement: 'top',
   open: isOpen,
   middlewares: [
-    offset(10), // Add 10px distance
-    flip(), // Flip when no space
-    shift({ padding: 8 }) // Shift to stay in viewport
+    offset(8),
+    flip(),
+    shift({ padding: 8 })
   ]
 })
+
+const showTooltip = () => {
+  isOpen.value = true
+}
+
+const hideTooltip = () => {
+  isOpen.value = false
+}
 </script>
 
 <template>
   <button 
-    ref="anchorEl" 
-    @click="isOpen = !isOpen"
+    ref="anchorEl"
+    @mouseenter="showTooltip"
+    @mouseleave="hideTooltip"
+    @focus="showTooltip"
+    @blur="hideTooltip"
+    class="tooltip-trigger"
   >
-    Toggle Popover
+    Hover or focus for tooltip
   </button>
   
   <div 
     ref="floatingEl" 
     :style="floatingStyles"
     v-show="isOpen"
-    class="popover"
+    class="tooltip"
+    role="tooltip"
     :data-placement="placement"
   >
-    <p>Popover content with smart positioning</p>
-    <p>Current placement: {{ placement }}</p>
+    This is a helpful tooltip!
+    <div class="tooltip-arrow" :data-placement="placement"></div>
   </div>
 </template>
-```
 
-### Advanced Usage with Custom Auto-Update
-
-Custom positioning update logic:
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating } from '@/composables/use-floating'
-
-const anchorEl = ref<HTMLElement>()
-const floatingEl = ref<HTMLElement>()
-const isOpen = ref(false)
-
-// Custom auto-update function
-const customWhileElementsMounted = (
-  anchor: HTMLElement,
-  floating: HTMLElement,
-  update: () => void
-) => {
-  // Custom logic for when to update positioning
-  const handleUpdate = () => {
-    // Add custom conditions or throttling
-    update()
-  }
-  
-  // Listen to custom events
-  window.addEventListener('resize', handleUpdate)
-  anchor.addEventListener('scroll', handleUpdate)
-  
-  // Return cleanup function
-  return () => {
-    window.removeEventListener('resize', handleUpdate)
-    anchor.removeEventListener('scroll', handleUpdate)
-  }
+<style scoped>
+.tooltip-trigger {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-const { floatingStyles, middlewareData, update } = useFloating(
-  anchorEl, 
-  floatingEl, 
-  {
-    placement: 'right',
-    open: isOpen,
-    whileElementsMounted: customWhileElementsMounted,
-    onOpenChange: (open) => {
-      console.log('Floating element is now:', open ? 'open' : 'closed')
-    }
-  }
-)
-
-// Manual update trigger
-const handleManualUpdate = async () => {
-  await update()
-  console.log('Position updated manually')
+.tooltip {
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  max-width: 200px;
+  z-index: 1000;
+  position: relative;
 }
-</script>
 
-<template>
-  <div class="container">
-    <button ref="anchorEl" @click="isOpen = !isOpen">
-      Toggle with Custom Logic
-    </button>
-    
-    <button @click="handleManualUpdate">
-      Manual Update
-    </button>
-    
-    <div 
-      ref="floatingEl" 
-      :style="floatingStyles"
-      v-show="isOpen"
-      class="floating-panel"
-    >
-      <h3>Advanced Floating Panel</h3>
-      <p>This panel uses custom auto-update logic.</p>
-      <pre>{{ JSON.stringify(middlewareData, null, 2) }}</pre>
-    </div>
-  </div>
-</template>
+.tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #1f2937;
+  transform: rotate(45deg);
+}
+
+.tooltip-arrow[data-placement^="top"] {
+  bottom: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.tooltip-arrow[data-placement^="bottom"] {
+  top: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.tooltip-arrow[data-placement^="left"] {
+  right: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+.tooltip-arrow[data-placement^="right"] {
+  left: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+</style>
 ```
 
-### Reactive Placement
+### Dropdown Menu Example
 
-Dynamic placement based on user interaction:
+A dropdown menu with click-to-toggle functionality:
+
+<demo-preview>
+ ### Dropdown Menu
+
+A complete dropdown menu implementation with click-to-toggle functionality:
+
+<demo-preview>
+  <DropdownMenu />
+</demo-preview>
+
+<style scoped>
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropdown-trigger:hover {
+  background: #f9fafb;
+}
+
+.dropdown-icon {
+  transition: transform 0.2s;
+}
+
+.dropdown-menu {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  min-width: 160px;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-item:focus {
+  outline: none;
+  background: #e5e7eb;
+}
+</style>
+```
+
+### Modal Dialog Example
+
+A modal dialog with backdrop and focus management:
+
+<demo-preview>
+ ### Modal Dialog
+
+A modal dialog with backdrop and focus management:
+
+<demo-preview>
+  <ModalDialog />
+</demo-preview>
+
+<style scoped>
+.modal-trigger {
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 20px 24px 24px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-secondary {
+  background: #6b7280;
+  color: white;
+}
+</style>
+```
+
+### Complex Positioning Example
+
+Advanced positioning with multiple middleware and dynamic content:
+
+<demo-preview>
+  <ComplexPositioningExample />
+</demo-preview>
 
 ```vue
-<script setup lang="ts">
+<script setup>
 import { ref, computed } from 'vue'
-import { useFloating } from '@/composables/use-floating'
-import type { Placement } from '@floating-ui/dom'
+import { 
+  useFloating, 
+  offset, 
+  flip, 
+  shift, 
+  autoPlacement, 
+  size, 
+  arrow 
+} from 'v-float'
 
-const anchorEl = ref<HTMLElement>()
-const floatingEl = ref<HTMLElement>()
-const selectedPlacement = ref<Placement>('bottom')
-const isOpen = ref(true)
+const anchorEl = ref()
+const floatingEl = ref()
+const arrowRef = ref()
+const isOpen = ref(false)
+const useAutoPlacement = ref(false)
+const offsetValue = ref(8)
+const content = ref('Short content')
 
-const { floatingStyles, placement } = useFloating(anchorEl, floatingEl, {
-  placement: computed(() => selectedPlacement.value),
-  open: isOpen
+const middlewares = computed(() => {
+  const mw = [
+    offset(offsetValue.value),
+    shift({ padding: 8 })
+  ]
+  
+  if (useAutoPlacement.value) {
+    mw.push(autoPlacement())
+  } else {
+    mw.push(flip())
+  }
+  
+  mw.push(
+    size({
+      apply({ availableWidth, availableHeight, elements }) {
+        Object.assign(elements.floating.style, {
+          maxWidth: `${Math.min(availableWidth, 300)}px`,
+          maxHeight: `${availableHeight}px`,
+        })
+      },
+    }),
+    arrow({ element: arrowRef })
+  )
+  
+  return mw
 })
 
-const placements: Placement[] = [
-  'top', 'top-start', 'top-end',
-  'right', 'right-start', 'right-end', 
-  'bottom', 'bottom-start', 'bottom-end',
-  'left', 'left-start', 'left-end'
+const { 
+  floatingStyles, 
+  placement, 
+  middlewareData,
+  update 
+} = useFloating(anchorEl, floatingEl, {
+  placement: 'top',
+  open: isOpen,
+  middlewares
+})
+
+const arrowStyles = computed(() => {
+  const arrowData = middlewareData.value.arrow
+  if (!arrowData) return {}
+  
+  const { x, y } = arrowData
+  const staticSide = {
+    top: 'bottom',
+    right: 'left',
+    bottom: 'top',
+    left: 'right',
+  }[placement.value.split('-')[0]]
+  
+  return {
+    left: x != null ? `${x}px` : '',
+    top: y != null ? `${y}px` : '',
+    right: '',
+    bottom: '',
+    [staticSide]: '-4px',
+  }
+})
+
+const contentOptions = [
+  'Short content',
+  'This is a longer piece of content that will test how the floating element handles text wrapping and sizing.',
+  'Very long content that goes on and on and should definitely cause the floating element to reach its maximum width and potentially wrap to multiple lines, demonstrating the size middleware in action.'
 ]
 </script>
 
 <template>
-  <div class="demo">
+  <div class="complex-demo">
     <div class="controls">
-      <label>Choose placement:</label>
-      <select v-model="selectedPlacement">
-        <option v-for="p in placements" :key="p" :value="p">
-          {{ p }}
-        </option>
-      </select>
+      <h3>Configuration</h3>
       
       <label>
-        <input type="checkbox" v-model="isOpen" />
-        Show floating element
+        <input 
+          type="checkbox" 
+          v-model="useAutoPlacement"
+          @change="handleUpdate"
+        />
+        Use auto-placement instead of flip
+      </label>
+      
+      <label>
+        Offset: 
+        <input 
+          type="range" 
+          v-model.number="offsetValue" 
+          min="0" 
+          max="50"
+          @input="handleUpdate"
+        />
+        {{ offsetValue }}px
+      </label>
+      
+      <label>
+        Content:
+        <select v-model="content" @change="handleUpdate">
+          <option v-for="option in contentOptions" :key="option" :value="option">
+            {{ option.slice(0, 30) }}{{ option.length > 30 ? '...' : '' }}
+          </option>
+        </select>
       </label>
     </div>
     
     <div class="demo-area">
-      <button ref="anchorEl" class="anchor">
-        Anchor Element
+      <button 
+        ref="anchorEl"
+        @click="toggleFloating"
+        class="complex-trigger"
+      >
+        {{ isOpen ? 'Hide' : 'Show' }} Complex Floating
       </button>
       
       <div 
         ref="floatingEl" 
         :style="floatingStyles"
         v-show="isOpen"
-        class="floating"
+        class="complex-floating"
+        :data-placement="placement"
       >
-        <strong>Requested:</strong> {{ selectedPlacement }}<br>
-        <strong>Actual:</strong> {{ placement }}
+        <div class="floating-content">
+          {{ content }}
+        </div>
+        
+        <div class="floating-info">
+          <small>
+            <strong>Placement:</strong> {{ placement }}<br>
+            <strong>Middleware:</strong> 
+            {{ useAutoPlacement ? 'autoPlacement' : 'flip' }}, 
+            offset({{ offsetValue }}), shift, size, arrow
+          </small>
+        </div>
+        
+        <div 
+          ref="arrowEl"
+          class="floating-arrow"
+          :style="arrowStyles"
+        ></div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.complex-demo {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.controls {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  min-width: 250px;
+}
+
+.controls h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+}
+
+.controls label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.controls input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.controls input[type="range"] {
+  width: 100%;
+  margin: 4px 0;
+}
+
+.controls select {
+  width: 100%;
+  padding: 4px;
+  margin-top: 4px;
+}
+
+.demo-area {
+  flex: 1;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  position: relative;
+}
+
+.complex-trigger {
+  padding: 12px 24px;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.complex-floating {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  z-index: 1000;
+  position: relative;
+}
+
+.floating-content {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.floating-info {
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.floating-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border: 1px solid #d1d5db;
+  transform: rotate(45deg);
+}
+</style>
 ```
 
 ## Integration with Other Composables

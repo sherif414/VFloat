@@ -4,35 +4,27 @@ The `useClick` composable enables click-based interactions for floating elements
 
 ## Basic Usage
 
-```vue
+```vue twoslash
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useInteractions, useClick } from "v-float";
+import { useFloating, useClick } from "v-float";
 
 const referenceRef = ref<HTMLElement | null>(null);
 const floatingRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+const context = useFloating(referenceRef, floatingRef);
 
 // Create click interaction
-const click = useClick(floating.context);
-
-// Apply the interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([click]);
+useClick(context);
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Click Me</button>
+  <button ref="referenceRef">Click Me</button>
 
   <div
-    v-if="isOpen"
+    v-if="context.open.value"
     ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="floating.floatingStyles"
+    :style="{...context.floatingStyles}"
   >
     This element appears when the button is clicked
   </div>

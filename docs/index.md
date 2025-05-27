@@ -21,20 +21,14 @@ hero:
 
 features:
   - icon: 🎯
-    title: Accurate Positioning
-    details: Position floating elements with pixel-perfect accuracy, even in complex layouts.
+    title: Pinpoint Precision
+    details: Place your floating elements exactly where you want them, down to the last pixel - even in the trickiest layouts!
   - icon: 🧩
-    title: Powerful Composables
-    details: Leverage the power of Vue 3 Composition API with our suite of flexible composables.
-  - icon: 🧰
-    title: Ready-to-use Components
-    details: Drop-in components for arrows, focus management, portals, and more to accelerate development.
+    title: Vue 3 Ready
+    details: Built with Vue 3's Composition API, giving you the flexibility and power you need to create amazing interfaces.
   - icon: 🚀
     title: Lightweight & Tree-shakable
     details: Import only what you need. Keep your bundle size small and performance high.
-  - icon: ♿
-    title: Accessibility Built-in
-    details: ARIA attributes, keyboard navigation, and focus management for inclusive UIs.
   - icon: 📱
-    title: Responsive Design
-    details: Adapts smoothly across desktop and mobile devices.
+    title: Works Everywhere
+    details: Looks great and works perfectly on any device - from phones to desktops and everything in between.

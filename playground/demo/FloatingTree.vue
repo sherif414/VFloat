@@ -32,7 +32,7 @@
       </button>
     </div>
 
-    <div class="tree-visualization" v-if="treeInstance">
+    <div class="tree-visualization" v-if="treeInstance" :style="treeInstance.root.data.value.floatingStyles.value">
       <h3>Tree Structure:</h3>
       <ul v-if="treeInstance.root">
         <TreeNodeVisualizer :node="treeInstance.root" />
@@ -45,8 +45,8 @@
 <script lang="ts">
 // Define the interface and recursive component outside <script setup>
 // so they are standard declarations available to both the template and setup
-import type { TreeNode } from "@/composables/use-tree"
-import type { FloatingContext } from "@/composables"
+import type { Tree, TreeNode } from "@/composables/use-tree"
+import type { FloatingContext, UseFloatingTreeReturn } from "@/composables"
 import { defineComponent, h, type PropType, type DefineComponent, type VNode } from "vue"
 
 // Minimal mock for FloatingContext for this playground
@@ -96,7 +96,7 @@ const TreeNodeVisualizer: DefineComponent<TreeNodeVisualizerProps> = defineCompo
 import { ref, computed, watch, shallowRef } from "vue"
 import { useFloatingTree } from "@/composables/use-floating-tree"
 
-let treeInstance: useFloatingTree | null = null
+let treeInstance: UseFloatingTreeReturn | null = null
 const newNodeLabel = ref<string>("")
 const selectedParentId = ref<string>("")
 const nodeToCloseDescendants = ref<string>("")
@@ -124,7 +124,7 @@ const createFloatingContext = (
 const addRootNode = () => {
   if (!newNodeLabel.value.trim()) return
   const rootContext = createFloatingContext(newNodeLabel.value.trim())
-  treeInstance = new useFloatingTree(rootContext as any as FloatingContext)
+  treeInstance =  useFloatingTree(rootContext as any as FloatingContext)
   // Reset to empty string
   newNodeLabel.value = ""
   selectedParentId.value = ""
@@ -155,7 +155,9 @@ const triggerCloseDescendants = () => {
   console.log(`Calling closeDescendants for node: ${nodeToCloseDescendants.value}`)
   // This call is expected to internally update the 'open.value' property
   // of the descendant nodes by calling their onOpenChange methods.
-  treeInstance.closeDescendants(nodeToCloseDescendants.value)
+  treeInstance.forEach(nodeToCloseDescendants.value, (descendent)=>{
+    descendent.data.value.onOpenChange(false)
+  }, {relationship: 'descendants-only'})
   console.log("closeDescendants triggered. Check visualization.")
 }
 

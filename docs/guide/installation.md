@@ -1,161 +1,53 @@
 # Installation
 
-This guide will help you set up V-Float in your Vue 3 project. V-Float is designed to work with Vue 3 projects using the Composition API.
+This guide will walk you through setting up V-Float in your Vue 3 project. V-Float provides precise positioning utilities for your floating UI elements, built for the Vue 3 Composition API.
 
 ## Requirements
 
-- **Vue 3.2+**: V-Float is built specifically for Vue 3 and leverages the Composition API.
-- **TypeScript** (recommended): V-Float includes full TypeScript support for better developer experience.
+*   **Vue 3.2+**: V-Float is specifically designed for Vue 3 and leverages its Composition API for reactive positioning.
+*   **TypeScript** (recommended): V-Float ships with full TypeScript definitions, offering an enhanced development experience with type safety and auto-completion.
 
 ## Installation Options
 
-### Option 1: Using PNPM (Recommended)
+Choose your preferred package manager to add V-Float to your project:
 
 ```bash
+# Using pnpm (recommended)
 pnpm add v-float
-```
 
-### Option 2: Using NPM
-
-```bash
+# Or with npm
 npm install v-float
-```
 
-### Option 3: Using Yarn
-
-```bash
+# Or with yarn
 yarn add v-float
 ```
 
+
 ## Basic Setup
 
-Once installed, you can import the composables and components you need directly in your Vue files:
+Once installed, you can import the core `useFloating` composable directly into your Vue components. This is the primary utility for calculating element positions.
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float";
+import { useFloating } from "v-float";
 </script>
-```
-
-## Global Registration (Optional)
-
-If you prefer, you can register V-Float components globally in your main.js/ts file:
-
-```js
-// main.js or main.ts
-import { createApp } from "vue";
-import App from "./App.vue";
-import { FloatingArrow, FloatingPortal, FloatingFocusManager } from "v-float";
-
-const app = createApp(App);
-
-// Register components globally
-app.component("FloatingArrow", FloatingArrow);
-app.component("FloatingPortal", FloatingPortal);
-app.component("FloatingFocusManager", FloatingFocusManager);
-
-app.mount("#app");
-```
-
-## Vite Configuration (Optional)
-
-When using Vite, you can add a convenient alias for importing from v-float:
-
-```js
-// vite.config.js or vite.config.ts
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-import path from "path";
-
-export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "v-float": path.resolve(__dirname, "node_modules/v-float"),
-    },
-  },
-});
-```
-
-## TypeScript Setup (Recommended)
-
-V-Float includes TypeScript definitions. To get the best development experience, ensure your tsconfig.json includes:
-
-```json
-{
-  "compilerOptions": {
-    "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "strict": true,
-    "jsx": "preserve",
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "lib": ["esnext", "dom"],
-    "types": ["vite/client", "vue"]
-  }
-}
-```
-
-## Checking Installation
-
-Once installed, you can verify that V-Float is working correctly by creating a simple tooltip:
-
-```vue
-<script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useHover } from "v-float";
-
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
-
-const floating = useFloating(referenceRef, floatingRef, {
-  placement: "top",
-  open: isOpen,
-  onOpenChange: (open) => (isOpen.value = open),
-});
-
-const hover = useHover(floating.context);
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
-</script>
-
-<template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Hover me</button>
-
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="floating.floatingStyles"
-    style="background: #333; color: white; padding: 4px 8px; border-radius: 4px;"
-  >
-    I'm a tooltip!
-  </div>
-</template>
 ```
 
 ## Browser Support
 
-V-Float supports all modern browsers:
+V-Float is built to support all modern browsers:
 
-- Chrome (and Chromium-based browsers like Edge)
-- Firefox
-- Safari
-- iOS Safari
-- Android browsers
+*   Chrome (and Chromium-based browsers like Edge)
+*   Firefox
+*   Safari
+*   iOS Safari
+*   Android browsers
 
-For older browsers, you may need to include appropriate polyfills for features like:
-
-- ResizeObserver
-- Promises
-- Array methods
+For compatibility with older browsers, you may need to include appropriate polyfills for modern JavaScript features and APIs such as `ResizeObserver`, `Promises`, and various `Array` methods.
 
 ## CDN Usage (Not Recommended)
 
-While it's possible to use V-Float via CDN, we recommend using a build tool for better tree-shaking and optimized builds:
+While it's technically possible to use V-Float via a Content Delivery Network (CDN), we strongly recommend using a build tool (like Vite or Webpack) in conjunction with a package manager. This approach provides better benefits such as tree-shaking for optimized bundle sizes and more efficient dependency management.
 
 ```html
 <script src="https://unpkg.com/vue@3"></script>
@@ -163,7 +55,7 @@ While it's possible to use V-Float via CDN, we recommend using a build tool for 
 
 <script>
   const app = Vue.createApp({
-    // Your app setup
+    // Your Vue application setup
   });
   app.mount("#app");
 </script>
@@ -171,10 +63,10 @@ While it's possible to use V-Float via CDN, we recommend using a build tool for 
 
 ## Next Steps
 
-Now that you have installed V-Float, you can:
+With V-Float successfully installed, you're ready to dive deeper:
 
-- Read the [Core Concepts](/guide/concepts) to understand how V-Float works
-- Explore the [Composables](/composables/) to learn about available utilities
-- Check out the [Examples](/examples/) for complete implementations
+*   Read the [Core Concepts](/guide/concepts) to understand how V-Float works at a fundamental level.
+*   Explore the [Composables](/composables/) to learn about all the available utilities for advanced positioning.
+*   Check out the [Examples](/examples/) for complete implementations of common floating UI patterns.
 
-For any installation issues, please check the [Troubleshooting](/guide/troubleshooting) section or file an issue on GitHub.
+Should you encounter any installation issues, please consult the [Troubleshooting](/guide/troubleshooting) section or file an issue on the [V-Float GitHub repository](https://github.com/sherif414/VFloat).
