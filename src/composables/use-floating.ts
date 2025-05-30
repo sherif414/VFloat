@@ -103,11 +103,6 @@ export interface UseFloatingOptions {
   onOpenChange?: (open: boolean) => void
 
   /**
-   * Unique ID for this floating element, used in floating tree context.
-   */
-  nodeId?: string
-
-  /**
    * Root context for the floating element tree.
    */
   rootContext?: Partial<FloatingContext>

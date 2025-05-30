@@ -12,7 +12,7 @@
       >
         <option value="">Select Parent (or add as root)</option>
         <option v-for="node in allNodes" :key="node.id" :value="node.id">
-          {{ node.data.value.label }} (ID: {{ node.id }})
+          {{ node.data.label }} (ID: {{ node.id }})
         </option>
       </select>
       <button @click="addChildNode" :disabled="!newNodeLabel.trim() || !treeInstance">
@@ -24,7 +24,7 @@
       <select v-model="nodeToCloseDescendants">
         <option value="">Select Node to Close Descendants</option>
         <option v-for="node in allNodes" :key="node.id" :value="node.id">
-          {{ node.data.value.label }} (ID: {{ node.id }})
+          {{ node.data.label }} (ID: {{ node.id }})
         </option>
       </select>
       <button @click="triggerCloseDescendants" :disabled="!nodeToCloseDescendants">
@@ -32,7 +32,7 @@
       </button>
     </div>
 
-    <div class="tree-visualization" v-if="treeInstance" :style="treeInstance.root.data.value.floatingStyles.value">
+    <div class="tree-visualization" v-if="treeInstance" :style="treeInstance.root.data.floatingStyles.value">
       <h3>Tree Structure:</h3>
       <ul v-if="treeInstance.root">
         <TreeNodeVisualizer :node="treeInstance.root" />
@@ -73,7 +73,7 @@ const TreeNodeVisualizer: DefineComponent<TreeNodeVisualizerProps> = defineCompo
       h("li", [
         h(
           "span",
-          `${props.node.data.value.label} (ID: ${props.node.id}) - [${props.node.data.value.open.value ? "Open" : "Closed"}]`
+          `${props.node.data.label} (ID: ${props.node.id}) - [${props.node.data.open.value ? "Open" : "Closed"}]`
         ),
         props.node.children.value && props.node.children.value.length > 0
           ? h(
@@ -156,7 +156,7 @@ const triggerCloseDescendants = () => {
   // This call is expected to internally update the 'open.value' property
   // of the descendant nodes by calling their onOpenChange methods.
   treeInstance.forEach(nodeToCloseDescendants.value, (descendent)=>{
-    descendent.data.value.onOpenChange(false)
+    descendent.data.onOpenChange(false)
   }, {relationship: 'descendants-only'})
   console.log("closeDescendants triggered. Check visualization.")
 }

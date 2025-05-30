@@ -8,11 +8,9 @@ import { useId } from "@/utils"
 /**
  * Options for creating a TreeNode
  */
-export interface TreeNodeOptions<T> {
+export interface TreeNodeOptions {
   /** Optional ID for the node. If not provided, one will be generated. */
   id?: string
-  /** Optional initial children data to populate the node with. */
-  children?: T[]
 }
 
 /**
@@ -40,7 +38,7 @@ export interface TreeOptions {
  */
 export class TreeNode<T> {
   readonly id: string
-  data: Ref<T>
+  data: T
   parent: Ref<TreeNode<T> | null>
   children: Ref<TreeNode<T>[]>
   #isRoot: boolean
@@ -48,11 +46,11 @@ export class TreeNode<T> {
   constructor(
     data: T,
     parent: TreeNode<T> | null = null,
-    options: TreeNodeOptions<T> = {},
+    options: TreeNodeOptions = {},
     isRoot = false
   ) {
     this.id = options.id ?? useId()
-    this.data = shallowRef(data)
+    this.data = data
     this.parent = shallowRef(parent)
     this.children = shallowRef([])
     this.#isRoot = isRoot
@@ -60,19 +58,23 @@ export class TreeNode<T> {
 
   /**
    * Adds an existing node instance to this node's children array.
+   * @internal
    * @param childNode The TreeNode instance to add.
    */
   addChild(childNode: TreeNode<T>): void {
+    // Internal: Generally not called directly by consumers. Prefer Tree.addNode and Tree.removeNode.
     this.children.value = [...this.children.value, childNode]
   }
 
   /**
    * Removes a specific child node instance from this node's children.
+   * @internal
    * Note: This only removes the direct child link. Use the Tree's `removeNode` method for full removal including map updates and recursive deletion.
    * @param childNode The child node instance to remove.
    * @returns True if the child was found and removed, false otherwise.
    */
   _removeChildInstance(childNode: TreeNode<T>): boolean {
+    // Internal: Generally not called directly by consumers. Prefer Tree.addNode and Tree.removeNode.
     if (!this.children.value.includes(childNode)) return false
     this.children.value = this.children.value.filter((node) => node.id !== childNode.id)
     childNode.parent.value = null // Break the parent link reactively
@@ -86,7 +88,7 @@ export class TreeNode<T> {
    * @param newData Partial data for objects, or the new value for primitives.
    */
   updateData(newData: Partial<T> | T) {
-    const currentValue = this.data.value
+    const currentValue = this.data
     if (
       typeof currentValue === "object" &&
       currentValue !== null &&
@@ -94,10 +96,10 @@ export class TreeNode<T> {
       newData !== null
     ) {
       // Shallow merge for objects
-      this.data.value = Object.assign({}, currentValue, newData)
+      this.data = Object.assign({}, currentValue, newData)
     } else {
       // Replace value for primitives or if types mismatch significantly
-      this.data.value = newData as T
+      this.data = newData as T
     }
   }
 
@@ -231,7 +233,7 @@ export class Tree<T> {
   addNode(
     data: T,
     parentId: string | null = null,
-    nodeOptions: TreeNodeOptions<T> = {}
+    nodeOptions: TreeNodeOptions = {}
   ): TreeNode<T> | null {
     const parentNode = parentId ? this.findNodeById(parentId) : this.root
     if (!parentNode) {

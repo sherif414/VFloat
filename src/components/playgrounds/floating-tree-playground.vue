@@ -8,7 +8,7 @@
 
             <select v-model="selectedParentId" :disabled="!treeInstance || treeInstance.nodeMap.value.size === 0">
                 <option value="">Select Parent (or add as root)</option>
-                <option v-for="node in allNodes" :key="node.id" :value="node.id">{{ node.data.value.label }} (ID: {{
+                <option v-for="node in allNodes" :key="node.id" :value="node.id">{{ node.data.label }} (ID: {{
                     node.id }})</option>
             </select>
             <button @click="addChildNode" :disabled="!newNodeLabel.trim() || !treeInstance">Add Child Node</button>
@@ -17,7 +17,7 @@
         <div class="actions" v-if="treeInstance && treeInstance.nodeMap.value.size > 0">
             <select v-model="nodeToCloseDescendants">
                 <option value="">Select Node to Close Descendants</option>
-                <option v-for="node in allNodes" :key="node.id" :value="node.id">{{ node.data.value.label }} (ID: {{
+                <option v-for="node in allNodes" :key="node.id" :value="node.id">{{ node.data.label }} (ID: {{
                     node.id }})</option>
             </select>
             <button @click="triggerCloseDescendants" :disabled="!nodeToCloseDescendants">Close Descendants</button>
@@ -71,7 +71,7 @@ const createFloatingContext = (label: string, parentId: string | null = null): P
             // Force reactivity update for visualization if needed
             if (treeInstance.value) {
                 // This is a bit of a hack; ideally, the tree structure itself or node data is reactive
-                treeInstance.value = new useFloatingTree(treeInstance.value.root.value!.data.value, { ...treeInstance.value.options });
+                treeInstance.value = new useFloatingTree(treeInstance.value.root.value!.data, { ...treeInstance.value.options });
                 // Re-populate the tree to reflect changes. This is not efficient for large trees.
                 // A better approach would be to make TreeNode.data reactive or have a dedicated reactive list of nodes.
             }
@@ -118,7 +118,7 @@ const triggerCloseDescendants = () => {
         if (treeInstance.value) {
             // Create a new instance to trigger reactivity, copying essential state
             // This is a simplified way to force update. In a real app, you'd manage reactivity more granularly.
-            const currentRootData = treeInstance.value.root.value?.data.value;
+            const currentRootData = treeInstance.value.root.value?.data;
             if (currentRootData) {
                 const newTree = new useFloatingTree(currentRootData, { ...treeInstance.value.options });
                 // Re-add all nodes to the new tree to maintain structure
@@ -127,10 +127,10 @@ const triggerCloseDescendants = () => {
                 allNodesFlat.forEach(node => {
                     if (node.id !== currentRootData.id && node.parent.value) {
                         try {
-                            newTree.addNode(node.data.value, node.parent.value.id);
+                            newTree.addNode(node.data, node.parent.value.id);
                             // Preserve open state
-                            const oldNodeContext = treeInstance.value!.findNodeById(node.id)?.data.value;
-                            const newNodeContext = newTree.findNodeById(node.id)?.data.value;
+                            const oldNodeContext = treeInstance.value!.findNodeById(node.id)?.data;
+                            const newNodeContext = newTree.findNodeById(node.id)?.data;
                             if (oldNodeContext && newNodeContext) {
                                 newNodeContext.open.value = oldNodeContext.open.value;
                             }
@@ -153,8 +153,8 @@ const allNodesInfo = computed(() => {
     if (!treeInstance.value) return {};
     return allNodes.value.map(node => ({
         id: node.id,
-        label: node.data.value.label,
-        isOpen: node.data.value.open.value,
+        label: node.data.label,
+        isOpen: node.data.open.value,
         parentId: node.parent.value?.id || null,
         childrenIds: node.children.value.map(c => c.id)
     }));
@@ -168,7 +168,7 @@ const TreeNodeVisualizer = {
     },
     template: `
     <li>
-      <span>{{ node.data.value.label }} (ID: {{ node.id }}) - [{{ node.data.value.open.value ? 'Open' : 'Closed' }}]</span>
+      <span>{{ node.data.label }} (ID: {{ node.id }}) - [{{ node.data.open.value ? 'Open' : 'Closed' }}]</span>
       <ul v-if="node.children.value && node.children.value.length > 0">
         <tree-node-visualizer v-for="child in node.children.value" :key="child.id" :node="child" />
       </ul>

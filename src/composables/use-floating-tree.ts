@@ -14,9 +14,9 @@ export interface UseFloatingTreeReturn {
   readonly nodeMap: Readonly<Map<string, TreeNode<FloatingContext>>>
   readonly root: Readonly<TreeNode<FloatingContext>>
   findNodeById: (nodeId: string) => TreeNode<FloatingContext> | null
-  moveNode: (nodeId: string, newParentId: string) => boolean
+  moveNode: (nodeId: string, newParentId: string | null) => boolean
   dispose: () => void
-  addNode: (data: FloatingContext, parentId?: string) => TreeNode<FloatingContext> | null
+  addNode: (data: FloatingContext, parentId?: string | null) => TreeNode<FloatingContext> | null
   removeNode: (nodeId: string) => boolean
   traverse: (
     mode: "dfs" | "bfs",
@@ -204,7 +204,7 @@ export function useFloatingTree(
   const getAllOpenNodes = (): TreeNode<FloatingContext>[] => {
     const openNodes: TreeNode<FloatingContext>[] = []
     for (const node of tree.nodeMap.values()) {
-      if (node.data.value.open.value) {
+      if (node.data.open.value) {
         openNodes.push(node)
       }
     }
@@ -213,13 +213,13 @@ export function useFloatingTree(
 
   const isTopmost = (nodeId: string): boolean => {
     const node = tree.findNodeById(nodeId)
-    if (!node || !node.data.value.open.value) {
+    if (!node || !node.data.open.value) {
       return false // Node doesn't exist or isn't open
     }
 
     let parent = node.parent.value
     while (parent) {
-      if (parent.data.value.open.value) {
+      if (parent.data.open.value) {
         return false // An ancestor is open
       }
       parent = parent.parent.value
@@ -239,7 +239,7 @@ export function useFloatingTree(
     findNodeById: (nodeId: string) => tree.findNodeById(nodeId),
     moveNode: (nodeId, newParentId) => tree.moveNode(nodeId, newParentId),
     dispose: () => tree.dispose(),
-    addNode: (data: FloatingContext, parentId?: string) => tree.addNode(data, parentId),
+    addNode: (data: FloatingContext, parentId?: string | null) => tree.addNode(data, parentId),
     removeNode: (nodeId: string) => tree.removeNode(nodeId),
     traverse: (mode: "dfs" | "bfs", startNode?: TreeNode<FloatingContext>) =>
       tree.traverse(mode, startNode),

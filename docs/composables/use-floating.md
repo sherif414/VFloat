@@ -2,22 +2,127 @@
 description: The core composable for positioning floating elements using Floating UI
 ---
 
-# useFloating
+# useFloating: Your UI Positioning Swiss Army Knife 🛠️
 
-The `useFloating` composable is the foundation of V-Float, providing precise positioning logic for floating elements like tooltips, popovers, dropdowns, and modals. It wraps Floating UI's `computePosition` function with Vue 3's reactivity system to create a seamless positioning solution.
+Picture this: you’re building a modern web app with tooltips that elegantly follow your cursor, popovers that snap to their triggers, and dropdowns that always land in the perfect spot—no matter how the page shifts or resizes. Behind the scenes, something needs to orchestrate all that pixel-perfect positioning, adapting in real time as users interact and layouts change.
 
-## Overview
+Enter `useFloating`—the unsung hero of V-Float. Think of it as your UI’s GPS and autopilot, precisely calculating and updating the position of floating elements so you can focus on building delightful experiences, not wrestling with CSS.
 
-`useFloating` handles the complex calculations needed to position a floating element relative to an anchor element. It automatically updates positions when elements move, resize, or when configuration changes, ensuring your floating elements stay perfectly aligned.
+---
 
-### Key Features
+## Why `useFloating`?
 
-- **Reactive positioning** - Automatically updates when anchor or floating elements change
-- **Flexible placement** - Supports 12 different placement options
-- **Middleware support** - Extensible with offset, flip, shift, and custom middleware
-- **Performance optimized** - Uses CSS transforms by default for better performance
-- **Auto-update** - Automatically repositions on scroll, resize, and DOM changes
-- **TypeScript support** - Fully typed for better developer experience
+`useFloating` is your go-to tool whenever you need to anchor a floating element (like a tooltip, popover, dropdown, or modal) to another element on the page. It’s designed for:
+
+- **Tooltips that always point to the right spot—even as content scrolls or resizes**
+- **Dropdown menus that stay attached to their triggers, regardless of viewport changes**
+- **Popovers and modals that need to be perfectly centered or aligned**
+- **Any scenario where you want a floating UI element to feel “magnetically” connected to something else**
+
+No more manual calculations, no more guessing with margins or transforms. `useFloating` brings the precision of Floating UI to Vue 3’s reactivity system, making your floating elements feel smart, dynamic, and effortless.
+
+---
+
+## Core Features at a Glance
+
+- **Reactive Positioning:** Instantly adapts when anchor or floating elements move, resize, or change.
+- **Flexible Placement:** Choose from 12+ placement options—top, bottom, left, right, and all the fine-grained variants.
+- **Middleware Power:** Plug in offset, flip, shift, arrow, and custom middleware for advanced behaviors.
+- **Performance First:** Uses CSS transforms by default for buttery-smooth rendering.
+- **Auto-Update:** Keeps everything aligned on scroll, resize, or DOM changes—no manual triggers needed.
+- **Fully Typed:** Enjoy TypeScript safety and intellisense everywhere.
+
+---
+
+## API Reference
+
+### Parameters
+
+```typescript
+useFloating(
+  anchorEl: Ref<AnchorElement>,
+  floatingEl: Ref<FloatingElement>,
+  options?: UseFloatingOptions
+): FloatingContext
+```
+
+#### `anchorEl`
+- **Type**: `Ref<AnchorElement>`
+- **Required**: Yes
+- **Description**: A Vue ref containing the anchor element that the floating element will be positioned relative to. Can be an HTMLElement, VirtualElement, or null.
+
+#### `floatingEl`
+- **Type**: `Ref<FloatingElement>`
+- **Required**: Yes
+- **Description**: A Vue ref containing the floating element to be positioned. Can be an HTMLElement or null.
+
+#### `options`
+- **Type**: `UseFloatingOptions`
+- **Required**: No
+- **Description**: Configuration options for positioning behavior.
+
+### Options Interface
+
+```typescript
+interface UseFloatingOptions {
+  placement?: MaybeRefOrGetter<Placement | undefined>
+  strategy?: MaybeRefOrGetter<Strategy | undefined>
+  transform?: MaybeRefOrGetter<boolean | undefined>
+  middlewares?: Middleware[]
+  whileElementsMounted?: (
+    anchorEl: NonNullable<AnchorElement>,
+    floatingEl: NonNullable<FloatingElement>,
+    update: () => void
+  ) => undefined | (() => void)
+  open?: Ref<boolean>
+  onOpenChange?: (open: boolean) => void
+  nodeId?: string
+  rootContext?: Partial<FloatingContext>
+}
+```
+
+#### Option Details
+
+**`placement`**
+- **Type**: `MaybeRefOrGetter<Placement | undefined>`
+- **Default**: `'bottom'`
+- **Description**: Where to place the floating element relative to the anchor element.
+- **Values**: `'top'`, `'top-start'`, `'top-end'`, `'right'`, `'right-start'`, `'right-end'`, `'bottom'`, `'bottom-start'`, `'bottom-end'`, `'left'`, `'left-start'`, `'left-end'`
+
+**`strategy`**
+- **Type**: `MaybeRefOrGetter<Strategy | undefined>`
+- **Default**: `'absolute'`
+- **Description**: The CSS positioning strategy to use.
+- **Values**: `'absolute'`, `'fixed'`
+
+**`transform`**
+- **Type**: `MaybeRefOrGetter<boolean | undefined>`
+- **Default**: `true`
+- **Description**: Whether to use CSS transform for positioning instead of top/left properties. Transform is generally more performant.
+
+**`middlewares`**
+- **Type**: `Middleware[]`
+- **Default**: `[]`
+- **Description**: Array of middleware functions that modify positioning behavior. Common middleware include `offset`, `flip`, `shift`, and `arrow`.
+
+**`whileElementsMounted`**
+- **Type**: Function
+- **Description**: Custom function called when both elements are mounted. Should return a cleanup function. If not provided, uses Floating UI's `autoUpdate`.
+
+**`open`**
+- **Type**: `Ref<boolean>`
+- **Default**: `ref(false)`
+- **Description**: Reactive boolean controlling whether the floating element is open/visible.
+
+**`onOpenChange`**
+- **Type**: `(open: boolean) => void`
+- **Description**: Callback function called when the open state changes.
+
+---
+
+### Return Value
+
+The composable returns a `FloatingContext` object with the following properties:
 
 ## API Reference
 
