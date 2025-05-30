@@ -1,11 +1,3 @@
-We'll break this down into sections:
-
-1.  **`useFloatingTree`**: The star of the show.
-2.  **`Tree<T>`**: The powerful engine under the hood.
-3.  **`TreeNode<T>`**: The fundamental building blocks.
-
-This structure will help users understand not just _how_ to use `useFloatingTree`, but also the underlying mechanics if they need to dive deeper or customize.
-
 ## `useFloatingTree`: Orchestrating Your Floating UI Kingdom 👑
 
 While `useFloating` is excellent for positioning a single floating element, complex UI patterns often involve multiple connected floating elements. Without a tree structure, managing interactions like closing all child popovers when a parent closes, or ensuring only the topmost element is active, becomes cumbersome.
@@ -51,14 +43,12 @@ import { useFloating, useFloatingTree } from 'v-float'
 const rootData = useFloating(...)
 
 // Initialize the floating tree with the root floating context
-const tree = useFloatingTree(rootData)
+const tree = useFloatingTree(rootData) // `tree` is an object containing wrapper methods around the Tree instance methods, along with other helpers.
 </script>
 ```
 
 > **Note:**
-> When you call `useFloatingTree(rootData)`, it internally creates a new `Tree<FloatingContext>` instance using your provided `rootData` as the root node's data. The composable manages the tree for the duration of its own lifecycle, so you don't need to manually instantiate the `Tree`.
->
-> **However, `useFloatingTree` does _not_ automatically call `dispose()` on the tree instance.** If you need to perform manual cleanup (for example, in advanced or non-standard scenarios), you are responsible for disposing of the tree yourself by calling `tree.dispose()`. In typical Vue usage, this is rarely necessary, but it's important to be aware of for edge cases.
+> When you call `useFloatingTree(rootData)`, it internally creates a new `Tree<FloatingContext>` instance using your provided `rootData` as the root node's data. The `useFloatingTree` composable internally manages the lifecycle of the `Tree` instance. In typical Vue component usage, you generally won't need to manually call `tree.dispose()`, as the underlying reactive references are tied to the component's lifecycle and will be garbage-collected when the component unmounts. However, if you are using `useFloatingTree` outside of a standard component setup (e.g., in a global store that persists longer than a component), or for very advanced memory management, you might consider calling `tree.dispose()` when the tree is no longer needed.
 
 ### 2. Adding Nested Floating Elements
 
@@ -94,7 +84,7 @@ export class Tree<T> {
   constructor(initialRootData: T, options?: TreeOptions)
 
   findNodeById(id: string): TreeNode<T> | null
-  addNode(data: T, parentId?: string | null, nodeOptions?: TreeNodeOptions<T>): TreeNode<T> | null
+  addNode(data: T, parentId?: string | null, nodeOptions?: TreeNodeOptions): TreeNode<T> | null
   removeNode(nodeId: string): boolean
   moveNode(nodeId: string, newParentId: string | null): boolean
   traverse(strategy?: "dfs" | "bfs", startNode?: TreeNode<T> | null): TreeNode<T>[]
@@ -109,7 +99,7 @@ export class Tree<T> {
   - **`options?: TreeOptions`:**
     - `deleteStrategy?: "orphan" | "recursive"`: (Default: `"recursive"`)
       - `"recursive"`: When a node is removed, all its descendants are also removed from the tree and `nodeMap`.
-      - `"orphan"`: When a node is removed, its children have their `parent` reference set to `null` but remain in the `nodeMap`. They become disconnected subtrees.
+      - `"orphan"`: When a node is removed, its children have their `parent` reference set to `null` but remain in the `nodeMap`. They become disconnected orphan nodes.
 
 #### Properties
 
@@ -125,7 +115,7 @@ export class Tree<T> {
   - **Description:** Finds a node by its ID.
   - **Returns:** The `TreeNode<T>` or `null`.
 
-- `addNode(data: T, parentId: string | null = null, nodeOptions: TreeNodeOptions<T> = {}): TreeNode<T> | null`
+- `addNode(data: T, parentId: string | null = null, nodeOptions: TreeNodeOptions = {}): TreeNode<T> | null`
 
   - **Description:** Creates a new `TreeNode<T>` with the given `data` and adds it as a child to the node specified by `parentId`. If `parentId` is `null` or omitted, adds to the `root`.
   - **`nodeOptions.id`:** You can suggest an ID. If it's a duplicate, a new one will be generated (with a dev warning).
@@ -144,7 +134,7 @@ export class Tree<T> {
 - `traverse(strategy: "dfs" | "bfs" = "dfs", startNode: TreeNode<T> | null = this.root): TreeNode<T>[]`
 
   - **Description:** Performs DFS or BFS traversal starting from `startNode` (defaults to root).
-  - **Returns:** An array of `TreeNode<T>` instances in visited order.
+  - **Returns:** An array of `TreeNode<T>` instances in visited order, including the `startNode` itself.
 
 - `dispose(): void`
   - **Description:** Clears the `nodeMap`. Call this when the `Tree` instance is no longer needed to help with garbage collection.
@@ -168,11 +158,16 @@ A `TreeNode<T>` is a reactive container for your data (`T`) within the tree stru
 ```typescript
 export class TreeNode<T> {
   readonly id: string
-  data: Ref<T>
+  data: T
   parent: Ref<TreeNode<T> | null>
   children: Ref<TreeNode<T>[]>
 
-  constructor(data: T, parent?: TreeNode<T> | null, options?: TreeNodeOptions<T>, isRoot?: boolean)
+  constructor(
+    data: T,
+    parent: TreeNode<T> | null = null,
+    options: TreeNodeOptions = {},
+    isRoot = false
+  )
 
   // Primarily internal, prefer Tree's methods for adding/removing
   // addChild(childNode: TreeNode<T>): void;
@@ -191,19 +186,19 @@ export class TreeNode<T> {
 
 #### Constructor
 
-- `constructor(data: T, parent: TreeNode<T> | null = null, options: TreeNodeOptions<T> = {}, isRoot = false)`
+- `constructor(data: T, parent: TreeNode<T> | null = null, options: TreeNodeOptions = {}, isRoot = false)`
   - **`data: T`:** The data payload for this node.
   - **`parent: TreeNode<T> | null`:** The parent node. `null` for the root or orphaned nodes.
-  - **`options?: TreeNodeOptions<T>`:**
-    - `id?: string`: Optional ID. If not provided or duplicate, one is generated by `useId()`.
+  - **`options?: TreeNodeOptions`:**
+  - `id?: string`: Optional ID. If not provided or duplicate, one is generated by `useId()`.
   - **`isRoot: boolean`:** An internal flag set to `true` by the `Tree` class only for the actual root node.
 
 #### Properties
 
 - `id: string` (readonly)
   - **Description:** The unique identifier for this node. Generated if not provided.
-- `data: Ref<T>`
-  - **Description:** A Vue `shallowRef` holding the actual data for this node. You can update it via `node.data = ...` or `node.updateData(...)`.
+- `data: T`
+  - **Description:** The actual data payload for this node. You can update it via `node.data = ...` or `node.updateData(...)`.
 - `parent: Ref<TreeNode<T> | null>`
   - **Description:** A Vue `shallowRef` pointing to the parent `TreeNode`, or `null` if it's the root or an orphan.
 - `children: Ref<TreeNode<T>[]>`
@@ -214,7 +209,7 @@ export class TreeNode<T> {
 - `updateData(newData: Partial<T> | T)`
 
   - **Description:** Updates the node's `data`. If `T` is an object and `newData` is a partial object, it performs a shallow merge (`Object.assign`). Otherwise, it replaces the value.
-  - **Example:** `node.updateData({ open: ref(true) });` or `node.data.open.value = true;`
+  - **Example:** `node.updateData({ open: ref(true) });` (for merging) or `node.data = {open: ref(true)};`
 
 - `findChild(predicate: (node: TreeNode<T>) => boolean): TreeNode<T> | null`
 
