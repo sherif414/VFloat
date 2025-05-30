@@ -10,7 +10,7 @@ This structure will help users understand not just *how* to use `useFloatingTree
 
 ## `useFloatingTree`: Orchestrating Your Floating UI Kingdom 👑
 
-Imagine building a complex web application with nested menus that unfurl gracefully, tooltips that appear inside popovers, or context menus that branch out with sub-options. Managing the state, relationships, and interactions of these "floating" elements can quickly become a tangled mess.
+While `useFloating` is excellent for positioning a single floating element, complex UI patterns often involve multiple connected floating elements. Without a tree structure, managing interactions like closing all child popovers when a parent closes, or ensuring only the topmost element is active, becomes cumbersome.
 
 Enter `useFloatingTree` – your maestro for conducting an orchestra of hierarchical floating UI elements!
 
@@ -20,18 +20,10 @@ Enter `useFloatingTree` – your maestro for conducting an orchestra of hierarch
 
 Think of it as the central nervous system for your dynamic, layered UIs. It ensures that:
 
-*   Parent menus know about their children.
-*   Opening a submenu can correctly close its siblings.
-*   You can easily determine which element is "on top."
-*   Focus can be managed intelligently across the hierarchy.
-
-**When to Reach for `useFloatingTree`:**
-
-*   **Nested Dropdown Menus:** The classic example – menus within menus.
-*   **Tooltips Inside Popovers:** A tooltip needs to know it's part of a popover's "floating tree."
-*   **Context Menus with Submenus:** Right-click menus that branch out.
-*   **Multi-Level Navigation:** Complex flyout navigation systems.
-*   **Any UI Requiring Coordinated Floating Layers:** If your floating elements form a family, `useFloatingTree` is the family manager.
+* Parent elements maintain awareness of their child relationships.
+* Elements can intelligently manage their sibling states.
+* Elements understand their position in the overall hierarchy.
+* Complex nested structures can be managed with ease.
 
 ---
 
@@ -41,7 +33,7 @@ Before diving into the API, let's understand the key players:
 
 1.  **Floating Tree:** The entire hierarchical structure managed by `useFloatingTree`.
 2.  **Node (`TreeNode<FloatingContext>`):** Each individual floating element (a menu, a submenu, a tooltip) is represented as a node in the tree.
-3.  **`FloatingContext`:** The special data packet each node carries. This typically includes at least an `id` (string) and an `open` (boolean, often a `Ref<boolean>`) state, crucial for `useFloatingTree`'s logic.
+3.  **Node Data:** Each node holds a `data` property, which is the `FloatingContext` object returned by `useFloating`. This object contains the node's positioning information, open state, and other relevant data.
 4.  **Root Node:** The very top-level node from which all other nodes descend. Even if not visually represented, it's the anchor of your tree.
 
 ---
