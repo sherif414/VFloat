@@ -1,9 +1,5 @@
 import DefaultTheme from "vitepress/theme"
-import {
-  AntDesignContainer,
-  ElementPlusContainer,
-  NaiveUIContainer,
-} from "@vitepress-demo-preview/component"
+import { AntDesignContainer } from "@vitepress-demo-preview/component"
 import TwoslashFloatingVue from "@shikijs/vitepress-twoslash/client"
 import "@shikijs/vitepress-twoslash/style.css"
 import "@vitepress-demo-preview/component/dist/style.css"
