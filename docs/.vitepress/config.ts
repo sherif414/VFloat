@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
 import { containerPreview, componentPreview } from "@vitepress-demo-preview/plugin"
 import { transformerTwoslash } from "@shikijs/vitepress-twoslash"
+import unocss from "unocss/vite"
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   markdown: {
@@ -85,7 +86,14 @@ export default defineConfig({
       message: "Released under the MIT License.",
       copyright: "Copyright 2025-present Shareef Hassan",
     },
+
+    editLink: {
+      pattern: "https://github.com/sherif414/VFloat/edit/main/docs/:path",
+    },
   },
   ignoreDeadLinks: true,
   base: "/",
+  vite: {
+    plugins: [unocss()],
+  },
 })
