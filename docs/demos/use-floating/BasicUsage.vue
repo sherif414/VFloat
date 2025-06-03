@@ -1,80 +1,31 @@
-<script setup lang="ts">
-import { ref, useTemplateRef } from "vue"
-import { useFloating, useHover } from "v-float"
+<script lang="ts" setup>
+import { useTemplateRef } from "vue"
+import { offset, useFloating, useHover } from "v-float"
 
 const anchorEl = useTemplateRef("anchorEl")
 const floatingEl = useTemplateRef("floatingEl")
 
-const floating = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl, { placement: "top", middlewares: [offset(4)] })
 
-useHover(floating)
+useHover(context)
 </script>
 
 <template>
-  <div class="demo-container">
-    <button ref="anchorEl" class="demo-button">Hover or focus me</button>
+  <div class="bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-8">
+    <button
+      ref="anchorEl"
+      class="px-6 py-3 light:outline-size-2 light:outline light:outline-gray-300 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg font-medium border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-gray-100/20"
+    >
+      Hover me
+    </button>
 
     <div
-      v-if="floating.open"
+      v-if="context.open.value"
       ref="floatingEl"
-      :style="{ ...floating.floatingStyles.value }"
-      class="demo-tooltip"
+      :style="{ ...context.floatingStyles.value }"
+      class="absolute z-50 bg-gray-900 dark:bg-gray-800 text-white text-sm px-3 py-2 rounded-md max-w-xs shadow-lg border border-gray-700/50 dark:border-gray-600/50"
     >
-      Interactive tooltip with hover and focus
-      <div class="demo-arrow"></div>
+      This is a tooltip
     </div>
   </div>
 </template>
-
-<style scoped>
-.demo-container {
-  display: flex;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.demo-button {
-  padding: 0.5rem 1rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.2s;
-}
-
-.demo-button:hover {
-  background: #2563eb;
-}
-
-.demo-button:focus {
-  outline: 2px solid #93c5fd;
-  outline-offset: 2px;
-}
-
-.demo-tooltip {
-  background: #1f2937;
-  color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  max-width: 200px;
-  position: absolute;
-  z-index: 50;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.demo-arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #1f2937;
-  transform: rotate(45deg);
-  bottom: -4px;
-  left: 50%;
-  margin-left: -4px;
-}
-</style>
