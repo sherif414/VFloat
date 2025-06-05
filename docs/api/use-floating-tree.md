@@ -1,13 +1,11 @@
----
-title: useFloatingTree
-description: A Vue Composable for managing a hierarchy of floating UI elements like popovers, tooltips, and menus.
----
+# Floating Tree API
 
-# API
+## useFloatingTree()
 
- `useFloatingTree()`
+Creates a floating tree instance to manage hierarchical UI elements like popovers, tooltips, and menus.
 
-- Type:
+- **Type:**
+
   ```ts
   function useFloatingTree(
     rootNodeData: FloatingContext,
@@ -15,11 +13,12 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   ): UseFloatingTreeReturn
   ```
 
-- Details:
+- **Details:**
 
   Creates a new floating tree instance to manage hierarchical UI elements. The root node anchors your entire floating tree and must include an `id` and reactive `open` state. Options control tree behavior like deletion strategy.
 
-- Example:
+- **Example:**
+
   ```ts
   const tree = useFloatingTree(
     { id: 'app-root', open: ref(true) },
@@ -27,61 +26,67 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   )
   ```
 
+**See also:** [Guide - Managing Floating UI Hierarchies](/guide/floating-ui/hierarchies)
 
-## Properties
+## tree.nodeMap
 
- `tree.nodeMap`
+A reactive map containing all nodes in the tree, keyed by their IDs.
 
-- Type:
+- **Type:**
+
   ```ts
   readonly nodeMap: Readonly<Map<string, TreeNode<FloatingContext>>>
   ```
 
-- Details:
+- **Details:**
 
   A reactive map of all nodes in the tree, keyed by ID. Internally, it's a `shallowReactive` Map. Useful for debugging or direct node access, but prefer using the provided methods for most operations.
 
-- Example:
+- **Example:**
+
   ```ts
   const tree = useFloatingTree(rootContext)
   console.log(tree.nodeMap.value.get('node-id')) // Get specific node
   console.log(tree.nodeMap.value.size) // Total node count
   ```
 
----
+## tree.root
 
- `tree.root`
+Reference to the root TreeNode instance.
 
-- Type:
+- **Type:**
+
   ```ts
   readonly root: Readonly<TreeNode<FloatingContext>>
   ```
 
-- Details:
+- **Details:**
 
   Reference to the root TreeNode instance. This is your entry point to the top of the hierarchy and contains the root data you provided during initialization.
 
-- Example:
+- **Example:**
+
   ```ts
   const rootNode = tree.root
   console.log(rootNode.children.length) // Number of direct children
   ```
 
+## tree.addNode()
 
-## Methods
+Adds a new floating element to the tree.
 
- `tree.addNode()`
+- **Type:**
 
-- Type:
   ```ts
   addNode(data: FloatingContext, parentId?: string | null): TreeNode<FloatingContext> | null
   ```
 
-- Details:
+- **Details:**
 
   Adds a new floating element to the tree. If `parentId` is `null` or `undefined`, the node becomes a child of the root. Returns the created node or `null` if the parent doesn't exist.
 
-- Example:
+- **Example:**
+
   ```ts
   // Add as child of root
   const menuData = useFloating(...)
@@ -92,20 +97,22 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   const submenuNode = tree.addNode(submenuData, menuNode.id)
   ```
 
----
+## tree.removeNode()
 
- `tree.removeNode()`
+Removes a node from the tree by its ID.
 
-- Type:
+- **Type:**
+
   ```ts
   removeNode(nodeId: string, deleteStrategy?: "orphan" | "recursive"): boolean
   ```
 
-- Details:
+- **Details:**
 
   Removes a node from the tree by its ID. Handles deletion of descendants based on the provided strategy or the tree's default. Returns `true` if successful.
 
-- Example:
+- **Example:**
+
   ```ts
   const success = tree.removeNode('main-menu')
   // With recursive: removes main-menu and all children
@@ -117,20 +124,22 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   console.log(successOrphan) // true if node existed and was removed
   ```
 
----
+## tree.moveNode()
 
- `tree.moveNode()`
+Moves an existing node to a new parent within the tree.
 
-- Type:
+- **Type:**
+
   ```ts
   moveNode(nodeId: string, newParentId: string | null): boolean
   ```
 
-- Details:
+- **Details:**
 
   Moves an existing node to a new parent within the tree. The node maintains all its children and data, but changes its position in the hierarchy. Returns `true` if successful.
 
-- Example:
+- **Example:**
+
   ```ts
   // Move submenu from main-menu to different parent
   const moved = tree.moveNode('submenu', 'other-menu')
@@ -142,34 +151,37 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   tree.moveNode('node-id', null)
   ```
 
----
+## tree.findNodeById()
 
- `tree.findNodeById()`
+Locates and returns a specific node by its ID.
 
-- Type:
+- **Type:**
+
   ```ts
   findNodeById(nodeId: string): TreeNode<FloatingContext> | null
   ```
 
-- Details:
+- **Details:**
 
   Quickly locates and returns a specific node by its ID. Returns `null` if no node with the given ID exists in the tree.
 
-- Example:
+- **Example:**
+
   ```ts
   const menuNode = tree.findNodeById('main-menu')
   if (menuNode) {
     console.log(menuNode.data.open.value) // Check if open
-    console.log(menuNode.parent?.data.id) // Parent ID
+    console.log(menuNode.parent?.id) // Parent ID
     console.log(menuNode.children.length) // Child count
   }
   ```
 
----
+## tree.traverse()
 
- `tree.traverse()`
+Traverses the tree using depth-first or breadth-first search.
 
-- Type:
+- **Type:**
+
   ```ts
   traverse(
     mode: 'dfs' | 'bfs',
@@ -177,35 +189,38 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   ): TreeNode<FloatingContext>[]
   ```
 
-- Details:
+- **Details:**
 
   Traverses the tree using depth-first search (DFS) or breadth-first search (BFS) and returns nodes in visit order. If no start node is provided, traversal begins from the root.
 
-- Example:
+- **Example:**
+
   ```ts
   // Depth-first traversal from root
   const allNodes = tree.traverse('dfs')
-  allNodes.forEach(node => console.log(node.data.id))
+  allNodes.forEach(node => console.log(node.id))
 
   // Breadth-first from specific node
   const menuNode = tree.findNodeById('main-menu')
   const menuBranch = tree.traverse('bfs', menuNode)
   ```
 
----
+## tree.isTopmost()
 
- `tree.isTopmost()`
+Checks if a given open node is the topmost open node in its branch.
 
-- Type:
+- **Type:**
+
   ```ts
   isTopmost(nodeId: string): boolean
   ```
 
-- Details:
+- **Details:**
 
   Checks if a given open node is the "highest" open node in its particular branch of the hierarchy. Useful for determining focus management or z-index priorities.
 
-- Example:
+- **Example:**
+
   ```ts
   // Check which menu should receive focus
   if (tree.isTopmost('submenu')) {
@@ -214,34 +229,37 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   }
   ```
 
----
+## tree.getAllOpenNodes()
 
- `tree.getAllOpenNodes()`
+Retrieves all currently open nodes in the tree.
 
-- Type:
+- **Type:**
+
   ```ts
   getAllOpenNodes(): TreeNode<FloatingContext>[]
   ```
 
-- Details:
+- **Details:**
 
   Retrieves all nodes in the entire tree whose `open` state is currently `true`. Returns an array of open nodes regardless of their position in the hierarchy.
 
-- Example:
+- **Example:**
+
   ```ts
   const openNodes = tree.getAllOpenNodes()
   console.log(`${openNodes.length} elements are currently open`)
 
   openNodes.forEach(node => {
-    console.log(`${node.data.id} is open`)
+    console.log(`${node.id} is open`)
   })
   ```
 
----
+## tree.forEach()
 
- `tree.forEach()`
+Executes a callback function on nodes related to a specified target node.
 
-- Type:
+- **Type:**
+
   ```ts
   forEach(
     nodeId: string, 
@@ -253,11 +271,12 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   ): void
   ```
 
-- Details:
+- **Details:**
 
   Executes a callback function on nodes related to a specified target node. The `relationship` option determines which nodes are included (defaults to `self-and-children`). Very powerful for bulk operations like closing related menus.
 
-- Example:
+- **Example:**
+
   ```ts
   // Close all siblings of a node
   tree.forEach('main-menu', (node) => {
@@ -277,20 +296,22 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   }, { relationship: 'self-and-descendants' })
   ```
 
----
+## tree.dispose()
 
- `tree.dispose()`
+Cleans up the tree instance and prevents memory leaks.
 
-- Type:
+- **Type:**
+
   ```ts
   dispose(): void
   ```
 
-- Details:
+- **Details:**
 
   Cleans up the tree instance by clearing the internal node map and breaking references. Should be called when the component unmounts to prevent memory leaks.
 
-- Example:
+- **Example:**
+
   ```ts
   import { onUnmounted } from 'vue'
 
@@ -301,53 +322,12 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
   })
   ```
 
-
-## Types
-
-### FloatingContext
-
-- Type:
-  ```ts
-  interface FloatingContext {
-    id: string
-    open: Ref<boolean>
-    [key: string]: any
-  }
-  ```
-
-- Details:
-
-  The data structure required for each tree node. Must include a unique `id` string and reactive `open` boolean ref. Additional custom properties can be added as needed.
-
-- Example:
-  ```ts
-  // Basic context
-  const basicContext: FloatingContext = {
-    id: 'tooltip-1',
-    open: ref(false)
-  }
-
-  // Extended context with custom properties
-  interface MenuContext extends FloatingContext {
-    label: string
-    icon?: string
-    disabled?: boolean
-  }
-
-  const menuContext: MenuContext = {
-    id: 'user-menu',
-    open: ref(false),
-    label: 'User',
-    icon: 'user',
-    disabled: false
-  }
-  ```
-
----
-
 ### NodeRelationship
 
-- Type:
+Defines the set of nodes to target relative to a given node.
+
+- **Type:**
+
   ```ts
   type NodeRelationship = 
     | 'ancestors-only'
@@ -363,11 +343,12 @@ description: A Vue Composable for managing a hierarchy of floating UI elements l
     | 'all-except-branch'
   ```
 
-- Details:
+- **Details:**
 
   Defines the set of nodes to target in the `forEach` method, relative to a given node. Each relationship type specifies a different pattern of node selection for bulk operations.
 
-- Example:
+- **Example:**
+
   ```ts
   // Different relationship examples
   tree.forEach('main-menu', closeNode, { relationship: 'ancestors-only' })     // Close all parents
@@ -397,7 +378,7 @@ tree.addNode({ id: 'edit-menu', open: ref(false) }, 'main-menu')
 // Close all when clicking outside
 function handleClickOutside() {
   tree.forEach('root', (node) => {
-    if (node.data.id !== 'root') {
+    if (node.id !== 'root') {
       node.data.open.value = false
     }
   }, { relationship: 'descendants-only' })
