@@ -4,6 +4,7 @@ import TwoslashFloatingVue from "@shikijs/vitepress-twoslash/client"
 import "@shikijs/vitepress-twoslash/style.css"
 import "@vitepress-demo-preview/component/dist/style.css"
 import "virtual:uno.css"
+import './styles.css'
 
 // Import demo components
 import * as UseFloatingDemos from "../../demos/use-floating"

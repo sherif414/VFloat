@@ -1,0 +1,5 @@
+/* Make h2 header anchor links "#" symbol always visible */
+h2 a.header-anchor {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
