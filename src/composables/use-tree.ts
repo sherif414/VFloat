@@ -257,11 +257,14 @@ export class Tree<T> {
 
   /**
    * Removes a node from the tree by its ID.
-   * Handles deletion of descendants based on the `deleteStrategy` option.
+   * Handles deletion of descendants based on the provided strategy or the tree's default.
    * @param nodeId The ID of the node to remove.
+   * @param deleteStrategy Optional strategy override. If not provided, uses the tree's default strategy.
    * @returns True if the node was successfully removed, false otherwise.
    */
-  removeNode(nodeId: string): boolean {
+  removeNode(nodeId: string, deleteStrategy?: "orphan" | "recursive"): boolean {
+    const strategy = deleteStrategy ?? this.#deleteStrategy
+
     const nodeToRemove = this.findNodeById(nodeId)
     if (!nodeToRemove) {
       return false
@@ -274,8 +277,8 @@ export class Tree<T> {
     const parent = nodeToRemove.parent.value! // Root case is handled, so parent must exist
 
     // 1. Handle children based on strategy
-    if (this.#deleteStrategy === "recursive") {
-      // Cleanup children (removes from map) and the node itself
+    if (strategy === "recursive") {
+      // Cleanup children (removes from map)
       this.#cleanupNodeRecursive(nodeToRemove)
     } else {
       // 'orphan'

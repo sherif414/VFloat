@@ -17,7 +17,7 @@ export interface UseFloatingTreeReturn {
   moveNode: (nodeId: string, newParentId: string | null) => boolean
   dispose: () => void
   addNode: (data: FloatingContext, parentId?: string | null) => TreeNode<FloatingContext> | null
-  removeNode: (nodeId: string) => boolean
+  removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") => boolean
   traverse: (
     mode: "dfs" | "bfs",
     startNode?: TreeNode<FloatingContext>
@@ -240,7 +240,8 @@ export function useFloatingTree(
     moveNode: (nodeId, newParentId) => tree.moveNode(nodeId, newParentId),
     dispose: () => tree.dispose(),
     addNode: (data: FloatingContext, parentId?: string | null) => tree.addNode(data, parentId),
-    removeNode: (nodeId: string) => tree.removeNode(nodeId),
+    removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") =>
+      tree.removeNode(nodeId, deleteStrategy),
     traverse: (mode: "dfs" | "bfs", startNode?: TreeNode<FloatingContext>) =>
       tree.traverse(mode, startNode),
 
