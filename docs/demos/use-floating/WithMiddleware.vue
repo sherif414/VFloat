@@ -1,10 +1,10 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { arrow, flip, offset, shift, useArrow, useFloating } from "v-float"
-import { ref } from "vue"
+import { ref, useTemplateRef } from "vue"
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const arrowRef = ref<HTMLElement | null>(null)
+const anchorEl = useTemplateRef("anchorEl")
+const floatingEl = useTemplateRef("floatingEl")
+const arrowEl = useTemplateRef("arrowEl")
 
 const middlewares = [
   offset(4),
@@ -13,7 +13,7 @@ const middlewares = [
     padding: 5,
   }),
   shift({ padding: 5 }),
-  arrow({ element: arrowRef }),
+  arrow({ element: arrowEl, padding: 4 }),
 ]
 
 const context = useFloating(anchorEl, floatingEl, {
@@ -33,7 +33,7 @@ const { arrowStyles } = useArrow(context)
       <div class="h-150px"></div>
       <button
         ref="anchorEl"
-        class="px-4 py-2 bg-black text-white rounded cursor-pointer text-base whitespace-nowrap transition-colors duration-200 hover:bg-black-800"
+        class="px-6 py-3 light:outline-size-2 light:outline light:outline-gray-300 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg font-medium border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-gray-100/20"
       >
         (with middleware)
       </button>
@@ -46,9 +46,9 @@ const { arrowStyles } = useArrow(context)
     >
       Tooltip
       <div
-        ref="arrowRef"
-        class="absolute w-2 h-2 bg-red-800 rotate-45"
+        ref="arrowEl"
         :style="{ ...arrowStyles }"
+        class="absolute w-2 h-2 bg-red-800 rotate-45"
       />
     </div>
   </div>
