@@ -1,10 +1,18 @@
-## `useFloatingTree`: Orchestrating Your Floating UI Kingdom 👑
+# useFloatingTree
+
+To make the most of `useFloatingTree`, we recommend you're familiar with:
+
+*   **Vue 3 Composition API:** A good understanding is crucial, as `useFloatingTree` is built as a composable function.
+*   **The `useFloating` Composable:** Solid experience with the basic `useFloating` hook for positioning single floating elements is necessary. `useFloatingTree` orchestrates multiple `FloatingContext` instances, which are the output of `useFloating`.
+*   **Basic Tree Concepts (Helpful):** Familiarity with terms like nodes, parent-child relationships, and hierarchical structures will make it easier to understand how `useFloatingTree` manages interconnected UI elements.
+
+## Orchestrating Your Floating UI Kingdom 👑
 
 While `useFloating` is excellent for positioning a single floating element, complex UI patterns often involve multiple connected floating elements. Without a tree structure, managing interactions like closing all child popovers when a parent closes, or ensuring only the topmost element is active, becomes cumbersome.
 
 Enter `useFloatingTree` – your maestro for conducting an orchestra of hierarchical floating UI elements!
 
-**Overview: Why `useFloatingTree`?**
+### Overview: Why `useFloatingTree`?
 
 `useFloatingTree` provides a robust context system and a set of powerful tools to manage floating elements that need to be aware of each other in a parent-child hierarchy. It's designed for scenarios where simple, isolated floating elements aren't enough, and you need coordination, context sharing, and complex relationship management.
 
@@ -64,7 +72,7 @@ const grandChildNode = tree.addNode(grandChildData, childNode.id)
 
 While `useFloatingTree` is tailored for floating UI elements, its power comes from a more generic and versatile `Tree<T>` class. This class is the backbone, providing the core tree data structure and manipulation logic. You might even use `Tree<T>` directly for other hierarchical data management needs in your application!
 
-**Overview: What is `Tree<T>`?**
+### Overview: What is `Tree<T>`?
 
 The `Tree<T>` class is a generic, reactive tree data structure.
 
