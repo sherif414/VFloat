@@ -11,25 +11,30 @@ This guide will walk you through setting up V-Float in your Vue 3 project. V-Flo
 
 Choose your preferred package manager to add V-Float to your project:
 
-```bash
-# Using pnpm (recommended)
+::: code-group
+
+```bash [pnpm]
 pnpm add v-float
-
-# Or with npm
-npm install v-float
-
-# Or with yarn
-yarn add v-float
 ```
 
+```bash [npm]
+npm install v-float
+```
+
+```bash [yarn]
+yarn add v-float
+```
+:::
 
 ## Basic Setup
 
-Once installed, you can import the core `useFloating` composable directly into your Vue components. This is the primary utility for calculating element positions.
+Once installed, you can import and use the core `useFloating` composable directly into your Vue components. This is the primary utility for calculating element positions.
 
 ```vue
 <script setup>
 import { useFloating } from "v-float";
+
+const context = useFloating(...)
 </script>
 ```
 
