@@ -9,7 +9,7 @@ const isOpen = ref(false)
 const floating = useFloating(anchorEl, floatingEl, {
   placement: "top",
   open: isOpen,
-  onOpenChange: (open) => {
+  onOpenChange: (open: boolean) => {
     isOpen.value = open
   },
   middlewares: [offset(8), flip(), shift()],

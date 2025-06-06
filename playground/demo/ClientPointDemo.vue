@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue"
+import { computed, ref } from "vue"
 import { useClientPoint, useFloating } from "@/composables"
 import { flip } from "@floating-ui/dom"
 
@@ -15,25 +15,29 @@ const isTrackingActive = ref(true)
 
 // Available placements
 const placements = [
-  "top", "top-start", "top-end", 
-  "right", "right-start", "right-end", 
-  "bottom", "bottom-start", "bottom-end", 
-  "left", "left-start", "left-end"
+  "top",
+  "top-start",
+  "top-end",
+  "right",
+  "right-start",
+  "right-end",
+  "bottom",
+  "bottom-start",
+  "bottom-end",
+  "left",
+  "left-start",
+  "left-end",
 ]
 
 // Floating context with reactive placement
-const context = useFloating(ref(null), floating, { 
-  open: showTooltip, 
+const context = useFloating(ref(null), floating, {
+  open: showTooltip,
   placement,
-  middlewares: [flip()]
+  middlewares: [flip()],
 })
 
 // Client point with reactive axis constraint
-const { coordinates } = useClientPoint(
-  reference, 
-  context, 
-  { axis: axis }
-)
+const { coordinates } = useClientPoint(reference, context, { axis: axis })
 
 // Format coordinates based on axis mode
 function formatCoordinates(coords, mode) {
@@ -65,9 +69,12 @@ function onMouseLeave() {
 // Tooltip color based on visualization type
 const tooltipColor = computed(() => {
   switch (visualizationType.value) {
-    case 'indicator': return 'bg-teal-600 border-teal-800'
-    case 'heatmap': return 'bg-purple-600 border-purple-800'
-    default: return 'bg-indigo-600 border-indigo-800'
+    case "indicator":
+      return "bg-teal-600 border-teal-800"
+    case "heatmap":
+      return "bg-purple-600 border-purple-800"
+    default:
+      return "bg-indigo-600 border-indigo-800"
   }
 })
 </script>
@@ -78,8 +85,9 @@ const tooltipColor = computed(() => {
     <header class="w-full max-w-4xl mb-6">
       <h1 class="text-3xl font-bold text-indigo-800 mb-2">useClientPoint Demo</h1>
       <p class="text-gray-600">
-        This demo showcases the <code class="bg-gray-200 px-1 rounded">useClientPoint</code> composable, 
-        which tracks the mouse cursor's position relative to reference elements.
+        This demo showcases the
+        <code class="bg-gray-200 px-1 rounded">useClientPoint</code> composable, which tracks the
+        mouse cursor's position relative to reference elements.
       </p>
     </header>
 
@@ -96,15 +104,20 @@ const tooltipColor = computed(() => {
             <h3 class="font-semibold text-sm text-gray-700 mb-2">Axis Constraint</h3>
             <div class="flex flex-col gap-2">
               <label class="inline-flex items-center">
-                <input type="radio" v-model="axis" value="both" class="form-radio text-indigo-600" />
+                <input
+                  v-model="axis"
+                  class="form-radio text-indigo-600"
+                  type="radio"
+                  value="both"
+                />
                 <span class="ml-2 text-sm">Both X/Y</span>
               </label>
               <label class="inline-flex items-center">
-                <input type="radio" v-model="axis" value="x" class="form-radio text-indigo-600" />
+                <input v-model="axis" class="form-radio text-indigo-600" type="radio" value="x" />
                 <span class="ml-2 text-sm">X axis only</span>
               </label>
               <label class="inline-flex items-center">
-                <input type="radio" v-model="axis" value="y" class="form-radio text-indigo-600" />
+                <input v-model="axis" class="form-radio text-indigo-600" type="radio" value="y" />
                 <span class="ml-2 text-sm">Y axis only</span>
               </label>
             </div>
@@ -127,15 +140,30 @@ const tooltipColor = computed(() => {
             <h3 class="font-semibold text-sm text-gray-700 mb-2">Visualization</h3>
             <div class="flex flex-col gap-2">
               <label class="inline-flex items-center">
-                <input type="radio" v-model="visualizationType" value="tooltip" class="form-radio text-indigo-600" />
+                <input
+                  v-model="visualizationType"
+                  class="form-radio text-indigo-600"
+                  type="radio"
+                  value="tooltip"
+                />
                 <span class="ml-2 text-sm">Tooltip</span>
               </label>
               <label class="inline-flex items-center">
-                <input type="radio" v-model="visualizationType" value="indicator" class="form-radio text-indigo-600" />
+                <input
+                  v-model="visualizationType"
+                  class="form-radio text-indigo-600"
+                  type="radio"
+                  value="indicator"
+                />
                 <span class="ml-2 text-sm">Axis Indicator</span>
               </label>
               <label class="inline-flex items-center">
-                <input type="radio" v-model="visualizationType" value="heatmap" class="form-radio text-indigo-600" />
+                <input
+                  v-model="visualizationType"
+                  class="form-radio text-indigo-600"
+                  type="radio"
+                  value="heatmap"
+                />
                 <span class="ml-2 text-sm">Heatmap</span>
               </label>
             </div>
@@ -146,18 +174,23 @@ const tooltipColor = computed(() => {
         <div class="bg-gray-50 p-3 border-t border-gray-200 flex justify-between items-center">
           <div class="text-sm">
             <span class="font-mono">{{ formatCoordinates(coordinates, axis) }}</span>
-            <span class="ml-4 text-gray-500">Status: 
+            <span class="ml-4 text-gray-500"
+              >Status:
               <span :class="isTrackingActive ? 'text-green-600' : 'text-red-500'">
-                {{ isTrackingActive ? 'Active' : 'Disabled' }}
+                {{ isTrackingActive ? "Active" : "Disabled" }}
               </span>
             </span>
           </div>
-          <button 
-            @click="toggleTracking" 
+          <button
+            :class="
+              isTrackingActive
+                ? 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-green-500 hover:bg-green-600 text-white'
+            "
             class="px-3 py-1 text-sm rounded"
-            :class="isTrackingActive ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'"
+            @click="toggleTracking"
           >
-            {{ isTrackingActive ? 'Disable' : 'Enable' }} Tracking
+            {{ isTrackingActive ? "Disable" : "Enable" }} Tracking
           </button>
         </div>
       </section>
@@ -167,8 +200,13 @@ const tooltipColor = computed(() => {
         <div class="bg-indigo-700 text-white p-3 flex justify-between items-center">
           <h2 class="font-bold">Interactive Demonstration</h2>
           <div class="text-xs text-indigo-200">
-            {{ axis === 'both' ? 'Tracking both axes' : 
-               axis === 'x' ? 'Tracking X axis only' : 'Tracking Y axis only' }}
+            {{
+              axis === "both"
+                ? "Tracking both axes"
+                : axis === "x"
+                  ? "Tracking X axis only"
+                  : "Tracking Y axis only"
+            }}
           </div>
         </div>
 
@@ -195,7 +233,9 @@ const tooltipColor = computed(() => {
             <!-- Instructions -->
             <div class="text-center z-10">
               <div class="text-gray-700 font-medium mb-2">
-                {{ isTrackingActive ? 'Move cursor to see tracking in action' : 'Tracking disabled' }}
+                {{
+                  isTrackingActive ? "Move cursor to see tracking in action" : "Tracking disabled"
+                }}
               </div>
               <div class="text-xs text-gray-500">
                 Using placement: <span class="font-mono">{{ placement }}</span>
@@ -206,14 +246,19 @@ const tooltipColor = computed(() => {
             <div
               v-if="showTooltip"
               ref="floating"
+              :class="{
+                'transform -translate-x-1/2 -translate-y-1/2': visualizationType === 'heatmap',
+              }"
+              :style="
+                visualizationType === 'heatmap'
+                  ? { left: `${coordinates.x}px`, top: `${coordinates.y}px` }
+                  : context.floatingStyles.value
+              "
               class="absolute z-20 pointer-events-none"
-              :class="{ 'transform -translate-x-1/2 -translate-y-1/2': visualizationType === 'heatmap' }"
-              :style="visualizationType === 'heatmap' ? 
-                      { left: `${coordinates.x}px`, top: `${coordinates.y}px` } :
-                      context.floatingStyles.value"
             >
               <!-- Tooltip Visualization -->
-              <div v-if="visualizationType === 'tooltip'"
+              <div
+                v-if="visualizationType === 'tooltip'"
                 :class="`${tooltipColor} text-white px-3 py-1 rounded-md shadow-lg text-xs border font-mono`"
               >
                 {{ formatCoordinates(coordinates, axis) }}
@@ -222,11 +267,18 @@ const tooltipColor = computed(() => {
               <!-- Axis Indicator Visualization -->
               <template v-else-if="visualizationType === 'indicator'">
                 <div v-if="axis === 'x'" class="h-8 w-0.5 bg-teal-500 rounded-full shadow-md"></div>
-                <div v-else-if="axis === 'y'" class="w-8 h-0.5 bg-teal-500 rounded-full shadow-md"></div>
+                <div
+                  v-else-if="axis === 'y'"
+                  class="w-8 h-0.5 bg-teal-500 rounded-full shadow-md"
+                ></div>
                 <div v-else class="relative">
                   <div class="w-8 h-0.5 bg-teal-500 rounded-full shadow-md"></div>
-                  <div class="h-8 w-0.5 bg-teal-500 rounded-full shadow-md absolute top-0 left-1/2 -translate-x-1/2"></div>
-                  <div class="absolute -top-6 -left-4 bg-teal-600 text-white px-2 py-0.5 rounded text-xs">
+                  <div
+                    class="h-8 w-0.5 bg-teal-500 rounded-full shadow-md absolute top-0 left-1/2 -translate-x-1/2"
+                  ></div>
+                  <div
+                    class="absolute -top-6 -left-4 bg-teal-600 text-white px-2 py-0.5 rounded text-xs"
+                  >
                     {{ formatCoordinates(coordinates, axis) }}
                   </div>
                 </div>
@@ -234,10 +286,11 @@ const tooltipColor = computed(() => {
 
               <!-- Heatmap Visualization -->
               <template v-else-if="visualizationType === 'heatmap'">
-                <div class="rounded-full w-16 h-16 flex items-center justify-center"
+                <div
                   :style="{
-                    background: `radial-gradient(circle, rgba(124, 58, 237, 0.8) 0%, rgba(124, 58, 237, 0.1) 70%, transparent 100%)`
+                    background: `radial-gradient(circle, rgba(124, 58, 237, 0.8) 0%, rgba(124, 58, 237, 0.1) 70%, transparent 100%)`,
                   }"
+                  class="rounded-full w-16 h-16 flex items-center justify-center"
                 >
                   <div class="text-white text-xs font-mono">
                     {{ Math.round(coordinates.x) }},{{ Math.round(coordinates.y) }}
@@ -257,20 +310,28 @@ const tooltipColor = computed(() => {
         <div class="p-4">
           <div class="prose prose-sm max-w-none">
             <p>
-              The <code>useClientPoint</code> composable lets you track mouse cursor coordinates relative 
-              to a reference element. This is useful for building tooltips, popovers, and other interactive UI elements.
+              The <code>useClientPoint</code> composable lets you track mouse cursor coordinates
+              relative to a reference element. This is useful for building tooltips, popovers, and
+              other interactive UI elements.
             </p>
             <pre class="bg-gray-100 p-2 rounded text-xs overflow-auto">
 const { coordinates } = useClientPoint(
   referenceElement,
   floatingContext,
   { axis: "both" | "x" | "y" }
-)</pre>
+)</pre
+            >
             <p>Key features demonstrated here:</p>
             <ul class="space-y-1">
-              <li>• <strong>Axis Constraint</strong> - Limit tracking to X-axis, Y-axis, or both</li>
-              <li>• <strong>Placement Options</strong> - Position tooltips relative to the cursor</li>
-              <li>• <strong>Dynamic Visualization</strong> - Different ways to visualize the tracking</li>
+              <li>
+                • <strong>Axis Constraint</strong> - Limit tracking to X-axis, Y-axis, or both
+              </li>
+              <li>
+                • <strong>Placement Options</strong> - Position tooltips relative to the cursor
+              </li>
+              <li>
+                • <strong>Dynamic Visualization</strong> - Different ways to visualize the tracking
+              </li>
             </ul>
           </div>
         </div>
