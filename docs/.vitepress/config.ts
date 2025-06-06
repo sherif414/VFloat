@@ -22,6 +22,7 @@ export default defineConfig({
       { text: "Guide", link: "/guide/" },
       { text: "Composables", link: "/composables/" },
       { text: "Examples", link: "/examples/" },
+      { text: "API", link: "/api/" },
     ],
 
     sidebar: {
@@ -76,6 +77,16 @@ export default defineConfig({
         {
           text: "Examples",
           items: [{ text: "Overview", link: "/examples/" }],
+        },
+      ],
+      "/api/": [
+        {
+          text: "Core API",
+          items: [
+            { text: "Overview", link: "/api/" },
+            { text: "useFloating", link: "/api/use-floating" },
+            { text: "useFloatingTree", link: "/api/use-floating-tree" },
+          ],
         },
       ],
     },
