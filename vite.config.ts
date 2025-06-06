@@ -6,7 +6,11 @@ import dts from "vite-plugin-dts"
 import unocss from "unocss/vite"
 
 export default defineConfig({
-  plugins: [vue(), unocss(), dts({ tsconfigPath: "./tsconfig.app.json" })],
+  plugins: [
+    vue(),
+    unocss(),
+    dts({ tsconfigPath: "./tsconfig.build.json", outDir: "dist", entryRoot: "src" }),
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

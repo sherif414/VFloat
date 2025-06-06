@@ -7,7 +7,7 @@
   "files": [
     "dist"
   ],
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "main": "./dist/v-float.umd.js",
   "module": "./dist/v-float.es.js",
   "exports": {
@@ -23,7 +23,7 @@
     "preview": "vite preview",
     "test:unit": "vitest --no-watch",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build",
+    "type-check": "vue-tsc --build tsconfig.build.json",
     "lint": "biome check --apply --write",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
