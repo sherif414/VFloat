@@ -98,14 +98,9 @@ export interface UseFloatingOptions {
   open?: Ref<boolean>
 
   /**
-   * Function called when the open state changes.
+   * Function to control the open state of the floating element. If not provided, a default function is used that updates the `open` ref.
    */
   setOpen?: (open: boolean) => void
-
-  /**
-   * Root context for the floating element tree.
-   */
-  rootContext?: Partial<FloatingContext>
 }
 
 /**
@@ -166,7 +161,7 @@ export interface FloatingContext {
   open: Readonly<Ref<boolean>>
 
   /**
-   * Function to update the open state
+   * Function to explicitly set the open state of the floating element.
    */
   setOpen: (open: boolean) => void
 }
