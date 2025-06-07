@@ -3,8 +3,8 @@ import { useEventListener } from "@vueuse/core"
 import {
   computed,
   type MaybeRefOrGetter,
+  onMounted,
   onScopeDispose,
-  onUnmounted,
   onWatcherCleanup,
   toValue,
   watchPostEffect,
@@ -57,24 +57,26 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
 
   // 3. Safari `:focus-visible` polyfill. Tracks if the last interaction was
   //    from a keyboard or a pointer to correctly apply focus-visible logic.
-  if (isMac() && isSafari()) {
-    useEventListener(
-      window,
-      "keydown",
-      () => {
-        keyboardModality = true
-      },
-      { capture: true }
-    )
-    useEventListener(
-      window,
-      "pointerdown",
-      () => {
-        keyboardModality = false
-      },
-      { capture: true }
-    )
-  }
+  onMounted(() => {
+    if (isMac() && isSafari()) {
+      useEventListener(
+        window,
+        "keydown",
+        () => {
+          keyboardModality = true
+        },
+        { capture: true }
+      )
+      useEventListener(
+        window,
+        "pointerdown",
+        () => {
+          keyboardModality = false
+        },
+        { capture: true }
+      )
+    }
+  })
 
   // --- Element Event Handlers ---
   function onFocus(event: FocusEvent): void {
@@ -153,6 +155,7 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
 export interface UseFocusOptions {
   /**
    * Whether focus event listeners are enabled
