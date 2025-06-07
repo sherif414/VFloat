@@ -1,94 +1,135 @@
 import type { FloatingContext } from "@/composables"
 import { useEventListener } from "@vueuse/core"
-import { type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import {
+  computed,
+  type MaybeRefOrGetter,
+  onScopeDispose,
+  onUnmounted,
+  onWatcherCleanup,
+  toValue,
+  watchPostEffect,
+} from "vue"
 
 //=======================================================================================
-// 📌 Main
+// 📌 Main Composable
 //=======================================================================================
 
 /**
- * Enables showing/hiding the floating element when focusing the reference element
+ * Enables showing/hiding the floating element when focusing the reference element.
  *
- * This composable provides event handlers for focus and blur events to control
- * the visibility of floating elements when using keyboard navigation.
+ * This composable is responsible for KEYBOARD-ONLY interactions. For a complete user experience,
+ * it should be composed with other hooks like `useClick`, `useHover`, and `useDismiss`.
  *
- * @param context - The floating context with open state and change handler
- * @param options - Configuration options for focus behavior
- * @returns Event handler props for the reference element
- *
- * @example
- * ```ts
- * const { getReferenceProps } = useFocus(floating, {
- *   requireFocusVisible: true
- * })
- * ```
+ * @param context - The floating context with open state and change handler.
+ * @param options - Configuration options for focus behavior.
  */
 export function useFocus(context: FloatingContext, options: UseFocusOptions = {}): UseFocusReturn {
   const {
     open,
     setOpen,
-    refs: { floatingEl, anchorEl },
+    refs: { floatingEl, anchorEl: _anchorEl },
   } = context
 
   const { enabled = true, requireFocusVisible = true } = options
+  const anchorEl = computed(() => {
+    if (!_anchorEl.value) return null
+    return _anchorEl.value instanceof HTMLElement ? _anchorEl.value : _anchorEl.value.contextElement
+  })
 
-  // Flag to prevent opening on window refocus after blur
   let isFocusBlocked = false
+  let keyboardModality = true // Assume keyboard modality initially.
+  let timeoutId: number
 
-  // --- Window Event Listeners ---
+  // --- Window Event Listeners for Edge Cases ---
+
+  // 1. Blocks the floating element from opening when a user switches back to a
+  //    tab where the reference element was focused but the popover was closed.
   useEventListener(window, "blur", () => {
-    // If the anchor element is focused when the window blurs, and the floating element is not open,
-    // set the block flag. This prevents the floating element from opening automatically
-    // when the window regains focus and the browser refocuses the anchor.
-    if (anchorEl.value === document.activeElement && !open.value) {
+    if (!open.value && anchorEl.value && anchorEl.value === document.activeElement) {
       isFocusBlocked = true
     }
   })
 
+  // 2. Resets the block when the window regains focus.
   useEventListener(window, "focus", () => {
-    // Reset the block flag when the window gains focus.
     isFocusBlocked = false
   })
 
+  // 3. Safari `:focus-visible` polyfill. Tracks if the last interaction was
+  //    from a keyboard or a pointer to correctly apply focus-visible logic.
+  if (isMac() && isSafari()) {
+    useEventListener(
+      window,
+      "keydown",
+      () => {
+        keyboardModality = true
+      },
+      { capture: true }
+    )
+    useEventListener(
+      window,
+      "pointerdown",
+      () => {
+        keyboardModality = false
+      },
+      { capture: true }
+    )
+  }
+
   // --- Element Event Handlers ---
   function onFocus(event: FocusEvent): void {
-    // If focus is blocked due to window blur/refocus, do nothing and reset the flag.
     if (isFocusBlocked) {
       isFocusBlocked = false
       return
     }
 
     const target = event.target as Element | null
-
-    // Open if focus visibility is not required OR if the target matches :focus-visible
-    if (
-      !toValue(requireFocusVisible) ||
-      (target instanceof Element && target.matches(":focus-visible"))
-    ) {
-      setOpen(true)
+    if (toValue(requireFocusVisible) && target) {
+      // Safari fails to match `:focus-visible` if focus was initially outside
+      // the document. This is a workaround.
+      if (isMac() && isSafari() && !event.relatedTarget) {
+        if (!keyboardModality && !isTypeableElement(target)) {
+          return // Do not open if interaction was pointer-based on a non-typeable element.
+        }
+      } else if (!matchesFocusVisible(target)) {
+        return // Standard check for other browsers.
+      }
     }
+
+    setOpen(true)
   }
 
   function onBlur(event: FocusEvent): void {
-    // If the floating element doesn't exist, close immediately.
-    if (!floatingEl.value) {
+    // Clear any existing timeout from a previous blur event.
+    clearTimeout(timeoutId)
+
+    // Use a timeout to check the activeElement in the next event loop tick.
+    // This is more reliable than `event.relatedTarget` for complex cases
+    // like Shadow DOM or when focus is programmatically moved.
+    timeoutId = window.setTimeout(() => {
+      const ownerDocument = anchorEl.value?.ownerDocument ?? document
+      const activeEl = ownerDocument.activeElement
+
+      // Case 1: Focus has left the window entirely, but the browser is tricky
+      // and hasn't blurred the window yet. If `relatedTarget` is null but focus
+      // is still on the anchor, we assume focus is about to leave, so don't close.
+      if (!event.relatedTarget && activeEl === anchorEl.value) {
+        return
+      }
+
+      // Case 2: Focus has moved to an element within the floating element.
+      // This is the primary way we keep it open during keyboard navigation.
+      if (floatingEl.value && activeEl && floatingEl.value.contains(activeEl)) {
+        return
+      }
+
+      // If neither of the above conditions are met, focus has moved elsewhere,
+      // so it's safe to close the floating element.
       setOpen(false)
-      return
-    }
-
-    // Don't close if focus moved to the floating element itself or one of its descendants.
-    if (
-      event.relatedTarget &&
-      floatingEl.value &&
-      floatingEl.value.contains(event.relatedTarget as Node)
-    ) {
-      return
-    }
-
-    // Otherwise, close the floating element.
-    setOpen(false)
+    }, 0)
   }
 
+  // --- Attach Listeners to the Anchor Element ---
   watchPostEffect(() => {
     if (!toValue(enabled)) return
     const el = anchorEl.value
@@ -102,15 +143,16 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
       el.removeEventListener("blur", onBlur)
     })
   })
+
+  // Ensure the timeout is cleared if the component unmounts.
+  onScopeDispose(() => {
+    clearTimeout(timeoutId)
+  })
 }
 
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
-
-/**
- * Options for configuring focus behavior
- */
 export interface UseFocusOptions {
   /**
    * Whether focus event listeners are enabled
@@ -130,3 +172,33 @@ export interface UseFocusOptions {
  * Return value of the useFocus composable
  */
 export type UseFocusReturn = undefined
+
+//=======================================================================================
+// 📌 Utilities
+//=======================================================================================
+
+/** Checks if the user agent is on a Mac. */
+function isMac(): boolean {
+  return navigator.platform.toUpperCase().indexOf("MAC") >= 0
+}
+
+/** Checks if the browser is Safari. */
+function isSafari(): boolean {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+}
+
+/** Checks if the element is a type of input that should receive focus on click. */
+function isTypeableElement(
+  element: unknown
+): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  )
+}
+
+/** A simple utility to check if an element matches `:focus-visible`. */
+function matchesFocusVisible(element: Element): boolean {
+  return element.matches(":focus-visible")
+}
