@@ -1,6 +1,6 @@
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { effectScope, nextTick, type Ref, ref, computed } from "vue"
+import { effectScope, nextTick, type Ref, ref, computed, type ComputedRef } from "vue"
 import { useHover, type UseHoverOptions } from "@/composables"
 import type { FloatingStyles } from "../use-floating"
 import type { Strategy } from "@floating-ui/dom"
@@ -18,7 +18,7 @@ interface FloatingContext {
   y: Ref<number>
   isPositioned: Ref<boolean>
   open: Ref<boolean>
-  onOpenChange: (open: boolean, event?: Event) => void
+  setOpen: (open: boolean, event?: Event) => void
   update: () => void
   floatingStyles: ComputedRef<FloatingStyles>
 }
@@ -32,7 +32,7 @@ describe("useHover", () => {
   let context: FloatingContext
   let referenceEl: HTMLElement
   let floatingEl: HTMLElement
-  let onOpenChangeMock: ReturnType<typeof vi.fn>
+  let setOpenMock: ReturnType<typeof vi.fn>
   let scope: ReturnType<typeof effectScope>
 
   // Helper to initialize useHover and wait for effects
@@ -64,7 +64,7 @@ describe("useHover", () => {
     document.body.appendChild(referenceEl)
     document.body.appendChild(floatingEl)
 
-    onOpenChangeMock = vi.fn()
+    setOpenMock = vi.fn()
 
     context = {
       refs: {
@@ -78,9 +78,9 @@ describe("useHover", () => {
       y: ref(0),
       isPositioned: ref(true),
       open: ref(false),
-      onOpenChange: (v) => {
+      setOpen: (v) => {
         context.open.value = v
-        onOpenChangeMock(v)
+        setOpenMock(v)
       },
       update: () => {},
       floatingStyles: computed<FloatingStyles>(() => ({
@@ -126,19 +126,19 @@ describe("useHover", () => {
     it("should open when pointer enters reference element", async () => {
       initHover()
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledOnce()
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledOnce()
+      expect(setOpenMock).toHaveBeenCalledWith(true)
       expect(context.open.value).toBe(true)
     })
 
     it("should close when pointer leaves reference element (and floating is closed)", async () => {
       initHover()
       await userEvent.hover(referenceEl) // Open first
-      onOpenChangeMock.mockClear() // Clear mock after initial open
+      setOpenMock.mockClear() // Clear mock after initial open
 
       await userEvent.unhover(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledOnce()
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledOnce()
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
@@ -148,10 +148,10 @@ describe("useHover", () => {
       await userEvent.hover(referenceEl)
       vi.runAllTimers()
       await nextTick()
-      expect(onOpenChangeMock).toHaveBeenCalledOnce()
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledOnce()
+      expect(setOpenMock).toHaveBeenCalledWith(true)
       expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
 
       // Simulate move from reference -> floating (userEvent doesn't have a direct 'moveBetween')
       // We simulate by unhovering reference (which would normally trigger close)
@@ -164,13 +164,13 @@ describe("useHover", () => {
       // Advance timers to check if a close was scheduled and cancelled
       vi.runAllTimers()
 
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
 
       await userEvent.unhover(floatingEl)
       vi.runAllTimers()
-      expect(onOpenChangeMock).toHaveBeenCalledOnce()
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledOnce()
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
@@ -184,7 +184,7 @@ describe("useHover", () => {
 
       // Hovering old ref should do nothing now
       await userEvent.hover(oldRef)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // Create and attach new element
       const newRef = document.createElement("div")
@@ -196,7 +196,7 @@ describe("useHover", () => {
 
       // Hovering new ref should work
       await userEvent.hover(newRef)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
 
       // Cleanup new element
       document.body.removeChild(newRef)
@@ -208,8 +208,8 @@ describe("useHover", () => {
 
       // Check it works initially
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
-      onOpenChangeMock.mockClear()
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+      setOpenMock.mockClear()
 
       // Disable
       enabled.value = false
@@ -218,12 +218,12 @@ describe("useHover", () => {
       // Try hovering again
       await userEvent.hover(referenceEl)
       vi.runAllTimers() // Check no delayed actions trigger either
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // Try unhovering (e.g., if it was somehow open)
       await userEvent.unhover(referenceEl)
       vi.runAllTimers()
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
     })
   })
 
@@ -233,24 +233,24 @@ describe("useHover", () => {
       initHover({ delay: { open: 100 } })
       await userEvent.hover(referenceEl)
 
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(99)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1)
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
     })
 
     it("should respect `delay.close` (object notation)", async () => {
       initHover({ delay: { close: 100 } })
       await userEvent.hover(referenceEl) // Open (no delay)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
 
       await userEvent.unhover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(99)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1)
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(false)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(false)
     })
 
     it("should respect `delay` (number notation)", async () => {
@@ -258,20 +258,20 @@ describe("useHover", () => {
 
       // Test open delay
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(149)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1)
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
-      onOpenChangeMock.mockClear()
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
+      setOpenMock.mockClear()
 
       // Test close delay
       await userEvent.unhover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(149)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1)
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(false)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(false)
     })
   })
 
@@ -282,13 +282,13 @@ describe("useHover", () => {
 
       // Initial hover shouldn't open immediately
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // Simulate pointer resting by advancing time without moving
       vi.advanceTimersByTime(49)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
     })
 
     it("should NOT open if pointer moves significantly before `restMs` expires", async () => {
@@ -306,14 +306,14 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: Not opened yet
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Wait for less than restMs ---
       vi.advanceTimersByTime(25)
       await nextTick()
 
       // Assert: Still not opened
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Simulate Significant Pointer Move within the element ---
       // Move more than POINTER_MOVE_THRESHOLD (10px) on at least one axis
@@ -328,7 +328,7 @@ describe("useHover", () => {
       await nextTick() // Allow move handler to run
 
       // Assert: Still not opened, move should have reset the rest timer
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Advance time past the *original* restMs completion time ---
       // If the timer wasn't reset, it would have fired by now (25ms + 30ms > 50ms)
@@ -336,7 +336,7 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: Still not opened because the timer was reset
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Advance time to complete the *new* rest period ---
       // The new rest period started after the move. We already waited 30ms since the move.
@@ -345,32 +345,32 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: NOW it should have opened, after 50ms of resting *since the move*
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
     })
 
     it("should cancel rest period timer if pointer leaves before `restMs` expires", async () => {
       initHover({ restMs: 50 })
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       vi.advanceTimersByTime(30)
       await userEvent.unhover(referenceEl)
 
       vi.advanceTimersByTime(100)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
     })
 
     it("should ignore `restMs` if `delay.open` is greater than 0", async () => {
       initHover({ delay: { open: 100 }, restMs: 50 })
       await userEvent.hover(referenceEl)
 
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       vi.advanceTimersByTime(50)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       vi.advanceTimersByTime(50)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
     })
   })
 
@@ -393,7 +393,7 @@ describe("useHover", () => {
 
       // Assert: Ignored
       expect(context.open.value).toBe(false) // State should not change
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Simulate Pen Enter ---
       const penEnterEvent = new PointerEvent("pointerenter", {
@@ -408,7 +408,7 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: Ignored
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Simulate Mouse Enter ---
       const mouseEnterEvent = new PointerEvent("pointerenter", {
@@ -420,8 +420,8 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: Should open
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
-      onOpenChangeMock.mockClear() // Clear for next steps
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
+      setOpenMock.mockClear() // Clear for next steps
 
       // --- Simulate Touch Leave ---
       // Need to simulate leaving the reference element
@@ -439,7 +439,7 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: Ignored (should still be open from mouse enter)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // --- Simulate Mouse Leave ---
       const mouseLeaveEvent = new PointerEvent("pointerleave", {
@@ -454,7 +454,7 @@ describe("useHover", () => {
       await nextTick()
 
       // Assert: Should close
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(false)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(false)
     })
   })
 
@@ -464,29 +464,29 @@ describe("useHover", () => {
       initHover({ delay: { open: 100 } })
       await userEvent.hover(referenceEl)
       vi.advanceTimersByTime(50)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       await userEvent.unhover(referenceEl)
       vi.runAllTimers()
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
     })
 
     it("should cancel pending close delay if pointer re-enters reference", async () => {
       initHover({ delay: { close: 100 } })
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
-      onOpenChangeMock.mockClear()
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+      setOpenMock.mockClear()
 
       await userEvent.unhover(referenceEl)
       vi.advanceTimersByTime(50)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       await userEvent.hover(referenceEl)
       await nextTick()
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // its already open so nothing should happen
+      expect(setOpenMock).not.toHaveBeenCalled() // its already open so nothing should happen
 
       vi.advanceTimersByTime(100)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
     })
 
@@ -499,17 +499,17 @@ describe("useHover", () => {
       await userEvent.hover(floatingEl) // Move onto floating
 
       vi.advanceTimersByTime(150) // Wait past close delay
-      expect(onOpenChangeMock).not.toHaveBeenCalledWith(false) // Should not close yet
+      expect(setOpenMock).not.toHaveBeenCalledWith(false) // Should not close yet
       expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
 
       // Now leave the floating element
       await userEvent.unhover(floatingEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // Close delay starts
+      expect(setOpenMock).not.toHaveBeenCalled() // Close delay starts
       vi.advanceTimersByTime(99)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       vi.advanceTimersByTime(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
@@ -517,43 +517,43 @@ describe("useHover", () => {
       initHover()
 
       // 1. External open -> hover -> external close -> unhover
-      context.onOpenChange(true) // Externally open
+      context.setOpen(true) // Externally open
       await nextTick()
       expect(context.open.value).toBe(true)
 
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // Shouldn't try to open again
+      expect(setOpenMock).not.toHaveBeenCalled() // Shouldn't try to open again
 
-      context.onOpenChange(false)
+      context.setOpen(false)
       await nextTick()
       expect(context.open.value).toBe(false)
 
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
       await userEvent.unhover(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // Shouldn't try to close again
+      expect(setOpenMock).not.toHaveBeenCalled() // Shouldn't try to close again
 
       // 2. External close -> unhover -> external open -> hover
-      context.onOpenChange(true) // Open normally
+      context.setOpen(true) // Open normally
       await userEvent.hover(referenceEl)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
       await userEvent.unhover(referenceEl) // Close normally
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
 
       await userEvent.unhover(referenceEl) // Unhover again (while closed)
       await nextTick()
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
-      context.onOpenChange(true) // Externally open while not hovered
+      context.setOpen(true) // Externally open while not hovered
       await nextTick()
       expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
 
       await userEvent.hover(referenceEl) // Hover while externally open
       await nextTick()
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // Shouldn't try to open again
+      expect(setOpenMock).not.toHaveBeenCalled() // Shouldn't try to open again
     })
   })
 
@@ -568,9 +568,9 @@ describe("useHover", () => {
 
       // Verify it works initially
       await userEvent.hover(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
       expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear()
+      setOpenMock.mockClear()
 
       // Stop the effect to simulate unmount and trigger cleanup
       scope.stop()
@@ -579,18 +579,18 @@ describe("useHover", () => {
       // Try interacting again - listeners should be gone
       await userEvent.hover(referenceEl)
       vi.runAllTimers() // Check delays too
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       await userEvent.unhover(referenceEl)
       vi.runAllTimers()
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // Also check floating element interaction is gone
       context.open.value = true // Manually set open to test leave from floating
       await userEvent.hover(floatingEl)
       await userEvent.unhover(floatingEl)
       vi.runAllTimers()
-      expect(onOpenChangeMock).not.toHaveBeenCalled() // No close call expected
+      expect(setOpenMock).not.toHaveBeenCalled() // No close call expected
     })
   })
 

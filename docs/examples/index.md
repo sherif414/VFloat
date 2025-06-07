@@ -12,32 +12,25 @@ Create a simple tooltip that appears on hover.
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  offset,
-  flip,
-  shift,
-} from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useHover, offset, flip, shift } from "v-float"
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   placement: "top",
   middleware: [offset(8), flip(), shift()],
   open: isOpen,
-  onOpenChange: (open) => (isOpen.value = open),
-});
+  setOpen: (open) => (isOpen.value = open),
+})
 
 const hover = useHover(floating.context, {
   delay: { open: 300, close: 100 },
-});
+})
 
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover])
 </script>
 
 <template>
@@ -73,7 +66,9 @@ const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
 
 .v-enter-active,
 .v-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .v-enter-from,

@@ -6,36 +6,31 @@ The `useArrow` composable helps position and style an arrow element that points 
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useArrow, arrowMiddleware } from "v-float";
+import { ref } from "vue"
+import { useFloating, useArrow, arrowMiddleware } from "v-float"
 
 // Create refs for elements
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const arrowRef = ref<HTMLElement | null>(null);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const arrowRef = ref<HTMLElement | null>(null)
 
 // Set up floating element with arrow middleware
 const floating = useFloating(referenceRef, floatingRef, {
   middleware: [arrowMiddleware({ element: arrowRef })],
-});
+})
 
 // Calculate arrow styles based on placement
 const arrowStyles = useArrow({
   element: arrowRef,
   middlewareData: floating.middlewareData,
   placement: floating.placement,
-});
+})
 </script>
 
 <template>
   <button ref="referenceRef">Hover me</button>
 
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    :style="floating.floatingStyles"
-    class="tooltip"
-  >
+  <div v-if="isOpen" ref="floatingRef" :style="floating.floatingStyles" class="tooltip">
     This is a tooltip with an arrow
     <div ref="arrowRef" class="arrow" :style="arrowStyles"></div>
   </div>
@@ -70,7 +65,7 @@ const arrowStyles = useArrow({
 The `arrowMiddleware` function is used in the middleware array of `useFloating` to collect positioning data for the arrow.
 
 ```ts
-function arrowMiddleware(options: ArrowOptions): Middleware;
+function arrowMiddleware(options: ArrowOptions): Middleware
 ```
 
 #### Options
@@ -91,10 +86,10 @@ The `useArrow` composable takes the data from `arrowMiddleware` and converts it 
 
 ```ts
 function useArrow(options: {
-  element?: MaybeRefOrGetter<HTMLElement | null>;
-  middlewareData: MaybeRefOrGetter<MiddlewareData>;
-  placement: MaybeRefOrGetter<Placement>;
-}): ComputedRef<Record<string, string>>;
+  element?: MaybeRefOrGetter<HTMLElement | null>
+  middlewareData: MaybeRefOrGetter<MiddlewareData>
+  placement: MaybeRefOrGetter<Placement>
+}): ComputedRef<Record<string, string>>
 ```
 
 #### Options
@@ -192,21 +187,13 @@ Here's a more complete example showing a tooltip with an arrow that appears on h
 
 ```vue
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
-import {
-  useFloating,
-  useArrow,
-  arrowMiddleware,
-  offset,
-  flip,
-  shift,
-  autoUpdate,
-} from "v-float";
+import { ref, onMounted, onBeforeUnmount } from "vue"
+import { useFloating, useArrow, arrowMiddleware, offset, flip, shift, autoUpdate } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const arrowRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const arrowRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
 // Set up floating element with multiple middleware
 const floating = useFloating(referenceRef, floatingRef, {
@@ -220,49 +207,49 @@ const floating = useFloating(referenceRef, floatingRef, {
       padding: 5, // Keep arrow 5px away from the edges
     }),
   ],
+  open: isOpen,
+  setOpen: (value) => (isOpen.value = value),
   whileElementsMounted: autoUpdate, // Auto-update position on scroll/resize
-});
+})
 
 // Calculate arrow styles
 const arrowStyles = useArrow({
   element: arrowRef,
   middlewareData: floating.middlewareData,
   placement: floating.placement,
-});
+})
 
 // Handle hover events
 function handleMouseEnter() {
-  isOpen.value = true;
+  isOpen.value = true
 }
 
 function handleMouseLeave() {
-  isOpen.value = false;
+  isOpen.value = false
 }
 
 // Set up event listeners
 onMounted(() => {
-  const reference = referenceRef.value;
+  const reference = referenceRef.value
   if (reference) {
-    reference.addEventListener("mouseenter", handleMouseEnter);
-    reference.addEventListener("mouseleave", handleMouseLeave);
+    reference.addEventListener("mouseenter", handleMouseEnter)
+    reference.addEventListener("mouseleave", handleMouseLeave)
   }
-});
+})
 
 // Clean up event listeners
 onBeforeUnmount(() => {
-  const reference = referenceRef.value;
+  const reference = referenceRef.value
   if (reference) {
-    reference.removeEventListener("mouseenter", handleMouseEnter);
-    reference.removeEventListener("mouseleave", handleMouseLeave);
+    reference.removeEventListener("mouseenter", handleMouseEnter)
+    reference.removeEventListener("mouseleave", handleMouseLeave)
   }
-});
+})
 </script>
 
 <template>
   <div class="tooltip-container">
-    <button ref="referenceRef" class="tooltip-trigger">
-      Hover for Information
-    </button>
+    <button ref="referenceRef" class="tooltip-trigger">Hover for Information</button>
 
     <div
       v-if="isOpen"
@@ -272,8 +259,8 @@ onBeforeUnmount(() => {
       :data-placement="floating.placement"
     >
       <div class="tooltip-content">
-        This tooltip adjusts its position and features a dynamic arrow that
-        always points to the reference element.
+        This tooltip adjusts its position and features a dynamic arrow that always points to the
+        reference element.
       </div>
       <div ref="arrowRef" class="arrow" :style="arrowStyles"></div>
     </div>
@@ -348,7 +335,7 @@ Here's an example of a clickable popover with an arrow:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useArrow,
@@ -360,12 +347,12 @@ import {
   flip,
   shift,
   autoUpdate,
-} from "v-float";
+} from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const arrowRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const arrowRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
 // Set up floating element
 const floating = useFloating(referenceRef, floatingRef, {
@@ -380,39 +367,32 @@ const floating = useFloating(referenceRef, floatingRef, {
     }),
   ],
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
+  setOpen: (value) => (isOpen.value = value),
   whileElementsMounted: autoUpdate,
-});
+})
 
 // Calculate arrow styles
 const arrowStyles = useArrow({
   element: arrowRef,
   middlewareData: floating.middlewareData,
   placement: floating.placement,
-});
+})
 
 // Click to toggle
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 
 // Click outside to close
 const dismiss = useDismiss(floating.context, {
   outsidePress: true,
-});
+})
 
 // Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss])
 </script>
 
 <template>
   <div class="popover-container">
-    <button
-      ref="referenceRef"
-      v-bind="getReferenceProps()"
-      class="popover-trigger"
-    >
+    <button ref="referenceRef" v-bind="getReferenceProps()" class="popover-trigger">
       Click for Details
     </button>
 

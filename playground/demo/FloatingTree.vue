@@ -54,7 +54,7 @@ interface PlaygroundFloatingContext {
   id: string
   label: string
   open: { value: boolean }
-  onOpenChange: (isOpen: boolean) => void
+  setOpen: (isOpen: boolean) => void
   parentId?: string | null
 }
 
@@ -111,7 +111,7 @@ const createFloatingContext = (
     id,
     label: `${label} ${id}`,
     open: ref(true), // Nodes are open by default for visualization
-    onOpenChange: (isOpen: boolean) => {
+    setOpen: (isOpen: boolean) => {
       // Ensure reactivity by updating the ref's value
       context.open.value = isOpen
       console.log(`Node ${context.id} (${context.label}) open state changed to: ${isOpen}`)
@@ -154,9 +154,9 @@ const triggerCloseDescendants = () => {
   if (!treeInstance || !nodeToCloseDescendants.value) return
   console.log(`Calling closeDescendants for node: ${nodeToCloseDescendants.value}`)
   // This call is expected to internally update the 'open.value' property
-  // of the descendant nodes by calling their onOpenChange methods.
+  // of the descendant nodes by calling their setOpen methods.
   treeInstance.forEach(nodeToCloseDescendants.value, (descendent)=>{
-    descendent.data.onOpenChange(false)
+    descendent.data.setOpen(false)
   }, {relationship: 'descendants-only'})
   console.log("closeDescendants triggered. Check visualization.")
 }

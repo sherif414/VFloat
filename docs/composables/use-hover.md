@@ -6,34 +6,29 @@ The `useHover` composable enables hover-based interactions for floating elements
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useInteractions, useHover } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useHover } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create hover interaction with default options
-const hover = useHover(floating.context);
+const hover = useHover(floating.context)
 
 // Apply the interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover])
 </script>
 
 <template>
   <button ref="referenceRef" v-bind="getReferenceProps()">Hover Me</button>
 
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="floating.floatingStyles"
-  >
+  <div v-if="isOpen" ref="floatingRef" v-bind="getFloatingProps()" :style="floating.floatingStyles">
     This tooltip appears on hover
   </div>
 </template>
@@ -48,9 +43,9 @@ function useHover(
   context: FloatingContext,
   options?: UseHoverOptions
 ): {
-  getReferenceProps: (userProps?: object) => object;
-  getFloatingProps: (userProps?: object) => object;
-};
+  getReferenceProps: (userProps?: object) => object
+  getFloatingProps: (userProps?: object) => object
+}
 ```
 
 | Parameter | Type            | Description                                  |
@@ -89,17 +84,17 @@ One of the most common customizations is adding a delay to hover interactions to
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float";
+import { useFloating, useInteractions, useHover } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Add delay for both opening and closing
 const hover = useHover(floating.context, {
   delay: 300, // 300ms delay for both open and close
-});
+})
 
 // Or different delays for opening and closing
 const hoverWithCustomDelay = useHover(floating.context, {
@@ -107,9 +102,9 @@ const hoverWithCustomDelay = useHover(floating.context, {
     open: 500, // Wait 500ms before opening
     close: 150, // Wait 150ms before closing
   },
-});
+})
 
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover])
 </script>
 ```
 
@@ -119,24 +114,24 @@ You can make the hover delay reactive by using a ref:
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useHover } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useHover } from "v-float"
 
-const hoverDelay = ref(300);
+const hoverDelay = ref(300)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Use reactive delay
 const hover = useHover(floating.context, {
   delay: hoverDelay,
-});
+})
 
 // Later you can update the delay
 function setFasterDelay() {
-  hoverDelay.value = 150;
+  hoverDelay.value = 150
 }
 </script>
 ```
@@ -147,29 +142,29 @@ You can conditionally enable or disable the hover interaction:
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useHover } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useHover } from "v-float"
 
 // Control whether hover is enabled
-const hoverEnabled = ref(true);
+const hoverEnabled = ref(true)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Use reactive enabled option
 const hover = useHover(floating.context, {
   enabled: hoverEnabled,
-});
+})
 
 // Later in your component
 function disableHover() {
-  hoverEnabled.value = false;
+  hoverEnabled.value = false
 }
 
 function enableHover() {
-  hoverEnabled.value = true;
+  hoverEnabled.value = true
 }
 </script>
 ```
@@ -180,17 +175,17 @@ The `restMs` option allows you to set a minimum time that the cursor must "rest"
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float";
+import { useFloating, useInteractions, useHover } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Only trigger hover after cursor has rested for 100ms
 const hover = useHover(floating.context, {
   restMs: 100,
-});
+})
 </script>
 ```
 
@@ -202,17 +197,17 @@ By default, `useHover` will update the position of the floating element as the c
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float";
+import { useFloating, useInteractions, useHover } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Disable position updates on cursor movement
 const hover = useHover(floating.context, {
   move: false,
-});
+})
 </script>
 ```
 
@@ -222,36 +217,26 @@ const hover = useHover(floating.context, {
 
 ```vue
 <script setup>
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  useFocus,
-  useRole,
-} from "v-float";
+import { useFloating, useInteractions, useHover, useFocus, useRole } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Hover interaction
 const hover = useHover(floating.context, {
   delay: { open: 200, close: 100 },
-});
+})
 
 // Focus interaction (for accessibility)
-const focus = useFocus(floating.context);
+const focus = useFocus(floating.context)
 
 // Role for proper ARIA attributes
-const role = useRole(floating.context, { role: "tooltip" });
+const role = useRole(floating.context, { role: "tooltip" })
 
 // Combine all interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  hover,
-  focus,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, role])
 </script>
 ```
 
@@ -263,31 +248,25 @@ For UIs with multiple hover elements that should share delay settings, you can u
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  FloatingDelayGroup,
-  useDelayGroup,
-} from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useHover, FloatingDelayGroup, useDelayGroup } from "v-float"
 
-const isOpen = ref(false);
+const isOpen = ref(false)
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Set an ID for this floating element
-const id = "tooltip-1";
+const id = "tooltip-1"
 
 // Access delay group context
-const { delay } = useDelayGroup(floating.context, { id });
+const { delay } = useDelayGroup(floating.context, { id })
 
 // Use shared delay from the group
-const hover = useHover(floating.context, { delay });
+const hover = useHover(floating.context, { delay })
 
-const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover])
 </script>
 
 <template>
@@ -316,7 +295,7 @@ This ensures all hover elements in the group share the same delay settings and b
 
 ```vue
 <script setup>
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useInteractions,
@@ -326,34 +305,30 @@ import {
   offset,
   flip,
   shift,
-} from "v-float";
+} from "v-float"
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   placement: "top",
   middleware: [offset(10), flip(), shift({ padding: 5 })],
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create interactions
 const hover = useHover(floating.context, {
   delay: { open: 300, close: 200 },
   move: true,
-});
+})
 
-const focus = useFocus(floating.context);
-const role = useRole(floating.context, { role: "tooltip" });
+const focus = useFocus(floating.context)
+const role = useRole(floating.context, { role: "tooltip" })
 
 // Combine them
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  hover,
-  focus,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, role])
 </script>
 
 <template>
@@ -368,10 +343,7 @@ const { getReferenceProps, getFloatingProps } = useInteractions([
     :style="floating.floatingStyles"
     class="tooltip"
   >
-    <p>
-      This is an interactive tooltip with hover delay for a smoother user
-      experience.
-    </p>
+    <p>This is an interactive tooltip with hover delay for a smoother user experience.</p>
     <button @click="isOpen = false" class="close-button">Close</button>
   </div>
 </template>

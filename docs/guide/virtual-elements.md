@@ -9,16 +9,16 @@ A virtual element is an object that implements the minimal interface required by
 ```ts
 interface VirtualElement {
   getBoundingClientRect(): {
-    x: number;
-    y: number;
-    top: number;
-    left: number;
-    right: number;
-    bottom: number;
-    width: number;
-    height: number;
-  };
-  contextElement?: Element;
+    x: number
+    y: number
+    top: number
+    left: number
+    right: number
+    bottom: number
+    width: number
+    height: number
+  }
+  contextElement?: Element
 }
 ```
 
@@ -39,7 +39,7 @@ Virtual elements are particularly useful for:
 Here's how to create a basic virtual element at fixed coordinates:
 
 ```js
-import { ref } from "vue";
+import { ref } from "vue"
 
 const virtualRef = ref({
   getBoundingClientRect() {
@@ -52,9 +52,9 @@ const virtualRef = ref({
       bottom: 100,
       width: 0,
       height: 0,
-    };
+    }
   },
-});
+})
 ```
 
 ## Using with useFloating
@@ -63,10 +63,10 @@ Use the virtual element just like you would use a regular DOM element ref:
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating } from "v-float";
+import { ref } from "vue"
+import { useFloating } from "v-float"
 
-const floatingRef = ref(null);
+const floatingRef = ref(null)
 const virtualRef = ref({
   getBoundingClientRect() {
     return {
@@ -78,22 +78,22 @@ const virtualRef = ref({
       bottom: 100,
       width: 0,
       height: 0,
-    };
+    }
   },
-});
+})
 
 const floating = useFloating({
   elements: {
     reference: virtualRef,
     floating: floatingRef,
   },
-});
+  open: isOpen,
+  setOpen: (value) => (isOpen.value = value),
+})
 </script>
 
 <template>
-  <div v-if="isOpen" ref="floatingRef" :style="floating.floatingStyles">
-    Floating content
-  </div>
+  <div v-if="isOpen" ref="floatingRef" :style="floating.floatingStyles">Floating content</div>
 </template>
 ```
 
@@ -103,11 +103,11 @@ Virtual elements can be updated dynamically, such as following the mouse cursor:
 
 ```vue
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useFloating } from "v-float";
+import { ref, onMounted, onUnmounted } from "vue"
+import { useFloating } from "v-float"
 
-const floatingRef = ref(null);
-const isOpen = ref(false);
+const floatingRef = ref(null)
+const isOpen = ref(false)
 
 // Create a virtual element that follows the mouse
 const virtualRef = ref({
@@ -121,13 +121,13 @@ const virtualRef = ref({
       bottom: mouseY.value,
       width: 0,
       height: 0,
-    };
+    }
   },
-});
+})
 
 // Track mouse position
-const mouseX = ref(0);
-const mouseY = ref(0);
+const mouseX = ref(0)
+const mouseY = ref(0)
 
 const floating = useFloating({
   elements: {
@@ -135,44 +135,39 @@ const floating = useFloating({
     floating: floatingRef,
   },
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Update mouse position and floating position
 function onMouseMove(e) {
-  mouseX.value = e.clientX;
-  mouseY.value = e.clientY;
+  mouseX.value = e.clientX
+  mouseY.value = e.clientY
 
   // Force update the position
   if (isOpen.value) {
-    floating.update();
+    floating.update()
   }
 }
 
 // Toggle the floating element
 function onMouseDown() {
-  isOpen.value = !isOpen.value;
+  isOpen.value = !isOpen.value
 }
 
 // Set up and clean up event listeners
 onMounted(() => {
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mousedown", onMouseDown);
-});
+  window.addEventListener("mousemove", onMouseMove)
+  window.addEventListener("mousedown", onMouseDown)
+})
 
 onUnmounted(() => {
-  window.removeEventListener("mousemove", onMouseMove);
-  window.removeEventListener("mousedown", onMouseDown);
-});
+  window.removeEventListener("mousemove", onMouseMove)
+  window.removeEventListener("mousedown", onMouseDown)
+})
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    :style="floating.floatingStyles"
-    class="tooltip"
-  >
+  <div v-if="isOpen" ref="floatingRef" :style="floating.floatingStyles" class="tooltip">
     Current mouse position: {{ Math.round(mouseX) }}, {{ Math.round(mouseY) }}
   </div>
 </template>
@@ -183,7 +178,7 @@ onUnmounted(() => {
 The `contextElement` property is important when your virtual element should be positioned relative to a scrollable container:
 
 ```js
-const scrollableContainerRef = ref(null);
+const scrollableContainerRef = ref(null)
 
 const virtualRef = ref({
   getBoundingClientRect() {
@@ -192,11 +187,11 @@ const virtualRef = ref({
       x: 100,
       y: 100,
       // ...
-    };
+    }
   },
   // This tells Floating UI which element's scroll events to listen to
   contextElement: scrollableContainerRef.value,
-});
+})
 ```
 
 ## Example: Context Menu
@@ -205,11 +200,11 @@ Here's an example of a context menu positioned where the user right-clicks:
 
 ```vue
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useFloating, offset, flip, shift } from "v-float";
+import { ref, onMounted, onUnmounted } from "vue"
+import { useFloating, offset, flip, shift } from "v-float"
 
-const menuRef = ref(null);
-const isOpen = ref(false);
+const menuRef = ref(null)
+const isOpen = ref(false)
 
 // Virtual element for right-click position
 const virtualRef = ref({
@@ -223,13 +218,13 @@ const virtualRef = ref({
       bottom: clickY.value,
       width: 0,
       height: 0,
-    };
+    }
   },
-});
+})
 
 // Track click position
-const clickX = ref(0);
-const clickY = ref(0);
+const clickX = ref(0)
+const clickY = ref(0)
 
 const floating = useFloating({
   elements: {
@@ -239,45 +234,40 @@ const floating = useFloating({
   middleware: [offset(5), flip(), shift({ padding: 8 })],
   placement: "bottom-start",
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Handle right click
 function onContextMenu(e) {
-  e.preventDefault();
-  clickX.value = e.clientX;
-  clickY.value = e.clientY;
-  isOpen.value = true;
+  e.preventDefault()
+  clickX.value = e.clientX
+  clickY.value = e.clientY
+  isOpen.value = true
 
   // Force update after setting new coordinates
-  floating.update();
+  floating.update()
 }
 
 // Close menu when clicking outside
 function onDocumentClick(e) {
   if (isOpen.value && menuRef.value && !menuRef.value.contains(e.target)) {
-    isOpen.value = false;
+    isOpen.value = false
   }
 }
 
 onMounted(() => {
-  document.addEventListener("contextmenu", onContextMenu);
-  document.addEventListener("click", onDocumentClick);
-});
+  document.addEventListener("contextmenu", onContextMenu)
+  document.addEventListener("click", onDocumentClick)
+})
 
 onUnmounted(() => {
-  document.removeEventListener("contextmenu", onContextMenu);
-  document.removeEventListener("click", onDocumentClick);
-});
+  document.removeEventListener("contextmenu", onContextMenu)
+  document.removeEventListener("click", onDocumentClick)
+})
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    ref="menuRef"
-    :style="floating.floatingStyles"
-    class="context-menu"
-  >
+  <div v-if="isOpen" ref="menuRef" :style="floating.floatingStyles" class="context-menu">
     <ul>
       <li>Cut</li>
       <li>Copy</li>

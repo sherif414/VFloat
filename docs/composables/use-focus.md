@@ -6,36 +6,29 @@ The `useFocus` composable enables focus-based interactions for floating elements
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useInteractions, useFocus } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useFocus } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create focus interaction
-const focus = useFocus(floating.context);
+const focus = useFocus(floating.context)
 
 // Apply the interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([focus]);
+const { getReferenceProps, getFloatingProps } = useInteractions([focus])
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">
-    Focus Me (click or tab)
-  </button>
+  <button ref="referenceRef" v-bind="getReferenceProps()">Focus Me (click or tab)</button>
 
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="floating.floatingStyles"
-  >
+  <div v-if="isOpen" ref="floatingRef" v-bind="getFloatingProps()" :style="floating.floatingStyles">
     This element appears when the button is focused
   </div>
 </template>
@@ -50,9 +43,9 @@ function useFocus(
   context: FloatingContext,
   options?: UseFocusOptions
 ): {
-  getReferenceProps: (userProps?: object) => object;
-  getFloatingProps: (userProps?: object) => object;
-};
+  getReferenceProps: (userProps?: object) => object
+  getFloatingProps: (userProps?: object) => object
+}
 ```
 
 | Parameter | Type            | Description                                  |
@@ -91,19 +84,19 @@ In some cases, you may want to show the floating element only when the user navi
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useFocus } from "v-float";
+import { useFloating, useInteractions, useFocus } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Only trigger on keyboard focus events
 const focus = useFocus(floating.context, {
   keyboardOnly: true,
-});
+})
 
-const { getReferenceProps, getFloatingProps } = useInteractions([focus]);
+const { getReferenceProps, getFloatingProps } = useInteractions([focus])
 </script>
 ```
 
@@ -115,17 +108,17 @@ The `visibleOnly` option makes the focus interaction only trigger for elements t
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useFocus } from "v-float";
+import { useFloating, useInteractions, useFocus } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Only trigger on visible focus events
 const focus = useFocus(floating.context, {
   visibleOnly: true,
-});
+})
 </script>
 ```
 
@@ -135,29 +128,29 @@ You can conditionally enable or disable the focus interaction with the `enabled`
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useFocus } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useFocus } from "v-float"
 
 // Control whether focus interaction is enabled
-const focusEnabled = ref(true);
+const focusEnabled = ref(true)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Use reactive enabled option
 const focus = useFocus(floating.context, {
   enabled: focusEnabled,
-});
+})
 
 // Later you can update this
 function disableFocus() {
-  focusEnabled.value = false;
+  focusEnabled.value = false
 }
 
 function enableFocus() {
-  focusEnabled.value = true;
+  focusEnabled.value = true
 }
 </script>
 ```
@@ -168,32 +161,22 @@ function enableFocus() {
 
 ```vue
 <script setup>
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  useFocus,
-  useRole,
-} from "v-float";
+import { useFloating, useInteractions, useHover, useFocus, useRole } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create interaction handlers
 const hover = useHover(floating.context, {
   delay: { open: 200, close: 100 },
-});
-const focus = useFocus(floating.context);
-const role = useRole(floating.context, { role: "tooltip" });
+})
+const focus = useFocus(floating.context)
+const role = useRole(floating.context, { role: "tooltip" })
 
 // Combine them all
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  hover,
-  focus,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, role])
 </script>
 ```
 
@@ -205,29 +188,23 @@ For more complex focus management within floating elements (like modals or compl
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import {
-  useFloating,
-  useInteractions,
-  useFocus,
-  useClick,
-  FloatingFocusManager,
-} from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useFocus, useClick, FloatingFocusManager } from "v-float"
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Combine focus and click interactions
-const focus = useFocus(floating.context);
-const click = useClick(floating.context);
+const focus = useFocus(floating.context)
+const click = useClick(floating.context)
 
-const { getReferenceProps, getFloatingProps } = useInteractions([focus, click]);
+const { getReferenceProps, getFloatingProps } = useInteractions([focus, click])
 </script>
 
 <template>
@@ -260,7 +237,7 @@ The `FloatingFocusManager` traps and manages focus within the dialog, enabling p
 
 ```vue
 <script setup>
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useInteractions,
@@ -270,82 +247,72 @@ import {
   offset,
   flip,
   shift,
-} from "v-float";
+} from "v-float"
 
-const suggestions = [
-  "Apple",
-  "Banana",
-  "Cherry",
-  "Date",
-  "Elderberry",
-  "Fig",
-  "Grape",
-];
+const suggestions = ["Apple", "Banana", "Cherry", "Date", "Elderberry", "Fig", "Grape"]
 
-const inputRef = ref(null);
-const floatingRef = ref(null);
-const listRef = ref([]);
-const isOpen = ref(false);
-const activeIndex = ref(null);
-const inputValue = ref("");
+const inputRef = ref(null)
+const floatingRef = ref(null)
+const listRef = ref([])
+const isOpen = ref(false)
+const activeIndex = ref(null)
+const inputValue = ref("")
 
 const floating = useFloating(inputRef, floatingRef, {
   placement: "bottom-start",
   middleware: [offset(5), flip(), shift()],
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Focus interaction - show suggestions on input focus
-const focus = useFocus(floating.context);
+const focus = useFocus(floating.context)
 
 // List navigation - keyboard navigation of suggestions
 const listNav = useListNavigation(floating.context, {
   listRef,
   activeIndex,
   onNavigate: (index) => {
-    activeIndex.value = index;
+    activeIndex.value = index
   },
   loop: true,
-});
+})
 
 // Set ARIA attributes
-const role = useRole(floating.context, { role: "listbox" });
+const role = useRole(floating.context, { role: "listbox" })
 
 // Combine interactions
 const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([
   focus,
   listNav,
   role,
-]);
+])
 
 // Filter suggestions based on input
 const filteredSuggestions = computed(() => {
-  if (!inputValue.value) return suggestions;
-  return suggestions.filter((s) =>
-    s.toLowerCase().includes(inputValue.value.toLowerCase())
-  );
-});
+  if (!inputValue.value) return suggestions
+  return suggestions.filter((s) => s.toLowerCase().includes(inputValue.value.toLowerCase()))
+})
 
 // Track item elements for list navigation
 function collectItem(el) {
   if (el && !listRef.value.includes(el)) {
-    listRef.value.push(el);
+    listRef.value.push(el)
   }
 }
 
 // Select a suggestion
 function selectSuggestion(suggestion) {
-  inputValue.value = suggestion;
-  isOpen.value = false;
+  inputValue.value = suggestion
+  isOpen.value = false
 }
 
 // Reset list when input changes
 function updateInput(e) {
-  inputValue.value = e.target.value;
-  listRef.value = [];
+  inputValue.value = e.target.value
+  listRef.value = []
   if (inputValue.value) {
-    isOpen.value = true;
+    isOpen.value = true
   }
 }
 </script>

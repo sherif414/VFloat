@@ -29,7 +29,7 @@ if (!tree || !parentMenuId) {
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right-start",
   open: isOpen,
-  onOpenChange: (openValue) => {
+  setOpen: (openValue) => {
     if (props.disabled && openValue) return // Prevent opening if disabled
     isOpen.value = openValue
 
@@ -40,7 +40,7 @@ const context = useFloating(anchorEl, floatingEl, {
         node.id,
         (siblingNode) => {
           if (siblingNode.id !== node.id && siblingNode.data.open.value) {
-            siblingNode.data.onOpenChange(false)
+            siblingNode.data.setOpen(false)
           }
         },
         { relationship: "siblings-only", applyToMatching: true }
@@ -52,7 +52,7 @@ const context = useFloating(anchorEl, floatingEl, {
         node.id,
         (descendantNode) => {
           if (descendantNode.id !== node.id && descendantNode.data.open.value) {
-            descendantNode.data.onOpenChange(false)
+            descendantNode.data.setOpen(false)
           }
         },
         { relationship: "descendants-only", applyToMatching: true }

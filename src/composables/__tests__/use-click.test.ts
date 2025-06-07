@@ -10,14 +10,14 @@ interface FloatingContext {
     floating: Ref<HTMLElement | null>
   }
   open: Ref<boolean>
-  onOpenChange: (open: boolean, event?: Event) => void
+  setOpen: (open: boolean, event?: Event) => void
 }
 
 describe("useClick", () => {
   let context: FloatingContext
   let referenceEl: HTMLElement
   let floatingEl: HTMLElement
-  let onOpenChangeMock: ReturnType<typeof vi.fn>
+  let setOpenMock: ReturnType<typeof vi.fn>
   let scope: ReturnType<typeof effectScope>
 
   // Helper to initialize useClick and wait for effects
@@ -39,7 +39,7 @@ describe("useClick", () => {
     floatingEl.id = "floating"
     floatingEl.textContent = "Content"
 
-    onOpenChangeMock = vi.fn()
+    setOpenMock = vi.fn()
 
     context = {
       refs: {
@@ -47,9 +47,9 @@ describe("useClick", () => {
         floating: ref(null),
       },
       open: ref(false),
-      onOpenChange: (v) => {
+      setOpen: (v) => {
         context.open.value = v
-        onOpenChangeMock(v)
+        setOpenMock(v)
       },
     }
 
@@ -82,14 +82,14 @@ describe("useClick", () => {
 
       // First click - opens
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
       expect(context.open.value).toBe(true)
 
       // Second click - closes
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(2)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledTimes(2)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
@@ -99,12 +99,12 @@ describe("useClick", () => {
 
       // First click - opens
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledExactlyOnceWith(true)
+      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
       expect(context.open.value).toBe(true)
 
-      // Second click - should stay open (no call to onOpenChange)
+      // Second click - should stay open (no call to setOpen)
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledOnce()
+      expect(setOpenMock).toHaveBeenCalledOnce()
       expect(context.open.value).toBe(true)
     })
   })
@@ -121,7 +121,7 @@ describe("useClick", () => {
       await userEvent.click(referenceEl)
 
       // Should remain closed
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)
 
       // Enable and test again
@@ -129,8 +129,8 @@ describe("useClick", () => {
       await nextTick() // Allow effect to re-run
 
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
       expect(context.open.value).toBe(true)
     })
 
@@ -140,9 +140,9 @@ describe("useClick", () => {
 
       // Click trigger - works
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
       expect(context.open.value).toBe(true)
-      onOpenChangeMock.mockClear() // Clear for next check
+      setOpenMock.mockClear() // Clear for next check
 
       // Disable
       enabled.value = false
@@ -150,7 +150,7 @@ describe("useClick", () => {
 
       // Click again - should not work
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true) // State remains unchanged
     })
   })
@@ -167,14 +167,14 @@ describe("useClick", () => {
 
       // Press Enter key - opens
       await userEvent.keyboard("{Enter}")
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
       expect(context.open.value).toBe(true)
 
       // Press Enter key again - closes
       await userEvent.keyboard("{Enter}")
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(2)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledTimes(2)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
@@ -188,14 +188,14 @@ describe("useClick", () => {
 
       // Press Space key - opens
       await userEvent.keyboard(" ")
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
       expect(context.open.value).toBe(true)
 
       // Press Space key again - closes
       await userEvent.keyboard(" ")
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(2)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      expect(setOpenMock).toHaveBeenCalledTimes(2)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
@@ -213,27 +213,27 @@ describe("useClick", () => {
       referenceEl.focus()
       await userEvent.keyboard(" ")
 
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)
     })
   })
 
   // --- Programmatic Control (Testing via context) ---
   describe("programmatic control", () => {
-    it("can be controlled via onOpenChange", () => {
+    it("can be controlled via setOpen", () => {
       initClick() // Initialize listeners
       expect(context.open.value).toBe(false)
 
       // Programmatically open
-      context.onOpenChange(true)
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(1)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(true) // No event passed
+      context.setOpen(true)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true) // No event passed
       expect(context.open.value).toBe(true)
 
       // Programmatically close
-      context.onOpenChange(false)
-      expect(onOpenChangeMock).toHaveBeenCalledTimes(2)
-      expect(onOpenChangeMock).toHaveBeenCalledWith(false)
+      context.setOpen(false)
+      expect(setOpenMock).toHaveBeenCalledTimes(2)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
   })
@@ -248,14 +248,14 @@ describe("useClick", () => {
       scope.stop()
       await nextTick() // Allow cleanup effects
 
-      // Try clicking - should not trigger onOpenChange
+      // Try clicking - should not trigger setOpen
       await userEvent.click(referenceEl)
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
 
       // Try keyboard - should not trigger
       referenceEl.focus()
       await userEvent.keyboard("{Enter}")
-      expect(onOpenChangeMock).not.toHaveBeenCalled()
+      expect(setOpenMock).not.toHaveBeenCalled()
     })
   })
 })

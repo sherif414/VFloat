@@ -20,7 +20,7 @@ import type { FloatingContext } from "../use-floating"
  * ```ts
  * const { getReferenceProps, getFloatingProps } = useDismiss({
  *   open: floating.open,
- *   onOpenChange: floating.onOpenChange,
+ *   setOpen: floating.setOpen,
  *   escapeKey: true,
  *   outsidePress: true
  * })
@@ -57,7 +57,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
 
     if (event.key === "Escape") {
       event.preventDefault()
-      context.onOpenChange(false)
+      context.setOpen(false)
     }
   }
 
@@ -83,7 +83,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
       if (typeof shouldBubble === "boolean" ? shouldBubble : shouldBubble?.outsidePress) {
         e.stopPropagation()
       }
-      context.onOpenChange(false)
+      context.setOpen(false)
       endedOrStartedInside = false
     },
     {
@@ -94,7 +94,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
 
   useEventListener(reference, referencePressEvent, () => {
     if (isEnabled.value && toValue(referencePress) && context.open.value) {
-      context.onOpenChange(false)
+      context.setOpen(false)
     }
   })
 
@@ -102,7 +102,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
     "scroll",
     () => {
       if (isEnabled.value && toValue(ancestorScroll) && context.open.value) {
-        context.onOpenChange(false)
+        context.setOpen(false)
       }
     },
     { passive: true }

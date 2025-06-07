@@ -1,206 +1,138 @@
-# `useFloating`
+# useFloating API
 
-The `useFloating` composable provides positioning for a floating element relative to an anchor element.
-
-This composable handles the positioning logic for floating elements (like tooltips, popovers, etc.) relative to their anchor elements. It uses Floating UI under the hood and provides reactive positioning data and styles.
-
-## Usage
-
-```ts
-import { useFloating } from '@/composables/use-floating'
-
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-
-const { floatingStyles, refs } = useFloating(anchorEl, floatingEl, {
-  placement: 'bottom',
-  strategy: 'absolute'
-})
-```
-
-## Type Definitions
-
-### `AnchorElement`
-
-Type for anchor element in floating UI.
-
-```ts
-type AnchorElement = HTMLElement | VirtualElement | null
-```
-
-### `FloatingElement`
-
-Type for floating element in floating UI.
-
-```ts
-type FloatingElement = HTMLElement | null
-```
-
-### `FloatingStyles`
-
-CSS styles for positioning floating elements.
-
-```ts
-interface FloatingStyles extends CSSProperties {
-  position: Strategy
-  top: string
-  left: string
-  transform?: string
-  "will-change"?: "transform"
-}
-```
-
-### `UseFloatingOptions`
-
-Options for configuring floating element behavior.
-
-```ts
-interface UseFloatingOptions {
-  /**
-   * Where to place the floating element relative to its anchor element.
-   * @default 'bottom'
-   */
-  placement?: MaybeRefOrGetter<Placement | undefined>
-  /**
-   * The type of CSS positioning to use.
-   * @default 'absolute'
-   */
-  strategy?: MaybeRefOrGetter<Strategy | undefined>
-  /**
-   * Whether to use CSS transform instead of top/left positioning.
-   * @default true
-   */
-  transform?: MaybeRefOrGetter<boolean | undefined>
-  /**
-   * Middlewares modify the positioning coordinates in some fashion, or provide useful data for the consumer to use.
-   */
-  middlewares?: Middleware[]
-  /**
-   * Function called when both the anchor and floating elements are mounted.
-   */
-  whileElementsMounted?: (
-    anchorEl: NonNullable<AnchorElement>,
-    floatingEl: NonNullable<FloatingElement>,
-    update: () => void
-  ) => undefined | (() => void)
-  /**
-   * Whether the floating element is open.
-   * @default false
-   */
-  open?: Ref<boolean>
-  /**
-   * Function called when the open state changes.
-   */
-  onOpenChange?: (open: boolean) => void
-  /**
-   * Root context for the floating element tree.
-   */
-  rootContext?: Partial<FloatingContext>
-}
-```
-
-### `FloatingContext`
-
-Context object returned by useFloating containing all necessary data and methods.
-
-```ts
-interface FloatingContext {
-  /**
-   * The x-coordinate of the floating element
-   */
-  x: Readonly<Ref<number>>
-  /**
-   * The y-coordinate of the floating element
-   */
-  y: Readonly<Ref<number>>
-  /**
-   * The strategy used for positioning
-   */
-  strategy: Readonly<Ref<Strategy>>
-  /**
-   * The placement of the floating element
-   */
-  placement: Readonly<Ref<Placement>>
-  /**
-   * Data from middleware for additional customization
-   */
-  middlewareData: Readonly<Ref<MiddlewareData>>
-  /**
-   * Whether the floating element has been positioned
-   */
-  isPositioned: Readonly<Ref<boolean>>
-  /**
-   * Computed styles to apply to the floating element
-   */
-  floatingStyles: ComputedRef<FloatingStyles>
-  /**
-   * Function to manually update the position
-   */
-  update: () => void
-  /**
-   * The refs object containing references to anchor and floating elements
-   */
-  refs: {
-    anchorEl: Ref<AnchorElement>
-    floatingEl: Ref<FloatingElement>
-  }
-  /**
-   * Whether the floating element is open
-   */
-  open: Readonly<Ref<boolean>>
-  /**
-   * Function to update the open state
-   */
-  onOpenChange: (open: boolean) => void
-}
-```
-
-## Functions
-
-### `useFloating(anchorEl, floatingEl, options)`
+## useFloating()
 
 Composable function that provides positioning for a floating element relative to an anchor element.
 
-```ts
-function useFloating(
-  anchorEl: Ref<AnchorElement>,
-  floatingEl: Ref<FloatingElement>,
-  options: UseFloatingOptions = {}
-): FloatingContext
-```
+- **Type:**
 
-#### Parameters
+  ```ts
+  function useFloating(
+    anchorEl: Ref<AnchorElement>,
+    floatingEl: Ref<FloatingElement>,
+    options?: UseFloatingOptions
+  ): FloatingContext
+  ```
 
-*   `anchorEl`: (`Ref<AnchorElement>`) The anchor element or a reactive reference to it.
-*   `floatingEl`: (`Ref<FloatingElement>`) The floating element or a reactive reference to it.
-*   `options`: (`UseFloatingOptions`, optional) Additional options for the floating behavior.
+- **Details:**
 
-#### Returns
+  This composable handles the core positioning logic for floating elements (like tooltips, popovers, and menus) relative to their anchor elements. It is a wrapper around the `@floating-ui/dom` library, providing reactive positioning data, computed styles, and lifecycle management within a Vue application. It returns a `FloatingContext` object with all the necessary state and methods.
 
-*   (`FloatingContext`) A `FloatingContext` object containing positioning data and methods.
+- **Example:**
 
-### `autoUpdate(anchorEl, floatingEl, update, options)`
+  ```vue
+  <script setup>
+  import { ref } from "vue"
+  import { useFloating } from "@/composables/useFloating"
 
-Auto-update function to use with `whileElementsMounted` option.
+  const anchorEl = ref(null)
+  const floatingEl = ref(null)
 
-This function provides automatic position updates for floating elements. It's a wrapper around Floating UI's autoUpdate function.
+  const { floatingStyles } = useFloating(anchorEl, floatingEl, {
+    placement: "top-start",
+    open: ref(true),
+  })
+  </script>
 
-```ts
-function autoUpdate(
-  anchorEl: HTMLElement,
-  floatingEl: HTMLElement,
-  update: () => void,
-  options: AutoUpdateOptions = {}
-): () => void
-```
+  <template>
+    <button ref="anchorEl">Anchor</button>
+    <div ref="floatingEl" :style="floatingStyles">Floating</div>
+  </template>
+  ```
 
-#### Parameters
+**See also:** [Guide - Core Concepts](/guide/concepts)
 
-*   `anchorEl`: (`HTMLElement`) The anchor element.
-*   `floatingEl`: (`HTMLElement`) The floating element.
-*   `update`: (`() => void`) The update function to call.
-*   `options`: (`AutoUpdateOptions`, optional) Additional options for auto-updating.
+## Types and Interfaces
 
-#### Returns
+### FloatingContext
 
-*   (`() => void`) A cleanup function to stop auto-updating.
+The context object returned by `useFloating` containing all necessary reactive data and methods.
+
+| Property         | Type                                                                  | Description                                                         |
+| :--------------- | :-------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| `x`              | `Readonly<Ref<number>>`                                               | The x-coordinate of the floating element.                           |
+| `y`              | `Readonly<Ref<number>>`                                               | The y-coordinate of the floating element.                           |
+| `strategy`       | `Readonly<Ref<Strategy>>`                                             | The positioning strategy (`'absolute'` or `'fixed'`).               |
+| `placement`      | `Readonly<Ref<Placement>>`                                            | The final placement of the floating element.                        |
+| `middlewareData` | `Readonly<Ref<MiddlewareData>>`                                       | Data provided by middleware functions.                              |
+| `isPositioned`   | `Readonly<Ref<boolean>>`                                              | Indicates if the floating element has been positioned.              |
+| `floatingStyles` | `ComputedRef<FloatingStyles>`                                         | Computed CSS styles to apply to the floating element.               |
+| `update`         | `() => void`                                                          | Function to manually update the floating element's position.        |
+| `refs`           | `{ anchorEl: Ref<AnchorElement>; floatingEl: Ref<FloatingElement>; }` | References to the anchor and floating DOM elements.                 |
+| `open`           | `Readonly<Ref<boolean>>`                                              | Reactive boolean indicating the open state of the floating element. |
+| `setOpen`        | `(open: boolean) => void`                                             | Callback function triggered when the open state changes.            |
+
+### UseFloatingOptions
+
+Options for configuring the behavior of the `useFloating` composable.
+
+| Property               | Type                                                          | Description                                                                                               |
+| :--------------------- | :------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------- |
+| `placement`            | `MaybeRefOrGetter<Placement>`                                 | Desired placement of the floating element (e.g., `'top-start'`, `'bottom'`).                              |
+| `strategy`             | `MaybeRefOrGetter<Strategy>`                                  | Positioning strategy: `'absolute'` or `'fixed'`.                                                          |
+| `transform`            | `MaybeRefOrGetter<boolean>`                                   | Whether to use CSS `transform` for positioning (improves performance).                                    |
+| `middlewares`          | `Middleware[]`                                                | An array of middleware functions to apply to the positioning.                                             |
+| `whileElementsMounted` | `(anchorEl: ..., floatingEl: ..., update: ...) => () => void` | Function called when elements are mounted, useful for setting up auto-update. Returns a cleanup function. |
+| `open`                 | `Ref<boolean>`                                                | A reactive boolean to control the open/closed state of the floating element.                              |
+| `setOpen`              | `(open: boolean) => void`                                     | Callback function invoked when the `open` state changes.                                                  |
+| `rootContext`          | `Partial<FloatingContext>`                                    | Partial `FloatingContext` for setting up a floating tree root.                                            |
+
+- **Example:**
+
+  ```ts
+  import { offset, shift } from "v-float"
+
+  const options: UseFloatingOptions = {
+    placement: "bottom-end",
+    strategy: "fixed",
+    open: ref(true),
+    // Add a 10px offset and enable shifting
+    middlewares: [offset(10), shift({ padding: 5 })],
+  }
+
+  const { floatingStyles } = useFloating(anchorEl, floatingEl, options)
+  ```
+
+### FloatingStyles
+
+An interface for the computed CSS styles object that positions the floating element.
+
+- **Type:**
+
+  ```ts
+  interface FloatingStyles extends CSSProperties {
+    position: Strategy
+    top: string
+    left: string
+    transform?: string
+    "will-change"?: "transform"
+  }
+  ```
+
+- **Details:**
+
+  This object is returned as a `ComputedRef` (`floatingStyles`) from `useFloating`. It contains the essential CSS properties (`position`, `top`, `left`, and optionally `transform`) that you should bind to your floating element's `style` attribute to position it correctly.
+
+### AnchorElement
+
+- **Type:**
+
+  ```ts
+  type AnchorElement = HTMLElement | VirtualElement | null
+  ```
+
+- **Details:**
+
+  Defines the type for the anchor element. This is the element that the floating element is positioned relative to. It can be a standard `HTMLElement`, a `VirtualElement` for custom positioning contexts, or `null`.
+
+### FloatingElement
+
+- **Type:**
+
+  ```ts
+  type FloatingElement = HTMLElement | null
+  ```
+
+- **Details:**
+
+  Defines the type for the floating element itself. This is the element that gets positioned (e.g., the tooltip or popover). It must be an `HTMLElement` or `null`.

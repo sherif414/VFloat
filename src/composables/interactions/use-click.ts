@@ -24,7 +24,7 @@ import type { FloatingContext } from "@/composables"
  * ```
  */
 export function useClick(context: FloatingContext, options: UseClickOptions = {}): void {
-  const { open, onOpenChange, refs } = context
+  const { open, setOpen, refs } = context
   const {
     enabled = true,
     event: eventOption = "click",
@@ -45,9 +45,9 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
   function handleOpenChange() {
     if (open.value) {
-      toValue(toggle) && onOpenChange(false)
+      toValue(toggle) && setOpen(false)
     } else {
-      onOpenChange(true)
+      setOpen(true)
     }
   }
 
@@ -211,7 +211,7 @@ export interface UseClickOptions {
   enabled?: MaybeRefOrGetter<boolean>
 
   /**
-   * The type of event to use to determine a “click” with mouse input.
+   * The type of event to use to determine a "click" with mouse input.
    * Keyboard clicks work as normal.
    * @default 'click'
    */

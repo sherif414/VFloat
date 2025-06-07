@@ -30,25 +30,24 @@ yarn add v-float
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useInteractions, useHover } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useHover } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
 // Set up the floating element
 const floating = useFloating(referenceRef, floatingRef, {
   placement: "top",
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Add hover interaction
 useHover(floating.context, {
   delay: { open: 100, close: 200 },
-});
-
+})
 </script>
 
 <template>

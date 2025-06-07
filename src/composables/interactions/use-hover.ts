@@ -150,7 +150,7 @@ function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
 export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
   const {
     open,
-    onOpenChange,
+    setOpen,
     refs: { anchorEl, floatingEl },
   } = context
   const {
@@ -170,10 +170,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
   const { hide, show, showDelay, clearTimeouts } = useDelayedOpen(
     () => {
-      open.value || onOpenChange(true)
+      open.value || setOpen(true)
     },
     () => {
-      open.value && onOpenChange(false)
+      open.value && setOpen(false)
     },
     { delay }
   )

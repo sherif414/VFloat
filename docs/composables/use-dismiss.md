@@ -6,32 +6,29 @@ The `useDismiss` composable provides ways to dismiss or close floating elements 
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useInteractions, useClick, useDismiss } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useClick, useDismiss } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
-const isOpen = ref(false);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create click interaction to open
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 
 // Add dismiss behavior
 const dismiss = useDismiss(floating.context, {
   outsidePress: true, // Close when clicking outside
   escapeKey: true, // Close when pressing Escape
-});
+})
 
 // Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss])
 </script>
 
 <template>
@@ -68,9 +65,9 @@ function useDismiss(
   context: FloatingContext,
   options?: UseDismissOptions
 ): {
-  getReferenceProps: (userProps?: object) => object;
-  getFloatingProps: (userProps?: object) => object;
-};
+  getReferenceProps: (userProps?: object) => object
+  getFloatingProps: (userProps?: object) => object
+}
 ```
 
 | Parameter | Type              | Description                                  |
@@ -114,28 +111,28 @@ The `outsidePress` option determines whether clicking outside the floating eleme
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useDismiss } from "v-float";
+import { useFloating, useInteractions, useDismiss } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Basic outside press closing
 const dismiss = useDismiss(floating.context, {
   outsidePress: true,
-});
+})
 
 // Or use a custom function to determine if a click should close
 const customDismiss = useDismiss(floating.context, {
   outsidePress: (event) => {
     // Don't close when clicking elements with a specific class
     if (event.target.closest(".no-dismiss")) {
-      return false;
+      return false
     }
-    return true;
+    return true
   },
-});
+})
 </script>
 ```
 
@@ -146,7 +143,7 @@ You can also control which event triggers the outside press behavior:
 const dismiss = useDismiss(floating.context, {
   outsidePress: true,
   outsidePressEvent: "mouseup", // 'mousedown', 'mouseup', or 'click'
-});
+})
 </script>
 ```
 
@@ -158,12 +155,12 @@ The `escapeKey` option determines whether pressing the Escape key will close the
 <script setup>
 const dismiss = useDismiss(floating.context, {
   escapeKey: true, // Default is true
-});
+})
 
 // Disable escape key dismissal
 const dismissNoEscape = useDismiss(floating.context, {
   escapeKey: false,
-});
+})
 </script>
 ```
 
@@ -177,7 +174,7 @@ The `referencePress` option determines whether clicking the reference element wh
 const dismiss = useDismiss(floating.context, {
   referencePress: true, // Default is false
   referencePressEvent: "click", // Default is 'mousedown'
-});
+})
 </script>
 ```
 
@@ -192,7 +189,7 @@ The `ancestorScroll` option determines whether scrolling a parent element will c
 // Close when scrolling a parent element
 const dismiss = useDismiss(floating.context, {
   ancestorScroll: true, // Default is false
-});
+})
 </script>
 ```
 
@@ -204,29 +201,29 @@ You can conditionally enable or disable the dismiss behavior:
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useDismiss } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useDismiss } from "v-float"
 
 // Control whether dismiss is enabled
-const dismissEnabled = ref(true);
+const dismissEnabled = ref(true)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Use reactive enabled option
 const dismiss = useDismiss(floating.context, {
   enabled: dismissEnabled,
-});
+})
 
 // Later you can update this
 function disableDismiss() {
-  dismissEnabled.value = false;
+  dismissEnabled.value = false
 }
 
 function enableDismiss() {
-  dismissEnabled.value = true;
+  dismissEnabled.value = true
 }
 </script>
 ```
@@ -237,33 +234,23 @@ function enableDismiss() {
 
 ```vue
 <script setup>
-import {
-  useFloating,
-  useInteractions,
-  useClick,
-  useDismiss,
-  useRole,
-} from "v-float";
+import { useFloating, useInteractions, useClick, useDismiss, useRole } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create interaction handlers
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 const dismiss = useDismiss(floating.context, {
   outsidePress: true,
   escapeKey: true,
-});
-const role = useRole(floating.context, { role: "dialog" });
+})
+const role = useRole(floating.context, { role: "dialog" })
 
 // Combine them all
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
 </script>
 ```
 
@@ -271,7 +258,7 @@ const { getReferenceProps, getFloatingProps } = useInteractions([
 
 ```vue
 <script setup>
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useInteractions,
@@ -281,21 +268,21 @@ import {
   offset,
   flip,
   shift,
-} from "v-float";
+} from "v-float"
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   placement: "bottom",
   middleware: [offset(10), flip(), shift({ padding: 5 })],
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Click to open
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 
 // Custom dismiss behavior
 const dismiss = useDismiss(floating.context, {
@@ -306,9 +293,9 @@ const dismiss = useDismiss(floating.context, {
   outsidePress: (event) => {
     // Don't close when clicking elements with this class
     if (event.target.closest(".ignore-dismiss")) {
-      return false;
+      return false
     }
-    return true;
+    return true
   },
 
   // Don't close when clicking reference element
@@ -316,17 +303,13 @@ const dismiss = useDismiss(floating.context, {
 
   // Close when scrolling
   ancestorScroll: true,
-});
+})
 
 // Set ARIA attributes
-const role = useRole(floating.context, { role: "dialog" });
+const role = useRole(floating.context, { role: "dialog" })
 
 // Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
 </script>
 
 <template>
@@ -351,9 +334,7 @@ const { getReferenceProps, getFloatingProps } = useInteractions([
         <p>Press Escape, scroll, or click outside to close.</p>
 
         <!-- This button won't dismiss the popover when clicked -->
-        <button class="ignore-dismiss">
-          Clicking me won't close the popover
-        </button>
+        <button class="ignore-dismiss">Clicking me won't close the popover</button>
       </div>
     </div>
 
@@ -415,7 +396,7 @@ For modal dialogs where you want more controlled dismissal behavior:
 
 ```vue
 <script setup>
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useInteractions,
@@ -424,32 +405,32 @@ import {
   useRole,
   FloatingFocusManager,
   FloatingOverlay,
-} from "v-float";
+} from "v-float"
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
-const confirmationShown = ref(false);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const isOpen = ref(false)
+const confirmationShown = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: handleOpenChange,
-});
+  setOpen: handleOpenChange,
+})
 
 // Function to handle open state changes
 function handleOpenChange(open) {
   // If trying to close and confirmation is needed
   if (!open && !confirmationShown.value) {
-    confirmationShown.value = true;
-    return; // Don't close yet
+    confirmationShown.value = true
+    return // Don't close yet
   }
 
   // Otherwise update the open state
-  isOpen.value = open;
+  isOpen.value = open
 
   // Reset confirmation state when fully closed
   if (!open) {
-    confirmationShown.value = false;
+    confirmationShown.value = false
   }
 }
 
@@ -458,46 +439,42 @@ function handleDismiss(event) {
   // Only allow Escape key to show confirmation
   if (event.type === "keydown" && event.key === "Escape") {
     if (!confirmationShown.value) {
-      confirmationShown.value = true;
-      return false; // Prevent immediate closing
+      confirmationShown.value = true
+      return false // Prevent immediate closing
     }
   }
 
   // Prevent outside clicks from dismissing
   if (event.type.includes("mouse")) {
-    return false;
+    return false
   }
 
-  return true;
+  return true
 }
 
 // Click to open
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 
 // Custom dismiss behavior
 const dismiss = useDismiss(floating.context, {
   escapeKey: true,
   outsidePress: handleDismiss,
-});
+})
 
 // Set ARIA attributes
-const role = useRole(floating.context, { role: "dialog" });
+const role = useRole(floating.context, { role: "dialog" })
 
 // Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
 
 // Handle confirmation
 function confirmClose() {
-  isOpen.value = false;
-  confirmationShown.value = false;
+  isOpen.value = false
+  confirmationShown.value = false
 }
 
 function cancelClose() {
-  confirmationShown.value = false;
+  confirmationShown.value = false
 }
 </script>
 
@@ -516,9 +493,7 @@ function cancelClose() {
       >
         <div class="modal-header">
           <h2 id="modal-title">Important Form</h2>
-          <button @click="confirmationShown = true" class="close-button">
-            ×
-          </button>
+          <button @click="confirmationShown = true" class="close-button">×</button>
         </div>
 
         <div class="modal-body" v-if="!confirmationShown">
@@ -538,17 +513,10 @@ function cancelClose() {
 
         <!-- Confirmation dialog -->
         <div v-if="confirmationShown" class="confirmation">
-          <p>
-            Are you sure you want to close this form? Any unsaved changes will
-            be lost.
-          </p>
+          <p>Are you sure you want to close this form? Any unsaved changes will be lost.</p>
           <div class="button-group">
-            <button @click="cancelClose" class="cancel-button">
-              No, keep editing
-            </button>
-            <button @click="confirmClose" class="confirm-button">
-              Yes, close
-            </button>
+            <button @click="cancelClose" class="cancel-button">No, keep editing</button>
+            <button @click="confirmClose" class="confirm-button">Yes, close</button>
           </div>
         </div>
       </div>

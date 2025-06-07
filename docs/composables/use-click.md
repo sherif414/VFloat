@@ -6,26 +6,22 @@ The `useClick` composable enables click-based interactions for floating elements
 
 ```vue twoslash
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useClick } from "v-float";
+import { ref } from "vue"
+import { useFloating, useClick } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null);
-const floatingRef = ref<HTMLElement | null>(null);
+const referenceRef = ref<HTMLElement | null>(null)
+const floatingRef = ref<HTMLElement | null>(null)
 
-const context = useFloating(referenceRef, floatingRef);
+const context = useFloating(referenceRef, floatingRef)
 
 // Create click interaction
-useClick(context);
+useClick(context)
 </script>
 
 <template>
   <button ref="referenceRef">Click Me</button>
 
-  <div
-    v-if="context.open.value"
-    ref="floatingRef"
-    :style="{...context.floatingStyles}"
-  >
+  <div v-if="context.open.value" ref="floatingRef" :style="{ ...context.floatingStyles }">
     This element appears when the button is clicked
   </div>
 </template>
@@ -40,8 +36,8 @@ function useClick(
   context: FloatingContext,
   options?: UseClickOptions
 ): {
-  getReferenceProps: (userProps?: object) => object;
-};
+  getReferenceProps: (userProps?: object) => object
+}
 ```
 
 | Parameter | Type            | Description                                  |
@@ -81,19 +77,19 @@ By default, `useClick` uses the 'click' event, but you can change it to 'mousedo
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float";
+import { useFloating, useInteractions, useClick } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Trigger on mousedown instead of click
 const click = useClick(floating.context, {
   event: "mousedown",
-});
+})
 
-const { getReferenceProps, getFloatingProps } = useInteractions([click]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click])
 </script>
 ```
 
@@ -105,17 +101,17 @@ By default, clicking the reference element toggles the floating element (showing
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float";
+import { useFloating, useInteractions, useClick } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Disable toggle behavior (clicking again won't close)
 const click = useClick(floating.context, {
   toggle: false,
-});
+})
 </script>
 ```
 
@@ -127,17 +123,17 @@ For touch interfaces, you might want to handle touch events differently from mou
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float";
+import { useFloating, useInteractions, useClick } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Ignore mouse clicks (only keyboard or programmatic opening)
 const click = useClick(floating.context, {
   ignoreMouse: true,
-});
+})
 </script>
 ```
 
@@ -149,17 +145,17 @@ By default, `useClick` also handles keyboard events (`Enter` and `Space` keys) o
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float";
+import { useFloating, useInteractions, useClick } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Disable keyboard handling
 const click = useClick(floating.context, {
   keyboardHandlers: false,
-});
+})
 </script>
 ```
 
@@ -171,29 +167,29 @@ You can conditionally enable or disable the click interaction:
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating, useInteractions, useClick } from "v-float";
+import { ref } from "vue"
+import { useFloating, useInteractions, useClick } from "v-float"
 
 // Control whether click interaction is enabled
-const clickEnabled = ref(true);
+const clickEnabled = ref(true)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Use reactive enabled option
 const click = useClick(floating.context, {
   enabled: clickEnabled,
-});
+})
 
 // Later you can update this
 function disableClick() {
-  clickEnabled.value = false;
+  clickEnabled.value = false
 }
 
 function enableClick() {
-  clickEnabled.value = true;
+  clickEnabled.value = true
 }
 </script>
 ```
@@ -204,34 +200,24 @@ function enableClick() {
 
 ```vue
 <script setup>
-import {
-  useFloating,
-  useInteractions,
-  useClick,
-  useDismiss,
-  useRole,
-} from "v-float";
+import { useFloating, useInteractions, useClick, useDismiss, useRole } from "v-float"
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Create interaction handlers
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 const dismiss = useDismiss(floating.context, {
   outsidePress: true, // Close when clicking outside
-});
+})
 const role = useRole(floating.context, {
   role: "dialog", // Set ARIA role
-});
+})
 
 // Combine them all
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
 </script>
 ```
 
@@ -241,7 +227,7 @@ This creates a dialog that opens when the reference element is clicked, closes w
 
 ```vue
 <script setup>
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useInteractions,
@@ -252,49 +238,49 @@ import {
   offset,
   flip,
   shift,
-} from "v-float";
+} from "v-float"
 
 const items = [
   { label: "Edit", action: () => console.log("Edit clicked") },
   { label: "Duplicate", action: () => console.log("Duplicate clicked") },
   { label: "Delete", action: () => console.log("Delete clicked") },
   { label: "Export", action: () => console.log("Export clicked") },
-];
+]
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const listRef = ref([]);
-const isOpen = ref(false);
-const activeIndex = ref(null);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const listRef = ref([])
+const isOpen = ref(false)
+const activeIndex = ref(null)
 
 const floating = useFloating(referenceRef, floatingRef, {
   placement: "bottom-start",
   middleware: [offset(5), flip(), shift({ padding: 5 })],
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Click to open the dropdown
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 
 // Close when clicking outside or pressing escape
 const dismiss = useDismiss(floating.context, {
   outsidePress: true,
   escapeKey: true,
-});
+})
 
 // Set ARIA attributes
-const role = useRole(floating.context, { role: "menu" });
+const role = useRole(floating.context, { role: "menu" })
 
 // Handle keyboard navigation
 const listNav = useListNavigation(floating.context, {
   listRef,
   activeIndex,
   onNavigate: (index) => {
-    activeIndex.value = index;
+    activeIndex.value = index
   },
   loop: true,
-});
+})
 
 // Combine interactions
 const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([
@@ -302,19 +288,19 @@ const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([
   dismiss,
   role,
   listNav,
-]);
+])
 
 // Track item elements for list navigation
 function collectItem(el) {
   if (el && !listRef.value.includes(el)) {
-    listRef.value.push(el);
+    listRef.value.push(el)
   }
 }
 
 // Execute action when item is clicked
 function selectItem(index) {
-  items[index].action();
-  isOpen.value = false;
+  items[index].action()
+  isOpen.value = false
 }
 </script>
 
@@ -399,7 +385,7 @@ function selectItem(index) {
 
 ```vue
 <script setup>
-import { ref } from "vue";
+import { ref } from "vue"
 import {
   useFloating,
   useInteractions,
@@ -408,43 +394,35 @@ import {
   useRole,
   FloatingFocusManager,
   FloatingOverlay,
-} from "v-float";
+} from "v-float"
 
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const isOpen = ref(false);
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+const isOpen = ref(false)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Click to open the modal
-const click = useClick(floating.context);
+const click = useClick(floating.context)
 
 // Close when pressing escape (but not when clicking outside)
 const dismiss = useDismiss(floating.context, {
   outsidePress: false,
   escapeKey: true,
-});
+})
 
 // Set ARIA attributes for accessibility
-const role = useRole(floating.context, { role: "dialog" });
+const role = useRole(floating.context, { role: "dialog" })
 
 // Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([
-  click,
-  dismiss,
-  role,
-]);
+const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
 </script>
 
 <template>
-  <button
-    ref="referenceRef"
-    v-bind="getReferenceProps()"
-    class="open-modal-button"
-  >
+  <button ref="referenceRef" v-bind="getReferenceProps()" class="open-modal-button">
     Open Modal
   </button>
 
@@ -465,17 +443,12 @@ const { getReferenceProps, getFloatingProps } = useInteractions([
 
         <div class="modal-body">
           <p>This is a modal dialog that appears when you click the button.</p>
-          <p>
-            It traps focus inside the modal and has proper ARIA attributes for
-            accessibility.
-          </p>
+          <p>It traps focus inside the modal and has proper ARIA attributes for accessibility.</p>
         </div>
 
         <div class="modal-footer">
           <button @click="isOpen = false" class="cancel-button">Cancel</button>
-          <button @click="isOpen = false" class="confirm-button">
-            Confirm
-          </button>
+          <button @click="isOpen = false" class="confirm-button">Confirm</button>
         </div>
       </div>
     </FloatingFocusManager>

@@ -20,13 +20,13 @@ V-Float's positioning is based on two key elements:
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating } from "v-float";
+import { ref } from "vue"
+import { useFloating } from "v-float"
 
-const anchorEl = ref(null); // Reference to the anchor element
-const floatingEl = ref(null);  // Reference to the floating element
+const anchorEl = ref(null) // Reference to the anchor element
+const floatingEl = ref(null) // Reference to the floating element
 
-const floating = useFloating(anchorEl, floatingEl);
+const floating = useFloating(anchorEl, floatingEl)
 </script>
 
 <template>
@@ -45,7 +45,7 @@ The placement determines where the floating element appears relative to the anch
 ```js
 const floating = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start", // Position at the bottom, aligned to the start
-});
+})
 ```
 
 ## Arrow Middleware
@@ -62,18 +62,16 @@ V-Float provides an arrow middleware to position an arrow element pointing to th
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFloating, arrow as useArrow } from "v-float";
+import { ref } from "vue"
+import { useFloating, arrow as useArrow } from "v-float"
 
-const anchorEl = ref(null);
-const floatingEl = ref(null);
-const arrowRef = ref(null);
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+const arrowRef = ref(null)
 
 const floating = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    useArrow({ element: arrowRef })
-  ]
-});
+  middleware: [useArrow({ element: arrowRef })],
+})
 </script>
 ```
 
@@ -82,12 +80,12 @@ const floating = useFloating(anchorEl, floatingEl, {
 V-Float manages the position state of floating elements. You can control the visibility of the floating element using Vue's reactivity system:
 
 ```js
-const isOpen = ref(false);
+const isOpen = ref(false)
 
 const floating = useFloating(anchorEl, floatingEl, {
   open: isOpen, // Control open state
-  onOpenChange: (open) => (isOpen.value = open), // React to state changes
-});
+  setOpen: (open) => (isOpen.value = open), // React to state changes
+})
 ```
 
 ## Interaction Composable
@@ -96,32 +94,28 @@ V-Float provides composables for common interaction patterns. Here's an example 
 
 ```vue
 <template>
-  <button ref="anchorEl">
-    Hover me
-  </button>
-  <div v-if="isOpen" ref="floatingEl" :style="floating.floatingStyles">
-    Tooltip content
-  </div>
+  <button ref="anchorEl">Hover me</button>
+  <div v-if="isOpen" ref="floatingEl" :style="floating.floatingStyles">Tooltip content</div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFloating, useHover } from "v-float";
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
 
-const anchorEl = ref(null);
-const floatingEl = ref(null);
-const isOpen = ref(false);
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+const isOpen = ref(false)
 
 useFloating(anchorEl, floatingEl, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 
 // Setup hover interaction
 useHover(anchorEl, floatingEl, {
   open: isOpen,
-  onOpenChange: (value) => (isOpen.value = value),
-});
+  setOpen: (value) => (isOpen.value = value),
+})
 </script>
 ```
 

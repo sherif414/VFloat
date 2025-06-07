@@ -100,7 +100,7 @@ export interface UseFloatingOptions {
   /**
    * Function called when the open state changes.
    */
-  onOpenChange?: (open: boolean) => void
+  setOpen?: (open: boolean) => void
 
   /**
    * Root context for the floating element tree.
@@ -168,7 +168,7 @@ export interface FloatingContext {
   /**
    * Function to update the open state
    */
-  onOpenChange: (open: boolean) => void
+  setOpen: (open: boolean) => void
 }
 
 //=======================================================================================
@@ -207,7 +207,7 @@ export function useFloating(
     middlewares,
     whileElementsMounted,
     open = ref(false),
-    onOpenChange = (value: boolean) => {
+    setOpen = (value: boolean) => {
       open.value = value
     },
   } = options
@@ -318,7 +318,7 @@ export function useFloating(
       floatingEl: floatingEl,
     },
     open,
-    onOpenChange,
+    setOpen,
   }
 }
 

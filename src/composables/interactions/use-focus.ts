@@ -26,7 +26,7 @@ import { type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } fro
 export function useFocus(context: FloatingContext, options: UseFocusOptions = {}): UseFocusReturn {
   const {
     open,
-    onOpenChange,
+    setOpen,
     refs: { floatingEl, anchorEl },
   } = context
 
@@ -65,14 +65,14 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
       !toValue(requireFocusVisible) ||
       (target instanceof Element && target.matches(":focus-visible"))
     ) {
-      onOpenChange(true)
+      setOpen(true)
     }
   }
 
   function onBlur(event: FocusEvent): void {
     // If the floating element doesn't exist, close immediately.
     if (!floatingEl.value) {
-      onOpenChange(false)
+      setOpen(false)
       return
     }
 
@@ -86,7 +86,7 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
     }
 
     // Otherwise, close the floating element.
-    onOpenChange(false)
+    setOpen(false)
   }
 
   watchPostEffect(() => {
