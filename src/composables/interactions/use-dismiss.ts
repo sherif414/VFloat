@@ -121,9 +121,11 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
 // 📌 Utilities
 //=======================================================================================
 
+// TODO: find a usage for it
 /**
  * Gets all scroll ancestor elements for a given element
  */
+// biome-ignore lint/correctness/noUnusedVariables: will be used later
 function scrollAncestors(element: Element): Element[] {
   const result: Element[] = []
 
