@@ -64,7 +64,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
   useEventListener(document, "keydown", dismissOnEscapeKeyDown)
 
   onClickOutside(
-    context.refs.floatingEl.value,
+    context.refs.floatingEl,
     (e: PointerEvent) => {
       if (!isEnabled.value || !toValue(outsidePress) || !context.open.value) {
         return
