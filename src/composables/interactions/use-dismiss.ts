@@ -10,15 +10,15 @@ import type { FloatingContext } from "../use-floating"
  * Enables dismissing the floating element
  *
  * This composable provides event handlers for dismissal behaviors including
- * outside clicks, escape key press, reference press, and ancestor scroll.
+ * outside clicks, escape key press, anchor press, and ancestor scroll.
  *
  * @param context - The floating context with open state and change handler
  * @param options - Configuration options for dismissal behavior
- * @returns Event handler props for reference and floating elements
+ * @returns Event handler props for anchor and floating elements
  *
  * @example
  * ```ts
- * const { getReferenceProps, getFloatingProps } = useDismiss({
+ * useDismiss({
  *   open: floating.open,
  *   setOpen: floating.setOpen,
  *   escapeKey: true,
@@ -31,15 +31,15 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
     enabled = true,
     escapeKey = true,
     outsidePress = true,
-    referencePress = false,
+    anchorPress = false,
     ancestorScroll = false,
     bubbles,
     capture = true,
-    referencePressEvent = "pointerdown",
+    anchorPressEvent = "pointerdown",
     outsidePressEvent = "pointerdown",
   } = options
 
-  const reference = computed(() =>
+  const anchorEl = computed(() =>
     context.refs.anchorEl.value instanceof HTMLElement ? context.refs.anchorEl.value : null
   )
   const isEnabled = computed(() => toValue(enabled))
@@ -87,13 +87,13 @@ export function useDismiss(context: FloatingContext, options: UseDismissOptions 
       endedOrStartedInside = false
     },
     {
-      ignore: [reference],
+      ignore: [anchorEl],
       capture: typeof capture === "boolean" ? capture : capture.outsidePress,
     }
   )
 
-  useEventListener(reference, referencePressEvent, () => {
-    if (isEnabled.value && toValue(referencePress) && context.open.value) {
+  useEventListener(anchorEl, anchorPressEvent, () => {
+    if (isEnabled.value && toValue(anchorPress) && context.open.value) {
       context.setOpen(false)
     }
   })
@@ -250,13 +250,13 @@ export interface UseDismissOptions {
   escapeKey?: MaybeRefOrGetter<boolean>
 
   /**
-   * Whether to dismiss when the reference element is pressed
+   * Whether to dismiss when the anchor element is pressed
    * @default false
    */
-  referencePress?: MaybeRefOrGetter<boolean>
+  anchorPress?: MaybeRefOrGetter<boolean>
 
   /**
-   * Whether to dismiss when clicking outside the floating element
+   * Whether to dismiss when clicking outside the floating and anchor element
    * @default true
    */
   outsidePress?: MaybeRefOrGetter<boolean>
@@ -279,10 +279,11 @@ export interface UseDismissOptions {
   capture?: boolean | { escapeKey?: boolean; outsidePress?: boolean }
 
   /**
-   * The event name to use for reference press
+   /**
+    * The event name to use for anchor press
    * @default 'pointerdown'
    */
-  referencePressEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+  anchorPressEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
 
   /**
    * The event name to use for outside press
