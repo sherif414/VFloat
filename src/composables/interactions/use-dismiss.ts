@@ -2,6 +2,8 @@ import { getOverflowAncestors } from "@floating-ui/dom"
 import { useEventListener } from "@vueuse/core"
 import { type MaybeRefOrGetter, computed, onScopeDispose, toValue, watchEffect } from "vue"
 import type { FloatingContext } from "../use-floating"
+import { useComposition } from "../utils/use-composition"
+import { isClickOnScrollbar, isEventTargetWithin, isHTMLElement, normalizeProp } from "../utils/dom"
 
 //=======================================================================================
 // 📌 Types
@@ -179,10 +181,10 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
     }
 
     const ancestors: HTMLElement[] = []
-    if (anchorEl.value instanceof HTMLElement) {
+    if (anchorEl.value) {
       ancestors.push(...getOverflowAncestors(anchorEl.value).filter(isHTMLElement))
     }
-    if (floatingEl.value instanceof HTMLElement) {
+    if (floatingEl.value) {
       ancestors.push(...getOverflowAncestors(floatingEl.value).filter(isHTMLElement))
     }
 
@@ -222,83 +224,4 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
     },
     { capture: true }
   )
-}
-
-//=======================================================================================
-// 📌 Utilities
-//=======================================================================================
-
-function normalizeProp(normalizable?: boolean | { escapeKey?: boolean; outsidePress?: boolean }) {
-  return {
-    escapeKey:
-      typeof normalizable === "boolean" ? normalizable : (normalizable?.escapeKey ?? false),
-    outsidePress:
-      typeof normalizable === "boolean" ? normalizable : (normalizable?.outsidePress ?? true),
-  }
-}
-
-function isHTMLElement(node: unknown | null): node is HTMLElement {
-  return node instanceof Element && node instanceof HTMLElement
-}
-
-function isEventTargetWithin(event: Event, element: Element | null | undefined): boolean {
-  if (!element) return false
-
-  // Modern, Shadow DOM-aware approach
-  if ("composedPath" in event && typeof event.composedPath === "function") {
-    return (event.composedPath() as Node[]).includes(element)
-  }
-
-  // Fallback for older browsers or environments where target is all we have
-  const target = event.target as Node | null
-  if (!target) return false
-
-  return element.contains(target)
-}
-
-function useComposition() {
-  let isComposing = false
-  let compositionTimeout: number | undefined
-
-  useEventListener(document, "compositionstart", () => {
-    window.clearTimeout(compositionTimeout)
-    isComposing = true
-  })
-
-  useEventListener(document, "compositionend", () => {
-    compositionTimeout = window.setTimeout(() => {
-      isComposing = false
-    }, 50)
-  })
-
-  onScopeDispose(() => {
-    window.clearTimeout(compositionTimeout)
-  })
-
-  return { isComposing: () => isComposing }
-}
-
-function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
-  const style = window.getComputedStyle(target)
-  const scrollRe = /auto|scroll|overlay/
-  const isScrollableX = scrollRe.test(style.overflowX)
-  const isScrollableY = scrollRe.test(style.overflowY)
-
-  const canScrollX = isScrollableX && target.scrollWidth > target.clientWidth
-  const canScrollY = isScrollableY && target.scrollHeight > target.clientHeight
-
-  if (!canScrollX && !canScrollY) return false
-
-  const { clientX, clientY } = event
-  const { top, left, width, height } = target.getBoundingClientRect()
-  const isRTL = style.direction === "rtl"
-
-  const scrollbarWidth = 17 // A reasonable approximation
-
-  const pressedVerticalScrollbar =
-    canScrollY &&
-    (isRTL ? clientX < left + scrollbarWidth : clientX > left + width - scrollbarWidth)
-  const pressedHorizontalScrollbar = canScrollY && clientY > top + height - scrollbarWidth
-
-  return pressedVerticalScrollbar || pressedHorizontalScrollbar
 }
