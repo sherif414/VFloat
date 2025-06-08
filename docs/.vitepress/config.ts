@@ -4,6 +4,9 @@ import { transformerTwoslash } from "@shikijs/vitepress-twoslash"
 import unocss from "unocss/vite"
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  head: [
+    ['meta', { name: 'algolia-site-verification', content: '3A8199582DC4CB2E' }]
+  ],
   markdown: {
     config(md) {
       md.use(containerPreview)
@@ -13,10 +16,13 @@ export default defineConfig({
     languages: ["js", "ts"],
   },
   title: "V-Float",
-  description: "Vue 3 port of Floating UI - a library for positioning floating elements",
+  description: "A library for positioning floating elements",
   themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
-    logo: "/logo.svg",
+    algolia: {
+      appId: 'YOUR_ALGOLIA_APP_ID',
+      apiKey: 'YOUR_ALGOLIA_API_KEY',
+      indexName: 'YOUR_ALGOLIA_INDEX_NAME',
+    },
     nav: [
       { text: "Home", link: "/" },
       { text: "Guide", link: "/guide/" },
@@ -91,7 +97,7 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [{ icon: "github", link: "https://github.com/sherif414/v-float" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/sherif414/VFloat" }],
 
     footer: {
       message: "Released under the MIT License.",
