@@ -2,7 +2,7 @@
 description: The core composable for positioning floating elements using Floating UI
 ---
 
-# useFloating: Your UI Positioning Swiss Army Knife 🛠️
+# useFloating: Your UI Positioning Swiss Army Knife
 
 Picture this: you're building a modern web app with tooltips that elegantly follow your cursor, popovers that snap to
 their triggers, and dropdowns that always land in the perfect spot—no matter how the page shifts or resizes. Behind the
@@ -70,34 +70,11 @@ demo-preview=../demos/use-floating/PlacementDemo.vue
 
 `useFloating` works seamlessly with other V-Float composables:
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useHover, useFocus, useInteractions } from "@/composables"
-import { offset, flip, shift } from "@floating-ui/dom"
+:::preview
 
-const anchorEl = ref<HTMLElement>()
-const floatingEl = ref<HTMLElement>()
+demo-preview=../demos/use-floating/Interaction.vue
 
-// Core positioning
-const context = useFloating(anchorEl, floatingEl, {
-  placement: "top",
-  middlewares: [offset(8), flip(), shift()],
-})
-
-// Interactions
-const hover = useHover(context, { delay: { open: 100, close: 200 } })
-const focus = useFocus(context)
-</script>
-
-<template>
-  <button ref="anchorEl">Hover or focus me</button>
-
-  <div ref="floatingEl" :style="context.floatingStyles.value" v-if="context.open.value">
-    Interactive tooltip with hover and focus
-  </div>
-</template>
-```
+:::
 
 ## API Reference
 
@@ -168,17 +145,6 @@ Options for configuring the behavior of the `useFloating` composable.
 | `open`                 | `Ref<boolean>`                                                | A reactive boolean to control the open/closed state of the floating element.                                                         |
 | `setOpen`              | `(open: boolean) => void`                                     | Function to control the open state of the floating element. If not provided, a default function is used that updates the `open` ref. |
 
-- **Example:**
-
-  ```ts
-  const context = useFloating(anchorEl, floatingEl, {
-    placement: "bottom-end",
-    strategy: "fixed",
-    open: ref(true),
-    middlewares: [offset(10), shift({ padding: 5 })],
-  })
-  ```
-
 ---
 
 ### FloatingContext
@@ -198,6 +164,8 @@ The context object returned by `useFloating` containing all necessary reactive d
 | `refs`           | `{ anchorEl: Ref<AnchorElement>; floatingEl: Ref<FloatingElement>; }` | References to the anchor and floating DOM elements.                 |
 | `open`           | `Readonly<Ref<boolean>>`                                              | Reactive boolean indicating the open state of the floating element. |
 | `setOpen`        | `(open: boolean) => void`                                             | Function to explicitly set the open state of the floating element.  |
+
+---
 
 ### FloatingStyles
 
