@@ -2,26 +2,17 @@
 
 To make the most of `useFloatingTree`, we recommend you're familiar with:
 
-*   **Vue 3 Composition API:** A good understanding is crucial, as `useFloatingTree` is built as a composable function.
-*   **The `useFloating` Composable:** Solid experience with the basic `useFloating` hook for positioning single floating elements is necessary. `useFloatingTree` orchestrates multiple `FloatingContext` instances, which are the output of `useFloating`.
-*   **Basic Tree Concepts (Helpful):** Familiarity with terms like nodes, parent-child relationships, and hierarchical structures will make it easier to understand how `useFloatingTree` manages interconnected UI elements.
+- **Vue 3 Composition API:** A good understanding is crucial, as `useFloatingTree` is built as a composable function.
+- **The `useFloating` Composable:** Solid experience with the basic `useFloating` hook for positioning single floating elements is necessary. `useFloatingTree` orchestrates multiple `FloatingContext` instances, which are the output of `useFloating`.
+- **Basic Tree Concepts (Helpful):** Familiarity with terms like nodes, parent-child relationships, and hierarchical structures will make it easier to understand how `useFloatingTree` manages interconnected UI elements.
 
-## Orchestrating Your Floating UI Kingdom 👑
+## Orchestrating Your Floating UI Kingdom
 
 While `useFloating` is excellent for positioning a single floating element, complex UI patterns often involve multiple connected floating elements. Without a tree structure, managing interactions like closing all child popovers when a parent closes, or ensuring only the topmost element is active, becomes cumbersome.
 
 Enter `useFloatingTree` – your maestro for conducting an orchestra of hierarchical floating UI elements!
 
-### Overview: Why `useFloatingTree`?
-
-`useFloatingTree` provides a robust context system and a set of powerful tools to manage floating elements that need to be aware of each other in a parent-child hierarchy. It's designed for scenarios where simple, isolated floating elements aren't enough, and you need coordination, context sharing, and complex relationship management.
-
-Think of it as the central nervous system for your dynamic, layered UIs. It ensures that:
-
-- Parent elements maintain awareness of their child relationships.
-- Elements can intelligently manage their sibling states.
-- Elements understand their position in the overall hierarchy.
-- Complex nested structures can be managed with ease.
+It provides a robust context system and a set of powerful tools to manage floating elements that need to be aware of each other in a parent-child hierarchy. Think of it as the central nervous system for your dynamic, layered UIs.
 
 ---
 
@@ -34,230 +25,423 @@ Before diving into the API, let's understand the key players:
 3.  **Node Data:** Each node holds a `data` property, which is the `FloatingContext` object returned by `useFloating`. This object contains the node's positioning information, open state, and other relevant data.
 4.  **Root Node:** The very top-level node from which all other nodes descend. Even if not visually represented, it's the anchor of your tree.
 
+## Floating Tree API
+
+### useFloatingTree()
+
+Creates a floating tree instance to manage hierarchical UI elements like popovers, tooltips, and menus.
+
+- **Type:**
+
+  ```ts
+  function useFloatingTree(
+    rootNodeData: FloatingContext,
+    options?: { deleteStrategy?: "orphan" | "recursive" }
+  ): UseFloatingTreeReturn
+  ```
+
+- **Details:**
+  Initializes a new floating tree. The `rootNodeData` you provide anchors the entire tree and must be a `FloatingContext` object. The `options` object allows you to configure tree-wide behavior.
+
+  - `deleteStrategy`: (Default: `"recursive"`) Controls what happens to child nodes when a parent is removed.
+    - `"recursive"`: Removing a node also removes its entire subtree.
+    - `"orphan"`: Removing a node sets its children's parent to `null`, but they remain in the tree.
+
+- **Example:**
+
+  ```vue
+  <script setup lang="ts">
+  import { ref } from "vue"
+  import { useFloating, useFloatingTree } from "v-float"
+
+  // Create the first floating context for your root floating element
+  const rootData = useFloating({
+    // The open state is crucial for many tree operations
+    open: ref(true),
+  })
+
+  // Initialize the floating tree
+  const tree = useFloatingTree(rootData, { deleteStrategy: "recursive" })
+  </script>
+  ```
+
 ---
 
-### Usage Examples
+## Tree Instance API
 
-### 1. Initialize the Tree
+The `useFloatingTree` composable returns a `tree` object with the following properties and methods.
 
-Start by creating a root node for your floating tree. This root typically represents the primary floating element, or a conceptual "base" if your floating elements are not truly nested under one initial floating component.
+### tree.root
+
+Reference to the root `TreeNode` instance of the tree.
+
+- **Type:**
+  ```ts
+  readonly root: Readonly<TreeNode<FloatingContext>>
+  ```
+- **Details:**
+  This is your entry point to the top of the hierarchy. It's a read-only property containing the root `TreeNode` which holds the `rootData` you provided during initialization.
+- **Example:**
+  ```ts
+  const rootNode = tree.root
+  console.log(rootNode.id) // The ID of the root node
+  console.log(rootNode.children.value.length) // Number of direct children
+  ```
+
+### tree.nodeMap
+
+A reactive map containing all nodes in the tree, keyed by their IDs.
+
+- **Type:**
+  ```ts
+  readonly nodeMap: Readonly<Map<string, TreeNode<FloatingContext>>>
+  ```
+- **Details:**
+  A `shallowReactive` map of all node IDs to their `TreeNode` instances. This is useful for debugging or direct node access, but you should prefer using the provided methods like `findNodeById` for most operations to ensure stability.
+- **Example:**
+
+  ```ts
+  const totalNodes = tree.nodeMap.value.size
+  console.log(`The tree has ${totalNodes} nodes.`)
+
+  const specificNode = tree.nodeMap.value.get("node-id")
+  ```
+
+### tree.addNode()
+
+Adds a new floating element to the tree.
+
+- **Type:**
+  ```ts
+  addNode(
+    data: FloatingContext,
+    parentId?: string | null
+  ): TreeNode<FloatingContext> | null
+  ```
+- **Details:**
+  Creates and adds a new node to the tree with the provided `data`. If `parentId` is `null` or omitted, the node becomes a direct child of the root. It returns the newly created `TreeNode` instance or `null` if the specified `parentId` does not exist.
+- **Example:**
+
+  ```ts
+  // Add a main menu as a child of the root
+  const mainMenuData = useFloating({ open: ref(false) })
+  const mainMenuNode = tree.addNode(mainMenuData)
+
+  // Add a submenu as a child of the main menu
+  const subMenuData = useFloating({ open: ref(false) })
+  if (mainMenuNode) {
+    const subMenuNode = tree.addNode(subMenuData, mainMenuNode.id)
+  }
+  ```
+
+### tree.removeNode()
+
+Removes a node from the tree by its ID.
+
+- **Type:**
+  ```ts
+  removeNode(nodeId: string): boolean
+  ```
+- **Details:**
+  Removes the node with the specified `nodeId`. The behavior towards descendants is determined by the `deleteStrategy` option set during tree initialization. Returns `true` if the node was found and removed, `false` otherwise.
+- **Example:**
+  ```ts
+  // Assuming deleteStrategy is 'recursive' (default)
+  // This will remove 'main-menu' and all its submenus.
+  const success = tree.removeNode("main-menu")
+  if (success) {
+    console.log("Main menu and its children were removed.")
+  }
+  ```
+
+### tree.moveNode()
+
+Moves an existing node to a new parent within the tree.
+
+- **Type:**
+  ```ts
+  moveNode(nodeId: string, newParentId: string | null): boolean
+  ```
+- **Details:**
+  Moves an existing node to become a child of `newParentId`. The node and its entire subtree are re-parented. If `newParentId` is `null`, the node becomes a child of the root. This method prevents cyclic moves (e.g., moving a parent into its own child). Returns `true` on success.
+- **Example:**
+
+  ```ts
+  // Move 'submenu-1' from 'main-menu' to 'other-menu'
+  const moved = tree.moveNode("submenu-1", "other-menu")
+  if (moved) {
+    console.log("Submenu successfully moved.")
+  }
+
+  // Move a node to be a direct child of the root
+  tree.moveNode("some-node", null)
+  ```
+
+### tree.findNodeById()
+
+Locates and returns a specific node by its ID.
+
+- **Type:**
+  ```ts
+  findNodeById(nodeId: string): TreeNode<FloatingContext> | null
+  ```
+- **Details:**
+  Provides a quick, efficient way to look up a node by its ID from the internal `nodeMap`. Returns the `TreeNode` instance or `null` if no node with the given ID exists.
+- **Example:**
+  ```ts
+  const menuNode = tree.findNodeById("main-menu")
+  if (menuNode) {
+    // Toggle its open state
+    menuNode.data.open.value = !menuNode.data.open.value
+  }
+  ```
+
+### tree.traverse()
+
+Traverses the tree using depth-first or breadth-first search.
+
+- **Type:**
+  ```ts
+  traverse(
+    strategy: "dfs" | "bfs" = "dfs",
+    startNode: TreeNode<FloatingContext> | null = tree.root
+  ): TreeNode<FloatingContext>[]
+  ```
+- **Details:**
+  Performs a traversal starting from `startNode` (or the root by default) and returns an array of nodes in the visited order.
+  - `'dfs'` (Depth-First Search): Explores as far as possible along each branch before backtracking.
+  - `'bfs'` (Breadth-First Search): Explores all neighbor nodes at the present depth prior to moving on to the nodes at the next depth level.
+- **Example:**
+
+  ```ts
+  // Get all nodes in the tree via DFS
+  const allNodesDfs = tree.traverse("dfs")
+  allNodesDfs.forEach((node) => console.log(node.id))
+
+  // Get all descendants of a specific menu via BFS
+  const menuNode = tree.findNodeById("main-menu")
+  if (menuNode) {
+    const menuBranch = tree.traverse("bfs", menuNode)
+  }
+  ```
+
+### tree.forEach()
+
+Executes a callback function on a group of nodes related to a target node.
+
+- **Type:**
+  ```ts
+  forEach(
+    nodeId: string,
+    callback: (node: TreeNode<FloatingContext>) => void,
+    options?: {
+      relationship?: NodeRelationship
+      applyToMatching?: boolean
+    }
+  ): void
+  ```
+- **Details:**
+  A powerful utility for performing bulk actions. It identifies a set of nodes based on their `relationship` to the `nodeId` and executes the `callback` on each one. By default (`applyToMatching: true`), the callback is also applied to the starting node if it fits the relationship criteria (e.g., for 'self-and-descendants').
+- **Example:**
+
+  ```ts
+  // Close all sibling menus when one is opened
+  tree.forEach(
+    "file-menu",
+    (node) => {
+      node.data.open.value = false
+    },
+    { relationship: "siblings-only" }
+  )
+
+  // Close an entire menu branch
+  tree.forEach(
+    "main-menu",
+    (node) => {
+      node.data.open.value = false
+    },
+    { relationship: "self-and-descendants" }
+  )
+  ```
+
+### tree.isTopmost()
+
+Checks if a given open node is the topmost open node in its branch.
+
+- **Type:**
+  ```ts
+  isTopmost(nodeId: string): boolean
+  ```
+- **Details:**
+  Determines if the specified node is the "highest" open node within its direct line of descendants. This is extremely useful for managing focus or applying specific styles (e.g., a special `z-index`) to the most recently opened element in a nested menu system.
+- **Example:**
+  ```ts
+  // In a nested menu, determine if the submenu should receive focus
+  if (tree.isTopmost("submenu-2")) {
+    // This submenu is the active one, focus its first item
+    focusElementInside("submenu-2-container")
+  }
+  ```
+
+### tree.getAllOpenNodes()
+
+Retrieves all currently open nodes in the tree.
+
+- **Type:**
+  ```ts
+  getAllOpenNodes(): TreeNode<FloatingContext>[]
+  ```
+- **Details:**
+  Scans the entire tree and returns an array of all nodes where `node.data.open.value` is `true`, regardless of their position or depth.
+- **Example:**
+  ```ts
+  // Close all open elements in the entire application
+  const openNodes = tree.getAllOpenNodes()
+  openNodes.forEach((node) => {
+    node.data.open.value = false
+  })
+  ```
+
+### tree.dispose()
+
+Cleans up the tree instance and helps prevent memory leaks.
+
+- **Type:**
+  ```ts
+  dispose(): void
+  ```
+- **Details:**
+  Clears the internal `nodeMap`, effectively breaking all internal references between nodes in the tree. This should be called when the tree is no longer needed, typically in a component's `onUnmounted` lifecycle hook.
+- **Example:**
+
+  ```ts
+  import { onUnmounted } from "vue"
+
+  const tree = useFloatingTree(rootContext)
+
+  onUnmounted(() => {
+    tree.dispose()
+    console.log("Floating tree disposed.")
+  })
+  ```
+
+---
+
+### NodeRelationship
+
+The `NodeRelationship` type is used in `tree.forEach()` to specify which group of nodes to target.
+
+| Relationship                  | Description                                                               |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `ancestors-only`              | All parent nodes, up to the root.                                         |
+| `siblings-only`               | All nodes that share the same immediate parent.                           |
+| `descendants-only`            | All children, grandchildren, and so on, down the entire subtree.          |
+| `children-only`               | Only the immediate children of the node.                                  |
+| `self-and-ancestors`          | The node itself and all its parent nodes up to the root.                  |
+| `self-and-children`           | The node itself and its immediate children.                               |
+| `self-and-descendants`        | The node itself and its entire subtree.                                   |
+| `self-and-siblings`           | The node itself and all its siblings.                                     |
+| `self-ancestors-and-children` | The node, its parents, and its immediate children.                        |
+| `full-branch`                 | The node, all its ancestors, and all its descendants (the entire branch). |
+| `all-except-branch`           | All nodes in the tree _except_ for the node's full branch.                |
+
+---
+
+## Common Patterns
+
+### Nested Menu System
+
+Here's how you might manage a nested menu where opening a new menu closes its siblings and clicking outside closes everything.
 
 ```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useFloatingTree } from 'v-float'
+<script setup>
+import { ref } from "vue"
+import { useFloatingTree } from "v-float"
 
-// Create the first floating context for your root floating element
-const rootData = useFloating(...)
+const tree = useFloatingTree({ open: ref(true) })
 
-// Initialize the floating tree with the root floating context
-const tree = useFloatingTree(rootData) // `tree` is an object containing wrapper methods around the Tree instance methods, along with other helpers.
+// Create menu hierarchy
+const mainMenu = tree.addNode({ open: ref(false) })
+const fileMenu = tree.addNode({ open: ref(false) }, mainMenu.id)
+const editMenu = tree.addNode({ open: ref(false) }, mainMenu.id)
+
+// When opening the file menu, close the edit menu
+function openFileMenu() {
+  tree.forEach(
+    fileMenu.id,
+    (node) => {
+      node.data.open.value = false
+    },
+    { relationship: "siblings-only" }
+  )
+  fileMenu.data.open.value = true
+}
+
+// Close all menus when clicking outside
+function handleClickOutside() {
+  tree.forEach(
+    tree.root.id,
+    (node) => {
+      if (!node.isRoot) {
+        // Don't close the conceptual root
+        node.data.open.value = false
+      }
+    },
+    { relationship: "descendants-only" }
+  )
+}
 </script>
 ```
 
-> **Note:**
-> When you call `useFloatingTree(rootData)`, it internally creates a new `Tree<FloatingContext>` instance using your provided `rootData` as the root node's data. The `useFloatingTree` composable internally manages the lifecycle of the `Tree` instance. In typical Vue component usage, you generally won't need to manually call `tree.dispose()`, as the underlying reactive references are tied to the component's lifecycle and will be garbage-collected when the component unmounts. However, if you are using `useFloatingTree` outside of a standard component setup (e.g., in a global store that persists longer than a component), or for very advanced memory management, you might consider calling `tree.dispose()` when the tree is no longer needed.
-
-### 2. Adding Nested Floating Elements
-
-```ts
-const childData = useFloating(...)
-const childNode = tree.addNode(childData)
-
-const grandchildData = useFloating(...)
-const grandChildNode = tree.addNode(grandChildData, childNode.id)
-```
-
-## The Engine Room: `Tree<T>` Class
-
-While `useFloatingTree` is tailored for floating UI elements, its power comes from a more generic and versatile `Tree<T>` class. This class is the backbone, providing the core tree data structure and manipulation logic. You might even use `Tree<T>` directly for other hierarchical data management needs in your application!
-
-### Overview: What is `Tree<T>`?
-
-The `Tree<T>` class is a generic, reactive tree data structure.
-
-- **Generic (`<T>`):** It can hold any type of data in its nodes, as long as you provide it. For `useFloatingTree`, `T` is `FloatingContext`.
-- **Reactive:** Node data, parent/child relationships, and the `nodeMap` are built with Vue's reactivity system (`shallowRef`, `shallowReactive`), so changes automatically propagate where needed.
-- **Full-Featured:** Provides all essential tree operations: adding, removing, moving nodes, traversal, and searching.
-
 ---
+
+## The Engine Room: `Tree<T>` and `TreeNode<T>` Classes
+
+While `useFloatingTree` is your primary interface, it is a specialized wrapper around a generic and reactive `Tree<T>` class. You can even use this class directly for other hierarchical data management needs.
 
 ### API Reference: `Tree<T>`
 
-```typescript
-export class Tree<T> {
-  readonly root: TreeNode<T>
-  readonly nodeMap: Readonly<Map<string, TreeNode<T>>>
+A generic, reactive tree data structure.
 
-  constructor(initialRootData: T, options?: TreeOptions)
-
-  findNodeById(id: string): TreeNode<T> | null
-  addNode(data: T, parentId?: string | null, nodeOptions?: TreeNodeOptions): TreeNode<T> | null
-  removeNode(nodeId: string): boolean
-  moveNode(nodeId: string, newParentId: string | null): boolean
-  traverse(strategy?: "dfs" | "bfs", startNode?: TreeNode<T> | null): TreeNode<T>[]
-  dispose(): void
-}
-```
-
-#### Constructor
-
-- `constructor(initialRootData: T, options?: TreeOptions)`
-  - **`initialRootData: T`:** The data for the root node of this tree.
-  - **`options?: TreeOptions`:**
-    - `deleteStrategy?: "orphan" | "recursive"`: (Default: `"recursive"`)
-      - `"recursive"`: When a node is removed, all its descendants are also removed from the tree and `nodeMap`.
-      - `"orphan"`: When a node is removed, its children have their `parent` reference set to `null` but remain in the `nodeMap`. They become disconnected orphan nodes.
-
-#### Properties
-
-- `root: TreeNode<T>`
-  - **Description:** The root `TreeNode` instance of this tree. It's read-only on the `Tree` instance itself, but the `root.data` can be modified.
-- `nodeMap: Readonly<Map<string, TreeNode<T>>>`
-  - **Description:** A shallowly reactive, read-only map of all node IDs to their `TreeNode<T>` instances. Essential for quick lookups.
-
-#### Methods
-
-- `findNodeById(id: string): TreeNode<T> | null`
-
-  - **Description:** Finds a node by its ID.
-  - **Returns:** The `TreeNode<T>` or `null`.
-
-- `addNode(data: T, parentId: string | null = null, nodeOptions: TreeNodeOptions = {}): TreeNode<T> | null`
-
-  - **Description:** Creates a new `TreeNode<T>` with the given `data` and adds it as a child to the node specified by `parentId`. If `parentId` is `null` or omitted, adds to the `root`.
-  - **`nodeOptions.id`:** You can suggest an ID. If it's a duplicate, a new one will be generated (with a dev warning).
-  - **Returns:** The new `TreeNode<T>` or `null` if `parentId` is invalid.
-
-- `removeNode(nodeId: string): boolean`
-
-  - **Description:** Removes the node with `nodeId`. Behavior towards children depends on `deleteStrategy`.
-  - **Returns:** `true` on success, `false` if node not found or trying to remove root.
-
-- `moveNode(nodeId: string, newParentId: string | null): boolean`
-
-  - **Description:** Moves the node `nodeId` to become a child of `newParentId`. If `newParentId` is `null`, it attempts to move it to be a child of the root (though typically, you'd provide `this.root.id`).
-  - **Returns:** `true` on success. `false` for errors (node not found, cyclic move, etc.).
-
-- `traverse(strategy: "dfs" | "bfs" = "dfs", startNode: TreeNode<T> | null = this.root): TreeNode<T>[]`
-
-  - **Description:** Performs DFS or BFS traversal starting from `startNode` (defaults to root).
-  - **Returns:** An array of `TreeNode<T>` instances in visited order, including the `startNode` itself.
-
-- `dispose(): void`
-  - **Description:** Clears the `nodeMap`. Call this when the `Tree` instance is no longer needed to help with garbage collection.
-
-## The Building Blocks: `TreeNode<T>` Class
-
-Each element in your `Tree<T>` (and thus, your `useFloatingTree`) is an instance of `TreeNode<T>`. This class encapsulates the data for a single node and its relationships with its parent and children.
-
-**Overview: What is `TreeNode<T>`?**
-
-A `TreeNode<T>` is a reactive container for your data (`T`) within the tree structure. It holds:
-
-- A unique `id`.
-- The actual `data` (e.g., `FloatingContext`).
-- Reactive references to its `parent` and `children`.
-
----
+- **Constructor:** `new Tree<T>(initialRootData: T, options?: TreeOptions)`
+  - **Details:** Creates a new tree. `options` can include `deleteStrategy`.
+- **Properties:**
+  - `root: TreeNode<T>`: The root node of the tree.
+  - `nodeMap: Readonly<Map<string, TreeNode<T>>>`: A reactive map of all node IDs to their instances.
+- **Methods:**
+  - `findNodeById(id: string): TreeNode<T> | null`: Finds a node by ID.
+  - `addNode(data: T, parentId?: string | null, ...): TreeNode<T> | null`: Adds a new node.
+  - `removeNode(nodeId: string): boolean`: Removes a node.
+  - `moveNode(nodeId: string, newParentId: string | null): boolean`: Moves a node.
+  - `traverse(strategy?, startNode?): TreeNode<T>[]`: Traverses the tree.
+  - `dispose(): void`: Clears the `nodeMap` for garbage collection.
 
 ### API Reference: `TreeNode<T>`
 
-```typescript
-export class TreeNode<T> {
-  readonly id: string
-  data: T
-  parent: Ref<TreeNode<T> | null>
-  children: Ref<TreeNode<T>[]>
+A reactive container for your data within the tree structure.
 
-  constructor(
-    data: T,
-    parent: TreeNode<T> | null = null,
-    options: TreeNodeOptions = {},
-    isRoot = false
-  )
-
-  // Primarily internal, prefer Tree's methods for adding/removing
-  // addChild(childNode: TreeNode<T>): void;
-  // _removeChildInstance(childNode: TreeNode<T>): boolean;
-
-  updateData(newData: Partial<T> | T): void
-  findChild(predicate: (node: TreeNode<T>) => boolean): TreeNode<T> | null
-  findDescendant(predicate: (node: TreeNode<T>) => boolean): TreeNode<T> | null
-  isDescendantOf(potentialAncestor: TreeNode<T>): boolean
-  getPath(): TreeNode<T>[]
-
-  get isRoot(): boolean
-  get isLeaf(): boolean
-}
-```
-
-#### Constructor
-
-- `constructor(data: T, parent: TreeNode<T> | null = null, options: TreeNodeOptions = {}, isRoot = false)`
-  - **`data: T`:** The data payload for this node.
-  - **`parent: TreeNode<T> | null`:** The parent node. `null` for the root or orphaned nodes.
-  - **`options?: TreeNodeOptions`:**
-  - `id?: string`: Optional ID. If not provided or duplicate, one is generated by `useId()`.
-  - **`isRoot: boolean`:** An internal flag set to `true` by the `Tree` class only for the actual root node.
-
-#### Properties
-
-- `id: string` (readonly)
-  - **Description:** The unique identifier for this node. Generated if not provided.
-- `data: T`
-  - **Description:** The actual data payload for this node. You can update it via `node.data = ...` or `node.updateData(...)`.
-- `parent: Ref<TreeNode<T> | null>`
-  - **Description:** A Vue `shallowRef` pointing to the parent `TreeNode`, or `null` if it's the root or an orphan.
-- `children: Ref<TreeNode<T>[]>`
-  - **Description:** A Vue `shallowRef` holding an array of its direct child `TreeNode` instances.
-
-#### Methods
-
-- `updateData(newData: Partial<T> | T)`
-
-  - **Description:** Updates the node's `data`. If `T` is an object and `newData` is a partial object, it performs a shallow merge (`Object.assign`). Otherwise, it replaces the value.
-  - **Example:** `node.updateData({ open: ref(true) });` (for merging) or `node.data = {open: ref(true)};`
-
-- `findChild(predicate: (node: TreeNode<T>) => boolean): TreeNode<T> | null`
-
-  - **Description:** Searches only the _direct children_ of this node.
-  - **Returns:** The first child satisfying the `predicate`, or `null`.
-
-- `findDescendant(predicate: (node: TreeNode<T>) => boolean): TreeNode<T> | null`
-
-  - **Description:** Performs a Depth-First Search starting from _this node_ (including itself) to find a descendant that satisfies the `predicate`.
-  - **Returns:** The first matching descendant (or self), or `null`.
-
-- `isDescendantOf(potentialAncestor: TreeNode<T>): boolean`
-
-  - **Description:** Checks if this node is a descendant of the `potentialAncestor` node by traversing up its parent chain.
-  - **Returns:** `true` if it's a descendant, `false` otherwise.
-
-- `getPath(): TreeNode<T>[]`
-
-  - **Description:** Traverses upwards from this node to the root.
-  - **Returns:** An array of `TreeNode<T>` instances representing the path from the root down to (and including) this node. Example: `[root, parentOfParent, parent, thisNode]`.
-
-- `addChild(childNode: TreeNode<T>): void`
-  - **Description:** (Usually called by `Tree.addNode`) Adds an _existing_ `TreeNode` instance to this node's `children` array. Updates reactivity. (Internal: Generally not called directly by consumers. Prefer Tree.addNode and Tree.removeNode.)
-- `_removeChildInstance(childNode: TreeNode<T>): boolean`
-  - **Description:** (Usually called by `Tree.removeNode` or `Tree.moveNode`) Removes a specific `TreeNode` instance from this node's `children` array and sets the child's `parent` to `null`. (Internal: Generally not called directly by consumers. Prefer Tree.addNode and Tree.removeNode.)
-  - **Returns:** `true` if found and removed.
-
-#### Getters
-
-- `get isRoot(): boolean`
-  - **Description:** Returns `true` if this node was designated as the _true root_ during its creation by the `Tree` class. An orphaned node (parent is `null` but `_isRoot` is `false`) will return `false`.
-- `get isLeaf(): boolean`
-  - **Description:** Returns `true` if this node has no children (`children.value.length === 0`).
+- **Constructor:** `new TreeNode<T>(data: T, parent?, options?, isRoot?)`
+- **Properties:**
+  - `id: string`: The unique node identifier.
+  - `data: T`: The data payload (e.g., `FloatingContext`).
+  - `parent: Ref<TreeNode<T> | null>`: A reactive ref to the parent node.
+  - `children: Ref<TreeNode<T>[]>`: A reactive ref to the array of child nodes.
+- **Methods:**
+  - `updateData(newData: Partial<T> | T)`: Merges or replaces the node's data.
+  - `findChild(predicate): TreeNode<T> | null`: Searches direct children.
+  - `findDescendant(predicate): TreeNode<T> | null`: Performs a DFS search on descendants.
+  - `isDescendantOf(potentialAncestor): boolean`: Checks if the node is in a subtree.
+  - `getPath(): TreeNode<T>[]`: Returns the path from the root to the current node.
+- **Getters:**
+  - `isRoot: boolean`: True if this is the tree's designated root.
+  - `isLeaf: boolean`: True if the node has no children.
 
 ---
 
-### Potential Pitfalls
+## Potential Pitfalls
 
-- **Memory Leaks:** Forgetting to call `dispose()` is the most common culprit.
-- **Non-Unique IDs:** Will lead to unpredictable behavior with `findNodeById`, `addNode`, `removeNode`, etc.
-- **Cyclic Moves:** `moveNode` prevents moving a node to be a descendant of itself, returning `false`. Be aware of this if you're dynamically restructuring.
-- **Recursive Deletion:** The default `deleteStrategy: 'recursive'` means removing a node also wipes out its entire subtree. If you want to preserve children, consider `"orphan"` or manual reparenting before removal.
-- **Modifying `nodeMap` or `root` Directly:** These are exposed as `Readonly` for a reason. While the underlying objects might be mutable, directly altering the `Map` structure or reassigning `root` can break `useFloatingTree`'s internal state. Stick to the provided methods.
+- **Memory Leaks:** Forgetting to call `tree.dispose()` in `onUnmounted` is the most common cause of memory leaks.
+- **Non-Unique IDs:** Providing duplicate IDs when creating nodes can lead to unpredictable behavior. Let the system generate IDs if you're unsure.
+- **Cyclic Moves:** `moveNode` prevents moving a node to be a descendant of itself by returning `false`. Be aware of this when dynamically restructuring the tree.
+- **Recursive Deletion:** The default `deleteStrategy: 'recursive'` means removing a node also wipes out its entire subtree. If you want to preserve children, use the `"orphan"` strategy or manually reparent them before removal.
+- **Direct State Mutation:** Avoid modifying the `tree.root` or `tree.nodeMap` properties directly. Always use the provided methods (`addNode`, `removeNode`, etc.) to ensure reactivity and internal state consistency.

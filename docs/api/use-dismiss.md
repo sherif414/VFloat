@@ -30,7 +30,7 @@ Here's a basic example demonstrating how to use `useDismiss` with `useFloating` 
 
 :::preview
 
-demo-preview=../demos/use-dismiss/BasicUsage.vue
+demo-preview=../.vitepress/demos/use-dismiss/BasicUsage.vue
 
 :::
 
@@ -176,7 +176,7 @@ function enableDismiss() {
 
 :::preview
 
-demo-preview=../demos/use-dismiss/PopoverWithCustomDismiss.vue
+demo-preview=../.vitepress/demos/use-dismiss/PopoverWithCustomDismiss.vue
 
 :::
 
@@ -184,7 +184,7 @@ demo-preview=../demos/use-dismiss/PopoverWithCustomDismiss.vue
 
 <!-- :::preview
 
-demo-preview=../demos/use-dismiss/ModalDialogWithLockedDismissal.vue
+demo-preview=../.vitepress/demos/use-dismiss/ModalDialogWithLockedDismissal.vue
 
 ::: -->
 

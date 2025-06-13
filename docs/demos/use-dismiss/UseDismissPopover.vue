@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue"
 import { useFloating, useDismiss, offset, flip, shift } from "v-float"
 
@@ -15,7 +15,7 @@ const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start", // Prefer placing it below the button, aligned to the start.
 
   // Middleware adjusts the final position. They run in order.
-  middleware: [
+  middlewares: [
     offset(10), // 1. Move the popover 10px away from the button.
     flip(), // 2. If it runs out of space, flip it to the opposite side (e.g., 'top-start').
     shift({ padding: 10 }), // 3. If it's still partially out of view, shift it to stay visible.
@@ -35,14 +35,14 @@ useDismiss(context, {
 
   // By default, clicking the anchor/reference element again closes the popover.
   // We set this to `false` because our button's @click handler already toggles the state.
-  referencePress: false,
+  anchorPress: false,
 
   // A powerful feature for complex cases. This function determines if a click
   // outside the popover should close it.
   outsidePress: (event) => {
     // We check if the clicked element (or any of its parents) has the class 'ignore-dismiss'.
     // If it does, we return `false` to *prevent* the popover from closing.
-    if (event.target.closest(".ignore-dismiss")) {
+    if ((event.target as HTMLElement)?.closest(".ignore-dismiss")) {
       return false
     }
     // Otherwise, we return `true` to allow the dismiss behavior.

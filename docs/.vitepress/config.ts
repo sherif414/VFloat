@@ -1,5 +1,5 @@
 import { defineConfig } from "vitepress";
-import { containerPreview, componentPreview } from "@vitepress-demo-preview/plugin"
+import { demoMdPlugin } from 'vitepress-plugin-demo'
 import { transformerTwoslash } from "@shikijs/vitepress-twoslash"
 import unocss from "unocss/vite"
 // https://vitepress.dev/reference/site-config
@@ -9,8 +9,7 @@ export default defineConfig({
   ],
   markdown: {
     config(md) {
-      md.use(containerPreview)
-      md.use(componentPreview)
+      md.use(demoMdPlugin)
     },
     codeTransformers: [transformerTwoslash()],
     languages: ["js", "ts"],

@@ -27,7 +27,7 @@ const { arrowStyles } = useArrow(context)
 
 <template>
   <div
-    class="border border-dashed border-gray-200 h-[20rem] overflow-hidden grid place-items-center overflow-y-auto relative"
+    class="w-full border border-dashed border-gray-200 h-[20rem] overflow-hidden grid place-items-center overflow-y-auto relative"
   >
     <div class="flex flex-col items-center gap-4 w-full h-800px rounded-md overflow-y-auto">
       <div class="h-150px"></div>

@@ -1,4 +1,4 @@
-export { default as BasicUsage } from "./BasicUsage.vue"
+export { default as UseFloatingBasicUsage } from "./UseFloatingBasicUsage.vue"
 export { default as WithMiddleware } from "./WithMiddleware.vue"
 export { default as PlacementDemo } from "./PlacementDemo.vue"
 export { default as InteractiveTooltip } from "./InteractiveTooltip.vue"
