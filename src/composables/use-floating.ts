@@ -196,8 +196,6 @@ export function useFloating(
   options: UseFloatingOptions = {}
 ): FloatingContext {
   const {
-    placement: initialPlacement = "bottom",
-    strategy: initialStrategy = "absolute",
     transform = true,
     middlewares,
     whileElementsMounted,
@@ -207,11 +205,14 @@ export function useFloating(
     },
   } = options
 
+  const initialPlacement = computed(() => toValue(options.placement) ?? "bottom")
+  const initialStrategy = computed(() => toValue(options.strategy) ?? "absolute")
+
   // Position state
   const x = ref(0)
   const y = ref(0)
-  const strategy = ref(toValue(initialStrategy) as Strategy)
-  const placement = ref(toValue(initialPlacement) as Placement)
+  const placement = ref(initialPlacement.value)
+  const strategy = ref(initialStrategy.value)
 
   const middlewareData = shallowRef<MiddlewareData>({})
   const isPositioned = ref(false)
@@ -220,8 +221,8 @@ export function useFloating(
     if (!anchorEl.value || !floatingEl.value) return
 
     const result = await computePosition(anchorEl.value, floatingEl.value, {
-      placement: toValue(initialPlacement),
-      strategy: toValue(initialStrategy),
+      placement: initialPlacement.value,
+      strategy: initialStrategy.value,
       middleware: middlewares,
     })
 
@@ -233,13 +234,13 @@ export function useFloating(
     isPositioned.value = open.value
   }
 
-  watch(
-    [() => toValue(initialPlacement), () => toValue(initialStrategy), anchorEl, floatingEl],
-    update
-  )
+  watch([initialPlacement, initialStrategy], () => {
+    if (open.value) {
+      update()
+    }
+  })
 
   let cleanup: (() => void) | undefined
-
 
   watch(
     [anchorEl, floatingEl, open],
