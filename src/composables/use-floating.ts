@@ -28,7 +28,7 @@ export type FloatingElement = HTMLElement | null
 /**
  * CSS styles for positioning floating elements
  */
-export interface FloatingStyles extends CSSProperties {
+export type FloatingStyles = {
   /**
    * CSS position property
    */
@@ -52,7 +52,11 @@ export interface FloatingStyles extends CSSProperties {
   /**
    * CSS will-change property
    */
-  "will-change"?: "transform"
+  "will-change"?: string
+} & {
+  // This index signature makes the type compatible with Vue's `StyleValue`
+  // biome-ignore lint/suspicious/noExplicitAny:
+  [key: `--${string}`]: any
 }
 
 /**
