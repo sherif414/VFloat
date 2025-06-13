@@ -240,6 +240,7 @@ export function useFloating(
 
   let cleanup: (() => void) | undefined
 
+
   watch(
     [anchorEl, floatingEl, open],
     ([anchorEl, floatingEl, open]) => {
@@ -282,7 +283,7 @@ export function useFloating(
     const xVal = roundByDPR(floatingEl.value, x.value)
     const yVal = roundByDPR(floatingEl.value, y.value)
 
-    if (transform) {
+    if (toValue(transform)) {
       return {
         ...initialStyles,
         transform: `translate(${xVal}px, ${yVal}px)`,
