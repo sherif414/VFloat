@@ -6,17 +6,17 @@ V-Float is a Vue 3 library dedicated to providing precise positioning for floati
 
 V-Float is the ideal choice when you need a robust solution for positioning any UI element that floats relative to another element:
 
-*   **Tooltips**: Precisely position informational tips near their triggers.
-*   **Dropdown Menus**: Ensure navigation or action menus appear correctly beneath their buttons.
-*   **Popovers**: Accurately place contextual information bubbles.
-*   **Modals**: Position dialogs or forms centrally or relative to a trigger.
-*   **Date Pickers**: Align calendar components perfectly with input fields.
-*   **Custom Selects**: Ensure custom dropdowns open consistently below their input.
+- **Tooltips**: Precisely position informational tips near their triggers.
+- **Dropdown Menus**: Ensure navigation or action menus appear correctly beneath their buttons.
+- **Popovers**: Accurately place contextual information bubbles.
+- **Modals**: Position dialogs or forms centrally or relative to a trigger.
+- **Date Pickers**: Align calendar components perfectly with input fields.
+- **Custom Selects**: Ensure custom dropdowns open consistently below their input.
 
 ## Prerequisites
 
-*   **Vue 3**: V-Float is designed specifically for Vue 3 and the Composition API.
-*   **TypeScript** (recommended): V-Float includes full TypeScript definitions for a better development experience.
+- **Vue 3**: V-Float is designed specifically for Vue 3 and the Composition API.
+- **TypeScript** (recommended): V-Float includes full TypeScript definitions for a better development experience.
 
 ## Quick Installation
 
@@ -39,41 +39,31 @@ This example demonstrates how to use `useFloating` to position a simple tooltip 
 
 ```vue twoslash
 <script setup>
-import { ref } from "vue";
-import { useFloating } from "v-float";
+import { ref } from "vue"
+import { useFloating } from "v-float"
 
-const anchorEl = ref(null);
-const floatingEl = ref(null);
+const anchorEl = ref(null)
+const floatingEl = ref(null)
 
-const isOpen = ref(false);
+const isOpen = ref(false)
 
 const { floatingStyles } = useFloating(anchorEl, floatingEl, {
   placement: "top",
-});
+})
 
 const showTooltip = () => {
-  isOpen.value = true;
-};
+  isOpen.value = true
+}
 
 const hideTooltip = () => {
-  isOpen.value = false;
-};
+  isOpen.value = false
+}
 </script>
 
 <template>
-  <button
-    ref="anchorEl"
-    @mouseenter="showTooltip"
-    @mouseleave="hideTooltip"
-  >
-    Hover me
-  </button>
+  <button ref="anchorEl" @mouseenter="showTooltip" @mouseleave="hideTooltip">Hover me</button>
 
-  <div
-    v-if="isOpen"
-    ref="floatingEl"
-    :style="{...floatingStyles}"
-  >
+  <div v-if="isOpen" ref="floatingEl" :style="{ ...floatingStyles }">
     This is a tooltip positioned by V-Float
   </div>
 </template>
@@ -83,7 +73,8 @@ const hideTooltip = () => {
 
 Now that you have a basic understanding of V-Float's positioning capabilities, explore further:
 
-*   [Installation](/guide/installation): Detailed instructions for various project setups.
-*   [Core Concepts](/guide/concepts): Dive deeper into how V-Float calculates positions and handles various scenarios.
-*   [Composables](/composables/): Learn about the other composables available within V-Float for advanced positioning.
-*   [Examples](/examples/): See more complex use cases and how to integrate V-Float into different UI patterns.
+- [Installation](/guide/installation): Detailed instructions for various project setups.
+- [Core Concepts](/guide/concepts): Dive deeper into how V-Float calculates positions and handles various scenarios.
+- [Interaction Composables](/guide/interactions): Understand the benefits of using pre-built interactions for your floating elements.
+- [Composables](/composables/): Learn about the other composables available within V-Float for advanced positioning.
+- [Examples](/examples/): See more complex use cases and how to integrate V-Float into different UI patterns.
