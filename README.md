@@ -1,15 +1,17 @@
-# V-Float: Vue 3 Floating UI Library
+# V-Float
 
-A comprehensive Vue 3 port of the [Floating UI](https://floating-ui.com/) library, providing composables and components for creating floating elements like tooltips, popovers, dropdowns, and more with accurate positioning and interaction management.
+A Vue 3 library for positioning floating UI elements like tooltips, popovers, dropdowns, and modals. Built on top of [VFloat](https://vfloat.pages.com/) with Vue 3 Composition API.
 
 ## Features
 
-- 🎯 **Accurate Positioning**: Position floating elements with pixel-perfect accuracy
-- 🧩 **Composables**: Powerful Vue 3 composables for floating element behavior
-- 🧰 **Components**: Ready-to-use components to simplify implementation
-- 🚀 **Lightweight**: Small footprint with tree-shakable modules
-- ♿ **Accessible**: Built with a focus on keyboard navigation and ARIA support
-- 📱 **Responsive**: Works on all screen sizes and device types
+- **Precise Positioning**: Pixel-perfect positioning with automatic collision detection
+- **Vue 3 Composables**: Reactive composables designed for the Composition API
+- **Interaction Handling**: Built-in hover, focus, click, and dismiss behaviors
+- **Nested Elements**: Support for floating element trees and hierarchies
+- **Ready-to-use Components**: Pre-built components like `FloatingArrow`
+- **Lightweight**: Tree-shakable with minimal bundle impact
+- **Cross-platform**: Works on desktop, mobile, and touch devices
+- **TypeScript**: Full TypeScript support with comprehensive type definitions
 
 ## Installation
 
@@ -24,72 +26,185 @@ npm install v-float
 yarn add v-float
 ```
 
-## Basic Usage
+## Quick Start
 
-### Simple Tooltip Example
+### Basic Tooltip
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useInteractions, useHover } from "v-float"
+import { useTemplateRef } from "vue"
+import { useFloating, useHover, offset } from "v-float"
 
-const referenceRef = ref<HTMLElement | null>(null)
-const floatingRef = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
+const anchorEl = useTemplateRef("anchorEl")
+const floatingEl = useTemplateRef("floatingEl")
 
-// Set up the floating element
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
+  middlewares: [offset(8)],
 })
 
-// Add hover interaction
-useHover(floating.context, {
-  delay: { open: 100, close: 200 },
-})
+useHover(context)
 </script>
 
 <template>
-  <button ref="referenceRef">Hover me</button>
+  <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="isOpen"
-    ref="floatingRef"
-    :style="{
-      position: floating.strategy,
-      top: '0px',
-      left: '0px',
-      transform: `translate(${floating.x}px, ${floating.y}px)`,
-    }"
-  >
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     This is a tooltip
   </div>
 </template>
 ```
 
-## Available Composables
+### Dropdown Menu
+
+```vue
+<script setup lang="ts">
+import { useTemplateRef } from "vue"
+import { useFloating, useClick, useDismiss, offset, flip, shift } from "v-float"
+
+const triggerEl = useTemplateRef("triggerEl")
+const menuEl = useTemplateRef("menuEl")
+
+const context = useFloating(triggerEl, menuEl, {
+  placement: "bottom-start",
+  middlewares: [offset(4), flip(), shift({ padding: 8 })],
+})
+
+useClick(context)
+useDismiss(context)
+</script>
+
+<template>
+  <button ref="triggerEl">Open Menu</button>
+
+  <div v-if="context.open.value" ref="menuEl" :style="context.floatingStyles.value">
+    <div>Menu Item 1</div>
+    <div>Menu Item 2</div>
+    <div>Menu Item 3</div>
+  </div>
+</template>
+```
+
+## Core Composables
 
 ### Positioning
 
-- `useFloating`: Core positioning logic
-- `offset`: Add distance between reference and floating element
-- `shift`: Prevent the floating element from overflowing
-- `flip`: Flip the placement when there's no space
-- `autoPlacement`: Automatically choose the best placement
-- `size`: Change the size of the floating element based on available space
+- **`useFloating`**: Core positioning logic with middleware support
+- **`useArrow`**: Position arrow elements pointing to the anchor
+- **`useFloatingTree`**: Manage nested floating element hierarchies
 
 ### Interactions
 
-- `useHover`: Hover interactions with configurable delay
-- `useFocus`: Focus/blur events
-- `useClick`: Click events
-- `useDismiss`: Close on outside click, ESC key press
+- **`useHover`**: Hover interactions with configurable delays and safe areas
+- **`useFocus`**: Focus/blur event handling for keyboard navigation
+- **`useClick`**: Click event handling with toggle and dismiss options
+- **`useDismiss`**: Close on outside click, ESC key, or scroll events
+- **`useClientPoint`**: Position floating elements at cursor/touch coordinates
+
+### Middleware
+
+All [Floating UI middleware](https://floating-ui.com/docs/middleware) are supported:
+
+- **`offset`**: Add distance between anchor and floating element
+- **`flip`**: Flip placement when there's insufficient space
+- **`shift`**: Shift floating element to stay in view
+- **`hide`**: Hide floating element when anchor is not visible
+- **`arrow`**: Position arrow elements (via `useArrow`)
+
+## Components
+
+### FloatingArrow
+
+Pre-built SVG arrow component with automatic positioning:
+
+```vue
+<script setup lang="ts">
+import { FloatingArrow, useFloating, useArrow } from "v-float"
+
+const context = useFloating(anchorEl, floatingEl, {
+  middlewares: [arrow({ element: arrowEl })],
+})
+</script>
+
+<template>
+  <div ref="floatingEl" :style="context.floatingStyles.value">
+    Tooltip content
+    <FloatingArrow :context="context" fill="white" />
+  </div>
+</template>
+```
+
+## Advanced Features
+
+### Floating Trees
+
+For nested floating elements like submenus:
+
+```vue
+<script setup lang="ts">
+import { useFloatingTree, useFloating } from "v-float"
+
+// Parent menu
+const parentTree = useFloatingTree()
+const parentContext = useFloating(triggerEl, menuEl, {
+  tree: parentTree,
+})
+
+// Submenu
+const submenuContext = useFloating(submenuTriggerEl, submenuEl, {
+  tree: parentTree,
+})
+</script>
+```
+
+### Virtual Elements
+
+Position relative to virtual coordinates:
+
+```vue
+<script setup lang="ts">
+import { useFloating, useClientPoint } from "v-float"
+
+const virtualEl = ref({
+  getBoundingClientRect: () => ({
+    x: 100,
+    y: 100,
+    width: 0,
+    height: 0,
+    top: 100,
+    left: 100,
+    right: 100,
+    bottom: 100,
+  }),
+})
+
+const context = useFloating(virtualEl, floatingEl)
+useClientPoint(context) // Follow mouse cursor
+</script>
+```
+
+## TypeScript Support
+
+V-Float is built with TypeScript and provides comprehensive type definitions:
+
+```typescript
+import type { FloatingContext, UseFloatingOptions, AnchorElement, FloatingElement } from "v-float"
+```
+
+## Browser Support
+
+- **Modern browsers**: Chrome, Firefox, Safari, Edge
+- **Mobile browsers**: iOS Safari, Chrome Mobile, Samsung Internet
+- **Node.js**: SSR compatible (with proper hydration)
 
 ## Documentation
 
-For complete documentation, visit our documentation site at [https://v-float.com](https://v-float.com).
+For complete documentation with interactive examples, visit the [V-Float Documentation](https://v-float.com).
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines and submit pull requests to our [GitHub repository](https://github.com/v-float/v-float).
 
 ## License
 
-MIT License
+MIT License - see [LICENSE](LICENSE) file for details.
