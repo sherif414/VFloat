@@ -1,240 +1,178 @@
 # Interactions
 
-## Introduction/Overview
+## Philosophy & Guiding Principles
 
-Interaction composables in this library are designed to manage how and when your floating elements appear and disappear in response to user actions. These functions provide flexible and common interaction patterns like hover, click, focus, and more. They are intended to be used in conjunction with the main `useFloating` composable, building upon the foundation it provides to create fully interactive floating UI components.
+Interaction composables are the heart of creating dynamic, user-responsive floating elements. Their design is guided by a few core principles:
 
-## Core Concepts
+1.  **Declarative & Composable:** You shouldn't have to manually wire up complex event listeners and state management. Instead, you declaratively _state_ which interactions your component needs (e.g., `useClick`, `useFocus`). The library then composes these behaviors into a cohesive and predictable system.
 
-### Floating Context
+2.  **Centralized State, Decentralized Logic:** All interactions revolve around a single source of truth: the `FloatingContext`. This context holds the core `open` state. Each interaction composable is a self-contained unit of logic that knows _how_ to modify that central state based on specific user actions. This separation of concerns makes the system predictable and easier to debug.
 
-All interaction composables operate within a `FloatingContext`. This context, typically provided by the `useFloating` composable, holds the state and methods necessary for managing the floating element, including its `open` state, and references to the anchor and floating elements themselves. Interaction composables leverage this context to react to user inputs and control the visibility of the floating element.
+3.  **Accessibility as a Feature, Not an Afterthought:** Interactions like `useFocus` are not optional add-ons; they are first-class citizens. By making it trivial to add keyboard and screen-reader support, the library encourages building accessible components by default.
 
-### Event Handling
+## The Core Engine: `FloatingContext`
 
-At their core, interaction composables work by attaching event listeners to either the anchor element, the floating element, or both. For example, `useHover` will attach mouseover and mouseout listeners, while `useClick` will listen for click events. These listeners detect user actions and trigger the appropriate logic to show or hide the floating element.
+Before diving into specific interactions, it's crucial to understand the `FloatingContext`. This object, provided by the main `useFloating` composable, is the central hub that all interaction composables plug into.
 
-### State Management
+It provides:
 
-The primary role of most interaction composables is to manage the `open` state of the floating element. Based on the user interactions they are designed to handle (e.g., a hover starting or ending), they will call the `setOpen` function (or a similar mechanism) provided by the `FloatingContext` to toggle the visibility of the floating content.
+- **A reactive `open` state:** The single source of truth for whether the floating element is visible.
+- **An `onOpenChange` function:** The designated way for interactions to request a change to the `open` state.
+- **Element References:** Reactive `refs` to the anchor and floating elements, which the interactions use to attach event listeners.
 
-### Composability
-
-A key feature of these interaction utilities is their composability. You can often combine multiple interaction composables to create richer and more nuanced user experiences. For instance, you might use `useHover` to show a tooltip on mouse hover, and also `useFocus` to show it when the anchor element receives keyboard focus. This allows for building accessible and intuitive UIs that cater to various input methods.
-
-## `useClick`
-
-_Best for dropdown menus, popovers, and action-triggered dialogs._
-
-The `useClick` composable allows you to control the visibility of a floating element by clicking the anchor element. It's a common way to implement dropdown menus, popovers, or any UI element that appears on a click interaction.
-
-### Basic Usage
+Every interaction composable you use will accept this `context` as its first argument, allowing it to read state and dispatch changes in a coordinated way.
 
 ```vue
 <script setup>
-const reference = ref(null)
-const floating = ref(null)
+// ...
 const open = ref(false)
 
-const { floatingStyles, context } = useFloating(reference, floating, {
+const { context } = useFloating(reference, floating, {
+  // The context is configured with the reactive `open` state
+  // and an `onOpenChange` handler to update it.
   open,
-  whileElementsMounted: autoUpdate,
+  onOpenChange: (value) => {
+    open.value = value
+  },
 })
 
-// Apply click interaction
+// All subsequent interactions plug into this same `context`.
 useClick(context)
-</script>
-
-<template>
-  <button ref="reference" type="button">Anchor Element</button>
-  <div v-if="open" ref="floating" :style="floatingStyles">Floating Element</div>
-</template>
-```
-
-### See Also
-
-- [`useClick`](../../src/composables/interactions/use-click.ts)
-
-## `useHover`
-
-_Best for tooltips and non-critical information that appears on mouseover._
-
-The `useHover` composable shows or hides a floating element when the user hovers their pointer over the anchor element. This is commonly used for tooltips or non-critical information that appears on hover.
-
-### Basic Usage
-
-```vue
-<script setup>
-const reference = ref(null)
-const floating = ref(null)
-const open = ref(false)
-
-const { floatingStyles, context } = useFloating(reference, floating, {
-  open,
-  whileElementsMounted: autoUpdate,
-})
-
-// Apply hover interaction
-useHover(context)
-</script>
-
-<template>
-  <button ref="reference" type="button">Hover Over Me</button>
-  <div v-if="open" ref="floating" :style="floatingStyles">Floating Element (Tooltip)</div>
-</template>
-```
-
-### See Also
-
-- [`useHover`](../../src/composables/interactions/use-hover.ts)
-
-## `useFocus`
-
-_Crucial for accessibility, allowing keyboard users to trigger floating elements._
-
-The `useFocus` composable controls the visibility of a floating element when the anchor element receives keyboard focus. It's often used in conjunction with other hooks like `useClick` or `useHover` to ensure accessibility.
-
-### Basic Usage
-
-```vue
-<script setup>
-const reference = ref(null)
-const floating = ref(null)
-const open = ref(false)
-
-const { floatingStyles, context } = useFloating(reference, floating, {
-  open,
-  whileElementsMounted: autoUpdate,
-})
-
-// Apply focus interaction
-useFocus(context)
-</script>
-
-<template>
-  <button ref="reference" type="button">Focus Me (e.g., using Tab key)</button>
-  <div v-if="open" ref="floating" :style="floatingStyles">Floating Element (Visible on Focus)</div>
-</template>
-```
-
-### See Also
-
-- [`useFocus`](../../src/composables/interactions/use-focus.ts)
-
-## `useDismiss`
-
-_For closing floating elements via outside clicks, the Escape key, or scrolling._
-
-The `useDismiss` composable provides functionality to close (dismiss) a floating element when certain events occur, such as pressing the Escape key or clicking outside the floating element.
-
-### Basic Usage
-
-```vue
-<script setup>
-const reference = ref(null)
-const floating = ref(null)
-const open = ref(false)
-
-const { floatingStyles, context } = useFloating(reference, floating, {
-  open,
-  whileElementsMounted: autoUpdate,
-})
-
-// Open on click
-useClick(context)
-// Close on dismiss events
 useDismiss(context)
+// ...
+</script>
+```
+
+## Building a Component: The Dropdown Menu
+
+Instead of looking at each interaction in isolation, let's build a common UI pattern: a fully-featured dropdown menu. This will demonstrate how different composables work together to create a robust user experience. A good dropdown should:
+
+1.  Open/close on **click**.
+2.  Close when the **Escape** key is pressed.
+3.  Close when the user **clicks outside** the menu.
+4.  Be fully **keyboard accessible**, opening on focus and allowing navigation.
+
+We can achieve all of this by composing four interactions: `useClick`, `useFocus`, `useDismiss`, and `useRole`.
+
+```vue
+<script setup>
+import { ref } from "vue"
+import { useFloating, autoUpdate, offset } from "@floating-ui/vue"
+// Assume these are imported from your library
+import { useClick, useFocus, useDismiss, useRole } from "./composables"
+
+// 1. Core Floating UI setup
+const reference = ref(null)
+const floating = ref(null)
+const open = ref(false)
+
+const { floatingStyles, context } = useFloating(reference, floating, {
+  open,
+  onOpenChange: (value) => {
+    open.value = value
+  },
+  placement: "bottom-start",
+  whileElementsMounted: autoUpdate,
+  middleware: [offset(5)],
+})
+
+// 2. Composing the Interactions
+// ---
+// Handles opening and closing on click.
+useClick(context)
+
+// Handles closing on outside clicks or Escape key presses.
+useDismiss(context)
+
+// Handles opening on keyboard focus for accessibility.
+useFocus(context)
+
+// Adds the necessary ARIA attributes for a `menu` role.
+useRole(context, { role: "menu" })
 </script>
 
 <template>
-  <button ref="reference" type="button">Open Popover</button>
+  <!-- `useRole` adds aria-haspopup, aria-expanded, etc. -->
+  <button ref="reference" type="button">Dropdown</button>
+
+  <!-- `useRole` adds role="menu" and manages focus -->
   <div v-if="open" ref="floating" :style="floatingStyles">
-    <p>Floating content. Click outside or press Esc to close.</p>
+    <ul>
+      <li><a href="#">Item 1</a></li>
+      <li><a href="#">Item 2</a></li>
+    </ul>
   </div>
 </template>
 ```
 
-### See Also
+### How It Works Together
 
-- [`useDismiss`](../../src/composables/interactions/use-dismiss.ts)
+- **`useClick(context)`** listens for clicks on the anchor. When a click occurs, it calls `onOpenChange` to toggle the `open` state.
+- **`useDismiss(context)`** adds global listeners. If it detects an outside click or an `Escape` keydown _while the menu is open_, it calls `onOpenChange(false)` to close it.
+- **`useFocus(context)`** listens for focus events on the anchor. When the element is focused (e.g., via the Tab key), it calls `onOpenChange(true)`. This ensures keyboard users can access the menu without a mouse.
+- **`useRole(context)`** enhances accessibility by managing ARIA attributes like `aria-expanded` (which it syncs with the `open` state) and `aria-controls`.
 
-## `useClientPoint`
+Notice there are no conflicts. Each composable operates on the same shared `open` state but is triggered by different, non-overlapping events. This is the power of the compositional model.
 
-_Ideal for context menus and tooltips that follow the mouse cursor._
+## Advanced Patterns & Common Pitfalls
 
-The `useClientPoint` composable positions the floating element relative to a client point, typically the mouse cursor's position. It works by updating the `VirtualElement` used by `useFloating`.
+### Pattern: The Accessible Tooltip
 
-### Basic Usage
-
-```vue
-<script setup>
-const reference = ref(null) // This element's bounds are used for event listening
-const floating = ref(null)
-const open = ref(false)
-
-const { floatingStyles, context } = useFloating(reference, floating, {
-  open,
-  whileElementsMounted: autoUpdate,
-})
-
-// Show/hide based on hover
-useHover(context, { delay: { open: 300 } })
-// Position based on client point, enabled only when open
-useClientPoint(reference, context, { enabled: open })
-</script>
-
-<template>
-  <div
-    ref="reference"
-    style="width: 200px; height: 100px; border: 1px solid #ccc; text-align: center; line-height: 100px;"
-  >
-    Hover over me
-  </div>
-  <div v-if="open" ref="floating" :style="floatingStyles">Context Menu / Tooltip</div>
-</template>
-```
-
-### See Also
-
-- [`useClientPoint`](../../src/composables/interactions/use-client-point.ts)
-
-## Combining Interactions: Tooltip Example
-
-Many UI elements require multiple interaction types. For example, a tooltip should appear on hover or keyboard focus and be dismissible. Here's how to combine `useHover`, `useFocus`, and `useDismiss`.
+A tooltip has different requirements from a dropdown. It should appear on **hover** or **focus**, not a click.
 
 ```vue
-<script setup>
-const reference = ref(null)
-const floating = ref(null)
-const open = ref(false)
+// In your <script setup>
+// ... (useFloating setup is the same)
 
-const { floatingStyles, context } = useFloating(reference, floating, {
-  open,
-  placement: "top",
-  whileElementsMounted: autoUpdate,
-  middleware: [offset(5)], // Add some space
-})
+// Show on mouse hover, with a slight delay to feel less twitchy.
+useHover(context, { delay: 150 })
 
-// Show on hover
-useHover(context, { delay: { open: 100, close: 50 } })
-// Show on focus
+// Also show on keyboard focus for accessibility.
 useFocus(context)
-// Hide on dismiss events (e.g., Escape key)
-useDismiss(context)
-</script>
 
-<template>
-  <button ref="reference" type="button" aria-describedby="tooltip">Hover or Focus Me</button>
-  <div v-if="open" ref="floating" :style="floatingStyles" id="tooltip" role="tooltip">
-    This is a helpful tooltip!
-  </div>
-</template>
+// Allow closing with the Escape key.
+useDismiss(context)
+
+// Apply the `tooltip` role for screen readers.
+useRole(context, { role: 'tooltip' })
 ```
 
-### How it Works Together
+Here, `useHover` and `useFocus` work in tandem. Whichever happens first will open the tooltip. `useDismiss` provides a consistent way to close it.
 
-- **`useHover(context, ...)`**: Makes the tooltip appear on mouse hover.
-- **`useFocus(context)`**: Allows the tooltip to appear on keyboard focus.
-- **`useDismiss(context)`**: Ensures the tooltip can be closed by pressing Escape or clicking outside.
+### Pitfall: Conflicting Triggers (`useClick` vs. `useHover`)
 
-By combining these interactions, you create a robust and accessible tooltip that you can adapt for other UI components like dropdowns or popovers.
+What if you want a popover that opens on click, but can _also_ be opened on hover? Combining `useClick` and `useHover` directly can lead to confusing behavior:
+
+- User clicks to open it.
+- User moves the mouse away.
+- `useHover`'s `mouseleave` event fires and closes the popover, which the user expected to stay open.
+
+**Solution:** Conditionally enable interactions. You can pass an `enabled` option (a `ref` or `computed`) to most interaction composables. This lets you decide which interaction should be active.
+
+```vue
+<script setup>
+// ...
+const isHovering = ref(false)
+
+// Only enable hover if the element is NOT open.
+// This prevents hover from closing a clicked-open element.
+useHover(context, { enabled: computed(() => !open.value) })
+
+// Click always works.
+useClick(context)
+useDismiss(context)
+// ...
+</script>
+```
+
+In this scenario, `useHover` can only _open_ the popover. Once `open` is `true`, the hover logic is disabled, preventing it from interfering with the clicked-open state.
+
+### Pitfall: Managing Focus
+
+When a floating element opens, where should keyboard focus go? By default, it stays on the anchor. For dialogs or menus, you often want to move focus inside the floating element. You can handle this by observing the `open` state.
+
+```ts
+import { watch, nextTick } from "vue"
+const open = ref(false)
+const floating = ref<HTMLElement | null>(null)
+```
