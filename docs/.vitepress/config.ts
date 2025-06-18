@@ -25,8 +25,6 @@ export default defineConfig({
     nav: [
       { text: "Home", link: "/" },
       { text: "Guide", link: "/guide/" },
-      { text: "Composables", link: "/composables/" },
-      { text: "Examples", link: "/examples/" },
       { text: "API", link: "/api/" },
     ],
 
@@ -51,47 +49,33 @@ export default defineConfig({
           ],
         },
       ],
-      "/composables/": [
+      "/api/": [
         {
           text: "Core",
           items: [
-            { text: "Overview", link: "/composables/" },
-            { text: "useFloating", link: "/composables/use-floating" },
-            { text: "useFloatingTree", link: "/composables/use-floating-tree" },
+            { text: "Overview", link: "/api/" },
+            { text: "useFloating", link: "/api/use-floating" },
+            { text: "useFloatingTree", link: "/api/use-floating-tree" },
+            { text: "useArrow", link: "/api/use-arrow" },
           ],
         },
         {
           text: "Interactions",
           items: [
-            { text: "useHover", link: "/composables/use-hover" },
-            { text: "useClick", link: "/composables/use-click" },
-            { text: "useDismiss", link: "/composables/use-dismiss" },
-            { text: "useClientPoint", link: "/composables/use-client-point" },
+            { text: "useClick", link: "/api/use-click" },
+            { text: "useHover", link: "/api/use-hover" },
+            { text: "useDismiss", link: "/api/use-dismiss" },
+            { text: "useFocus", link: "/api/use-focus" },
+            { text: "useClientPoint", link: "/api/use-client-point" },
           ],
         },
         {
           text: "Middleware",
           items: [
-            { text: "offset", link: "/composables/middleware/offset" },
-            { text: "flip", link: "/composables/middleware/flip" },
-            { text: "shift", link: "/composables/middleware/shift" },
-            { text: "size", link: "/composables/middleware/size" },
-          ],
-        },
-      ],
-      "/examples/": [
-        {
-          text: "Examples",
-          items: [{ text: "Overview", link: "/examples/" }],
-        },
-      ],
-      "/api/": [
-        {
-          text: "Core API",
-          items: [
-            { text: "Overview", link: "/api/" },
-            { text: "useFloating", link: "/api/use-floating" },
-            { text: "useFloatingTree", link: "/api/use-floating-tree" },
+            { text: "offset", link: "/api/offset" },
+            { text: "flip", link: "/api/flip" },
+            { text: "shift", link: "/api/shift" },
+            { text: "size", link: "/api/size" },
           ],
         },
       ],
