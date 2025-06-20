@@ -26,11 +26,16 @@ export interface UseArrowReturn {
   arrowStyles: ComputedRef<Record<string, string>>
 }
 
-//=======================================================================================
-// 📌 Constants
-//=======================================================================================
-
-const DEFAULT_ARROW_OFFSET = "-12px"
+/**
+ * Options for the useArrow composable
+ */
+export interface UseArrowOptions {
+  /**
+   * The offset for the arrow positioning.
+   * Defaults to "-12px" if not provided.
+   */
+  offset?: string
+}
 
 //=======================================================================================
 // 📌 Main Logic / Primary Export(s)
@@ -43,15 +48,17 @@ const DEFAULT_ARROW_OFFSET = "-12px"
  * based on the placement and middleware data from a floating element.
  *
  * @param context - The floating context containing middleware data and placement information
+ * @param options - Optional configuration for the arrow, e.g., offset
  * @returns Computed arrow positions and CSS styles
  *
  * @example
  * ```ts
- * const { arrowStyles } = useArrow(floatingContext)
+ * const { arrowStyles } = useArrow(floatingContext, { offset: "-10px" })
  * ```
  */
-export function useArrow(context: FloatingContext): UseArrowReturn {
+export function useArrow(context: FloatingContext, options: UseArrowOptions = {}): UseArrowReturn {
   const { middlewareData, placement } = context
+  const { offset = "-12px" } = options
 
   const arrowX = computed(() => middlewareData.value.arrow?.x ?? 0)
   const arrowY = computed(() => middlewareData.value.arrow?.y ?? 0)
@@ -70,7 +77,7 @@ export function useArrow(context: FloatingContext): UseArrowReturn {
     return {
       "inset-inline-start": x,
       "inset-block-start": y,
-      [staticSide]: DEFAULT_ARROW_OFFSET,
+      [staticSide]: offset,
     }
   })
 
