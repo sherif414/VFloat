@@ -96,6 +96,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
   } = options
 
   const isEnabled = computed(() => toValue(enabled))
+  const floatingEl = context.refs.floatingEl
   const anchorEl = computed(() => {
     const el = context.refs.anchorEl.value
     if (!el) return null
@@ -103,11 +104,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
     if (el.contextElement instanceof HTMLElement) return el.contextElement
     return null
   })
-  const floatingEl = computed(() => {
-    const el = context.refs.floatingEl.value
-    if (!el) return null
-    return el instanceof HTMLElement ? el : null
-  })
+  
 
   const { isComposing } = useComposition()
 
