@@ -13,7 +13,7 @@ dist
 dist-ssr
 coverage
 *.local
-# playground
+playground
 
 /cypress/videos/
 /cypress/screenshots/
