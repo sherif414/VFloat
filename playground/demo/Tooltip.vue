@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useClick, useDismiss, useFloating, useFocus } from "@/composables"
 import { ref } from "vue"
-import type { UseDismissProps } from '@/composables/interactions/use-dismiss'
+import type { UseDismissProps } from "@/composables/interactions/use-dismiss"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
@@ -18,15 +18,12 @@ const dismissOptions = {
 useClick(floating)
 useDismiss(floating, dismissOptions)
 // useFocus(floating)
-
 </script>
 
 <template>
   <div class="h-300px"></div>
   <div class="demo-container">
-    <button ref="anchorEl" class="demo-anchor">
-      Click, Focus, or Dismiss me!
-    </button>
+    <button ref="anchorEl" class="demo-anchor">Click, Focus, or Dismiss me!</button>
 
     <div
       v-if="floating.open.value"
@@ -58,7 +55,6 @@ body {
   border-radius: 4px;
   font-size: 1rem;
 }
-
 
 .demo-floating {
   background: #1f2937;

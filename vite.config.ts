@@ -2,7 +2,6 @@ import { URL, fileURLToPath } from "node:url"
 import vue from "@vitejs/plugin-vue"
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
-// import tailwind from "@tailwindcss/vite"
 import unocss from "unocss/vite"
 
 export default defineConfig({

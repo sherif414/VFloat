@@ -9,5 +9,5 @@ import DemoContainer from "./demo/DemoContainer.vue"
 </script>
 
 <template>
-  <DemoContainer />
+  <Tooltip />
 </template>
