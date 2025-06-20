@@ -53,13 +53,13 @@ export interface UseDismissProps {
    * The event name to use for anchor press.
    * @default 'pointerdown'
    */
-  anchorPressEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+  anchorPressEvent?: "pointerdown" | "mousedown" | "click"
 
   /**
    * The event name to use for outside press.
    * @default 'pointerdown'
    */
-  outsidePressEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+  outsidePressEvent?: "pointerdown" | "mousedown" | "click"
 }
 
 //=======================================================================================
@@ -133,7 +133,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
     }
 
     // A `mousedown` or `pointerdown` event started inside and ended outside.
-    if (toValue(outsidePressEvent) === "click" && endedOrStartedInside) {
+    if (outsidePressEvent === "click" && endedOrStartedInside) {
       endedOrStartedInside = false
       return
     }
@@ -201,13 +201,8 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
 
   // Add and remove event listeners.
   useEventListener(document, "keydown", onKeyDown, toValue(escapeKeyCapture))
-  useEventListener(
-    document,
-    toValue(outsidePressEvent),
-    onOutsidePress,
-    toValue(outsidePressCapture)
-  )
-  useEventListener(anchorEl, toValue(anchorPressEvent), onAnchorPress)
+  useEventListener(document, outsidePressEvent, onOutsidePress, toValue(outsidePressCapture))
+  useEventListener(anchorEl, anchorPressEvent, onAnchorPress)
   useEventListener(
     floatingEl,
     "mousedown",
