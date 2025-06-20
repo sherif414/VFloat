@@ -1,9 +1,7 @@
 import { getOverflowAncestors } from "@floating-ui/dom"
 import { useEventListener } from "@vueuse/core"
-import { type MaybeRefOrGetter, computed, onScopeDispose, toValue, watchEffect } from "vue"
+import { type MaybeRefOrGetter, computed, onScopeDispose, toValue, watchEffect, ref } from "vue"
 import type { FloatingContext } from "../use-floating"
-import { useComposition } from "../utils/use-composition"
-import { isClickOnScrollbar, isEventTargetWithin, isHTMLElement, normalizeProp } from "../utils/dom"
 
 //=======================================================================================
 // 📌 Types
@@ -216,4 +214,65 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
     },
     { capture: true }
   )
+}
+
+//=======================================================================================
+// 📌 Helper Functions
+//=======================================================================================
+function normalizeProp(
+  normalizable?: boolean | { escapeKey?: boolean; outsidePress?: boolean }
+) {
+  return {
+    escapeKey:
+      typeof normalizable === "boolean" ? normalizable : (normalizable?.escapeKey ?? false),
+    outsidePress:
+      typeof normalizable === "boolean" ? normalizable : (normalizable?.outsidePress ?? true),
+  }
+}
+
+function isHTMLElement(node: unknown | null): node is HTMLElement {
+  return node instanceof Element && node instanceof HTMLElement
+}
+
+function isEventTargetWithin(event: Event, element: Element | null | undefined): boolean {
+  if (!element) return false
+
+  // Modern, Shadow DOM-aware approach
+  if ("composedPath" in event && typeof event.composedPath === "function") {
+    return (event.composedPath() as Node[]).includes(element)
+  }
+
+  // Fallback for older browsers or non-Shadow DOM contexts
+  return element.contains(event.target as Node)
+}
+
+function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
+  const scrollbarWidth = target.offsetWidth - target.clientWidth
+  const scrollbarHeight = target.offsetHeight - target.clientHeight
+
+  if (scrollbarWidth > 0 && event.clientX > target.clientWidth) {
+    return true
+  }
+
+  if (scrollbarHeight > 0 && event.clientY > target.clientHeight) {
+    return true
+  }
+
+  return false
+}
+
+function useComposition() {
+  const isComposing = ref(false)
+
+  useEventListener(document, "compositionstart", () => {
+    isComposing.value = true
+  })
+
+  useEventListener(document, "compositionend", () => {
+    isComposing.value = false
+  })
+
+  return {
+    isComposing: () => isComposing.value,
+  }
 }
