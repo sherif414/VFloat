@@ -82,28 +82,6 @@ export class TreeNode<T> {
   }
 
   /**
-   * Updates the node's data.
-   * If T is an object, performs a shallow merge using Object.assign.
-   * If T is a primitive, replaces the value.
-   * @param newData Partial data for objects, or the new value for primitives.
-   */
-  updateData(newData: Partial<T> | T) {
-    const currentValue = this.data
-    if (
-      typeof currentValue === "object" &&
-      currentValue !== null &&
-      typeof newData === "object" &&
-      newData !== null
-    ) {
-      // Shallow merge for objects
-      this.data = Object.assign({}, currentValue, newData)
-    } else {
-      // Replace value for primitives or if types mismatch significantly
-      this.data = newData as T
-    }
-  }
-
-  /**
    * Finds the first direct child matching the predicate.
    * @param predicate Function to test each child node.
    * @returns The matching child node or null if not found.
