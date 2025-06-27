@@ -7,7 +7,7 @@ import type {
   VirtualElement,
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
-import type { ComputedRef, CSSProperties, MaybeRefOrGetter, Ref } from "vue"
+import type { MaybeRefOrGetter, Ref } from "vue"
 import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
 
 //=======================================================================================
@@ -141,9 +141,9 @@ export interface FloatingContext {
   isPositioned: Readonly<Ref<boolean>>
 
   /**
-   * Computed styles to apply to the floating element
+   * Reactive styles to apply to the floating element
    */
-  floatingStyles: ComputedRef<FloatingStyles>
+  floatingStyles: Readonly<Ref<FloatingStyles>>
 
   /**
    * Function to manually update the position
@@ -273,36 +273,47 @@ export function useFloating(
     }
   })
 
-  const floatingStyles = computed(() => {
-    const initialStyles = {
-      position: strategy.value,
-      left: "0",
-      top: "0",
-    }
-
-    if (!isPositioned.value || !floatingEl.value) {
-      return initialStyles
-    }
-
-    const xVal = roundByDPR(floatingEl.value, x.value)
-    const yVal = roundByDPR(floatingEl.value, y.value)
-
-    if (toValue(transform)) {
-      return {
-        ...initialStyles,
-        transform: `translate(${xVal}px, ${yVal}px)`,
-        ...(getDPR(floatingEl.value) >= 1.5 && {
-          willChange: "transform",
-        }),
-      }
-    }
-
-    return {
-      ...initialStyles,
-      left: `${xVal}px`,
-      top: `${yVal}px`,
-    }
+  const floatingStyles: Ref<FloatingStyles> = ref({
+    position: initialStrategy.value,
+    left: "0",
+    top: "0",
   })
+
+  watch(
+    [isPositioned, x, y, strategy, floatingEl, () => toValue(transform)],
+    ([isPositionedVal, xVal, yVal, strategyVal, floatingElVal, useTransformVal]) => {
+      const initialStyles = {
+        position: strategyVal,
+        left: "0",
+        top: "0",
+      }
+
+      if (!isPositionedVal || !floatingElVal) {
+        floatingStyles.value = initialStyles
+        return
+      }
+
+      const roundedX = roundByDPR(floatingElVal, xVal)
+      const roundedY = roundByDPR(floatingElVal, yVal)
+
+      if (useTransformVal) {
+        floatingStyles.value = {
+          ...initialStyles,
+          transform: `translate(${roundedX}px, ${roundedY}px)`,
+          ...(getDPR(floatingElVal) >= 1.5 && {
+            "will-change": "transform",
+          }),
+        }
+      } else {
+        floatingStyles.value = {
+          ...initialStyles,
+          left: `${roundedX}px`,
+          top: `${roundedY}px`,
+        }
+      }
+    },
+    { immediate: true }
+  )
 
   return {
     x,
@@ -330,17 +341,17 @@ export function useFloating(
  * Rounds a value based on the device pixel ratio
  */
 function roundByDPR(el: HTMLElement, value: number) {
-  const dpr = getDPR(el);
-  return Math.round(value * dpr) / dpr;
+  const dpr = getDPR(el)
+  return Math.round(value * dpr) / dpr
 }
 
 /**
  * Gets the device pixel ratio for an element
  */
 function getDPR(el: HTMLElement) {
-  if (typeof window === "undefined") return 1;
-  const win = el.ownerDocument.defaultView || window;
-  return win.devicePixelRatio || 1;
+  if (typeof window === "undefined") return 1
+  const win = el.ownerDocument.defaultView || window
+  return win.devicePixelRatio || 1
 }
 
 /**
