@@ -266,7 +266,6 @@ export function useFloating(
 
   onScopeDispose(() => cleanup?.())
 
-  // Reset isPositioned when closed
   watch(open, (isOpen) => {
     if (!isOpen) {
       isPositioned.value = false
@@ -280,17 +279,15 @@ export function useFloating(
   })
 
   watch(
-    [isPositioned, x, y, strategy, floatingEl, () => toValue(transform)],
-    ([isPositionedVal, xVal, yVal, strategyVal, floatingElVal, useTransformVal]) => {
+    [x, y, () => toValue(transform)],
+    ([xVal, yVal, useTransformVal]) => {
+      const floatingElVal = floatingEl.value
+      if (!floatingElVal) return
+
       const initialStyles = {
-        position: strategyVal,
+        position: strategy.value,
         left: "0",
         top: "0",
-      }
-
-      if (!isPositionedVal || !floatingElVal) {
-        floatingStyles.value = initialStyles
-        return
       }
 
       const roundedX = roundByDPR(floatingElVal, xVal)
