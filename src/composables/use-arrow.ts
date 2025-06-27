@@ -31,8 +31,15 @@ export interface UseArrowReturn {
  */
 export interface UseArrowOptions {
   /**
-   * The offset for the arrow positioning.
-   * Defaults to "-12px" if not provided.
+   * Controls the offset of the arrow from the edge of the floating element.
+   *
+   * A positive value moves the arrow further into the floating element,
+   * while a negative value creates a gap between the arrow and the element.
+   * This is useful for preventing the arrow from overlapping borders or shadows.
+   *
+   * The value must be a valid CSS length (e.g., '5px', '-0.5rem').
+   *
+   * @default '-4px'
    */
   offset?: string
 }
@@ -58,28 +65,44 @@ export interface UseArrowOptions {
  */
 export function useArrow(context: FloatingContext, options: UseArrowOptions = {}): UseArrowReturn {
   const { middlewareData, placement } = context
-  const { offset = "-12px" } = options
+  const { offset = "-4px" } = options
 
   const arrowX = computed(() => middlewareData.value.arrow?.x ?? 0)
   const arrowY = computed(() => middlewareData.value.arrow?.y ?? 0)
 
   const arrowStyles = computed(() => {
-    const staticSide = {
-      top: "inset-block-end",
-      right: "inset-inline-start",
-      bottom: "inset-block-start",
-      left: "inset-inline-end",
-    }[toValue(placement).split("-")[0]] as string
+    const side = toValue(placement).split("-")[0] as "top" | "bottom" | "left" | "right"
 
-    const x = arrowX.value != null ? `${arrowX.value}px` : ""
-    const y = arrowY.value != null ? `${arrowY.value}px` : ""
+    const x = arrowX.value
+    const y = arrowY.value
 
-    return {
-      "inset-inline-start": x,
-      "inset-block-start": y,
-      [staticSide]: offset,
+    if (side === "bottom") {
+      return {
+        "inset-inline-start": `${x}px`,
+        "inset-block-start": offset,
+      }
     }
-  })
+    if (side === "top") {
+      return {
+        "inset-inline-start": `${x}px`,
+        "inset-block-end": offset,
+      }
+    }
+    if (side === "right") {
+      return {
+        "inset-block-start": `${y}px`,
+        "inset-inline-start": offset,
+      }
+    }
+    if (side === "left") {
+      return {
+        "inset-block-start": `${y}px`,
+        "inset-inline-end": offset,
+      }
+    }
+
+    return {}
+  }) as unknown as ComputedRef<Record<string, string>>
 
   return {
     arrowX,
