@@ -25,15 +25,18 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build tsconfig.build.json",
     "lint": "biome check --apply --write",
-    "test:browser": "vitest --workspace=vitest.workspace.ts"
+    "test:browser": "vitest --workspace=vitest.workspace.ts",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.13",
     "@vueuse/core": "^13.0.0",
+    "vitepress-plugin-demo": "^0.8.0",
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "lucide-vue-next": "^0.513.0",
     "@biomejs/biome": "1.9.4",
     "@testing-library/vue": "^8.1.0",
     "@tsconfig/node22": "^22.0.1",
@@ -47,6 +50,7 @@
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
     "jsdom": "^26.0.0",
+    "lucide-vue-next": "^0.513.0",
     "npm-run-all2": "^7.0.2",
     "playwright": "^1.51.1",
     "prettier": "^3.5.3",

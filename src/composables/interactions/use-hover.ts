@@ -9,29 +9,13 @@ import {
   watchPostEffect,
 } from "vue"
 import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
+import { safePolygon, type SafePolygonOptions } from "./polygon"
 
 //=======================================================================================
 // 📌 Types & Interfaces
 //=======================================================================================
 
 type PointerType = "mouse" | "pen" | "touch" | null
-
-export interface HandleCloseContext {
-  context: FloatingContext
-  open: boolean
-  pointerType: PointerType
-  x: number
-  y: number
-  referenceEl: AnchorElement
-  floatingEl: FloatingElement
-  isPointInFloating(event: PointerEvent | MouseEvent | TouchEvent): boolean
-  originalEvent?: Event
-}
-
-export type HandleCloseFn = (
-  context: HandleCloseContext,
-  onClose: () => void
-) => undefined | (() => void)
 
 export interface UseHoverOptions {
   /**
@@ -61,6 +45,16 @@ export interface UseHoverOptions {
    * @default false
    */
   mouseOnly?: MaybeRef<boolean>
+
+  /**
+   * Enable floating-ui style safe polygon algorithm that keeps the
+   * floating element open while the pointer traverses the rectangle/triangle
+   * region between the reference and floating elements.
+   * – `true` → enabled with defaults
+   * – `false | undefined` → disabled (current behaviour)
+   * – `SafePolygonOptions` → enabled with custom buffer
+   */
+  safePolygon?: MaybeRef<boolean | SafePolygonOptions>
 }
 
 //=======================================================================================
@@ -158,6 +152,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     delay = 0,
     restMs: restMsOption = 0,
     mouseOnly = false,
+    safePolygon: safePolygonOption = false,
   } = options
 
   const enabled = computed(() => toValue(enabledOption))
@@ -249,21 +244,61 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   function onPointerEnterFloating(e: PointerEvent): void {
     if (!enabled.value || !isValidPointerType(e)) return
     clearTimeouts()
+    cleanupPolygon()
   }
 
-  function onPointerLeaveReference(e: PointerEvent): void {
-    if (!enabled.value || !isValidPointerType(e)) return
+  let polygonMouseMoveHandler: ((e: MouseEvent) => void) | null = null
 
-    if (!floatingEl.value?.contains(e.relatedTarget as Node)) {
-      hide()
+  function cleanupPolygon() {
+    if (polygonMouseMoveHandler) {
+      document.removeEventListener("pointermove", polygonMouseMoveHandler)
+      polygonMouseMoveHandler = null
     }
   }
 
-  function onPointerLeaveFloating(e: PointerEvent): void {
-    if (!enabled.value || !isValidPointerType(e)) return
+  const safePolygonEnabled = computed(() => !!toValue(safePolygonOption))
+  const safePolygonOptions = computed<SafePolygonOptions | undefined>(() => {
+    const val = toValue(safePolygonOption)
+    if (typeof val === "object" && val) return val
+    if (val === true) return {}
+    return undefined
+  })
 
-    if (!reference.value?.contains(e.relatedTarget as Node)) {
-      hide()
+  function onPointerLeave(e: PointerEvent): void {
+    if (!enabled.value || !isValidPointerType(e)) return;
+
+    const { clientX, clientY } = e;
+    const relatedTarget = e.relatedTarget as Node | null;
+
+    if (safePolygonEnabled.value) {
+      setTimeout(() => {
+        cleanupPolygon();
+        const refEl = reference.value;
+        const floatEl = floatingEl.value;
+
+        if (!refEl || !floatEl) {
+          hide();
+          return;
+        }
+
+        polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
+          x: clientX,
+          y: clientY,
+          placement: context.placement.value,
+          elements: {
+            domReference: refEl,
+            floating: floatEl,
+          },
+          buffer: safePolygonOptions.value?.buffer ?? 1,
+          onClose: () => {
+            cleanupPolygon();
+            hide();
+          },
+        });
+        document.addEventListener("pointermove", polygonMouseMoveHandler);
+      }, 0);
+    } else if (!floatingEl.value?.contains(relatedTarget)) {
+      hide();
     }
   }
 
@@ -272,11 +307,11 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     if (!el || !enabled.value) return
 
     el.addEventListener("pointerenter", onPointerEnterReference)
-    el.addEventListener("pointerleave", onPointerLeaveReference)
+    el.addEventListener("pointerleave", onPointerLeave)
 
     onWatcherCleanup(() => {
       el.removeEventListener("pointerenter", onPointerEnterReference)
-      el.removeEventListener("pointerleave", onPointerLeaveReference)
+      el.removeEventListener("pointerleave", onPointerLeave)
     })
   })
 
@@ -285,11 +320,15 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     if (!el || !enabled.value) return
 
     el.addEventListener("pointerenter", onPointerEnterFloating)
-    el.addEventListener("pointerleave", onPointerLeaveFloating)
+    el.addEventListener("pointerleave", onPointerLeave)
 
     onWatcherCleanup(() => {
       el.removeEventListener("pointerenter", onPointerEnterFloating)
-      el.removeEventListener("pointerleave", onPointerLeaveFloating)
+      el.removeEventListener("pointerleave", onPointerLeave)
     })
+  })
+
+  onScopeDispose(() => {
+    cleanupPolygon()
   })
 }

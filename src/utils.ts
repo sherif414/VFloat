@@ -18,3 +18,7 @@ export function useId(): string {
 export function isFunction(value: unknown): value is AnyFn {
   return typeof value === "function"
 }
+
+export function isHTMLElement(value: unknown): value is HTMLElement {
+  return typeof value === "object" && value instanceof HTMLElement
+}
