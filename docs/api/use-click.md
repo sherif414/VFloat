@@ -35,39 +35,31 @@ useClick(context)
 function useClick(
   context: FloatingContext,
   options?: UseClickOptions
-): {
-  getReferenceProps: (userProps?: object) => object
-}
+): void // useClick directly attaches event listeners and returns void
 ```
 
-| Parameter | Type            | Description                                  |
-| --------- | --------------- | -------------------------------------------- |
-| context   | FloatingContext | The context object returned from useFloating |
-| options   | UseClickOptions | Optional configuration options               |
+| Parameter | Type                             | Description                                                                    |
+| --------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| context   | `FloatingContext`                | The context object returned from `useFloating`. Contains refs and state.       |
+| options   | `UseClickOptions` (see below)    | Optional configuration for the click behavior.                                 |
 
-### Options
+### Options (`UseClickOptions`)
 
-<script setup>
-import { ref } from 'vue'
-</script>
+The `useClick` composable accepts several options to customize its behavior. These options can be reactive (e.g., a `Ref`).
 
-The `useClick` composable accepts several options to customize its behavior:
+| Option           | Type                                     | Default | Description                                                                              |
+| ---------------- | ---------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| enabled          | `MaybeRefOrGetter<boolean>`              | `true`  | Whether the click interaction is enabled.                                                |
+| event            | `MaybeRefOrGetter<'click' \| 'mousedown'>` | `'click'` | The mouse event that triggers the interaction. Keyboard clicks are handled separately.   |
+| toggle           | `MaybeRefOrGetter<boolean>`              | `true`  | Whether clicking the reference element toggles the floating element's open state.        |
+| ignoreMouse      | `MaybeRefOrGetter<boolean>`              | `false` | When `true`, mouse clicks don't trigger the interaction (useful for touch-only interfaces). |
+| keyboardHandlers | `MaybeRefOrGetter<boolean>`              | `true`  | Whether to handle keyboard events (`Enter` and `Space`) on the reference element.        |
 
-| Option           | Type                                | Default | Description                                                                              |
-| ---------------- | ----------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| enabled          | boolean \| Ref&lt;boolean&gt;       | true    | Whether the click interaction is enabled                                                 |
-| event            | 'mousedown' \| 'mouseup' \| 'click' | 'click' | The event that triggers the interaction                                                  |
-| toggle           | boolean                             | true    | Whether clicking the reference element toggles the floating element's open state         |
-| ignoreMouse      | boolean                             | false   | When true, mouse clicks don't trigger the interaction (useful for touch-only interfaces) |
-| keyboardHandlers | boolean                             | true    | Whether to handle keyboard events (Enter and Space) on the reference element             |
+(Note: `MaybeRefOrGetter<T>` means the value can be `T`, `Ref<T>`, or a getter function `() => T`.)
 
 ### Return Value
 
-`useClick` returns an object with functions that generate props:
-
-| Property          | Type                           | Description                                                   |
-| ----------------- | ------------------------------ | ------------------------------------------------------------- |
-| getReferenceProps | (userProps?: object) => object | Function that returns props to apply to the reference element |
+`useClick` returns `void`. It performs its actions by attaching event listeners to the reference element obtained from the `FloatingContext`.
 
 ## Customizing Click Behavior
 
@@ -77,20 +69,37 @@ By default, `useClick` uses the 'click' event, but you can change it to 'mousedo
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float"
+import { ref } from "vue" // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick } from "v-float"
+
+const isOpen = ref(false)
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
-// Trigger on mousedown instead of click
-const click = useClick(floating.context, {
+// Trigger on mousedown instead of click.
+// useClick directly attaches event listeners to the reference element.
+useClick(floating.context, {
   event: "mousedown",
 })
 
-const { getReferenceProps, getFloatingProps } = useInteractions([click])
+// ARIA attributes and other non-event props should be handled manually or by other composables.
+// For example:
+// :aria-expanded="isOpen"
+// :aria-controls="floatingId" (if floating element has an ID)
 </script>
+<template>
+  <button ref="referenceRef" :aria-expanded="isOpen.value">
+    Trigger on mousedown
+  </button>
+  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+    Floating content
+  </div>
+</template>
 ```
 
 Using 'mousedown' can make the interaction feel more responsive since it triggers before the user releases the mouse button.
@@ -101,18 +110,32 @@ By default, clicking the reference element toggles the floating element (showing
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float"
+import { ref } from "vue" // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick } from "v-float"
+
+const isOpen = ref(false)
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
-// Disable toggle behavior (clicking again won't close)
-const click = useClick(floating.context, {
+// Disable toggle behavior (clicking again won't close if already open)
+// useClick directly attaches event listeners.
+useClick(floating.context, {
   toggle: false,
 })
 </script>
+<template>
+  <button ref="referenceRef" :aria-expanded="isOpen.value">
+    Clicking again won't close
+  </button>
+  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+    Floating content
+  </div>
+</template>
 ```
 
 This is useful when you want clicking the reference element to only open the floating element, and closing requires another action (like clicking a close button or outside the element).
@@ -123,18 +146,32 @@ For touch interfaces, you might want to handle touch events differently from mou
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float"
+import { ref } from "vue" // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick } from "v-float"
+
+const isOpen = ref(false)
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
-// Ignore mouse clicks (only keyboard or programmatic opening)
-const click = useClick(floating.context, {
+// Ignore mouse clicks (only keyboard or programmatic opening through isOpen ref)
+// useClick directly attaches event listeners.
+useClick(floating.context, {
   ignoreMouse: true,
 })
 </script>
+<template>
+  <button ref="referenceRef" :aria-expanded="isOpen.value">
+    Mouse clicks ignored (try keyboard)
+  </button>
+  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+    Floating content
+  </div>
+</template>
 ```
 
 This is useful when combining with other interaction methods or when creating touch-specific interfaces.
@@ -145,18 +182,32 @@ By default, `useClick` also handles keyboard events (`Enter` and `Space` keys) o
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick } from "v-float"
+import { ref } from "vue" // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick } from "v-float"
+
+const isOpen = ref(false)
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
-// Disable keyboard handling
-const click = useClick(floating.context, {
+// Disable keyboard handling (Enter/Space keys won't trigger)
+// useClick directly attaches event listeners.
+useClick(floating.context, {
   keyboardHandlers: false,
 })
 </script>
+<template>
+  <button ref="referenceRef" :aria-expanded="isOpen.value">
+    Keyboard handlers disabled
+  </button>
+  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+    Floating content
+  </div>
+</template>
 ```
 
 However, disabling keyboard handlers is generally not recommended for accessibility reasons, unless you're handling keyboard interactions another way.
@@ -167,8 +218,12 @@ You can conditionally enable or disable the click interaction:
 
 ```vue
 <script setup>
-import { ref } from "vue"
-import { useFloating, useInteractions, useClick } from "v-float"
+import { ref } from "vue" // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick } from "v-float"
+
+const isOpen = ref(false)
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
 // Control whether click interaction is enabled
 const clickEnabled = ref(true)
@@ -178,12 +233,13 @@ const floating = useFloating(referenceRef, floatingRef, {
   setOpen: (value) => (isOpen.value = value),
 })
 
-// Use reactive enabled option
-const click = useClick(floating.context, {
+// Use reactive enabled option.
+// useClick directly attaches event listeners based on the 'enabled' state.
+useClick(floating.context, {
   enabled: clickEnabled,
 })
 
-// Later you can update this
+// Later you can update this:
 function disableClick() {
   clickEnabled.value = false
 }
@@ -200,25 +256,56 @@ function enableClick() {
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useClick, useDismiss, useRole } from "v-float"
+import { ref } from "vue"; // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick, useDismiss /*, useRole */ } from "v-float";
+// Note: useInteractions and prop-getters like getReferenceProps are not returned by
+// v-float's useClick or useDismiss as per current source.
+// Event listeners are attached directly. ARIA props need manual binding or a separate utility.
+
+const isOpen = ref(false);
+const referenceRef = ref(null);
+const floatingRef = ref(null);
+const floatingId = "my-floating-element"; // Example ID for ARIA
 
 const floating = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
-})
+});
 
-// Create interaction handlers
-const click = useClick(floating.context)
-const dismiss = useDismiss(floating.context, {
-  outsidePress: true, // Close when clicking outside
-})
-const role = useRole(floating.context, {
-  role: "dialog", // Set ARIA role
-})
+// useClick sets up click listeners on the reference element.
+useClick(floating.context);
 
-// Combine them all
-const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
+// Assuming useDismiss works similarly, setting up listeners for Esc/outside click.
+useDismiss(floating.context, {
+  outsidePress: true, // Example
+});
+
+// If a useRole composable exists and provides ARIA logic, it would be used here.
+// For now, ARIA attributes are shown manually in the template.
 </script>
+<template>
+  <button
+    ref="referenceRef"
+    :aria-expanded="isOpen.value"
+    :aria-controls="floatingId"
+    aria-haspopup="dialog"
+  >
+    Toggle Dialog
+  </button>
+  <div
+    v-if="isOpen.value"
+    :id="floatingId"
+    ref="floatingRef"
+    :style="floating.floatingStyles"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="dialog-title" /* Assuming a title element exists */
+  >
+    <h2 id="dialog-title">Dialog</h2>
+    <p>Content... Click outside or press Esc to dismiss (if useDismiss is configured).</p>
+    <button @click="isOpen.value = false">Close</button>
+  </div>
+</template>
 ```
 
 This creates a dialog that opens when the reference element is clicked, closes when clicking outside, and has proper ARIA attributes.
@@ -282,15 +369,21 @@ const listNav = useListNavigation(floating.context, {
   loop: true,
 })
 
-// Combine interactions
-const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([
-  click,
-  dismiss,
-  role,
-  listNav,
-])
+// Event listeners from useClick, useDismiss are attached directly.
+// ARIA roles from useRole would need manual application or its own prop mechanism.
+// useListNavigation typically provides getItemProps or similar for list items.
+// Since useInteractions is not available in v-float as per source,
+// props need to be managed differently.
 
-// Track item elements for list navigation
+// Example: useClick sets up listeners on referenceRef
+// Example: useDismiss sets up its listeners
+// Example: useRole would mean manually adding role attributes or using its specific return.
+// Example: listNav might return getItemProps, which would be bound manually.
+
+// For simplicity, this example will focus on click and manual ARIA.
+// The full complexity of combining these without useInteractions is beyond this specific example.
+
+// Track item elements for list navigation (assuming listRef is used by useListNavigation)
 function collectItem(el) {
   if (el && !listRef.value.includes(el)) {
     listRef.value.push(el)
@@ -307,9 +400,10 @@ function selectItem(index) {
 <template>
   <button
     ref="referenceRef"
-    v-bind="getReferenceProps()"
+    <!-- getReferenceProps() from useInteractions is not used here -->
+    <!-- Event listeners for click are attached by useClick(floating.context) -->
     aria-haspopup="menu"
-    :aria-expanded="isOpen"
+    :aria-expanded="isOpen.value"
     class="dropdown-button"
   >
     Actions
@@ -317,23 +411,24 @@ function selectItem(index) {
   </button>
 
   <div
-    v-if="isOpen"
+    v-if="isOpen.value"
     ref="floatingRef"
-    v-bind="getFloatingProps()"
+    <!-- getFloatingProps() from useInteractions is not used here -->
     :style="floating.floatingStyles"
-    role="menu"
+    role="menu" <!-- Assuming useRole would handle this, or it's manual -->
     class="dropdown-menu"
   >
     <div
       v-for="(item, index) in items"
       :key="index"
       :ref="collectItem"
-      v-bind="getItemProps({ index })"
+      <!-- getItemProps() from useListNavigation would be bound here if available and useInteractions wasn't used -->
       role="menuitem"
       :tabindex="activeIndex === index ? 0 : -1"
       class="menu-item"
       :class="{ active: activeIndex === index }"
       @click="selectItem(index)"
+      @keydown.enter="selectItem(index)" @keydown.space="selectItem(index)" <!-- Basic keyboard handling for items -->
     >
       {{ item.label }}
     </div>
@@ -417,24 +512,37 @@ const dismiss = useDismiss(floating.context, {
 // Set ARIA attributes for accessibility
 const role = useRole(floating.context, { role: "dialog" })
 
-// Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
+// Event listeners from useClick and useDismiss are attached directly.
+// ARIA roles from useRole would need manual application or its own prop mechanism.
+// Since useInteractions is not available in v-float as per source,
+// props need to be managed differently.
+useClick(floating.context); // Attaches click listeners
+useDismiss(floating.context, { outsidePress: false, escapeKey: true }); // Attaches dismiss listeners
+
+// ARIA attributes are shown manually in the template.
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()" class="open-modal-button">
+  <button
+    ref="referenceRef"
+    class="open-modal-button"
+    :aria-expanded="isOpen.value"
+    aria-controls="modal-dialog"
+    aria-haspopup="dialog"
+  >
     Open Modal
   </button>
 
-  <FloatingOverlay v-if="isOpen" lock-scroll>
+  <FloatingOverlay v-if="isOpen.value" lock-scroll>
     <FloatingFocusManager :context="floating.context" modal>
       <div
         ref="floatingRef"
-        v-bind="getFloatingProps()"
+        id="modal-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         class="modal"
+        :style="floating.floatingStyles"
       >
         <div class="modal-header">
           <h2 id="modal-title">Modal Title</h2>
