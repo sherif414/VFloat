@@ -1,5 +1,6 @@
 import { isHTMLElement } from "@/utils"
 import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
+import { computed } from "vue"
 
 type Point = [number, number]
 type Polygon = Point[]
@@ -107,6 +108,14 @@ export function safePolygon(options: SafePolygonOptions = {}) {
     buffer: contextBuffer,
     onClose,
   }: CreateSafePolygonHandlerContext) {
+    const referenceEl = computed(() => {
+      const domReference = elements.domReference
+      if (isHTMLElement(domReference)) {
+        return domReference
+      }
+      return (domReference?.contextElement as HTMLElement) ?? null
+    })
+
     return function onMouseMove(event: MouseEvent) {
       function close() {
         clearTimeout(timeoutId)
@@ -129,8 +138,8 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       const target = getTarget(event) as Element | null
       const isLeave = event.type === "mouseleave"
       const isOverFloatingEl = elements.floating && contains(elements.floating, target)
-      const isOverReferenceEl = elements.domReference && contains(elements.domReference, target)
-      const refRect = elements.domReference?.getBoundingClientRect()
+      const isOverReferenceEl = referenceEl.value && contains(referenceEl.value, target)
+      const refRect = referenceEl.value?.getBoundingClientRect()
       const rect = elements.floating?.getBoundingClientRect()
       const side = placement.split("-")[0] as Side
       const cursorLeaveFromRight = x > (rect?.right ?? 0) - (rect?.width ?? 0) / 2
