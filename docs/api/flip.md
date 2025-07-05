@@ -22,7 +22,7 @@ const { x, y, strategy } = useFloating({
 ```ts
 interface FlipOptions {
   mainAxis?: boolean
-  crossAxis?: boolean
+  crossAxis?: boolean | 'alignment'
   fallbackAxisSideDirection?: 'none' | 'start' | 'end'
   flipAlignment?: boolean
   fallbackPlacements?: Array<Placement>

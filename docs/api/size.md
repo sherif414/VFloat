@@ -28,17 +28,20 @@ const { x, y, strategy } = useFloating({
 ## Options
 
 ```ts
+// SizeOptions extends DetectOverflowOptions from @floating-ui/core
 interface SizeOptions {
-  apply: (state: {
+  // apply's state combines MiddlewareState with availableWidth and availableHeight
+  apply?: (state: {
     availableWidth: number
     availableHeight: number
     elements: {
-      floating: HTMLElement
-      reference: HTMLElement
+      floating: HTMLElement // HTMLElement from @floating-ui/dom
+      reference: Element | VirtualElement // Element | VirtualElement from @floating-ui/dom
     }
-  }) => void
-  padding?: number | Partial<Record<string, number>>
-  boundary?: 'clippingAncestors' | Element | Array<Element>
-  rootBoundary?: 'document' | 'viewport'
+    // ... other MiddlewareState properties like rects, placement, strategy are also available
+  } & any) => void // Using 'any' to represent MiddlewareState for brevity
+  padding?: number | Partial<Record<string, number>> // From DetectOverflowOptions
+  boundary?: 'clippingAncestors' | Element | Array<Element> // From DetectOverflowOptions
+  rootBoundary?: 'document' | 'viewport' // From DetectOverflowOptions
 }
 ```

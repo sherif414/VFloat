@@ -7,7 +7,7 @@ The `useArrow` composable helps position and style an arrow element that points 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { useFloating, useArrow, arrowMiddleware } from "v-float"
+import { useFloating, useArrow, arrow } from "v-float" // Correctly import 'arrow'
 
 // Create refs for elements
 const referenceRef = ref<HTMLElement | null>(null)
@@ -16,15 +16,13 @@ const arrowRef = ref<HTMLElement | null>(null)
 
 // Set up floating element with arrow middleware
 const floating = useFloating(referenceRef, floatingRef, {
-  middleware: [arrowMiddleware({ element: arrowRef })],
+  middleware: [arrow({ element: arrowRef })], // Use 'arrow()'
 })
 
-// Calculate arrow styles based on placement
-const arrowStyles = useArrow({
-  element: arrowRef,
-  middlewareData: floating.middlewareData,
-  placement: floating.placement,
-})
+// const floating = useFloating(...) returns FloatingContext
+// Calculate arrow styles using the FloatingContext
+const { arrowStyles } = useArrow(floating) // Pass the whole context
+// You can also use an offset: const { arrowStyles } = useArrow(floating, { offset: '-5px' })
 </script>
 
 <template>
@@ -60,59 +58,98 @@ const arrowStyles = useArrow({
 
 ## API Reference
 
-### arrowMiddleware
+### arrow
 
-The `arrowMiddleware` function is used in the middleware array of `useFloating` to collect positioning data for the arrow.
+The `arrow` function (often imported as `arrowMiddleware` in examples, but exported as `arrow`) is used in the middleware array of `useFloating` to collect positioning data for the arrow. It's a wrapper around the `arrow` middleware from `@floating-ui/dom`.
 
 ```ts
-function arrowMiddleware(options: ArrowOptions): Middleware
+import { arrow } from 'vfloat/middleware'; // Or from 'vfloat' if re-exported at top level
+// or (if using an alias like in some examples):
+// import { arrow as arrowMiddleware } from 'vfloat/middleware';
+
+// Definition:
+// function arrow(options: ArrowMiddlewareOptions): Middleware
+
+interface ArrowMiddlewareOptions {
+  element: Ref<HTMLElement | null>;
+  padding?: number | Partial<{ top: number; right: number; bottom: number; left: number }>;
+}
 ```
 
-#### Options
+#### Options (ArrowMiddlewareOptions)
 
-| Parameter | Type                                        | Description                                                              |
-| --------- | ------------------------------------------- | ------------------------------------------------------------------------ |
-| element   | MaybeRefOrGetter&lt;HTMLElement \| null&gt; | The arrow element reference                                              |
-| padding   | number \| Partial&lt;Padding&gt;            | Optional padding between the arrow and the edges of the floating element |
+| Parameter | Type                                                                          | Description                                                              |
+| --------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| element   | Ref&lt;HTMLElement \| null&gt;                                                  | Vue Ref to the arrow DOM element.                                        |
+| padding   | number \| Partial&lt;{ top: number; right: number; bottom: number; left: number }&gt; (optional) | Optional padding between the arrow and the edges of the floating element. See [@floating-ui/core Padding type](https://floating-ui.com/docs/arrow#padding). |
 
 The `padding` option can be:
 
-- A number to apply the same padding to all sides
-- An object specifying different padding for each side: `{ top, right, bottom, left }`
+- A number to apply the same padding to all sides.
+- An object specifying different padding for each side: `{ top, right, bottom, left }`.
 
 ### useArrow
 
-The `useArrow` composable takes the data from `arrowMiddleware` and converts it into CSS styles for the arrow element.
+The `useArrow` composable calculates the position and styles for an arrow element based on the placement and middleware data from a `FloatingContext` (returned by `useFloating`).
 
 ```ts
-function useArrow(options: {
-  element?: MaybeRefOrGetter<HTMLElement | null>
-  middlewareData: MaybeRefOrGetter<MiddlewareData>
-  placement: MaybeRefOrGetter<Placement>
-}): ComputedRef<Record<string, string>>
-```
+import { useArrow } from 'vfloat'; // Or from 'vfloat/composables'
 
-#### Options
+// Definition:
+// function useArrow(
+//   context: FloatingContext,
+//   options?: UseArrowOptions
+// ): UseArrowReturn;
 
-| Parameter      | Type                                        | Description                        |
-| -------------- | ------------------------------------------- | ---------------------------------- |
-| element        | MaybeRefOrGetter&lt;HTMLElement \| null&gt; | The arrow element reference        |
-| middlewareData | MaybeRefOrGetter&lt;MiddlewareData&gt;      | Middleware data from `useFloating` |
-| placement      | MaybeRefOrGetter&lt;Placement&gt;           | Placement from `useFloating`       |
+// Interface for context (simplified, see useFloating for full definition)
+interface FloatingContext {
+  middlewareData: Ref<MiddlewareData>; // from @floating-ui/dom
+  placement: Ref<Placement>; // from @floating-ui/dom
+  // ...other properties
+}
 
-#### Return Value
+interface UseArrowOptions {
+  /**
+   * Controls the offset of the arrow from the edge of the floating element.
+   * A positive value moves the arrow further into the floating element,
+   * while a negative value creates a gap.
+   * Default: '-4px'.
+   * Example: '5px', '-0.5rem'.
+   */
+  offset?: string;
+}
 
-`useArrow` returns a computed ref containing CSS styles to apply to the arrow element:
-
-```ts
-{
-  left?: string;
-  top?: string;
-  right?: string;
-  bottom?: string;
-  transform: string; // Rotates the arrow based on placement
+interface UseArrowReturn {
+  arrowX: ComputedRef<number>; // The computed X position of the arrow
+  arrowY: ComputedRef<number>; // The computed Y position of the arrow
+  arrowStyles: ComputedRef<Record<string, string>>; // CSS for the arrow
 }
 ```
+
+#### Parameters
+
+1.  **`context: FloatingContext`**
+    *   The `FloatingContext` object returned by `useFloating`. This context provides `middlewareData` (which should contain `arrow` data from the `arrow` middleware) and the current `placement`.
+
+2.  **`options?: UseArrowOptions`** (optional)
+    *   An optional configuration object for the arrow.
+    *   **`offset?: string`**: Specifies the offset of the arrow from the edge of the floating element. Default is `'-4px'`. Positive values move the arrow inwards, negative values create a gap. Examples: `'5px'`, `'-0.5rem'`.
+
+#### Return Value (`UseArrowReturn`)
+
+`useArrow` returns an object with the following properties:
+
+*   **`arrowX: ComputedRef<number>`**: The computed X-coordinate for the arrow's position, relative to the floating element.
+*   **`arrowY: ComputedRef<number>`**: The computed Y-coordinate for the arrow's position, relative to the floating element.
+*   **`arrowStyles: ComputedRef<Record<string, string>>`**: A computed ref containing CSS styles (e.g., `inset-inline-start`, `inset-block-start`) to apply to the arrow element for its positioning. The styles are logical properties. Example:
+    ```ts
+    {
+      'inset-inline-start': '10px', // for left/right positioning depending on writing mode
+      'inset-block-start': '-4px', // for top/bottom positioning
+      // OR 'inset-inline-end', 'inset-block-end'
+    }
+    ```
+    The actual properties (`left`, `top`, `right`, `bottom`) are not directly returned; instead, logical inset properties are used. The old documentation mentioning `transform` is also incorrect for the direct return of `arrowStyles`; transformations are usually applied via CSS classes on the arrow element itself. The `arrowStyles` specifically handles the placement offset.
 
 ## Styling the Arrow Element
 
@@ -188,7 +225,7 @@ Here's a more complete example showing a tooltip with an arrow that appears on h
 ```vue
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue"
-import { useFloating, useArrow, arrowMiddleware, offset, flip, shift, autoUpdate } from "v-float"
+import { useFloating, useArrow, arrow, offset, flip, shift, autoUpdate } from "v-float" // Import 'arrow'
 
 const referenceRef = ref<HTMLElement | null>(null)
 const floatingRef = ref<HTMLElement | null>(null)
@@ -202,7 +239,7 @@ const floating = useFloating(referenceRef, floatingRef, {
     offset(8), // Add some distance between reference and floating
     flip(), // Flip to the opposite side if needed
     shift(), // Shift along the main axis if needed
-    arrowMiddleware({
+    arrow({ // Use 'arrow()'
       element: arrowRef,
       padding: 5, // Keep arrow 5px away from the edges
     }),
@@ -212,12 +249,9 @@ const floating = useFloating(referenceRef, floatingRef, {
   whileElementsMounted: autoUpdate, // Auto-update position on scroll/resize
 })
 
+// const floating = useFloating(...) returns FloatingContext
 // Calculate arrow styles
-const arrowStyles = useArrow({
-  element: arrowRef,
-  middlewareData: floating.middlewareData,
-  placement: floating.placement,
-})
+const { arrowStyles } = useArrow(floating, { offset: '5px' }) // Example with offset
 
 // Handle hover events
 function handleMouseEnter() {
@@ -339,7 +373,7 @@ import { ref } from "vue"
 import {
   useFloating,
   useArrow,
-  arrowMiddleware,
+  arrow, // Import 'arrow'
   useInteractions,
   useClick,
   useDismiss,
@@ -361,7 +395,7 @@ const floating = useFloating(referenceRef, floatingRef, {
     offset(12),
     flip({ padding: 15 }),
     shift(),
-    arrowMiddleware({
+    arrow({ // Use 'arrow()'
       element: arrowRef,
       padding: 8,
     }),
@@ -371,12 +405,9 @@ const floating = useFloating(referenceRef, floatingRef, {
   whileElementsMounted: autoUpdate,
 })
 
+// const floating = useFloating(...) returns FloatingContext
 // Calculate arrow styles
-const arrowStyles = useArrow({
-  element: arrowRef,
-  middlewareData: floating.middlewareData,
-  placement: floating.placement,
-})
+const { arrowStyles } = useArrow(floating) // Or with an offset, e.g. { offset: '8px' }
 
 // Click to toggle
 const click = useClick(floating.context)
