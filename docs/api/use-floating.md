@@ -125,7 +125,7 @@ Options for configuring the behavior of the `useFloating` composable.
 | `strategy`             | `MaybeRefOrGetter<Strategy>`                                  | Positioning strategy: `'absolute'` or `'fixed'`.                                                                                     |
 | `transform`            | `MaybeRefOrGetter<boolean>`                                   | Whether to use CSS `transform` for positioning (improves performance).                                                               |
 | `middlewares`          | `Middleware[]`                                                | An array of middleware functions to apply to the positioning.                                                                        |
-| `whileElementsMounted` | `(anchorEl: ..., floatingEl: ..., update: ...) => () => void` | Function called when elements are mounted, useful for setting up auto-update. Returns a cleanup function.                            |
+| `autoUpdate`           | `boolean \| AutoUpdateOptions`                                | Whether to automatically update the position of the floating element. Can be a boolean or an `AutoUpdateOptions` object. Defaults to `true`. |
 | `open`                 | `Ref<boolean>`                                                | A reactive boolean to control the open/closed state of the floating element.                                                         |
 | `setOpen`              | `(open: boolean) => void`                                     | Function to control the open state of the floating element. If not provided, a default function is used that updates the `open` ref. |
 
@@ -177,4 +177,4 @@ An interface for the computed CSS styles object that positions the floating elem
 
 1. **Use CSS transforms**: Keep `transform: true` (default) for better performance
 2. **Minimize middleware**: Only use necessary middleware to reduce computation
-3. **Custom auto-update**: Implement custom `whileElementsMounted` for specific use cases
+3. **Customize auto-update**: Use the `autoUpdate` option to control when and how position updates occur. For specific use cases, you can provide an `AutoUpdateOptions` object to fine-tune the behavior.
