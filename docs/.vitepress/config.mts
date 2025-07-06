@@ -44,6 +44,7 @@ export default defineConfig({
           items: [
             { text: "Middleware", link: "/guide/middleware" },
             { text: "Virtual Elements", link: "/guide/virtual-elements" },
+            { text: "Safe Polygon", link: "/guide/safe-polygon" },
           ],
         },
       ],
@@ -68,7 +69,7 @@ export default defineConfig({
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useClientPoint", link: "/api/use-client-point" },
           ],
-        },
+        },,
         {
           text: "Middleware",
           collapsed: true,

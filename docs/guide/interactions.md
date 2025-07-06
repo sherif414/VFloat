@@ -57,7 +57,7 @@ We can achieve all of this by composing four interactions: `useClick`, `useFocus
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, autoUpdate, offset } from "@floating-ui/vue"
+import { useFloating, autoUpdate, offset } from "v-float"
 // Assume these are imported from your library
 import { useClick, useFocus, useDismiss, useRole } from "./composables"
 

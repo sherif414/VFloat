@@ -6,15 +6,13 @@ A composable that enables tracking of client point (mouse/touch) coordinates for
 
 ```vue
 <script setup>
-import { useClientPoint } from 'vfloat'
+import { useClientPoint } from "v-float"
 
 const { refs, x, y } = useClientPoint()
 </script>
 
 <template>
-  <div ref="refs.setReference">
-    Hover me
-  </div>
+  <div ref="refs.setReference">Hover me</div>
   <div
     v-if="x && y"
     :style="{
@@ -35,7 +33,7 @@ const { refs, x, y } = useClientPoint()
 ```ts
 interface UseClientPointOptions {
   enabled?: boolean
-  axis?: 'both' | 'x' | 'y'
+  axis?: "both" | "x" | "y"
 }
 ```
 

@@ -63,14 +63,14 @@ V-Float provides an arrow middleware to position an arrow element pointing to th
 
 <script setup>
 import { ref } from "vue"
-import { useFloating, arrow as useArrow } from "v-float"
+import { useFloating, arrowMiddleware } from "v-float"
 
 const anchorEl = ref(null)
 const floatingEl = ref(null)
 const arrowRef = ref(null)
 
 const floating = useFloating(anchorEl, floatingEl, {
-  middleware: [useArrow({ element: arrowRef })],
+  middleware: [arrowMiddleware({ element: arrowRef })],
 })
 </script>
 ```

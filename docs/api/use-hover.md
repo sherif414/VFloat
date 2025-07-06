@@ -68,6 +68,7 @@ The `useHover` composable accepts several options to customize its behavior:
 | handleClose | null \| (context: FloatingContext) => void         | null    | Custom close handling logic                                                      |
 | restMs      | number                                             | 0       | Time in ms to wait before triggering a hover event after the cursor has "rested" |
 | move        | boolean                                            | true    | Whether to update the position when the cursor moves                             |
+| safePolygon | boolean \| Ref&lt;boolean&gt; \| SafePolygonOptions | false   | Enables a "safe polygon" around the floating element to prevent accidental closing when the cursor moves over it. Can be a boolean or an object with more options. |
 
 ### Return Value
 
@@ -395,3 +396,52 @@ const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, r
 5. **Set appropriate z-index**: Ensure your floating element has a suitable z-index to appear above other content.
 
 6. **Handle edge cases**: Consider what happens when users hover quickly between multiple elements with the `FloatingDelayGroup` component.
+
+7. **Use `safePolygon` for complex layouts**: For menus or tooltips with interactive content, `safePolygon` can prevent the floating element from closing when the user moves the cursor between the reference and floating elements.
+
+## Safe Polygon
+
+The `safePolygon` option creates a virtual polygon around the reference and floating elements, allowing the user's cursor to move between them without closing the floating element. This is particularly useful for dropdown menus or tooltips that contain interactive elements.
+
+To enable it, set the `safePolygon` option to `true`:
+
+```vue
+<script setup>
+import { useFloating, useInteractions, useHover } from "v-float"
+
+const floating = useFloating(referenceRef, floatingRef, {
+  open: isOpen,
+  setOpen: (value) => (isOpen.value = value),
+})
+
+// Enable safe polygon
+const hover = useHover(floating.context, {
+  safePolygon: true,
+})
+
+const { getReferenceProps, getFloatingProps } = useInteractions([hover])
+</script>
+```
+
+### Customizing the Safe Polygon
+
+You can also provide an object with options to customize the `safePolygon` behavior:
+
+```vue
+<script setup>
+import { useFloating, useInteractions, useHover } from "v-float"
+
+const floating = useFloating(referenceRef, floatingRef, {
+  open: isOpen,
+  setOpen: (value) => (isOpen.value = value),
+})
+
+// Customize safe polygon
+const hover = useHover(floating.context, {
+  safePolygon: {
+    buffer: 10, // Add a 10px buffer around the polygon
+    requireIntent: true, // Only trigger with intentional movement
+  },
+})
+</script>
+```

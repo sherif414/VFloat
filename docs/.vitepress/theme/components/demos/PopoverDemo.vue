@@ -114,7 +114,7 @@ const fileContext = useFloating(fileTrigger, fileFloating, {
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
 });
-useHover(fileContext, { delay: 200 });
+useHover(fileContext, { delay: 200, safePolygon: true });
 useDismiss(fileContext);
 const fileNode = tree.addNode(fileContext, tree.root.id);
 
@@ -126,7 +126,7 @@ const exportContext = useFloating(exportTrigger, exportFloating, {
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
 });
-useHover(exportContext, { delay: 200 });
+useHover(exportContext, { delay: 200, safePolygon: true });
 useDismiss(exportContext);
 const exportNode = tree.addNode(exportContext, fileNode.id);
 
@@ -138,7 +138,7 @@ const viewContext = useFloating(viewTrigger, viewFloating, {
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
 });
-useHover(viewContext, { delay: 200 });
+useHover(viewContext, { delay: 200, safePolygon: true });
 useDismiss(viewContext);
 const viewNode = tree.addNode(viewContext, tree.root.id);
 </script>
