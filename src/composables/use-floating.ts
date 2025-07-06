@@ -97,11 +97,6 @@ export interface UseFloatingOptions {
    * @default false
    */
   open?: Ref<boolean>
-
-  /**
-   * Function to control the open state of the floating element. If not provided, a default function is used that updates the `open` ref.
-   */
-  setOpen?: (open: boolean) => void
 }
 
 /**
@@ -201,10 +196,11 @@ export function useFloating(
     middlewares,
     autoUpdate: autoUpdateOptions = true,
     open = ref(false),
-    setOpen = (value: boolean) => {
-      open.value = value
-    },
   } = options
+
+  const setOpen = (value: boolean) => {
+    open.value = value
+  }
 
   const initialPlacement = computed(() => toValue(options.placement) ?? "bottom")
   const initialStrategy = computed(() => toValue(options.strategy) ?? "absolute")

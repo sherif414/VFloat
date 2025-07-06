@@ -119,15 +119,14 @@ Dynamic placement based on user interaction:
 
 Options for configuring the behavior of the `useFloating` composable.
 
-| Property               | Type                                                          | Description                                                                                                                          |
-| :--------------------- | :------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------- |
-| `placement`            | `MaybeRefOrGetter<Placement>`                                 | Desired placement of the floating element (e.g., `'top-start'`, `'bottom'`).                                                         |
-| `strategy`             | `MaybeRefOrGetter<Strategy>`                                  | Positioning strategy: `'absolute'` or `'fixed'`.                                                                                     |
-| `transform`            | `MaybeRefOrGetter<boolean>`                                   | Whether to use CSS `transform` for positioning (improves performance).                                                               |
-| `middlewares`          | `Middleware[]`                                                | An array of middleware functions to apply to the positioning.                                                                        |
-| `autoUpdate`           | `boolean \| AutoUpdateOptions`                                | Whether to automatically update the position of the floating element. Can be a boolean or an `AutoUpdateOptions` object. Defaults to `true`. |
-| `open`                 | `Ref<boolean>`                                                | A reactive boolean to control the open/closed state of the floating element.                                                         |
-| `setOpen`              | `(open: boolean) => void`                                     | Function to control the open state of the floating element. If not provided, a default function is used that updates the `open` ref. |
+| Property      | Type                           | Description                                                                                                                                  |
+| :------------ | :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| `placement`   | `MaybeRefOrGetter<Placement>`  | Desired placement of the floating element (e.g., `'top-start'`, `'bottom'`).                                                                 |
+| `strategy`    | `MaybeRefOrGetter<Strategy>`   | Positioning strategy: `'absolute'` or `'fixed'`.                                                                                             |
+| `transform`   | `MaybeRefOrGetter<boolean>`    | Whether to use CSS `transform` for positioning (improves performance).                                                                       |
+| `middlewares` | `Middleware[]`                 | An array of middleware functions to apply to the positioning.                                                                                |
+| `autoUpdate`  | `boolean \| AutoUpdateOptions` | Whether to automatically update the position of the floating element. Can be a boolean or an `AutoUpdateOptions` object. Defaults to `true`. |
+| `open`        | `Ref<boolean>`                 | A reactive boolean to control the open/closed state of the floating element.                                                                 |
 
 ---
 
@@ -147,7 +146,6 @@ The context object returned by `useFloating` containing all necessary reactive d
 | `update`         | `() => void`                                                          | Function to manually update the floating element's position.        |
 | `refs`           | `{ anchorEl: Ref<AnchorElement>; floatingEl: Ref<FloatingElement>; }` | References to the anchor and floating DOM elements.                 |
 | `open`           | `Readonly<Ref<boolean>>`                                              | Reactive boolean indicating the open state of the floating element. |
-| `setOpen`        | `(open: boolean) => void`                                             | Function to explicitly set the open state of the floating element.  |
 
 ---
 
