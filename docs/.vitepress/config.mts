@@ -34,7 +34,6 @@ export default defineConfig({
           text: "Introduction",
           items: [
             { text: "Getting Started", link: "/guide/" },
-            { text: "Installation", link: "/guide/installation" },
             { text: "Core Concepts", link: "/guide/concepts" },
             { text: "Interactions", link: "/guide/interactions" },
           ],
@@ -69,7 +68,7 @@ export default defineConfig({
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useClientPoint", link: "/api/use-client-point" },
           ],
-        },,
+        },
         {
           text: "Middleware",
           collapsed: true,

@@ -1,81 +1,155 @@
-# Getting Started:
+# Getting Started with V-Float
 
-V-Float is a Vue 3 library dedicated to providing precise positioning for floating UI elements like tooltips, popovers, dropdowns, and modals. It is a port inspired by the positioning core of the popular [Floating UI](https://floating-ui.com/) library, adapted for the Vue 3 Composition API.
+V-Float is a Vue 3 composable library for positioning floating UI elements such as tooltips, popovers, and dropdown menus. It provides a reactive and precise positioning engine inspired by Floating UI, tailored for the Vue 3 Composition API.
 
-## When to Use V-Float
+This guide walks you through installing V-Float and creating a basic positioned tooltip.
 
-V-Float is the ideal choice when you need a robust solution for positioning any UI element that floats relative to another element:
+**What you'll do:**
 
-- **Tooltips**: Precisely position informational tips near their triggers.
-- **Dropdown Menus**: Ensure navigation or action menus appear correctly beneath their buttons.
-- **Popovers**: Accurately place contextual information bubbles.
-- **Modals**: Position dialogs or forms centrally or relative to a trigger.
-- **Date Pickers**: Align calendar components perfectly with input fields.
-- **Custom Selects**: Ensure custom dropdowns open consistently below their input.
+- Install V-Float in a Vue 3 project.
+- Use the `useFloating` composable to manage element positions.
+- Create a simple tooltip that appears on hover.
+- Apply the dynamic styles to position the tooltip correctly.
 
-## Quick Installation
+## Before you begin
 
-Add V-Float to your Vue 3 project using your preferred package manager:
+Ensure your development environment meets the following requirements:
 
-```bash
-# Using pnpm (recommended)
+- **Vue 3.2+**
+- **Node.js** with a package manager such as `pnpm`, `npm`, or `yarn`.
+- **(Recommended)** **TypeScript** for an improved developer experience with type safety.
+
+## Install V-Float
+
+You can add V-Float to your project using your preferred package manager.
+
+::: code-group
+
+```bash [pnpm]
 pnpm add v-float
+```
 
-# Or with npm
+```bash [npm]
 npm install v-float
+```
 
-# Or with yarn
+```bash [yarn]
 yarn add v-float
 ```
 
-## Basic Positioning Example
+:::
 
-This example demonstrates how to use `useFloating` to position a simple tooltip element. We'll manage the `isOpen` state for visibility using standard Vue `ref` and event handling, while `useFloating` provides the `floatingStyles` for accurate placement.
+While you can use V-Float from a CDN for quick prototyping, we strongly recommend using a package manager for production applications to benefit from tree-shaking and optimized dependency management.
+
+## Create a Basic Tooltip
+
+This example guides you through positioning a simple tooltip that appears when a user hovers over a button. The `useFloating` composable calculates the necessary styles, and you apply them to your floating element.
+
+### Step 1: Set up the component refs
+
+In your `<script setup>` block, import `ref` from Vue and create two `ref` variables. One will be for the `anchor` element (the button) and the other for the `floating` element (the tooltip).
+
+```javascript
+import { ref } from "vue"
+
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+```
+
+### Step 2: Initialize `useFloating`
+
+Import `useFloating` from `v-float`. Call the composable with the anchor and floating element refs. You can pass an options object as the third argument to configure its behavior, such as setting the `placement`.
+
+```javascript
+import { useFloating } from "v-float"
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "top", // Position the tooltip above the anchor
+})
+```
+
+The `useFloating` composable returns a `context` object containing reactive properties, including the calculated `floatingStyles` and the element's `open` state.
+
+### Step 3: Control visibility
+
+Create functions to toggle the tooltip's visibility. Use the `context.setOpen()` method to update the state.
+
+```javascript
+const showTooltip = () => {
+  context.setOpen(true)
+}
+
+const hideTooltip = () => {
+  context.setOpen(false)
+}
+```
+
+### Step 4: Build the template
+
+In your `<template>`, connect the refs, event listeners, and dynamic styles.
+
+1.  Assign the `anchorEl` ref to your trigger element and attach the `@mouseenter` and `@mouseleave` event listeners.
+2.  Use `v-if="context.open.value"` to render the floating element only when it should be visible.
+3.  Assign the `floatingEl` ref to your floating element.
+4.  Bind the calculated styles to the element using `:style="{ ...context.floatingStyles.value }"`.
+
+### Complete Example
+
+Here is the complete code for the component.
 
 ```vue
 <script setup>
-import { ref } from "vue";
-import { useFloating } from "v-float";
+import { ref } from "vue"
+import { useFloating } from "v-float"
 
-const anchorEl = ref(null);
-const floatingEl = ref(null);
+// 1. Create refs for the anchor and floating elements.
+const anchorEl = ref(null)
+const floatingEl = ref(null)
 
+// 2. Initialize useFloating to get the positioning context.
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
-});
+})
 
+// 3. Define functions to control the open state.
 const showTooltip = () => {
-  context.setOpen(true);
-};
+  context.setOpen(true)
+}
 
 const hideTooltip = () => {
-  context.setOpen(false);
-};
+  context.setOpen(false)
+}
 </script>
 
 <template>
   <main>
-    <button ref="anchorEl" @mouseenter="showTooltip" @mouseleave="hideTooltip">
-      Hover me
-    </button>
+    <button ref="anchorEl" @mouseenter="showTooltip" @mouseleave="hideTooltip">Hover me</button>
 
-    <div
-      v-if="context.open.value"
-      ref="floatingEl"
-      :style="{ ...context.floatingStyles.value }"
-    >
+    <div v-if="context.open.value" ref="floatingEl" :style="{ ...context.floatingStyles.value }">
       This is a tooltip positioned by V-Float
     </div>
   </main>
 </template>
 ```
 
-## Next Steps
+## Browser Support
 
-Now that you have a basic understanding of V-Float's positioning capabilities, explore further:
+V-Float supports all modern, evergreen browsers:
 
-- [Installation](/guide/installation): Detailed instructions for various project setups.
-- [Core Concepts](/guide/concepts): Dive deeper into how V-Float calculates positions and handles various scenarios.
-- [Interaction Composables](/guide/interactions): Understand the benefits of using pre-built interactions for your floating elements.
-- [Composables](/composables/): Learn about the other composables available within V-Float for advanced positioning.
-- [Examples](/examples/): See more complex use cases and how to integrate V-Float into different UI patterns.
+- Chrome (and Chromium-based browsers)
+- Firefox
+- Safari
+- iOS Safari
+- Android browsers
+
+For older browser compatibility, you may need to provide polyfills for APIs such as `ResizeObserver` and `Promise`.
+
+## What's next
+
+You have successfully created your first floating element with V-Float. To continue learning, explore the following resources:
+
+- [**Core Concepts**](/guide/concepts): Understand the fundamental principles of how V-Float calculates positions.
+- [**Interaction Composables**](/guide/interactions): Discover pre-built composables for handling common UI interactions like clicks, focus, and hover.
+- [**Composables**](/composables/): See the full list of available composables for advanced positioning and middleware.
+- [**Examples**](/examples/): Review complete implementations of dropdowns, popovers, and other common patterns.
+- [**V-Float on GitHub**](https://github.com/sherif414/VFloat): Report issues or contribute to the project.
