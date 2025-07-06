@@ -5,9 +5,15 @@
     "src/**/*.ts",
     "src/**/*.vue",
     "playground/**/*.vue",
-    "playground/**/*.ts"
+    "playground/**/*.ts",
+    "docs/**/*.ts",
+    "docs/**/*.vue",
+    "docs/**/*.md",
   ],
   "exclude": ["src/**/__tests__/*"],
+  "vueCompilerOptions": {
+    "vitePressExtensions": [".md"],
+  },
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
 
