@@ -24,7 +24,9 @@ interface ShiftOptions {
   mainAxis?: boolean
   crossAxis?: boolean
   limiter?: {
-    fn: (state: { x: number, y: number }) => { x: number, y: number }
+    // state: MiddlewareState from @floating-ui/dom
+    // returns: Coords from @floating-ui/dom ({ x: number, y: number })
+    fn: (state: any) => { x: number, y: number }
     options?: any
   }
 }

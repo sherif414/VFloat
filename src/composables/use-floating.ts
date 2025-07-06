@@ -86,13 +86,11 @@ export interface UseFloatingOptions {
   middlewares?: Middleware[]
 
   /**
-   * Function called when both the anchor and floating elements are mounted.
+   * Whether to automatically update the position of the floating element.
+   * Can be a boolean or an `AutoUpdateOptions` object.
+   * @default true
    */
-  whileElementsMounted?: (
-    anchorEl: NonNullable<AnchorElement>,
-    floatingEl: NonNullable<FloatingElement>,
-    update: () => void
-  ) => undefined | (() => void)
+  autoUpdate?: boolean | AutoUpdateOptions
 
   /**
    * Whether the floating element is open.
@@ -201,7 +199,7 @@ export function useFloating(
   const {
     transform = true,
     middlewares,
-    whileElementsMounted,
+    autoUpdate: autoUpdateOptions = true,
     open = ref(false),
     setOpen = (value: boolean) => {
       open.value = value
@@ -250,10 +248,13 @@ export function useFloating(
     ([anchorEl, floatingEl, open]) => {
       if (!open || !anchorEl || !floatingEl) return
 
-      if (whileElementsMounted) {
-        cleanup = whileElementsMounted(anchorEl, floatingEl, update)
-      } else {
-        cleanup = floatingUIAutoUpdate(anchorEl, floatingEl, update)
+      if (autoUpdateOptions) {
+        cleanup = floatingUIAutoUpdate(
+          anchorEl,
+          floatingEl,
+          update,
+          typeof autoUpdateOptions === "object" ? autoUpdateOptions : undefined
+        )
       }
 
       onWatcherCleanup(() => {
@@ -349,25 +350,4 @@ function getDPR(el: HTMLElement) {
   if (typeof window === "undefined") return 1
   const win = el.ownerDocument.defaultView || window
   return win.devicePixelRatio || 1
-}
-
-/**
- * Auto-update function to use with `whileElementsMounted` option
- *
- * This function provides automatic position updates for floating elements.
- * It's a wrapper around Floating UI's autoUpdate function.
- *
- * @param anchorEl - The anchor element
- * @param floatingEl - The floating element
- * @param update - The update function to call
- * @param options - Additional options for auto-updating
- * @returns A cleanup function to stop auto-updating
- */
-export function autoUpdate(
-  anchorEl: HTMLElement,
-  floatingEl: HTMLElement,
-  update: () => void,
-  options: AutoUpdateOptions = {}
-) {
-  return floatingUIAutoUpdate(anchorEl, floatingEl, update, options)
 }
