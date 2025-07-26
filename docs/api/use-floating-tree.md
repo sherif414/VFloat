@@ -1,5 +1,3 @@
-# Floating Tree API
-
 ## useFloatingTree()
 
 Creates a floating tree instance to manage hierarchical UI elements like popovers, tooltips, and menus.
@@ -20,10 +18,7 @@ Creates a floating tree instance to manage hierarchical UI elements like popover
 - **Example:**
 
   ```ts
-  const tree = useFloatingTree(
-    { id: 'app-root', open: ref(true) },
-    { deleteStrategy: 'recursive' }
-  )
+  const tree = useFloatingTree({ id: "app-root", open: ref(true) }, { deleteStrategy: "recursive" })
   ```
 
 **See also:** [Guide - Managing Floating UI Hierarchies](/guide/floating-ui/hierarchies)
@@ -46,7 +41,7 @@ A reactive map containing all nodes in the tree, keyed by their IDs.
 
   ```ts
   const tree = useFloatingTree(rootContext)
-  console.log(tree.nodeMap.value.get('node-id')) // Get specific node
+  console.log(tree.nodeMap.value.get("node-id")) // Get specific node
   console.log(tree.nodeMap.value.size) // Total node count
   ```
 
@@ -114,13 +109,13 @@ Removes a node from the tree by its ID.
 - **Example:**
 
   ```ts
-  const success = tree.removeNode('main-menu')
+  const success = tree.removeNode("main-menu")
   // With recursive: removes main-menu and all children
   // With orphan: removes main-menu, children become root-level
   console.log(success) // true if node existed and was removed
 
   // Override with 'orphan' strategy
-  const successOrphan = tree.removeNode('other-menu', 'orphan')
+  const successOrphan = tree.removeNode("other-menu", "orphan")
   console.log(successOrphan) // true if node existed and was removed
   ```
 
@@ -142,13 +137,13 @@ Moves an existing node to a new parent within the tree.
 
   ```ts
   // Move submenu from main-menu to different parent
-  const moved = tree.moveNode('submenu', 'other-menu')
+  const moved = tree.moveNode("submenu", "other-menu")
   if (moved) {
-    console.log('Submenu successfully moved')
+    console.log("Submenu successfully moved")
   }
 
   // Move a node to be a direct child of the root
-  tree.moveNode('node-id', null)
+  tree.moveNode("node-id", null)
   ```
 
 ## tree.findNodeById()
@@ -168,7 +163,7 @@ Locates and returns a specific node by its ID.
 - **Example:**
 
   ```ts
-  const menuNode = tree.findNodeById('main-menu')
+  const menuNode = tree.findNodeById("main-menu")
   if (menuNode) {
     console.log(menuNode.data.open.value) // Check if open
     console.log(menuNode.parent?.id) // Parent ID
@@ -197,12 +192,12 @@ Traverses the tree using depth-first or breadth-first search.
 
   ```ts
   // Depth-first traversal from root
-  const allNodes = tree.traverse('dfs')
-  allNodes.forEach(node => console.log(node.id))
+  const allNodes = tree.traverse("dfs")
+  allNodes.forEach((node) => console.log(node.id))
 
   // Breadth-first from specific node
-  const menuNode = tree.findNodeById('main-menu')
-  const menuBranch = tree.traverse('bfs', menuNode)
+  const menuNode = tree.findNodeById("main-menu")
+  const menuBranch = tree.traverse("bfs", menuNode)
   ```
 
 ## tree.isTopmost()
@@ -223,9 +218,9 @@ Checks if a given open node is the topmost open node in its branch.
 
   ```ts
   // Check which menu should receive focus
-  if (tree.isTopmost('submenu')) {
+  if (tree.isTopmost("submenu")) {
     // This submenu is the topmost open element in its branch
-    focusElement('submenu')
+    focusElement("submenu")
   }
   ```
 
@@ -249,7 +244,7 @@ Retrieves all currently open nodes in the tree.
   const openNodes = tree.getAllOpenNodes()
   console.log(`${openNodes.length} elements are currently open`)
 
-  openNodes.forEach(node => {
+  openNodes.forEach((node) => {
     console.log(`${node.id} is open`)
   })
   ```
@@ -262,7 +257,7 @@ Executes a callback function on nodes related to a specified target node.
 
   ```ts
   forEach(
-    nodeId: string, 
+    nodeId: string,
     callback: (node: TreeNode<FloatingContext>) => void,
     options?: {
       relationship?: NodeRelationship
@@ -279,21 +274,33 @@ Executes a callback function on nodes related to a specified target node.
 
   ```ts
   // Close all siblings of a node
-  tree.forEach('main-menu', (node) => {
-    node.data.open.value = false
-  }, { relationship: 'siblings-only' })
+  tree.forEach(
+    "main-menu",
+    (node) => {
+      node.data.open.value = false
+    },
+    { relationship: "siblings-only" }
+  )
 
   // Close all descendants
-  tree.forEach('main-menu', (node) => {
-    node.data.open.value = false  
-  }, { relationship: 'descendants-only' })
+  tree.forEach(
+    "main-menu",
+    (node) => {
+      node.data.open.value = false
+    },
+    { relationship: "descendants-only" }
+  )
 
   // Apply custom logic to related nodes
-  tree.forEach('user-menu', (node) => {
-    if (node.data.disabled) {
-      node.data.open.value = false
-    }
-  }, { relationship: 'self-and-descendants' })
+  tree.forEach(
+    "user-menu",
+    (node) => {
+      if (node.data.disabled) {
+        node.data.open.value = false
+      }
+    },
+    { relationship: "self-and-descendants" }
+  )
   ```
 
 ## tree.dispose()
@@ -313,7 +320,7 @@ Cleans up the tree instance and prevents memory leaks.
 - **Example:**
 
   ```ts
-  import { onUnmounted } from 'vue'
+  import { onUnmounted } from "vue"
 
   const tree = useFloatingTree(rootContext)
 
@@ -329,18 +336,18 @@ Defines the set of nodes to target relative to a given node.
 - **Type:**
 
   ```ts
-  type NodeRelationship = 
-    | 'ancestors-only'
-    | 'siblings-only' 
-    | 'descendants-only'
-    | 'children-only'
-    | 'self-and-ancestors'
-    | 'self-and-children'
-    | 'self-and-descendants'
-    | 'self-and-siblings'
-    | 'self-ancestors-and-children'
-    | 'full-branch'
-    | 'all-except-branch'
+  type NodeRelationship =
+    | "ancestors-only"
+    | "siblings-only"
+    | "descendants-only"
+    | "children-only"
+    | "self-and-ancestors"
+    | "self-and-children"
+    | "self-and-descendants"
+    | "self-and-siblings"
+    | "self-ancestors-and-children"
+    | "full-branch"
+    | "all-except-branch"
   ```
 
 - **Details:**
@@ -351,37 +358,13 @@ Defines the set of nodes to target relative to a given node.
 
   ```ts
   // Different relationship examples
-  tree.forEach('main-menu', closeNode, { relationship: 'ancestors-only' })     // Close all parents
-  tree.forEach('main-menu', closeNode, { relationship: 'siblings-only' })      // Close sibling menus
-  tree.forEach('main-menu', closeNode, { relationship: 'descendants-only' })   // Close all submenus
-  tree.forEach('main-menu', closeNode, { relationship: 'children-only' })      // Close direct children
-  tree.forEach('main-menu', closeNode, { relationship: 'full-branch' })        // Close entire branch
+  tree.forEach("main-menu", closeNode, { relationship: "ancestors-only" }) // Close all parents
+  tree.forEach("main-menu", closeNode, { relationship: "siblings-only" }) // Close sibling menus
+  tree.forEach("main-menu", closeNode, { relationship: "descendants-only" }) // Close all submenus
+  tree.forEach("main-menu", closeNode, { relationship: "children-only" }) // Close direct children
+  tree.forEach("main-menu", closeNode, { relationship: "full-branch" }) // Close entire branch
 
   function closeNode(node) {
     node.data.open.value = false
   }
   ```
-
-## Common Patterns
-
-### Nested Menu System
-
-```vue
-<script setup>
-const tree = useFloatingTree({ id: 'root', open: ref(true) })
-
-// Create menu hierarchy
-const mainMenu = tree.addNode({ id: 'main-menu', open: ref(false) })
-tree.addNode({ id: 'file-menu', open: ref(false) }, 'main-menu')
-tree.addNode({ id: 'edit-menu', open: ref(false) }, 'main-menu')
-
-// Close all when clicking outside
-function handleClickOutside() {
-  tree.forEach('root', (node) => {
-    if (node.id !== 'root') {
-      node.data.open.value = false
-    }
-  }, { relationship: 'descendants-only' })
-}
-</script>
-```

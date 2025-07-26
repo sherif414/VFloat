@@ -37,6 +37,8 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@21st-extension/toolbar-vue": "^0.5.14",
+    "@21st-extension/vue": "^0.5.14",
     "@biomejs/biome": "1.9.4",
     "@testing-library/vue": "^8.1.0",
     "@tsconfig/node22": "^22.0.1",

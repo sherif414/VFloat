@@ -11,16 +11,10 @@
         >
           <div class="popover-header">
             <h4>Positioning Options</h4>
-            <button @click="popoverContext.setOpen(false)" class="close-btn">
-              ×
-            </button>
+            <button @click="popoverContext.setOpen(false)" class="close-btn">×</button>
           </div>
           <ul class="menu">
-            <li
-              ref="fileTrigger"
-              class="menu-item"
-              :class="{ open: fileContext.open.value }"
-            >
+            <li ref="fileTrigger" class="menu-item" :class="{ open: fileContext.open.value }">
               File <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
                 <ul
@@ -53,11 +47,7 @@
               </Teleport>
             </li>
             <li ref="editItem" class="menu-item">Edit</li>
-            <li
-              ref="viewTrigger"
-              class="menu-item"
-              :class="{ open: viewContext.open.value }"
-            >
+            <li ref="viewTrigger" class="menu-item" :class="{ open: viewContext.open.value }">
               View <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
                 <ul
@@ -80,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, ref } from "vue";
+import { useTemplateRef, ref } from "vue"
 import {
   useFloatingTree,
   useFloating,
@@ -89,58 +79,58 @@ import {
   useHover,
   offset,
   shift,
-} from "v-float";
+} from "v-float"
 
-const popoverTrigger = useTemplateRef("popoverTrigger");
-const popoverFloating = useTemplateRef("popoverFloating");
+const popoverTrigger = useTemplateRef("popoverTrigger")
+const popoverFloating = useTemplateRef("popoverFloating")
 
 const popoverContext = useFloating(popoverTrigger, popoverFloating, {
   placement: "bottom-start",
   open: ref(false),
   middlewares: [offset(4)],
-});
+})
 
-useClick(popoverContext);
-useDismiss(popoverContext);
+useClick(popoverContext)
+useDismiss(popoverContext)
 
 // Create floating hierarchy tree
-const tree = useFloatingTree(popoverContext, { deleteStrategy: "recursive" });
+const tree = useFloatingTree(popoverContext, { deleteStrategy: "recursive" })
 
 // File submenu
-const fileTrigger = useTemplateRef("fileTrigger");
-const fileFloating = useTemplateRef("fileFloating");
+const fileTrigger = useTemplateRef("fileTrigger")
+const fileFloating = useTemplateRef("fileFloating")
 const fileContext = useFloating(fileTrigger, fileFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-});
-useHover(fileContext, { delay: 200, safePolygon: true });
-useDismiss(fileContext);
-const fileNode = tree.addNode(fileContext, tree.root.id);
+})
+useHover(fileContext, { delay: 200, safePolygon: true })
+useDismiss(fileContext)
+const fileNode = tree.addNode(fileContext, tree.root.id)
 
 // Export sub-submenu
-const exportTrigger = useTemplateRef("exportTrigger");
-const exportFloating = useTemplateRef("exportFloating");
+const exportTrigger = useTemplateRef("exportTrigger")
+const exportFloating = useTemplateRef("exportFloating")
 const exportContext = useFloating(exportTrigger, exportFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-});
-useHover(exportContext, { delay: 200, safePolygon: true });
-useDismiss(exportContext);
-const exportNode = tree.addNode(exportContext, fileNode.id);
+})
+useHover(exportContext, { delay: 200, safePolygon: true })
+useDismiss(exportContext)
+const exportNode = tree.addNode(exportContext, fileNode.id)
 
 // View submenu
-const viewTrigger = useTemplateRef("viewTrigger");
-const viewFloating = useTemplateRef("viewFloating");
+const viewTrigger = useTemplateRef("viewTrigger")
+const viewFloating = useTemplateRef("viewFloating")
 const viewContext = useFloating(viewTrigger, viewFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-});
-useHover(viewContext, { delay: 200, safePolygon: true });
-useDismiss(viewContext);
-const viewNode = tree.addNode(viewContext, tree.root.id);
+})
+useHover(viewContext, { delay: 200, safePolygon: true })
+useDismiss(viewContext)
+const viewNode = tree.addNode(viewContext, tree.root.id)
 </script>
 
 <style scoped>

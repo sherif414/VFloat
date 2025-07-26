@@ -148,8 +148,9 @@ For older browser compatibility, you may need to provide polyfills for APIs such
 
 You have successfully created your first floating element with V-Float. To continue learning, explore the following resources:
 
-- [**Core Concepts**](/guide/concepts): Understand the fundamental principles of how V-Float calculates positions.
-- [**Interaction Composables**](/guide/interactions): Discover pre-built composables for handling common UI interactions like clicks, focus, and hover.
+- [**Core Concepts**](./concepts.md)
+- [**Floating Tree**](./floating-tree/floating-tree-introduction.md)
+- [**Interactions**](./interactions.md)
 - [**Composables**](/composables/): See the full list of available composables for advanced positioning and middleware.
 - [**Examples**](/examples/): Review complete implementations of dropdowns, popovers, and other common patterns.
 - [**V-Float on GitHub**](https://github.com/sherif414/VFloat): Report issues or contribute to the project.
