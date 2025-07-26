@@ -30,7 +30,7 @@ const { arrowStyles } = useArrow(context, { offset: "-4px" })
   <div class="relative flex items-center justify-center p-20">
     <button
       ref="buttonRef"
-      class="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+      class="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-2.5 font-medium text-white shadow-md transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95"
     >
       Hover Me
     </button>

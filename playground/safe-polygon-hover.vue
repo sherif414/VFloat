@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { offset } from "@floating-ui/dom"
-import { useFloating, autoUpdate, useHover } from "../src/composables"
+import { useFloating, useHover } from "../src/composables"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
@@ -9,7 +9,6 @@ const polygonPoints = ref<Array<[number, number]>>([])
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right",
-  whileElementsMounted: autoUpdate,
   middlewares: [offset(10)],
 })
 

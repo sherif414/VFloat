@@ -7,11 +7,16 @@
 // import Tooltip from "./demo/Tooltip.vue"
 import ArrowDemo from "./demo/ArrowDemo.vue"
 // import DemoContainer from "./demo/DemoContainer.vue"
+import { TwentyFirstToolbar } from "@21st-extension/toolbar-vue"
+import { VuePlugin } from "@21st-extension/vue"
+import TreeInteractionsDemo from "./demo/TreeInteractionsDemo.vue"
+
+const toolbarConfig = {
+  plugins: [VuePlugin],
+}
 </script>
 
 <template>
-  <ArrowDemo />
-  <ArrowDemo placement="bottom" />
-  <ArrowDemo placement="right" />
-  <ArrowDemo placement="left" />
+  <!-- <TwentyFirstToolbar :config="toolbarConfig" /> -->
+  <TreeInteractionsDemo />
 </template>
