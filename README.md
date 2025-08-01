@@ -34,11 +34,11 @@ yarn add v-float
 ```vue
 
 <script setup lang="ts">
-  import { ref } from "vue"
+  import { useTemplateRef } from "vue"
   import { useFloating, useHover, offset } from "v-float"
 
-  const anchorEl = ref<HTMLButtonElement | null>(null)
-  const floatingEl = ref<HTMLDivElement | null>(null)
+  const anchorEl = useTemplateRef("anchorEl")
+  const floatingEl = useTemplateRef("floatingEl")
 
   const context = useFloating(anchorEl, floatingEl, {
     placement: "top",
@@ -62,11 +62,11 @@ yarn add v-float
 ```vue
 
 <script setup lang="ts">
-  import { ref } from "vue"
+  import { useTemplateRef } from "vue"
   import { useFloating, useClick, useDismiss, offset, flip, shift } from "v-float"
 
-  const triggerEl = ref<HTMLButtonElement | null>(null)
-  const menuEl = ref<HTMLDivElement | null>(null)
+  const triggerEl = useTemplateRef("triggerEl")
+  const menuEl = useTemplateRef("menuEl")
 
   const context = useFloating(triggerEl, menuEl, {
     placement: "bottom-start",
@@ -126,14 +126,14 @@ Here's how you can set up a parent menu with a submenu:
 ```vue
 
 <script setup lang="ts">
-  import { ref } from "vue";
+  import { useTemplateRef } from "vue";
   import { useFloating, useFloatingTree, offset } from "v-float";
 
-  const parentTriggerEl = ref<HTMLButtonElement | null>(null);
-  const parentMenuEl = ref<HTMLDivElement | null>(null);
+  const parentTriggerEl = useTemplateRef("parentTriggerRef");
+  const parentMenuEl = useTemplateRef("parentMenuRef");
 
-  const submenuTriggerEl = ref<HTMLDivElement | null>(null);
-  const submenuEl = ref<HTMLDivElement | null>(null);
+  const submenuTriggerEl = useTemplateRef("submenuTriggerRef");
+  const submenuEl = useTemplateRef("submenuRef");
 
   // 1. Create the floating context for the parent menu.
   const parentContext = useFloating(parentTriggerEl, parentMenuEl, {
@@ -175,7 +175,6 @@ Here's how you can set up a parent menu with a submenu:
       ref="submenuTriggerEl"
       style="padding: 5px; cursor: pointer; hover: background-color: #e0e0e0;"
       @mouseenter="() => submenuContext?.setOpen(true)" @mouseleave="() => submenuContext?.setOpen(false)"
-    <!-- Basic hover for example -->
     >
     Parent Menu Item 2 (Hover for Submenu)
 
