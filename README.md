@@ -34,11 +34,11 @@ yarn add v-float
 ```vue
 
 <script setup lang="ts">
-  import { useTemplateRef } from "vue"
+  import { ref } from "vue"
   import { useFloating, useHover, offset } from "v-float"
 
-  const anchorEl = useTemplateRef("anchorEl")
-  const floatingEl = useTemplateRef("floatingEl")
+  const anchorEl = ref<HTMLButtonElement | null>(null)
+  const floatingEl = ref<HTMLDivElement | null>(null)
 
   const context = useFloating(anchorEl, floatingEl, {
     placement: "top",
@@ -62,11 +62,11 @@ yarn add v-float
 ```vue
 
 <script setup lang="ts">
-  import { useTemplateRef } from "vue"
+  import { ref } from "vue"
   import { useFloating, useClick, useDismiss, offset, flip, shift } from "v-float"
 
-  const triggerEl = useTemplateRef("triggerEl")
-  const menuEl = useTemplateRef("menuEl")
+  const triggerEl = ref<HTMLButtonElement | null>(null)
+  const menuEl = ref<HTMLDivElement | null>(null)
 
   const context = useFloating(triggerEl, menuEl, {
     placement: "bottom-start",
@@ -98,7 +98,7 @@ yarn add v-float
 
 ### Interactions
 
-- **`useHover`**: Hover interactions with configurable delays and safe areas
+- **`useHover`**: Hover interactions with configurable delays
 - **`useFocus`**: Focus/blur event handling for keyboard navigation
 - **`useClick`**: Click event handling with toggle and dismiss options
 - **`useDismiss`**: Close on outside click, ESC key, or scroll events
@@ -114,30 +114,6 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 - **`hide`**: Hide floating element when anchor is not visible
 - **`arrow`**: Position arrow elements (via `useArrow`)
 
-## Components
-
-### FloatingArrow
-
-Pre-built SVG arrow component with automatic positioning:
-
-```vue
-
-<script setup lang="ts">
-  import { FloatingArrow, useFloating, useArrow } from "v-float"
-
-  const context = useFloating(anchorEl, floatingEl, {
-    middlewares: [arrow({ element: arrowEl })],
-  })
-</script>
-
-<template>
-  <div ref="floatingEl" :style="context.floatingStyles.value">
-    Tooltip content
-    <FloatingArrow :context="context" fill="white" />
-  </div>
-</template>
-```
-
 ## Advanced Features
 
 ### Floating Trees
@@ -150,14 +126,14 @@ Here's how you can set up a parent menu with a submenu:
 ```vue
 
 <script setup lang="ts">
-  import { useTemplateRef } from "vue";
+  import { ref } from "vue";
   import { useFloating, useFloatingTree, offset } from "v-float";
 
-  const parentTriggerEl = useTemplateRef("parentTriggerRef");
-  const parentMenuEl = useTemplateRef("parentMenuRef");
+  const parentTriggerEl = ref<HTMLButtonElement | null>(null);
+  const parentMenuEl = ref<HTMLDivElement | null>(null);
 
-  const submenuTriggerEl = useTemplateRef("submenuTriggerRef");
-  const submenuEl = useTemplateRef("submenuRef");
+  const submenuTriggerEl = ref<HTMLDivElement | null>(null);
+  const submenuEl = ref<HTMLDivElement | null>(null);
 
   // 1. Create the floating context for the parent menu.
   const parentContext = useFloating(parentTriggerEl, parentMenuEl, {
@@ -183,12 +159,12 @@ Here's how you can set up a parent menu with a submenu:
 
 <template>
   <!-- Parent Menu Trigger -->
-  <button ref="parentTriggerRef">Open Menu</button>
+  <button ref="parentTriggerEl">Open Menu</button>
 
   <!-- Parent Menu Floating Element -->
   <div
     v-if="parentContext.open.value"
-    ref="parentMenuRef"
+    ref="parentMenuEl"
     :style="parentContext.floatingStyles.value"
     style="background-color: #f0f0f0; border: 1px solid #ccc; padding: 5px; z-index: 1000;"
   >
@@ -196,7 +172,7 @@ Here's how you can set up a parent menu with a submenu:
 
     <!-- Submenu Trigger (an item within the parent menu) -->
     <div
-      ref="submenuTriggerRef"
+      ref="submenuTriggerEl"
       style="padding: 5px; cursor: pointer; hover: background-color: #e0e0e0;"
       @mouseenter="() => submenuContext?.setOpen(true)" @mouseleave="() => submenuContext?.setOpen(false)"
     <!-- Basic hover for example -->
@@ -206,7 +182,7 @@ Here's how you can set up a parent menu with a submenu:
     <!-- Submenu Floating Element -->
     <div
       v-if="submenuContext.open.value"
-      ref="submenuRef"
+      ref="submenuEl"
       :style="submenuContext.floatingStyles.value"
       style="background-color: #e0e0e0; border: 1px solid #bbb; padding: 5px; margin-left: 10px; z-index: 1010;"
     >
