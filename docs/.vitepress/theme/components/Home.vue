@@ -167,28 +167,46 @@ const activeDemo = ref(demos[0].id);
   gap: 0;
   margin-bottom: 2rem;
   border-bottom: 1px solid var(--vp-c-divider);
-  overflow-x: auto;
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .demo-tab {
+  position: relative;
   padding: 1rem 1.5rem;
   background: none;
   border: none;
   color: var(--vp-c-text-2);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 2px solid transparent;
+  transition: color 0.3s ease;
   white-space: nowrap;
+  border-bottom: 2px solid transparent;
 }
 
 .demo-tab:hover {
   color: var(--vp-c-text-1);
 }
 
+.demo-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--vp-c-brand-1);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .demo-tab.active {
   color: var(--vp-c-text-1);
-  border-bottom-color: var(--vp-c-brand-1);
+}
+
+.demo-tab.active::after {
+  transform: scaleX(1);
 }
 
 .demo-showcase {

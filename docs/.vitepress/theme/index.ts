@@ -1,6 +1,6 @@
 import DefaultTheme from "vitepress/theme";
 import type { Theme } from "vitepress";
-import DemoPreview from "../components/demo/DemoPreview.vue";
+import DemoPreview from "./components/demos/DemoPreview.vue"
 import * as Demos from "../../demos";
 import Layout from "./components/Layout.vue";
 
