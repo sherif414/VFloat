@@ -37,9 +37,13 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   let didKeyDown = false
 
   const isEnabled = computed(() => toValue(enabled))
-  const reference = computed(() =>
-    refs.anchorEl.value instanceof HTMLElement ? refs.anchorEl.value : null
-  )
+  const anchorEl = computed(() => {
+    const el = refs.anchorEl.value
+    if (!el) return null
+    if (el instanceof HTMLElement) return el
+    if (el.contextElement instanceof HTMLElement) return el.contextElement
+    return null
+  })
 
   // --- Event Handlers --- //
 
@@ -64,7 +68,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     // Prevent stealing focus from the floating element if it's already open
     // and reference is not the target (e.g. clicking scrollbar).
     const target = e.target as HTMLElement | null
-    if (!open.value && target === reference.value) {
+    if (!open.value && target === anchorEl.value) {
       e.preventDefault()
     }
 
@@ -94,7 +98,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
       return
     }
 
-    const el = reference.value
+    const el = anchorEl.value
     if (!el) return
 
     if (e.key === " " && !isSpaceIgnored(el)) {
@@ -109,7 +113,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    const el = reference.value // Get current element inside handler
+    const el = anchorEl.value // Get current element inside handler
     if (!el) return
 
     if (
@@ -130,7 +134,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   // --- Watch for changes in enabled state or reference element ---
 
   watchPostEffect(() => {
-    const el = reference.value
+    const el = anchorEl.value
     if (!isEnabled.value || !el) return
 
     el.addEventListener("pointerdown", onPointerDown)
