@@ -7,8 +7,6 @@ import type { FloatingContext } from "../use-floating"
 // 📌 Types
 //=======================================================================================
 
-export type DismissReason = "escape-key" | "outside-press" | "anchor-press" | "ancestor-scroll"
-
 export interface UseDismissProps {
   /**
    * Whether dismiss event listeners are enabled.
@@ -102,7 +100,6 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
     if (el.contextElement instanceof HTMLElement) return el.contextElement
     return null
   })
-  
 
   const { isComposing } = useComposition()
 
@@ -219,9 +216,7 @@ export function useDismiss(context: FloatingContext, options: UseDismissProps = 
 //=======================================================================================
 // 📌 Helper Functions
 //=======================================================================================
-function normalizeProp(
-  normalizable?: boolean | { escapeKey?: boolean; outsidePress?: boolean }
-) {
+function normalizeProp(normalizable?: boolean | { escapeKey?: boolean; outsidePress?: boolean }) {
   return {
     escapeKey:
       typeof normalizable === "boolean" ? normalizable : (normalizable?.escapeKey ?? false),

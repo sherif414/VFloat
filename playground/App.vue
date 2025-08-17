@@ -1,19 +1,11 @@
 <script setup lang="ts">
-// import Menu from "./components/Menu.vue"
-// import SubMenu from "./components/SubMenu.vue"
-// import MenuItem from "./components/MenuItem.vue"
-// import MenuTrigger from "./components/MenuTrigger.vue"
-// import MenuDropdown from "./components/MenuDropdown.vue"
 // import Tooltip from "./demo/Tooltip.vue"
-import ArrowDemo from "./demo/ArrowDemo.vue"
+// import ArrowDemo from "./demo/ArrowDemo.vue"
+import MenuDemo from "./demo/MenuDemo.vue"
 // import DemoContainer from "./demo/DemoContainer.vue"
-import { VuePlugin } from "@21st-extension/vue"
-
-const toolbarConfig = {
-  plugins: [VuePlugin],
-}
+// import { VuePlugin } from "@21st-extension/vue"
 </script>
 
 <template>
-  <ArrowDemo />
+  <MenuDemo />
 </template>

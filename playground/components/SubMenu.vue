@@ -29,36 +29,6 @@ if (!tree || !parentMenuId) {
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right-start",
   open: isOpen,
-  setOpen: (openValue) => {
-    if (props.disabled && openValue) return // Prevent opening if disabled
-    isOpen.value = openValue
-
-    if (openValue) {
-      // When this submenu is OPENING
-      // Close any sibling submenus that might be open
-      tree.forEach(
-        node.id,
-        (siblingNode) => {
-          if (siblingNode.id !== node.id && siblingNode.data.open.value) {
-            siblingNode.data.setOpen(false)
-          }
-        },
-        { relationship: "siblings-only", applyToMatching: true }
-      )
-    } else {
-      // When this submenu is CLOSING
-      // Close all of its own descendant submenus
-      tree.forEach(
-        node.id,
-        (descendantNode) => {
-          if (descendantNode.id !== node.id && descendantNode.data.open.value) {
-            descendantNode.data.setOpen(false)
-          }
-        },
-        { relationship: "descendants-only", applyToMatching: true }
-      )
-    }
-  },
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
 })
 const node = tree?.addNode(context, parentMenuId)!
@@ -71,7 +41,7 @@ onUnmounted(() => {
 provide("parentMenuId", parentMenuId) // Pass down the original parent ID
 provide("currentMenuId", node.id) // This submenu is now the current menu for its children
 
-useHover(context)
+useHover(context, { safePolygon: true })
 useDismiss(context)
 </script>
 

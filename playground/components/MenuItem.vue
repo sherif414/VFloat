@@ -10,7 +10,7 @@ const props = defineProps<MenuItemProps>();
 </script>
 
 <template>
-  <div class="menu-item w-full" :class="{ 'menu-item--disabled': disabled }" role="menuitem" :aria-disabled="disabled"
+  <div class="menu-item w-full" :class="{ 'menu-item--disabled': props.disabled }" role="menuitem" :aria-disabled="props.disabled"
     tabindex="-1">
     <slot>{{ props.label }}</slot>
   </div>
