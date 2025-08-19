@@ -2,57 +2,69 @@
   <div class="demo-preview">
     <div class="popover-demo">
       <button ref="popoverTrigger" class="demo-button">Open popover</button>
-      <div
-        v-show="popoverContext.isPositioned.value"
-        ref="popoverFloating"
-        class="popover floating-element"
-        :style="popoverContext.floatingStyles.value"
-      >
-        <div class="popover-header">
-          <h4>Positioning Options</h4>
-          <button @click="popoverContext.setOpen(false)" class="close-btn">×</button>
-        </div>
-        <ul class="menu">
-          <li ref="fileTrigger" class="menu-item" :class="{ open: fileContext.open.value }">
-            File <span class="submenu-arrow">▶︎</span>
-            <ul
-              v-show="fileContext.isPositioned.value"
-              ref="fileFloating"
-              class="submenu floating-element"
-              :style="fileContext.floatingStyles.value"
-            >
-              <li class="menu-item">New</li>
-              <li class="menu-item">Open</li>
-              <li ref="exportTrigger" class="menu-item" :class="{ open: exportContext.open.value }">
-                Export <span class="submenu-arrow">▶︎</span>
+      <Teleport to="body">
+        <div
+          v-show="popoverContext.isPositioned.value"
+          ref="popoverFloating"
+          class="popover floating-element"
+          :style="popoverContext.floatingStyles.value"
+        >
+          <div class="popover-header">
+            <h4>Positioning Options</h4>
+            <button @click="popoverContext.setOpen(false)" class="close-btn">×</button>
+          </div>
+          <ul class="menu">
+            <li ref="fileTrigger" class="menu-item" :class="{ open: fileContext.open.value }">
+              File <span class="submenu-arrow">▶︎</span>
+              <Teleport to="body">
                 <ul
-                  v-show="exportContext.isPositioned.value"
-                  ref="exportFloating"
-                  class="sub-submenu floating-element"
-                  :style="exportContext.floatingStyles.value"
+                  v-show="fileContext.isPositioned.value"
+                  ref="fileFloating"
+                  class="submenu floating-element"
+                  :style="fileContext.floatingStyles.value"
                 >
-                  <li class="menu-item">PDF</li>
-                  <li class="menu-item">DOCX</li>
+                  <li class="menu-item">New</li>
+                  <li class="menu-item">Open</li>
+                  <li
+                    ref="exportTrigger"
+                    class="menu-item"
+                    :class="{ open: exportContext.open.value }"
+                  >
+                    Export <span class="submenu-arrow">▶︎</span>
+                    <Teleport to="body">
+                      <ul
+                        v-show="exportContext.isPositioned.value"
+                        ref="exportFloating"
+                        class="sub-submenu floating-element"
+                        :style="exportContext.floatingStyles.value"
+                      >
+                        <li class="menu-item">PDF</li>
+                        <li class="menu-item">DOCX</li>
+                      </ul>
+                    </Teleport>
+                  </li>
                 </ul>
-              </li>
-            </ul>
-          </li>
-          <li ref="editItem" class="menu-item">Edit</li>
-          <li ref="viewTrigger" class="menu-item" :class="{ open: viewContext.open.value }">
-            View <span class="submenu-arrow">▶︎</span>
-            <ul
-              v-show="viewContext.isPositioned.value"
-              ref="viewFloating"
-              class="submenu floating-element"
-              :style="viewContext.floatingStyles.value"
-            >
-              <li class="menu-item">Zoom In</li>
-              <li class="menu-item">Zoom Out</li>
-            </ul>
-          </li>
-          <li ref="helpItem" class="menu-item">Help</li>
-        </ul>
-      </div>
+              </Teleport>
+            </li>
+            <li ref="editItem" class="menu-item">Edit</li>
+            <li ref="viewTrigger" class="menu-item" :class="{ open: viewContext.open.value }">
+              View <span class="submenu-arrow">▶︎</span>
+              <Teleport to="body">
+                <ul
+                  v-show="viewContext.isPositioned.value"
+                  ref="viewFloating"
+                  class="submenu floating-element"
+                  :style="viewContext.floatingStyles.value"
+                >
+                  <li class="menu-item">Zoom In</li>
+                  <li class="menu-item">Zoom Out</li>
+                </ul>
+              </Teleport>
+            </li>
+            <li ref="helpItem" class="menu-item">Help</li>
+          </ul>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -69,17 +81,6 @@ import {
   shift,
 } from "v-float"
 
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-function isEventTargetWithin(event: Event, element: Element | null | undefined): boolean {
-  if (!element) return false
-  if ("composedPath" in event && typeof event.composedPath === "function") {
-    return (event.composedPath() as Node[]).includes(element)
-  }
-  return element.contains(event.target as Node)
-}
-
 const popoverTrigger = useTemplateRef("popoverTrigger")
 const popoverFloating = useTemplateRef("popoverFloating")
 
@@ -89,26 +90,11 @@ const popoverContext = useFloating(popoverTrigger, popoverFloating, {
   middlewares: [offset(4)],
 })
 
-// Create floating hierarchy tree (must be before useDismiss so it's available in handlers)
-const tree = useFloatingTree(popoverContext, { deleteStrategy: "recursive" })
-
-const isOutsideAllOpenNodes = (event: MouseEvent): boolean => {
-  const target = event.target as Node | null
-  if (!target) return true
-  const openNodes = tree.getAllOpenNodes()
-  for (const node of openNodes) {
-    if (
-      isEventTargetWithin(event, node.data.refs.floatingEl.value) ||
-      isEventTargetWithin(event, node.data.refs.anchorEl.value)
-    ) {
-      return false
-    }
-  }
-  return true
-}
-
 useClick(popoverContext)
-useDismiss(popoverContext, { outsidePress: isOutsideAllOpenNodes })
+useDismiss(popoverContext)
+
+// Create floating hierarchy tree
+const tree = useFloatingTree(popoverContext, { deleteStrategy: "recursive" })
 
 // File submenu
 const fileTrigger = useTemplateRef("fileTrigger")
@@ -118,8 +104,8 @@ const fileContext = useFloating(fileTrigger, fileFloating, {
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
 })
-useHover(fileContext, { safePolygon: true })
-useDismiss(fileContext, { outsidePress: isOutsideAllOpenNodes })
+useHover(fileContext, { delay: 200, safePolygon: true })
+useDismiss(fileContext)
 const fileNode = tree.addNode(fileContext, tree.root.id)
 
 // Export sub-submenu
@@ -130,8 +116,8 @@ const exportContext = useFloating(exportTrigger, exportFloating, {
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
 })
-useHover(exportContext, { safePolygon: true })
-useDismiss(exportContext, { outsidePress: isOutsideAllOpenNodes })
+useHover(exportContext, { delay: 200, safePolygon: true })
+useDismiss(exportContext)
 const exportNode = tree.addNode(exportContext, fileNode.id)
 
 // View submenu
@@ -142,8 +128,8 @@ const viewContext = useFloating(viewTrigger, viewFloating, {
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
 })
-useHover(viewContext, { safePolygon: true })
-useDismiss(viewContext, { outsidePress: isOutsideAllOpenNodes })
+useHover(viewContext, { delay: 200, safePolygon: true })
+useDismiss(viewContext)
 const viewNode = tree.addNode(viewContext, tree.root.id)
 </script>
 

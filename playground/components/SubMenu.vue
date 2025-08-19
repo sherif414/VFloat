@@ -42,7 +42,6 @@ provide("parentMenuId", parentMenuId) // Pass down the original parent ID
 provide("currentMenuId", node.id) // This submenu is now the current menu for its children
 
 useHover(context, { safePolygon: true })
-useDismiss(context)
 </script>
 
 <template>
