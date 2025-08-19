@@ -1,6 +1,6 @@
 export * from "./use-hover"
 export * from "./use-focus"
 export * from "./use-click"
-export * from "./use-dismiss"
 export * from "./use-client-point"
 export * from "./use-outside-click"
+export * from "./use-escape-key"
