@@ -22,15 +22,8 @@ export interface UseFloatingTreeReturn {
     mode: "dfs" | "bfs",
     startNode?: TreeNode<FloatingContext>
   ) => TreeNode<FloatingContext>[]
-  /**
-   * Checks if a given node is the topmost open node in the tree hierarchy.
-   * A node is considered topmost if it's open and none of its ancestors are open.
-   *
-   * @param nodeId - The ID of the node to check.
-   * @returns True if the node is open and no ancestors are open, false otherwise.
-   */
-  isTopmost: (nodeId: string) => boolean
   getAllOpenNodes: () => TreeNode<FloatingContext>[]
+  getTopmostOpenNode: () => TreeNode<FloatingContext> | null
   /**
    * Executes a provided function once for each tree node that matches the specified relationship.
    * This is a flexible iteration method that can target nodes based on their relationship to a target node.
@@ -211,21 +204,21 @@ export function useFloatingTree(
     return openNodes
   }
 
-  const isTopmost = (nodeId: string): boolean => {
-    const node = tree.findNodeById(nodeId)
-    if (!node || !node.data.open.value) {
-      return false // Node doesn't exist or isn't open
-    }
+  const getTopmostOpenNode = (): TreeNode<FloatingContext> | null => {
+    let topmostNode: TreeNode<FloatingContext> | null = null
+    let maxLevel = -1
 
-    let parent = node.parent.value
-    while (parent) {
-      if (parent.data.open.value) {
-        return false // An ancestor is open
+    for (const node of tree.nodeMap.values()) {
+      if (node.data.open.value) {
+        const level = node.getPath().length
+        if (level > maxLevel) {
+          maxLevel = level
+          topmostNode = node
+        }
       }
-      parent = parent.parent.value
     }
 
-    return true // No open ancestors found
+    return topmostNode
   }
 
   return {
@@ -244,9 +237,8 @@ export function useFloatingTree(
       tree.removeNode(nodeId, deleteStrategy),
     traverse: (mode: "dfs" | "bfs", startNode?: TreeNode<FloatingContext>) =>
       tree.traverse(mode, startNode),
-
-    isTopmost,
     getAllOpenNodes,
+    getTopmostOpenNode,
     forEach,
   }
 }
