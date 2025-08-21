@@ -1,6 +1,5 @@
 import { useEventListener } from "@vueuse/core"
 import { type MaybeRefOrGetter, ref, toValue } from "vue"
-import type { UseFloatingTreeReturn } from "../use-floating-tree"
 
 // =======================================================================================
 // 📌 Types
