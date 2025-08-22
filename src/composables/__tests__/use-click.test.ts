@@ -6,7 +6,7 @@ import { useClick, type UseClickOptions } from "@/composables"
 // a minimal FloatingContext type for the tests
 interface FloatingContext {
   refs: {
-    reference: Ref<HTMLElement | null>
+    anchorEl: Ref<HTMLElement | null>
     floating: Ref<HTMLElement | null>
   }
   open: Ref<boolean>
@@ -43,7 +43,7 @@ describe("useClick", () => {
 
     context = {
       refs: {
-        reference: ref(null),
+        anchorEl: ref(null),
         floating: ref(null),
       },
       open: ref(false),
@@ -53,7 +53,7 @@ describe("useClick", () => {
       },
     }
 
-    context.refs.reference.value = referenceEl
+    context.refs.anchorEl.value = referenceEl
     context.refs.floating.value = floatingEl
 
     await nextTick()
@@ -199,7 +199,7 @@ describe("useClick", () => {
       expect(context.open.value).toBe(false)
     })
 
-    it("does not trigger on Space key press if keyboardHandlers is false", async () => {
+    it("does not trigger on Space key press if ignoreKeyboard is true", async () => {
       document.body.removeChild(referenceEl)
       referenceEl = document.createElement("div")
       referenceEl.id = "reference"
@@ -207,11 +207,60 @@ describe("useClick", () => {
       document.body.appendChild(referenceEl)
       context.refs.reference.value = referenceEl
 
-      initClick({ keyboardHandlers: false })
+      initClick({ ignoreKeyboard: true })
       expect(context.open.value).toBe(false)
 
       referenceEl.focus()
       await userEvent.keyboard(" ")
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
+    })
+
+    it("does not trigger on Enter key press if ignoreKeyboard is true", async () => {
+      initClick({ ignoreKeyboard: true })
+      expect(context.open.value).toBe(false)
+
+      referenceEl.focus()
+      await userEvent.keyboard("{Enter}")
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
+    })
+  })
+
+  // --- Pointer Event Handling ---
+  describe("pointer event handling", () => {
+    it("toggles on touch event by default", async () => {
+      initClick()
+      expect(context.open.value).toBe(false)
+
+      // Simulate a touch pointer event
+      // This will fire pointerdown, pointerup, and click events.
+      await userEvent.pointer({ keys: "[TouchA>]", target: referenceEl })
+
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+      expect(context.open.value).toBe(true)
+    })
+
+    it("does not toggle on touch event if ignoreTouch is true", async () => {
+      initClick({ ignoreTouch: true })
+      expect(context.open.value).toBe(false)
+
+      // Simulate a touch pointer event
+      await userEvent.pointer({ keys: "[TouchA>]", target: referenceEl })
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
+    })
+
+    it("does not toggle on mouse click if ignoreMouse is true", async () => {
+      initClick({ ignoreMouse: true })
+      expect(context.open.value).toBe(false)
+
+      // userEvent.click simulates a mouse click.
+      await userEvent.click(referenceEl)
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)

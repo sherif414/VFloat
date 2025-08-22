@@ -30,7 +30,8 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     event: eventOption = "click",
     toggle = true,
     ignoreMouse = false,
-    keyboardHandlers = true,
+    ignoreKeyboard = false,
+    ignoreTouch = false,
   } = options
 
   let pointerType: PointerType | undefined
@@ -64,6 +65,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     if (e.button !== 0) return
     if (toValue(eventOption) === "click") return
     if (isMouseLikePointerType(pointerType, true) && toValue(ignoreMouse)) return
+    if (pointerType === "touch" && toValue(ignoreTouch)) return
 
     // Prevent stealing focus from the floating element if it's already open
     // and reference is not the target (e.g. clicking scrollbar).
@@ -87,6 +89,11 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
       return
     }
 
+    if (pointerType === "touch" && toValue(ignoreTouch)) {
+      pointerType = undefined
+      return
+    }
+
     handleOpenChange()
     pointerType = undefined
   }
@@ -94,7 +101,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   function onKeyDown(e: KeyboardEvent) {
     pointerType = undefined
 
-    if (e.defaultPrevented || !toValue(keyboardHandlers) || isButtonTarget(e)) {
+    if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e)) {
       return
     }
 
@@ -118,7 +125,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
     if (
       e.defaultPrevented ||
-      !toValue(keyboardHandlers) ||
+      toValue(ignoreKeyboard) ||
       isButtonTarget(e) ||
       isSpaceIgnored(el)
     ) {
@@ -234,8 +241,14 @@ export interface UseClickOptions {
   ignoreMouse?: MaybeRefOrGetter<boolean>
 
   /**
-   * Whether to add keyboard handlers (Enter and Space key functionality).
-   * @default true
+   * Whether to ignore keyboard handlers (Enter and Space key functionality).
+   * @default false
    */
-  keyboardHandlers?: MaybeRefOrGetter<boolean>
+  ignoreKeyboard?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to ignore touch events.
+   * @default false
+   */
+  ignoreTouch?: MaybeRefOrGetter<boolean>
 }
