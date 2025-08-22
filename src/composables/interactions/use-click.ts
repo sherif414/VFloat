@@ -70,7 +70,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     // Prevent stealing focus from the floating element if it's already open
     // and reference is not the target (e.g. clicking scrollbar).
     const target = e.target as HTMLElement | null
-    if (!open.value && target === anchorEl.value) {
+    if (!open.value && target && anchorEl.value?.contains(target)) {
       e.preventDefault()
     }
 
@@ -123,12 +123,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     const el = anchorEl.value // Get current element inside handler
     if (!el) return
 
-    if (
-      e.defaultPrevented ||
-      toValue(ignoreKeyboard) ||
-      isButtonTarget(e) ||
-      isSpaceIgnored(el)
-    ) {
+    if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e) || isSpaceIgnored(el)) {
       return
     }
 
@@ -141,6 +136,8 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   // --- Watch for changes in enabled state or reference element ---
 
   watchPostEffect(() => {
+    pointerType = undefined
+    didKeyDown = false
     const el = anchorEl.value
     if (!isEnabled.value || !el) return
 
@@ -177,12 +174,19 @@ function isMouseLikePointerType(pointerType: string | undefined, strict?: boolea
 }
 
 /**
- * Checks if the event target is an HTMLButtonElement.
+ * Checks if the event target is a button-like element.
  * @param event - The KeyboardEvent.
  * @returns True if the target is a button.
  */
 function isButtonTarget(event: KeyboardEvent): boolean {
-  return event.target instanceof HTMLElement && event.target.tagName === "BUTTON"
+  const target = event.target
+  if (!(target instanceof HTMLElement)) return false
+
+  return (
+    target.tagName === "BUTTON" ||
+    (target.tagName === "INPUT" && target.getAttribute("type") === "button") ||
+    target.getAttribute("role") === "button"
+  )
 }
 
 /**
@@ -191,10 +195,12 @@ function isButtonTarget(event: KeyboardEvent): boolean {
  * @returns True if the element is typeable.
  */
 function isTypeableElement(element: Element | null): boolean {
+  if (!element || !(element instanceof HTMLElement)) return false
+
   return (
     element instanceof HTMLInputElement ||
     element instanceof HTMLTextAreaElement ||
-    (element instanceof HTMLElement && element.isContentEditable)
+    (element.isContentEditable && element.contentEditable !== "false")
   )
 }
 
