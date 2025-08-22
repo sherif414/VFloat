@@ -52,8 +52,9 @@ The `useClick` composable accepts several options to customize its behavior. The
 | enabled          | `MaybeRefOrGetter<boolean>`              | `true`  | Whether the click interaction is enabled.                                                |
 | event            | `MaybeRefOrGetter<'click' \| 'mousedown'>` | `'click'` | The mouse event that triggers the interaction. Keyboard clicks are handled separately.   |
 | toggle           | `MaybeRefOrGetter<boolean>`              | `true`  | Whether clicking the reference element toggles the floating element's open state.        |
-| ignoreMouse      | `MaybeRefOrGetter<boolean>`              | `false` | When `true`, mouse clicks don't trigger the interaction (useful for touch-only interfaces). |
-| keyboardHandlers | `MaybeRefOrGetter<boolean>`              | `true`  | Whether to handle keyboard events (`Enter` and `Space`) on the reference element.        |
+| ignoreMouse      | `MaybeRefOrGetter<boolean>`              | `false` | If `true`, mouse events will be ignored.                                                 |
+| ignoreKeyboard   | `MaybeRefOrGetter<boolean>`              | `false` | If `true`, keyboard events (`Enter` and `Space`) will be ignored.                        |
+| ignoreTouch      | `MaybeRefOrGetter<boolean>`              | `false` | If `true`, touch events will be ignored.                                                 |
 
 (Note: `MaybeRefOrGetter<T>` means the value can be `T`, `Ref<T>`, or a getter function `() => T`.)
 
@@ -176,9 +177,9 @@ useClick(floating.context, {
 
 This is useful when combining with other interaction methods or when creating touch-specific interfaces.
 
-### Disabling Keyboard Handlers
+### Ignoring Touch Events
 
-By default, `useClick` also handles keyboard events (`Enter` and `Space` keys) on the reference element for accessibility. You can disable this behavior:
+You can also ignore touch events, which can be useful when you want to handle touch and mouse interactions differently.
 
 ```vue
 <script setup>
@@ -194,15 +195,48 @@ const floating = useFloating(referenceRef, floatingRef, {
   setOpen: (value) => (isOpen.value = value),
 })
 
-// Disable keyboard handling (Enter/Space keys won't trigger)
-// useClick directly attaches event listeners.
+// Ignore touch events
 useClick(floating.context, {
-  keyboardHandlers: false,
+  ignoreTouch: true,
 })
 </script>
 <template>
   <button ref="referenceRef" :aria-expanded="isOpen.value">
-    Keyboard handlers disabled
+    Touch events ignored
+  </button>
+  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+    Floating content
+  </div>
+</template>
+```
+This is useful when you want to implement custom touch interactions, like swipe gestures, without triggering a click.
+
+### Ignoring Keyboard Handlers
+
+By default, `useClick` handles keyboard events (`Enter` and `Space`) for accessibility. You can ignore this behavior:
+
+```vue
+<script setup>
+import { ref } from "vue" // Assuming isOpen, referenceRef, floatingRef are defined
+import { useFloating, useClick } from "v-float"
+
+const isOpen = ref(false)
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const floating = useFloating(referenceRef, floatingRef, {
+  open: isOpen,
+  setOpen: (value) => (isOpen.value = value),
+})
+
+// Ignore keyboard handling (Enter/Space keys won't trigger)
+useClick(floating.context, {
+  ignoreKeyboard: true,
+})
+</script>
+<template>
+  <button ref="referenceRef" :aria-expanded="isOpen.value">
+    Keyboard handlers ignored
   </button>
   <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
     Floating content
@@ -210,7 +244,7 @@ useClick(floating.context, {
 </template>
 ```
 
-However, disabling keyboard handlers is generally not recommended for accessibility reasons, unless you're handling keyboard interactions another way.
+However, ignoring keyboard handlers is generally not recommended for accessibility reasons unless you provide an alternative way to interact with the component.
 
 ## Conditional Enabling
 
@@ -633,7 +667,7 @@ useDismiss(floating.context, { outsidePress: false, escapeKey: true }); // Attac
 
 1. **Combine with dismissal**: Always combine `useClick` with `useDismiss` to provide a way to close the floating element.
 
-2. **Ensure keyboard accessibility**: Keep `keyboardHandlers` enabled so keyboard users can trigger the interaction with Enter or Space keys.
+2. **Ensure keyboard accessibility**: Avoid setting `ignoreKeyboard` to `true` so keyboard users can trigger the interaction with the `Enter` or `Space` keys.
 
 3. **Add ARIA attributes**: Use `useRole` to add appropriate ARIA attributes for accessibility.
 
