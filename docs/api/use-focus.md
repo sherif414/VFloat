@@ -4,31 +4,24 @@ The `useFocus` composable enables focus-based interactions for floating elements
 
 ## Basic Usage
 
-```vue
+```vue twoslash
 <script setup lang="ts">
 import { ref } from "vue"
-import { useFloating, useInteractions, useFocus } from "v-float"
+import { useFloating, useFocus } from "v-float"
 
 const referenceRef = ref<HTMLElement | null>(null)
 const floatingRef = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const context = useFloating(referenceRef, floatingRef)
 
 // Create focus interaction
-const focus = useFocus(floating.context)
-
-// Apply the interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([focus])
+useFocus(context)
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Focus Me (click or tab)</button>
+  <button ref="referenceRef">Focus Me (click or tab)</button>
 
-  <div v-if="isOpen" ref="floatingRef" v-bind="getFloatingProps()" :style="floating.floatingStyles">
+  <div v-if="context.open.value" ref="floatingRef" :style="{ ...context.floatingStyles }">
     This element appears when the button is focused
   </div>
 </template>
@@ -42,84 +35,83 @@ const { getReferenceProps, getFloatingProps } = useInteractions([focus])
 function useFocus(
   context: FloatingContext,
   options?: UseFocusOptions
-): {
-  getReferenceProps: (userProps?: object) => object
-  getFloatingProps: (userProps?: object) => object
-}
+): UseFocusReturn
 ```
 
-| Parameter | Type            | Description                                  |
-| --------- | --------------- | -------------------------------------------- |
-| context   | FloatingContext | The context object returned from useFloating |
-| options   | UseFocusOptions | Optional configuration options               |
+| Parameter | Type                | Description                                                                    |
+| --------- | ------------------- | ------------------------------------------------------------------------------ |
+| context   | `FloatingContext`   | The context object returned from `useFloating`. Contains refs and state.       |
+| options   | `UseFocusOptions`   | Optional configuration options for focus behavior.                            |
 
-### Options
-
-<script setup>
-import { ref } from 'vue'
-</script>
+### Options (`UseFocusOptions`)
 
 The `useFocus` composable accepts several options to customize its behavior:
 
-| Option       | Type                          | Default | Description                                                                                           |
-| ------------ | ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| enabled      | boolean \| Ref&lt;boolean&gt; | true    | Whether the focus interaction is enabled                                                              |
-| keyboardOnly | boolean                       | false   | When true, only keyboard navigation focus events will trigger the interaction (not mouse clicks)      |
-| visibleOnly  | boolean                       | false   | When true, only focus events for visible elements are handled (useful for screenreader accessibility) |
+| Option              | Type                        | Default | Description                                                                          |
+| ------------------- | --------------------------- | ------- | ------------------------------------------------------------------------------------ |
+| enabled             | `MaybeRefOrGetter<boolean>` | `true`  | Whether focus event listeners are enabled                                            |
+| requireFocusVisible | `MaybeRefOrGetter<boolean>` | `true`  | Whether to only open when focus is visible (`:focus-visible` CSS selector)          |
 
 ### Return Value
 
-`useFocus` returns an object with functions that generate props:
-
-| Property          | Type                           | Description                                                   |
-| ----------------- | ------------------------------ | ------------------------------------------------------------- |
-| getReferenceProps | (userProps?: object) => object | Function that returns props to apply to the reference element |
-| getFloatingProps  | (userProps?: object) => object | Function that returns props to apply to the floating element  |
+`useFocus` returns `UseFocusReturn` (currently `undefined`). It performs its actions by attaching event listeners to the reference element obtained from the `FloatingContext`.
 
 ## Focus Behavior Options
 
-### Keyboard-Only Focus
+### Requiring Focus-Visible
 
-In some cases, you may want to show the floating element only when the user navigates to the reference element using the keyboard (via Tab key), but not when they click on it. The `keyboardOnly` option enables this behavior:
+By default, `useFocus` only opens the floating element when the focus is "visible" (following the `:focus-visible` CSS selector behavior). This means it typically only triggers for keyboard navigation, not mouse clicks:
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useFocus } from "v-float"
+import { ref } from "vue"
+import { useFloating, useFocus } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const context = useFloating(referenceRef, floatingRef)
+
+// Default behavior - only triggers on keyboard focus
+useFocus(context, {
+  requireFocusVisible: true, // This is the default
 })
-
-// Only trigger on keyboard focus events
-const focus = useFocus(floating.context, {
-  keyboardOnly: true,
-})
-
-const { getReferenceProps, getFloatingProps } = useInteractions([focus])
 </script>
+
+<template>
+  <button ref="referenceRef">Tab to me, don't click</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Appears on keyboard focus only
+  </div>
+</template>
 ```
 
-This is particularly useful when combining with other interaction methods like `useHover` or `useClick`, allowing different behaviors for different types of interactions.
+### Allowing Any Focus
 
-### Visible-Only Focus
-
-The `visibleOnly` option makes the focus interaction only trigger for elements that are visible to the user. This is useful for improving accessibility with screen readers, which can focus elements that aren't visually focused:
+You can disable the focus-visible requirement to make the floating element appear on any focus event, including mouse clicks:
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useFocus } from "v-float"
+import { ref } from "vue"
+import { useFloating, useFocus } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
-// Only trigger on visible focus events
-const focus = useFocus(floating.context, {
-  visibleOnly: true,
+const context = useFloating(referenceRef, floatingRef)
+
+// Trigger on any focus event
+useFocus(context, {
+  requireFocusVisible: false,
 })
 </script>
+
+<template>
+  <button ref="referenceRef">Click or tab to me</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Appears on any focus
+  </div>
+</template>
 ```
 
 ## Conditional Enabling
@@ -129,18 +121,17 @@ You can conditionally enable or disable the focus interaction with the `enabled`
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, useInteractions, useFocus } from "v-float"
+import { useFloating, useFocus } from "v-float"
 
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 // Control whether focus interaction is enabled
 const focusEnabled = ref(true)
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const context = useFloating(referenceRef, floatingRef)
 
 // Use reactive enabled option
-const focus = useFocus(floating.context, {
+useFocus(context, {
   enabled: focusEnabled,
 })
 
@@ -153,6 +144,17 @@ function enableFocus() {
   focusEnabled.value = true
 }
 </script>
+
+<template>
+  <div>
+    <button ref="referenceRef">Focus interaction target</button>
+    <button @click="disableFocus">Disable focus</button>
+    <button @click="enableFocus">Enable focus</button>
+  </div>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Focus interaction is {{ focusEnabled ? 'enabled' : 'disabled' }}
+  </div>
+</template>
 ```
 
 ## Combining with Other Interactions
@@ -161,253 +163,193 @@ function enableFocus() {
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover, useFocus, useRole } from "v-float"
+import { ref } from "vue"
+import { useFloating, useHover, useFocus, useEscapeKey } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const context = useFloating(referenceRef, floatingRef)
 
 // Create interaction handlers
-const hover = useHover(floating.context, {
+useHover(context, {
   delay: { open: 200, close: 100 },
 })
-const focus = useFocus(floating.context)
-const role = useRole(floating.context, { role: "tooltip" })
 
-// Combine them all
-const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, role])
+useFocus(context)
+
+useEscapeKey({
+  enabled: context.open,
+  onEscape: () => context.setOpen(false)
+})
 </script>
+
+<template>
+  <button 
+    ref="referenceRef" 
+    :aria-describedby="context.open.value ? 'tooltip' : undefined"
+  >
+    Hover or focus me
+  </button>
+  <div 
+    v-if="context.open.value" 
+    ref="floatingRef" 
+    :style="context.floatingStyles"
+    role="tooltip"
+    id="tooltip"
+  >
+    Accessible tooltip with multiple interaction methods
+  </div>
+</template>
 ```
 
 This creates a floating element that appears both when the reference element is hovered and when it's focused, with proper ARIA attributes.
 
-## Focus Management Within Floating Elements
+## Advanced Focus Handling
 
-For more complex focus management within floating elements (like modals or complex dialogs), you should use the `FloatingFocusManager` component in addition to `useFocus`:
+The `useFocus` composable automatically handles complex focus scenarios and edge cases:
+
+### Safari Focus-Visible Support
 
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, useInteractions, useFocus, useClick, FloatingFocusManager } from "v-float"
+import { useFloating, useFocus } from "v-float"
 
 const referenceRef = ref(null)
 const floatingRef = ref(null)
-const isOpen = ref(false)
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const context = useFloating(referenceRef, floatingRef)
 
-// Combine focus and click interactions
-const focus = useFocus(floating.context)
-const click = useClick(floating.context)
-
-const { getReferenceProps, getFloatingProps } = useInteractions([focus, click])
+// Automatically handles Safari focus-visible polyfill
+useFocus(context)
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Open Dialog</button>
-
-  <FloatingFocusManager v-if="isOpen" :context="floating.context" modal>
-    <div
-      ref="floatingRef"
-      v-bind="getFloatingProps()"
-      :style="floating.floatingStyles"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      class="dialog"
-    >
-      <h2>Dialog Title</h2>
-      <p>Dialog content goes here.</p>
-      <div class="button-group">
-        <button @click="isOpen = false">Cancel</button>
-        <button @click="isOpen = false">Confirm</button>
-      </div>
-    </div>
-  </FloatingFocusManager>
+  <button ref="referenceRef">Works correctly in Safari</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Focus-visible behavior works across browsers
+  </div>
 </template>
 ```
 
-The `FloatingFocusManager` traps and manages focus within the dialog, enabling proper keyboard navigation within the floating element.
-
-## Example: Accessible Form Input with Suggestions
+### Modal Dialog Example
 
 ```vue
 <script setup>
-import { ref } from "vue"
-import {
-  useFloating,
-  useInteractions,
-  useFocus,
-  useListNavigation,
-  useRole,
-  offset,
-  flip,
-  shift,
-} from "v-float"
+import { ref, nextTick } from "vue"
+import { useFloating, useFocus, useEscapeKey, useOutsideClick } from "v-float"
 
-const suggestions = ["Apple", "Banana", "Cherry", "Date", "Elderberry", "Fig", "Grape"]
+const triggerRef = ref(null)
+const dialogRef = ref(null)
 
-const inputRef = ref(null)
-const floatingRef = ref(null)
-const listRef = ref([])
-const isOpen = ref(false)
-const activeIndex = ref(null)
-const inputValue = ref("")
-
-const floating = useFloating(inputRef, floatingRef, {
-  placement: "bottom-start",
-  middleware: [offset(5), flip(), shift()],
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
+const context = useFloating(triggerRef, dialogRef, {
+  strategy: "fixed"
 })
 
-// Focus interaction - show suggestions on input focus
-const focus = useFocus(floating.context)
+// Focus management for modal
+useFocus(context)
 
-// List navigation - keyboard navigation of suggestions
-const listNav = useListNavigation(floating.context, {
-  listRef,
-  activeIndex,
-  onNavigate: (index) => {
-    activeIndex.value = index
-  },
-  loop: true,
-})
-
-// Set ARIA attributes
-const role = useRole(floating.context, { role: "listbox" })
-
-// Combine interactions
-const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([
-  focus,
-  listNav,
-  role,
-])
-
-// Filter suggestions based on input
-const filteredSuggestions = computed(() => {
-  if (!inputValue.value) return suggestions
-  return suggestions.filter((s) => s.toLowerCase().includes(inputValue.value.toLowerCase()))
-})
-
-// Track item elements for list navigation
-function collectItem(el) {
-  if (el && !listRef.value.includes(el)) {
-    listRef.value.push(el)
+// Close on escape
+useEscapeKey({
+  enabled: context.open,
+  onEscape: () => {
+    context.setOpen(false)
+    // Return focus to trigger
+    nextTick(() => triggerRef.value?.focus())
   }
-}
+})
 
-// Select a suggestion
-function selectSuggestion(suggestion) {
-  inputValue.value = suggestion
-  isOpen.value = false
-}
+// Close on outside click
+useOutsideClick(context)
 
-// Reset list when input changes
-function updateInput(e) {
-  inputValue.value = e.target.value
-  listRef.value = []
-  if (inputValue.value) {
-    isOpen.value = true
-  }
+const openModal = async () => {
+  context.setOpen(true)
+  await nextTick()
+  // Focus the dialog
+  dialogRef.value?.focus()
 }
 </script>
 
 <template>
-  <label for="fruit-input">Choose a fruit:</label>
-  <input
-    id="fruit-input"
-    ref="inputRef"
-    v-bind="getReferenceProps()"
-    v-model="inputValue"
-    @input="updateInput"
-    placeholder="Type to search..."
-    autocomplete="off"
-    :aria-expanded="isOpen"
-    aria-autocomplete="list"
-    aria-controls="suggestions-list"
-  />
-
-  <div
-    v-if="isOpen && filteredSuggestions.length > 0"
-    id="suggestions-list"
-    ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="floating.floatingStyles"
-    class="suggestions-list"
-  >
-    <div
-      v-for="(suggestion, index) in filteredSuggestions"
-      :key="suggestion"
-      :ref="collectItem"
-      v-bind="getItemProps({ index })"
-      role="option"
-      :aria-selected="activeIndex === index"
-      :class="{ active: activeIndex === index }"
-      class="suggestion-item"
-      @click="selectSuggestion(suggestion)"
-    >
-      {{ suggestion }}
+  <button ref="triggerRef" @click="openModal">
+    Open Modal
+  </button>
+  
+  <Teleport to="body">
+    <div v-if="context.open.value" class="modal-backdrop">
+      <div 
+        ref="dialogRef"
+        :style="context.floatingStyles"
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
+        class="modal"
+      >
+        <h2>Modal Dialog</h2>
+        <p>This modal handles focus correctly.</p>
+        <input placeholder="Focus management works here" />
+        <div class="button-group">
+          <button @click="context.setOpen(false)">Cancel</button>
+          <button @click="context.setOpen(false)">Confirm</button>
+        </div>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
-<style scoped>
-input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+<style>
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.suggestions-list {
+.modal {
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  min-width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  outline: none;
 }
 
-.suggestion-item {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.suggestion-item:hover,
-.suggestion-item.active {
-  background-color: #f0f0f0;
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 </style>
 ```
-
-This example shows an accessible form input with suggestions that appear on focus and can be navigated using keyboard.
-
 ## Best Practices
 
 1. **Combine with hover**: For non-touch devices, combine with `useHover` to provide multiple interaction methods.
 
-2. **Consider screen readers**: Use `visibleOnly: false` if you want focus behavior to work with screen readers where elements may not be visually focused.
+2. **Use requireFocusVisible**: Keep the default `requireFocusVisible: true` for better UX - it prevents tooltips from appearing on mouse clicks.
 
 3. **Keyboard accessibility**: Ensure all functionality that's available via mouse is also available via keyboard.
 
-4. **Proper focus management**: For complex floating UIs like dialogs, use `FloatingFocusManager` to trap focus within the floating element.
+4. **Proper focus management**: For modal dialogs, manually manage focus and ensure it returns to the trigger element when closed.
 
-5. **Return focus on close**: When using modal dialogs, ensure focus returns to the trigger element when the dialog closes.
+5. **Test with keyboard**: Always test your implementation by navigating with the Tab key and ensure it works as expected.
 
-6. **Test with keyboard**: Always test your implementation by navigating with the Tab key and ensure it works as expected.
+6. **Include ARIA attributes**: Add appropriate ARIA attributes manually to ensure accessibility for screen readers.
 
-7. **Include ARIA attributes**: Use `useRole` to provide appropriate ARIA attributes for accessibility.
+7. **Handle edge cases**: The composable automatically handles window blur/focus scenarios and browser-specific focus-visible behavior.
+
+## Accessibility Considerations
+
+- ✅ **Keyboard Navigation**: Primary purpose - enables keyboard access to floating content
+- ✅ **Screen Readers**: Works seamlessly with assistive technologies
+- ✅ **WCAG Compliance**: Follows focus visibility best practices with `:focus-visible`
+- ✅ **Cross-browser**: Handles Safari-specific focus-visible behavior automatically
+- ✅ **Edge Cases**: Automatically prevents issues with window switching and programmatic focus
 
 ## Related Composables
 
-- `useHover`: For hover-based interactions
-- `useClick`: For click-based interactions
-- `useRole`: For ARIA attribute management
-- `useListNavigation`: For keyboard navigation within the floating element
-- `FloatingFocusManager`: For managing focus within the floating element
+- [`useClick`](/api/use-click) - For click-based interactions
+- [`useHover`](/api/use-hover) - For hover-based interactions
+- [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal
+- [`useOutsideClick`](/api/use-outside-click) - For dismissing with outside clicks

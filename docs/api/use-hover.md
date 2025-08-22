@@ -1,34 +1,27 @@
 # useHover
 
-The `useHover` composable enables hover-based interactions for floating elements. It provides a way to show and hide floating UI elements when the user hovers over a reference element.
+The `useHover` composable enables hover-based interactions for floating elements. It provides a way to show and hide floating UI elements when the user hovers over a reference element with advanced features like delays, rest detection, and safe polygon traversal.
 
 ## Basic Usage
 
-```vue
+```vue twoslash
 <script setup lang="ts">
 import { ref } from "vue"
-import { useFloating, useInteractions, useHover } from "v-float"
+import { useFloating, useHover } from "v-float"
 
 const referenceRef = ref<HTMLElement | null>(null)
 const floatingRef = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const context = useFloating(referenceRef, floatingRef)
 
-// Create hover interaction with default options
-const hover = useHover(floating.context)
-
-// Apply the interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([hover])
+// Create hover interaction
+useHover(context)
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()">Hover Me</button>
+  <button ref="referenceRef">Hover Me</button>
 
-  <div v-if="isOpen" ref="floatingRef" v-bind="getFloatingProps()" :style="floating.floatingStyles">
+  <div v-if="context.open.value" ref="floatingRef" :style="{ ...context.floatingStyles }">
     This tooltip appears on hover
   </div>
 </template>
@@ -42,42 +35,29 @@ const { getReferenceProps, getFloatingProps } = useInteractions([hover])
 function useHover(
   context: FloatingContext,
   options?: UseHoverOptions
-): {
-  getReferenceProps: (userProps?: object) => object
-  getFloatingProps: (userProps?: object) => object
-}
+): void
 ```
 
-| Parameter | Type            | Description                                  |
-| --------- | --------------- | -------------------------------------------- |
-| context   | FloatingContext | The context object returned from useFloating |
-| options   | UseHoverOptions | Optional configuration options               |
+| Parameter | Type                | Description                                                                    |
+| --------- | ------------------- | ------------------------------------------------------------------------------ |
+| context   | `FloatingContext`   | The context object returned from `useFloating`. Contains refs and state.       |
+| options   | `UseHoverOptions`   | Optional configuration options for hover behavior.                            |
 
-### Options
-
-<script setup>
-import { ref } from 'vue'
-</script>
+### Options (`UseHoverOptions`)
 
 The `useHover` composable accepts several options to customize its behavior:
 
 | Option      | Type                                               | Default | Description                                                                      |
 | ----------- | -------------------------------------------------- | ------- | -------------------------------------------------------------------------------- |
-| enabled     | boolean \| Ref&lt;boolean&gt;                      | true    | Whether the hover interaction is enabled                                         |
-| delay       | number \| { open?: number; close?: number } \| Ref | 0       | Delay in ms before showing/hiding the floating element                           |
-| handleClose | null \| (context: FloatingContext) => void         | null    | Custom close handling logic                                                      |
-| restMs      | number                                             | 0       | Time in ms to wait before triggering a hover event after the cursor has "rested" |
-| move        | boolean                                            | true    | Whether to update the position when the cursor moves                             |
-| safePolygon | boolean \| Ref&lt;boolean&gt; \| SafePolygonOptions | false   | Enables a "safe polygon" around the floating element to prevent accidental closing when the cursor moves over it. Can be a boolean or an object with more options. |
+| enabled     | `MaybeRef<boolean>`                                | `true`  | Whether hover event listeners are enabled                                       |
+| delay       | `MaybeRef<number \| { open?: number; close?: number }>` | `0`     | Delay in milliseconds before showing/hiding the floating element                |
+| restMs      | `MaybeRef<number>`                                 | `0`     | Time in milliseconds the pointer must rest before opening (when no open delay)  |
+| mouseOnly   | `MaybeRef<boolean>`                                | `false` | Whether to only trigger for mouse-like pointers (mouse, pen, stylus)           |
+| safePolygon | `MaybeRef<boolean \| SafePolygonOptions>`           | `false` | Enable safe polygon traversal algorithm                                         |
 
 ### Return Value
 
-`useHover` returns an object with functions that generate props:
-
-| Property          | Type                           | Description                                                   |
-| ----------------- | ------------------------------ | ------------------------------------------------------------- |
-| getReferenceProps | (userProps?: object) => object | Function that returns props to apply to the reference element |
-| getFloatingProps  | (userProps?: object) => object | Function that returns props to apply to the floating element  |
+`useHover` returns `void`. It performs its actions by attaching event listeners to the reference and floating elements obtained from the `FloatingContext`.
 
 ## Adding Hover Delay
 
@@ -85,28 +65,34 @@ One of the most common customizations is adding a delay to hover interactions to
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float"
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const context = useFloating(referenceRef, floatingRef)
 
 // Add delay for both opening and closing
-const hover = useHover(floating.context, {
+useHover(context, {
   delay: 300, // 300ms delay for both open and close
 })
 
 // Or different delays for opening and closing
-const hoverWithCustomDelay = useHover(floating.context, {
-  delay: {
-    open: 500, // Wait 500ms before opening
-    close: 150, // Wait 150ms before closing
-  },
-})
-
-const { getReferenceProps, getFloatingProps } = useInteractions([hover])
+// useHover(context, {
+//   delay: {
+//     open: 500, // Wait 500ms before opening
+//     close: 150, // Wait 150ms before closing
+//   },
+// })
 </script>
+
+<template>
+  <button ref="referenceRef">Hover with delay</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Delayed hover tooltip
+  </div>
+</template>
 ```
 
 ## Making Hover Delay Reactive
@@ -116,17 +102,16 @@ You can make the hover delay reactive by using a ref:
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, useInteractions, useHover } from "v-float"
+import { useFloating, useHover } from "v-float"
 
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 const hoverDelay = ref(300)
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const context = useFloating(referenceRef, floatingRef)
 
 // Use reactive delay
-const hover = useHover(floating.context, {
+useHover(context, {
   delay: hoverDelay,
 })
 
@@ -135,6 +120,16 @@ function setFasterDelay() {
   hoverDelay.value = 150
 }
 </script>
+
+<template>
+  <div>
+    <button ref="referenceRef">Hover with reactive delay</button>
+    <button @click="setFasterDelay">Make delay faster</button>
+  </div>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Delay: {{ hoverDelay }}ms
+  </div>
+</template>
 ```
 
 ## Conditionally Enabling Hover
@@ -144,18 +139,17 @@ You can conditionally enable or disable the hover interaction:
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, useInteractions, useHover } from "v-float"
+import { useFloating, useHover } from "v-float"
 
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 // Control whether hover is enabled
 const hoverEnabled = ref(true)
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const context = useFloating(referenceRef, floatingRef)
 
 // Use reactive enabled option
-const hover = useHover(floating.context, {
+useHover(context, {
   enabled: hoverEnabled,
 })
 
@@ -168,6 +162,17 @@ function enableHover() {
   hoverEnabled.value = true
 }
 </script>
+
+<template>
+  <div>
+    <button ref="referenceRef">Conditional hover</button>
+    <button @click="disableHover">Disable hover</button>
+    <button @click="enableHover">Enable hover</button>
+  </div>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Hover is {{ hoverEnabled ? 'enabled' : 'disabled' }}
+  </div>
+</template>
 ```
 
 ## Cursor Resting Time
@@ -176,40 +181,95 @@ The `restMs` option allows you to set a minimum time that the cursor must "rest"
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float"
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const context = useFloating(referenceRef, floatingRef)
 
 // Only trigger hover after cursor has rested for 100ms
-const hover = useHover(floating.context, {
+useHover(context, {
   restMs: 100,
 })
 </script>
+
+<template>
+  <button ref="referenceRef">Rest-based hover</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Triggered after resting
+  </div>
+</template>
 ```
 
 This is useful for preventing tooltips from appearing when a user is just moving their cursor across the screen.
 
-## Disabling Move Updates
+## Mouse-Only Mode
 
-By default, `useHover` will update the position of the floating element as the cursor moves. You can disable this behavior with the `move` option:
+You can configure hover to only respond to mouse-like devices (mouse, pen, stylus) and ignore touch interactions:
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover } from "v-float"
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const referenceRef = ref(null)
+const floatingRef = ref(null)
 
-// Disable position updates on cursor movement
-const hover = useHover(floating.context, {
-  move: false,
+const context = useFloating(referenceRef, floatingRef)
+
+// Only respond to mouse-like pointers
+useHover(context, {
+  mouseOnly: true,
 })
 </script>
+
+<template>
+  <button ref="referenceRef">Mouse-only hover</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    Only triggered by mouse/pen
+  </div>
+</template>
+```
+
+## Safe Polygon
+
+The `safePolygon` feature allows users to move their cursor from the reference element to the floating element without accidentally closing it:
+
+```vue
+<script setup>
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
+
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const context = useFloating(referenceRef, floatingRef, {
+  placement: "right-start"
+})
+
+// Enable safe polygon with default settings
+useHover(context, {
+  safePolygon: true,
+})
+
+// Or with custom options
+// useHover(context, {
+//   safePolygon: {
+//     buffer: 2, // Custom buffer area
+//     blockPointerEvents: true // Block pointer events during traversal
+//   }
+// })
+</script>
+
+<template>
+  <button ref="referenceRef">Safe polygon hover</button>
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
+    <p>You can move your cursor here without closing!</p>
+    <button>Interactive content</button>
+  </div>
+</template>
 ```
 
 ## Combining with Other Interactions
@@ -218,134 +278,85 @@ const hover = useHover(floating.context, {
 
 ```vue
 <script setup>
-import { useFloating, useInteractions, useHover, useFocus, useRole } from "v-float"
+import { ref } from "vue"
+import { useFloating, useHover, useFocus, useEscapeKey } from "v-float"
 
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
-})
+const referenceRef = ref(null)
+const floatingRef = ref(null)
+
+const context = useFloating(referenceRef, floatingRef)
 
 // Hover interaction
-const hover = useHover(floating.context, {
+useHover(context, {
   delay: { open: 200, close: 100 },
 })
 
 // Focus interaction (for accessibility)
-const focus = useFocus(floating.context)
+useFocus(context)
 
-// Role for proper ARIA attributes
-const role = useRole(floating.context, { role: "tooltip" })
-
-// Combine all interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, role])
-</script>
-```
-
-This creates a tooltip that appears both on hover and on focus, with proper ARIA attributes for accessibility.
-
-## Usage with FloatingDelayGroup
-
-For UIs with multiple hover elements that should share delay settings, you can use `useHover` with the `FloatingDelayGroup` component:
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating, useInteractions, useHover, FloatingDelayGroup, useDelayGroup } from "v-float"
-
-const isOpen = ref(false)
-const floating = useFloating(referenceRef, floatingRef, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
+// Escape key support
+useEscapeKey({
+  enabled: context.open,
+  onEscape: () => context.setOpen(false)
 })
-
-// Set an ID for this floating element
-const id = "tooltip-1"
-
-// Access delay group context
-const { delay } = useDelayGroup(floating.context, { id })
-
-// Use shared delay from the group
-const hover = useHover(floating.context, { delay })
-
-const { getReferenceProps, getFloatingProps } = useInteractions([hover])
 </script>
 
 <template>
-  <!-- Wrap multiple tooltips in a delay group -->
-  <FloatingDelayGroup :delay="{ open: 500, close: 100 }">
-    <!-- First tooltip -->
-    <button ref="referenceRef" v-bind="getReferenceProps()">Hover Me</button>
-
-    <div
-      v-if="isOpen"
-      ref="floatingRef"
-      v-bind="getFloatingProps()"
-      :style="floating.floatingStyles"
-    >
-      This tooltip uses shared delay settings
-    </div>
-
-    <!-- Add more tooltips here... -->
-  </FloatingDelayGroup>
+  <button ref="referenceRef" :aria-describedby="context.open.value ? 'tooltip' : undefined">
+    Accessible tooltip trigger
+  </button>
+  <div 
+    v-if="context.open.value" 
+    ref="floatingRef" 
+    :style="context.floatingStyles"
+    role="tooltip"
+    id="tooltip"
+  >
+    This tooltip works with hover, focus, and keyboard dismissal
+  </div>
 </template>
 ```
 
-This ensures all hover elements in the group share the same delay settings and behavior.
+This creates a tooltip that appears both on hover and on focus, with proper ARIA attributes for accessibility.
 
 ## Example: Interactive Tooltip
 
 ```vue
 <script setup>
 import { ref } from "vue"
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  useFocus,
-  useRole,
-  offset,
-  flip,
-  shift,
-} from "v-float"
+import { useFloating, useHover, useFocus, offset, flip, shift } from "v-float"
 
 const referenceRef = ref(null)
 const floatingRef = ref(null)
-const isOpen = ref(false)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   placement: "top",
   middleware: [offset(10), flip(), shift({ padding: 5 })],
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
 })
 
 // Create interactions
-const hover = useHover(floating.context, {
+useHover(context, {
   delay: { open: 300, close: 200 },
-  move: true,
 })
 
-const focus = useFocus(floating.context)
-const role = useRole(floating.context, { role: "tooltip" })
-
-// Combine them
-const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, role])
+useFocus(context)
 </script>
 
 <template>
-  <button ref="referenceRef" v-bind="getReferenceProps()" class="info-button">
+  <button ref="referenceRef" class="info-button" :aria-describedby="context.open.value ? 'tooltip' : undefined">
     <span class="icon">ℹ️</span>
   </button>
 
   <div
-    v-if="isOpen"
+    v-if="context.open.value"
     ref="floatingRef"
-    v-bind="getFloatingProps()"
-    :style="floating.floatingStyles"
+    :style="context.floatingStyles"
     class="tooltip"
+    role="tooltip"
+    id="tooltip"
   >
     <p>This is an interactive tooltip with hover delay for a smoother user experience.</p>
-    <button @click="isOpen = false" class="close-button">Close</button>
+    <button @click="context.setOpen(false)" class="close-button">Close</button>
   </div>
 </template>
 
@@ -389,15 +400,29 @@ const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, r
 
 2. **Combine with focus**: Always combine `useHover` with `useFocus` for better accessibility, ensuring keyboard users can also access the content.
 
-3. **Consider mobile users**: Hover doesn't work on mobile devices, so provide alternative interaction methods like click or touch.
+3. **Consider mobile users**: Hover doesn't work on mobile devices, so use `mouseOnly: true` or provide alternative interaction methods like click or touch.
 
-4. **Use with ARIA attributes**: Combine with `useRole` to ensure proper accessibility for screen readers.
+4. **Use proper ARIA attributes**: Add appropriate ARIA attributes manually to ensure accessibility for screen readers.
 
 5. **Set appropriate z-index**: Ensure your floating element has a suitable z-index to appear above other content.
 
-6. **Handle edge cases**: Consider what happens when users hover quickly between multiple elements with the `FloatingDelayGroup` component.
+6. **Use `safePolygon` for complex layouts**: For menus or tooltips with interactive content, `safePolygon` can prevent the floating element from closing when the user moves the cursor between the reference and floating elements.
 
-7. **Use `safePolygon` for complex layouts**: For menus or tooltips with interactive content, `safePolygon` can prevent the floating element from closing when the user moves the cursor between the reference and floating elements.
+7. **Handle rest detection**: Use `restMs` to prevent tooltips from appearing when users are just moving their cursor across the screen.
+
+## Accessibility Considerations
+
+- ⚠️ **Touch Devices**: Consider using `mouseOnly: true` to avoid hover conflicts on touch devices
+- ✅ **Keyboard Users**: Should be paired with `useFocus` for accessibility
+- ⚠️ **Screen Readers**: Hover-only interactions may not be accessible - consider adding proper ARIA attributes
+- ✅ **Composition**: Works seamlessly with other interaction composables
+
+## Related Composables
+
+- [`useFocus`](/api/use-focus) - Essential for keyboard accessibility
+- [`useClick`](/api/use-click) - Alternative interaction method for mobile devices
+- [`useOutsideClick`](/api/use-outside-click) - For dismissing with outside clicks
+- [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal
 
 ## Safe Polygon
 

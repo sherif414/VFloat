@@ -73,6 +73,8 @@ export default defineConfig({
             { text: "useDismiss", link: "/api/use-dismiss" },
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useClientPoint", link: "/api/use-client-point" },
+            { text: "useOutsideClick", link: "/api/use-outside-click" },
+            { text: "useEscapeKey", link: "/api/use-escape-key" },
           ],
         },
         {
