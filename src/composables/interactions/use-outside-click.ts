@@ -25,6 +25,15 @@ export interface UseOutsideClickProps {
    * @default 'pointerdown'
    */
   eventName?: "pointerdown" | "mousedown" | "click"
+
+  /**
+   * Custom function to handle outside clicks.
+   * If provided, this function will be called instead of the default behavior.
+   * The function receives the event and context as parameters.
+   * @param event - The mouse event that triggered the outside click
+   * @param context - The floating context containing refs and state
+   */
+  onOutsideClick?: (event: MouseEvent, context: FloatingContext) => void
 }
 
 //=======================================================================================
@@ -39,7 +48,12 @@ export function useOutsideClick(
   context: FloatingContext,
   options: UseOutsideClickProps = {}
 ): void {
-  const { enabled = true, eventName: outsidePressEvent = "pointerdown", capture } = options
+  const {
+    enabled = true,
+    eventName: outsidePressEvent = "pointerdown",
+    capture,
+    onOutsideClick,
+  } = options
 
   const isEnabled = computed(() => toValue(enabled))
   const floatingEl = context.refs.floatingEl
@@ -81,7 +95,12 @@ export function useOutsideClick(
         return
       }
 
-      context.setOpen(false)
+      // Use custom handler if provided, otherwise use default behavior
+      if (onOutsideClick) {
+        onOutsideClick(event, context)
+      } else {
+        context.setOpen(false)
+      }
     },
     capture
   )
