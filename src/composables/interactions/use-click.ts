@@ -2,6 +2,7 @@ import type { PointerType } from "@vueuse/core"
 import { useEventListener } from "@vueuse/core"
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-tree"
 import type { VirtualElement } from "@floating-ui/dom"
 
 //=======================================================================================
@@ -15,10 +16,13 @@ import type { VirtualElement } from "@floating-ui/dom"
  * This composable provides unified event handlers for both inside click interactions
  * (to open/toggle floating elements) and outside click interactions (to close them).
  *
- * @param context - The floating context with open state and change handler.
+ * The composable supports both standalone usage with FloatingContext and tree-aware
+ * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
+ *
+ * @param context - The floating context or tree node with open state and change handler.
  * @param options - Configuration options for click behavior.
  *
- * @example Basic usage with outside click enabled
+ * @example Basic standalone usage with outside click enabled
  * ```ts
  * const context = useFloating(...)
  * useClick(context, {
@@ -26,6 +30,17 @@ import type { VirtualElement } from "@floating-ui/dom"
  *   outsideClick: true,
  *   outsideEvent: 'pointerdown'
  * })
+ * ```
+ *
+ * @example Tree-aware usage for nested floating elements
+ * ```ts
+ * const tree = useFloatingTree(rootContext)
+ * const parentNode = tree.root
+ * const childNode = tree.addNode(childContext, parentNode.id)
+ *
+ * // Tree-aware behavior: child won't close when clicked,
+ * // but will close when parent or outside is clicked
+ * useClick(childNode, { outsideClick: true })
  * ```
  *
  * @example Custom outside click handler
@@ -40,8 +55,13 @@ import type { VirtualElement } from "@floating-ui/dom"
  * })
  * ```
  */
-export function useClick(context: FloatingContext, options: UseClickOptions = {}): void {
-  const { open, setOpen, refs } = context
+export function useClick(
+  context: FloatingContext | TreeNode<FloatingContext>,
+  options: UseClickOptions = {}
+): void {
+  // Extract floating context from either standalone context or tree node
+  const { floatingContext, treeContext } = getContextFromParameter(context)
+  const { open, setOpen, refs } = floatingContext
   const {
     enabled = true,
     event: eventOption = "click",
@@ -204,17 +224,23 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
       return
     }
 
-    // Ignore if target is within anchor or floating elements
-    if (
-      isEventTargetWithin(event, anchorEl.value) ||
-      isEventTargetWithin(event, floatingEl.value)
-    ) {
-      return
+    // Use tree-aware logic if tree context is available
+    if (treeContext) {
+      if (!isClickOutsideNodeHierarchy(treeContext, target)) {
+        return
+      }
+    } else {
+      if (
+        isEventTargetWithin(event, anchorEl.value) ||
+        isEventTargetWithin(event, floatingEl.value)
+      ) {
+        return
+      }
     }
 
     // Use custom handler if provided, otherwise use default behavior
     if (onOutsideClick) {
-      onOutsideClick(event, context)
+      onOutsideClick(event, floatingContext)
     } else {
       setOpen(false)
     }
@@ -296,6 +322,134 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     onFloatingMouseUp,
     { capture: true }
   )
+}
+
+//=======================================================================================
+// 📌 Tree-Aware Helper Functions
+//=======================================================================================
+
+/**
+ * Type guard to determine if the context parameter is a TreeNode.
+ * @param context - The context parameter to check
+ * @returns True if the context is a TreeNode
+ */
+function isTreeNode(
+  context: FloatingContext | TreeNode<FloatingContext>
+): context is TreeNode<FloatingContext> {
+  return (
+    context !== null &&
+    typeof context === "object" &&
+    "data" in context &&
+    "id" in context &&
+    "children" in context &&
+    "parent" in context
+  )
+}
+
+/**
+ * Extracts floating context and tree context from the parameter.
+ * @param context - Either a FloatingContext or TreeNode<FloatingContext>
+ * @returns Object containing both floating context and optional tree context
+ */
+function getContextFromParameter(context: FloatingContext | TreeNode<FloatingContext>): {
+  floatingContext: FloatingContext
+  treeContext: TreeNode<FloatingContext> | null
+} {
+  if (isTreeNode(context)) {
+    return {
+      floatingContext: context.data,
+      treeContext: context,
+    }
+  }
+  return {
+    floatingContext: context,
+    treeContext: null,
+  }
+}
+
+/**
+ * Checks if a target node is within an anchor or floating element, handling VirtualElement.
+ * @param target - The target node to check
+ * @param element - The element to check containment against (can be VirtualElement or null)
+ * @returns True if the target is within the element
+ */
+function isTargetWithinElement(target: Node, element: any): boolean {
+  if (!element) return false
+
+  // Handle VirtualElement (has contextElement)
+  if (typeof element === "object" && element !== null && "contextElement" in element) {
+    const contextElement = element.contextElement
+    if (contextElement instanceof Element) {
+      return contextElement.contains(target)
+    }
+    return false
+  }
+
+  // Handle regular Element
+  if (element instanceof Element) {
+    return element.contains(target)
+  }
+
+  return false
+}
+
+/**
+ * Determines if a click occurred outside the current node's hierarchy.
+ *
+ * Returns true if the click should close the current node (click is outside),
+ * false if the click should be ignored (click is on current node or descendants).
+ *
+ * @param currentNode - The tree node to check against
+ * @param target - The click target
+ * @returns True if the click is outside the node hierarchy and should close the node
+ */
+function isClickOutsideNodeHierarchy(
+  currentNode: TreeNode<FloatingContext>,
+  target: Node
+): boolean {
+  // Check if click is within current node's elements
+  if (
+    isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
+    isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+  ) {
+    return false // Click on current node - don't close
+  }
+
+  // Check if click is within any descendant
+  const descendantNode = findDescendantContainingTarget(currentNode, target)
+  if (descendantNode) {
+    return false // Click on descendant - don't close
+  }
+
+  // Click is outside the node hierarchy - should close
+  return true
+}
+
+/**
+ * Finds a descendant node that contains the target element.
+ * @param node - The parent node to search from
+ * @param target - The target element to find
+ * @returns The descendant node containing the target, or null
+ */
+function findDescendantContainingTarget(
+  node: TreeNode<FloatingContext>,
+  target: Node
+): TreeNode<FloatingContext> | null {
+  for (const child of node.children.value) {
+    if (child.data.open.value) {
+      if (
+        isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
+        isTargetWithinElement(target, child.data.refs.floatingEl.value)
+      ) {
+        return child
+      }
+
+      // Recursively check descendants
+      const descendant = findDescendantContainingTarget(child, target)
+      if (descendant) return descendant
+    }
+  }
+  return null
 }
 
 //=======================================================================================
