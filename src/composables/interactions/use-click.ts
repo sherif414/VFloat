@@ -132,13 +132,6 @@ export function useClick(
     if (toValue(eventOption) === "click") return
     if (shouldIgnorePointerType(pointerType)) return
 
-    // Prevent stealing focus from the floating element if it's already open
-    // and reference is not the target (e.g. clicking scrollbar).
-    const target = e.target as HTMLElement | null
-    if (!open.value && target && anchorEl.value?.contains(target)) {
-      e.preventDefault()
-    }
-
     handleOpenChange()
   }
 
