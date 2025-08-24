@@ -12,7 +12,7 @@ export interface FloatingTreeOptions extends TreeOptions {}
 
 export interface UseFloatingTreeReturn {
   readonly nodeMap: Readonly<Map<string, TreeNode<FloatingContext>>>
-  readonly root: Readonly<TreeNode<FloatingContext>>
+  readonly root: TreeNode<FloatingContext>
   findNodeById: (nodeId: string) => TreeNode<FloatingContext> | null
   moveNode: (nodeId: string, newParentId: string | null) => boolean
   dispose: () => void
