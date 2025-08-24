@@ -9,6 +9,7 @@ import {
   watchPostEffect,
 } from "vue"
 import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
+import type { TreeNode } from "@/composables/use-tree"
 import { safePolygon, type SafePolygonOptions } from "./polygon"
 
 //=======================================================================================
@@ -129,10 +130,13 @@ function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
  * with enhanced behaviors like delayed open/close, rest detection, and custom
  * exit handling.
  *
- * @param context - The floating context with open state and change handler
+ * The composable supports both standalone usage with FloatingContext and tree-aware
+ * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
+ *
+ * @param context - The floating context or tree node with open state and change handler
  * @param options - Configuration options for hover behavior
  *
- * @example
+ * @example Basic standalone usage
  * ```ts
  * const context = useFloating(...)
  * useHover(context, {
@@ -140,13 +144,32 @@ function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
  *   restMs: 150
  * })
  * ```
+ *
+ * @example Tree-aware usage for nested floating elements
+ * ```ts
+ * const tree = useFloatingTree(rootContext)
+ * const parentNode = tree.root
+ * const childNode = tree.addNode(childContext, parentNode.id)
+ *
+ * // Tree-aware behavior: child hover won't end when hovering over child,
+ * // but will end when hovering outside the entire hierarchy
+ * useHover(childNode, {
+ *   delay: { close: 300 },
+ *   safePolygon: true
+ * })
+ * ```
  */
-export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
+export function useHover(
+  context: FloatingContext | TreeNode<FloatingContext>,
+  options: UseHoverOptions = {}
+): void {
+  // Extract floating context from either standalone context or tree node
+  const { floatingContext, treeContext } = getContextFromParameter(context)
   const {
     open,
     setOpen,
     refs: { anchorEl, floatingEl },
-  } = context
+  } = floatingContext
   const {
     enabled: enabledOption = true,
     delay = 0,
@@ -233,7 +256,12 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   // General Event Handlers
   //-------------------------
   function isValidPointerType(e: PointerEvent): boolean {
-    return !(toValue(mouseOnly) && !isMouseLikePointerType(e.pointerType as PointerType))
+    if (toValue(mouseOnly)) {
+      // When mouseOnly is true, only accept actual mouse events
+      return e.pointerType === "mouse"
+    }
+    // When mouseOnly is false, accept mouse, pen, and touch
+    return true
   }
 
   function onPointerEnterReference(e: PointerEvent): void {
@@ -281,23 +309,52 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
           return;
         }
 
-        polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
-          x: clientX,
-          y: clientY,
-          placement: context.placement.value,
-          elements: {
-            domReference: refEl,
-            floating: floatEl,
-          },
-          buffer: safePolygonOptions.value?.buffer ?? 1,
-          onClose: () => {
-            cleanupPolygon();
-            hide();
-          },
-        });
-        document.addEventListener("pointermove", polygonMouseMoveHandler);
+        // Use tree-aware polygon if tree context is available
+        if (treeContext) {
+          polygonMouseMoveHandler = createTreeAwareSafePolygon(
+            treeContext,
+            { x: clientX, y: clientY },
+            safePolygonOptions.value,
+            floatingContext,
+            () => {
+              cleanupPolygon();
+              hide();
+            }
+          );
+        } else {
+          polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
+            x: clientX,
+            y: clientY,
+            placement: floatingContext.placement.value,
+            elements: {
+              domReference: refEl,
+              floating: floatEl,
+            },
+            buffer: safePolygonOptions.value?.buffer ?? 1,
+            onClose: () => {
+              cleanupPolygon();
+              hide();
+            },
+          });
+        }
+        
+        if (polygonMouseMoveHandler) {
+          document.addEventListener("pointermove", polygonMouseMoveHandler);
+        }
       }, 0);
-    } else if (!floatingEl.value?.contains(relatedTarget)) {
+    } else {
+      // Use tree-aware logic if tree context is available
+      if (treeContext) {
+        if (!isPointerLeavingNodeHierarchy(treeContext, relatedTarget)) {
+          return; // Pointer moved to current node or descendant - don't hide
+        }
+      } else {
+        // Standard logic for standalone usage
+        if (floatingEl.value?.contains(relatedTarget)) {
+          return; // Pointer moved to floating element - don't hide
+        }
+      }
+      
       hide();
     }
   }
@@ -331,4 +388,196 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   onScopeDispose(() => {
     cleanupPolygon()
   })
+}
+
+//=======================================================================================
+// 📌 Tree-Aware Helper Functions
+//=======================================================================================
+
+/**
+ * Type guard to determine if the context parameter is a TreeNode.
+ * @param context - The context parameter to check
+ * @returns True if the context is a TreeNode
+ */
+function isTreeNode(
+  context: FloatingContext | TreeNode<FloatingContext>
+): context is TreeNode<FloatingContext> {
+  return (
+    context !== null &&
+    typeof context === "object" &&
+    "data" in context &&
+    "id" in context &&
+    "children" in context &&
+    "parent" in context
+  )
+}
+
+/**
+ * Extracts floating context and tree context from the parameter.
+ * @param context - Either a FloatingContext or TreeNode<FloatingContext>
+ * @returns Object containing both floating context and optional tree context
+ */
+function getContextFromParameter(context: FloatingContext | TreeNode<FloatingContext>): {
+  floatingContext: FloatingContext
+  treeContext: TreeNode<FloatingContext> | null
+} {
+  if (isTreeNode(context)) {
+    return {
+      floatingContext: context.data,
+      treeContext: context,
+    }
+  }
+  return {
+    floatingContext: context,
+    treeContext: null,
+  }
+}
+
+/**
+ * Checks if a target node is within an anchor or floating element, handling VirtualElement.
+ * @param target - The target node to check
+ * @param element - The element to check containment against (can be VirtualElement or null)
+ * @returns True if the target is within the element
+ */
+function isTargetWithinElement(target: Node, element: any): boolean {
+  if (!element) return false
+
+  // Handle VirtualElement (has contextElement)
+  if (typeof element === "object" && element !== null && "contextElement" in element) {
+    const contextElement = element.contextElement
+    if (contextElement instanceof Element) {
+      return contextElement.contains(target)
+    }
+    return false
+  }
+
+  // Handle regular Element
+  if (element instanceof Element) {
+    return element.contains(target)
+  }
+
+  return false
+}
+
+/**
+ * Determines if the pointer is leaving to an area outside the current node's hierarchy.
+ *
+ * Returns true if the hover should end (pointer left to outside area),
+ * false if the hover should continue (pointer moved to current node or descendants).
+ *
+ * @param currentNode - The tree node to check against
+ * @param target - The related target from the pointer leave event
+ * @returns True if the pointer left to outside the node hierarchy
+ */
+function isPointerLeavingNodeHierarchy(
+  currentNode: TreeNode<FloatingContext>,
+  target: Node | null
+): boolean {
+  if (!target) {
+    return true // No related target means leaving to outside
+  }
+
+  // Check if pointer moved to current node's elements
+  if (
+    isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
+    isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+  ) {
+    return false // Pointer moved to current node - don't end hover
+  }
+
+  // Check if pointer moved to any open descendant
+  const descendantNode = findDescendantContainingTarget(currentNode, target)
+  if (descendantNode) {
+    return false // Pointer moved to descendant - don't end hover
+  }
+
+  // Pointer left to outside the node hierarchy - should end hover
+  return true
+}
+
+/**
+ * Finds a descendant node that contains the target element.
+ * @param node - The parent node to search from
+ * @param target - The target element to find
+ * @returns The descendant node containing the target, or null
+ */
+function findDescendantContainingTarget(
+  node: TreeNode<FloatingContext>,
+  target: Node
+): TreeNode<FloatingContext> | null {
+  for (const child of node.children.value) {
+    if (child.data.open.value) {
+      if (
+        isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
+        isTargetWithinElement(target, child.data.refs.floatingEl.value)
+      ) {
+        return child
+      }
+
+      // Recursively check descendants
+      const descendant = findDescendantContainingTarget(child, target)
+      if (descendant) return descendant
+    }
+  }
+  return null
+}
+
+/**
+ * Creates a tree-aware safe polygon that considers descendant floating elements.
+ * @param currentNode - The tree node context
+ * @param exitPoint - The pointer exit coordinates
+ * @param options - Safe polygon options
+ * @param context - The floating context
+ * @param onClose - Callback to execute when polygon should close
+ * @returns Enhanced polygon handler function
+ */
+function createTreeAwareSafePolygon(
+  currentNode: TreeNode<FloatingContext>,
+  exitPoint: Coords,
+  options: SafePolygonOptions | undefined,
+  context: FloatingContext,
+  onClose: () => void
+): ((event: MouseEvent) => void) | null {
+  const refEl = currentNode.data.refs.anchorEl.value
+  const floatEl = currentNode.data.refs.floatingEl.value
+
+  if (!refEl || !floatEl) {
+    return null
+  }
+
+  // For tree-aware mode, we need to consider descendant elements
+  // The safe polygon should not close if pointer moves to a descendant
+  const originalPolygon = safePolygon(options)({
+    x: exitPoint.x,
+    y: exitPoint.y,
+    placement: context.placement.value,
+    elements: {
+      domReference: refEl,
+      floating: floatEl,
+    },
+    buffer: options?.buffer ?? 1,
+    onClose: () => {
+      onClose()
+    },
+  })
+
+  // Wrap the original polygon with tree-aware logic
+  return (event: MouseEvent) => {
+    const target = event.target as Node | null
+    if (!target) {
+      originalPolygon(event)
+      return
+    }
+
+    // Check if pointer moved to a descendant element
+    const descendantNode = findDescendantContainingTarget(currentNode, target)
+    if (descendantNode) {
+      // Pointer moved to descendant - don't close, cleanup polygon
+      onClose() // This will cleanup the polygon but won't hide
+      return
+    }
+
+    // Use original polygon logic for all other cases
+    originalPolygon(event)
+  }
 }

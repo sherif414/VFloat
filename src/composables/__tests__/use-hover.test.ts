@@ -593,15 +593,4 @@ describe("useHover", () => {
       expect(setOpenMock).not.toHaveBeenCalled() // No close call expected
     })
   })
-
-  it("should handle hover events", () => {
-    const { getReferenceProps, getFloatingProps } = useHover(context)
-    const referenceProps = getReferenceProps()
-    const floatingProps = getFloatingProps()
-
-    expect(referenceProps.onMouseEnter).toBeDefined()
-    expect(referenceProps.onMouseLeave).toBeDefined()
-    expect(floatingProps.onMouseEnter).toBeDefined()
-    expect(floatingProps.onMouseLeave).toBeDefined()
-  })
 })
