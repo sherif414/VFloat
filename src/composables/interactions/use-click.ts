@@ -1,25 +1,42 @@
 import type { PointerType } from "@vueuse/core"
+import { useEventListener } from "@vueuse/core"
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables"
+import type { VirtualElement } from "@floating-ui/dom"
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
 /**
- * Enables showing/hiding the floating element when clicking the reference element.
+ * Enables showing/hiding the floating element when clicking the reference element
+ * and optionally when clicking outside both the reference and floating elements.
  *
- * This composable provides event handlers for click interactions with the reference element
- * to control the visibility of the floating element.
+ * This composable provides unified event handlers for both inside click interactions
+ * (to open/toggle floating elements) and outside click interactions (to close them).
  *
  * @param context - The floating context with open state and change handler.
  * @param options - Configuration options for click behavior.
  *
- * @example
+ * @example Basic usage with outside click enabled
  * ```ts
  * const context = useFloating(...)
  * useClick(context, {
- *   event: "mousedown",
+ *   toggle: true,
+ *   outsideClick: true,
+ *   outsideEvent: 'pointerdown'
+ * })
+ * ```
+ * 
+ * @example Custom outside click handler
+ * ```ts
+ * useClick(context, {
+ *   outsideClick: true,
+ *   onOutsideClick: (event, context) => {
+ *     if (confirm('Close dialog?')) {
+ *       context.setOpen(false)
+ *     }
+ *   }
  * })
  * ```
  */
@@ -32,19 +49,29 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     ignoreMouse = false,
     ignoreKeyboard = false,
     ignoreTouch = false,
+    // Outside click options
+    outsideClick = false,
+    outsideEvent = "pointerdown",
+    outsideCapture = true,
+    onOutsideClick,
+    preventScrollbarClick = true,
+    handleDragEvents = true,
   } = options
 
   let pointerType: PointerType | undefined
   let didKeyDown = false
+  let endedOrStartedInside = false
 
   const isEnabled = computed(() => toValue(enabled))
+  const isOutsideClickEnabled = computed(() => toValue(outsideClick))
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value
     if (!el) return null
     if (el instanceof HTMLElement) return el
-    if (el.contextElement instanceof HTMLElement) return el.contextElement
+    if ((el as VirtualElement).contextElement instanceof HTMLElement) return (el as VirtualElement).contextElement
     return null
   })
+  const floatingEl = computed(() => refs.floatingEl.value)
 
   // --- Event Handlers --- //
 
@@ -133,11 +160,49 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     }
   }
 
+  // --- Outside Click Event Handlers ---
+
+  function onOutsideClickHandler(event: MouseEvent) {
+    if (!isEnabled.value || !isOutsideClickEnabled.value || !open.value) {
+      return
+    }
+
+    // A `mousedown` or `pointerdown` event started inside and ended outside.
+    if (toValue(outsideEvent) === "click" && toValue(handleDragEvents) && endedOrStartedInside) {
+      endedOrStartedInside = false
+      return
+    }
+
+    const target = event.target as Node | null
+    if (!target) return
+
+    // Clicked on a scrollbar
+    if (toValue(preventScrollbarClick) && isHTMLElement(target) && floatingEl.value && isClickOnScrollbar(event, target)) {
+      return
+    }
+
+    // Ignore if target is within anchor or floating elements
+    if (
+      isEventTargetWithin(event, anchorEl.value) ||
+      isEventTargetWithin(event, floatingEl.value)
+    ) {
+      return
+    }
+
+    // Use custom handler if provided, otherwise use default behavior
+    if (onOutsideClick) {
+      onOutsideClick(event, context)
+    } else {
+      setOpen(false)
+    }
+  }
+
   // --- Watch for changes in enabled state or reference element ---
 
   watchPostEffect(() => {
     pointerType = undefined
     didKeyDown = false
+    endedOrStartedInside = false
     const el = anchorEl.value
     if (!isEnabled.value || !el) return
 
@@ -155,6 +220,35 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
       el.removeEventListener("keyup", onKeyUp)
     })
   })
+
+  // --- Outside Click Listeners ---
+
+  // Document listener for outside clicks
+  useEventListener(
+    () => isEnabled.value && isOutsideClickEnabled.value ? document : null,
+    () => toValue(outsideEvent),
+    onOutsideClickHandler,
+    { capture: toValue(outsideCapture) }
+  )
+
+  // Floating element listeners for drag detection
+  useEventListener(
+    () => isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents) ? floatingEl.value : null,
+    "mousedown",
+    () => {
+      endedOrStartedInside = true
+    },
+    { capture: true }
+  )
+
+  useEventListener(
+    () => isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents) ? floatingEl.value : null,
+    "mouseup",
+    () => {
+      endedOrStartedInside = true
+    },
+    { capture: true }
+  )
 }
 
 //=======================================================================================
@@ -213,6 +307,52 @@ function isSpaceIgnored(element: Element | null): boolean {
   return isTypeableElement(element)
 }
 
+/**
+ * Checks if the value is an HTML element.
+ * @param node - The value to check.
+ * @returns True if the value is an HTML element.
+ */
+function isHTMLElement(node: unknown | null): node is HTMLElement {
+  return node instanceof Element && node instanceof HTMLElement
+}
+
+/**
+ * Checks if the event target is within the given element.
+ * @param event - The event to check.
+ * @param element - The element to check containment against.
+ * @returns True if the event target is within the element.
+ */
+function isEventTargetWithin(event: Event, element: Element | null | undefined): boolean {
+  if (!element) return false
+
+  if ("composedPath" in event && typeof event.composedPath === "function") {
+    return (event.composedPath() as Node[]).includes(element)
+  }
+
+  return element.contains(event.target as Node)
+}
+
+/**
+ * Checks if a click event occurred on a scrollbar.
+ * @param event - The mouse event.
+ * @param target - The target HTML element.
+ * @returns True if the click was on a scrollbar.
+ */
+function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
+  const scrollbarWidth = target.offsetWidth - target.clientWidth
+  const scrollbarHeight = target.offsetHeight - target.clientHeight
+
+  if (scrollbarWidth > 0 && event.clientX > target.clientWidth) {
+    return true
+  }
+
+  if (scrollbarHeight > 0 && event.clientY > target.clientHeight) {
+    return true
+  }
+
+  return false
+}
+
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
@@ -221,6 +361,8 @@ function isSpaceIgnored(element: Element | null): boolean {
  * Options for configuring the useClick behavior.
  */
 export interface UseClickOptions {
+  // --- Inside Click Options ---
+  
   /**
    * Whether the Hook is enabled.
    * @default true
@@ -257,4 +399,45 @@ export interface UseClickOptions {
    * @default false
    */
   ignoreTouch?: MaybeRefOrGetter<boolean>
+
+  // --- Outside Click Options ---
+
+  /**
+   * Whether to enable outside click detection to close the floating element.
+   * @default false
+   */
+  outsideClick?: MaybeRefOrGetter<boolean>
+
+  /**
+   * The event to use for outside click detection.
+   * @default 'pointerdown'
+   */
+  outsideEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+
+  /**
+   * Whether to use capture phase for document outside click listener.
+   * @default true
+   */
+  outsideCapture?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Custom function to handle outside clicks.
+   * If provided, this function will be called instead of the default behavior.
+   * The function receives the event and context as parameters.
+   * @param event - The mouse event that triggered the outside click
+   * @param context - The floating context containing refs and state
+   */
+  onOutsideClick?: (event: MouseEvent, context: FloatingContext) => void
+
+  /**
+   * Whether to prevent clicks on scrollbars from triggering outside click.
+   * @default true
+   */
+  preventScrollbarClick?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to handle drag events that start inside and end outside.
+   * @default true
+   */
+  handleDragEvents?: MaybeRefOrGetter<boolean>
 }
