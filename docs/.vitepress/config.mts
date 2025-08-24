@@ -1,16 +1,11 @@
-import { defineConfig } from "vitepress";
-import { demoMdPlugin } from "vitepress-plugin-demo";
+import { defineConfig } from "vitepress"
+import { demoMdPlugin } from "vitepress-plugin-demo"
 
 export default defineConfig({
-  head: [
-    [
-      "meta",
-      { name: "algolia-site-verification", content: "3A8199582DC4CB2E" },
-    ],
-  ],
+  head: [["meta", { name: "algolia-site-verification", content: "3A8199582DC4CB2E" }]],
   markdown: {
     config(md) {
-      md.use(demoMdPlugin);
+      md.use(demoMdPlugin)
     },
     languages: ["js", "ts"],
   },
@@ -35,12 +30,16 @@ export default defineConfig({
           items: [
             { text: "Getting Started", link: "/guide/" },
             { text: "Core Concepts", link: "/guide/concepts" },
-            { text: "Floating Tree", collapsed: false, items: [
-              { text: "Introduction", link: "/guide/floating-tree/introduction" },
-              { text: "Getting Started", link: "/guide/floating-tree/getting-started" },
-              { text: "Cookbook & Advanced Recipes", link: "/guide/floating-tree/cookbook" },
-              { text: "API Reference", link: "/guide/floating-tree/api-reference" },
-            ] },
+            {
+              text: "Floating Tree",
+              collapsed: false,
+              items: [
+                { text: "Introduction", link: "/guide/floating-tree/introduction" },
+                { text: "Getting Started", link: "/guide/floating-tree/getting-started" },
+                { text: "Cookbook & Advanced Recipes", link: "/guide/floating-tree/cookbook" },
+                { text: "API Reference", link: "/guide/floating-tree/api-reference" },
+              ],
+            },
             { text: "Interactions", link: "/guide/interactions" },
           ],
         },
@@ -73,7 +72,6 @@ export default defineConfig({
             { text: "useDismiss", link: "/api/use-dismiss" },
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useClientPoint", link: "/api/use-client-point" },
-            { text: "useOutsideClick", link: "/api/use-outside-click" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
           ],
         },
@@ -90,9 +88,7 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [
-      { icon: "github", link: "https://github.com/sherif414/VFloat" },
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/sherif414/VFloat" }],
 
     footer: {
       message: "Released under the MIT License.",
@@ -105,4 +101,4 @@ export default defineConfig({
   },
   ignoreDeadLinks: true,
   base: "/",
-});
+})
