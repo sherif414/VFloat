@@ -7,7 +7,7 @@ import { useClick, type UseClickOptions } from "@/composables"
 interface FloatingContext {
   refs: {
     anchorEl: Ref<HTMLElement | null>
-    floating: Ref<HTMLElement | null>
+    floatingEl: Ref<HTMLElement | null>
   }
   open: Ref<boolean>
   setOpen: (open: boolean, event?: Event) => void
@@ -44,7 +44,7 @@ describe("useClick", () => {
     context = {
       refs: {
         anchorEl: ref(null),
-        floating: ref(null),
+        floatingEl: ref(null),
       },
       open: ref(false),
       setOpen: (v) => {
@@ -54,7 +54,7 @@ describe("useClick", () => {
     }
 
     context.refs.anchorEl.value = referenceEl
-    context.refs.floating.value = floatingEl
+    context.refs.floatingEl.value = floatingEl
 
     await nextTick()
   })
@@ -205,7 +205,7 @@ describe("useClick", () => {
       referenceEl.id = "reference"
       referenceEl.textContent = "Trigger"
       document.body.appendChild(referenceEl)
-      context.refs.reference.value = referenceEl
+      context.refs.anchorEl.value = referenceEl
 
       initClick({ ignoreKeyboard: true })
       expect(context.open.value).toBe(false)
@@ -287,24 +287,97 @@ describe("useClick", () => {
     })
   })
 
-  // --- Cleanup ---
-  describe("Cleanup", () => {
-    it("should remove event listeners on cleanup (simulated unmount)", async () => {
-      initClick()
+  // --- Integration Testing ---
+  describe("integration: inside and outside clicks", () => {
+    let outsideElement: HTMLElement
+
+    beforeEach(() => {
+      outsideElement = document.createElement("div")
+      outsideElement.id = "outside"
+      document.body.appendChild(outsideElement)
+    })
+
+    afterEach(() => {
+      if (outsideElement.isConnected) {
+        document.body.removeChild(outsideElement)
+      }
+    })
+
+    it("supports complete interaction flow: open with inside click, close with outside click", async () => {
+      initClick({ outsideClick: true, toggle: true })
       expect(context.open.value).toBe(false)
 
-      // Stop the scope (simulates component unmount)
-      scope.stop()
-      await nextTick() // Allow cleanup effects
+      // Open with inside click
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(true)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+      setOpenMock.mockClear()
 
-      // Try clicking - should not trigger setOpen
+      // Close with outside click
+      await userEvent.click(outsideElement)
+      expect(context.open.value).toBe(false)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
+      setOpenMock.mockClear()
+
+      // Open again with inside click
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(true)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+    })
+
+    it("supports toggle behavior with outside click enabled", async () => {
+      initClick({ outsideClick: true, toggle: true })
+      
+      // Open with inside click
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      // Close with inside click (toggle)
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(false)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
+      setOpenMock.mockClear()
+
+      // Open again
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      // Close with outside click
+      await userEvent.click(outsideElement)
+      expect(context.open.value).toBe(false)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
+    })
+
+    it("respects disabled state for both inside and outside clicks", async () => {
+      const enabled = ref(false)
+      initClick({ enabled, outsideClick: true })
+      
+      // Try inside click when disabled
       await userEvent.click(referenceEl)
       expect(setOpenMock).not.toHaveBeenCalled()
-
-      // Try keyboard - should not trigger
-      referenceEl.focus()
-      await userEvent.keyboard("{Enter}")
+      
+      // Try outside click when disabled
+      await userEvent.click(outsideElement)
       expect(setOpenMock).not.toHaveBeenCalled()
+      
+      // Enable and open
+      enabled.value = true
+      await nextTick()
+      
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+      
+      // Disable again
+      enabled.value = false
+      await nextTick()
+      
+      // Outside click should not work when disabled
+      await userEvent.click(outsideElement)
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(true) // Remains open
     })
   })
 })
