@@ -27,7 +27,7 @@ import type { VirtualElement } from "@floating-ui/dom"
  *   outsideEvent: 'pointerdown'
  * })
  * ```
- * 
+ *
  * @example Custom outside click handler
  * ```ts
  * useClick(context, {
@@ -60,27 +60,46 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
   let pointerType: PointerType | undefined
   let didKeyDown = false
-  let endedOrStartedInside = false
+  let dragStartedInside = false
+  let interactionInProgress = false
 
   const isEnabled = computed(() => toValue(enabled))
   const isOutsideClickEnabled = computed(() => toValue(outsideClick))
+
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value
     if (!el) return null
     if (el instanceof HTMLElement) return el
-    if ((el as VirtualElement).contextElement instanceof HTMLElement) return (el as VirtualElement).contextElement
+    if (isVirtualElement(el) && el.contextElement instanceof HTMLElement) {
+      return el.contextElement
+    }
     return null
   })
+
   const floatingEl = computed(() => refs.floatingEl.value)
 
   // --- Event Handlers --- //
 
   function handleOpenChange() {
-    if (open.value) {
-      toValue(toggle) && setOpen(false)
-    } else {
-      setOpen(true)
+    interactionInProgress = true
+    try {
+      if (open.value) {
+        toValue(toggle) && setOpen(false)
+      } else {
+        setOpen(true)
+      }
+    } finally {
+      // Reset interaction state after a micro-task to allow events to complete
+      Promise.resolve().then(() => {
+        interactionInProgress = false
+      })
     }
+  }
+
+  function resetInteractionState() {
+    pointerType = undefined
+    didKeyDown = false
+    dragStartedInside = false
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -91,8 +110,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     // Ignore non-primary buttons
     if (e.button !== 0) return
     if (toValue(eventOption) === "click") return
-    if (isMouseLikePointerType(pointerType, true) && toValue(ignoreMouse)) return
-    if (pointerType === "touch" && toValue(ignoreTouch)) return
+    if (shouldIgnorePointerType(pointerType)) return
 
     // Prevent stealing focus from the floating element if it's already open
     // and reference is not the target (e.g. clicking scrollbar).
@@ -107,22 +125,17 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
   function onClick(): void {
     if (toValue(eventOption) === "mousedown" && pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
-      pointerType = undefined
+      resetInteractionState()
       return
     }
 
-    if (isMouseLikePointerType(pointerType, true) && toValue(ignoreMouse)) {
-      pointerType = undefined
-      return
-    }
-
-    if (pointerType === "touch" && toValue(ignoreTouch)) {
-      pointerType = undefined
+    if (shouldIgnorePointerType(pointerType)) {
+      resetInteractionState()
       return
     }
 
     handleOpenChange()
-    pointerType = undefined
+    resetInteractionState()
   }
 
   function onKeyDown(e: KeyboardEvent) {
@@ -168,8 +181,13 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     }
 
     // A `mousedown` or `pointerdown` event started inside and ended outside.
-    if (toValue(outsideEvent) === "click" && toValue(handleDragEvents) && endedOrStartedInside) {
-      endedOrStartedInside = false
+    if (toValue(outsideEvent) === "click" && toValue(handleDragEvents) && dragStartedInside) {
+      dragStartedInside = false
+      return
+    }
+
+    // Don't process outside clicks during ongoing interactions
+    if (interactionInProgress) {
       return
     }
 
@@ -177,7 +195,12 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     if (!target) return
 
     // Clicked on a scrollbar
-    if (toValue(preventScrollbarClick) && isHTMLElement(target) && floatingEl.value && isClickOnScrollbar(event, target)) {
+    if (
+      toValue(preventScrollbarClick) &&
+      isHTMLElement(target) &&
+      floatingEl.value &&
+      isClickOnScrollbar(event, target)
+    ) {
       return
     }
 
@@ -197,12 +220,32 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
     }
   }
 
+  function onFloatingMouseDown() {
+    dragStartedInside = true
+  }
+
+  function onFloatingMouseUp() {
+    // Reset drag state after a brief delay to allow click events to process
+    setTimeout(() => {
+      dragStartedInside = false
+    }, 0)
+  }
+
+  // --- Helper Functions ---
+
+  function shouldIgnorePointerType(type: PointerType | undefined): boolean {
+    if (isMouseLikePointerType(type, true) && toValue(ignoreMouse)) {
+      return true
+    }
+    if (type === "touch" && toValue(ignoreTouch)) {
+      return true
+    }
+    return false
+  }
+
   // --- Watch for changes in enabled state or reference element ---
 
   watchPostEffect(() => {
-    pointerType = undefined
-    didKeyDown = false
-    endedOrStartedInside = false
     const el = anchorEl.value
     if (!isEnabled.value || !el) return
 
@@ -218,6 +261,8 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
       el.removeEventListener("click", onClick)
       el.removeEventListener("keydown", onKeyDown)
       el.removeEventListener("keyup", onKeyUp)
+      // Reset state on cleanup
+      resetInteractionState()
     })
   })
 
@@ -225,7 +270,7 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
   // Document listener for outside clicks
   useEventListener(
-    () => isEnabled.value && isOutsideClickEnabled.value ? document : null,
+    () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
     () => toValue(outsideEvent),
     onOutsideClickHandler,
     { capture: toValue(outsideCapture) }
@@ -233,20 +278,22 @@ export function useClick(context: FloatingContext, options: UseClickOptions = {}
 
   // Floating element listeners for drag detection
   useEventListener(
-    () => isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents) ? floatingEl.value : null,
+    () =>
+      isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents)
+        ? floatingEl.value
+        : null,
     "mousedown",
-    () => {
-      endedOrStartedInside = true
-    },
+    onFloatingMouseDown,
     { capture: true }
   )
 
   useEventListener(
-    () => isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents) ? floatingEl.value : null,
+    () =>
+      isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents)
+        ? floatingEl.value
+        : null,
     "mouseup",
-    () => {
-      endedOrStartedInside = true
-    },
+    onFloatingMouseUp,
     { capture: true }
   )
 }
@@ -317,6 +364,15 @@ function isHTMLElement(node: unknown | null): node is HTMLElement {
 }
 
 /**
+ * Checks if the value is a VirtualElement.
+ * @param el - The value to check.
+ * @returns True if the value is a VirtualElement.
+ */
+function isVirtualElement(el: unknown): el is VirtualElement {
+  return typeof el === "object" && el !== null && "contextElement" in el
+}
+
+/**
  * Checks if the event target is within the given element.
  * @param event - The event to check.
  * @param element - The element to check containment against.
@@ -339,15 +395,28 @@ function isEventTargetWithin(event: Event, element: Element | null | undefined):
  * @returns True if the click was on a scrollbar.
  */
 function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
+  const rect = target.getBoundingClientRect()
   const scrollbarWidth = target.offsetWidth - target.clientWidth
   const scrollbarHeight = target.offsetHeight - target.clientHeight
 
-  if (scrollbarWidth > 0 && event.clientX > target.clientWidth) {
-    return true
+  // Convert event coordinates to element-relative coordinates
+  const elementX = event.clientX - rect.left
+  const elementY = event.clientY - rect.top
+
+  // Check vertical scrollbar (typically on the right)
+  if (scrollbarWidth > 0) {
+    const scrollbarStart = target.clientWidth
+    if (elementX >= scrollbarStart && elementX <= target.offsetWidth) {
+      return true
+    }
   }
 
-  if (scrollbarHeight > 0 && event.clientY > target.clientHeight) {
-    return true
+  // Check horizontal scrollbar (typically on the bottom)
+  if (scrollbarHeight > 0) {
+    const scrollbarStart = target.clientHeight
+    if (elementY >= scrollbarStart && elementY <= target.offsetHeight) {
+      return true
+    }
   }
 
   return false
@@ -362,7 +431,7 @@ function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
  */
 export interface UseClickOptions {
   // --- Inside Click Options ---
-  
+
   /**
    * Whether the Hook is enabled.
    * @default true
