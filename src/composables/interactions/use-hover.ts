@@ -266,6 +266,7 @@ export function useHover(
 
   function onPointerEnterReference(e: PointerEvent): void {
     if (!enabled.value || !isValidPointerType(e) || isRestMsEnabled.value) return
+    cleanupPolygon()
     show()
   }
 
@@ -282,6 +283,11 @@ export function useHover(
       document.removeEventListener("pointermove", polygonMouseMoveHandler)
       polygonMouseMoveHandler = null
     }
+    // Clear the polygon visualization
+    const polygonOptions = safePolygonOptions.value
+    if (polygonOptions?.onPolygonChange) {
+      polygonOptions.onPolygonChange([])
+    }
   }
 
   const safePolygonEnabled = computed(() => !!toValue(safePolygonOption))
@@ -293,69 +299,75 @@ export function useHover(
   })
 
   function onPointerLeave(e: PointerEvent): void {
-    if (!enabled.value || !isValidPointerType(e)) return;
+    if (!enabled.value || !isValidPointerType(e)) return
 
-    const { clientX, clientY } = e;
-    const relatedTarget = e.relatedTarget as Node | null;
+    const { clientX, clientY } = e
+    const relatedTarget = e.relatedTarget as Node | null
 
     if (safePolygonEnabled.value) {
       setTimeout(() => {
-        cleanupPolygon();
-        const refEl = reference.value;
-        const floatEl = floatingEl.value;
+        cleanupPolygon()
+        const refEl = reference.value
+        const floatEl = floatingEl.value
 
         if (!refEl || !floatEl) {
-          hide();
-          return;
+          hide()
+          return
         }
 
-        // Use tree-aware polygon if tree context is available
+        // Create tree map for tree-aware functionality
+        let treeMap: Map<string, TreeNode<FloatingContext>> | undefined
+        let nodeId: string | undefined
+
         if (treeContext) {
-          polygonMouseMoveHandler = createTreeAwareSafePolygon(
-            treeContext,
-            { x: clientX, y: clientY },
-            safePolygonOptions.value,
-            floatingContext,
-            () => {
-              cleanupPolygon();
-              hide();
+          // Build a simple node map for tree-aware functionality
+          treeMap = new Map()
+          const addToMap = (node: TreeNode<FloatingContext>) => {
+            treeMap!.set(node.id, node)
+            for (const child of node.children.value) {
+              addToMap(child)
             }
-          );
-        } else {
-          polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
-            x: clientX,
-            y: clientY,
-            placement: floatingContext.placement.value,
-            elements: {
-              domReference: refEl,
-              floating: floatEl,
-            },
-            buffer: safePolygonOptions.value?.buffer ?? 1,
-            onClose: () => {
-              cleanupPolygon();
-              hide();
-            },
-          });
+          }
+          addToMap(treeContext)
+          nodeId = treeContext.id
         }
-        
+
+        // Use the enhanced safe polygon with unified functionality
+        polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
+          x: clientX,
+          y: clientY,
+          placement: floatingContext.placement.value,
+          elements: {
+            domReference: refEl,
+            floating: floatEl,
+          },
+          buffer: safePolygonOptions.value?.buffer ?? 1,
+          onClose: () => {
+            cleanupPolygon()
+            hide()
+          },
+          nodeId,
+          tree: treeMap ? { nodes: treeMap } : undefined,
+        })
+
         if (polygonMouseMoveHandler) {
-          document.addEventListener("pointermove", polygonMouseMoveHandler);
+          document.addEventListener("pointermove", polygonMouseMoveHandler)
         }
-      }, 0);
+      }, 0)
     } else {
       // Use tree-aware logic if tree context is available
       if (treeContext) {
         if (!isPointerLeavingNodeHierarchy(treeContext, relatedTarget)) {
-          return; // Pointer moved to current node or descendant - don't hide
+          return // Pointer moved to current node or descendant - don't hide
         }
       } else {
         // Standard logic for standalone usage
         if (floatingEl.value?.contains(relatedTarget)) {
-          return; // Pointer moved to floating element - don't hide
+          return // Pointer moved to floating element - don't hide
         }
       }
-      
-      hide();
+
+      hide()
     }
   }
 
@@ -501,6 +513,7 @@ function isPointerLeavingNodeHierarchy(
  * @param target - The target element to find
  * @returns The descendant node containing the target, or null
  */
+
 function findDescendantContainingTarget(
   node: TreeNode<FloatingContext>,
   target: Node
@@ -520,64 +533,4 @@ function findDescendantContainingTarget(
     }
   }
   return null
-}
-
-/**
- * Creates a tree-aware safe polygon that considers descendant floating elements.
- * @param currentNode - The tree node context
- * @param exitPoint - The pointer exit coordinates
- * @param options - Safe polygon options
- * @param context - The floating context
- * @param onClose - Callback to execute when polygon should close
- * @returns Enhanced polygon handler function
- */
-function createTreeAwareSafePolygon(
-  currentNode: TreeNode<FloatingContext>,
-  exitPoint: Coords,
-  options: SafePolygonOptions | undefined,
-  context: FloatingContext,
-  onClose: () => void
-): ((event: MouseEvent) => void) | null {
-  const refEl = currentNode.data.refs.anchorEl.value
-  const floatEl = currentNode.data.refs.floatingEl.value
-
-  if (!refEl || !floatEl) {
-    return null
-  }
-
-  // For tree-aware mode, we need to consider descendant elements
-  // The safe polygon should not close if pointer moves to a descendant
-  const originalPolygon = safePolygon(options)({
-    x: exitPoint.x,
-    y: exitPoint.y,
-    placement: context.placement.value,
-    elements: {
-      domReference: refEl,
-      floating: floatEl,
-    },
-    buffer: options?.buffer ?? 1,
-    onClose: () => {
-      onClose()
-    },
-  })
-
-  // Wrap the original polygon with tree-aware logic
-  return (event: MouseEvent) => {
-    const target = event.target as Node | null
-    if (!target) {
-      originalPolygon(event)
-      return
-    }
-
-    // Check if pointer moved to a descendant element
-    const descendantNode = findDescendantContainingTarget(currentNode, target)
-    if (descendantNode) {
-      // Pointer moved to descendant - don't close, cleanup polygon
-      onClose() // This will cleanup the polygon but won't hide
-      return
-    }
-
-    // Use original polygon logic for all other cases
-    originalPolygon(event)
-  }
 }

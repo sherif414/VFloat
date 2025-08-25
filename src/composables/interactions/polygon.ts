@@ -1,5 +1,6 @@
 import { isHTMLElement } from "@/utils"
 import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
+import type { TreeNode } from "@/composables/use-tree"
 import { computed } from "vue"
 
 type Point = [number, number]
@@ -12,12 +13,53 @@ type Rect = {
 }
 type Side = "top" | "right" | "bottom" | "left"
 
+// Timeout management type
+type TimeoutId = number
+
+// Utility functions for improved safe polygon implementation
 function contains(el: HTMLElement, target: Element | null) {
   return el.contains(target)
 }
 
 function getTarget(event: MouseEvent | TouchEvent): Element | null {
   return event.target as Element | null
+}
+
+/**
+ * Safe performance timing that handles environments without performance API
+ */
+function getCurrentTime(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now()
+}
+
+/**
+ * Centralized timeout management to prevent memory leaks
+ */
+function clearTimeoutIfSet(timeoutId: TimeoutId): void {
+  if (timeoutId !== -1) {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Enhanced tree-aware child detection that checks for open nested children
+ */
+function hasOpenNestedChildren(treeContext: TreeNode<FloatingContext>): boolean {
+  return treeContext.children.value.some(
+    (child) => child.data.open.value || hasOpenNestedChildren(child)
+  )
+}
+
+/**
+ * Enhanced isInside function that matches React reference behavior
+ */
+function isInside(point: Point, rect: Rect): boolean {
+  return (
+    point[0] >= rect.x &&
+    point[0] <= rect.x + rect.width &&
+    point[1] >= rect.y &&
+    point[1] <= rect.y + rect.height
+  )
 }
 
 function isPointInPolygon(point: Point, polygon: Polygon) {
@@ -36,12 +78,7 @@ function isPointInPolygon(point: Point, polygon: Polygon) {
 }
 
 function isInsideRect(point: Point, rect: Rect) {
-  return (
-    point[0] >= rect.x &&
-    point[0] <= rect.x + rect.width &&
-    point[1] >= rect.y &&
-    point[1] <= rect.y + rect.height
-  )
+  return isInside(point, rect)
 }
 
 export interface SafePolygonOptions {
@@ -61,6 +98,8 @@ export interface CreateSafePolygonHandlerContext {
   }
   buffer: number
   onClose: () => void
+  nodeId?: string
+  tree?: { nodes: Map<string, TreeNode<FloatingContext>> }
 }
 
 /**
@@ -69,23 +108,28 @@ export interface CreateSafePolygonHandlerContext {
  * @see https://floating-ui.com/docs/useHover#safepolygon
  */
 export function safePolygon(options: SafePolygonOptions = {}) {
-  const { requireIntent = true } = options
+  const { buffer = 0.5, blockPointerEvents = false, requireIntent = true } = options
 
-  let timeoutId: number
+  let timeoutId: TimeoutId = -1
   let hasLanded = false
-  let lastX: number | null = null
-  let lastY: number | null = null
-  let lastCursorTime = performance.now()
 
-  function getCursorSpeed(x: number, y: number): number | null {
-    const currentTime = performance.now()
+  function getCursorSpeed(
+    x: number,
+    y: number,
+    lastX: number | null,
+    lastY: number | null,
+    lastCursorTime: number
+  ): { speed: number | null; lastX: number; lastY: number; lastCursorTime: number } {
+    const currentTime = getCurrentTime()
     const elapsedTime = currentTime - lastCursorTime
 
     if (lastX === null || lastY === null || elapsedTime === 0) {
-      lastX = x
-      lastY = y
-      lastCursorTime = currentTime
-      return null
+      return {
+        speed: null,
+        lastX: x,
+        lastY: y,
+        lastCursorTime: currentTime,
+      }
     }
 
     const deltaX = x - lastX
@@ -93,21 +137,16 @@ export function safePolygon(options: SafePolygonOptions = {}) {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
     const speed = distance / elapsedTime // px / ms
 
-    lastX = x
-    lastY = y
-    lastCursorTime = currentTime
-
-    return speed
+    return {
+      speed,
+      lastX: x,
+      lastY: y,
+      lastCursorTime: currentTime,
+    }
   }
 
-  return function createSafePolygonHandler({
-    x,
-    y,
-    placement,
-    elements,
-    buffer: contextBuffer,
-    onClose,
-  }: CreateSafePolygonHandlerContext) {
+  const fn = function createSafePolygonHandler(context: CreateSafePolygonHandlerContext) {
+    const { x, y, placement, elements, buffer: contextBuffer, onClose, nodeId, tree } = context
     const referenceEl = computed(() => {
       const domReference = elements.domReference
       if (isHTMLElement(domReference)) {
@@ -116,13 +155,20 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       return (domReference?.contextElement as HTMLElement) ?? null
     })
 
+    // Instance-specific cursor tracking
+    let lastX: number | null = null
+    let lastY: number | null = null
+    let lastCursorTime = getCurrentTime()
+
     return function onMouseMove(event: MouseEvent) {
       function close() {
-        clearTimeout(timeoutId)
+        clearTimeoutIfSet(timeoutId)
+        timeoutId = -1
         onClose()
       }
 
-      clearTimeout(timeoutId)
+      clearTimeoutIfSet(timeoutId)
+      timeoutId = -1
 
       if (
         !elements.domReference ||
@@ -135,6 +181,7 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       }
 
       const { clientX, clientY } = event
+      const clientPoint: Point = [clientX, clientY]
       const target = getTarget(event) as Element | null
       const isLeave = event.type === "mouseleave"
       const isOverFloatingEl = elements.floating && contains(elements.floating, target)
@@ -144,6 +191,7 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       const side = placement.split("-")[0] as Side
       const cursorLeaveFromRight = x > (rect?.right ?? 0) - (rect?.width ?? 0) / 2
       const cursorLeaveFromBottom = y > (rect?.bottom ?? 0) - (rect?.height ?? 0) / 2
+      const isOverReferenceRect = refRect ? isInside(clientPoint, refRect) : false
       const isFloatingWider = (rect?.width ?? 0) > (refRect?.width ?? 0)
       const isFloatingTaller = (rect?.height ?? 0) > (refRect?.height ?? 0)
       const left = (isFloatingWider ? refRect : rect)?.left ?? 0
@@ -177,6 +225,14 @@ export function safePolygon(options: SafePolygonOptions = {}) {
         contains(elements.floating, event.relatedTarget)
       ) {
         return
+      }
+
+      // If any nested child is open, abort
+      if (tree && nodeId) {
+        const currentNode = tree.nodes.get(nodeId)
+        if (currentNode && hasOpenNestedChildren(currentNode)) {
+          return
+        }
       }
 
       // If the pointer is leaving from the opposite side, the "buffer" logic
@@ -235,40 +291,41 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       }
 
       function getPolygon([x, y]: Point): Array<Point> {
+        const actualBuffer = contextBuffer // Use the contextBuffer passed from useHover
         switch (side) {
           case "top": {
             const cursorPointOne: Point = [
               isFloatingWider
-                ? x + contextBuffer / 2
+                ? x + actualBuffer / 2
                 : cursorLeaveFromRight
-                  ? x + contextBuffer * 4
-                  : x - contextBuffer * 4,
-              y + contextBuffer + 1,
+                  ? x + actualBuffer * 4
+                  : x - actualBuffer * 4,
+              y + actualBuffer + 1,
             ]
             const cursorPointTwo: Point = [
               isFloatingWider
-                ? x - contextBuffer / 2
+                ? x - actualBuffer / 2
                 : cursorLeaveFromRight
-                  ? x + contextBuffer * 4
-                  : x - contextBuffer * 4,
-              y + contextBuffer + 1,
+                  ? x + actualBuffer * 4
+                  : x - actualBuffer * 4,
+              y + actualBuffer + 1,
             ]
             const commonPoints: [Point, Point] = [
               [
                 rect?.left ?? 0,
                 cursorLeaveFromRight
-                  ? (rect?.bottom ?? 0) - contextBuffer
+                  ? (rect?.bottom ?? 0) - actualBuffer
                   : isFloatingWider
-                    ? (rect?.bottom ?? 0) - contextBuffer
+                    ? (rect?.bottom ?? 0) - actualBuffer
                     : (rect?.top ?? 0),
               ],
               [
                 rect?.right ?? 0,
                 cursorLeaveFromRight
                   ? isFloatingWider
-                    ? (rect?.bottom ?? 0) - contextBuffer
+                    ? (rect?.bottom ?? 0) - actualBuffer
                     : (rect?.top ?? 0)
-                  : (rect?.bottom ?? 0) - contextBuffer,
+                  : (rect?.bottom ?? 0) - actualBuffer,
               ],
             ]
 
@@ -277,36 +334,36 @@ export function safePolygon(options: SafePolygonOptions = {}) {
           case "bottom": {
             const cursorPointOne: Point = [
               isFloatingWider
-                ? x + contextBuffer / 2
+                ? x + actualBuffer / 2
                 : cursorLeaveFromRight
-                  ? x + contextBuffer * 4
-                  : x - contextBuffer * 4,
-              y - contextBuffer,
+                  ? x + actualBuffer * 4
+                  : x - actualBuffer * 4,
+              y - actualBuffer,
             ]
             const cursorPointTwo: Point = [
               isFloatingWider
-                ? x - contextBuffer / 2
+                ? x - actualBuffer / 2
                 : cursorLeaveFromRight
-                  ? x + contextBuffer * 4
-                  : x - contextBuffer * 4,
-              y - contextBuffer,
+                  ? x + actualBuffer * 4
+                  : x - actualBuffer * 4,
+              y - actualBuffer,
             ]
             const commonPoints: [Point, Point] = [
               [
                 rect?.left ?? 0,
                 cursorLeaveFromRight
-                  ? (rect?.top ?? 0) + contextBuffer
+                  ? (rect?.top ?? 0) + actualBuffer
                   : isFloatingWider
-                    ? (rect?.top ?? 0) + contextBuffer
+                    ? (rect?.top ?? 0) + actualBuffer
                     : (rect?.bottom ?? 0),
               ],
               [
                 rect?.right ?? 0,
                 cursorLeaveFromRight
                   ? isFloatingWider
-                    ? (rect?.top ?? 0) + contextBuffer
+                    ? (rect?.top ?? 0) + actualBuffer
                     : (rect?.bottom ?? 0)
-                  : (rect?.top ?? 0) + contextBuffer,
+                  : (rect?.top ?? 0) + actualBuffer,
               ],
             ]
 
@@ -314,36 +371,36 @@ export function safePolygon(options: SafePolygonOptions = {}) {
           }
           case "left": {
             const cursorPointOne: Point = [
-              x + contextBuffer + 1,
+              x + actualBuffer + 1,
               isFloatingTaller
-                ? y + contextBuffer / 2
+                ? y + actualBuffer / 2
                 : cursorLeaveFromBottom
-                  ? y + contextBuffer * 4
-                  : y - contextBuffer * 4,
+                  ? y + actualBuffer * 4
+                  : y - actualBuffer * 4,
             ]
             const cursorPointTwo: Point = [
-              x + contextBuffer + 1,
+              x + actualBuffer + 1,
               isFloatingTaller
-                ? y - contextBuffer / 2
+                ? y - actualBuffer / 2
                 : cursorLeaveFromBottom
-                  ? y + contextBuffer * 4
-                  : y - contextBuffer * 4,
+                  ? y + actualBuffer * 4
+                  : y - actualBuffer * 4,
             ]
             const commonPoints: [Point, Point] = [
               [
                 cursorLeaveFromBottom
-                  ? (rect?.right ?? 0) - contextBuffer
+                  ? (rect?.right ?? 0) - actualBuffer
                   : isFloatingTaller
-                    ? (rect?.right ?? 0) - contextBuffer
+                    ? (rect?.right ?? 0) - actualBuffer
                     : (rect?.left ?? 0),
                 rect?.top ?? 0,
               ],
               [
                 cursorLeaveFromBottom
                   ? isFloatingTaller
-                    ? (rect?.right ?? 0) - contextBuffer
+                    ? (rect?.right ?? 0) - actualBuffer
                     : (rect?.left ?? 0)
-                  : (rect?.right ?? 0) - contextBuffer,
+                  : (rect?.right ?? 0) - actualBuffer,
                 rect?.bottom ?? 0,
               ],
             ]
@@ -352,36 +409,36 @@ export function safePolygon(options: SafePolygonOptions = {}) {
           }
           case "right": {
             const cursorPointOne: Point = [
-              x - contextBuffer,
+              x - actualBuffer,
               isFloatingTaller
-                ? y + contextBuffer / 2
+                ? y + actualBuffer / 2
                 : cursorLeaveFromBottom
-                  ? y + contextBuffer * 4
-                  : y - contextBuffer * 4,
+                  ? y + actualBuffer * 4
+                  : y - actualBuffer * 4,
             ]
             const cursorPointTwo: Point = [
-              x - contextBuffer,
+              x - actualBuffer,
               isFloatingTaller
-                ? y - contextBuffer / 2
+                ? y - actualBuffer / 2
                 : cursorLeaveFromBottom
-                  ? y + contextBuffer * 4
-                  : y - contextBuffer * 4,
+                  ? y + actualBuffer * 4
+                  : y - actualBuffer * 4,
             ]
             const commonPoints: [Point, Point] = [
               [
                 cursorLeaveFromBottom
-                  ? (rect?.left ?? 0) + contextBuffer
+                  ? (rect?.left ?? 0) + actualBuffer
                   : isFloatingTaller
-                    ? (rect?.left ?? 0) + contextBuffer
+                    ? (rect?.left ?? 0) + actualBuffer
                     : (rect?.right ?? 0),
                 rect?.top ?? 0,
               ],
               [
                 cursorLeaveFromBottom
                   ? isFloatingTaller
-                    ? (rect?.left ?? 0) + contextBuffer
+                    ? (rect?.left ?? 0) + actualBuffer
                     : (rect?.right ?? 0)
-                  : (rect?.left ?? 0) + contextBuffer,
+                  : (rect?.left ?? 0) + actualBuffer,
                 rect?.bottom ?? 0,
               ],
             ]
@@ -391,30 +448,53 @@ export function safePolygon(options: SafePolygonOptions = {}) {
         }
       }
 
-      if (isPointInPolygon([clientX, clientY], rectPoly)) {
-        return
-      }
-
-      if (hasLanded && refRect && !isInsideRect([clientX, clientY], refRect)) {
-        return close()
-      }
-
-      if (!isLeave && requireIntent) {
-        const cursorSpeed = getCursorSpeed(event.clientX, event.clientY)
-        const cursorSpeedThreshold = 0.1
-        if (cursorSpeed !== null && cursorSpeed < cursorSpeedThreshold) {
-          return close()
-        }
-      }
-
+      // Always calculate and show the polygon for visualization
       const polygon = getPolygon([x, y])
       options.onPolygonChange?.(polygon)
 
-      if (!isPointInPolygon([clientX, clientY], polygon)) {
-        close()
-      } else if (!hasLanded && requireIntent) {
-        timeoutId = window.setTimeout(close, 40)
+      // Check if cursor is in the rectangular trough (always safe)
+      if (isPointInPolygon(clientPoint, rectPoly)) {
+        return
       }
+
+      // Check if cursor is in the safe polygon
+      if (isPointInPolygon(clientPoint, polygon)) {
+        // We're in the safe polygon - stay open
+        // Only apply intent detection for initial entry when not landed
+        if (!hasLanded && requireIntent) {
+          // If cursor speed is too slow on initial entry, it might be accidental
+          const speedResult = getCursorSpeed(
+            event.clientX,
+            event.clientY,
+            lastX,
+            lastY,
+            lastCursorTime
+          )
+          lastX = speedResult.lastX
+          lastY = speedResult.lastY
+          lastCursorTime = speedResult.lastCursorTime
+
+          const cursorSpeedThreshold = 0.1
+          if (speedResult.speed !== null && speedResult.speed < cursorSpeedThreshold) {
+            timeoutId = window.setTimeout(close, 40)
+          }
+        }
+        return
+      }
+
+      // We're outside both safe areas - check additional conditions before closing
+      if (hasLanded && !isOverReferenceRect) {
+        return close()
+      }
+
+      // If we reach here, we're outside the safe areas - close
+      close()
     }
   }
+
+  fn.__options = {
+    blockPointerEvents,
+  }
+
+  return fn
 }
