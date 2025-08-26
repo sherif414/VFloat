@@ -10,6 +10,16 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
+import {
+  isTreeNode,
+  getContextFromParameter,
+  isTargetWithinElement,
+  findDescendantContainingTarget,
+  isTypeableElement,
+  isMac,
+  isSafari,
+  matchesFocusVisible,
+} from "./utils"
 
 //=======================================================================================
 // 📌 Main Composable
@@ -211,103 +221,8 @@ export interface UseFocusOptions {
 export type UseFocusReturn = undefined
 
 //=======================================================================================
-// 📌 Utilities
+// 📌 Tree-Aware Logic Helpers
 //=======================================================================================
-
-/** Checks if the user agent is on a Mac. */
-function isMac(): boolean {
-  return navigator.platform.toUpperCase().indexOf("MAC") >= 0
-}
-
-/** Checks if the browser is Safari. */
-function isSafari(): boolean {
-  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-}
-
-/** Checks if the element is a type of input that should receive focus on click. */
-function isTypeableElement(
-  element: unknown
-): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
-  return (
-    element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLSelectElement
-  )
-}
-
-/** A simple utility to check if an element matches `:focus-visible`. */
-function matchesFocusVisible(element: Element): boolean {
-  return element.matches(":focus-visible")
-}
-
-//=======================================================================================
-// 📌 Tree-Aware Helper Functions
-//=======================================================================================
-
-/**
- * Type guard to determine if the context parameter is a TreeNode.
- * @param context - The context parameter to check
- * @returns True if the context is a TreeNode
- */
-function isTreeNode(
-  context: FloatingContext | TreeNode<FloatingContext>
-): context is TreeNode<FloatingContext> {
-  return (
-    context !== null &&
-    typeof context === "object" &&
-    "data" in context &&
-    "id" in context &&
-    "children" in context &&
-    "parent" in context
-  )
-}
-
-/**
- * Extracts floating context and tree context from the parameter.
- * @param context - Either a FloatingContext or TreeNode<FloatingContext>
- * @returns Object containing both floating context and optional tree context
- */
-function getContextFromParameter(context: FloatingContext | TreeNode<FloatingContext>): {
-  floatingContext: FloatingContext
-  treeContext: TreeNode<FloatingContext> | null
-} {
-  if (isTreeNode(context)) {
-    return {
-      floatingContext: context.data,
-      treeContext: context,
-    }
-  }
-  return {
-    floatingContext: context,
-    treeContext: null,
-  }
-}
-
-/**
- * Checks if a target element is within an anchor or floating element, handling VirtualElement.
- * @param target - The target element to check
- * @param element - The element to check containment against (can be VirtualElement or null)
- * @returns True if the target is within the element
- */
-function isTargetWithinElement(target: Element, element: any): boolean {
-  if (!element) return false
-
-  // Handle VirtualElement (has contextElement)
-  if (typeof element === "object" && element !== null && "contextElement" in element) {
-    const contextElement = element.contextElement
-    if (contextElement instanceof Element) {
-      return contextElement.contains(target)
-    }
-    return false
-  }
-
-  // Handle regular Element
-  if (element instanceof Element) {
-    return element.contains(target)
-  }
-
-  return false
-}
 
 /**
  * Determines if focus is within the current node's hierarchy.

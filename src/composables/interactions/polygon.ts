@@ -2,6 +2,12 @@ import { isHTMLElement } from "@/utils"
 import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
 import type { TreeNode } from "@/composables/use-tree"
 import { computed } from "vue"
+import {
+  contains,
+  getTarget,
+  getCurrentTime,
+  clearTimeoutIfSet,
+} from "./utils"
 
 type Point = [number, number]
 type Polygon = Point[]
@@ -15,31 +21,6 @@ type Side = "top" | "right" | "bottom" | "left"
 
 // Timeout management type
 type TimeoutId = number
-
-// Utility functions for improved safe polygon implementation
-function contains(el: HTMLElement, target: Element | null) {
-  return el.contains(target)
-}
-
-function getTarget(event: MouseEvent | TouchEvent): Element | null {
-  return event.target as Element | null
-}
-
-/**
- * Safe performance timing that handles environments without performance API
- */
-function getCurrentTime(): number {
-  return typeof performance !== "undefined" ? performance.now() : Date.now()
-}
-
-/**
- * Centralized timeout management to prevent memory leaks
- */
-function clearTimeoutIfSet(timeoutId: TimeoutId): void {
-  if (timeoutId !== -1) {
-    clearTimeout(timeoutId)
-  }
-}
 
 /**
  * Enhanced tree-aware child detection that checks for open nested children

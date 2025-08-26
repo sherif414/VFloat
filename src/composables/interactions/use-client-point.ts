@@ -11,6 +11,7 @@ import {
 } from "vue"
 import type { FloatingContext } from "@/composables"
 import type { VirtualElement } from "@floating-ui/dom"
+import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================
 // 📌 Main
@@ -203,12 +204,6 @@ function createVirtualElement(
       }
     },
   }
-}
-
-function isMouseLikePointerType(pointerType: PointerType | undefined, strict?: boolean): boolean {
-  if (pointerType === undefined) return false
-  const isMouse = pointerType === "mouse"
-  return strict ? isMouse : isMouse || pointerType === "pen"
 }
 
 //=======================================================================================
