@@ -1,4 +1,5 @@
 import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-tree"
 import { useEventListener } from "@vueuse/core"
 import {
   computed,
@@ -20,15 +21,41 @@ import {
  * This composable is responsible for KEYBOARD-ONLY interactions. For a complete user experience,
  * it should be composed with other hooks like `useClick`, `useHover`, and `useDismiss`.
  *
- * @param context - The floating context with open state and change handler.
+ * The composable supports both standalone usage with FloatingContext and tree-aware
+ * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
+ *
+ * @param context - The floating context or tree node with open state and change handler.
  * @param options - Configuration options for focus behavior.
+ *
+ * @example Basic standalone usage
+ * ```ts
+ * const context = useFloating(...)
+ * useFocus(context, {
+ *   enabled: true,
+ *   requireFocusVisible: true
+ * })
+ * ```
+ *
+ * @example Tree-aware usage for nested floating elements
+ * ```ts
+ * const tree = useFloatingTree(rootContext)
+ * const parentNode = tree.root
+ * const childNode = tree.addNode(childContext, parentNode.id)
+ *
+ * // Tree-aware behavior: parent stays open when focus moves to child,
+ * // but closes when focus moves outside hierarchy
+ * useFocus(parentNode, { requireFocusVisible: true })
+ * useFocus(childNode, { requireFocusVisible: true })
+ * ```
  */
-export function useFocus(context: FloatingContext, options: UseFocusOptions = {}): UseFocusReturn {
+export function useFocus(context: FloatingContext | TreeNode<FloatingContext>, options: UseFocusOptions = {}): UseFocusReturn {
+  // Extract floating context from either standalone context or tree node
+  const { floatingContext, treeContext } = getContextFromParameter(context)
   const {
     open,
     setOpen,
     refs: { floatingEl, anchorEl: _anchorEl },
-  } = context
+  } = floatingContext
 
   const { enabled = true, requireFocusVisible = true } = options
   const anchorEl = computed(() => {
@@ -119,10 +146,17 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
         return
       }
 
-      // Case 2: Focus has moved to an element within the floating element.
-      // This is the primary way we keep it open during keyboard navigation.
-      if (floatingEl.value && activeEl && floatingEl.value.contains(activeEl)) {
-        return
+      // Tree-aware focus checking
+      if (treeContext) {
+        if (activeEl && isFocusWithinNodeHierarchy(treeContext, activeEl)) {
+          return // Focus is within hierarchy - keep open
+        }
+      } else {
+        // Case 2: Focus has moved to an element within the floating element.
+        // This is the primary way we keep it open during keyboard navigation.
+        if (floatingEl.value && activeEl && floatingEl.value.contains(activeEl)) {
+          return
+        }
       }
 
       // If neither of the above conditions are met, focus has moved elsewhere,
@@ -204,4 +238,127 @@ function isTypeableElement(
 /** A simple utility to check if an element matches `:focus-visible`. */
 function matchesFocusVisible(element: Element): boolean {
   return element.matches(":focus-visible")
+}
+
+//=======================================================================================
+// 📌 Tree-Aware Helper Functions
+//=======================================================================================
+
+/**
+ * Type guard to determine if the context parameter is a TreeNode.
+ * @param context - The context parameter to check
+ * @returns True if the context is a TreeNode
+ */
+function isTreeNode(
+  context: FloatingContext | TreeNode<FloatingContext>
+): context is TreeNode<FloatingContext> {
+  return (
+    context !== null &&
+    typeof context === "object" &&
+    "data" in context &&
+    "id" in context &&
+    "children" in context &&
+    "parent" in context
+  )
+}
+
+/**
+ * Extracts floating context and tree context from the parameter.
+ * @param context - Either a FloatingContext or TreeNode<FloatingContext>
+ * @returns Object containing both floating context and optional tree context
+ */
+function getContextFromParameter(context: FloatingContext | TreeNode<FloatingContext>): {
+  floatingContext: FloatingContext
+  treeContext: TreeNode<FloatingContext> | null
+} {
+  if (isTreeNode(context)) {
+    return {
+      floatingContext: context.data,
+      treeContext: context,
+    }
+  }
+  return {
+    floatingContext: context,
+    treeContext: null,
+  }
+}
+
+/**
+ * Checks if a target element is within an anchor or floating element, handling VirtualElement.
+ * @param target - The target element to check
+ * @param element - The element to check containment against (can be VirtualElement or null)
+ * @returns True if the target is within the element
+ */
+function isTargetWithinElement(target: Element, element: any): boolean {
+  if (!element) return false
+
+  // Handle VirtualElement (has contextElement)
+  if (typeof element === "object" && element !== null && "contextElement" in element) {
+    const contextElement = element.contextElement
+    if (contextElement instanceof Element) {
+      return contextElement.contains(target)
+    }
+    return false
+  }
+
+  // Handle regular Element
+  if (element instanceof Element) {
+    return element.contains(target)
+  }
+
+  return false
+}
+
+/**
+ * Determines if focus is within the current node's hierarchy.
+ *
+ * Returns true if focus is on the current node or any of its descendants,
+ * false if focus is outside the hierarchy.
+ *
+ * @param currentNode - The tree node to check against
+ * @param target - The focused element
+ * @returns True if focus is within the node hierarchy
+ */
+function isFocusWithinNodeHierarchy(
+  currentNode: TreeNode<FloatingContext>,
+  target: Element
+): boolean {
+  // Check if focus is within current node's elements
+  if (
+    isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
+    isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+  ) {
+    return true // Focus on current node
+  }
+
+  // Check if focus is within any descendant
+  const descendantNode = findDescendantContainingFocus(currentNode, target)
+  return descendantNode !== null
+}
+
+/**
+ * Finds a descendant node that contains the focused element.
+ * @param node - The parent node to search from
+ * @param target - The focused element to find
+ * @returns The descendant node containing the target, or null
+ */
+function findDescendantContainingFocus(
+  node: TreeNode<FloatingContext>,
+  target: Element
+): TreeNode<FloatingContext> | null {
+  for (const child of node.children.value) {
+    if (child.data.open.value) {
+      if (
+        isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
+        isTargetWithinElement(target, child.data.refs.floatingEl.value)
+      ) {
+        return child
+      }
+
+      // Recursively check descendants
+      const descendant = findDescendantContainingFocus(child, target)
+      if (descendant) return descendant
+    }
+  }
+  return null
 }
