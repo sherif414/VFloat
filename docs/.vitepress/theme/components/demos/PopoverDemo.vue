@@ -71,15 +71,7 @@
 
 <script setup lang="ts">
 import { useTemplateRef, ref } from "vue"
-import {
-  useFloatingTree,
-  useFloating,
-  useClick,
-  useDismiss,
-  useHover,
-  offset,
-  shift,
-} from "v-float"
+import { useFloatingTree, useFloating, useClick, useHover, offset, shift } from "v-float"
 
 const popoverTrigger = useTemplateRef("popoverTrigger")
 const popoverFloating = useTemplateRef("popoverFloating")
@@ -90,8 +82,7 @@ const popoverContext = useFloating(popoverTrigger, popoverFloating, {
   middlewares: [offset(4)],
 })
 
-useClick(popoverContext)
-useDismiss(popoverContext)
+useClick(popoverContext, { outsideCapture: true })
 
 // Create floating hierarchy tree
 const tree = useFloatingTree(popoverContext, { deleteStrategy: "recursive" })
@@ -105,7 +96,6 @@ const fileContext = useFloating(fileTrigger, fileFloating, {
   middlewares: [offset(2), shift({ padding: 8 })],
 })
 useHover(fileContext, { delay: 200, safePolygon: true })
-useDismiss(fileContext)
 const fileNode = tree.addNode(fileContext, tree.root.id)
 
 // Export sub-submenu
@@ -117,7 +107,6 @@ const exportContext = useFloating(exportTrigger, exportFloating, {
   middlewares: [offset(2), shift({ padding: 8 })],
 })
 useHover(exportContext, { delay: 200, safePolygon: true })
-useDismiss(exportContext)
 const exportNode = tree.addNode(exportContext, fileNode.id)
 
 // View submenu
@@ -129,7 +118,6 @@ const viewContext = useFloating(viewTrigger, viewFloating, {
   middlewares: [offset(2), shift({ padding: 8 })],
 })
 useHover(viewContext, { delay: 200, safePolygon: true })
-useDismiss(viewContext)
 const viewNode = tree.addNode(viewContext, tree.root.id)
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UseFloatingTreeReturn } from "@/composables"
-import { useDismiss, useFloating, useHover } from "@/composables"
+import { useClick, useFloating, useHover } from "@/composables"
 import { useId } from "@/utils"
 import { flip, offset, shift } from "@floating-ui/dom"
 import { inject, onUnmounted, provide, ref } from "vue"
@@ -41,7 +41,8 @@ onUnmounted(() => {
 provide("parentMenuId", parentMenuId) // Pass down the original parent ID
 provide("currentMenuId", node.id) // This submenu is now the current menu for its children
 
-useHover(context, { safePolygon: true })
+// useHover(context, { safePolygon: true })
+useClick(node, { outsideClick: true })
 </script>
 
 <template>

@@ -595,7 +595,7 @@ However, ignoring keyboard handlers is generally not recommended for accessibili
 ```vue
 <script setup>
 import { ref } from "vue"; // Assuming isOpen, referenceRef, floatingRef are defined
-import { useFloating, useClick, useDismiss /*, useRole */ } from "v-float";
+import { useFloating, useClick, useEscapeKey /*, useRole */ } from "v-float";
 // Note: useInteractions and prop-getters like getReferenceProps are not returned by
 // v-float's useClick or useDismiss as per current source.
 // Event listeners are attached directly. ARIA props need manual binding or a separate utility.
@@ -613,9 +613,11 @@ const floating = useFloating(referenceRef, floatingRef, {
 // useClick sets up click listeners on the reference element.
 useClick(floating.context);
 
-// Assuming useDismiss works similarly, setting up listeners for Esc/outside click.
-useDismiss(floating.context, {
-  outsidePress: true, // Example
+// useEscapeKey sets up escape key listener.
+useEscapeKey(floating.context, {
+  onEscape: () => {
+    isOpen.value = false;
+  }
 });
 
 // If a useRole composable exists and provides ARIA logic, it would be used here.
@@ -640,7 +642,7 @@ useDismiss(floating.context, {
     aria-labelledby="dialog-title" /* Assuming a title element exists */
   >
     <h2 id="dialog-title">Dialog</h2>
-    <p>Content... Click outside or press Esc to dismiss (if useDismiss is configured).</p>
+    <p>Content... Click outside or press Esc to dismiss (if useEscapeKey is configured).</p>
     <button @click="isOpen.value = false">Close</button>
   </div>
 </template>
@@ -896,7 +898,7 @@ import {
   useFloating,
   useInteractions,
   useClick,
-  useDismiss,
+  useEscapeKey,
   useRole,
   useListNavigation,
   offset,
@@ -927,10 +929,9 @@ const floating = useFloating(referenceRef, floatingRef, {
 // Click to open the dropdown
 const click = useClick(floating.context)
 
-// Close when clicking outside or pressing escape
-const dismiss = useDismiss(floating.context, {
-  outsidePress: true,
-  escapeKey: true,
+// Close when pressing escape
+const escapeKey = useEscapeKey(floating.context, {
+  onEscape: () => floating.setOpen(false)
 })
 
 // Set ARIA attributes
@@ -946,14 +947,14 @@ const listNav = useListNavigation(floating.context, {
   loop: true,
 })
 
-// Event listeners from useClick, useDismiss are attached directly.
+// Event listeners from useClick, useEscapeKey are attached directly.
 // ARIA roles from useRole would need manual application or its own prop mechanism.
 // useListNavigation typically provides getItemProps or similar for list items.
 // Since useInteractions is not available in v-float as per source,
 // props need to be managed differently.
 
 // Example: useClick sets up listeners on referenceRef
-// Example: useDismiss sets up its listeners
+// Example: useEscapeKey sets up its listeners
 // Example: useRole would mean manually adding role attributes or using its specific return.
 // Example: listNav might return getItemProps, which would be bound manually.
 
@@ -1062,7 +1063,7 @@ import {
   useFloating,
   useInteractions,
   useClick,
-  useDismiss,
+  useEscapeKey,
   useRole,
   FloatingFocusManager,
   FloatingOverlay,
@@ -1081,20 +1082,19 @@ const floating = useFloating(referenceRef, floatingRef, {
 const click = useClick(floating.context)
 
 // Close when pressing escape (but not when clicking outside)
-const dismiss = useDismiss(floating.context, {
-  outsidePress: false,
-  escapeKey: true,
+const escapeKey = useEscapeKey(floating.context, {
+  onEscape: () => floating.setOpen(false)
 })
 
 // Set ARIA attributes for accessibility
 const role = useRole(floating.context, { role: "dialog" })
 
-// Event listeners from useClick and useDismiss are attached directly.
+// Event listeners from useClick and useEscapeKey are attached directly.
 // ARIA roles from useRole would need manual application or its own prop mechanism.
 // Since useInteractions is not available in v-float as per source,
 // props need to be managed differently.
 useClick(floating.context); // Attaches click listeners
-useDismiss(floating.context, { outsidePress: false, escapeKey: true }); // Attaches dismiss listeners
+useEscapeKey(floating.context, { onEscape: () => floating.setOpen(false) }); // Attaches escape key listener
 
 // ARIA attributes are shown manually in the template.
 </script>
@@ -1210,7 +1210,7 @@ useDismiss(floating.context, { outsidePress: false, escapeKey: true }); // Attac
 
 ### General Usage
 
-1. **Combine with dismissal**: Always combine `useClick` with `useDismiss` to provide a way to close the floating element.
+1. **Combine with dismissal**: Always combine `useClick` with `useEscapeKey` to provide a way to close the floating element.
 
 2. **Ensure keyboard accessibility**: Avoid setting `ignoreKeyboard` to `true` so keyboard users can trigger the interaction with the `Enter` or `Space` keys.
 
@@ -1222,7 +1222,7 @@ useDismiss(floating.context, { outsidePress: false, escapeKey: true }); // Attac
 
 6. **Provide visual feedback**: Add hover and active states to indicate the element is clickable.
 
-7. **Handle outside clicks**: Use `useDismiss` with `outsidePress: true` to close the floating element when clicking outside.
+7. **Handle escape key**: Use `useEscapeKey` to close the floating element when pressing the escape key.
 
 ### Tree-Aware Usage
 
@@ -1238,7 +1238,7 @@ useDismiss(floating.context, { outsidePress: false, escapeKey: true }); // Attac
 
 ## Related Composables
 
-- `useDismiss`: For handling dismissal behavior (clicking outside, escape key)
+- `useEscapeKey`: For handling escape key dismissal behavior
 - `useRole`: For ARIA attribute management
 - `useListNavigation`: For keyboard navigation within the floating element
 - `FloatingFocusManager`: For managing focus within modal dialogs

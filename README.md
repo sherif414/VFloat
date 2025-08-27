@@ -63,7 +63,7 @@ yarn add v-float
 
 <script setup lang="ts">
   import { useTemplateRef } from "vue"
-  import { useFloating, useClick, useDismiss, offset, flip, shift } from "v-float"
+  import { useFloating, useClick, useEscapeKey, offset, flip, shift } from "v-float"
 
   const triggerEl = useTemplateRef("triggerEl")
   const menuEl = useTemplateRef("menuEl")
@@ -74,7 +74,9 @@ yarn add v-float
   })
 
   useClick(context)
-  useDismiss(context)
+  useEscapeKey({
+    onEscape: () => context.setOpen(false)
+  })
 </script>
 
 <template>
@@ -101,7 +103,7 @@ yarn add v-float
 - **`useHover`**: Hover interactions with configurable delays
 - **`useFocus`**: Focus/blur event handling for keyboard navigation
 - **`useClick`**: Click event handling with toggle and dismiss options
-- **`useDismiss`**: Close on outside click, ESC key, or scroll events
+- **`useEscapeKey`**: Close on ESC key press with composition handling
 - **`useClientPoint`**: Position floating elements at cursor/touch coordinates
 
 ### Middleware
@@ -193,7 +195,7 @@ Here's how you can set up a parent menu with a submenu:
 ```
 
 This example demonstrates the manual process of creating contexts and then linking them within the tree. For more
-complex scenarios, you would integrate interaction composables (`useClick`, `useHover`, `useDismiss`) to manage the
+complex scenarios, you would integrate interaction composables (`useClick`, `useHover`, `useEscapeKey`) to manage the
 `open` state of each context, potentially using tree methods like `tree.isTopmost()` or `tree.forEach()` to coordinate
 behavior (e.g., closing child menus when a parent closes).
 

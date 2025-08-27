@@ -21,19 +21,18 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef } from "vue";
-import { useFloating, useClick, useDismiss, offset } from "v-float";
+import { useTemplateRef } from "vue"
+import { useFloating, useClick, offset } from "v-float"
 
-const dropdownTrigger = useTemplateRef("dropdownTrigger");
-const dropdownFloating = useTemplateRef("dropdownFloating");
+const dropdownTrigger = useTemplateRef("dropdownTrigger")
+const dropdownFloating = useTemplateRef("dropdownFloating")
 
 const dropdownContext = useFloating(dropdownTrigger, dropdownFloating, {
   placement: "bottom-start",
   middlewares: [offset(4)],
-});
+})
 
-useClick(dropdownContext);
-useDismiss(dropdownContext);
+useClick(dropdownContext)
 </script>
 
 <style scoped>

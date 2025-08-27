@@ -29,7 +29,7 @@ import {
  * Enables showing/hiding the floating element when focusing the reference element.
  *
  * This composable is responsible for KEYBOARD-ONLY interactions. For a complete user experience,
- * it should be composed with other hooks like `useClick`, `useHover`, and `useDismiss`.
+ * it should be composed with other hooks like `useClick`, `useHover`, and `useEscapeKey`.
  *
  * The composable supports both standalone usage with FloatingContext and tree-aware
  * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
@@ -58,7 +58,10 @@ import {
  * useFocus(childNode, { requireFocusVisible: true })
  * ```
  */
-export function useFocus(context: FloatingContext | TreeNode<FloatingContext>, options: UseFocusOptions = {}): UseFocusReturn {
+export function useFocus(
+  context: FloatingContext | TreeNode<FloatingContext>,
+  options: UseFocusOptions = {}
+): UseFocusReturn {
   // Extract floating context from either standalone context or tree node
   const { floatingContext, treeContext } = getContextFromParameter(context)
   const {

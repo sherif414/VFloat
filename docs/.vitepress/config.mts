@@ -3,6 +3,15 @@ import { demoMdPlugin } from "vitepress-plugin-demo"
 
 export default defineConfig({
   head: [["meta", { name: "algolia-site-verification", content: "3A8199582DC4CB2E" }]],
+  vite: {
+    build: {
+      sourcemap: true,
+      minify: false,
+    },
+    ssr: {
+      noExternal: ["v-float"],
+    },
+  },
   markdown: {
     config(md) {
       md.use(demoMdPlugin)
@@ -69,7 +78,6 @@ export default defineConfig({
           items: [
             { text: "useClick", link: "/api/use-click" },
             { text: "useHover", link: "/api/use-hover" },
-            { text: "useDismiss", link: "/api/use-dismiss" },
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useClientPoint", link: "/api/use-client-point" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },

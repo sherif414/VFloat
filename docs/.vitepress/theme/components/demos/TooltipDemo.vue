@@ -8,10 +8,7 @@
           ref="tooltipFloating"
           :style="tooltipContext.floatingStyles.value"
         >
-          <div
-            v-show="tooltipContext.isPositioned.value"
-            class="tooltip floating-element"
-          >
+          <div v-show="tooltipContext.isPositioned.value" class="tooltip floating-element">
             This tooltip is perfectly positioned!
           </div>
         </div>
@@ -21,19 +18,19 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, watch } from "vue";
-import { useFloating, useHover, useFocus, useDismiss, offset } from "v-float";
+import { useTemplateRef, watch } from "vue"
+import { useFloating, useHover, useFocus, offset } from "v-float"
 
-const tooltipTrigger = useTemplateRef("tooltipTrigger");
-const tooltipFloating = useTemplateRef("tooltipFloating");
+const tooltipTrigger = useTemplateRef("tooltipTrigger")
+const tooltipFloating = useTemplateRef("tooltipFloating")
 
 const tooltipContext = useFloating(tooltipTrigger, tooltipFloating, {
   placement: "top",
   middlewares: [offset(4)],
-});
+})
 
-useHover(tooltipContext);
-useFocus(tooltipContext);
+useHover(tooltipContext)
+useFocus(tooltipContext)
 </script>
 
 <style scoped>

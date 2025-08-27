@@ -2,6 +2,8 @@
 
 The `useFocus` composable enables focus-based interactions for floating elements. It provides a way to show and hide floating UI elements when the user focuses on a reference element, which is crucial for keyboard accessibility.
 
+The composable supports both standalone usage with `FloatingContext` and tree-aware usage with `TreeNode<FloatingContext>` for complex nested floating UI structures, enabling intelligent focus behavior in hierarchical menus and dropdowns.
+
 ## Basic Usage
 
 ```vue twoslash
@@ -33,24 +35,24 @@ useFocus(context)
 
 ```ts
 function useFocus(
-  context: FloatingContext,
+  context: FloatingContext | TreeNode<FloatingContext>,
   options?: UseFocusOptions
 ): UseFocusReturn
 ```
 
-| Parameter | Type                | Description                                                                    |
-| --------- | ------------------- | ------------------------------------------------------------------------------ |
-| context   | `FloatingContext`   | The context object returned from `useFloating`. Contains refs and state.       |
-| options   | `UseFocusOptions`   | Optional configuration options for focus behavior.                            |
+| Parameter | Type                                           | Description                                                           |
+| --------- | ---------------------------------------------- | --------------------------------------------------------------------- |
+| context   | `FloatingContext \| TreeNode<FloatingContext>` | The floating context or tree node with open state and change handler. |
+| options   | `UseFocusOptions`                              | Optional configuration options for focus behavior.                    |
 
 ### Options (`UseFocusOptions`)
 
 The `useFocus` composable accepts several options to customize its behavior:
 
-| Option              | Type                        | Default | Description                                                                          |
-| ------------------- | --------------------------- | ------- | ------------------------------------------------------------------------------------ |
-| enabled             | `MaybeRefOrGetter<boolean>` | `true`  | Whether focus event listeners are enabled                                            |
-| requireFocusVisible | `MaybeRefOrGetter<boolean>` | `true`  | Whether to only open when focus is visible (`:focus-visible` CSS selector)          |
+| Option              | Type                        | Default | Description                                                                |
+| ------------------- | --------------------------- | ------- | -------------------------------------------------------------------------- |
+| enabled             | `MaybeRefOrGetter<boolean>` | `true`  | Whether focus event listeners are enabled                                  |
+| requireFocusVisible | `MaybeRefOrGetter<boolean>` | `true`  | Whether to only open when focus is visible (`:focus-visible` CSS selector) |
 
 ### Return Value
 
@@ -152,10 +154,65 @@ function enableFocus() {
     <button @click="enableFocus">Enable focus</button>
   </div>
   <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
-    Focus interaction is {{ focusEnabled ? 'enabled' : 'disabled' }}
+    Focus interaction is {{ focusEnabled ? "enabled" : "disabled" }}
   </div>
 </template>
 ```
+
+## Tree-Aware Focus Behavior
+
+When working with nested floating elements like dropdown menus with submenus, the `useFocus` composable can accept a `TreeNode<FloatingContext>` to enable intelligent hierarchical focus behavior:
+
+```vue
+<script setup>
+import { ref } from "vue"
+import { useFloating, useFloatingTree, useFocus } from "v-float"
+
+const menuTriggerRef = ref(null)
+const menuRef = ref(null)
+const submenuTriggerRef = ref(null)
+const submenuRef = ref(null)
+
+// Create floating contexts
+const menuContext = useFloating(menuTriggerRef, menuRef)
+const submenuContext = useFloating(submenuTriggerRef, submenuRef)
+
+// Create floating tree
+const tree = useFloatingTree(menuContext)
+const menuNode = tree.root
+const submenuNode = tree.addNode(submenuContext, menuNode.id)
+
+// Tree-aware focus behavior
+// Parent stays open when focus moves to child
+// Closes when focus moves outside hierarchy
+useFocus(menuNode, { requireFocusVisible: true })
+useFocus(submenuNode, { requireFocusVisible: true })
+</script>
+
+<template>
+  <div>
+    <button ref="menuTriggerRef">Main Menu</button>
+
+    <div v-if="menuContext.open.value" ref="menuRef" :style="menuContext.floatingStyles">
+      <button ref="submenuTriggerRef">Submenu Trigger</button>
+
+      <div v-if="submenuContext.open.value" ref="submenuRef" :style="submenuContext.floatingStyles">
+        <input placeholder="Focus stays within hierarchy" />
+        <button>Submenu Item</button>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+### Tree-Aware Focus Logic
+
+When using tree-aware focus:
+
+- **Within Hierarchy**: Focus moving between elements in the same node hierarchy keeps all ancestors open
+- **Outside Hierarchy**: Focus moving outside the node hierarchy closes the node and its descendants
+- **Descendant Focus**: Focus moving to descendant nodes keeps the current node open
+- **Teleported Elements**: Works correctly with teleported floating elements by using logical tree hierarchy instead of DOM containment
 
 ## Combining with Other Interactions
 
@@ -180,20 +237,17 @@ useFocus(context)
 
 useEscapeKey({
   enabled: context.open,
-  onEscape: () => context.setOpen(false)
+  onEscape: () => context.setOpen(false),
 })
 </script>
 
 <template>
-  <button 
-    ref="referenceRef" 
-    :aria-describedby="context.open.value ? 'tooltip' : undefined"
-  >
+  <button ref="referenceRef" :aria-describedby="context.open.value ? 'tooltip' : undefined">
     Hover or focus me
   </button>
-  <div 
-    v-if="context.open.value" 
-    ref="floatingRef" 
+  <div
+    v-if="context.open.value"
+    ref="floatingRef"
     :style="context.floatingStyles"
     role="tooltip"
     id="tooltip"
@@ -244,7 +298,7 @@ const triggerRef = ref(null)
 const dialogRef = ref(null)
 
 const context = useFloating(triggerRef, dialogRef, {
-  strategy: "fixed"
+  strategy: "fixed",
 })
 
 // Focus management for modal
@@ -257,7 +311,7 @@ useEscapeKey({
     context.setOpen(false)
     // Return focus to trigger
     nextTick(() => triggerRef.value?.focus())
-  }
+  },
 })
 
 // Close on outside click
@@ -272,13 +326,11 @@ const openModal = async () => {
 </script>
 
 <template>
-  <button ref="triggerRef" @click="openModal">
-    Open Modal
-  </button>
-  
+  <button ref="triggerRef" @click="openModal">Open Modal</button>
+
   <Teleport to="body">
     <div v-if="context.open.value" class="modal-backdrop">
-      <div 
+      <div
         ref="dialogRef"
         :style="context.floatingStyles"
         role="dialog"
@@ -323,6 +375,7 @@ const openModal = async () => {
 }
 </style>
 ```
+
 ## Best Practices
 
 1. **Combine with hover**: For non-touch devices, combine with `useHover` to provide multiple interaction methods.
@@ -339,6 +392,10 @@ const openModal = async () => {
 
 7. **Handle edge cases**: The composable automatically handles window blur/focus scenarios and browser-specific focus-visible behavior.
 
+8. **Use tree-aware focus for nested UIs**: When building nested floating elements like dropdown menus with submenus, use `TreeNode<FloatingContext>` for intelligent hierarchical focus behavior.
+
+9. **Test hierarchical focus**: For tree-aware usage, test focus movement between parent and child elements to ensure proper hierarchy behavior.
+
 ## Accessibility Considerations
 
 - ✅ **Keyboard Navigation**: Primary purpose - enables keyboard access to floating content
@@ -349,7 +406,7 @@ const openModal = async () => {
 
 ## Related Composables
 
-- [`useClick`](/api/use-click) - For click-based interactions
-- [`useHover`](/api/use-hover) - For hover-based interactions
+- [`useClick`](/api/use-click) - For click-based interactions (also supports tree-aware behavior)
+- [`useHover`](/api/use-hover) - For hover-based interactions (also supports tree-aware behavior)
+- [`useFloatingTree`](/api/use-floating-tree) - For managing hierarchical floating element structures
 - [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal
-- [`useOutsideClick`](/api/use-outside-click) - For dismissing with outside clicks

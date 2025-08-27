@@ -376,7 +376,7 @@ import {
   arrow, // Import 'arrow'
   useInteractions,
   useClick,
-  useDismiss,
+  useEscapeKey,
   offset,
   flip,
   shift,
@@ -412,13 +412,13 @@ const { arrowStyles } = useArrow(floating) // Or with an offset, e.g. { offset: 
 // Click to toggle
 const click = useClick(floating.context)
 
-// Click outside to close
-const dismiss = useDismiss(floating.context, {
-  outsidePress: true,
+// Press escape to close
+const escapeKey = useEscapeKey(floating.context, {
+  onEscape: () => floating.setOpen(false)
 })
 
 // Combine interactions
-const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss])
+const { getReferenceProps, getFloatingProps } = useInteractions([click, escapeKey])
 </script>
 
 <template>

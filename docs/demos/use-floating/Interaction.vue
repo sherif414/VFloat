@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useClick, useDismiss, useFloating, useFocus } from "v-float"
+import { useClick, useFloating, useFocus, useEscapeKey } from "v-float"
 import { ref } from "vue"
 
 const anchorEl = ref<HTMLElement | null>(null)
@@ -8,7 +8,7 @@ const floatingEl = ref<HTMLElement | null>(null)
 const floating = useFloating(anchorEl, floatingEl)
 
 useClick(floating)
-useDismiss(floating)
+useEscapeKey(floating, { onEscape: () => floating.setOpen(false) })
 useFocus(floating)
 
 </script>
@@ -16,7 +16,7 @@ useFocus(floating)
 <template>
   <div class="demo-container">
     <button ref="anchorEl" class="demo-anchor">
-      Click, Focus, or Dismiss me!
+      Click, Focus, or press Escape to close!
     </button>
 
     <div
@@ -25,7 +25,7 @@ useFocus(floating)
       :style="floating.floatingStyles.value"
       class="demo-floating"
     >
-      This tooltip opens on click/focus and dismisses on outside click/escape.
+      This tooltip opens on click/focus and closes with escape or outside click.
     </div>
   </div>
 </template>

@@ -38,7 +38,7 @@ const { context } = useFloating(reference, floating, {
 
 // All subsequent interactions plug into this same `context`.
 useClick(context)
-useDismiss(context)
+useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 // ...
 </script>
 ```
@@ -51,15 +51,16 @@ Instead of looking at each interaction in isolation, let's build a common UI pat
 2.  Close when the **Escape** key is pressed.
 3.  Close when the user **clicks outside** the menu.
 4.  Be fully **keyboard accessible**, opening on focus and allowing navigation.
+5.  Support **hierarchical focus behavior** for nested menus with tree-aware interactions.
 
-We can achieve all of this by composing four interactions: `useClick`, `useFocus`, `useDismiss`, and `useRole`.
+We can achieve all of this by composing four interactions: `useClick`, `useFocus`, `useEscapeKey`, and `useRole`.
 
 ```vue
 <script setup>
 import { ref } from "vue"
 import { useFloating, autoUpdate, offset } from "v-float"
 // Assume these are imported from your library
-import { useClick, useFocus, useDismiss, useRole } from "./composables"
+import { useClick, useFocus, useEscapeKey, useRole } from "./composables"
 
 // 1. Core Floating UI setup
 const reference = ref(null)
@@ -81,10 +82,11 @@ const { floatingStyles, context } = useFloating(reference, floating, {
 // Handles opening and closing on click.
 useClick(context)
 
-// Handles closing on outside clicks or Escape key presses.
-useDismiss(context)
+// Handles closing on Escape key presses.
+useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 
 // Handles opening on keyboard focus for accessibility.
+// Supports both standalone and tree-aware usage for nested menus.
 useFocus(context)
 
 // Adds the necessary ARIA attributes for a `menu` role.
@@ -108,7 +110,7 @@ useRole(context, { role: "menu" })
 ### How It Works Together
 
 - **`useClick(context)`** listens for clicks on the anchor. When a click occurs, it calls `onOpenChange` to toggle the `open` state.
-- **`useDismiss(context)`** adds global listeners. If it detects an outside click or an `Escape` keydown _while the menu is open_, it calls `onOpenChange(false)` to close it.
+- **`useEscapeKey(context)`** adds a global listener for the Escape key. When pressed _while the menu is open_, it calls `onOpenChange(false)` to close it.
 - **`useFocus(context)`** listens for focus events on the anchor. When the element is focused (e.g., via the Tab key), it calls `onOpenChange(true)`. This ensures keyboard users can access the menu without a mouse.
 - **`useRole(context)`** enhances accessibility by managing ARIA attributes like `aria-expanded` (which it syncs with the `open` state) and `aria-controls`.
 
@@ -131,13 +133,13 @@ useHover(context, { delay: 150 })
 useFocus(context)
 
 // Allow closing with the Escape key.
-useDismiss(context)
+useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 
 // Apply the `tooltip` role for screen readers.
 useRole(context, { role: 'tooltip' })
 ```
 
-Here, `useHover` and `useFocus` work in tandem. Whichever happens first will open the tooltip. `useDismiss` provides a consistent way to close it.
+Here, `useHover` and `useFocus` work in tandem. Whichever happens first will open the tooltip. `useEscapeKey` provides a consistent way to close it.
 
 ### Pitfall: Conflicting Triggers (`useClick` vs. `useHover`)
 
@@ -160,7 +162,7 @@ useHover(context, { enabled: computed(() => !open.value) })
 
 // Click always works.
 useClick(context)
-useDismiss(context)
+useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 // ...
 </script>
 ```

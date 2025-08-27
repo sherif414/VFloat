@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-  useClick,
-  useDismiss,
-  useFloatingTree,
-  type UseFloatingTreeReturn,
-  useEscapeKey,
-} from "@/composables"
+import { useClick, useFloatingTree, type UseFloatingTreeReturn, useEscapeKey } from "@/composables"
 import { useFloating } from "@/composables" // Assuming v-float exports these
 import { flip, shift, offset } from "@floating-ui/dom"
 import { onUnmounted, provide, ref } from "vue"
@@ -39,7 +33,7 @@ useEscapeKey({
     tree.getTopmostOpenNode()?.data.setOpen(false)
   },
 })
-useClick(context)
+useClick(tree.root, { outsideClick: true })
 
 onUnmounted(() => {
   tree.dispose()

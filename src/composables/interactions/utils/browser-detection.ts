@@ -1,6 +1,6 @@
 /**
  * @fileoverview Browser environment detection utilities
- * 
+ *
  * Provides utilities for detecting browser types, platforms, and
  * environment-specific polyfills for focus-visible behavior.
  */
@@ -10,6 +10,7 @@
  * @returns True if running on macOS
  */
 export function isMac(): boolean {
+  if (typeof navigator === "undefined") return false
   return navigator.platform.toUpperCase().indexOf("MAC") >= 0
 }
 
@@ -18,6 +19,7 @@ export function isMac(): boolean {
  * @returns True if the browser is Safari
  */
 export function isSafari(): boolean {
+  if (typeof navigator === "undefined") return false
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
 }
 
@@ -27,5 +29,6 @@ export function isSafari(): boolean {
  * @returns True if the element matches :focus-visible
  */
 export function matchesFocusVisible(element: Element): boolean {
+  if (typeof element?.matches !== "function") return false
   return element.matches(":focus-visible")
 }
