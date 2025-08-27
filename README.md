@@ -32,20 +32,19 @@ yarn add v-float
 ### Basic Tooltip
 
 ```vue
-
 <script setup lang="ts">
-  import { useTemplateRef } from "vue"
-  import { useFloating, useHover, offset } from "v-float"
+import { useTemplateRef } from "vue"
+import { useFloating, useHover, offset } from "v-float"
 
-  const anchorEl = useTemplateRef("anchorEl")
-  const floatingEl = useTemplateRef("floatingEl")
+const anchorEl = useTemplateRef("anchorEl")
+const floatingEl = useTemplateRef("floatingEl")
 
-  const context = useFloating(anchorEl, floatingEl, {
-    placement: "top",
-    middlewares: [offset(8)],
-  })
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "top",
+  middlewares: [offset(8)],
+})
 
-  useHover(context)
+useHover(context)
 </script>
 
 <template>
@@ -60,23 +59,22 @@ yarn add v-float
 ### Dropdown Menu
 
 ```vue
-
 <script setup lang="ts">
-  import { useTemplateRef } from "vue"
-  import { useFloating, useClick, useEscapeKey, offset, flip, shift } from "v-float"
+import { useTemplateRef } from "vue"
+import { useFloating, useClick, useEscapeKey, offset, flip, shift } from "v-float"
 
-  const triggerEl = useTemplateRef("triggerEl")
-  const menuEl = useTemplateRef("menuEl")
+const triggerEl = useTemplateRef("triggerEl")
+const menuEl = useTemplateRef("menuEl")
 
-  const context = useFloating(triggerEl, menuEl, {
-    placement: "bottom-start",
-    middlewares: [offset(4), flip(), shift({ padding: 8 })],
-  })
+const context = useFloating(triggerEl, menuEl, {
+  placement: "bottom-start",
+  middlewares: [offset(4), flip(), shift({ padding: 8 })],
+})
 
-  useClick(context)
-  useEscapeKey({
-    onEscape: () => context.setOpen(false)
-  })
+useClick(context)
+useEscapeKey({
+  onEscape: () => context.setOpen(false),
+})
 </script>
 
 <template>
@@ -88,6 +86,65 @@ yarn add v-float
     <div>Menu Item 3</div>
   </div>
 </template>
+```
+
+### Tooltip with Arrow
+
+```vue
+<script setup lang="ts">
+import { useTemplateRef } from "vue"
+import { useFloating, useHover, useArrow, offset, flip } from "v-float"
+
+const anchorEl = useTemplateRef("anchorEl")
+const tooltipEl = useTemplateRef("tooltipEl")
+const arrowEl = useTemplateRef("arrowEl")
+
+const context = useFloating(anchorEl, tooltipEl, {
+  placement: "top",
+  middlewares: [offset(8), flip()],
+})
+
+useHover(context)
+
+// Arrow middleware is automatically registered
+const { arrowStyles } = useArrow(arrowEl, context, {
+  offset: "-4px",
+})
+</script>
+
+<template>
+  <button ref="anchorEl">Hover me</button>
+
+  <div
+    v-if="context.open.value"
+    ref="tooltipEl"
+    :style="context.floatingStyles.value"
+    class="tooltip"
+  >
+    This is a tooltip with an arrow
+    <div ref="arrowEl" class="arrow" :style="arrowStyles"></div>
+  </div>
+</template>
+
+<style scoped>
+.tooltip {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border: 1px solid #ddd;
+  transform: rotate(45deg);
+  z-index: -1;
+}
+</style>
 ```
 
 ## Core Composables
@@ -114,7 +171,8 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 - **`flip`**: Flip placement when there's insufficient space
 - **`shift`**: Shift floating element to stay in view
 - **`hide`**: Hide floating element when anchor is not visible
-- **`arrow`**: Position arrow elements (via `useArrow`)
+
+**Arrow positioning** is handled by the [`useArrow`](/api/use-arrow) composable, which automatically registers the necessary middleware.
 
 ## Advanced Features
 

@@ -8,24 +8,19 @@ interface ArrowAutoDemoProps {
   placement?: Placement
 }
 
-const props = withDefaults(defineProps<ArrowAutoDemoProps>(), {
-  placement: "top",
-})
-
 const buttonRef = ref<HTMLElement | null>(null)
 const tooltipRef = ref<HTMLElement | null>(null)
 const arrowRef = ref<HTMLElement | null>(null)
 
 // Notice: No need to add arrow middleware manually!
 const context = useFloating(buttonRef, tooltipRef, {
-  placement: props.placement,
+  placement: "bottom",
   open: ref(true),
   middlewares: [offset(8), flip(), shift()], // arrow is auto-registered
 })
 
-// Arrow middleware is automatically registered when element is provided
-const { arrowStyles } = useArrow(context, {
-  arrowEl: arrowRef, // Auto-registers arrow middleware
+// Arrow middleware is automatically registered
+const { arrowStyles } = useArrow(arrowRef, context, {
   offset: "-4px",
 })
 </script>
@@ -44,7 +39,7 @@ const { arrowStyles } = useArrow(context, {
       <div class="tooltip-content">
         Auto-registered arrow tooltip!
         <br />
-        <small>Placement: {{ props.placement }}</small>
+        <small>Placement: bottom</small>
       </div>
 
       <!-- Arrow element with auto-computed styles -->
