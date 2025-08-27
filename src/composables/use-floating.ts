@@ -8,7 +8,17 @@ import type {
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { MaybeRefOrGetter, Ref } from "vue"
-import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
+import {
+  computed,
+  onScopeDispose,
+  onWatcherCleanup,
+  ref,
+  shallowRef,
+  toValue,
+  watch,
+  nextTick,
+} from "vue"
+import { arrow } from "./middlewares/arrow"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -149,6 +159,7 @@ export interface FloatingContext {
   refs: {
     anchorEl: Ref<AnchorElement>
     floatingEl: Ref<FloatingElement>
+    arrowEl: Ref<HTMLElement | null>
   }
 
   /**
@@ -214,13 +225,29 @@ export function useFloating(
   const middlewareData = shallowRef<MiddlewareData>({})
   const isPositioned = ref(false)
 
+  // Arrow element ref for useArrow composable
+  const arrowEl = ref<HTMLElement | null>(null)
+
+  // Reactive middleware array that includes arrow middleware when arrowEl is set
+  const reactiveMiddlewares = computed(() => {
+    const baseMiddlewares = middlewares || []
+    if (arrowEl.value) {
+      // Check if arrow middleware already exists
+      const hasArrow = baseMiddlewares.some((m) => m.name === "arrow")
+      if (!hasArrow) {
+        return [...baseMiddlewares, arrow({ element: arrowEl })]
+      }
+    }
+    return baseMiddlewares
+  })
+
   const update = async () => {
     if (!anchorEl.value || !floatingEl.value) return
 
     const result = await computePosition(anchorEl.value, floatingEl.value, {
       placement: initialPlacement.value,
       strategy: initialStrategy.value,
-      middleware: middlewares,
+      middleware: reactiveMiddlewares.value,
     })
 
     x.value = result.x
@@ -321,6 +348,7 @@ export function useFloating(
     refs: {
       anchorEl: anchorEl,
       floatingEl: floatingEl,
+      arrowEl: arrowEl,
     },
     open,
     setOpen,

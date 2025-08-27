@@ -1,5 +1,6 @@
-import type { ComputedRef } from "vue"
-import { computed, toValue } from "vue"
+import type { Padding } from "@floating-ui/dom"
+import type { ComputedRef, Ref } from "vue"
+import { computed, toValue, watch } from "vue"
 import type { FloatingContext } from "./use-floating"
 
 //=======================================================================================
@@ -42,6 +43,11 @@ export interface UseArrowOptions {
    * @default '-4px'
    */
   offset?: string
+
+  /**
+   * Padding around arrow element
+   */
+  padding?: Padding
 }
 
 //=======================================================================================
@@ -54,23 +60,40 @@ export interface UseArrowOptions {
  * This composable calculates the position and styles for an arrow element
  * based on the placement and middleware data from a floating element.
  *
+ * @param arrowEl - A ref to the arrow HTML element
  * @param context - The floating context containing middleware data and placement information
  * @param options - Optional configuration for the arrow, e.g., offset
  * @returns Computed arrow positions and CSS styles
  *
  * @example
  * ```ts
- * const { arrowStyles } = useArrow(floatingContext, { offset: "-10px" })
+ * const arrowRef = ref<HTMLElement | null>(null)
+ * const { arrowStyles } = useArrow(arrowRef, floatingContext, { offset: "-10px" })
  * ```
  */
-export function useArrow(context: FloatingContext, options: UseArrowOptions = {}): UseArrowReturn {
-  const { middlewareData, placement } = context
-  const { offset = "-4px" } = options
+export function useArrow(
+  arrowEl: Ref<HTMLElement | null>,
+  context: FloatingContext,
+  options: UseArrowOptions = {}
+): UseArrowReturn {
+  const { offset = "-4px", padding } = options
+  const { middlewareData, placement, refs } = context
+
+  watch(arrowEl, (el) => {
+    refs.arrowEl.value = el
+  })
 
   const arrowX = computed(() => middlewareData.value.arrow?.x ?? 0)
   const arrowY = computed(() => middlewareData.value.arrow?.y ?? 0)
 
   const arrowStyles = computed(() => {
+    const arrowElement = arrowEl.value || refs.arrowEl.value
+
+    // Only compute styles if element exists and middleware data is available
+    if (!arrowElement || !middlewareData.value.arrow) {
+      return {}
+    }
+
     const side = toValue(placement).split("-")[0] as "top" | "bottom" | "left" | "right"
 
     const x = arrowX.value
