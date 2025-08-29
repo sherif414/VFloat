@@ -34,5 +34,6 @@ docs/.vitepress/dist
 docs/.vitepress/cache
 *storybook.log
 .qodo
+.npmrc
 
 src/**/__tests__/__screenshots__/

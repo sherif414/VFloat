@@ -10,14 +10,13 @@
     "publishPath": "./dist"
   },
   "hooks": {
-    "before:init": ["pnpm run type-check"],
+    "before:init": ["git pull", "pnpm lint", "pnpm run type-check"],
     "after:bump": "pnpm run build",
     "after:release": "echo Successfully released ${name} v${version} to ${repo.repository}."
   },
   "github": {
     "release": true,
-    "releaseName": "v${version}",
-    "releaseNotes": "generate"
+    "releaseName": "v${version}"
   },
   "plugins": {
     "release-it-pnpm": {},

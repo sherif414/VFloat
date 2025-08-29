@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  # Manual release trigger
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - auto
+      dry_run:
+        description: "Dry run (test release without publishing)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    name: Release Package
+    runs-on: ubuntu-latest
+
+    # Only run if commit message doesn't contain skip flags
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (!contains(github.event.head_commit.message, '[skip ci]') &&
+       !contains(github.event.head_commit.message, '[ci skip]') &&
+       !contains(github.event.head_commit.message, 'chore: release'))
+
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.6.0"
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # - name: Run linting
+      #   run: pnpm lint
+
+      # - name: Run type checking
+      #   run: pnpm type-check
+
+      # - name: Run tests
+      #   run: pnpm test --run
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Dry run for manual workflow dispatch
+      - name: Dry run release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          if [ "${{ github.event.inputs.release_type }}" = "auto" ]; then
+            pnpm release:dry
+          else
+            pnpm release:dry ${{ github.event.inputs.release_type }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Manual release with specified type
+      - name: Release (Manual)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false'
+        run: |
+          if [ "${{ github.event.inputs.release_type }}" = "auto" ]; then
+            pnpm release --ci
+          else
+            pnpm release:${{ github.event.inputs.release_type }} --ci
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Automatic release on push to main
+      - name: Release (Automatic)
+        if: github.event_name == 'push'
+        run: |
+          # Check if there are releasable changes
+          if git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -E "^[a-f0-9]+ (feat|fix|perf)(\(.+\))?(!)?: " > /dev/null; then
+            echo "Found releasable changes, creating release..."
+            pnpm release --ci
+          else
+            echo "No releasable changes found, skipping release."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            CHANGELOG.md
+          retention-days: 30
+
+  # Notify on failure
+  notify-failure:
+    name: Notify Release Failure
+    runs-on: ubuntu-latest
+    needs: release
+    if: failure()
+
+    steps:
+      - name: Create issue on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Release workflow failed for ${context.sha.substring(0, 7)}`;
+            const body = `The release workflow failed for commit ${context.sha}.
+
+            **Workflow run:** ${context.payload.repository.html_url}/actions/runs/${context.runId}
+            **Commit:** ${context.payload.repository.html_url}/commit/${context.sha}
+
+            Please investigate and fix the issue.`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'ci/cd']
+            });
