@@ -1,8 +1,12 @@
 # useEscapeKey
 
-The `useEscapeKey` composable provides a simple and robust way to handle Escape key press events with composition support. This is essential for implementing keyboard dismissal behavior in floating UI components like modals, dropdowns, and popovers.
+The `useEscapeKey` composable provides a simple and robust way to handle Escape key press events with tree-aware behavior and composition support. This is essential for implementing keyboard dismissal behavior in floating UI components like modals, dropdowns, and popovers.
+
+It follows the same API pattern as other interaction composables, accepting either a [`FloatingContext`](/api/use-floating) or `TreeNode<FloatingContext>` as the first parameter and automatically handling the appropriate close behavior.
 
 ## Basic Usage
+
+### Standalone Floating Element
 
 ```vue twoslash
 <script setup lang="ts">
@@ -14,11 +18,8 @@ const floatingRef = ref<HTMLElement | null>(null)
 
 const context = useFloating(referenceRef, floatingRef)
 
-// Close floating element when Escape key is pressed
-useEscapeKey({
-  enabled: context.open,
-  onEscape: () => context.setOpen(false)
-})
+// Automatically closes the floating element when Escape key is pressed
+useEscapeKey(context)
 </script>
 
 <template>
@@ -32,17 +33,67 @@ useEscapeKey({
 </template>
 ```
 
+### Tree-Aware Usage
+
+When used with nested floating elements in a tree structure, `useEscapeKey` automatically closes the topmost (deepest) open node:
+
+```vue twoslash
+<script setup lang="ts">
+import { ref } from "vue"
+import { useFloatingTree, useEscapeKey } from "v-float"
+
+const rootAnchorRef = ref<HTMLElement | null>(null)
+const rootFloatingRef = ref<HTMLElement | null>(null)
+const submenuAnchorRef = ref<HTMLElement | null>(null)
+const submenuFloatingRef = ref<HTMLElement | null>(null)
+
+// Create tree with root menu
+const tree = useFloatingTree(rootAnchorRef, rootFloatingRef)
+
+// Add submenu to the tree
+const submenuNode = tree.addNode(submenuAnchorRef, submenuFloatingRef, {
+  parentId: tree.root.id
+})
+
+// Tree-aware behavior: closes the deepest open menu first
+useEscapeKey(tree.root)     // Works for root
+useEscapeKey(submenuNode)   // Works for submenu - closes topmost open
+</script>
+
+<template>
+  <!-- Root menu -->
+  <button ref="rootAnchorRef" @click="tree.root.data.setOpen(true)">
+    Open Menu
+  </button>
+  
+  <div v-if="tree.root.data.open.value" ref="rootFloatingRef">
+    <button ref="submenuAnchorRef" @click="submenuNode.data.setOpen(true)">
+      Open Submenu
+    </button>
+  </div>
+
+  <!-- Submenu -->
+  <div v-if="submenuNode.data.open.value" ref="submenuFloatingRef">
+    <p>Press Escape to close this submenu first, then the root menu</p>
+  </div>
+</template>
+```
+
 ## API Reference
 
 ### Arguments
 
 ```ts
-function useEscapeKey(options: UseEscapeKeyOptions): void
+function useEscapeKey(
+  context: FloatingContext | TreeNode<FloatingContext>,
+  options?: UseEscapeKeyOptions
+): void
 ```
 
-| Parameter | Type                      | Description                                                                    |
-| --------- | ------------------------- | ------------------------------------------------------------------------------ |
-| options   | `UseEscapeKeyOptions`     | Configuration options for the escape key behavior.                            |
+| Parameter | Type                                          | Description                                                                    |
+| --------- | --------------------------------------------- | ------------------------------------------------------------------------------ |
+| context   | `FloatingContext \| TreeNode<FloatingContext>` | The floating context or tree node to control.                                |
+| options   | `UseEscapeKeyOptions`                         | Configuration options for the escape key behavior.                            |
 
 ### Options (`UseEscapeKeyOptions`)
 
@@ -50,13 +101,50 @@ function useEscapeKey(options: UseEscapeKeyOptions): void
 | --------- | ----------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
 | enabled   | `MaybeRefOrGetter<boolean>`         | `true`  | Condition to enable the escape key listener.                                             |
 | capture   | `boolean`                          | `false` | Whether to use capture phase for document event listeners.                               |
-| onEscape  | `(event: KeyboardEvent) => void`   | *required* | Callback function to be executed when the escape key is pressed.                     |
+| onEscape  | `(event: KeyboardEvent) => void`   | *optional* | Custom callback function to override default behavior.                     |
 
 ### Return Value
 
 `useEscapeKey` returns `void`. It performs its actions by attaching a keydown event listener to the document.
 
 ## Features
+
+### Default Behavior
+
+The composable provides intelligent default behavior based on the context type:
+
+- **Standalone Context**: Automatically calls `setOpen(false)` on the floating context
+- **Tree Context**: Finds and closes the topmost (deepest) open node in the tree hierarchy
+
+```vue
+<script setup>
+import { useFloating, useEscapeKey } from "v-float"
+
+const context = useFloating(anchorRef, floatingRef)
+
+// Simple usage - no configuration needed
+useEscapeKey(context) // Automatically closes on escape
+</script>
+```
+
+### Tree-Aware Behavior
+
+When working with nested floating elements, the composable intelligently closes the deepest open element first:
+
+```vue
+<script setup>
+import { useFloatingTree, useEscapeKey } from "v-float"
+
+const tree = useFloatingTree(rootAnchor, rootFloating)
+const level1 = tree.addNode(anchor1, floating1, { parentId: tree.root.id })
+const level2 = tree.addNode(anchor2, floating2, { parentId: level1.id })
+
+// Any of these will close the deepest open element first
+useEscapeKey(tree.root)
+useEscapeKey(level1)
+useEscapeKey(level2)
+</script>
+```
 
 ### Composition Event Handling
 
@@ -229,7 +317,7 @@ useEscapeKey({
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, useClick, useOutsideClick, useEscapeKey } from "v-float"
+import { useFloating, useClick, useHover, useEscapeKey } from "v-float"
 
 const referenceRef = ref(null)
 const floatingRef = ref(null)
@@ -237,24 +325,21 @@ const floatingRef = ref(null)
 const context = useFloating(referenceRef, floatingRef)
 
 // Multiple ways to interact with the floating element
-useClick(context)           // Click to toggle
-useOutsideClick(context)    // Click outside to close
-useEscapeKey({              // Press Escape to close
-  enabled: context.open,
-  onEscape: () => context.setOpen(false)
-})
+useClick(context)        // Click to toggle
+useHover(context)        // Hover to show/hide
+useEscapeKey(context)    // Press Escape to close
 </script>
 
 <template>
   <button ref="referenceRef">
-    Click to toggle
+    Hover or click to toggle
   </button>
   
   <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles">
     <p>You can close this by:</p>
     <ul>
       <li>Clicking the button again</li>
-      <li>Clicking outside this area</li>
+      <li>Moving mouse away (hover out)</li>
       <li>Pressing the Escape key</li>
     </ul>
   </div>
