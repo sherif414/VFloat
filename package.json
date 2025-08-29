@@ -1,6 +1,6 @@
 {
   "name": "v-float",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Vue 3 port of Floating UI - a library for positioning floating elements",
   "private": false,
   "type": "module",
