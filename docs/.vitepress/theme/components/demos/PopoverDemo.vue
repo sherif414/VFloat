@@ -4,39 +4,39 @@
       <button ref="popoverTrigger" class="demo-button">Open popover</button>
       <Teleport to="body">
         <div
-          v-show="popoverContext.isPositioned.value"
+          v-show="tree.root.data.isPositioned.value"
           ref="popoverFloating"
           class="popover floating-element"
-          :style="popoverContext.floatingStyles.value"
+          :style="tree.root.data.floatingStyles.value"
         >
           <div class="popover-header">
             <h4>Positioning Options</h4>
-            <button @click="popoverContext.setOpen(false)" class="close-btn">×</button>
+            <button @click="tree.root.data.setOpen(false)" class="close-btn">×</button>
           </div>
           <ul class="menu">
-            <li ref="fileTrigger" class="menu-item" :class="{ open: fileContext.open.value }">
+            <li ref="fileTrigger" class="menu-item" :class="{ open: fileNode.data.open.value }">
               File <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
                 <ul
-                  v-show="fileContext.isPositioned.value"
+                  v-show="fileNode.data.isPositioned.value"
                   ref="fileFloating"
                   class="submenu floating-element"
-                  :style="fileContext.floatingStyles.value"
+                  :style="fileNode.data.floatingStyles.value"
                 >
                   <li class="menu-item">New</li>
                   <li class="menu-item">Open</li>
                   <li
                     ref="exportTrigger"
                     class="menu-item"
-                    :class="{ open: exportContext.open.value }"
+                    :class="{ open: exportNode.data.open.value }"
                   >
                     Export <span class="submenu-arrow">▶︎</span>
                     <Teleport to="body">
                       <ul
-                        v-show="exportContext.isPositioned.value"
+                        v-show="exportNode.data.isPositioned.value"
                         ref="exportFloating"
                         class="sub-submenu floating-element"
-                        :style="exportContext.floatingStyles.value"
+                        :style="exportNode.data.floatingStyles.value"
                       >
                         <li class="menu-item">PDF</li>
                         <li class="menu-item">DOCX</li>
@@ -47,14 +47,14 @@
               </Teleport>
             </li>
             <li ref="editItem" class="menu-item">Edit</li>
-            <li ref="viewTrigger" class="menu-item" :class="{ open: viewContext.open.value }">
+            <li ref="viewTrigger" class="menu-item" :class="{ open: viewNode.data.open.value }">
               View <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
                 <ul
-                  v-show="viewContext.isPositioned.value"
+                  v-show="viewNode.data.isPositioned.value"
                   ref="viewFloating"
                   class="submenu floating-element"
-                  :style="viewContext.floatingStyles.value"
+                  :style="viewNode.data.floatingStyles.value"
                 >
                   <li class="menu-item">Zoom In</li>
                   <li class="menu-item">Zoom Out</li>
@@ -71,54 +71,58 @@
 
 <script setup lang="ts">
 import { useTemplateRef, ref } from "vue"
-import { useFloatingTree, useFloating, useClick, useHover, offset, shift } from "v-float"
+import { useFloatingTree, useClick, useHover, offset, shift, useEscapeKey } from "v-float"
 
 const popoverTrigger = useTemplateRef("popoverTrigger")
 const popoverFloating = useTemplateRef("popoverFloating")
 
-const popoverContext = useFloating(popoverTrigger, popoverFloating, {
-  placement: "bottom-start",
-  open: ref(false),
-  middlewares: [offset(4)],
-})
-
-useClick(popoverContext, { outsideCapture: true })
-
 // Create floating hierarchy tree
-const tree = useFloatingTree(popoverContext, { deleteStrategy: "recursive" })
+const tree = useFloatingTree(
+  popoverTrigger,
+  popoverFloating,
+  {
+    placement: "bottom-start",
+    open: ref(false),
+    middlewares: [offset(4)],
+  },
+  { deleteStrategy: "recursive" }
+)
+
+useClick(tree.root, { outsideClick: true })
+useEscapeKey(tree.root)
 
 // File submenu
 const fileTrigger = useTemplateRef("fileTrigger")
 const fileFloating = useTemplateRef("fileFloating")
-const fileContext = useFloating(fileTrigger, fileFloating, {
+const fileNode = tree.addNode(fileTrigger, fileFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-})
-useHover(fileContext, { delay: 200, safePolygon: true })
-const fileNode = tree.addNode(fileContext, tree.root.id)
+  parentId: tree.root.id,
+})!
+useHover(fileNode, { delay: 200, safePolygon: true })
 
 // Export sub-submenu
 const exportTrigger = useTemplateRef("exportTrigger")
 const exportFloating = useTemplateRef("exportFloating")
-const exportContext = useFloating(exportTrigger, exportFloating, {
+const exportNode = tree.addNode(exportTrigger, exportFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-})
-useHover(exportContext, { delay: 200, safePolygon: true })
-const exportNode = tree.addNode(exportContext, fileNode.id)
+  parentId: fileNode.id,
+})!
+useHover(exportNode, { delay: 200, safePolygon: true })
 
 // View submenu
 const viewTrigger = useTemplateRef("viewTrigger")
 const viewFloating = useTemplateRef("viewFloating")
-const viewContext = useFloating(viewTrigger, viewFloating, {
+const viewNode = tree.addNode(viewTrigger, viewFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-})
-useHover(viewContext, { delay: 200, safePolygon: true })
-const viewNode = tree.addNode(viewContext, tree.root.id)
+  parentId: tree.root.id,
+})!
+useHover(viewNode, { delay: 200, safePolygon: true })
 </script>
 
 <style scoped>
