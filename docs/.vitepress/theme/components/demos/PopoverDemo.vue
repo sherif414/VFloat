@@ -100,7 +100,7 @@ const fileNode = tree.addNode(fileTrigger, fileFloating, {
   middlewares: [offset(2), shift({ padding: 8 })],
   parentId: tree.root.id,
 })!
-useHover(fileNode, { delay: 200, safePolygon: true })
+useHover(fileNode, { delay: 50, safePolygon: true })
 
 // Export sub-submenu
 const exportTrigger = useTemplateRef("exportTrigger")
@@ -111,7 +111,7 @@ const exportNode = tree.addNode(exportTrigger, exportFloating, {
   middlewares: [offset(2), shift({ padding: 8 })],
   parentId: fileNode.id,
 })!
-useHover(exportNode, { delay: 200, safePolygon: true })
+useHover(exportNode, { delay: 50, safePolygon: true })
 
 // View submenu
 const viewTrigger = useTemplateRef("viewTrigger")
@@ -122,7 +122,7 @@ const viewNode = tree.addNode(viewTrigger, viewFloating, {
   middlewares: [offset(2), shift({ padding: 8 })],
   parentId: tree.root.id,
 })!
-useHover(viewNode, { delay: 200, safePolygon: true })
+useHover(viewNode, { delay: 50, safePolygon: true })
 </script>
 
 <style scoped>
