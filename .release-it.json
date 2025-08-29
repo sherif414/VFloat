@@ -10,9 +10,7 @@
     "publishPath": "./dist"
   },
   "hooks": {
-    "before:init": [
-      "pnpm run type-check"
-    ],
+    "before:init": ["pnpm run type-check"],
     "after:bump": "pnpm run build",
     "after:release": "echo Successfully released ${name} v${version} to ${repo.repository}."
   },
@@ -22,6 +20,7 @@
     "releaseNotes": "generate"
   },
   "plugins": {
+    "release-it-pnpm": {},
     "@release-it/conventional-changelog": {
       "preset": "angular",
       "infile": "CHANGELOG.md",
