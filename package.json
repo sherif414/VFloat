@@ -4,9 +4,7 @@
   "description": "Vue 3 port of Floating UI - a library for positioning floating elements",
   "private": false,
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "types": "./dist/src/index.d.ts",
   "main": "./dist/v-float.umd.js",
   "module": "./dist/v-float.es.js",
@@ -23,7 +21,7 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build tsconfig.build.json",
-    "lint": "biome check --apply --write",
+    "lint": "biome check --write",
     "test": "vitest --workspace=vitest.workspace.ts",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
@@ -74,12 +72,7 @@
     "vue-tsc": "^2.2.12"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "core-js",
-      "esbuild",
-      "msw"
-    ]
+    "onlyBuiltDependencies": ["@biomejs/biome", "core-js", "esbuild", "msw"]
   },
   "packageManager": "pnpm@10.6.0"
 }
