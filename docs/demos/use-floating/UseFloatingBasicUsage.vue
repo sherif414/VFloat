@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useTemplateRef } from "vue"
 import { offset, useFloating, useHover } from "v-float"
+import { useTemplateRef } from "vue"
 
 const anchorEl = useTemplateRef("anchorEl")
 const floatingEl = useTemplateRef("floatingEl")

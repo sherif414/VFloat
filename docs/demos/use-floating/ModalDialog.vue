@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, nextTick, watch } from "vue"
-import { useFloating, offset } from "v-float"
+import { offset, useFloating } from "v-float"
+import { nextTick, ref, watch } from "vue"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)

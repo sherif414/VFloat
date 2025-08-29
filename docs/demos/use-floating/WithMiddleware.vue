@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { arrow, flip, offset, shift, useArrow, useFloating } from "v-float"
+import { flip, offset, shift, useArrow, useFloating } from "v-float"
 import { ref, useTemplateRef } from "vue"
 
 const anchorEl = useTemplateRef("anchorEl")
@@ -13,7 +13,6 @@ const middlewares = [
     padding: 5,
   }),
   shift({ padding: 5 }),
-  arrow({ element: arrowEl, padding: 4 }),
 ]
 
 const context = useFloating(anchorEl, floatingEl, {
@@ -22,7 +21,7 @@ const context = useFloating(anchorEl, floatingEl, {
   middlewares,
 })
 
-const { arrowStyles } = useArrow(context)
+const { arrowStyles } = useArrow(arrowEl, context, { padding: 4 })
 </script>
 
 <template>

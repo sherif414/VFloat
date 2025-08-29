@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useClick, useFloating, useFocus, useEscapeKey } from "v-float"
+import { useClick, useEscapeKey, useFloating, useFocus } from "v-float"
 import { ref } from "vue"
 
 const anchorEl = ref<HTMLElement | null>(null)
@@ -10,7 +10,6 @@ const floating = useFloating(anchorEl, floatingEl)
 useClick(floating)
 useEscapeKey(floating, { onEscape: () => floating.setOpen(false) })
 useFocus(floating)
-
 </script>
 
 <template>

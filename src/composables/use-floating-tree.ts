@@ -1,4 +1,11 @@
-import type { FloatingContext } from "./use-floating"
+import type { Ref } from "vue"
+import type {
+  AnchorElement,
+  FloatingContext,
+  FloatingElement,
+  UseFloatingOptions,
+} from "./use-floating"
+import { useFloating } from "./use-floating"
 import { Tree, type TreeNode, type TreeOptions } from "./use-tree"
 
 //=======================================================================================
@@ -16,7 +23,11 @@ export interface UseFloatingTreeReturn {
   findNodeById: (nodeId: string) => TreeNode<FloatingContext> | null
   moveNode: (nodeId: string, newParentId: string | null) => boolean
   dispose: () => void
-  addNode: (data: FloatingContext, parentId?: string | null) => TreeNode<FloatingContext> | null
+  addNode: (
+    anchorEl: Ref<AnchorElement>,
+    floatingEl: Ref<FloatingElement>,
+    options?: UseFloatingOptions
+  ) => TreeNode<FloatingContext> | null
   removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") => boolean
   traverse: (
     mode: "dfs" | "bfs",
@@ -78,13 +89,24 @@ interface FilterNodesOptions {
 //=======================================================================================
 
 /**
- * Manages a hierarchical tree of floating elements.
+ * Creates and manages a hierarchical tree of floating elements.
+ *
+ * @param anchorEl - The anchor element for the root floating context
+ * @param floatingEl - The floating element for the root floating context
+ * @param options - Options for the root floating context
+ * @param treeOptions - Options for tree behavior
+ * @returns UseFloatingTreeReturn with tree management methods and root context
  */
 export function useFloatingTree(
-  rootNodeData: FloatingContext,
-  options: FloatingTreeOptions = {}
+  anchorEl: Ref<AnchorElement>,
+  floatingEl: Ref<FloatingElement>,
+  options: UseFloatingOptions = {},
+  treeOptions: FloatingTreeOptions = {}
 ): UseFloatingTreeReturn {
-  const tree = new Tree(rootNodeData, options)
+  const { parentId, ...floatingOptions } = options
+  const rootContext = useFloating(anchorEl, floatingEl, floatingOptions)
+
+  const tree = new Tree(rootContext, treeOptions)
 
   const forEach = (
     nodeId: string,
@@ -221,6 +243,38 @@ export function useFloatingTree(
     return topmostNode
   }
 
+  const addNode = (
+    anchorEl: Ref<AnchorElement>,
+    floatingEl: Ref<FloatingElement>,
+    options: UseFloatingOptions = {}
+  ): TreeNode<FloatingContext> | null => {
+    // Extract parentId from options
+    const { parentId, ...floatingOptions } = options
+
+    // Create floating context internally
+    const context = useFloating(anchorEl, floatingEl, floatingOptions)
+    return tree.addNode(context, parentId)
+  }
+
+  const findNodeById = (nodeId: string): TreeNode<FloatingContext> | null => {
+    return tree.findNodeById(nodeId)
+  }
+  const moveNode = (nodeId: string, newParentId: string | null): boolean => {
+    return tree.moveNode(nodeId, newParentId)
+  }
+  const dispose = (): void => {
+    return tree.dispose()
+  }
+  const removeNode = (nodeId: string, deleteStrategy?: "orphan" | "recursive"): boolean => {
+    return tree.removeNode(nodeId, deleteStrategy)
+  }
+  const traverse = (
+    mode: "dfs" | "bfs",
+    startNode?: TreeNode<FloatingContext>
+  ): TreeNode<FloatingContext>[] => {
+    return tree.traverse(mode, startNode)
+  }
+
   return {
     // Wrap original Tree methods in arrow functions to preserve context
     get nodeMap() {
@@ -229,14 +283,12 @@ export function useFloatingTree(
     get root() {
       return tree.root
     },
-    findNodeById: (nodeId: string) => tree.findNodeById(nodeId),
-    moveNode: (nodeId, newParentId) => tree.moveNode(nodeId, newParentId),
-    dispose: () => tree.dispose(),
-    addNode: (data: FloatingContext, parentId?: string | null) => tree.addNode(data, parentId),
-    removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") =>
-      tree.removeNode(nodeId, deleteStrategy),
-    traverse: (mode: "dfs" | "bfs", startNode?: TreeNode<FloatingContext>) =>
-      tree.traverse(mode, startNode),
+    findNodeById,
+    moveNode,
+    dispose,
+    addNode,
+    removeNode,
+    traverse,
     getAllOpenNodes,
     getTopmostOpenNode,
     forEach,

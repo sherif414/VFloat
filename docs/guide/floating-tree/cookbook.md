@@ -1,6 +1,6 @@
 # Floating Tree: Cookbook & Advanced Recipes
 
-This page provides a collection of advanced recipes and solutions for common, complex UI problems when working with the Floating Tree. Each recipe tackles a specific challenge, demonstrating the power and versatility of the V-Float API.
+This page provides a collection of advanced recipes and solutions for common, complex UI problems when working with the Floating Tree using the new streamlined API. Each recipe tackles a specific challenge, demonstrating the power and versatility of the V-Float API.
 
 ## Recipe: Creating Mutually Exclusive Submenus
 
@@ -14,49 +14,63 @@ Leverage the `tree.forEach` method with the `{ relationship: 'siblings-only' }` 
 
 ### Code Snippet
 
-```typescript
-import {
-  useFloatingTree,
-  useFloating,
-  type UseFloatingReturn,
-} from "@/composables/use-floating-tree"
-import { ref, watchEffect } from "vue"
+```vue
+<script setup lang="ts">
+import { useFloatingTree } from "@/composables/use-floating-tree"
+import { offset, flip, shift } from "@floating-ui/dom"
+import { ref } from "vue"
 
-interface MenuItemProps {
-  nodeId: string
-  parentId?: string
+interface MenuItem {
+  id: string
   label: string
+  children?: MenuItem[]
 }
 
-const Menu = ({ items }: { items: MenuItemProps[] }) => {
-  const tree = useFloatingTree()
-  const openSubMenuId = ref<string | null>(null)
+const props = defineProps<{ items: MenuItem[] }>()
 
-  const openSubMenu = (nodeToOpenId: string, parentId?: string) => {
-    openSubMenuId.value = nodeToOpenId
+// Create root menu tree
+const isRootOpen = ref(false)
+const rootAnchorEl = ref<HTMLElement | null>(null)
+const rootFloatingEl = ref<HTMLElement | null>(null)
+
+const tree = useFloatingTree(rootAnchorEl, rootFloatingEl, {
+  placement: "bottom-start",
+  open: isRootOpen,
+  middlewares: [offset(5), flip(), shift({ padding: 5 })],
+})
+
+const openSubmenuNodes = ref<Map<string, boolean>>(new Map())
+
+const createSubmenu = (item: MenuItem, parentNodeId: string) => {
+  const isOpen = ref(false)
+  const anchorEl = ref<HTMLElement | null>(null)
+  const floatingEl = ref<HTMLElement | null>(null)
+  
+  const node = tree.addNode(anchorEl, floatingEl, {
+    placement: "right-start",
+    open: isOpen,
+    middlewares: [offset(5), flip(), shift({ padding: 5 })],
+    parentId: parentNodeId,
+  })
+  
+  const openSubmenu = () => {
     // Close any other open sibling submenus
-    if (parentId) {
-      tree.forEach(
-        parentId,
-        (node) => {
-          if (node.nodeId !== nodeToOpenId) {
-            // Assuming you have a way to control the visibility of each node
-            // For example, if your node data includes a 'show' ref:
-            const floatingContext = node.context as UseFloatingReturn
-            if (floatingContext) {
-              // You would manage the visibility state here, e.g., setting a ref to false
-              // For this example, we'll just log it.
-              console.log(`Closing sibling submenu: ${node.nodeId}`)
-            }
-          }
-        },
-        { relationship: "siblings-only" }
-      )
-    }
+    tree.forEach(
+      parentNodeId,
+      (siblingNode) => {
+        if (siblingNode.id !== node.id) {
+          siblingNode.data.setOpen(false)
+        }
+      },
+      { relationship: "children-only" }
+    )
+    
+    isOpen.value = true
   }
-
-  // ... rest of your menu rendering logic
+  
+  return { node, isOpen, anchorEl, floatingEl, openSubmenu }
 }
+</script>
 ```
 
 ## Recipe: Intelligent Escape Key Dismissal
@@ -67,42 +81,62 @@ When a user presses the Escape key, only the topmost (most recently opened and a
 
 ### Solution
 
-Combine `tree.getAllOpenNodes()` with `tree.isTopmost()` to identify the correct node to dismiss. Attach a global keydown event listener.
+Use `tree.getTopmostOpenNode()` to identify the highest-level open node and close it. The new API provides a built-in method for this common pattern.
 
 ### Code Snippet
 
-```typescript
-import { useFloatingTree, type FloatingTreeContext } from "@/composables/use-floating-tree"
-import { onMounted, onUnmounted } from "vue"
+```vue
+<script setup lang="ts">
+import { useFloatingTree } from "@/composables/use-floating-tree"
+import { useEscapeKey } from "@/composables/interactions"
+import { ref, onUnmounted } from "vue"
 
-const tree = useFloatingTree()
+// Setup tree with root menu
+const isMenuOpen = ref(false)
+const menuAnchorEl = ref<HTMLElement | null>(null)
+const menuFloatingEl = ref<HTMLElement | null>(null)
 
+const tree = useFloatingTree(menuAnchorEl, menuFloatingEl, {
+  placement: "bottom-start",
+  open: isMenuOpen,
+  middlewares: [offset(5), flip()],
+})
+
+// Add submenus
+const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
+  placement: "right-start",
+  open: isSubmenuOpen,
+  parentId: tree.root.id,
+})
+
+// Intelligent escape key handling
+useEscapeKey({
+  onEscape() {
+    const topmostNode = tree.getTopmostOpenNode()
+    if (topmostNode) {
+      topmostNode.data.setOpen(false)
+    }
+  },
+})
+
+// Alternative manual approach for custom logic
 const handleEscapeKey = (event: KeyboardEvent) => {
   if (event.key === "Escape") {
     const openNodes = tree.getAllOpenNodes()
-    // Find the topmost open node
-    const topmostNode = openNodes.find((node) => tree.isTopmost(node.nodeId))
-
+    const topmostNode = tree.getTopmostOpenNode()
+    
     if (topmostNode) {
-      // Assuming your node's context or data contains a way to close it.
-      // For example, if it uses a `show` ref:
-      const context = topmostNode.context as FloatingTreeContext & { show: Ref<boolean> }
-      if (context && context.show) {
-        context.show.value = false
-      }
-      // Prevent default browser behavior (e.g., closing full-screen mode)
+      topmostNode.data.setOpen(false)
       event.preventDefault()
     }
   }
 }
 
-onMounted(() => {
-  window.addEventListener("keydown", handleEscapeKey)
-})
-
+// Cleanup
 onUnmounted(() => {
-  window.removeEventListener("keydown", handleEscapeKey)
+  tree.dispose()
 })
+</script>
 ```
 
 ## Recipe: Closing an Entire UI Branch
@@ -117,33 +151,98 @@ Use `tree.forEach` with the `{ relationship: 'self-and-descendants' }` option. T
 
 ### Code Snippet
 
-```typescript
-import { useFloatingTree, type FloatingTreeContext } from "@/composables/use-floating-tree"
+```vue
+<script setup lang="ts">
+import { useFloatingTree } from "@/composables/use-floating-tree"
 import { ref } from "vue"
 
-const tree = useFloatingTree()
-const showProfilePopover = ref(false)
+// Setup profile popover tree
+const isProfileOpen = ref(false)
+const profileAnchorEl = ref<HTMLElement | null>(null)
+const profileFloatingEl = ref<HTMLElement | null>(null)
 
-const closeProfilePopover = (nodeId: string) => {
+const tree = useFloatingTree(profileAnchorEl, profileFloatingEl, {
+  placement: "bottom-end",
+  open: isProfileOpen,
+  middlewares: [offset(8), flip()],
+})
+
+// Add settings dialog as child
+const isSettingsOpen = ref(false)
+const settingsAnchorEl = ref<HTMLElement | null>(null)
+const settingsFloatingEl = ref<HTMLElement | null>(null)
+
+const settingsNode = tree.addNode(settingsAnchorEl, settingsFloatingEl, {
+  placement: "right-start",
+  open: isSettingsOpen,
+  parentId: tree.root.id,
+})
+
+// Add logout confirmation as child of settings
+const isLogoutOpen = ref(false)
+const logoutAnchorEl = ref<HTMLElement | null>(null)
+const logoutFloatingEl = ref<HTMLElement | null>(null)
+
+const logoutNode = tree.addNode(logoutAnchorEl, logoutFloatingEl, {
+  placement: "bottom-start",
+  open: isLogoutOpen,
+  parentId: settingsNode.id,
+})
+
+const closeProfileBranch = () => {
   // Close the profile popover and all its descendants
   tree.forEach(
-    nodeId,
+    tree.root.id,
     (node) => {
-      // Assuming your node's context or data contains a way to close it.
-      // For example, if it uses a `show` ref:
-      const context = node.context as FloatingTreeContext & { show: Ref<boolean> }
-      if (context && context.show) {
-        context.show.value = false
-      }
+      node.data.setOpen(false)
     },
     { relationship: "self-and-descendants" }
   )
-
-  showProfilePopover.value = false // Also close the state controlling the main popover
 }
 
-// Usage example:
-// <button @click="closeProfilePopover(profilePopoverNodeId)">Close Profile</button>
+// Alternative: Close specific branch
+const closeSettingsBranch = () => {
+  tree.forEach(
+    settingsNode.id,
+    (node) => {
+      node.data.setOpen(false)
+    },
+    { relationship: "self-and-descendants" }
+  )
+}
+</script>
+
+<template>
+  <!-- Profile popover trigger -->
+  <button ref="profileAnchorEl" @click="isProfileOpen = !isProfileOpen">
+    Profile
+  </button>
+  
+  <!-- Profile popover -->
+  <div v-if="isProfileOpen" ref="profileFloatingEl" :style="tree.rootContext.floatingStyles">
+    <h3>Profile Menu</h3>
+    <button ref="settingsAnchorEl" @click="isSettingsOpen = !isSettingsOpen">
+      Settings
+    </button>
+    <button @click="closeProfileBranch">Close All</button>
+    
+    <!-- Settings dialog -->
+    <div v-if="isSettingsOpen" ref="settingsFloatingEl" :style="settingsNode.data.floatingStyles">
+      <h4>Settings</h4>
+      <button ref="logoutAnchorEl" @click="isLogoutOpen = !isLogoutOpen">
+        Logout
+      </button>
+      <button @click="closeSettingsBranch">Close Settings Branch</button>
+      
+      <!-- Logout confirmation -->
+      <div v-if="isLogoutOpen" ref="logoutFloatingEl" :style="logoutNode.data.floatingStyles">
+        <p>Are you sure you want to logout?</p>
+        <button @click="logout">Yes, Logout</button>
+        <button @click="isLogoutOpen = false">Cancel</button>
+      </div>
+    </div>
+  </div>
+</template>
 ```
 
 ## Recipe: Building Modal-like Behavior (Focus Trapping & Inert)
@@ -158,49 +257,135 @@ Use `tree.forEach` with `{ relationship: 'all-except-branch' }` to apply the `in
 
 ### Code Snippet
 
-```typescript
+```vue
+<script setup lang="ts">
 import { useFloatingTree } from "@/composables/use-floating-tree"
-import { onMounted, onUnmounted, watchEffect, ref } from "vue"
+import { useEscapeKey } from "@/composables/interactions"
+import { ref, watchEffect, onUnmounted } from "vue"
 
-const tree = useFloatingTree()
-const showModal = ref(false)
-const modalNodeId = ref<string | null>(null) // Store the nodeId of the modal
+// Setup application with multiple floating elements
+const isMenuOpen = ref(false)
+const menuAnchorEl = ref<HTMLElement | null>(null)
+const menuFloatingEl = ref<HTMLElement | null>(null)
+
+const menuTree = useFloatingTree(menuAnchorEl, menuFloatingEl, {
+  placement: "bottom-start",
+  open: isMenuOpen,
+})
+
+// Setup modal dialog
+const isModalOpen = ref(false)
+const modalAnchorEl = ref<HTMLElement | null>(null)
+const modalFloatingEl = ref<HTMLElement | null>(null)
+
+const modalTree = useFloatingTree(modalAnchorEl, modalFloatingEl, {
+  placement: "center",
+  open: isModalOpen,
+  strategy: "fixed",
+})
+
+// Track affected elements for cleanup
+const inertElements = ref<Set<HTMLElement>>(new Set())
 
 watchEffect(() => {
-  if (showModal.value && modalNodeId.value) {
-    // Apply inert to everything except the modal's branch
-    tree.forEach(
-      modalNodeId.value,
-      (node) => {
-        // This callback is for the nodes *not* in the target relationship.
-        // We apply inert to their reference and floating elements.
-        if (node.context.reference && node.context.reference.value) {
-          node.context.reference.value.setAttribute("inert", "")
-        }
-        if (node.context.floating && node.context.floating.value) {
-          node.context.floating.value.setAttribute("inert", "")
-        }
-      },
-      { relationship: "all-except-branch" }
-    )
-  } else if (!showModal.value && modalNodeId.value) {
-    // Remove inert from everything when modal closes
-    // You might need to iterate over all nodes or keep track of affected elements
-    // For simplicity, this example assumes you can re-enable everything.
-    // A more robust solution might store the elements that were made inert.
-    tree.getAllNodes().forEach((node) => {
-      if (node.context.reference && node.context.reference.value) {
-        node.context.reference.value.removeAttribute("inert")
-      }
-      if (node.context.floating && node.context.floating.value) {
-        node.context.floating.value.removeAttribute("inert")
+  if (isModalOpen.value) {
+    // Apply inert to all elements except the modal
+    const allElements = document.querySelectorAll('*')
+    
+    allElements.forEach((element) => {
+      const htmlElement = element as HTMLElement
+      
+      // Skip if element is part of modal tree
+      const isModalElement = modalFloatingEl.value?.contains(htmlElement) ||
+                           modalAnchorEl.value?.contains(htmlElement)
+      
+      if (!isModalElement && htmlElement !== document.body && htmlElement !== document.documentElement) {
+        htmlElement.setAttribute('inert', '')
+        inertElements.value.add(htmlElement)
       }
     })
+  } else {
+    // Remove inert from all affected elements
+    inertElements.value.forEach((element) => {
+      element.removeAttribute('inert')
+    })
+    inertElements.value.clear()
   }
 })
 
-// Remember to set modalNodeId when you add the modal to the tree:
-// tree.addNode(modalContext); modalNodeId.value = modalContext.nodeId;
+// Enhanced escape key handling for modal priority
+useEscapeKey({
+  onEscape() {
+    if (isModalOpen.value) {
+      isModalOpen.value = false
+    } else {
+      // Handle other floating elements
+      const topmostNode = menuTree.getTopmostOpenNode()
+      if (topmostNode) {
+        topmostNode.data.setOpen(false)
+      }
+    }
+  },
+})
+
+// Cleanup
+onUnmounted(() => {
+  menuTree.dispose()
+  modalTree.dispose()
+  inertElements.value.forEach((element) => {
+    element.removeAttribute('inert')
+  })
+})
+</script>
+
+<template>
+  <!-- Regular menu -->
+  <button ref="menuAnchorEl" @click="isMenuOpen = !isMenuOpen">
+    Open Menu
+  </button>
+  
+  <div v-if="isMenuOpen" ref="menuFloatingEl" :style="menuTree.rootContext.floatingStyles">
+    <div>Regular Menu Content</div>
+    <button ref="modalAnchorEl" @click="isModalOpen = true">
+      Open Modal
+    </button>
+  </div>
+  
+  <!-- Modal dialog -->
+  <div v-if="isModalOpen" ref="modalFloatingEl" :style="modalTree.rootContext.floatingStyles">
+    <div class="modal-backdrop">
+      <div class="modal-content">
+        <h2>Critical Dialog</h2>
+        <p>This modal blocks interaction with everything else.</p>
+        <button @click="isModalOpen = false">Close Modal</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  width: 90vw;
+}
+</style>
 ```
 
-This recipe demonstrates a powerful pattern, but implementing full focus trapping also involves careful management of `tabindex` and programmatic focus shifts, which are beyond the scope of this particular snippet.
+This recipe demonstrates a powerful pattern for creating true modal experiences. The `inert` attribute ensures that elements behind the modal are completely inaccessible to keyboard navigation and screen readers, providing a proper modal experience that meets accessibility standards.

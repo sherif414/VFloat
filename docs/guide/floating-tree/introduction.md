@@ -14,16 +14,6 @@ These challenges lead to brittle code, a poor user experience, and a lot of deve
 
 ## The Solution: A Hierarchical Approach
 
-<div style="text-align: center;">
-
-```mmd
-graph TD
-    A[Root] --> B(File Menu Node)
-    B --> C(Export Submenu Node)
-```
-
-</div>
-
 The Floating Tree provides a robust, hierarchical solution to manage all your floating elements. It organizes them into a tree-like structure, mirroring their visual and logical relationships. This allows you to orchestrate complex interactions with elegant, declarative code.
 
 ### Core Concepts Explained Simply

@@ -548,7 +548,7 @@ describe("useFloating", () => {
         open: ref(true), // autoUpdate is true by default
       })
 
-      const updateSpy = vi.spyOn(context, 'update')
+      const updateSpy = vi.spyOn(context, "update")
 
       // Simulate window resize
       const resizeEvent = new Event("resize")
@@ -577,4 +577,3 @@ function flushPromises() {
     setTimeout(resolve, 0)
   })
 }
-

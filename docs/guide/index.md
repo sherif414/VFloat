@@ -151,6 +151,4 @@ You have successfully created your first floating element with V-Float. To conti
 - [**Core Concepts**](./concepts.md)
 - [**Floating Tree**](./floating-tree/floating-tree-introduction.md)
 - [**Interactions**](./interactions.md)
-- [**Composables**](/composables/): See the full list of available composables for advanced positioning and middleware.
-- [**Examples**](/examples/): Review complete implementations of dropdowns, popovers, and other common patterns.
 - [**V-Float on GitHub**](https://github.com/sherif414/VFloat): Report issues or contribute to the project.

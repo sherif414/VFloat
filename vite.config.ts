@@ -1,8 +1,8 @@
 import { URL, fileURLToPath } from "node:url"
 import vue from "@vitejs/plugin-vue"
+import unocss from "unocss/vite"
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
-import unocss from "unocss/vite"
 
 export default defineConfig({
   plugins: [

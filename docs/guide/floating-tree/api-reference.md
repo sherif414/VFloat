@@ -1,27 +1,65 @@
 # useFloatingTree()
 
-Creates a floating tree instance to manage hierarchical UI elements like popovers, tooltips, and menus.
+Creates and manages a hierarchical tree of floating elements.
 
 - **Type:**
 
   ```ts
   function useFloatingTree(
-    rootNodeData: FloatingContext,
-    options?: FloatingTreeOptions
+    anchorEl: Ref<AnchorElement>,
+    floatingEl: Ref<FloatingElement>,
+    options?: UseFloatingOptions,
+    treeOptions?: FloatingTreeOptions
   ): UseFloatingTreeReturn
   ```
 
 - **Details:**
 
-  Creates a new floating tree instance to manage hierarchical UI elements. The root node anchors your entire floating tree and must include an `id` and reactive `open` state. Options control tree behavior like deletion strategy.
+  Creates a new floating tree instance that internally creates the root floating context using the provided anchor and floating elements. This eliminates the need for separate `useFloating` calls when building hierarchical structures. The tree provides methods to add child nodes with automatic context creation.
 
 - **Example:**
 
   ```ts
-  const tree = useFloatingTree({ id: "app-root", open: ref(true) }, { deleteStrategy: "recursive" })
+  const tree = useFloatingTree(anchorEl, floatingEl, {
+    placement: "bottom-start",
+    open: isOpen,
+    middlewares: [offset(5), flip(), shift({ padding: 5 })]
+  }, { deleteStrategy: "recursive" })
+  
+  // Access the root context if needed
+  const { floatingStyles } = tree.rootContext
   ```
 
 **See also:** [Guide - Managing Floating UI Hierarchies](/guide/floating-ui/hierarchies)
+
+## tree.rootContext
+
+Access to the root floating context created by useFloatingTree.
+
+- **Type:**
+
+  ```ts
+  readonly rootContext: FloatingContext
+  ```
+
+- **Details:**
+
+  Provides direct access to the root floating context that was automatically created when initializing the tree. This context contains the positioning data, styles, and methods for the root floating element.
+
+- **Example:**
+
+  ```ts
+  const tree = useFloatingTree(anchorEl, floatingEl, { placement: "bottom" })
+  
+  // Access root floating styles
+  const { floatingStyles } = tree.rootContext
+  
+  // Manually update root position
+  tree.rootContext.update()
+  
+  // Check if root is open
+  console.log(tree.rootContext.open.value)
+  ```
 
 ## tree.nodeMap
 
@@ -68,28 +106,44 @@ Reference to the root TreeNode instance.
 
 ## tree.addNode()
 
-Adds a new floating element to the tree.
+Adds a new floating element to the tree by creating its context internally.
 
 - **Type:**
 
   ```ts
-  addNode(data: FloatingContext, parentId?: string | null): TreeNode<FloatingContext> | null
+  addNode(
+    anchorEl: Ref<AnchorElement>,
+    floatingEl: Ref<FloatingElement>,
+    options?: UseFloatingOptions
+  ): TreeNode<FloatingContext> | null
   ```
 
 - **Details:**
 
-  Adds a new floating element to the tree. If `parentId` is `null` or `undefined`, the node becomes a child of the root. Returns the created node or `null` if the parent doesn't exist.
+  Adds a new floating element to the tree by internally creating a floating context using the provided anchor and floating elements. The `parentId` can be specified in the options to determine the parent node. If `parentId` is not provided, the node becomes a child of the root. Returns the created node or `null` if the parent doesn't exist.
 
 - **Example:**
 
   ```ts
-  // Add as child of root
-  const menuData = useFloating(...)
-  const menuNode = tree.addNode(menuData)
+  const tree = useFloatingTree(rootAnchorEl, rootFloatingEl)
+  
+  // Add as child of root (no parentId specified)
+  const menuNode = tree.addNode(menuAnchorEl, menuFloatingEl, {
+    placement: "bottom-start",
+    open: isMenuOpen,
+    middlewares: [offset(5), flip()]
+  })
 
-  // Add as child of specific parent
-  const submenuData = useFloating(...)
-  const submenuNode = tree.addNode(submenuData, menuNode.id)
+  // Add as child of specific parent using parentId
+  const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
+    placement: "right-start",
+    open: isSubmenuOpen,
+    middlewares: [offset(5), shift({ padding: 5 })],
+    parentId: menuNode.id
+  })
+  
+  // Access the floating context of the created node
+  const { floatingStyles } = submenuNode.data
   ```
 
 ## tree.removeNode()

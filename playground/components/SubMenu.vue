@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UseFloatingTreeReturn } from "@/composables"
-import { useClick, useFloating, useHover } from "@/composables"
+import { useClick, useHover } from "@/composables"
 import { useId } from "@/utils"
 import { flip, offset, shift } from "@floating-ui/dom"
 import { inject, onUnmounted, provide, ref } from "vue"
@@ -25,20 +25,19 @@ if (!tree || !parentMenuId) {
   )
 }
 
-// Floating logic for this submenu's panel
-const context = useFloating(anchorEl, floatingEl, {
+// Use new addNode API with parentId in options
+const node = tree.addNode(anchorEl, floatingEl, {
   placement: "right-start",
   open: isOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-})
-const node = tree?.addNode(context, parentMenuId)!
+  parentId: parentMenuId,
+})!
 
 onUnmounted(() => {
   tree.removeNode(node.id)
 })
 
 // Provide context for nested submenus/items
-provide("parentMenuId", parentMenuId) // Pass down the original parent ID
 provide("currentMenuId", node.id) // This submenu is now the current menu for its children
 
 // useHover(context, { safePolygon: true })

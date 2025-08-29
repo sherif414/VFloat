@@ -1,16 +1,16 @@
+import type { FloatingContext } from "@/composables"
+import type { VirtualElement } from "@floating-ui/dom"
 import type { PointerType } from "@vueuse/core"
 import {
-  computed,
   type MaybeRefOrGetter,
+  type Ref,
+  computed,
   onWatcherCleanup,
   readonly,
-  type Ref,
   ref,
   toValue,
   watchEffect,
 } from "vue"
-import type { FloatingContext } from "@/composables"
-import type { VirtualElement } from "@floating-ui/dom"
 import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================

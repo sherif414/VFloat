@@ -2,8 +2,8 @@ import type { FloatingContext } from "@/composables"
 import type { TreeNode } from "@/composables/use-tree"
 import { useEventListener } from "@vueuse/core"
 import {
-  computed,
   type MaybeRefOrGetter,
+  computed,
   onMounted,
   onScopeDispose,
   onWatcherCleanup,
@@ -11,13 +11,13 @@ import {
   watchPostEffect,
 } from "vue"
 import {
-  isTreeNode,
-  getContextFromParameter,
-  isTargetWithinElement,
   findDescendantContainingTarget,
-  isTypeableElement,
+  getContextFromParameter,
   isMac,
   isSafari,
+  isTargetWithinElement,
+  isTreeNode,
+  isTypeableElement,
   matchesFocusVisible,
 } from "./utils"
 

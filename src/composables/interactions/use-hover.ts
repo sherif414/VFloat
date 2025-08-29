@@ -1,3 +1,4 @@
+import type { TreeNode } from "@/composables/use-tree"
 import type { Fn } from "@/types"
 import type { Coords } from "@floating-ui/dom"
 import {
@@ -8,15 +9,14 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
-import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
-import type { TreeNode } from "@/composables/use-tree"
-import { safePolygon, type SafePolygonOptions } from "./polygon"
+import type { AnchorElement, FloatingContext, FloatingElement } from "../use-floating"
+import { type SafePolygonOptions, safePolygon } from "./polygon"
 import {
-  isTreeNode,
-  getContextFromParameter,
-  isTargetWithinElement,
   findDescendantContainingTarget,
+  getContextFromParameter,
   isMouseLikePointerType,
+  isTargetWithinElement,
+  isTreeNode,
 } from "./utils"
 
 //=======================================================================================

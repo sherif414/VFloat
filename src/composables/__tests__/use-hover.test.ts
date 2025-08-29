@@ -1,9 +1,9 @@
+import { type UseHoverOptions, useHover } from "@/composables"
+import type { Strategy } from "@floating-ui/dom"
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { effectScope, nextTick, type Ref, ref, computed, type ComputedRef } from "vue"
-import { useHover, type UseHoverOptions } from "@/composables"
+import { type ComputedRef, type Ref, computed, effectScope, nextTick, ref } from "vue"
 import type { FloatingStyles } from "../use-floating"
-import type { Strategy } from "@floating-ui/dom"
 
 // Define a minimal FloatingContext type for the tests
 interface FloatingContext {

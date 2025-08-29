@@ -56,26 +56,23 @@ const tooltipContext = useFloating(tooltipAnchorEl, tooltipFloatingEl, {
   middlewares: [offset(8), flip(), shift({ padding: 10 })],
 })
 
-// Tree-aware demo contexts
-const treeRootContext = useFloating(treeRootAnchorEl, treeRootFloatingEl, {
+// Tree-aware demo contexts using new API
+const floatingTree = useFloatingTree(treeRootAnchorEl, treeRootFloatingEl, {
   placement: "bottom-start",
   middlewares: [offset(5), flip(), shift({ padding: 10 })],
 })
 
-const treeChildContext = useFloating(treeChildAnchorEl, treeChildFloatingEl, {
+const childNode = floatingTree.addNode(treeChildAnchorEl, treeChildFloatingEl, {
   placement: "right-start",
   middlewares: [offset(5), flip(), shift({ padding: 10 })],
-})
+  parentId: floatingTree.root.id,
+})!
 
-const treeGrandChildContext = useFloating(treeGrandChildAnchorEl, treeGrandChildFloatingEl, {
+const grandChildNode = floatingTree.addNode(treeGrandChildAnchorEl, treeGrandChildFloatingEl, {
   placement: "right-start",
   middlewares: [offset(5), flip(), shift({ padding: 10 })],
-})
-
-// Set up floating tree
-const floatingTree = useFloatingTree(treeRootContext)
-const childNode = floatingTree.addNode(treeChildContext, floatingTree.root.id)!
-const grandChildNode = floatingTree.addNode(treeGrandChildContext, childNode.id)!
+  parentId: childNode.id,
+})!
 
 onUnmounted(() => {
   floatingTree.dispose()

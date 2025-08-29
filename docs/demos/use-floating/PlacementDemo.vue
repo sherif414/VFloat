@@ -1,29 +1,45 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useFloating, offset } from 'v-float'
+import { offset, useFloating } from "v-float"
+import { computed, ref } from "vue"
 
-type Placement = 
-  | 'top' | 'top-start' | 'top-end'
-  | 'right' | 'right-start' | 'right-end'
-  | 'bottom' | 'bottom-start' | 'bottom-end'
-  | 'left' | 'left-start' | 'left-end'
+type Placement =
+  | "top"
+  | "top-start"
+  | "top-end"
+  | "right"
+  | "right-start"
+  | "right-end"
+  | "bottom"
+  | "bottom-start"
+  | "bottom-end"
+  | "left"
+  | "left-start"
+  | "left-end"
 
 const anchorEl = ref<HTMLElement>()
 const floatingEl = ref<HTMLElement>()
 const isOpen = ref(true)
-const currentPlacement = ref<Placement>('top')
+const currentPlacement = ref<Placement>("top")
 
 const placements: Placement[] = [
-  'top', 'top-start', 'top-end',
-  'right', 'right-start', 'right-end',
-  'bottom', 'bottom-start', 'bottom-end',
-  'left', 'left-start', 'left-end'
+  "top",
+  "top-start",
+  "top-end",
+  "right",
+  "right-start",
+  "right-end",
+  "bottom",
+  "bottom-start",
+  "bottom-end",
+  "left",
+  "left-start",
+  "left-end",
 ]
 
 const { floatingStyles, update } = useFloating(anchorEl, floatingEl, {
   placement: currentPlacement,
   open: isOpen,
-  middlewares: [offset(10)]
+  middlewares: [offset(10)],
 })
 
 function selectPlacement(placement: Placement) {

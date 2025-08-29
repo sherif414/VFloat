@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
 import { offset } from "@floating-ui/dom"
 import { useFloating, useHover } from "v-float"
+import { computed, ref, watch } from "vue"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)

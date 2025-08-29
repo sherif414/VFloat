@@ -1,6 +1,6 @@
 /**
  * @fileoverview Event handling and timing utilities
- * 
+ *
  * Provides utilities for event handling, timing operations,
  * and DOM element containment checks.
  */

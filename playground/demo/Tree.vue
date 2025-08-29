@@ -2,16 +2,24 @@
 import { ref, computed, watch, shallowRef } from "vue"
 import { useFloatingTree } from "@/composables/use-floating-tree"
 
-const tree = useFloatingTree({} as any)
+// Mock elements for demonstration
+const mockAnchor = ref<HTMLElement | null>(null)
+const mockFloating = ref<HTMLElement | null>(null)
 
-const nodeParent1 = tree.addNode({} as any)
-const nodeParent2 = tree.addNode({} as any)
+// Create tree with new API - no need for separate useFloating call
+const tree = useFloatingTree(mockAnchor, mockFloating, {
+  placement: "bottom-start"
+})
 
-const nodeChild1 = tree.addNode({} as any, nodeParent1.id)
-const nodeChild2 = tree.addNode({} as any, nodeParent1.id)
+// Add nodes using new addNode API with element refs
+const nodeParent1 = tree.addNode(mockAnchor, mockFloating, {})
+const nodeParent2 = tree.addNode(mockAnchor, mockFloating, {})
 
-const nodeChild3 = tree.addNode({} as any, nodeParent2.id)
-const nodeChild4 = tree.addNode({} as any, nodeParent2.id)
+const nodeChild1 = tree.addNode(mockAnchor, mockFloating, { parentId: nodeParent1?.id })
+const nodeChild2 = tree.addNode(mockAnchor, mockFloating, { parentId: nodeParent1?.id })
+
+const nodeChild3 = tree.addNode(mockAnchor, mockFloating, { parentId: nodeParent2?.id })
+const nodeChild4 = tree.addNode(mockAnchor, mockFloating, { parentId: nodeParent2?.id })
 
 console.log("dfs: ", tree.traverse("dfs"))
 console.log("bfs: ", tree.traverse("bfs"))

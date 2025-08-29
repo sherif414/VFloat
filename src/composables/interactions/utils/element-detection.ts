@@ -1,11 +1,11 @@
 /**
  * @fileoverview Element detection and input type utilities
- * 
+ *
  * Provides utilities for pointer type detection, element type checking,
  * input validation, and UI interaction logic.
  */
 
-import type { VirtualElement } from '@floating-ui/dom'
+import type { VirtualElement } from "@floating-ui/dom"
 
 /**
  * Checks if the pointer type is mouse-like (mouse or pen).

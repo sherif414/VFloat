@@ -18,4 +18,4 @@
   },
   "include": ["src/**/*.ts", "src/**/*.vue"],
   "exclude": ["src/**/__tests__/*"]
-} 
+}

@@ -178,84 +178,130 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 
 ### Floating Trees
 
-For nested floating elements like submenus, you need to manage the tree structure explicitly. `useFloating` creates
-contexts for individual floating elements, and `useFloatingTree` manages their hierarchical relationship.
+For nested floating elements like submenus, use `useFloatingTree` to manage hierarchical structures with a streamlined API that eliminates redundant `useFloating` calls.
 
-Here's how you can set up a parent menu with a submenu:
+**Clear Separation of Concerns:**
+
+- Use `useFloating` for isolated floating elements
+- Use `useFloatingTree` for hierarchical structures
+
+Here's how you can set up a parent menu with a submenu using the new API:
 
 ```vue
-
 <script setup lang="ts">
-  import { useTemplateRef } from "vue";
-  import { useFloating, useFloatingTree, offset } from "v-float";
+import { useTemplateRef, ref } from "vue"
+import { useFloatingTree, useHover, useClick, offset, flip, shift } from "v-float"
 
-  const parentTriggerEl = useTemplateRef("parentTriggerRef");
-  const parentMenuEl = useTemplateRef("parentMenuRef");
+const parentTriggerEl = useTemplateRef("parentTriggerRef")
+const parentMenuEl = useTemplateRef("parentMenuRef")
+const isParentOpen = ref(false)
 
-  const submenuTriggerEl = useTemplateRef("submenuTriggerRef");
-  const submenuEl = useTemplateRef("submenuRef");
+const submenuTriggerEl = useTemplateRef("submenuTriggerRef")
+const submenuEl = useTemplateRef("submenuRef")
+const isSubmenuOpen = ref(false)
 
-  // 1. Create the floating context for the parent menu.
-  const parentContext = useFloating(parentTriggerEl, parentMenuEl, {
-    placement: "bottom-start",
-    middlewares: [offset(4)],
-  });
+// 1. Create the floating tree with root context automatically
+const tree = useFloatingTree(parentTriggerEl, parentMenuEl, {
+  placement: "bottom-start",
+  open: isParentOpen,
+  middlewares: [offset(4), flip(), shift({ padding: 8 })],
+})
 
-  // 2. Create the floating tree, using the parent's context as the data for the root node.
-  //    useFloatingTree will create a root TreeNode whose `data` is parentContext.
-  const tree = useFloatingTree(parentContext);
+// 2. Add submenu node - no separate useFloating call needed!
+const submenuNode = tree.addNode(submenuTriggerEl, submenuEl, {
+  placement: "right-start",
+  open: isSubmenuOpen,
+  middlewares: [offset(4), flip(), shift({ padding: 8 })],
+  parentId: tree.root.id, // Link to parent using parentId in options
+})
 
-  // 3. Create the floating context for the submenu.
-  const submenuContext = useFloating(submenuTriggerEl, submenuEl, {
-    placement: "right-start",
-    middlewares: [offset(4)],
-  });
+// 3. Add interactions
+useClick(tree.root, { outsideClick: true })
+useHover(submenuNode, { delay: { open: 100, close: 300 } })
 
-  // 4. Add the submenu to the tree as a child of the parent menu.
-  //    tree.root refers to the TreeNode associated with parentContext.
-  const submenuNode = tree.addNode(submenuContext, tree.root.id);
-  // submenuNode is the TreeNode for the submenu. You can store it if needed.
+// Access floating styles from the contexts
+const { floatingStyles: parentStyles } = tree.rootContext
+const { floatingStyles: submenuStyles } = submenuNode.data
 </script>
 
 <template>
   <!-- Parent Menu Trigger -->
-  <button ref="parentTriggerEl">Open Menu</button>
+  <button ref="parentTriggerEl" @click="isParentOpen = !isParentOpen">Open Menu</button>
 
-  <!-- Parent Menu Floating Element -->
-  <div
-    v-if="parentContext.open.value"
-    ref="parentMenuEl"
-    :style="parentContext.floatingStyles.value"
-    style="background-color: #f0f0f0; border: 1px solid #ccc; padding: 5px; z-index: 1000;"
-  >
-    <div>Parent Menu Item 1</div>
+  <!-- Parent Menu -->
+  <div v-if="isParentOpen" ref="parentMenuEl" :style="parentStyles" class="menu">
+    <div class="menu-item">Menu Item 1</div>
 
-    <!-- Submenu Trigger (an item within the parent menu) -->
+    <!-- Submenu Trigger -->
     <div
       ref="submenuTriggerEl"
-      style="padding: 5px; cursor: pointer; hover: background-color: #e0e0e0;"
-      @mouseenter="() => submenuContext?.setOpen(true)" @mouseleave="() => submenuContext?.setOpen(false)"
+      class="menu-item menu-item--submenu"
+      @click="isSubmenuOpen = !isSubmenuOpen"
     >
-    Parent Menu Item 2 (Hover for Submenu)
+      Menu Item 2 (Has Submenu)
 
-    <!-- Submenu Floating Element -->
-    <div
-      v-if="submenuContext.open.value"
-      ref="submenuEl"
-      :style="submenuContext.floatingStyles.value"
-      style="background-color: #e0e0e0; border: 1px solid #bbb; padding: 5px; margin-left: 10px; z-index: 1010;"
-    >
-      <div>Submenu Item A</div>
-      <div>Submenu Item B</div>
+      <!-- Submenu -->
+      <div v-if="isSubmenuOpen" ref="submenuEl" :style="submenuStyles" class="menu submenu">
+        <div class="menu-item">Submenu Item A</div>
+        <div class="menu-item">Submenu Item B</div>
+        <div class="menu-item">Submenu Item C</div>
+      </div>
     </div>
+
+    <div class="menu-item">Menu Item 3</div>
   </div>
 </template>
+
+<style scoped>
+.menu {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  z-index: 1000;
+}
+
+.submenu {
+  margin-left: 8px;
+  z-index: 1010;
+}
+
+.menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item--submenu {
+  position: relative;
+}
+</style>
 ```
 
-This example demonstrates the manual process of creating contexts and then linking them within the tree. For more
-complex scenarios, you would integrate interaction composables (`useClick`, `useHover`, `useEscapeKey`) to manage the
-`open` state of each context, potentially using tree methods like `tree.isTopmost()` or `tree.forEach()` to coordinate
-behavior (e.g., closing child menus when a parent closes).
+**API Benefits:**
+
+```ts
+// Before: Required separate useFloating calls
+const parentContext = useFloating(parentEl, parentFloating, options)
+const tree = useFloatingTree(parentContext)
+const childContext = useFloating(childEl, childFloating, childOptions)
+const childNode = tree.addNode(childContext, parentContext.nodeId)
+
+// After: Streamlined API with internal context creation
+const tree = useFloatingTree(parentEl, parentFloating, options)
+const childNode = tree.addNode(childEl, childFloating, {
+  ...childOptions,
+  parentId: tree.root.id,
+})
+```
+
+This approach eliminates redundant calls and provides a clearer separation between isolated floating elements (`useFloating`) and hierarchical structures (`useFloatingTree`).
 
 ## TypeScript Support
 
@@ -275,6 +321,65 @@ For complete documentation with interactive examples, visit the [V-Float Documen
 
 Contributions are welcome! Please read our contributing guidelines and submit pull requests to
 our [GitHub repository](https://github.com/sherif414/VFloat).
+
+## Development
+
+### Prerequisites
+
+- Node.js (18+)
+- pnpm (recommended package manager)
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/sherif414/VFloat.git
+cd VFloat
+
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm dev
+
+# Run tests
+pnpm test:unit
+
+# Build for production
+pnpm build
+```
+
+### Release Process
+
+This project uses [release-it](https://github.com/release-it/release-it) for automated releases:
+
+```bash
+# Dry run to see what would happen
+pnpm run release:dry
+
+# Release with automatic version bump (interactive)
+pnpm run release
+
+# Release specific version types
+pnpm run release:patch  # 0.2.1 -> 0.2.2
+pnpm run release:minor  # 0.2.1 -> 0.3.0
+pnpm run release:major  # 0.2.1 -> 1.0.0
+```
+
+**Release Features:**
+
+- Automatic version bumping based on conventional commits
+- Changelog generation from commit messages
+- Git tagging and GitHub releases
+- NPM publishing (when configured)
+- Pre-release validation (linting, type checking, tests)
+
+**Before releasing:**
+
+1. Ensure all changes are committed
+2. Working directory is clean
+3. You're on the main branch
+4. All tests pass
 
 ## License
 

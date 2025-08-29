@@ -1,12 +1,12 @@
 /**
  * @fileoverview Tree-aware context utilities for floating UI composables
- * 
+ *
  * Provides utilities for handling tree-aware floating element contexts,
  * parameter extraction, and hierarchical element detection.
  */
 
-import type { FloatingContext } from '@/composables'
-import type { TreeNode } from '@/composables/use-tree'
+import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-tree"
 
 /**
  * Type guard to determine if the context parameter is a TreeNode.

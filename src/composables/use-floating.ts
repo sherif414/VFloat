@@ -10,13 +10,13 @@ import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-u
 import type { MaybeRefOrGetter, Ref } from "vue"
 import {
   computed,
+  nextTick,
   onScopeDispose,
   onWatcherCleanup,
   ref,
   shallowRef,
   toValue,
   watch,
-  nextTick,
 } from "vue"
 import { arrow } from "./middlewares/arrow"
 
@@ -107,6 +107,13 @@ export interface UseFloatingOptions {
    * @default false
    */
   open?: Ref<boolean>
+
+  /**
+   * Parent node ID for tree hierarchy.
+   * Used when adding nodes to floating trees.
+   * @default null
+   */
+  parentId?: string | null
 }
 
 /**

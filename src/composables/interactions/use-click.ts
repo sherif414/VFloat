@@ -1,22 +1,19 @@
-import type { PointerType } from "@vueuse/core"
-import { useEventListener } from "@vueuse/core"
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables"
 import type { TreeNode } from "@/composables/use-tree"
-import type { VirtualElement } from "@floating-ui/dom"
+import type { PointerType } from "@vueuse/core"
+import { useEventListener } from "@vueuse/core"
+import { type MaybeRefOrGetter, computed, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import {
-  isTreeNode,
-  getContextFromParameter,
-  isTargetWithinElement,
   findDescendantContainingTarget,
-  isMouseLikePointerType,
-  isTypeableElement,
+  getContextFromParameter,
   isButtonTarget,
-  isSpaceIgnored,
-  isHTMLElement,
-  isVirtualElement,
-  isEventTargetWithin,
   isClickOnScrollbar,
+  isEventTargetWithin,
+  isHTMLElement,
+  isMouseLikePointerType,
+  isSpaceIgnored,
+  isTargetWithinElement,
+  isVirtualElement,
 } from "./utils"
 
 //=======================================================================================

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useClick, useFloatingTree, type UseFloatingTreeReturn, useEscapeKey } from "@/composables"
-import { useFloating } from "@/composables" // Assuming v-float exports these
 import { flip, shift, offset } from "@floating-ui/dom"
 import { onUnmounted, provide, ref } from "vue"
 
@@ -14,19 +13,16 @@ const isOpen = ref(false)
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
-// 1. Floating logic for the main menu panel
-const context = useFloating(anchorEl, floatingEl, {
+// 1. Direct tree creation with new API - no separate useFloating call needed
+const tree = useFloatingTree(anchorEl, floatingEl, {
   placement: "bottom-start",
   open: isOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-})
+}, { deleteStrategy: "recursive" })
 
-// 2. Initialize useFloatingTree
-// The tree's root node data is the FloatingContext of this Menu.vue instance.
-const tree = useFloatingTree(context, { deleteStrategy: "recursive" })
+// Provide tree reference for child components (instead of separate context)
 provide<UseFloatingTreeReturn>("floatingTree", tree)
-provide<string | null>("parentMenuId", null) // Root menu has no parent
-provide<string>("currentMenuId", tree.root.id) // Provide its own ID
+provide<string>("currentMenuId", tree.root.id) // Root menu ID
 
 useEscapeKey({
   onEscape() {

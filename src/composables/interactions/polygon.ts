@@ -1,13 +1,8 @@
-import { isHTMLElement } from "@/utils"
-import type { FloatingContext, FloatingElement, AnchorElement } from "../use-floating"
 import type { TreeNode } from "@/composables/use-tree"
+import { isHTMLElement } from "@/utils"
 import { computed } from "vue"
-import {
-  contains,
-  getTarget,
-  getCurrentTime,
-  clearTimeoutIfSet,
-} from "./utils"
+import type { AnchorElement, FloatingContext, FloatingElement } from "../use-floating"
+import { clearTimeoutIfSet, contains, getCurrentTime, getTarget } from "./utils"
 
 type Point = [number, number]
 type Polygon = Point[]

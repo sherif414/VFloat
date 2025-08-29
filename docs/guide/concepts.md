@@ -26,12 +26,12 @@ import { useFloating } from "v-float"
 const anchorEl = ref(null) // Reference to the anchor element
 const floatingEl = ref(null) // Reference to the floating element
 
-const floating = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl)
 </script>
 
 <template>
   <button ref="anchorEl">Trigger</button>
-  <div ref="floatingEl" :style="floating.floatingStyles">Floating content</div>
+  <div ref="floatingEl" :style="context.floatingStyles.value">Floating content</div>
 </template>
 ```
 
@@ -48,29 +48,33 @@ const floating = useFloating(anchorEl, floatingEl, {
 })
 ```
 
-## Arrow Middleware
+## Arrow Positioning
 
-V-Float provides an arrow middleware to position an arrow element pointing to the anchor element. This is commonly used for tooltips and popovers.
+V-Float provides the `useArrow` composable to position an arrow element pointing to the anchor element. This is commonly used for tooltips and popovers.
 
 ```vue
 <template>
   <button ref="anchorEl">Hover me</button>
   <div ref="floatingEl" :style="floating.floatingStyles">
     Tooltip content
-    <div ref="arrowRef" class="arrow" />
+    <div ref="arrowRef" class="arrow" :style="arrowStyles" />
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue"
-import { useFloating, arrowMiddleware } from "v-float"
+import { useFloating, useArrow, offset, flip } from "v-float"
 
 const anchorEl = ref(null)
 const floatingEl = ref(null)
-const arrowRef = ref(null)
+const arrowEl = ref(null)
 
 const floating = useFloating(anchorEl, floatingEl, {
-  middleware: [arrowMiddleware({ element: arrowRef })],
+  middlewares: [offset(8), flip()],
+})
+
+const { arrowStyles } = useArrow(arrowEl, floating, {
+  offset: "-4px", // Optional: controls arrow offset from floating element edge
 })
 </script>
 ```
@@ -82,42 +86,170 @@ V-Float manages the position state of floating elements. You can control the vis
 ```js
 const isOpen = ref(false)
 
-const floating = useFloating(anchorEl, floatingEl, {
+const context = useFloating(anchorEl, floatingEl, {
   open: isOpen, // Control open state
-  setOpen: (open) => (isOpen.value = open), // React to state changes
 })
+
+// Use the setOpen property from the context object to update state
+context.setOpen(true)
+context.setOpen(false)
+
+// or update manually using the isOpen ref
+isOpen.value = true
+isOpen.value = false
 ```
 
-## Interaction Composable
+## Interaction Composables
 
-V-Float provides composables for common interaction patterns. Here's an example of using the hover interaction:
+V-Float provides a comprehensive set of interaction composables that work with the floating context to handle user interactions. These composables follow a consistent pattern where they accept a `FloatingContext` as their first parameter and manage the `open` state automatically.
+
+### Available Interactions
+
+- **[`useHover`](/api/use-hover)**: Show/hide on mouse hover with configurable delays and safe polygon support
+- **[`useClick`](/api/use-click)**: Toggle on click with outside click detection
+- **[`useFocus`](/api/use-focus)**: Show on focus for keyboard accessibility
+- **[`useEscapeKey`](/api/use-escape-key)**: Close on Escape key press
+- **[`useClientPoint`](/api/use-client-point)**: Position at cursor/touch coordinates
+
+### Basic Usage Pattern
 
 ```vue
 <template>
-  <button ref="anchorEl">Hover me</button>
-  <div v-if="isOpen" ref="floatingEl" :style="floating.floatingStyles">Tooltip content</div>
+  <button ref="anchorEl">Hover or click me</button>
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Tooltip content
+  </div>
 </template>
 
 <script setup>
 import { ref } from "vue"
+import { useFloating, useHover, useClick, useFocus, useEscapeKey } from "v-float"
+
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+
+// Create the floating context
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "top",
+})
+
+// Add interaction behaviors
+useHover(context, { delay: { open: 100, close: 300 } })
+useClick(context, { outsideClick: true })
+useFocus(context)
+useEscapeKey({
+  onEscape: () => context.setOpen(false),
+})
+</script>
+```
+
+### Composing Multiple Interactions
+
+Interaction composables are designed to work together seamlessly. You can combine multiple interactions for a rich user experience:
+
+```js
+// Create floating context
+const context = useFloating(anchorEl, floatingEl)
+
+// Hover for desktop users
+useHover(context, {
+  delay: 200,
+  mouseOnly: true, // Only respond to actual mouse, not touch
+})
+
+// Click for mobile and accessibility
+useClick(context, {
+  toggle: true,
+  outsideClick: true,
+})
+
+// Keyboard support
+useFocus(context)
+
+// Close on escape
+useEscapeKey({
+  onEscape: () => context.setOpen(false),
+})
+```
+
+## Clear Separation of Concerns
+
+V-Float provides a clear architectural separation between standalone floating elements and hierarchical tree structures:
+
+### Standalone Floating Elements
+
+Use `useFloating` for isolated floating elements that don't require hierarchical management:
+
+```vue
+<script setup>
+import { ref } from "vue"
 import { useFloating, useHover } from "v-float"
 
+// Standalone tooltip
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "top",
+  open: isOpen,
+})
+
+// Add interactions
+useHover(context, { delay: 200 })
+</script>
+
+<template>
+  <button ref="anchorEl">Hover for tooltip</button>
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Standalone tooltip
+  </div>
+</template>
+```
+
+### Hierarchical Tree Structures
+
+Use `useFloatingTree` for building hierarchical floating structures like nested menus:
+
+```vue
+<script setup>
+import { ref } from "vue"
+import { useFloatingTree } from "v-float"
+
+// Root menu with tree management
 const anchorEl = ref(null)
 const floatingEl = ref(null)
 const isOpen = ref(false)
 
-useFloating(anchorEl, floatingEl, {
+const tree = useFloatingTree(anchorEl, floatingEl, {
+  placement: "bottom-start",
   open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
 })
 
-// Setup hover interaction
-useHover(anchorEl, floatingEl, {
-  open: isOpen,
-  setOpen: (value) => (isOpen.value = value),
+// Add submenu as child node
+const submenuAnchorEl = ref(null)
+const submenuFloatingEl = ref(null)
+const isSubmenuOpen = ref(false)
+
+const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
+  placement: "right-start",
+  open: isSubmenuOpen,
+  parentId: tree.root.id, // Links to parent in hierarchy
 })
 </script>
 ```
+
+### When to Use Which
+
+| Use Case | API Choice | Reason |
+|----------|------------|---------|
+| Simple tooltip | `useFloating` | Isolated, no hierarchy needed |
+| Standalone modal | `useFloating` | Independent floating element |
+| Single dropdown | `useFloating` | No nested children |
+| Nested menus | `useFloatingTree` | Requires hierarchical management |
+| Submenus | `tree.addNode` | Part of a tree structure |
+| Complex UI with relationships | `useFloatingTree` | Benefits from tree coordination |
+
+This separation ensures your code remains clean and uses the appropriate level of complexity for each use case.
 
 ## Composition Pattern
 

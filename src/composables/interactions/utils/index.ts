@@ -1,6 +1,6 @@
 /**
  * @fileoverview Centralized utility functions for interaction composables
- * 
+ *
  * This module exports shared helper functions to eliminate code duplication
  * across use-click, use-focus, use-hover, use-client-point, and polygon composables.
  */
@@ -11,7 +11,7 @@ export {
   getContextFromParameter,
   isTargetWithinElement,
   findDescendantContainingTarget,
-} from './tree-context'
+} from "./tree-context"
 
 // Element and input type detection
 export {
@@ -23,14 +23,14 @@ export {
   isVirtualElement,
   isEventTargetWithin,
   isClickOnScrollbar,
-} from './element-detection'
+} from "./element-detection"
 
 // Browser environment detection
 export {
   isMac,
   isSafari,
   matchesFocusVisible,
-} from './browser-detection'
+} from "./browser-detection"
 
 // Event handling and timing utilities
 export {
@@ -38,4 +38,4 @@ export {
   getTarget,
   getCurrentTime,
   clearTimeoutIfSet,
-} from './event-utils'
+} from "./event-utils"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { flip, offset, shift, useFloating, useFocus, useHover } from "v-float"
 import { ref } from "vue"
-import { useFloating, offset, flip, shift, useHover, useFocus } from "v-float"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)

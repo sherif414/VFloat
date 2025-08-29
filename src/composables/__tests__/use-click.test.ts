@@ -1,7 +1,7 @@
+import { type UseClickOptions, useClick } from "@/composables"
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { effectScope, nextTick, type Ref, ref } from "vue"
-import { useClick, type UseClickOptions } from "@/composables"
+import { type Ref, effectScope, nextTick, ref } from "vue"
 
 // a minimal FloatingContext type for the tests
 interface FloatingContext {
@@ -327,7 +327,7 @@ describe("useClick", () => {
 
     it("supports toggle behavior with outside click enabled", async () => {
       initClick({ outsideClick: true, toggle: true })
-      
+
       // Open with inside click
       await userEvent.click(referenceEl)
       expect(context.open.value).toBe(true)
@@ -353,27 +353,27 @@ describe("useClick", () => {
     it("respects disabled state for both inside and outside clicks", async () => {
       const enabled = ref(false)
       initClick({ enabled, outsideClick: true })
-      
+
       // Try inside click when disabled
       await userEvent.click(referenceEl)
       expect(setOpenMock).not.toHaveBeenCalled()
-      
+
       // Try outside click when disabled
       await userEvent.click(outsideElement)
       expect(setOpenMock).not.toHaveBeenCalled()
-      
+
       // Enable and open
       enabled.value = true
       await nextTick()
-      
+
       await userEvent.click(referenceEl)
       expect(context.open.value).toBe(true)
       setOpenMock.mockClear()
-      
+
       // Disable again
       enabled.value = false
       await nextTick()
-      
+
       // Outside click should not work when disabled
       await userEvent.click(outsideElement)
       expect(setOpenMock).not.toHaveBeenCalled()
