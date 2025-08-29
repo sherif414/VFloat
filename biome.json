@@ -39,7 +39,8 @@
       "node_modules/**/*",
       ".vitepress/**/*",
       "playground/**/*",
-      "docs/.vitepress/cache/**/*"
+      "docs/.vitepress/**/*",
+      "coverage/**/*"
     ]
   }
 }
