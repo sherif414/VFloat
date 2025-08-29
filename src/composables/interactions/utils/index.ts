@@ -5,26 +5,6 @@
  * across use-click, use-focus, use-hover, use-client-point, and polygon composables.
  */
 
-// Tree-aware context utilities
-export {
-  isTreeNode,
-  getContextFromParameter,
-  isTargetWithinElement,
-  findDescendantContainingTarget,
-} from "./tree-context"
-
-// Element and input type detection
-export {
-  isMouseLikePointerType,
-  isTypeableElement,
-  isButtonTarget,
-  isSpaceIgnored,
-  isHTMLElement,
-  isVirtualElement,
-  isEventTargetWithin,
-  isClickOnScrollbar,
-} from "./element-detection"
-
 // Browser environment detection
 export {
   isMac,
@@ -32,10 +12,28 @@ export {
   matchesFocusVisible,
 } from "./browser-detection"
 
+// Element and input type detection
+export {
+  isButtonTarget,
+  isClickOnScrollbar,
+  isEventTargetWithin,
+  isHTMLElement,
+  isMouseLikePointerType,
+  isSpaceIgnored,
+  isTypeableElement,
+  isVirtualElement,
+} from "./element-detection"
 // Event handling and timing utilities
 export {
-  contains,
-  getTarget,
-  getCurrentTime,
   clearTimeoutIfSet,
+  contains,
+  getCurrentTime,
+  getTarget,
 } from "./event-utils"
+// Tree-aware context utilities
+export {
+  findDescendantContainingTarget,
+  getContextFromParameter,
+  isTargetWithinElement,
+  isTreeNode,
+} from "./tree-context"

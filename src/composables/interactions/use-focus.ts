@@ -1,22 +1,20 @@
-import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-tree"
 import { useEventListener } from "@vueuse/core"
 import {
-  type MaybeRefOrGetter,
   computed,
+  type MaybeRefOrGetter,
   onMounted,
   onScopeDispose,
   onWatcherCleanup,
   toValue,
   watchPostEffect,
 } from "vue"
+import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-tree"
 import {
-  findDescendantContainingTarget,
   getContextFromParameter,
   isMac,
   isSafari,
   isTargetWithinElement,
-  isTreeNode,
   isTypeableElement,
   matchesFocusVisible,
 } from "./utils"

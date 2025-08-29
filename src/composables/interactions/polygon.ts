@@ -1,6 +1,6 @@
+import { computed } from "vue"
 import type { TreeNode } from "@/composables/use-tree"
 import { isHTMLElement } from "@/utils"
-import { computed } from "vue"
 import type { AnchorElement, FloatingContext, FloatingElement } from "../use-floating"
 import { clearTimeoutIfSet, contains, getCurrentTime, getTarget } from "./utils"
 
@@ -53,7 +53,7 @@ function isPointInPolygon(point: Point, polygon: Polygon) {
   return isInside
 }
 
-function isInsideRect(point: Point, rect: Rect) {
+function _isInsideRect(point: Point, rect: Rect) {
   return isInside(point, rect)
 }
 
@@ -84,7 +84,7 @@ export interface CreateSafePolygonHandlerContext {
  * @see https://floating-ui.com/docs/useHover#safepolygon
  */
 export function safePolygon(options: SafePolygonOptions = {}) {
-  const { buffer = 0.5, blockPointerEvents = false, requireIntent = true } = options
+  const { blockPointerEvents = false, requireIntent = true } = options
 
   let timeoutId: TimeoutId = -1
   let hasLanded = false

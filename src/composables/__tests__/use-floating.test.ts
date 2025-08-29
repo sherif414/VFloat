@@ -1,9 +1,9 @@
-import type { AnchorElement, FloatingElement, UseFloatingOptions } from "@/composables"
-import { useFloating } from "@/composables"
 import type { Middleware, Placement } from "@floating-ui/dom"
 import { waitFor } from "@testing-library/vue"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { nextTick, ref } from "vue"
+import type { AnchorElement, FloatingElement, UseFloatingOptions } from "@/composables"
+import { useFloating } from "@/composables"
 
 // Mock DOM elements
 const createMockElement = (tagName = "div", attributes = {}) => {

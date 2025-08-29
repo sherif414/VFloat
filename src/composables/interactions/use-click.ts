@@ -1,8 +1,8 @@
-import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-tree"
 import type { PointerType } from "@vueuse/core"
 import { useEventListener } from "@vueuse/core"
-import { type MaybeRefOrGetter, computed, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-tree"
 import {
   findDescendantContainingTarget,
   getContextFromParameter,

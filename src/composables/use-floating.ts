@@ -8,16 +8,7 @@ import type {
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { MaybeRefOrGetter, Ref } from "vue"
-import {
-  computed,
-  nextTick,
-  onScopeDispose,
-  onWatcherCleanup,
-  ref,
-  shallowRef,
-  toValue,
-  watch,
-} from "vue"
+import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
 import { arrow } from "./middlewares/arrow"
 
 //=======================================================================================
@@ -64,7 +55,7 @@ export type FloatingStyles = {
   "will-change"?: string
 } & {
   // This index signature makes the type compatible with Vue's `StyleValue`
-  // biome-ignore lint/suspicious/noExplicitAny:
+  // biome-ignore lint/suspicious/noExplicitAny: <workaround>
   [key: `--${string}`]: any
 }
 

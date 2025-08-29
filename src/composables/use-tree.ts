@@ -1,5 +1,5 @@
-import { useId } from "@/utils"
 import { type Ref, shallowReactive, shallowRef } from "vue"
+import { useId } from "@/utils"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -98,6 +98,7 @@ export class TreeNode<T> {
   findDescendant(predicate: (node: TreeNode<T>) => boolean): TreeNode<T> | null {
     const stack: TreeNode<T>[] = [this]
     while (stack.length > 0) {
+      // biome-ignore lint/style/noNonNullAssertion: <stack is initilized with a node>
       const node = stack.pop()!
 
       if (predicate(node)) {
@@ -252,7 +253,8 @@ export class Tree<T> {
       return false
     }
 
-    const parent = nodeToRemove.parent.value! // Root case is handled, so parent must exist
+    // biome-ignore lint/style/noNonNullAssertion: <Root case is handled, so parent must exist>
+    const parent = nodeToRemove.parent.value!
 
     // 1. Handle children based on strategy
     if (strategy === "recursive") {
@@ -352,6 +354,7 @@ export class Tree<T> {
     if (strategy === "dfs") {
       const stack: TreeNode<T>[] = [startNode]
       while (stack.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: <stack is initialized with items>
         const node = stack.pop()!
         result.push(node)
         // Add children in reverse for pre-order pop()
@@ -363,6 +366,7 @@ export class Tree<T> {
       // bfs
       const queue: TreeNode<T>[] = [startNode]
       while (queue.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: <stack is initialized with items>
         const node = queue.shift()!
         result.push(node)
         for (const child of node.children.value) {

@@ -1,29 +1,25 @@
-import type { TreeNode } from "@/composables/use-tree"
-import type { Fn } from "@/types"
 import type { Coords } from "@floating-ui/dom"
 import {
-  type MaybeRef,
   computed,
+  type MaybeRef,
   onScopeDispose,
   onWatcherCleanup,
   toValue,
   watchPostEffect,
 } from "vue"
-import type { AnchorElement, FloatingContext, FloatingElement } from "../use-floating"
+import type { TreeNode } from "@/composables/use-tree"
+import type { Fn } from "@/types"
+import type { FloatingContext } from "../use-floating"
 import { type SafePolygonOptions, safePolygon } from "./polygon"
 import {
   findDescendantContainingTarget,
   getContextFromParameter,
-  isMouseLikePointerType,
   isTargetWithinElement,
-  isTreeNode,
 } from "./utils"
 
 //=======================================================================================
 // 📌 Types & Interfaces
 //=======================================================================================
-
-type PointerType = "mouse" | "pen" | "touch" | null
 
 export interface UseHoverOptions {
   /**
@@ -91,8 +87,8 @@ function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
     return (typeof delayVal === "number" ? delayVal : delayVal.close) ?? 0
   })
 
-  let showTimeoutID: ReturnType<typeof setTimeout> | undefined = undefined
-  let hideTimeoutID: ReturnType<typeof setTimeout> | undefined = undefined
+  let showTimeoutID: ReturnType<typeof setTimeout> | undefined
+  let hideTimeoutID: ReturnType<typeof setTimeout> | undefined
 
   const clearTimeouts = () => {
     clearTimeout(showTimeoutID)
@@ -204,7 +200,7 @@ export function useHover(
   //-------------------------
 
   let restCoords: Coords | null = null
-  let restTimeoutId: ReturnType<typeof setTimeout> | undefined = undefined
+  let restTimeoutId: ReturnType<typeof setTimeout> | undefined
   const isRestMsEnabled = computed<boolean>(() => showDelay.value === 0 && restMs.value > 0)
 
   function onPointerMoveForRest(e: PointerEvent): void {
@@ -326,7 +322,7 @@ export function useHover(
           // Build a simple node map for tree-aware functionality
           treeMap = new Map()
           const addToMap = (node: TreeNode<FloatingContext>) => {
-            treeMap!.set(node.id, node)
+            treeMap?.set(node.id, node)
             for (const child of node.children.value) {
               addToMap(child)
             }

@@ -8,11 +8,11 @@
     "playground/**/*.ts",
     "docs/**/*.ts",
     "docs/**/*.vue",
-    "docs/**/*.md",
+    "docs/**/*.md"
   ],
   "exclude": ["src/**/__tests__/*"],
   "vueCompilerOptions": {
-    "vitePressExtensions": [".md"],
+    "vitePressExtensions": [".md"]
   },
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",

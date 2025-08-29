@@ -6,7 +6,8 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedVariables": "error"
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error"
       },
       "suspicious": {
         "noExplicitAny": "warn"
@@ -39,7 +40,9 @@
       "!**/.vitepress/**/*",
       "!**/playground/**/*",
       "!**/docs/.vitepress/**/*",
-      "!**/coverage/**/*"
+      "!**/coverage/**/*",
+      "!**/__tests__/**/*",
+      "!**/*.vue"
     ]
   }
 }

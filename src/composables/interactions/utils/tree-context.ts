@@ -53,7 +53,7 @@ export function getContextFromParameter(context: FloatingContext | TreeNode<Floa
  * @param element - The element to check containment against (can be VirtualElement or null)
  * @returns True if the target is within the element
  */
-export function isTargetWithinElement(target: Node, element: any): boolean {
+export function isTargetWithinElement(target: Node, element: unknown): boolean {
   if (!element) return false
 
   // Handle VirtualElement (has contextElement)

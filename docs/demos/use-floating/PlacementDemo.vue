@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { offset, useFloating } from "v-float"
-import { computed, ref } from "vue"
+import { ref } from "vue"
 
 type Placement =
   | "top"
@@ -66,16 +66,9 @@ function selectPlacement(placement: Placement) {
 
     <div class="demo-area">
       <div class="anchor-container">
-        <div ref="anchorEl" class="anchor">
-          Anchor Element
-        </div>
-        
-        <div
-          v-if="isOpen"
-          ref="floatingEl"
-          :style="floatingStyles"
-          class="floating"
-        >
+        <div ref="anchorEl" class="anchor">Anchor Element</div>
+
+        <div v-if="isOpen" ref="floatingEl" :style="floatingStyles" class="floating">
           {{ currentPlacement }}
         </div>
       </div>
@@ -168,7 +161,9 @@ function selectPlacement(placement: Placement) {
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 50;
 }
 </style>

@@ -1,16 +1,16 @@
-import type { FloatingContext } from "@/composables"
 import type { VirtualElement } from "@floating-ui/dom"
 import type { PointerType } from "@vueuse/core"
 import {
-  type MaybeRefOrGetter,
-  type Ref,
   computed,
+  type MaybeRefOrGetter,
   onWatcherCleanup,
+  type Ref,
   readonly,
   ref,
   toValue,
   watchEffect,
 } from "vue"
+import type { FloatingContext } from "@/composables"
 import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================
@@ -44,7 +44,7 @@ export function useClientPoint(
   const { open, refs } = context
 
   // Tracking state
-  let pointerType: PointerType | undefined = undefined
+  let pointerType: PointerType | undefined
   const clientCoords = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
 
   // Computed options

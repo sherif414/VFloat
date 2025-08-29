@@ -103,7 +103,7 @@ export function useFloatingTree(
   options: UseFloatingOptions = {},
   treeOptions: FloatingTreeOptions = {}
 ): UseFloatingTreeReturn {
-  const { parentId, ...floatingOptions } = options
+  const { ...floatingOptions } = options
   const rootContext = useFloating(anchorEl, floatingEl, floatingOptions)
 
   const tree = new Tree(rootContext, treeOptions)

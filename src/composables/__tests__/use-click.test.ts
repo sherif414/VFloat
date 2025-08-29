@@ -1,7 +1,7 @@
-import { type UseClickOptions, useClick } from "@/composables"
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { type Ref, effectScope, nextTick, ref } from "vue"
+import { effectScope, nextTick, type Ref, ref } from "vue"
+import { type UseClickOptions, useClick } from "@/composables"
 
 // a minimal FloatingContext type for the tests
 interface FloatingContext {

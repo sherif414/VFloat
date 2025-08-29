@@ -1,4 +1,3 @@
-import type { Padding } from "@floating-ui/dom"
 import type { ComputedRef, Ref } from "vue"
 import { computed, toValue, watch } from "vue"
 import type { FloatingContext } from "./use-floating"
@@ -43,11 +42,6 @@ export interface UseArrowOptions {
    * @default '-4px'
    */
   offset?: string
-
-  /**
-   * Padding around arrow element
-   */
-  padding?: Padding
 }
 
 //=======================================================================================
@@ -76,7 +70,7 @@ export function useArrow(
   context: FloatingContext,
   options: UseArrowOptions = {}
 ): UseArrowReturn {
-  const { offset = "-4px", padding } = options
+  const { offset = "-4px" } = options
   const { middlewareData, placement, refs } = context
 
   watch(arrowEl, (el) => {
