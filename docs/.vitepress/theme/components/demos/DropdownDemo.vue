@@ -4,16 +4,17 @@
       <button ref="dropdownTrigger" class="demo-button">
         Click me <span class="arrow">↓</span>
       </button>
+
       <Teleport to="body">
         <div
-          v-show="dropdownContext.isPositioned.value"
+          v-show="context.isPositioned.value"
           ref="dropdownFloating"
           class="dropdown floating-element"
-          :style="dropdownContext.floatingStyles.value"
+          :style="context.floatingStyles.value"
         >
-          <div class="dropdown-item">Edit profile</div>
-          <div class="dropdown-item">Settings</div>
-          <div class="dropdown-item">Sign out</div>
+          <div @click="context.setOpen(false)" class="dropdown-item">Edit profile</div>
+          <div @click="context.setOpen(false)" class="dropdown-item">Settings</div>
+          <div @click="context.setOpen(false)" class="dropdown-item">Sign out</div>
         </div>
       </Teleport>
     </div>
@@ -22,17 +23,18 @@
 
 <script setup lang="ts">
 import { useTemplateRef } from "vue"
-import { useFloating, useClick, offset } from "v-float"
+import { useFloating, useClick, offset, useEscapeKey } from "v-float"
 
-const dropdownTrigger = useTemplateRef("dropdownTrigger")
-const dropdownFloating = useTemplateRef("dropdownFloating")
+const anchorEl = useTemplateRef("dropdownTrigger")
+const floatingEl = useTemplateRef("dropdownFloating")
 
-const dropdownContext = useFloating(dropdownTrigger, dropdownFloating, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
   middlewares: [offset(4)],
 })
 
-useClick(dropdownContext)
+useClick(context, { outsideClick: true })
+useEscapeKey({ onEscape: () => context.setOpen(false) })
 </script>
 
 <style scoped>
