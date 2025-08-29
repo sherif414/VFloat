@@ -263,7 +263,7 @@ export function useFloatingTree(
     return tree.moveNode(nodeId, newParentId)
   }
   const dispose = (): void => {
-    return tree.dispose()
+    tree.dispose()
   }
   const removeNode = (nodeId: string, deleteStrategy?: "orphan" | "recursive"): boolean => {
     return tree.removeNode(nodeId, deleteStrategy)
