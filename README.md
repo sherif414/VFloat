@@ -322,65 +322,6 @@ For complete documentation with interactive examples, visit the [V-Float Documen
 Contributions are welcome! Please read our contributing guidelines and submit pull requests to
 our [GitHub repository](https://github.com/sherif414/VFloat).
 
-## Development
-
-### Prerequisites
-
-- Node.js (18+)
-- pnpm (recommended package manager)
-
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/sherif414/VFloat.git
-cd VFloat
-
-# Install dependencies
-pnpm install
-
-# Start development server
-pnpm dev
-
-# Run tests
-pnpm test:unit
-
-# Build for production
-pnpm build
-```
-
-### Release Process
-
-This project uses [release-it](https://github.com/release-it/release-it) for automated releases:
-
-```bash
-# Dry run to see what would happen
-pnpm run release:dry
-
-# Release with automatic version bump (interactive)
-pnpm run release
-
-# Release specific version types
-pnpm run release:patch  # 0.2.1 -> 0.2.2
-pnpm run release:minor  # 0.2.1 -> 0.3.0
-pnpm run release:major  # 0.2.1 -> 1.0.0
-```
-
-**Release Features:**
-
-- Automatic version bumping based on conventional commits
-- Changelog generation from commit messages
-- Git tagging and GitHub releases
-- NPM publishing (when configured)
-- Pre-release validation (linting, type checking, tests)
-
-**Before releasing:**
-
-1. Ensure all changes are committed
-2. Working directory is clean
-3. You're on the main branch
-4. All tests pass
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
