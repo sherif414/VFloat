@@ -141,6 +141,58 @@ useRole(context, { role: 'tooltip' })
 
 Here, `useHover` and `useFocus` work in tandem. Whichever happens first will open the tooltip. `useEscapeKey` provides a consistent way to close it.
 
+### Pattern: The Context Menu with Static Positioning
+
+Context menus require a different approach to positioning - they should appear at the exact location where the user right-clicked, not follow the cursor:
+
+```vue
+<script setup>
+import { useFloating, useClientPoint, useClick } from "v-float"
+import { flip, shift } from "@floating-ui/dom"
+
+const contextReference = ref(null)
+const contextFloating = ref(null)
+
+const context = useFloating(contextReference, contextFloating, {
+  placement: "bottom-start",
+  middlewares: [flip(), shift({ padding: 8 })]
+})
+
+// Static positioning - appears at right-click location and stays there
+useClientPoint(contextReference, context, {
+  trackingMode: "static"
+})
+
+// Handle outside clicks to close menu
+useClick(context, { outsideClick: true })
+
+function showContextMenu(event: MouseEvent) {
+  event.preventDefault()
+  contextReference.value = event.target as HTMLElement
+  context.setOpen(true)
+}
+</script>
+
+<template>
+  <div @contextmenu="showContextMenu">
+    Right-click for context menu
+    
+    <Teleport to="body">
+      <div
+        v-if="context.open.value"
+        ref="contextFloating"
+        :style="context.floatingStyles.value"
+        class="context-menu"
+      >
+        <!-- Menu items -->
+      </div>
+    </Teleport>
+  </div>
+</template>
+```
+
+The `useClientPoint` composable with `trackingMode: "static"` ensures the menu appears exactly where the user right-clicked and doesn't move with subsequent mouse movements.
+
 ### Pitfall: Conflicting Triggers (`useClick` vs. `useHover`)
 
 What if you want a popover that opens on click, but can _also_ be opened on hover? Combining `useClick` and `useHover` directly can lead to confusing behavior:
@@ -168,6 +220,37 @@ useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 ```
 
 In this scenario, `useHover` can only _open_ the popover. Once `open` is `true`, the hover logic is disabled, preventing it from interfering with the clicked-open state.
+
+### Pattern: Choosing the Right Tracking Mode for `useClientPoint`
+
+The `useClientPoint` composable supports different tracking behaviors depending on your use case:
+
+- **`"follow"` mode** (default): For tooltips that should track cursor movement
+- **`"static"` mode**: For context menus that appear at click location
+- **`"initial-only"` mode**: For programmatically controlled positioning
+
+```vue
+<script setup>
+// Tooltip that follows cursor
+useClientPoint(reference, tooltipContext, {
+  trackingMode: "follow"
+})
+
+// Context menu at right-click position
+useClientPoint(reference, menuContext, {
+  trackingMode: "static"
+})
+
+// Controlled positioning
+useClientPoint(reference, controlledContext, {
+  trackingMode: "initial-only",
+  x: computedX,
+  y: computedY
+})
+</script>
+```
+
+Choosing the appropriate mode ensures the positioning behavior matches user expectations for each interaction pattern.
 
 ### Pitfall: Managing Focus
 

@@ -1,16 +1,17 @@
 import type { VirtualElement } from "@floating-ui/dom"
 import type { PointerType } from "@vueuse/core"
+import type { FloatingContext } from "@/composables"
 import {
   computed,
   type MaybeRefOrGetter,
   onWatcherCleanup,
-  type Ref,
   readonly,
+  type Ref,
   ref,
   toValue,
+  watch,
   watchEffect,
 } from "vue"
-import type { FloatingContext } from "@/composables"
 import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================
@@ -43,57 +44,103 @@ export function useClientPoint(
 ): UseClientPointReturn {
   const { open, refs } = context
 
-  // Tracking state
-  let pointerType: PointerType | undefined
+  // State
   const clientCoords = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
+  let pointerType: PointerType | undefined
+
+  // Last known coordinates from any pointer movement. Ideal for hover-delay.
+  const lastPointerCoords = ref<{ x: number; y: number } | null>(null)
+  // High-priority coordinates from a trigger event like a click. Ideal for context menus.
+  const triggerCoords = ref<{ x: number; y: number } | null>(null)
 
   // Computed options
   const axis = computed(() => toValue(options.axis ?? "both"))
   const enabled = computed(() => toValue(options.enabled ?? true))
   const externalX = computed(() => toValue(options.x ?? null))
   const externalY = computed(() => toValue(options.y ?? null))
+  const trackingMode = computed(() => toValue(options.trackingMode ?? "follow"))
 
-  const updateCoords = (newX: number, newY: number) => {
-    clientCoords.value = {
-      x: newX,
-      y: newY,
-    }
+  const setPosition = (x: number | null, y: number | null) => {
+    clientCoords.value = { x, y }
 
-    if (open.value) {
-      refs.anchorEl.value = createVirtualElement(
-        pointerTarget.value,
-        axis.value,
-        clientCoords.value
-      )
+    if (open.value && x != null && y != null) {
+      refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x, y })
     }
   }
 
-  watchEffect(() => {
-    const x = externalX.value
-    const y = externalY.value
+  // Handle controlled coordinates
+  watch(
+    [externalX, externalY, enabled],
+    ([x, y, isEnabled]) => {
+      if (isEnabled && x != null && y != null) {
+        setPosition(x, y)
+      }
+    },
+    { immediate: true }
+  )
 
-    if (enabled.value && x != null && y != null) {
-      updateCoords(x, y)
+  // Core logic for opening/closing
+  watch(open, (isOpen) => {
+    if (!enabled.value || (externalX.value != null && externalY.value != null)) {
+      return
+    }
+
+    if (isOpen) {
+      // For static mode, decide which coordinates to use upon opening.
+      if (trackingMode.value === "static") {
+        // 1. Prioritize coordinates from a recent trigger event (the click).
+        // 2. Fall back to the last known position (the hover).
+        const coordsToUse = triggerCoords.value ?? lastPointerCoords.value
+        if (coordsToUse) {
+          setPosition(coordsToUse.x, coordsToUse.y)
+        }
+      }
+    } else {
+      // When closing, reset everything.
+      clientCoords.value = { x: null, y: null }
+      triggerCoords.value = null // Clear the trigger coords for the next open.
     }
   })
 
+  // --- Event Listeners ---
+
   const onPointerdown = (e: PointerEvent) => {
     pointerType = e.pointerType as PointerType
-    updateCoords(e.clientX, e.clientY)
+    const coords = { x: e.clientX, y: e.clientY }
+    lastPointerCoords.value = coords
+
+    if (trackingMode.value === "static") {
+      // This is a potential trigger event. Store its coordinates.
+      triggerCoords.value = coords
+    } else {
+      // 'follow' mode
+      setPosition(coords.x, coords.y)
+    }
   }
 
   const onPointerenter = (e: PointerEvent) => {
     pointerType = e.pointerType as PointerType
-
-    if (!open.value && isMouseLikePointerType(pointerType, true)) {
-      updateCoords(e.clientX, e.clientY)
-    }
+    updateLastPointerCoords(e)
   }
 
   const onPointermove = (e: MouseEvent) => {
-    if (open.value && isMouseLikePointerType(pointerType, true)) {
-      updateCoords(e.clientX, e.clientY)
+    updateLastPointerCoords(e)
+
+    // A move event invalidates a previous click trigger.
+    // This makes the logic default back to standard hover tracking.
+    triggerCoords.value = null
+
+    if (
+      open.value &&
+      isMouseLikePointerType(pointerType, true) &&
+      trackingMode.value === "follow"
+    ) {
+      setPosition(e.clientX, e.clientY)
     }
+  }
+
+  const updateLastPointerCoords = (e: PointerEvent | MouseEvent) => {
+    lastPointerCoords.value = { x: e.clientX, y: e.clientY }
   }
 
   watchEffect(() => {
@@ -114,7 +161,7 @@ export function useClientPoint(
 
   return {
     coordinates: readonly(clientCoords),
-    updatePosition: updateCoords,
+    updatePosition: (x: number, y: number) => setPosition(x, y),
   }
 }
 
@@ -124,7 +171,7 @@ export function useClientPoint(
 
 /**
  * Creates a virtual element based on client coordinates and axis constraints.
- * @param referenceEl - The DOM element used as context, if available.
+ * @param referenceEl - The DOM element used as fallback context, if available.
  * @param currentAxis - The axis ('x', 'y', 'both') to consider for positioning.
  * @param clientCoords - The current client coordinates (x, y).
  * @returns A VirtualElement object for Floating UI.
@@ -134,63 +181,31 @@ function createVirtualElement(
   currentAxis: "x" | "y" | "both",
   clientCoords: { x: number | null; y: number | null }
 ): VirtualElement {
-  let offsetX: number | null = null
-  let offsetY: number | null = null
-  const domElement = referenceEl
+  const domRect = referenceEl?.getBoundingClientRect() ?? {
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  }
 
   return {
-    contextElement: domElement || undefined,
+    contextElement: referenceEl || undefined,
     getBoundingClientRect: () => {
-      const domRect = domElement?.getBoundingClientRect() ?? {
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-      }
-
       const isXAxis = currentAxis === "x" || currentAxis === "both"
       const isYAxis = currentAxis === "y" || currentAxis === "both"
 
-      // Calculate coordinates
-      let width = 0
-      let height = 0
-      let x = domRect.x
-      let y = domRect.y
+      // Use client coordinates when available and axis is enabled, otherwise use reference element
+      const x = isXAxis && clientCoords.x != null ? clientCoords.x : domRect.x
+      const y = isYAxis && clientCoords.y != null ? clientCoords.y : domRect.y
 
-      if (domElement) {
-        if (offsetX == null && clientCoords.x != null && isXAxis) {
-          offsetX = domRect.x - clientCoords.x
-        }
-        if (offsetY == null && clientCoords.y != null && isYAxis) {
-          offsetY = domRect.y - clientCoords.y
-        }
-        x -= offsetX || 0
-        y -= offsetY || 0
-      }
-
-      // Apply axis locking
-      if (isXAxis && clientCoords.x != null) {
-        x = clientCoords.x
-      } else {
-        offsetX = null
-        width = domRect.width
-      }
-
-      if (isYAxis && clientCoords.y != null) {
-        y = clientCoords.y
-      } else {
-        offsetY = null
-        height = domRect.height
-      }
-
-      if (currentAxis === "both") {
-        width = 0
-        height = 0
-      }
+      // For point positioning (both axes), create a zero-size rect at the cursor
+      // For line positioning (single axis), maintain the reference element's dimension on the other axis
+      const width = currentAxis === "both" || currentAxis === "y" ? 0 : domRect.width
+      const height = currentAxis === "both" || currentAxis === "x" ? 0 : domRect.height
 
       return {
         width,
@@ -209,6 +224,11 @@ function createVirtualElement(
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Tracking mode for client point positioning behavior
+ */
+export type TrackingMode = "follow" | "static"
 
 export interface UseClientPointOptions {
   /**
@@ -234,6 +254,14 @@ export interface UseClientPointOptions {
    * @default null
    */
   y?: MaybeRefOrGetter<number | null>
+
+  /**
+   * Tracking behavior mode:
+   * - "follow": Continuous cursor tracking (default)
+   * - "static": Position at initial interaction, no subsequent tracking
+   * @default "follow"
+   */
+  trackingMode?: MaybeRefOrGetter<TrackingMode>
 }
 
 export interface UseClientPointReturn {

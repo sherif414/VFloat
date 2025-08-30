@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue"
-import { useClientPoint, useFloating } from "@/composables"
+import { useClientPoint, useFloating, useClick } from "@/composables"
 import { flip } from "@floating-ui/dom"
 
 const showTooltip = ref(false)
@@ -12,6 +12,15 @@ const axis = ref("both") // 'x', 'y', or 'both'
 const placement = ref("bottom")
 const visualizationType = ref("tooltip") // 'tooltip', 'indicator', 'heatmap'
 const isTrackingActive = ref(true)
+const trackingMode = ref("follow") // 'follow', 'static'
+const useExternalCoords = ref(false)
+const externalX = ref(200)
+const externalY = ref(150)
+
+// Context menu state
+const showContextMenu = ref(false)
+const contextReference = ref(null)
+const contextFloating = ref(null)
 
 // Available placements
 const placements = [
@@ -36,8 +45,30 @@ const context = useFloating(ref(null), floating, {
   middlewares: [flip()],
 })
 
-// Client point with reactive axis constraint
-const { coordinates } = useClientPoint(reference, context, { axis: axis })
+// Context menu floating context
+const contextMenuContext = useFloating(contextReference, contextFloating, {
+  open: showContextMenu,
+  placement: "bottom-start",
+  middlewares: [flip()],
+})
+
+// Client point with reactive axis constraint and tracking mode
+const { coordinates } = useClientPoint(reference, context, {
+  axis: axis,
+  trackingMode: trackingMode,
+  x: computed(() => (useExternalCoords.value ? externalX.value : null)),
+  y: computed(() => (useExternalCoords.value ? externalY.value : null)),
+})
+
+// Context menu client point with static tracking
+const { coordinates: contextCoords } = useClientPoint(contextReference, contextMenuContext, {
+  trackingMode: "static",
+})
+
+// Click handling for context menu outside clicks
+useClick(contextMenuContext, {
+  outsideClick: true,
+})
 
 // Format coordinates based on axis mode
 function formatCoordinates(coords, mode) {
@@ -64,6 +95,22 @@ function onMouseEnter() {
 
 function onMouseLeave() {
   showTooltip.value = false
+}
+
+// Context menu handlers
+function onContextMenu(event) {
+  event.preventDefault()
+  contextReference.value = event.target
+  showContextMenu.value = true
+}
+
+function closeContextMenu() {
+  showContextMenu.value = false
+}
+
+function executeContextAction(action) {
+  console.log(`Context action: ${action}`)
+  closeContextMenu()
 }
 
 // Tooltip color based on visualization type
@@ -98,7 +145,7 @@ const tooltipColor = computed(() => {
         <div class="bg-indigo-800 text-white p-3">
           <h2 class="font-bold">Demo Controls</h2>
         </div>
-        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
           <!-- Axis Selection -->
           <div>
             <h3 class="font-semibold text-sm text-gray-700 mb-2">Axis Constraint</h3>
@@ -120,6 +167,58 @@ const tooltipColor = computed(() => {
                 <input v-model="axis" class="form-radio text-indigo-600" type="radio" value="y" />
                 <span class="ml-2 text-sm">Y axis only</span>
               </label>
+            </div>
+          </div>
+
+          <!-- Tracking Mode Selection -->
+          <div>
+            <h3 class="font-semibold text-sm text-gray-700 mb-2">Tracking Mode</h3>
+            <div class="flex flex-col gap-2">
+              <label class="inline-flex items-center">
+                <input
+                  v-model="trackingMode"
+                  class="form-radio text-indigo-600"
+                  type="radio"
+                  value="follow"
+                />
+                <span class="ml-2 text-sm">Follow Cursor</span>
+              </label>
+              <label class="inline-flex items-center">
+                <input
+                  v-model="trackingMode"
+                  class="form-radio text-indigo-600"
+                  type="radio"
+                  value="static"
+                  :disabled="useExternalCoords"
+                />
+                <span class="ml-2 text-sm">Static Position</span>
+              </label>
+              <label class="inline-flex items-center">
+                <input
+                  v-model="useExternalCoords"
+                  class="form-checkbox text-indigo-600"
+                  type="checkbox"
+                />
+                <span class="ml-2 text-sm">External Coordinates</span>
+              </label>
+              <div v-if="useExternalCoords" class="mt-2 space-y-1">
+                <label class="block text-xs text-gray-600">
+                  X:
+                  <input
+                    v-model.number="externalX"
+                    class="border rounded px-1 text-xs w-16"
+                    type="number"
+                  />
+                </label>
+                <label class="block text-xs text-gray-600">
+                  Y:
+                  <input
+                    v-model.number="externalY"
+                    class="border rounded px-1 text-xs w-16"
+                    type="number"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -217,6 +316,7 @@ const tooltipColor = computed(() => {
             class="relative w-full h-80 bg-gray-50 border border-gray-300 rounded-lg flex items-center justify-center select-none"
             @mouseenter="onMouseEnter"
             @mouseleave="onMouseLeave"
+            @contextmenu="onContextMenu"
           >
             <!-- Grid Lines for Visual Context -->
             <template v-if="axis === 'x' || axis === 'both'">
@@ -234,12 +334,29 @@ const tooltipColor = computed(() => {
             <div class="text-center z-10">
               <div class="text-gray-700 font-medium mb-2">
                 {{
-                  isTrackingActive ? "Move cursor to see tracking in action" : "Tracking disabled"
+                  isTrackingActive
+                    ? trackingMode === "static"
+                      ? "Move cursor around, then hover to see static positioning"
+                      : "Move cursor to see tracking in action"
+                    : "Tracking disabled"
                 }}
               </div>
-              <div class="text-xs text-gray-500">
+              <div class="text-xs text-gray-500 mb-1">
                 Using placement: <span class="font-mono">{{ placement }}</span>
               </div>
+              <div class="text-xs text-gray-500 mb-1">
+                Tracking mode:
+                <span class="font-mono">{{
+                  useExternalCoords ? "external-coords" : trackingMode
+                }}</span>
+              </div>
+              <div
+                v-if="trackingMode === 'static' && !useExternalCoords"
+                class="text-xs text-blue-600 mb-1"
+              >
+                Static mode: Position captured when tooltip opens, not on first mouse event
+              </div>
+              <div class="text-xs text-orange-600">Right-click anywhere for context menu demo</div>
             </div>
 
             <!-- Floating Element - Position and style depends on visualization type -->
@@ -299,6 +416,40 @@ const tooltipColor = computed(() => {
               </template>
             </div>
           </div>
+
+          <!-- Context Menu -->
+          <Teleport to="body">
+            <div
+              v-if="showContextMenu"
+              ref="contextFloating"
+              :style="contextMenuContext.floatingStyles.value"
+              class="absolute z-30 bg-white border border-gray-300 rounded-lg shadow-lg py-1 min-w-32"
+              @click="closeContextMenu"
+            >
+              <div class="px-3 py-1 text-xs text-gray-500 border-b border-gray-200 mb-1">
+                Static Position Demo
+              </div>
+              <button
+                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 transition-colors"
+                @click="executeContextAction('copy')"
+              >
+                📋 Copy
+              </button>
+              <button
+                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 transition-colors"
+                @click="executeContextAction('paste')"
+              >
+                📥 Paste
+              </button>
+              <div class="border-t border-gray-200 my-1"></div>
+              <button
+                class="w-full text-left px-3 py-2 text-sm hover:bg-red-50 hover:text-red-600 transition-colors"
+                @click="executeContextAction('delete')"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </Teleport>
         </div>
       </section>
 
@@ -318,7 +469,11 @@ const tooltipColor = computed(() => {
 const { coordinates } = useClientPoint(
   referenceElement,
   floatingContext,
-  { axis: "both" | "x" | "y" }
+  { 
+    axis: "both" | "x" | "y",
+    trackingMode: "follow" | "static"
+    useExternalCoords?: boolean
+  }
 )</pre
             >
             <p>Key features demonstrated here:</p>
@@ -326,11 +481,20 @@ const { coordinates } = useClientPoint(
               <li>
                 • <strong>Axis Constraint</strong> - Limit tracking to X-axis, Y-axis, or both
               </li>
+              <li>• <strong>Tracking Modes</strong> - Follow cursor or static position</li>
+              <li>
+                • <strong>External Coordinates</strong> - Programmatic positioning with custom
+                coordinates
+              </li>
               <li>
                 • <strong>Placement Options</strong> - Position tooltips relative to the cursor
               </li>
               <li>
                 • <strong>Dynamic Visualization</strong> - Different ways to visualize the tracking
+              </li>
+              <li>
+                • <strong>Context Menu Pattern</strong> - Right-click to see static positioning in
+                action
               </li>
             </ul>
           </div>

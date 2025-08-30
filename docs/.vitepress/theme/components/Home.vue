@@ -8,16 +8,14 @@
           <span class="highlight">Seamless Floating Elements</span>
         </h1>
         <p class="hero-description">
-          A robust, feature-rich toolkit for pixel-perfect placement of
-          tooltips, dropdowns, popovers, and any custom floating elements, built
-          specifically for Vue 3.
+          A robust, feature-rich toolkit for pixel-perfect placement of tooltips, dropdowns,
+          popovers, and any custom floating elements, built specifically for Vue 3. Features
+          advanced cursor tracking, middleware composition, and comprehensive interaction handling.
         </p>
 
         <div class="hero-actions">
           <a href="/guide/" class="action-button primary"> Get Started </a>
-          <a href="/examples/" class="action-button secondary">
-            Browse Examples
-          </a>
+          <a href="/examples/" class="action-button secondary"> Browse Examples </a>
         </div>
       </div>
     </div>
@@ -51,6 +49,21 @@
           <div v-if="activeDemo === 'popover'" class="demo-content">
             <PopoverDemo />
           </div>
+
+          <!-- Context Menu Demo -->
+          <div v-if="activeDemo === 'context-menu'" class="demo-content">
+            <ContextMenuDemo />
+          </div>
+
+          <!-- Cursor Follow Demo -->
+          <div v-if="activeDemo === 'cursor-follow'" class="demo-content">
+            <CursorFollowDemo />
+          </div>
+
+          <!-- Middleware Demo -->
+          <div v-if="activeDemo === 'middleware'" class="demo-content">
+            <MiddlewareDemo />
+          </div>
         </div>
       </div>
     </div>
@@ -58,18 +71,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import TooltipDemo from "./demos/TooltipDemo.vue";
-import DropdownDemo from "./demos/DropdownDemo.vue";
-import PopoverDemo from "./demos/PopoverDemo.vue";
+import { ref } from "vue"
+import TooltipDemo from "./demos/TooltipDemo.vue"
+import DropdownDemo from "./demos/DropdownDemo.vue"
+import PopoverDemo from "./demos/PopoverDemo.vue"
+import ContextMenuDemo from "./demos/ContextMenuDemo.vue"
+import MiddlewareDemo from "./demos/MiddlewareDemo.vue"
+import CursorFollowDemo from "./demos/CursorFollowDemo.vue"
 
 const demos = [
   { id: "tooltip", name: "Tooltip" },
   { id: "dropdown", name: "Dropdown" },
   { id: "popover", name: "Popover" },
-];
+  { id: "context-menu", name: "Context Menu" },
+  { id: "cursor-follow", name: "Cursor Follow" },
+  { id: "middleware", name: "Middleware" },
+]
 
-const activeDemo = ref(demos[0].id);
+const activeDemo = ref(demos[0].id)
 </script>
 
 <style scoped>
@@ -168,7 +187,15 @@ const activeDemo = ref(demos[0].id);
   margin-bottom: 2rem;
   border-bottom: 1px solid var(--vp-c-divider);
   flex-wrap: wrap;
-  overflow-x: visible;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.demo-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .demo-tab {
@@ -189,7 +216,7 @@ const activeDemo = ref(demos[0].id);
 }
 
 .demo-tab::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -2px;
   left: 0;
@@ -255,6 +282,19 @@ const activeDemo = ref(demos[0].id);
     width: 100%;
     max-width: 200px;
     justify-content: center;
+  }
+
+  .demo-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .demo-tab {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
   }
 }
 </style>
