@@ -49,9 +49,9 @@ export function useClientPoint(
   let pointerType: PointerType | undefined
 
   // Last known coordinates from any pointer movement. Ideal for hover-delay.
-  const lastPointerCoords = ref<{ x: number; y: number } | null>(null)
+  let lastPointerCoords: { x: number; y: number } | null = null
   // High-priority coordinates from a trigger event like a click. Ideal for context menus.
-  const triggerCoords = ref<{ x: number; y: number } | null>(null)
+  let triggerCoords: { x: number; y: number } | null = null
 
   // Computed options
   const axis = computed(() => toValue(options.axis ?? "both"))
@@ -86,19 +86,19 @@ export function useClientPoint(
     }
 
     if (isOpen) {
-      // For static mode, decide which coordinates to use upon opening.
       if (trackingMode.value === "static") {
-        // 1. Prioritize coordinates from a recent trigger event (the click).
-        // 2. Fall back to the last known position (the hover).
-        const coordsToUse = triggerCoords.value ?? lastPointerCoords.value
+        // 1. Prioritize coordinates from a recent trigger event (the click)
+        // 2. Fall back to the last known position (the hover)
+
+        const coordsToUse = triggerCoords ?? lastPointerCoords
         if (coordsToUse) {
           setPosition(coordsToUse.x, coordsToUse.y)
         }
       }
     } else {
-      // When closing, reset everything.
+      // When closing, reset everything
       clientCoords.value = { x: null, y: null }
-      triggerCoords.value = null // Clear the trigger coords for the next open.
+      triggerCoords = null
     }
   })
 
@@ -107,11 +107,11 @@ export function useClientPoint(
   const onPointerdown = (e: PointerEvent) => {
     pointerType = e.pointerType as PointerType
     const coords = { x: e.clientX, y: e.clientY }
-    lastPointerCoords.value = coords
+    lastPointerCoords = coords
 
     if (trackingMode.value === "static") {
       // This is a potential trigger event. Store its coordinates.
-      triggerCoords.value = coords
+      triggerCoords = coords
     } else {
       // 'follow' mode
       setPosition(coords.x, coords.y)
@@ -123,12 +123,12 @@ export function useClientPoint(
     updateLastPointerCoords(e)
   }
 
-  const onPointermove = (e: MouseEvent) => {
+  const onPointermove = (e: PointerEvent) => {
     updateLastPointerCoords(e)
 
     // A move event invalidates a previous click trigger.
     // This makes the logic default back to standard hover tracking.
-    triggerCoords.value = null
+    triggerCoords = null
 
     if (
       open.value &&
@@ -139,8 +139,8 @@ export function useClientPoint(
     }
   }
 
-  const updateLastPointerCoords = (e: PointerEvent | MouseEvent) => {
-    lastPointerCoords.value = { x: e.clientX, y: e.clientY }
+  const updateLastPointerCoords = (e: PointerEvent) => {
+    lastPointerCoords = { x: e.clientX, y: e.clientY }
   }
 
   watchEffect(() => {
@@ -208,8 +208,8 @@ function createVirtualElement(
       const height = currentAxis === "both" || currentAxis === "x" ? 0 : domRect.height
 
       return {
-        width,
-        height,
+        width: Math.max(0, width),
+        height: Math.max(0, height),
         x,
         y,
         top: y,
