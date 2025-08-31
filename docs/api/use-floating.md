@@ -54,6 +54,25 @@ Dynamic placement based on user interaction:
 
 <demo src="../demos/use-floating/PlacementDemo.vue" />
 
+### Reactive Middleware
+
+Middleware can be reactive, allowing you to dynamically change positioning behavior:
+
+```ts
+const useArrow = ref(true)
+const dynamicMiddlewares = computed(() => {
+  const middlewares = [offset(10), flip(), shift()]
+  if (useArrow.value) {
+    middlewares.push(arrow({ element: arrowEl }))
+  }
+  return middlewares
+})
+
+const { floatingStyles } = useFloating(anchorEl, floatingEl, {
+  middlewares: dynamicMiddlewares,
+})
+```
+
 ## Integration with Other Composables
 
 `useFloating` works seamlessly with other V-Float composables:
@@ -119,14 +138,14 @@ Dynamic placement based on user interaction:
 
 Options for configuring the behavior of the `useFloating` composable.
 
-| Property      | Type                           | Description                                                                                                                                  |
-| :------------ | :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| `placement`   | `MaybeRefOrGetter<Placement>`  | Desired placement of the floating element (e.g., `'top-start'`, `'bottom'`).                                                                 |
-| `strategy`    | `MaybeRefOrGetter<Strategy>`   | Positioning strategy: `'absolute'` or `'fixed'`.                                                                                             |
-| `transform`   | `MaybeRefOrGetter<boolean>`    | Whether to use CSS `transform` for positioning (improves performance).                                                                       |
-| `middlewares` | `Middleware[]`                 | An array of middleware functions to apply to the positioning.                                                                                |
-| `autoUpdate`  | `boolean \| AutoUpdateOptions` | Whether to automatically update the position of the floating element. Can be a boolean or an `AutoUpdateOptions` object. Defaults to `true`. |
-| `open`        | `Ref<boolean>`                 | A reactive boolean to control the open/closed state of the floating element.                                                                 |
+| Property      | Type                             | Description                                                                                                                                  |
+| :------------ | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| `placement`   | `MaybeRefOrGetter<Placement>`    | Desired placement of the floating element (e.g., `'top-start'`, `'bottom'`).                                                                 |
+| `strategy`    | `MaybeRefOrGetter<Strategy>`     | Positioning strategy: `'absolute'` or `'fixed'`.                                                                                             |
+| `transform`   | `MaybeRefOrGetter<boolean>`      | Whether to use CSS `transform` for positioning (improves performance).                                                                       |
+| `middlewares` | `MaybeRefOrGetter<Middleware[]>` | An array of middleware functions to apply to the positioning. Can be reactive.                                                               |
+| `autoUpdate`  | `boolean \| AutoUpdateOptions`   | Whether to automatically update the position of the floating element. Can be a boolean or an `AutoUpdateOptions` object. Defaults to `true`. |
+| `open`        | `Ref<boolean>`                   | A reactive boolean to control the open/closed state of the floating element.                                                                 |
 
 ---
 

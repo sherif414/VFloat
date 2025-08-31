@@ -84,7 +84,7 @@ export interface UseFloatingOptions {
   /**
    * Middlewares modify the positioning coordinates in some fashion, or provide useful data for the consumer to use.
    */
-  middlewares?: Middleware[]
+  middlewares?: MaybeRefOrGetter<Middleware[]>
 
   /**
    * Whether to automatically update the position of the floating element.
@@ -228,7 +228,7 @@ export function useFloating(
 
   // Reactive middleware array that includes arrow middleware when arrowEl is set
   const reactiveMiddlewares = computed(() => {
-    const baseMiddlewares = middlewares || []
+    const baseMiddlewares = toValue(middlewares) || []
     if (arrowEl.value) {
       // Check if arrow middleware already exists
       const hasArrow = baseMiddlewares.some((m) => m.name === "arrow")
@@ -256,7 +256,7 @@ export function useFloating(
     isPositioned.value = open.value
   }
 
-  watch([initialPlacement, initialStrategy], () => {
+  watch([initialPlacement, initialStrategy, reactiveMiddlewares], () => {
     if (open.value) {
       update()
     }
