@@ -181,6 +181,8 @@ export function useHover(
   const restMs = computed(() => toValue(restMsOption))
   const reference = computed(() => {
     const el = anchorEl.value
+    console.log(el)
+
     if (!el || el instanceof HTMLElement) return el
     return (el.contextElement as HTMLElement) ?? null
   })

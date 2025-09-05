@@ -13,7 +13,6 @@ import {
   isMouseLikePointerType,
   isSpaceIgnored,
   isTargetWithinElement,
-  isVirtualElement,
 } from "./utils"
 
 //=======================================================================================
@@ -99,11 +98,7 @@ export function useClick(
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value
-    if (!el) return null
     if (el instanceof HTMLElement) return el
-    if (isVirtualElement(el) && el.contextElement instanceof HTMLElement) {
-      return el.contextElement
-    }
     return null
   })
 
