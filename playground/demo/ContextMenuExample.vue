@@ -1,16 +1,16 @@
 <template>
   <div class="context-menu-example">
-    <div class="demo-area" @contextmenu.prevent="showContextMenu">
+    <div class="demo-area" @mousedown.prevent="showContextMenu">
       <h3>Context Menu Demo</h3>
       <p>Right-click anywhere in this area to see the static positioning in action.</p>
-      
+
       <div class="grid">
         <div class="item">Item 1</div>
         <div class="item">Item 2</div>
         <div class="item">Item 3</div>
         <div class="item">Item 4</div>
       </div>
-      
+
       <p class="instruction">
         The menu will appear at your right-click position and stay there (not follow cursor).
       </p>
@@ -24,16 +24,10 @@
         :style="contextMenuContext.floatingStyles.value"
         class="context-menu"
       >
-        <button @click="executeAction('copy')" class="menu-item">
-          📋 Copy
-        </button>
-        <button @click="executeAction('paste')" class="menu-item">
-          📄 Paste  
-        </button>
+        <button @click="executeAction('copy')" class="menu-item">📋 Copy</button>
+        <button @click="executeAction('paste')" class="menu-item">📄 Paste</button>
         <div class="divider"></div>
-        <button @click="executeAction('delete')" class="menu-item danger">
-          🗑️ Delete
-        </button>
+        <button @click="executeAction('delete')" class="menu-item danger">🗑️ Delete</button>
       </div>
     </Teleport>
   </div>
@@ -56,15 +50,18 @@ const contextMenuContext = useFloating(contextReference, contextFloating, {
 
 // Static positioning - menu appears at click position and stays there
 useClientPoint(contextReference, contextMenuContext, {
-  trackingMode: "static"
+  trackingMode: "static",
 })
 
 // Handle outside clicks to close menu
 useClick(contextMenuContext, {
-  outsideClick: true
+  outsideClick: true,
 })
 
 function showContextMenu(event: MouseEvent) {
+  // Only respond to right-clicks (button 2)
+  if (event.button !== 2) return
+
   // Set reference to the clicked element for positioning
   contextReference.value = event.target as HTMLElement
   contextMenuContext.setOpen(true)

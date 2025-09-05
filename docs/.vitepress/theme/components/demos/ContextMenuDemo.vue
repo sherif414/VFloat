@@ -1,30 +1,23 @@
 <template>
   <div class="demo-preview">
     <div class="context-demo">
-      <div ref="contextArea" class="context-area" @contextmenu.prevent="showContextMenu">
+      <div ref="contextArea" class="context-area" @contextmenu.prevent="showContextMenu($event)">
         <div class="context-content">
           <h3>Right-click anywhere in this area</h3>
           <p>
             The context menu will appear at your cursor position using <code>useClientPoint</code>
           </p>
-          <div class="demo-grid">
-            <div class="demo-item">Item 1</div>
-            <div class="demo-item">Item 2</div>
-            <div class="demo-item">Item 3</div>
-            <div class="demo-item">Item 4</div>
-          </div>
         </div>
       </div>
 
       <Teleport to="body">
         <div
-          v-if="contextContext.open.value"
+          v-if="context.open.value"
           ref="contextFloating"
-          :style="contextContext.floatingStyles.value"
+          :style="context.floatingStyles.value"
           class="context-menu floating-element"
-          @click="hideContextMenu"
         >
-          <div class="menu-item" @click="executeAction('copy')">
+          <div class="menu-item" @click="hideContextMenu">
             <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
@@ -35,7 +28,7 @@
             </svg>
             Copy
           </div>
-          <div class="menu-item" @click="executeAction('paste')">
+          <div class="menu-item" @click="hideContextMenu">
             <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
@@ -47,7 +40,7 @@
             Paste
           </div>
           <div class="menu-divider"></div>
-          <div class="menu-item" @click="executeAction('delete')">
+          <div class="menu-item" @click="hideContextMenu">
             <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
@@ -68,30 +61,29 @@
 import { ref, useTemplateRef } from "vue"
 import { useFloating, useClientPoint, flip, shift, useClick } from "v-float"
 
-const anchorEl = useTemplateRef("contextArea")
+const contextAreaEl = useTemplateRef("contextArea")
+const anchorEl = ref(null)
 const floatingEl = useTemplateRef("contextFloating")
 
-const contextContext = useFloating(ref(null), floatingEl, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
   middlewares: [flip(), shift({ padding: 8 })],
 })
 
-useClientPoint(anchorEl, contextContext)
+useClientPoint(contextAreaEl, context, { trackingMode: "static" })
+useClick(context, {
+  outsideClick: true,
+  toggle: false, // Don't toggle on inside clicks
+  ignoreMouse: true,
+})
 
-function showContextMenu() {
-  contextContext.setOpen(true)
+function showContextMenu(event) {
+  context.setOpen(true)
 }
 
 function hideContextMenu() {
-  contextContext.setOpen(false)
+  context.setOpen(false)
 }
-
-function executeAction(action: string) {
-  console.log(`Executed: ${action}`)
-  hideContextMenu()
-}
-
-useClick(contextContext)
 </script>
 
 <style scoped>
@@ -136,30 +128,6 @@ useClick(contextContext)
   border-radius: 4px;
   font-size: 0.8rem;
   color: var(--vp-c-brand-1);
-}
-
-.demo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  max-width: 200px;
-  margin: 0 auto;
-}
-
-.demo-item {
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  color: var(--vp-c-text-1);
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.demo-item:hover {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-brand-soft);
 }
 
 .floating-element {
@@ -207,11 +175,6 @@ useClick(contextContext)
   .context-area {
     padding: 1rem;
     min-height: 200px;
-  }
-
-  .demo-grid {
-    grid-template-columns: 1fr;
-    max-width: 150px;
   }
 }
 </style>

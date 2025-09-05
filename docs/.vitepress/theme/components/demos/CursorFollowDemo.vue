@@ -17,13 +17,7 @@
         </label>
       </div>
 
-      <div
-        ref="trackingArea"
-        class="tracking-area"
-        :class="{ active: isEnabled }"
-        @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave"
-      >
+      <div ref="trackingArea" class="tracking-area" :class="{ active: isEnabled }">
         <div class="tracking-content">
           <h3>Cursor Tracking Area</h3>
           <p>Move your mouse around to see the tooltip follow your cursor</p>
@@ -49,7 +43,7 @@
 
         <Teleport to="body">
           <div
-            v-if="cursorContext.open.value && isEnabled"
+            v-if="cursorContext.open.value"
             ref="cursorTooltip"
             :style="[
               cursorContext.floatingStyles.value,
@@ -100,7 +94,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from "vue"
-import { useFloating, useClientPoint, offset, flip, shift } from "v-float"
+import { useFloating, useClientPoint, useHover } from "v-float"
 
 const trackingArea = useTemplateRef("trackingArea")
 const cursorTooltip = useTemplateRef("cursorTooltip")
@@ -108,9 +102,12 @@ const cursorTooltip = useTemplateRef("cursorTooltip")
 const isEnabled = ref(true)
 const followMode = ref("smooth")
 
-const cursorContext = useFloating(trackingArea, cursorTooltip, {
+const cursorContext = useFloating(ref(null), cursorTooltip, {
   placement: "bottom-start",
-  middlewares: [offset(15), flip(), shift({ padding: 8 })],
+})
+
+useHover(cursorContext, {
+  enabled: isEnabled,
 })
 
 const axisMode = computed(() => {
@@ -128,16 +125,6 @@ const { coordinates } = useClientPoint(trackingArea, cursorContext, {
   axis: axisMode,
   enabled: isEnabled,
 })
-
-function handleMouseEnter() {
-  if (isEnabled.value) {
-    cursorContext.setOpen(true)
-  }
-}
-
-function handleMouseLeave() {
-  cursorContext.setOpen(false)
-}
 </script>
 
 <style scoped>
@@ -188,7 +175,6 @@ function handleMouseLeave() {
   padding: 2rem;
   min-height: 350px;
   transition: all 0.3s ease;
-  cursor: crosshair;
 }
 
 .tracking-area.active {
