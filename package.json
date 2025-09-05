@@ -24,7 +24,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build tsconfig.build.json",
     "lint": "biome check --write",
-    "test": "vitest --workspace=vitest.workspace.ts",
+    "test": "vitest",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
