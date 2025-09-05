@@ -1,0 +1,8 @@
+{
+  "id": "0e56a586-9dd0-41b2-8f63-82b7be47131e",
+  "title": "Learnings from fixing the cursor follow demo",
+  "details": "The `useClientPoint` composable is designed to work with a virtual element and sets the anchor for `useFloating` itself. When using `useClientPoint`, the `useFloating` composable should be initialized with `ref(null)` as the anchor to avoid conflicts. This was the issue in the `CursorFollowDemo.vue` component.",
+  "category": "task_learnings",
+  "dateCreated": "2025-09-01T18:27:51.805Z",
+  "dateUpdated": "2025-09-01T18:27:51.805Z"
+}

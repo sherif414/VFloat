@@ -1,0 +1,28 @@
+{
+  "theme": "Ayu",
+  // "selectedAuthType": "oauth-personal",
+  // "hasSeenIdeIntegrationNudge": true,
+  // "ideMode": true,
+  "autoAccept": true,
+  "mcpServers": {
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/sse"],
+      "env": {
+        "LINEAR_API_KEY": "$LINEAR_API_KEY"
+      }
+    },
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "."]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "agentic-tools": {
+      "command": "npx",
+      "args": ["-y", "@pimzino/agentic-tools-mcp"]
+    }
+  }
+}

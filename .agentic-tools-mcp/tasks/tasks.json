@@ -1,0 +1,52 @@
+{
+  "projects": [
+    {
+      "id": "a86f1768-5854-4237-be71-b46a635e1c17",
+      "name": "VFloat Maintenance",
+      "description": "General maintenance and improvements for the VFloat project.",
+      "createdAt": "2025-08-31T21:04:28.322Z",
+      "updatedAt": "2025-08-31T21:04:28.322Z"
+    },
+    {
+      "id": "cdbf7e5a-cbbf-4e50-a7dc-2e9f45fb45e0",
+      "name": "Fix Cursor Follow Demo",
+      "description": "Fix the cursor follow demo on the docs homepage",
+      "createdAt": "2025-09-01T18:24:29.704Z",
+      "updatedAt": "2025-09-01T18:24:29.704Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "b02d6685-84d1-4895-8f30-7689d86a360c",
+      "name": "Refactor and Bugfix: `useClientPoint` Composable",
+      "details": "Review, refactor, and fix bugs in the `useClientPoint` composable. Address issues with redundant `setPosition` calls, API design of `updatePosition`, and logic simplification.",
+      "projectId": "a86f1768-5854-4237-be71-b46a635e1c17",
+      "completed": false,
+      "createdAt": "2025-08-31T21:04:31.769Z",
+      "updatedAt": "2025-08-31T21:04:31.769Z",
+      "dependsOn": [],
+      "priority": 5,
+      "status": "pending",
+      "tags": [],
+      "level": 0
+    },
+    {
+      "id": "9bd68cb5-694e-4e66-bc23-316228f6ea8f",
+      "name": "Investigate and fix cursor follow demo",
+      "details": "The user wants to fix the cursor follow demo on the docs homepage. I have reviewed the relevant files but I can't find any obvious bugs. I need to ask the user for more information.",
+      "projectId": "cdbf7e5a-cbbf-4e50-a7dc-2e9f45fb45e0",
+      "completed": false,
+      "createdAt": "2025-09-01T18:24:48.670Z",
+      "updatedAt": "2025-09-01T18:27:43.013Z",
+      "dependsOn": [],
+      "priority": 5,
+      "status": "done",
+      "tags": [],
+      "level": 0
+    }
+  ],
+  "subtasks": [],
+  "migration": {
+    "version": "1.8.1"
+  }
+}
