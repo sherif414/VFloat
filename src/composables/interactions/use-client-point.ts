@@ -1,17 +1,17 @@
 import type { VirtualElement } from "@floating-ui/dom"
 import type { PointerType } from "@vueuse/core"
-import type { FloatingContext } from "@/composables"
 import {
   computed,
   type MaybeRefOrGetter,
   onWatcherCleanup,
-  readonly,
   type Ref,
+  readonly,
   ref,
   toValue,
   watch,
   watchEffect,
 } from "vue"
+import type { FloatingContext } from "@/composables"
 import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================
@@ -67,6 +67,8 @@ export function useClientPoint(
       refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x, y })
     }
   }
+
+  refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x: null, y: null })
 
   // Handle controlled coordinates
   watch(
