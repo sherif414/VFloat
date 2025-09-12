@@ -303,14 +303,14 @@ Retrieves all currently open nodes in the tree.
   })
   ```
 
-## tree.forEach()
+## tree.applyToNodes()
 
 Executes a callback function on nodes related to a specified target node.
 
 - **Type:**
 
   ```ts
-  forEach(
+  applyToNodes(
     nodeId: string,
     callback: (node: TreeNode<FloatingContext>) => void,
     options?: {
@@ -328,7 +328,7 @@ Executes a callback function on nodes related to a specified target node.
 
   ```ts
   // Close all siblings of a node
-  tree.forEach(
+  tree.applyToNodes(
     "main-menu",
     (node) => {
       node.data.open.value = false
@@ -337,7 +337,7 @@ Executes a callback function on nodes related to a specified target node.
   )
 
   // Close all descendants
-  tree.forEach(
+  tree.applyToNodes(
     "main-menu",
     (node) => {
       node.data.open.value = false
@@ -346,7 +346,7 @@ Executes a callback function on nodes related to a specified target node.
   )
 
   // Apply custom logic to related nodes
-  tree.forEach(
+  tree.applyToNodes(
     "user-menu",
     (node) => {
       if (node.data.disabled) {
@@ -406,17 +406,17 @@ Defines the set of nodes to target relative to a given node.
 
 - **Details:**
 
-  Defines the set of nodes to target in the `forEach` method, relative to a given node. Each relationship type specifies a different pattern of node selection for bulk operations.
+  Defines the set of nodes to target in the `applyToNodes` method, relative to a given node. Each relationship type specifies a different pattern of node selection for bulk operations.
 
 - **Example:**
 
   ```ts
   // Different relationship examples
-  tree.forEach("main-menu", closeNode, { relationship: "ancestors-only" }) // Close all parents
-  tree.forEach("main-menu", closeNode, { relationship: "siblings-only" }) // Close sibling menus
-  tree.forEach("main-menu", closeNode, { relationship: "descendants-only" }) // Close all submenus
-  tree.forEach("main-menu", closeNode, { relationship: "children-only" }) // Close direct children
-  tree.forEach("main-menu", closeNode, { relationship: "full-branch" }) // Close entire branch
+  tree.applyToNodes("main-menu", closeNode, { relationship: "ancestors-only" }) // Close all parents
+  tree.applyToNodes("main-menu", closeNode, { relationship: "siblings-only" }) // Close sibling menus
+  tree.applyToNodes("main-menu", closeNode, { relationship: "descendants-only" }) // Close all submenus
+  tree.applyToNodes("main-menu", closeNode, { relationship: "children-only" }) // Close direct children
+  tree.applyToNodes("main-menu", closeNode, { relationship: "full-branch" }) // Close entire branch
 
   function closeNode(node) {
     node.data.open.value = false

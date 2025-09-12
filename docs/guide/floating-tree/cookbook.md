@@ -10,7 +10,7 @@ In a nested menu system, when you open one submenu, any currently open sibling s
 
 ### Solution
 
-Leverage the `tree.forEach` method with the `{ relationship: 'siblings-only' }` option. This allows you to iterate over only the direct siblings of a given node, enabling you to close them when a new one opens.
+Leverage the `tree.applyToNodes` method with the `{ relationship: 'siblings-only' }` option. This allows you to iterate over only the direct siblings of a given node, enabling you to close them when a new one opens.
 
 ### Code Snippet
 
@@ -55,7 +55,7 @@ const createSubmenu = (item: MenuItem, parentNodeId: string) => {
   
   const openSubmenu = () => {
     // Close any other open sibling submenus
-    tree.forEach(
+    tree.applyToNodes(
       parentNodeId,
       (siblingNode) => {
         if (siblingNode.id !== node.id) {
@@ -147,7 +147,7 @@ When a user closes a parent floating element (e.g., a profile popover), any chil
 
 ### Solution
 
-Use `tree.forEach` with the `{ relationship: 'self-and-descendants' }` option. This allows you to traverse and close the target node and all its children.
+Use `tree.applyToNodes` with the `{ relationship: 'self-and-descendants' }` option. This allows you to traverse and close the target node and all its children.
 
 ### Code Snippet
 
@@ -191,7 +191,7 @@ const logoutNode = tree.addNode(logoutAnchorEl, logoutFloatingEl, {
 
 const closeProfileBranch = () => {
   // Close the profile popover and all its descendants
-  tree.forEach(
+  tree.applyToNodes(
     tree.root.id,
     (node) => {
       node.data.setOpen(false)
@@ -202,7 +202,7 @@ const closeProfileBranch = () => {
 
 // Alternative: Close specific branch
 const closeSettingsBranch = () => {
-  tree.forEach(
+  tree.applyToNodes(
     settingsNode.id,
     (node) => {
       node.data.setOpen(false)
@@ -253,7 +253,7 @@ When a critical dialog (like a modal) is open, all interactive elements _behind_
 
 ### Solution
 
-Use `tree.forEach` with `{ relationship: 'all-except-branch' }` to apply the `inert` attribute to all elements that are not part of the currently active floating branch. Remember to remove `inert` when the modal closes.
+Use `tree.applyToNodes` with `{ relationship: 'all-except-branch' }` to apply the `inert` attribute to all elements that are not part of the currently active floating branch. Remember to remove `inert` when the modal closes.
 
 ### Code Snippet
 

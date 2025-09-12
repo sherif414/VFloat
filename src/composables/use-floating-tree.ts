@@ -93,7 +93,7 @@ export interface UseFloatingTreeReturn {
    * @param callback - A function to execute for each matching node
    * @param options - Configuration options for the iteration behavior
    */
-  forEach: (
+  applyToNodes: (
     nodeId: string,
     callback: (node: TreeNode<FloatingContext>) => void,
     options?: {
@@ -158,7 +158,7 @@ export function useFloatingTree(
 
   const tree = createTree(rootContext, treeOptions)
 
-  const forEach = (
+  const applyToNodes = (
     nodeId: string,
     callback: NodeActionFn,
     options: FilterNodesOptions = {}
@@ -243,7 +243,7 @@ export function useFloatingTree(
       return // Exit early as iteration and callback are handled
     } else {
       // Default case for unknown relationship
-      console.warn(`forEach: Unknown relationship "${relationship}".`)
+      console.warn(`applyToNodes: Unknown relationship "${relationship}".`)
       return
     }
 
@@ -341,7 +341,7 @@ export function useFloatingTree(
     traverse,
     getAllOpenNodes,
     getTopmostOpenNode,
-    forEach,
+    applyToNodes,
   }
 }
 
