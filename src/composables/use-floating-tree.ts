@@ -16,7 +16,7 @@ import { useFloating } from "./use-floating"
 /**
  * Options for creating a TreeNode
  */
-export interface TreeNodeOptions {
+export interface CreateTreeNodeOptions {
   /** Optional ID for the node. If not provided, one will be generated. */
   id?: string
 }
@@ -24,7 +24,7 @@ export interface TreeNodeOptions {
 /**
  * Options for configuring tree behavior
  */
-export interface TreeOptions {
+export interface CreateTreeOptions {
   // Renamed from UseTreeOptions
   /** Strategy for deleting child nodes when a parent is deleted.
    * - 'orphan': Children are detached from the tree (parent becomes null).
@@ -55,7 +55,11 @@ export interface Tree<T> {
   readonly root: TreeNode<T>
   readonly nodeMap: Readonly<Map<string, TreeNode<T>>>
   findNodeById: (id: string) => TreeNode<T> | null
-  addNode: (data: T, parentId?: string | null, nodeOptions?: TreeNodeOptions) => TreeNode<T> | null
+  addNode: (
+    data: T,
+    parentId?: string | null,
+    nodeOptions?: CreateTreeNodeOptions
+  ) => TreeNode<T> | null
   removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") => boolean
   moveNode: (nodeId: string, newParentId: string | null) => boolean
   traverse: (strategy?: "dfs" | "bfs", startNode?: TreeNode<T> | null) => TreeNode<T>[]
@@ -65,7 +69,7 @@ export interface Tree<T> {
 /**
  * Configuration options for the floating tree
  */
-export interface FloatingTreeOptions extends TreeOptions {}
+export interface FloatingTreeOptions extends CreateTreeOptions {}
 
 export interface UseFloatingTreeReturn {
   readonly nodeMap: Readonly<Map<string, TreeNode<FloatingContext>>>
@@ -360,7 +364,7 @@ export function useFloatingTree(
 export function createTreeNode<T>(
   data: T,
   parent: TreeNode<T> | null = null,
-  options: TreeNodeOptions = {},
+  options: CreateTreeNodeOptions = {},
   isRoot = false
 ): TreeNode<T> {
   const id = options.id ?? useId()
@@ -451,7 +455,7 @@ export function createTreeNode<T>(
  * const childNode = myTree.addNode({ name: 'Child' }, myTree.root.id);
  * ```
  */
-export function createTree<T>(initialRootData: T, options?: TreeOptions): Tree<T> {
+export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): Tree<T> {
   const deleteStrategy = options?.deleteStrategy ?? "recursive"
   const nodeMap = shallowReactive(new Map<string, TreeNode<T>>())
   const root = createTreeNode<T>(initialRootData, null, {}, true)
@@ -477,7 +481,7 @@ export function createTree<T>(initialRootData: T, options?: TreeOptions): Tree<T
   const addNode = (
     data: T,
     parentId: string | null = null,
-    nodeOptions: TreeNodeOptions = {}
+    nodeOptions: CreateTreeNodeOptions = {}
   ): TreeNode<T> | null => {
     const parentNode = parentId ? findNodeById(parentId) : root
     if (!parentNode) {
