@@ -23,8 +23,8 @@
                   class="submenu floating-element"
                   :style="fileNode.data.floatingStyles.value"
                 >
-                  <li class="menu-item">New</li>
-                  <li class="menu-item">Open</li>
+                  <li class="menu-item" @click="handleActionClick">New</li>
+                  <li class="menu-item" @click="handleActionClick">Open</li>
                   <li
                     ref="exportTrigger"
                     class="menu-item"
@@ -38,15 +38,15 @@
                         class="sub-submenu floating-element"
                         :style="exportNode.data.floatingStyles.value"
                       >
-                        <li class="menu-item">PDF</li>
-                        <li class="menu-item">DOCX</li>
+                        <li class="menu-item" @click="handleActionClick">PDF</li>
+                        <li class="menu-item" @click="handleActionClick">DOCX</li>
                       </ul>
                     </Teleport>
                   </li>
                 </ul>
               </Teleport>
             </li>
-            <li ref="editItem" class="menu-item">Edit</li>
+            <li ref="editItem" class="menu-item" @click="handleActionClick">Edit</li>
             <li ref="viewTrigger" class="menu-item" :class="{ open: viewNode.data.open.value }">
               View <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
@@ -56,12 +56,12 @@
                   class="submenu floating-element"
                   :style="viewNode.data.floatingStyles.value"
                 >
-                  <li class="menu-item">Zoom In</li>
-                  <li class="menu-item">Zoom Out</li>
+                  <li class="menu-item" @click="handleActionClick">Zoom In</li>
+                  <li class="menu-item" @click="handleActionClick">Zoom Out</li>
                 </ul>
               </Teleport>
             </li>
-            <li ref="helpItem" class="menu-item">Help</li>
+            <li ref="helpItem" class="menu-item" @click="handleActionClick">Help</li>
           </ul>
         </div>
       </Teleport>
@@ -123,6 +123,13 @@ const viewNode = tree.addNode(viewTrigger, viewFloating, {
   parentId: tree.root.id,
 })!
 useHover(viewNode, { delay: 50, safePolygon: true })
+
+// Handle action clicks to close popover
+const handleActionClick = () => {
+  tree.getAllOpenNodes().forEach((node) => {
+    node.data.setOpen(false)
+  })
+}
 </script>
 
 <style scoped>
