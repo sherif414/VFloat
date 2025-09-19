@@ -71,22 +71,12 @@ export interface Tree<T> {
  */
 export interface FloatingTreeOptions extends CreateTreeOptions {}
 
-export interface UseFloatingTreeReturn {
-  readonly nodeMap: Readonly<Map<string, TreeNode<FloatingContext>>>
-  readonly root: TreeNode<FloatingContext>
-  findNodeById: (nodeId: string) => TreeNode<FloatingContext> | null
-  moveNode: (nodeId: string, newParentId: string | null) => boolean
-  dispose: () => void
+export interface UseFloatingTreeReturn extends Omit<Tree<FloatingContext>, "addNode"> {
   addNode: (
     anchorEl: Ref<AnchorElement>,
     floatingEl: Ref<FloatingElement>,
     options?: UseFloatingOptions
   ) => TreeNode<FloatingContext> | null
-  removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") => boolean
-  traverse: (
-    mode: "dfs" | "bfs",
-    startNode?: TreeNode<FloatingContext>
-  ) => TreeNode<FloatingContext>[]
   getAllOpenNodes: () => TreeNode<FloatingContext>[]
   getTopmostOpenNode: () => TreeNode<FloatingContext> | null
   /**
@@ -310,39 +300,9 @@ export function useFloatingTree(
     return tree.addNode(context, parentId)
   }
 
-  const findNodeById = (nodeId: string): TreeNode<FloatingContext> | null => {
-    return tree.findNodeById(nodeId)
-  }
-  const moveNode = (nodeId: string, newParentId: string | null): boolean => {
-    return tree.moveNode(nodeId, newParentId)
-  }
-  const dispose = (): void => {
-    tree.dispose()
-  }
-  const removeNode = (nodeId: string, deleteStrategy?: "orphan" | "recursive"): boolean => {
-    return tree.removeNode(nodeId, deleteStrategy)
-  }
-  const traverse = (
-    mode: "dfs" | "bfs",
-    startNode?: TreeNode<FloatingContext>
-  ): TreeNode<FloatingContext>[] => {
-    return tree.traverse(mode, startNode)
-  }
-
   return {
-    // Wrap original Tree methods in arrow functions to preserve context
-    get nodeMap() {
-      return tree.nodeMap
-    },
-    get root() {
-      return tree.root
-    },
-    findNodeById,
-    moveNode,
-    dispose,
+    ...tree,
     addNode,
-    removeNode,
-    traverse,
     getAllOpenNodes,
     getTopmostOpenNode,
     applyToNodes,
