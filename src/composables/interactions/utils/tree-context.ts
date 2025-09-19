@@ -6,7 +6,7 @@
  */
 
 import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-tree"
+import type { TreeNode } from "@/composables/use-floating-tree"
 
 /**
  * Type guard to determine if the context parameter is a TreeNode.

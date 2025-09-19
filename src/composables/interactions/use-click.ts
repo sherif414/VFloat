@@ -2,7 +2,7 @@ import type { PointerType } from "@vueuse/core"
 import { useEventListener } from "@vueuse/core"
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-tree"
+import type { TreeNode } from "@/composables/use-floating-tree"
 import {
   findDescendantContainingTarget,
   getContextFromParameter,

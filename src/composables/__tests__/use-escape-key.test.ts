@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { fireEvent } from "@testing-library/vue"
 import { useEscapeKey } from "../interactions/use-escape-key"
 import type { FloatingContext } from "../use-floating"
-import type { TreeNode } from "../use-tree"
+import type { TreeNode } from "../use-floating-tree"
 
 // Mock dependencies
 vi.mock("@vueuse/core", () => ({

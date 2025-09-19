@@ -7,7 +7,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
-import type { TreeNode } from "@/composables/use-tree"
+import type { TreeNode } from "@/composables/use-floating-tree"
 import type { Fn } from "@/types"
 import type { FloatingContext } from "../use-floating"
 import { type SafePolygonOptions, safePolygon } from "./polygon"
