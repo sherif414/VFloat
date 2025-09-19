@@ -48,11 +48,13 @@ onUnmounted(() => {
   document.removeEventListener("keydown", handleEscape)
 })
 
+const noop = () => {}
+
 const menuItems = [
-  { label: "Profile", action: () => console.log("Profile clicked") },
-  { label: "Settings", action: () => console.log("Settings clicked") },
-  { label: "Help", action: () => console.log("Help clicked") },
-  { label: "Sign out", action: () => console.log("Sign out clicked") },
+  { label: "Profile", action: noop },
+  { label: "Settings", action: noop },
+  { label: "Help", action: noop },
+  { label: "Sign out", action: noop },
 ]
 
 const handleItemClick = (item: (typeof menuItems)[0]) => {
