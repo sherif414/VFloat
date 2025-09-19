@@ -4,9 +4,7 @@
       <div ref="contextArea" class="context-area" @contextmenu.prevent="showContextMenu($event)">
         <div class="context-content">
           <h3>Right-click anywhere in this area</h3>
-          <p>
-            The context menu will appear at your cursor position using <code>useClientPoint</code>
-          </p>
+          <p>The context menu will appear at your cursor position</p>
         </div>
       </div>
 
