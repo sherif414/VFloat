@@ -8,9 +8,9 @@
           <span class="highlight">Seamless Floating Elements</span>
         </h1>
         <p class="hero-description">
-          A robust, feature-rich toolkit for pixel-perfect placement of tooltips, dropdowns,
-          popovers, and any custom floating elements, built specifically for Vue 3. Features
-          advanced cursor tracking, middleware composition, and comprehensive interaction handling.
+          A robust toolkit for pixel-perfect positioning of tooltips, dropdowns and any custom
+          floating elements, built specifically for Vue 3. Features advanced cursor tracking,
+          middleware composition, and comprehensive interaction handling.
         </p>
 
         <div class="hero-actions">
