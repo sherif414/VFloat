@@ -3,6 +3,7 @@ import type { PointerType } from "@vueuse/core"
 import {
   computed,
   type MaybeRefOrGetter,
+  nextTick,
   onWatcherCleanup,
   type Ref,
   readonly,
@@ -62,13 +63,30 @@ export function useClientPoint(
 
   const setPosition = (x: number | null, y: number | null) => {
     clientCoords.value = { x, y }
-
-    if (open.value && x != null && y != null) {
-      refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x, y })
-    }
   }
 
-  refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x: null, y: null })
+  // Reactive virtual element management - responds to all relevant dependencies
+  watchEffect(() => {
+    const shouldCreateVirtualElement = 
+      pointerTarget.value != null || 
+      (clientCoords.value.x != null && clientCoords.value.y != null)
+
+    if (shouldCreateVirtualElement) {
+      refs.anchorEl.value = createVirtualElement(
+        pointerTarget.value, 
+        axis.value, 
+        clientCoords.value
+      )
+      
+      // Trigger position recalculation when virtual element updates and floating is open
+      if (open.value && (clientCoords.value.x != null || clientCoords.value.y != null) && context.update) {
+        // Use nextTick to ensure the virtual element is properly set before update
+        nextTick(() => {
+          context.update()
+        })
+      }
+    }
+  })
 
   // Handle controlled coordinates
   watch(
@@ -126,6 +144,7 @@ export function useClientPoint(
   }
 
   const onPointermove = (e: PointerEvent) => {
+    pointerType = e.pointerType as PointerType
     updateLastPointerCoords(e)
 
     // A move event invalidates a previous click trigger.
