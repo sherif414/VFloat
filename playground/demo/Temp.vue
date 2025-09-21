@@ -1,221 +1,164 @@
 <template>
-  <div class="demo-preview">
-    <div class="context-demo">
-      <div class="context-area" @contextmenu.prevent="showContextMenu">
-        <div class="context-content">
-          <h3>Right-click anywhere in this area</h3>
-          <p>
-            The context menu will appear at your cursor position using <code>useClientPoint</code>
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="flex flex-col gap-6">
+      <div
+        class="flex gap-6 items-center p-4 bg-gray-50 rounded-lg border border-gray-200 flex-wrap md:flex-row md:items-center md:gap-6 flex-col items-start gap-4"
+      >
+        <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+          <input v-model="isEnabled" type="checkbox" />
+          Enable cursor following {{ cursorContext.open.value }}
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+          <span>Follow mode:</span>
+          <select
+            v-model="followMode"
+            class="px-2 py-1 border border-gray-300 rounded bg-white text-gray-800 text-sm ml-2"
+          >
+            <option value="smooth">Smooth following</option>
+            <option value="instant">Instant tracking</option>
+            <option value="axis-x">X-axis only</option>
+            <option value="axis-y">Y-axis only</option>
+          </select>
+        </label>
+      </div>
+
+      <div
+        ref="trackingArea"
+        class="bg-gray-100 border-2 border-gray-200 rounded-xl p-8 min-h-[350px] transition-all duration-300 md:p-8 md:min-h-[350px] p-4 min-h-[250px]"
+        :class="{ 'border-blue-500 bg-gray-50': isEnabled }"
+      >
+        <div class="text-center h-full flex flex-col justify-center gap-6">
+          <h3 class="m-0 text-gray-900 text-xl">Cursor Tracking Area</h3>
+          <p class="m-0 text-gray-600 text-sm">
+            Move your mouse around to see the tooltip follow your cursor
           </p>
-          <div class="demo-grid">
-            <div class="demo-item">Item 1</div>
-            <div class="demo-item">Item 2</div>
-            <div class="demo-item">Item 3</div>
-            <div class="demo-item">Item 4</div>
+          <div
+            class="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-4 max-w-[500px] mx-auto md:grid-cols-[repeat(auto-fit,minmax(130px,1fr))] grid-cols-2"
+          >
+            <div
+              class="bg-white border border-gray-200 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-500 hover:bg-blue-50"
+            >
+              <div class="text-2xl mb-2">🎯</div>
+              <div class="text-xs text-gray-900 font-medium">Precise positioning</div>
+            </div>
+            <div
+              class="bg-white border border-gray-200 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-500 hover:bg-blue-50"
+            >
+              <div class="text-2xl mb-2">🔄</div>
+              <div class="text-xs text-gray-900 font-medium">Real-time tracking</div>
+            </div>
+            <div
+              class="bg-white border border-gray-200 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-500 hover:bg-blue-50"
+            >
+              <div class="text-2xl mb-2">⚡</div>
+              <div class="text-xs text-gray-900 font-medium">High performance</div>
+            </div>
+            <div
+              class="bg-white border border-gray-200 rounded-lg p-4 text-center transition-all duration-200 hover:border-blue-500 hover:bg-blue-50"
+            >
+              <div class="text-2xl mb-2">🎨</div>
+              <div class="text-xs text-gray-900 font-medium">Smooth animations</div>
+            </div>
+          </div>
+        </div>
+
+        <Teleport to="body">
+          <div
+            v-if="cursorContext.open.value"
+            ref="cursorTooltip"
+            :style="[
+              cursorContext.floatingStyles.value,
+              { transition: followMode === 'smooth' ? 'transform 0.1s ease-out' : 'none' },
+            ]"
+            class="z-1000 pointer-events-none max-w-[200px]"
+          >
+            <div
+              v-show="cursorContext.isPositioned.value"
+              class="bg-white border border-gray-200 rounded-md p-3 shadow-lg text-xs"
+            >
+              <div class="flex justify-between mb-2">
+                <span class="text-gray-600 font-medium">Position:</span>
+                <span class="font-mono text-blue-600 font-semibold">
+                  {{ Math.round(coordinates.x || 0) }}, {{ Math.round(coordinates.y || 0) }}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600 font-medium">Mode:</span>
+                <span class="text-gray-900 font-medium capitalize">{{ followMode }}</span>
+              </div>
+            </div>
+          </div>
+        </Teleport>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6 md:grid-cols-2 grid-cols-1">
+        <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 class="m-0 mb-3 text-gray-900 text-base">useClientPoint Features</h4>
+          <ul class="m-0 pl-5 text-sm text-gray-600 leading-relaxed">
+            <li class="mb-2">
+              <strong class="text-gray-900">Axis constraints:</strong> Limit tracking to X or Y axis
+            </li>
+            <li class="mb-2">
+              <strong class="text-gray-900">Virtual elements:</strong> No need for DOM reference
+              elements
+            </li>
+            <li class="mb-2">
+              <strong class="text-gray-900">Performance optimized:</strong> Efficient event handling
+            </li>
+            <li class="mb-2">
+              <strong class="text-gray-900">Middleware compatible:</strong> Works with flip, shift,
+              etc.
+            </li>
+          </ul>
+        </div>
+        <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 class="m-0 mb-3 text-gray-900 text-base">Implementation</h4>
+          <div class="bg-gray-100 rounded-md p-3 overflow-x-auto">
+            <pre
+              class="m-0 text-xs leading-snug"
+            ><code class="text-gray-900 font-mono">const { coordinates } = useClientPoint(
+  trackingArea, 
+  context,
+  { axis: "{{ axisMode }}" }
+)</code></pre>
           </div>
         </div>
       </div>
-
-      <Teleport to="body">
-        <div
-          v-if="context.open.value"
-          ref="contextFloating"
-          :style="context.floatingStyles.value"
-          class="context-menu floating-element"
-          @click="hideContextMenu"
-        >
-          <div class="menu-item" @click="executeAction('copy')">
-            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              ></path>
-            </svg>
-            Copy
-          </div>
-          <div class="menu-item" @click="executeAction('paste')">
-            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              ></path>
-            </svg>
-            Paste
-          </div>
-          <div class="menu-divider"></div>
-          <div class="menu-item" @click="executeAction('delete')">
-            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              ></path>
-            </svg>
-            Delete
-          </div>
-        </div>
-      </Teleport>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, useTemplateRef } from "vue"
-import { useFloating, useClientPoint, flip, shift, useClick } from "v-float"
+import { computed, ref, useTemplateRef, watchPostEffect } from "vue"
+import { useFloating, useClientPoint, useHover } from "@/composables"
 
-const anchorEl = ref(null)
-const floatingEl = useTemplateRef("contextFloating")
+const trackingArea = useTemplateRef("trackingArea")
+const cursorTooltip = useTemplateRef("cursorTooltip")
 
-const context = useFloating(anchorEl, floatingEl, {
+const isEnabled = ref(true)
+const followMode = ref("smooth")
+
+const cursorContext = useFloating(ref(null), cursorTooltip, {
   placement: "bottom-start",
-  middlewares: [flip(), shift({ padding: 8 })],
 })
 
-useClientPoint(anchorEl, context, {
-  trackingMode: "static",
+useHover(cursorContext, {
+  enabled: isEnabled,
 })
 
-function showContextMenu() {
-  context.setOpen(true)
-}
+const axisMode = computed(() => {
+  switch (followMode.value) {
+    case "axis-x":
+      return "x"
+    case "axis-y":
+      return "y"
+    default:
+      return "both"
+  }
+})
 
-function hideContextMenu() {
-  context.setOpen(false)
-}
-
-function executeAction(action: string) {
-  console.log(`Executed: ${action}`)
-  hideContextMenu()
-}
-
-// useClick(context, outside)
+const { coordinates } = useClientPoint(trackingArea, cursorContext, {
+  axis: axisMode,
+  enabled: isEnabled,
+})
 </script>
-
-<style scoped>
-.demo-preview {
-  position: relative;
-}
-
-.context-area {
-  width: 50vw;
-  height: 50vh;
-  background: var(--vp-c-bg-soft);
-  border: 2px dashed black;
-  border-radius: 12px;
-  padding: 2rem;
-  min-height: 300px;
-  cursor: context-menu;
-  transition: all 0.2s ease;
-}
-
-.context-area:hover {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-bg-elv);
-}
-
-.context-content {
-  text-align: center;
-}
-
-.context-content h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--vp-c-text-1);
-  font-size: 1.125rem;
-}
-
-.context-content p {
-  margin: 0 0 1.5rem 0;
-  color: var(--vp-c-text-2);
-  font-size: 0.875rem;
-}
-
-.context-content code {
-  background: var(--vp-c-bg);
-  padding: 0.125rem 0.25rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: var(--vp-c-brand-1);
-}
-
-.demo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  max-width: 200px;
-  margin: 0 auto;
-}
-
-.demo-item {
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  color: var(--vp-c-text-1);
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.demo-item:hover {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-brand-soft);
-}
-
-.floating-element {
-  z-index: 1000;
-}
-
-.context-menu {
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  padding: 0.5rem 0;
-  min-width: 140px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(8px);
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--vp-c-text-1);
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.menu-item:hover {
-  background: var(--vp-c-bg-soft);
-}
-
-.menu-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--vp-c-text-2);
-}
-
-.menu-divider {
-  height: 1px;
-  background: var(--vp-c-divider);
-  margin: 0.25rem 0;
-}
-
-@media (max-width: 768px) {
-  .context-area {
-    padding: 1rem;
-    min-height: 200px;
-  }
-
-  .demo-grid {
-    grid-template-columns: 1fr;
-    max-width: 150px;
-  }
-}
-</style>
