@@ -1,15 +1,44 @@
 # Getting Started with V-Float
 
-V-Float is a Vue 3 composable library for positioning floating UI elements such as tooltips, popovers, and dropdown menus. It provides a reactive and precise positioning engine inspired by Floating UI, tailored for the Vue 3 Composition API.
+V-Float is a comprehensive Vue 3 composable library for building sophisticated floating UI elements including tooltips, dropdowns, popovers, context menus, and complex nested menu systems. It provides a complete toolkit with precise positioning, interaction handling, hierarchical management, and accessibility features.
 
-This guide walks you through installing V-Float and creating a basic positioned tooltip.
+- **Precise positioning engine** - Inspired by Floating UI, handles complex positioning logic with collision detection and middleware support
+- **Interaction composables** - Declarative APIs for clicks, hovers, focus, escape key, and custom interactions
+- **Floating Tree system** - Hierarchical management for nested floating elements and complex menu structures
+- **Middleware system** - Extensible positioning and behavior customization with arrows, offset, and more
+- **Accessibility-first** - Built-in ARIA support, keyboard navigation, and screen reader compatibility
+- **TypeScript support** - Full type safety and excellent developer experience
 
-**What you'll do:**
+**What you'll learn:**
 
-- Install V-Float in a Vue 3 project.
-- Use the `useFloating` composable to manage element positions.
-- Create a simple tooltip that appears on hover.
-- Apply the dynamic styles to position the tooltip correctly.
+- Install V-Float and understand its capabilities
+- Use the `useFloating` composable for precise positioning
+- Compose interactions for robust user experiences
+- Build accessible tooltips, dropdowns, and nested menus
+- Leverage the Floating Tree for complex hierarchies
+
+## What Can You Build with V-Float?
+
+V-Float provides the tools to build a wide range of floating UI components, from simple tooltips to complex nested menu systems:
+
+### Simple Components
+- **Tooltips** - Hover-activated informational overlays with precise positioning
+- **Popovers** - Rich content panels that appear on user interaction
+- **Dropdowns** - Navigation menus and select components with keyboard support
+
+### Advanced Components
+- **Context Menus** - Right-click menus with nested options and custom positioning
+- **Nested Menus** - Multi-level navigation systems with proper focus management
+- **Modal Dialogs** - Full-screen overlays triggered by floating elements
+- **Cascading Menus** - File menu → Export submenu → Format options hierarchies
+
+### Complex Interactions
+- **Hover tooltips** with keyboard accessibility and focus management
+- **Click dropdowns** with escape key handling and click-outside-to-close
+- **Context menus** with precise cursor positioning and collision detection
+- **Nested hierarchies** with automatic state management and accessibility
+
+Each component type leverages different combinations of V-Float's composables to provide robust, accessible user experiences.
 
 ## Before you begin
 
