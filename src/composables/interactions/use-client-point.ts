@@ -10,6 +10,7 @@ import type { PointerType } from "@vueuse/core"
 import {
   computed,
   type MaybeRefOrGetter,
+  nextTick,
   onWatcherCleanup,
   type Ref,
   readonly,

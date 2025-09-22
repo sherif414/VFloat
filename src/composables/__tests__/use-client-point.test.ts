@@ -11,6 +11,7 @@ describe("useClientPoint", () => {
     mockFloatingContext = {
       open: ref(false),
       setOpen: vi.fn(),
+      update: vi.fn(),
       refs: {
         anchorEl: ref(null),
       },
@@ -22,7 +23,7 @@ describe("useClientPoint", () => {
 
   afterEach(() => {
     // Clean up DOM
-    if (mockPointerTarget.value.parentNode) {
+    if (mockPointerTarget.value && mockPointerTarget.value.parentNode) {
       mockPointerTarget.value.parentNode.removeChild(mockPointerTarget.value)
     }
   })
@@ -443,6 +444,190 @@ describe("useClientPoint", () => {
       updatePosition(150, 300)
       
       expect(coordinates.value).toEqual({ x: 150, y: 300 })
+    })
+  })
+
+  describe("reactive virtual element behavior", () => {
+    it("should update virtual element when pointerTarget changes", async () => {
+      const newTarget = ref(document.createElement("span"))
+      document.body.appendChild(newTarget.value)
+      
+      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        trackingMode: "follow",
+      })
+      
+      mockFloatingContext.open.value = true
+      await nextTick()
+      
+      // Set initial coordinates
+      const event1 = new PointerEvent("pointermove", {
+        clientX: 100,
+        clientY: 200,
+        pointerType: "mouse",
+      })
+      mockPointerTarget.value.dispatchEvent(event1)
+      await nextTick()
+      
+      const initialVirtualElement = mockFloatingContext.refs.anchorEl.value
+      expect(initialVirtualElement).toBeDefined()
+      expect(initialVirtualElement.contextElement).toBe(mockPointerTarget.value)
+      
+      // Change the pointer target
+      mockPointerTarget.value = newTarget.value
+      await nextTick()
+      
+      const updatedVirtualElement = mockFloatingContext.refs.anchorEl.value
+      expect(updatedVirtualElement).toBeDefined()
+      expect(updatedVirtualElement.contextElement).toBe(newTarget.value)
+      
+      // Cleanup
+      if (newTarget.value.parentNode) {
+        newTarget.value.parentNode.removeChild(newTarget.value)
+      }
+    })
+
+    it("should update virtual element when axis configuration changes", async () => {
+      const axis = ref<"x" | "y" | "both">("both")
+      
+      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        axis: axis,
+        trackingMode: "follow",
+      })
+      
+      mockFloatingContext.open.value = true
+      await nextTick()
+      
+      // Set coordinates
+      const event = new PointerEvent("pointermove", {
+        clientX: 100,
+        clientY: 200,
+        pointerType: "mouse",
+      })
+      mockPointerTarget.value.dispatchEvent(event)
+      await nextTick()
+      
+      const initialRect = mockFloatingContext.refs.anchorEl.value.getBoundingClientRect()
+      expect(initialRect.width).toBe(0) // both axis should give 0 width
+      expect(initialRect.height).toBe(0) // both axis should give 0 height
+      
+      // Change axis to x-only
+      axis.value = "x"
+      await nextTick()
+      
+      const updatedRect = mockFloatingContext.refs.anchorEl.value.getBoundingClientRect()
+      expect(updatedRect.width).toBeGreaterThan(0) // x-only should preserve reference width
+      expect(updatedRect.height).toBe(0) // x-only should have 0 height
+    })
+
+    it("should trigger position update when virtual element changes and floating is open", async () => {
+      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        trackingMode: "follow",
+      })
+      
+      mockFloatingContext.open.value = true
+      await nextTick()
+      
+      const updateSpy = mockFloatingContext.update
+      updateSpy.mockClear() // Clear any initial calls
+      
+      // Trigger coordinate update
+      const event = new PointerEvent("pointermove", {
+        clientX: 100,
+        clientY: 200,
+        pointerType: "mouse",
+      })
+      mockPointerTarget.value.dispatchEvent(event)
+      
+      // Wait for watchEffect and nextTick to complete
+      await nextTick()
+      await nextTick()
+      
+      // Should have called update at least once
+      expect(updateSpy).toHaveBeenCalled()
+    })
+
+    it("should not trigger position update when floating is closed", async () => {
+      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        trackingMode: "follow",
+      })
+      
+      mockFloatingContext.open.value = false
+      await nextTick()
+      
+      const updateSpy = mockFloatingContext.update
+      updateSpy.mockClear()
+      
+      // Trigger coordinate update while closed
+      const event = new PointerEvent("pointermove", {
+        clientX: 100,
+        clientY: 200,
+        pointerType: "mouse",
+      })
+      mockPointerTarget.value.dispatchEvent(event)
+      await nextTick()
+      
+      // Should not have called update
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it("should handle null pointerTarget gracefully", async () => {
+      mockPointerTarget.value = null
+      
+      const { coordinates, updatePosition } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        trackingMode: "follow",
+      })
+      
+      mockFloatingContext.open.value = true
+      await nextTick()
+      
+      // Set coordinates manually to trigger virtual element creation
+      updatePosition(100, 200)
+      await nextTick()
+      
+      // Should create a virtual element with null context when coordinates exist
+      expect(mockFloatingContext.refs.anchorEl.value).toBeDefined()
+      expect(mockFloatingContext.refs.anchorEl.value.contextElement).toBeUndefined()
+      expect(coordinates.value).toEqual({ x: 100, y: 200 })
+    })
+
+    it("should preserve coordinate state across pointerTarget changes", async () => {
+      const newTarget = ref(document.createElement("div"))
+      document.body.appendChild(newTarget.value)
+      
+      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        trackingMode: "follow",
+      })
+      
+      mockFloatingContext.open.value = true
+      await nextTick()
+      
+      // Set initial coordinates
+      const event = new PointerEvent("pointermove", {
+        clientX: 100,
+        clientY: 200,
+        pointerType: "mouse",
+      })
+      mockPointerTarget.value.dispatchEvent(event)
+      await nextTick()
+      
+      expect(coordinates.value).toEqual({ x: 100, y: 200 })
+      
+      // Change pointer target
+      mockPointerTarget.value = newTarget.value
+      await nextTick()
+      
+      // Coordinates should be preserved
+      expect(coordinates.value).toEqual({ x: 100, y: 200 })
+      
+      // Virtual element should still use the preserved coordinates
+      const rect = mockFloatingContext.refs.anchorEl.value.getBoundingClientRect()
+      expect(rect.x).toBe(100)
+      expect(rect.y).toBe(200)
+      
+      // Cleanup
+      if (newTarget.value.parentNode) {
+        newTarget.value.parentNode.removeChild(newTarget.value)
+      }
     })
   })
 })
