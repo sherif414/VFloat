@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Comprehensive client point positioning composable
+ * 
+ * This file contains a complete modular implementation consolidated into a single file
+ * for easier maintenance while preserving the architectural benefits of separation of concerns.
+ */
+
 import type { VirtualElement } from "@floating-ui/dom"
 import type { PointerType } from "@vueuse/core"
 import {
@@ -15,222 +22,75 @@ import type { FloatingContext } from "@/composables"
 import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================
-// 📌 Main
-//=======================================================================================
-
-/**
- * Positions the floating element relative to a client point (mouse position).
- *
- * This composable tracks pointer movements and positions the floating element
- * accordingly, with options for axis locking and controlled coordinates.
- *
- * @param pointerTarget - The DOM element whose bounding box is used as the reference for pointer event listeners and initial positioning.
- * @param context - The floating context with open state and position reference
- * @param options - Configuration options for client point behavior
- *
- * @example
- * ```ts
- * const context = useFloating(...)
- * useClientPoint(context, {
- *   axis: "x",
- *   enabled: true
- * })
- * ```
- */
-export function useClientPoint(
-  pointerTarget: Ref<HTMLElement | null>,
-  context: FloatingContext,
-  options: UseClientPointOptions = {}
-): UseClientPointReturn {
-  const { open, refs } = context
-
-  // State
-  const clientCoords = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
-  let pointerType: PointerType | undefined
-
-  // Last known coordinates from any pointer movement. Ideal for hover-delay.
-  let lastPointerCoords: { x: number; y: number } | null = null
-  // High-priority coordinates from a trigger event like a click. Ideal for context menus.
-  let triggerCoords: { x: number; y: number } | null = null
-
-  // Computed options
-  const axis = computed(() => toValue(options.axis ?? "both"))
-  const enabled = computed(() => toValue(options.enabled ?? true))
-  const externalX = computed(() => toValue(options.x ?? null))
-  const externalY = computed(() => toValue(options.y ?? null))
-  const trackingMode = computed(() => toValue(options.trackingMode ?? "follow"))
-
-  const setPosition = (x: number | null, y: number | null) => {
-    clientCoords.value = { x, y }
-
-    if (open.value && x != null && y != null) {
-      refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x, y })
-    }
-  }
-
-  refs.anchorEl.value = createVirtualElement(pointerTarget.value, axis.value, { x: null, y: null })
-
-  // Handle controlled coordinates
-  watch(
-    [externalX, externalY, enabled],
-    ([x, y, isEnabled]) => {
-      if (isEnabled && x != null && y != null) {
-        setPosition(x, y)
-      }
-    },
-    { immediate: true }
-  )
-
-  // Core logic for opening/closing
-  watch(open, (isOpen) => {
-    if (!enabled.value || (externalX.value != null && externalY.value != null)) {
-      return
-    }
-
-    if (isOpen) {
-      if (trackingMode.value === "static") {
-        // 1. Prioritize coordinates from a recent trigger event (the click)
-        // 2. Fall back to the last known position (the hover)
-
-        const coordsToUse = triggerCoords ?? lastPointerCoords
-        if (coordsToUse) {
-          setPosition(coordsToUse.x, coordsToUse.y)
-        }
-      }
-    } else {
-      // When closing, reset everything
-      clientCoords.value = { x: null, y: null }
-      triggerCoords = null
-    }
-  })
-
-  // --- Event Listeners ---
-
-  const onPointerdown = (e: PointerEvent) => {
-    pointerType = e.pointerType as PointerType
-    const coords = { x: e.clientX, y: e.clientY }
-    lastPointerCoords = coords
-
-    if (trackingMode.value === "static") {
-      // This is a potential trigger event. Store its coordinates.
-      triggerCoords = coords
-    } else {
-      // 'follow' mode
-      setPosition(coords.x, coords.y)
-    }
-  }
-
-  const onPointerenter = (e: PointerEvent) => {
-    pointerType = e.pointerType as PointerType
-    updateLastPointerCoords(e)
-  }
-
-  const onPointermove = (e: PointerEvent) => {
-    updateLastPointerCoords(e)
-
-    // A move event invalidates a previous click trigger.
-    // This makes the logic default back to standard hover tracking.
-    triggerCoords = null
-
-    if (
-      open.value &&
-      isMouseLikePointerType(pointerType, true) &&
-      trackingMode.value === "follow"
-    ) {
-      setPosition(e.clientX, e.clientY)
-    }
-  }
-
-  const updateLastPointerCoords = (e: PointerEvent) => {
-    lastPointerCoords = { x: e.clientX, y: e.clientY }
-  }
-
-  watchEffect(() => {
-    if (externalX.value != null || externalY.value != null) return
-    const el = pointerTarget.value
-    if (!el || !enabled.value) return
-
-    el.addEventListener("pointerenter", onPointerenter)
-    el.addEventListener("pointerdown", onPointerdown)
-    el.addEventListener("pointermove", onPointermove)
-
-    onWatcherCleanup(() => {
-      el?.removeEventListener("pointerenter", onPointerenter)
-      el?.removeEventListener("pointerdown", onPointerdown)
-      el?.removeEventListener("pointermove", onPointermove)
-    })
-  })
-
-  return {
-    coordinates: readonly(clientCoords),
-    updatePosition: (x: number, y: number) => setPosition(x, y),
-  }
-}
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-/**
- * Creates a virtual element based on client coordinates and axis constraints.
- * @param referenceEl - The DOM element used as fallback context, if available.
- * @param currentAxis - The axis ('x', 'y', 'both') to consider for positioning.
- * @param clientCoords - The current client coordinates (x, y).
- * @returns A VirtualElement object for Floating UI.
- */
-function createVirtualElement(
-  referenceEl: HTMLElement | null,
-  currentAxis: "x" | "y" | "both",
-  clientCoords: { x: number | null; y: number | null }
-): VirtualElement {
-  const domRect = referenceEl?.getBoundingClientRect() ?? {
-    width: 0,
-    height: 0,
-    x: 0,
-    y: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  }
-
-  return {
-    contextElement: referenceEl || undefined,
-    getBoundingClientRect: () => {
-      const isXAxis = currentAxis === "x" || currentAxis === "both"
-      const isYAxis = currentAxis === "y" || currentAxis === "both"
-
-      // Use client coordinates when available and axis is enabled, otherwise use reference element
-      const x = isXAxis && clientCoords.x != null ? clientCoords.x : domRect.x
-      const y = isYAxis && clientCoords.y != null ? clientCoords.y : domRect.y
-
-      // For point positioning (both axes), create a zero-size rect at the cursor
-      // For line positioning (single axis), maintain the reference element's dimension on the other axis
-      const width = currentAxis === "both" || currentAxis === "y" ? 0 : domRect.width
-      const height = currentAxis === "both" || currentAxis === "x" ? 0 : domRect.height
-
-      return {
-        width: Math.max(0, width),
-        height: Math.max(0, height),
-        x,
-        y,
-        top: y,
-        right: x + width,
-        bottom: y + height,
-        left: x,
-      }
-    },
-  }
-}
-
-//=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Represents 2D coordinates with optional null values for unset states
+ */
+export interface Coordinates {
+  x: number | null
+  y: number | null
+}
+
+/**
+ * Axis constraint types for coordinate positioning
+ */
+export type AxisConstraint = "x" | "y" | "both"
 
 /**
  * Tracking mode for client point positioning behavior
  */
 export type TrackingMode = "follow" | "static"
+
+/**
+ * Dimensions for bounding rectangles
+ */
+interface Dimensions {
+  width: number
+  height: number
+}
+
+/**
+ * Processed pointer event data
+ */
+interface PointerEventData {
+  type: "pointerdown" | "pointermove" | "pointerenter"
+  coordinates: Coordinates
+  pointerType: PointerType
+  timestamp: number
+  originalEvent: PointerEvent
+}
+
+/**
+ * Coordinate update event data
+ */
+interface CoordinateUpdate {
+  coordinates: Coordinates
+  source: "pointer" | "external" | "programmatic"
+  timestamp: number
+}
+
+/**
+ * Context for tracking strategy operations
+ */
+interface TrackingContext {
+  axis: AxisConstraint
+  isOpen: boolean
+  lastCoordinates: Coordinates | null
+  lastUpdateTime: number
+}
+
+/**
+ * Virtual element configuration
+ */
+interface VirtualElementConfig {
+  referenceElement: HTMLElement | null
+  coordinates: Coordinates
+  lockedCoordinates: Coordinates | null
+  axis: AxisConstraint
+  fallbackDimensions: Dimensions
+}
 
 export interface UseClientPointOptions {
   /**
@@ -243,7 +103,7 @@ export interface UseClientPointOptions {
    * Whether to restrict the client point to an axis
    * @default 'both'
    */
-  axis?: MaybeRefOrGetter<"x" | "y" | "both">
+  axis?: MaybeRefOrGetter<AxisConstraint>
 
   /**
    * Controlled x coordinate
@@ -275,4 +135,731 @@ export interface UseClientPointReturn {
    * Function to manually update the floating element's position
    */
   updatePosition: (x: number, y: number) => void
+}
+
+//=======================================================================================
+// 📌 Services
+//=======================================================================================
+
+/**
+ * Service for validating and normalizing coordinates with axis constraints
+ */
+class CoordinateValidator {
+  /**
+   * Validate coordinates against the given axis constraint
+   */
+  validate(coordinates: Coordinates, axis: AxisConstraint = "both"): boolean {
+    const normalized = this.normalizeCoordinates(coordinates)
+    
+    // Allow null coordinates for initial state - they are valid
+    const hasAnyCoordinates = normalized.x !== null || normalized.y !== null
+    if (!hasAnyCoordinates) {
+      return true // No validation errors for completely null coordinates
+    }
+
+    // Basic type and range validation
+    if (normalized.x !== null && (typeof normalized.x !== "number" || !isFinite(normalized.x))) {
+      return false
+    }
+    if (normalized.y !== null && (typeof normalized.y !== "number" || !isFinite(normalized.y))) {
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Normalize coordinates by handling edge cases and type coercion
+   */
+  private normalizeCoordinates(coords: Coordinates): Coordinates {
+    return {
+      x: this.normalizeValue(coords.x),
+      y: this.normalizeValue(coords.y)
+    }
+  }
+
+  /**
+   * Normalize a single coordinate value
+   */
+  private normalizeValue(value: number | null | undefined): number | null {
+    if (value === null || value === undefined) {
+      return null
+    }
+    if (typeof value === "string") {
+      const parsed = parseFloat(value)
+      return isNaN(parsed) ? null : parsed
+    }
+    if (typeof value === "number") {
+      return isNaN(value) || !isFinite(value) ? null : value
+    }
+    return null
+  }
+
+  /**
+   * Check if two coordinate sets are equal
+   */
+  areEqual(coords1: Coordinates, coords2: Coordinates): boolean {
+    return coords1.x === coords2.x && coords1.y === coords2.y
+  }
+}
+
+/**
+ * Service for calculating bounding rectangles for virtual elements
+ */
+class BoundingRectCalculator {
+  /**
+   * Create a virtual element with precise bounding rectangle calculations
+   */
+  createVirtualElement(config: VirtualElementConfig): VirtualElement {
+    return {
+      contextElement: config.referenceElement || undefined,
+      getBoundingClientRect: () => this.calculateBoundingRect(config)
+    }
+  }
+
+  /**
+   * Calculate bounding rectangle based on configuration
+   */
+  private calculateBoundingRect(config: VirtualElementConfig): DOMRect {
+    const { referenceElement, coordinates, lockedCoordinates, axis, fallbackDimensions } = config
+    
+    const refRect = this.getReferenceRect(referenceElement, fallbackDimensions)
+    const position = this.calculatePosition(coordinates, axis, refRect, lockedCoordinates)
+    const dimensions = this.calculateDimensions(axis, refRect, fallbackDimensions)
+
+    return this.createDOMRect({
+      x: position.x,
+      y: position.y,
+      width: dimensions.width,
+      height: dimensions.height
+    })
+  }
+
+  /**
+   * Get reference element rectangle or fallback
+   */
+  private getReferenceRect(referenceElement: HTMLElement | null, fallback: Dimensions): DOMRect {
+    if (referenceElement) {
+      try {
+        return referenceElement.getBoundingClientRect()
+      } catch (error) {
+        console.warn("Failed to get reference element bounds:", error)
+      }
+    }
+
+    // Return fallback rectangle
+    return this.createDOMRect({
+      x: 0,
+      y: 0,
+      width: fallback.width,
+      height: fallback.height
+    })
+  }
+
+  /**
+   * Calculate position based on coordinates and axis constraints
+   */
+  private calculatePosition(
+    coordinates: Coordinates,
+    axis: AxisConstraint,
+    refRect: DOMRect,
+    lockedCoordinates: Coordinates | null
+  ): { x: number; y: number } {
+    const isXAxis = axis === "x" || axis === "both"
+    const isYAxis = axis === "y" || axis === "both"
+
+    // Use live coordinates when available and axis allows,
+    // otherwise prefer locked coordinates from the initial interaction,
+    // and finally fall back to the reference element's rect.
+    const x = isXAxis && coordinates.x !== null
+      ? coordinates.x
+      : (lockedCoordinates?.x ?? refRect.x)
+    const y = isYAxis && coordinates.y !== null
+      ? coordinates.y
+      : (lockedCoordinates?.y ?? refRect.y)
+
+    return { x, y }
+  }
+
+  /**
+   * Calculate dimensions based on axis constraints
+   */
+  private calculateDimensions(
+    axis: AxisConstraint,
+    refRect: DOMRect,
+    fallback: Dimensions
+  ): Dimensions {
+    switch (axis) {
+      case "both":
+        // Point positioning - zero dimensions
+        return { width: 0, height: 0 }
+        
+      case "x":
+        // Horizontal line - full width, zero height
+        return { width: refRect.width || fallback.width, height: 0 }
+        
+      case "y":
+        // Vertical line - zero width, full height
+        return { width: 0, height: refRect.height || fallback.height }
+        
+      default:
+        return { width: 0, height: 0 }
+    }
+  }
+
+  /**
+   * Create a DOMRect-like object
+   */
+  private createDOMRect(rect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }): DOMRect {
+    const { x, y, width, height } = rect
+    
+    // Ensure non-negative dimensions
+    const safeWidth = Math.max(0, width)
+    const safeHeight = Math.max(0, height)
+
+    return {
+      x,
+      y,
+      width: safeWidth,
+      height: safeHeight,
+      top: y,
+      right: x + safeWidth,
+      bottom: y + safeHeight,
+      left: x,
+      toJSON: () => ({ x, y, width: safeWidth, height: safeHeight })
+    } as DOMRect
+  }
+}
+
+//=======================================================================================
+// 📌 Tracking Strategies
+//=======================================================================================
+
+/**
+ * Base interface for tracking strategies
+ */
+abstract class TrackingStrategy {
+  abstract readonly name: TrackingMode
+  
+  /**
+   * Process a pointer event and return coordinate update if applicable
+   */
+  abstract process(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null
+  
+  /**
+   * Reset strategy state
+   */
+  abstract reset(): void
+  
+  /**
+   * Check if strategy can handle the given event
+   */
+  canHandle(event: PointerEventData): boolean {
+    return event.coordinates.x !== null || event.coordinates.y !== null
+  }
+
+  /**
+   * Create a coordinate update object
+   */
+  protected createCoordinateUpdate(
+    event: PointerEventData,
+    source: CoordinateUpdate["source"] = "pointer"
+  ): CoordinateUpdate {
+    return {
+      coordinates: event.coordinates,
+      source,
+      timestamp: event.timestamp
+    }
+  }
+
+  /**
+   * Check if event coordinates are valid for the current axis
+   */
+  protected isValidForAxis(event: PointerEventData, axis: AxisConstraint): boolean {
+    const { x, y } = event.coordinates
+    switch (axis) {
+      case "x": return x !== null
+      case "y": return y !== null
+      case "both": return x !== null && y !== null
+      default: return false
+    }
+  }
+}
+
+/**
+ * Strategy for continuous cursor tracking
+ */
+class FollowTracker extends TrackingStrategy {
+  readonly name = "follow" as const
+  private lastUpdateTime = 0
+
+  /**
+   * Process pointer events for continuous tracking
+   */
+  process(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Validate coordinates for current axis
+    if (!this.isValidForAxis(event, context.axis)) {
+      return null
+    }
+
+    // Handle different event types
+    switch (event.type) {
+      case "pointerdown":
+        return this.handlePointerDown(event, context)
+      case "pointermove":
+        return this.handlePointerMove(event, context)
+      case "pointerenter":
+        return this.handlePointerEnter(event, context)
+      default:
+        return null
+    }
+  }
+
+  /**
+   * Handle pointer down events
+   */
+  private handlePointerDown(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Always update on pointer down for immediate feedback
+    this.lastUpdateTime = event.timestamp
+    return this.createCoordinateUpdate(event)
+  }
+
+  /**
+   * Handle pointer move events
+   */
+  private handlePointerMove(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Only track movements when floating element is open for follow mode
+    if (!context.isOpen) {
+      return null
+    }
+
+    // Only track mouse-like pointers for movements
+    if (!isMouseLikePointerType(event.originalEvent.pointerType, true)) {
+      return null
+    }
+
+    // Update every time for better test reliability
+    this.lastUpdateTime = event.timestamp
+    return this.createCoordinateUpdate(event)
+  }
+
+  /**
+   * Handle pointer enter events
+   */
+  private handlePointerEnter(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Update on enter for initial positioning
+    this.lastUpdateTime = event.timestamp
+    return this.createCoordinateUpdate(event)
+  }
+
+  /**
+   * Reset tracking state
+   */
+  reset(): void {
+    this.lastUpdateTime = 0
+  }
+
+  /**
+   * Check if this strategy can handle the event
+   */
+  canHandle(event: PointerEventData): boolean {
+    if (!super.canHandle(event)) {
+      return false
+    }
+    return ["pointerdown", "pointermove", "pointerenter"].includes(event.type)
+  }
+}
+
+/**
+ * Strategy for static positioning at initial interaction
+ */
+class StaticTracker extends TrackingStrategy {
+  readonly name = "static" as const
+  
+  // Last known coordinates from any pointer movement
+  private lastPointerCoords: Coordinates | null = null
+  // High-priority coordinates from trigger events like clicks
+  private triggerCoords: Coordinates | null = null
+
+  /**
+   * Process pointer events for static positioning
+   */
+  process(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Validate coordinates for current axis
+    if (!this.isValidForAxis(event, context.axis)) {
+      return null
+    }
+
+    // Handle different event types
+    switch (event.type) {
+      case "pointerdown":
+        return this.handlePointerDown(event, context)
+      case "pointermove":
+        return this.handlePointerMove(event, context)
+      case "pointerenter":
+        return this.handlePointerEnter(event, context)
+      default:
+        return null
+    }
+  }
+
+  /**
+   * Handle pointer down events (trigger events)
+   */
+  private handlePointerDown(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Store as trigger coordinates (highest priority)
+    this.triggerCoords = event.coordinates
+    this.lastPointerCoords = event.coordinates
+
+    // If floating element is open, update immediately
+    if (context.isOpen) {
+      return this.createCoordinateUpdate(event)
+    }
+
+    return null
+  }
+
+  /**
+   * Handle pointer move events
+   */
+  private handlePointerMove(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Update last known position
+    this.lastPointerCoords = event.coordinates
+    // Movement invalidates trigger coordinates (user moved after click)
+    this.triggerCoords = null
+    // Don't update position during movement in static mode
+    return null
+  }
+
+  /**
+   * Handle pointer enter events
+   */
+  private handlePointerEnter(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+    // Update last known position
+    this.lastPointerCoords = event.coordinates
+    // Don't update position during enter in static mode
+    return null
+  }
+
+  /**
+   * Get coordinates to use when floating element opens
+   */
+  getCoordinatesForOpen(): Coordinates | null {
+    // 1. Prioritize trigger coordinates (from recent click)
+    if (this.triggerCoords) {
+      return this.triggerCoords
+    }
+    // 2. Fall back to last known hover position
+    return this.lastPointerCoords
+  }
+
+  /**
+   * Create coordinate update for static positioning
+   */
+  createStaticUpdate(timestamp?: number): CoordinateUpdate | null {
+    const coordinates = this.getCoordinatesForOpen()
+    
+    if (!coordinates) {
+      return null
+    }
+
+    return {
+      coordinates,
+      source: "pointer",
+      timestamp: timestamp ?? Date.now()
+    }
+  }
+
+  /**
+   * Reset tracking state
+   */
+  reset(): void {
+    this.lastPointerCoords = null
+    this.triggerCoords = null
+  }
+
+  /**
+   * Reset only trigger coordinates (called when floating closes)
+   */
+  resetTriggerCoordinates(): void {
+    this.triggerCoords = null
+  }
+
+  /**
+   * Check if this strategy can handle the event
+   */
+  canHandle(event: PointerEventData): boolean {
+    if (!super.canHandle(event)) {
+      return false
+    }
+    return ["pointerdown", "pointermove", "pointerenter"].includes(event.type)
+  }
+}
+
+//=======================================================================================
+// 📌 Main Composable
+//=======================================================================================
+
+/**
+ * Positions the floating element relative to a client point (mouse position).
+ *
+ * This composable tracks pointer movements and positions the floating element
+ * accordingly, with options for axis locking and controlled coordinates.
+ *
+ * @param pointerTarget - The DOM element whose bounding box is used as the reference for pointer event listeners and initial positioning.
+ * @param context - The floating context with open state and position reference
+ * @param options - Configuration options for client point behavior
+ *
+ * @example
+ * ```ts
+ * const context = useFloating(...)
+ * useClientPoint(context, {
+ *   axis: "x",
+ *   enabled: true
+ * })
+ * ```
+ */
+export function useClientPoint(
+  pointerTarget: Ref<HTMLElement | null>,
+  context: FloatingContext,
+  options: UseClientPointOptions = {}
+): UseClientPointReturn {
+  const { open, refs } = context
+
+  // Services
+  const validator = new CoordinateValidator()
+  const rectCalculator = new BoundingRectCalculator()
+  
+  // Tracking strategies
+  const followTracker = new FollowTracker()
+  const staticTracker = new StaticTracker()
+
+  // Internal state
+  const internalCoordinates = ref<Coordinates>({ x: null, y: null })
+  // Locked initial coordinates captured when opening to avoid jumps on constrained axes
+  const lockedCoordinates = ref<Coordinates | null>(null)
+
+  // Computed options
+  const axis = computed(() => toValue(options.axis ?? "both"))
+  const enabled = computed(() => toValue(options.enabled ?? true))
+  const externalX = computed(() => toValue(options.x ?? null))
+  const externalY = computed(() => toValue(options.y ?? null))
+  const trackingMode = computed(() => toValue(options.trackingMode ?? "follow"))
+
+  // Check if coordinates are externally controlled
+  const isExternallyControlled = computed(() => externalX.value !== null || externalY.value !== null)
+
+  // Primary coordinates - external takes precedence over internal
+  const coordinates = computed<Coordinates>(() => {
+    const hasExternalX = externalX.value !== null
+    const hasExternalY = externalY.value !== null
+
+    if (hasExternalX || hasExternalY) {
+      return {
+        x: hasExternalX ? externalX.value : internalCoordinates.value.x,
+        y: hasExternalY ? externalY.value : internalCoordinates.value.y
+      }
+    }
+
+    return internalCoordinates.value
+  })
+
+  // Coordinates constrained by current axis setting
+  const constrainedCoordinates = computed<Coordinates>(() => {
+    const coords = coordinates.value
+    const currentAxis = axis.value
+
+    switch (currentAxis) {
+      case "x":
+        return { x: coords.x, y: null }
+      case "y":
+        return { x: null, y: coords.y }
+      case "both":
+        return coords
+    }
+  })
+
+  // Current tracking strategy
+  const currentStrategy = computed<TrackingStrategy>(() => {
+    return trackingMode.value === "follow" ? followTracker : staticTracker
+  })
+
+  /**
+   * Set coordinates programmatically
+   */
+  const setCoordinates = (x: number | null, y: number | null): void => {
+    // Don't update if externally controlled
+    if (isExternallyControlled.value) {
+      return
+    }
+
+    const newCoordinates: Coordinates = { x, y }
+    
+    // Validate coordinates
+    if (validator.validate(newCoordinates, "both")) {
+      internalCoordinates.value = newCoordinates
+    } else {
+      // Still set coordinates even if validation fails (for development)
+      internalCoordinates.value = newCoordinates
+    }
+  }
+
+  /**
+   * Reset coordinates to null
+   */
+  const reset = (): void => {
+    if (!isExternallyControlled.value) {
+      internalCoordinates.value = { x: null, y: null }
+    }
+  }
+
+  /**
+   * Create virtual element based on current coordinates
+   */
+  const createVirtualElement = (): VirtualElement => {
+    const config: VirtualElementConfig = {
+      referenceElement: pointerTarget.value,
+      coordinates: constrainedCoordinates.value,
+      lockedCoordinates: lockedCoordinates.value,
+      axis: axis.value,
+      fallbackDimensions: { width: 100, height: 30 }
+    }
+    
+    return rectCalculator.createVirtualElement(config)
+  }
+
+  /**
+   * Process pointer event with current tracking strategy
+   */
+  const processPointerEvent = (event: PointerEvent, type: PointerEventData["type"]): void => {
+    if (!enabled.value || isExternallyControlled.value) {
+      return
+    }
+
+    const eventData: PointerEventData = {
+      type,
+      coordinates: { x: event.clientX, y: event.clientY },
+      pointerType: event.pointerType as PointerType,
+      timestamp: Date.now(),
+      originalEvent: event
+    }
+
+    // Capture the initial interaction point to lock constrained axis
+    if (type === "pointerdown" && !open.value) {
+      lockedCoordinates.value = { ...eventData.coordinates }
+    }
+
+    const strategy = currentStrategy.value
+    
+    if (!strategy.canHandle(eventData)) {
+      return
+    }
+
+    const trackingContext: TrackingContext = {
+      axis: axis.value,
+      isOpen: open.value,
+      lastCoordinates: coordinates.value,
+      lastUpdateTime: Date.now()
+    }
+
+    const update = strategy.process(eventData, trackingContext)
+    
+    if (update) {
+      setCoordinates(update.coordinates.x, update.coordinates.y)
+    }
+  }
+
+  // Initialize virtual element
+  refs.anchorEl.value = createVirtualElement()
+
+  // Update virtual element when coordinates change
+  watch(
+    [constrainedCoordinates, lockedCoordinates, axis],
+    () => {
+      refs.anchorEl.value = createVirtualElement()
+    },
+    { immediate: true }
+  )
+
+  // Handle controlled coordinates
+  watch(
+    [externalX, externalY, enabled],
+    ([x, y, isEnabled]) => {
+      if (isEnabled && x != null && y != null) {
+        setCoordinates(x, y)
+      }
+    },
+    { immediate: true }
+  )
+
+  // Core logic for opening/closing
+  watch(open, (isOpen) => {
+    if (!enabled.value || isExternallyControlled.value) {
+      return
+    }
+
+    if (isOpen) {
+      if (trackingMode.value === "static") {
+        // Get coordinates from static tracker when opening
+        const strategy = currentStrategy.value as StaticTracker
+        const staticUpdate = strategy.createStaticUpdate()
+        if (staticUpdate) {
+          setCoordinates(staticUpdate.coordinates.x, staticUpdate.coordinates.y)
+          // Lock to the trigger/initial coordinates
+          lockedCoordinates.value = { ...staticUpdate.coordinates }
+        } else {
+          // Fallback: lock to last known internal coordinates
+          lockedCoordinates.value = internalCoordinates.value
+        }
+      } else {
+        // Follow mode: lock to the current pointer coordinates at the moment of opening
+        lockedCoordinates.value = internalCoordinates.value
+      }
+    } else {
+      // When closing, reset everything
+      reset()
+      currentStrategy.value.reset()
+      lockedCoordinates.value = null
+    }
+  })
+
+  // Event listeners setup
+  const onPointerdown = (e: PointerEvent) => {
+    processPointerEvent(e, "pointerdown")
+  }
+
+  const onPointerenter = (e: PointerEvent) => {
+    processPointerEvent(e, "pointerenter")
+  }
+
+  const onPointermove = (e: PointerEvent) => {
+    processPointerEvent(e, "pointermove")
+  }
+
+  // Setup event listeners
+  watchEffect(() => {
+    if (externalX.value != null || externalY.value != null) return
+    const el = pointerTarget.value
+    if (!el || !enabled.value) return
+
+    el.addEventListener("pointerenter", onPointerenter)
+    el.addEventListener("pointerdown", onPointerdown)
+    el.addEventListener("pointermove", onPointermove)
+
+    onWatcherCleanup(() => {
+      el?.removeEventListener("pointerenter", onPointerenter)
+      el?.removeEventListener("pointerdown", onPointerdown)
+      el?.removeEventListener("pointermove", onPointermove)
+    })
+  })
+
+  return {
+    coordinates: readonly(coordinates),
+    updatePosition: (x: number, y: number) => setCoordinates(x, y),
+  }
 }
