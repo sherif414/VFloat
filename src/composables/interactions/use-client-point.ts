@@ -6,11 +6,9 @@
  */
 
 import type { VirtualElement } from "@floating-ui/dom"
-import type { PointerType } from "@vueuse/core"
 import {
   computed,
   type MaybeRefOrGetter,
-  nextTick,
   onWatcherCleanup,
   type Ref,
   readonly,
@@ -58,8 +56,6 @@ interface Dimensions {
 interface PointerEventData {
   type: "pointerdown" | "pointermove" | "pointerenter"
   coordinates: Coordinates
-  pointerType: PointerType
-  timestamp: number
   originalEvent: PointerEvent
 }
 
@@ -68,8 +64,6 @@ interface PointerEventData {
  */
 interface CoordinateUpdate {
   coordinates: Coordinates
-  source: "pointer" | "external" | "programmatic"
-  timestamp: number
 }
 
 /**
@@ -78,8 +72,6 @@ interface CoordinateUpdate {
 interface TrackingContext {
   axis: AxisConstraint
   isOpen: boolean
-  lastCoordinates: Coordinates | null
-  lastUpdateTime: number
 }
 
 /**
@@ -141,68 +133,6 @@ export interface UseClientPointReturn {
 //=======================================================================================
 // 📌 Services
 //=======================================================================================
-
-/**
- * Service for validating and normalizing coordinates with axis constraints
- */
-class CoordinateValidator {
-  /**
-   * Validate coordinates against the given axis constraint
-   */
-  validate(coordinates: Coordinates, axis: AxisConstraint = "both"): boolean {
-    const normalized = this.normalizeCoordinates(coordinates)
-    
-    // Allow null coordinates for initial state - they are valid
-    const hasAnyCoordinates = normalized.x !== null || normalized.y !== null
-    if (!hasAnyCoordinates) {
-      return true // No validation errors for completely null coordinates
-    }
-
-    // Basic type and range validation
-    if (normalized.x !== null && (typeof normalized.x !== "number" || !isFinite(normalized.x))) {
-      return false
-    }
-    if (normalized.y !== null && (typeof normalized.y !== "number" || !isFinite(normalized.y))) {
-      return false
-    }
-
-    return true
-  }
-
-  /**
-   * Normalize coordinates by handling edge cases and type coercion
-   */
-  private normalizeCoordinates(coords: Coordinates): Coordinates {
-    return {
-      x: this.normalizeValue(coords.x),
-      y: this.normalizeValue(coords.y)
-    }
-  }
-
-  /**
-   * Normalize a single coordinate value
-   */
-  private normalizeValue(value: number | null | undefined): number | null {
-    if (value === null || value === undefined) {
-      return null
-    }
-    if (typeof value === "string") {
-      const parsed = parseFloat(value)
-      return isNaN(parsed) ? null : parsed
-    }
-    if (typeof value === "number") {
-      return isNaN(value) || !isFinite(value) ? null : value
-    }
-    return null
-  }
-
-  /**
-   * Check if two coordinate sets are equal
-   */
-  areEqual(coords1: Coordinates, coords2: Coordinates): boolean {
-    return coords1.x === coords2.x && coords1.y === coords2.y
-  }
-}
 
 /**
  * Service for calculating bounding rectangles for virtual elements
@@ -368,13 +298,10 @@ abstract class TrackingStrategy {
    * Create a coordinate update object
    */
   protected createCoordinateUpdate(
-    event: PointerEventData,
-    source: CoordinateUpdate["source"] = "pointer"
+    event: PointerEventData
   ): CoordinateUpdate {
     return {
-      coordinates: event.coordinates,
-      source,
-      timestamp: event.timestamp
+      coordinates: event.coordinates
     }
   }
 
@@ -397,7 +324,6 @@ abstract class TrackingStrategy {
  */
 class FollowTracker extends TrackingStrategy {
   readonly name = "follow" as const
-  private lastUpdateTime = 0
 
   /**
    * Process pointer events for continuous tracking
@@ -411,11 +337,11 @@ class FollowTracker extends TrackingStrategy {
     // Handle different event types
     switch (event.type) {
       case "pointerdown":
-        return this.handlePointerDown(event, context)
+        return this.handlePointerDown(event)
       case "pointermove":
         return this.handlePointerMove(event, context)
       case "pointerenter":
-        return this.handlePointerEnter(event, context)
+        return this.handlePointerEnter(event)
       default:
         return null
     }
@@ -424,9 +350,8 @@ class FollowTracker extends TrackingStrategy {
   /**
    * Handle pointer down events
    */
-  private handlePointerDown(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+  private handlePointerDown(event: PointerEventData): CoordinateUpdate | null {
     // Always update on pointer down for immediate feedback
-    this.lastUpdateTime = event.timestamp
     return this.createCoordinateUpdate(event)
   }
 
@@ -445,16 +370,14 @@ class FollowTracker extends TrackingStrategy {
     }
 
     // Update every time for better test reliability
-    this.lastUpdateTime = event.timestamp
     return this.createCoordinateUpdate(event)
   }
 
   /**
    * Handle pointer enter events
    */
-  private handlePointerEnter(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+  private handlePointerEnter(event: PointerEventData): CoordinateUpdate | null {
     // Update on enter for initial positioning
-    this.lastUpdateTime = event.timestamp
     return this.createCoordinateUpdate(event)
   }
 
@@ -462,7 +385,7 @@ class FollowTracker extends TrackingStrategy {
    * Reset tracking state
    */
   reset(): void {
-    this.lastUpdateTime = 0
+    // no state to reset
   }
 
   /**
@@ -501,9 +424,9 @@ class StaticTracker extends TrackingStrategy {
       case "pointerdown":
         return this.handlePointerDown(event, context)
       case "pointermove":
-        return this.handlePointerMove(event, context)
+        return this.handlePointerMove(event)
       case "pointerenter":
-        return this.handlePointerEnter(event, context)
+        return this.handlePointerEnter(event)
       default:
         return null
     }
@@ -528,7 +451,7 @@ class StaticTracker extends TrackingStrategy {
   /**
    * Handle pointer move events
    */
-  private handlePointerMove(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+  private handlePointerMove(event: PointerEventData): CoordinateUpdate | null {
     // Update last known position
     this.lastPointerCoords = event.coordinates
     // Movement invalidates trigger coordinates (user moved after click)
@@ -540,7 +463,7 @@ class StaticTracker extends TrackingStrategy {
   /**
    * Handle pointer enter events
    */
-  private handlePointerEnter(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
+  private handlePointerEnter(event: PointerEventData): CoordinateUpdate | null {
     // Update last known position
     this.lastPointerCoords = event.coordinates
     // Don't update position during enter in static mode
@@ -560,34 +483,10 @@ class StaticTracker extends TrackingStrategy {
   }
 
   /**
-   * Create coordinate update for static positioning
-   */
-  createStaticUpdate(timestamp?: number): CoordinateUpdate | null {
-    const coordinates = this.getCoordinatesForOpen()
-    
-    if (!coordinates) {
-      return null
-    }
-
-    return {
-      coordinates,
-      source: "pointer",
-      timestamp: timestamp ?? Date.now()
-    }
-  }
-
-  /**
    * Reset tracking state
    */
   reset(): void {
     this.lastPointerCoords = null
-    this.triggerCoords = null
-  }
-
-  /**
-   * Reset only trigger coordinates (called when floating closes)
-   */
-  resetTriggerCoordinates(): void {
     this.triggerCoords = null
   }
 
@@ -633,7 +532,6 @@ export function useClientPoint(
   const { open, refs } = context
 
   // Services
-  const validator = new CoordinateValidator()
   const rectCalculator = new BoundingRectCalculator()
   
   // Tracking strategies
@@ -651,8 +549,6 @@ export function useClientPoint(
   const externalX = computed(() => toValue(options.x ?? null))
   const externalY = computed(() => toValue(options.y ?? null))
   const trackingMode = computed(() => toValue(options.trackingMode ?? "follow"))
-
-  // Check if coordinates are externally controlled
   const isExternallyControlled = computed(() => externalX.value !== null || externalY.value !== null)
 
   // Primary coordinates - external takes precedence over internal
@@ -686,7 +582,7 @@ export function useClientPoint(
   })
 
   // Current tracking strategy
-  const currentStrategy = computed<TrackingStrategy>(() => {
+  const trackingStrategy = computed<TrackingStrategy>(() => {
     return trackingMode.value === "follow" ? followTracker : staticTracker
   })
 
@@ -695,19 +591,8 @@ export function useClientPoint(
    */
   const setCoordinates = (x: number | null, y: number | null): void => {
     // Don't update if externally controlled
-    if (isExternallyControlled.value) {
-      return
-    }
-
-    const newCoordinates: Coordinates = { x, y }
-    
-    // Validate coordinates
-    if (validator.validate(newCoordinates, "both")) {
-      internalCoordinates.value = newCoordinates
-    } else {
-      // Still set coordinates even if validation fails (for development)
-      internalCoordinates.value = newCoordinates
-    }
+    if (isExternallyControlled.value) return
+    internalCoordinates.value = { x, y }
   }
 
   /**
@@ -745,8 +630,6 @@ export function useClientPoint(
     const eventData: PointerEventData = {
       type,
       coordinates: { x: event.clientX, y: event.clientY },
-      pointerType: event.pointerType as PointerType,
-      timestamp: Date.now(),
       originalEvent: event
     }
 
@@ -755,7 +638,7 @@ export function useClientPoint(
       lockedCoordinates.value = { ...eventData.coordinates }
     }
 
-    const strategy = currentStrategy.value
+    const strategy = trackingStrategy.value
     
     if (!strategy.canHandle(eventData)) {
       return
@@ -763,9 +646,7 @@ export function useClientPoint(
 
     const trackingContext: TrackingContext = {
       axis: axis.value,
-      isOpen: open.value,
-      lastCoordinates: coordinates.value,
-      lastUpdateTime: Date.now()
+      isOpen: open.value
     }
 
     const update = strategy.process(eventData, trackingContext)
@@ -774,9 +655,6 @@ export function useClientPoint(
       setCoordinates(update.coordinates.x, update.coordinates.y)
     }
   }
-
-  // Initialize virtual element
-  refs.anchorEl.value = createVirtualElement()
 
   // Update virtual element when coordinates change
   watch(
@@ -807,12 +685,12 @@ export function useClientPoint(
     if (isOpen) {
       if (trackingMode.value === "static") {
         // Get coordinates from static tracker when opening
-        const strategy = currentStrategy.value as StaticTracker
-        const staticUpdate = strategy.createStaticUpdate()
-        if (staticUpdate) {
-          setCoordinates(staticUpdate.coordinates.x, staticUpdate.coordinates.y)
+        const strategy = trackingStrategy.value as StaticTracker
+        const coords = strategy.getCoordinatesForOpen()
+        if (coords) {
+          setCoordinates(coords.x, coords.y)
           // Lock to the trigger/initial coordinates
-          lockedCoordinates.value = { ...staticUpdate.coordinates }
+          lockedCoordinates.value = { ...coords }
         } else {
           // Fallback: lock to last known internal coordinates
           lockedCoordinates.value = internalCoordinates.value
@@ -824,7 +702,7 @@ export function useClientPoint(
     } else {
       // When closing, reset everything
       reset()
-      currentStrategy.value.reset()
+      trackingStrategy.value.reset()
       lockedCoordinates.value = null
     }
   })
