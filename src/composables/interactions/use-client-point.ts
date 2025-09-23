@@ -1,6 +1,6 @@
 /**
  * @fileoverview Comprehensive client point positioning composable
- * 
+ *
  * This file contains a complete modular implementation consolidated into a single file
  * for easier maintenance while preserving the architectural benefits of separation of concerns.
  */
@@ -57,13 +57,6 @@ interface PointerEventData {
   type: "pointerdown" | "pointermove" | "pointerenter"
   coordinates: Coordinates
   originalEvent: PointerEvent
-}
-
-/**
- * Coordinate update event data
- */
-interface CoordinateUpdate {
-  coordinates: Coordinates
 }
 
 /**
@@ -144,7 +137,7 @@ class BoundingRectCalculator {
   createVirtualElement(config: VirtualElementConfig): VirtualElement {
     return {
       contextElement: config.referenceElement || undefined,
-      getBoundingClientRect: () => this.calculateBoundingRect(config)
+      getBoundingClientRect: () => this.calculateBoundingRect(config),
     }
   }
 
@@ -153,7 +146,7 @@ class BoundingRectCalculator {
    */
   private calculateBoundingRect(config: VirtualElementConfig): DOMRect {
     const { referenceElement, coordinates, lockedCoordinates, axis, fallbackDimensions } = config
-    
+
     const refRect = this.getReferenceRect(referenceElement, fallbackDimensions)
     const position = this.calculatePosition(coordinates, axis, refRect, lockedCoordinates)
     const dimensions = this.calculateDimensions(axis, refRect, fallbackDimensions)
@@ -162,7 +155,7 @@ class BoundingRectCalculator {
       x: position.x,
       y: position.y,
       width: dimensions.width,
-      height: dimensions.height
+      height: dimensions.height,
     })
   }
 
@@ -183,7 +176,7 @@ class BoundingRectCalculator {
       x: 0,
       y: 0,
       width: fallback.width,
-      height: fallback.height
+      height: fallback.height,
     })
   }
 
@@ -202,12 +195,10 @@ class BoundingRectCalculator {
     // Use live coordinates when available and axis allows,
     // otherwise prefer locked coordinates from the initial interaction,
     // and finally fall back to the reference element's rect.
-    const x = isXAxis && coordinates.x !== null
-      ? coordinates.x
-      : (lockedCoordinates?.x ?? refRect.x)
-    const y = isYAxis && coordinates.y !== null
-      ? coordinates.y
-      : (lockedCoordinates?.y ?? refRect.y)
+    const x =
+      isXAxis && coordinates.x !== null ? coordinates.x : (lockedCoordinates?.x ?? refRect.x)
+    const y =
+      isYAxis && coordinates.y !== null ? coordinates.y : (lockedCoordinates?.y ?? refRect.y)
 
     return { x, y }
   }
@@ -224,15 +215,15 @@ class BoundingRectCalculator {
       case "both":
         // Point positioning - zero dimensions
         return { width: 0, height: 0 }
-        
+
       case "x":
         // Horizontal line - full width, zero height
         return { width: refRect.width || fallback.width, height: 0 }
-        
+
       case "y":
         // Vertical line - zero width, full height
         return { width: 0, height: refRect.height || fallback.height }
-        
+
       default:
         return { width: 0, height: 0 }
     }
@@ -241,14 +232,9 @@ class BoundingRectCalculator {
   /**
    * Create a DOMRect-like object
    */
-  private createDOMRect(rect: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }): DOMRect {
+  private createDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
     const { x, y, width, height } = rect
-    
+
     // Ensure non-negative dimensions
     const safeWidth = Math.max(0, width)
     const safeHeight = Math.max(0, height)
@@ -262,7 +248,7 @@ class BoundingRectCalculator {
       right: x + safeWidth,
       bottom: y + safeHeight,
       left: x,
-      toJSON: () => ({ x, y, width: safeWidth, height: safeHeight })
+      toJSON: () => ({ x, y, width: safeWidth, height: safeHeight }),
     } as DOMRect
   }
 }
@@ -272,49 +258,86 @@ class BoundingRectCalculator {
 //=======================================================================================
 
 /**
- * Base interface for tracking strategies
+ * Abstract base class for tracking strategies
  */
 abstract class TrackingStrategy {
   abstract readonly name: TrackingMode
-  
+
+  // The core state every strategy needs: the last known good coordinates
+  protected lastKnownCoordinates: Coordinates | null = null
+
   /**
-   * Process a pointer event and return coordinate update if applicable
+   * Process a pointer event and return coordinates if the strategy wants to update
+   * This is the heart of each strategy's behavior
    */
-  abstract process(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null
-  
+  abstract process(event: PointerEventData, context: TrackingContext): Coordinates | null
+
   /**
-   * Reset strategy state
+   * Get coordinates to use when the floating element opens
+   * This lets each strategy decide its opening behavior without client code needing to know the details
    */
-  abstract reset(): void
-  
-  /**
-   * Check if strategy can handle the given event
-   */
-  canHandle(event: PointerEventData): boolean {
-    return event.coordinates.x !== null || event.coordinates.y !== null
+  getCoordinatesForOpening(): Coordinates | null {
+    // Default implementation: use the last known coordinates
+    // Strategies can override this if they need different behavior
+    return this.lastKnownCoordinates
   }
 
   /**
-   * Create a coordinate update object
+   * Called when the floating element opens
+   * Strategies can use this to adjust their behavior for the "open" state
    */
-  protected createCoordinateUpdate(
-    event: PointerEventData
-  ): CoordinateUpdate {
-    return {
-      coordinates: event.coordinates
+  onOpen(): void {
+    // Most strategies don't need special opening behavior
+    // But this gives them a hook if needed
+  }
+
+  /**
+   * Called when the floating element closes
+   * This is where strategies should clean up any temporary state
+   */
+  onClose(): void {
+    // Default: clear the last known coordinates since the interaction is over
+    this.lastKnownCoordinates = null
+  }
+
+  /**
+   * Reset all strategy state - used when the composable is disabled or reset
+   */
+  reset(): void {
+    this.lastKnownCoordinates = null
+  }
+
+  /**
+   * Helper to update coordinates with axis constraints applied
+   * This centralizes the axis logic so strategies don't need to think about it
+   */
+  protected applyAxisConstraints(coordinates: Coordinates, axis: AxisConstraint): Coordinates {
+    switch (axis) {
+      case "x":
+        return { x: coordinates.x, y: null }
+      case "y":
+        return { x: null, y: coordinates.y }
+      case "both":
+        return coordinates
+      default:
+        return coordinates
     }
   }
 
   /**
-   * Check if event coordinates are valid for the current axis
+   * Helper to check if coordinates are valid for the current axis
+   * This prevents strategies from trying to use invalid coordinate combinations
    */
-  protected isValidForAxis(event: PointerEventData, axis: AxisConstraint): boolean {
-    const { x, y } = event.coordinates
+  protected isValidForAxis(coordinates: Coordinates, axis: AxisConstraint): boolean {
     switch (axis) {
-      case "x": return x !== null
-      case "y": return y !== null
-      case "both": return x !== null && y !== null
-      default: return false
+      case "x":
+        return coordinates.x !== null
+      case "y":
+        return coordinates.y !== null
+      case "both":
+        return coordinates.x !== null && coordinates.y !== null
+      default:
+        return false
     }
   }
 }
@@ -326,76 +349,44 @@ class FollowTracker extends TrackingStrategy {
   readonly name = "follow" as const
 
   /**
-   * Process pointer events for continuous tracking
+   * Follow strategy: always update coordinates based on the current pointer position
+   * This creates smooth, continuous tracking behavior
    */
-  process(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
-    // Validate coordinates for current axis
-    if (!this.isValidForAxis(event, context.axis)) {
+  process(event: PointerEventData, context: TrackingContext): Coordinates | null {
+    const coordinates = event.coordinates
+
+    // First, check if these coordinates work with our current axis constraints
+    if (!this.isValidForAxis(coordinates, context.axis)) {
       return null
     }
 
-    // Handle different event types
+    // Apply axis constraints to get the final coordinates
+    const constrainedCoordinates = this.applyAxisConstraints(coordinates, context.axis)
+
+    // Always remember the latest valid coordinates for future use
+    this.lastKnownCoordinates = constrainedCoordinates
+
+    // The follow strategy's key behavior: different rules for different events
     switch (event.type) {
       case "pointerdown":
-        return this.handlePointerDown(event)
+        // Always respond to clicks for immediate feedback
+        return constrainedCoordinates
+
       case "pointermove":
-        return this.handlePointerMove(event, context)
+        // Only track mouse movements when the floating element is open
+        // This prevents unnecessary updates when the element isn't visible
+        if (context.isOpen && isMouseLikePointerType(event.originalEvent.pointerType, true)) {
+          return constrainedCoordinates
+        }
+        return null
+
       case "pointerenter":
-        return this.handlePointerEnter(event)
+        // Respond to hover for initial positioning
+        return constrainedCoordinates
+
       default:
         return null
     }
-  }
-
-  /**
-   * Handle pointer down events
-   */
-  private handlePointerDown(event: PointerEventData): CoordinateUpdate | null {
-    // Always update on pointer down for immediate feedback
-    return this.createCoordinateUpdate(event)
-  }
-
-  /**
-   * Handle pointer move events
-   */
-  private handlePointerMove(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
-    // Only track movements when floating element is open for follow mode
-    if (!context.isOpen) {
-      return null
-    }
-
-    // Only track mouse-like pointers for movements
-    if (!isMouseLikePointerType(event.originalEvent.pointerType, true)) {
-      return null
-    }
-
-    // Update every time for better test reliability
-    return this.createCoordinateUpdate(event)
-  }
-
-  /**
-   * Handle pointer enter events
-   */
-  private handlePointerEnter(event: PointerEventData): CoordinateUpdate | null {
-    // Update on enter for initial positioning
-    return this.createCoordinateUpdate(event)
-  }
-
-  /**
-   * Reset tracking state
-   */
-  reset(): void {
-    // no state to reset
-  }
-
-  /**
-   * Check if this strategy can handle the event
-   */
-  canHandle(event: PointerEventData): boolean {
-    if (!super.canHandle(event)) {
-      return false
-    }
-    return ["pointerdown", "pointermove", "pointerenter"].includes(event.type)
   }
 }
 
@@ -404,100 +395,73 @@ class FollowTracker extends TrackingStrategy {
  */
 class StaticTracker extends TrackingStrategy {
   readonly name = "static" as const
-  
-  // Last known coordinates from any pointer movement
-  private lastPointerCoords: Coordinates | null = null
-  // High-priority coordinates from trigger events like clicks
-  private triggerCoords: Coordinates | null = null
+
+  // Static strategy needs to remember the "trigger" coordinates from clicks
+  // These take priority over hover coordinates for positioning
+  private triggerCoordinates: Coordinates | null = null
 
   /**
-   * Process pointer events for static positioning
+   * Static strategy: capture coordinates from trigger events, ignore movement
+   * This creates stable positioning that doesn't jump around
    */
-  process(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
-    // Validate coordinates for current axis
-    if (!this.isValidForAxis(event, context.axis)) {
+  process(event: PointerEventData, context: TrackingContext): Coordinates | null {
+    const coordinates = event.coordinates
+
+    // First, check if these coordinates work with our current axis constraints
+    if (!this.isValidForAxis(coordinates, context.axis)) {
       return null
     }
 
-    // Handle different event types
+    // Apply axis constraints to get the final coordinates
+    const constrainedCoordinates = this.applyAxisConstraints(coordinates, context.axis)
+
+    // Static strategy behavior: different handling for different event types
     switch (event.type) {
       case "pointerdown":
-        return this.handlePointerDown(event, context)
+        // Clicks are "trigger events" - they set the position for static mode
+        this.triggerCoordinates = constrainedCoordinates
+        this.lastKnownCoordinates = constrainedCoordinates
+
+        // If the floating element is already open, update position immediately
+        // This handles cases like clicking while a context menu is open
+        return context.isOpen ? constrainedCoordinates : null
+
       case "pointermove":
-        return this.handlePointerMove(event)
       case "pointerenter":
-        return this.handlePointerEnter(event)
+        // Movement and hover update our fallback coordinates but don't trigger positioning
+        // This gives us something to fall back to if we don't have trigger coordinates
+        this.lastKnownCoordinates = constrainedCoordinates
+        return null
+
       default:
         return null
     }
   }
 
   /**
-   * Handle pointer down events (trigger events)
-   */
-  private handlePointerDown(event: PointerEventData, context: TrackingContext): CoordinateUpdate | null {
-    // Store as trigger coordinates (highest priority)
-    this.triggerCoords = event.coordinates
-    this.lastPointerCoords = event.coordinates
-
-    // If floating element is open, update immediately
-    if (context.isOpen) {
-      return this.createCoordinateUpdate(event)
-    }
-
-    return null
-  }
-
-  /**
-   * Handle pointer move events
-   */
-  private handlePointerMove(event: PointerEventData): CoordinateUpdate | null {
-    // Update last known position
-    this.lastPointerCoords = event.coordinates
-    // Movement invalidates trigger coordinates (user moved after click)
-    this.triggerCoords = null
-    // Don't update position during movement in static mode
-    return null
-  }
-
-  /**
-   * Handle pointer enter events
-   */
-  private handlePointerEnter(event: PointerEventData): CoordinateUpdate | null {
-    // Update last known position
-    this.lastPointerCoords = event.coordinates
-    // Don't update position during enter in static mode
-    return null
-  }
-
-  /**
    * Get coordinates to use when floating element opens
    */
-  getCoordinatesForOpen(): Coordinates | null {
+  getCoordinatesForOpening(): Coordinates | null {
     // 1. Prioritize trigger coordinates (from recent click)
-    if (this.triggerCoords) {
-      return this.triggerCoords
+    if (this.triggerCoordinates) {
+      return this.triggerCoordinates
     }
     // 2. Fall back to last known hover position
-    return this.lastPointerCoords
+    return this.lastKnownCoordinates
   }
 
   /**
    * Reset tracking state
    */
   reset(): void {
-    this.lastPointerCoords = null
-    this.triggerCoords = null
+    super.reset()
+    this.triggerCoordinates = null
   }
 
-  /**
-   * Check if this strategy can handle the event
-   */
-  canHandle(event: PointerEventData): boolean {
-    if (!super.canHandle(event)) {
-      return false
-    }
-    return ["pointerdown", "pointermove", "pointerenter"].includes(event.type)
+  onClose(): void {
+    this.triggerCoordinates = null
+    // Note: we don't clear lastKnownCoordinates here, unlike the base class
+    // This lets static mode remember hover positions between open/close cycles
   }
 }
 
@@ -533,7 +497,7 @@ export function useClientPoint(
 
   // Services
   const rectCalculator = new BoundingRectCalculator()
-  
+
   // Tracking strategies
   const followTracker = new FollowTracker()
   const staticTracker = new StaticTracker()
@@ -549,7 +513,9 @@ export function useClientPoint(
   const externalX = computed(() => toValue(options.x ?? null))
   const externalY = computed(() => toValue(options.y ?? null))
   const trackingMode = computed(() => toValue(options.trackingMode ?? "follow"))
-  const isExternallyControlled = computed(() => externalX.value !== null || externalY.value !== null)
+  const isExternallyControlled = computed(
+    () => externalX.value !== null || externalY.value !== null
+  )
 
   // Primary coordinates - external takes precedence over internal
   const coordinates = computed<Coordinates>(() => {
@@ -559,7 +525,7 @@ export function useClientPoint(
     if (hasExternalX || hasExternalY) {
       return {
         x: hasExternalX ? externalX.value : internalCoordinates.value.x,
-        y: hasExternalY ? externalY.value : internalCoordinates.value.y
+        y: hasExternalY ? externalY.value : internalCoordinates.value.y,
       }
     }
 
@@ -613,9 +579,9 @@ export function useClientPoint(
       coordinates: constrainedCoordinates.value,
       lockedCoordinates: lockedCoordinates.value,
       axis: axis.value,
-      fallbackDimensions: { width: 100, height: 30 }
+      fallbackDimensions: { width: 100, height: 30 },
     }
-    
+
     return rectCalculator.createVirtualElement(config)
   }
 
@@ -630,29 +596,18 @@ export function useClientPoint(
     const eventData: PointerEventData = {
       type,
       coordinates: { x: event.clientX, y: event.clientY },
-      originalEvent: event
-    }
-
-    // Capture the initial interaction point to lock constrained axis
-    if (type === "pointerdown" && !open.value) {
-      lockedCoordinates.value = { ...eventData.coordinates }
+      originalEvent: event,
     }
 
     const strategy = trackingStrategy.value
-    
-    if (!strategy.canHandle(eventData)) {
-      return
-    }
 
-    const trackingContext: TrackingContext = {
+    const coordinates = strategy.process(eventData, {
       axis: axis.value,
-      isOpen: open.value
-    }
+      isOpen: open.value,
+    })
 
-    const update = strategy.process(eventData, trackingContext)
-    
-    if (update) {
-      setCoordinates(update.coordinates.x, update.coordinates.y)
+    if (coordinates) {
+      setCoordinates(coordinates.x, coordinates.y)
     }
   }
 
@@ -682,27 +637,22 @@ export function useClientPoint(
       return
     }
 
+    const strategy = trackingStrategy.value
+
     if (isOpen) {
-      if (trackingMode.value === "static") {
-        // Get coordinates from static tracker when opening
-        const strategy = trackingStrategy.value as StaticTracker
-        const coords = strategy.getCoordinatesForOpen()
-        if (coords) {
-          setCoordinates(coords.x, coords.y)
-          // Lock to the trigger/initial coordinates
-          lockedCoordinates.value = { ...coords }
-        } else {
-          // Fallback: lock to last known internal coordinates
-          lockedCoordinates.value = internalCoordinates.value
-        }
+      const openingCoords = strategy.getCoordinatesForOpening()
+
+      if (openingCoords) {
+        setCoordinates(openingCoords.x, openingCoords.y)
+        lockedCoordinates.value = { ...openingCoords }
       } else {
-        // Follow mode: lock to the current pointer coordinates at the moment of opening
-        lockedCoordinates.value = internalCoordinates.value
+        lockedCoordinates.value = { ...internalCoordinates.value }
       }
+
+      strategy.onOpen()
     } else {
-      // When closing, reset everything
+      strategy.onClose()
       reset()
-      trackingStrategy.value.reset()
       lockedCoordinates.value = null
     }
   })
