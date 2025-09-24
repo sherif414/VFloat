@@ -271,20 +271,20 @@ The `useClientPoint` composable positions a floating element relative to the cli
 import type { Ref } from "vue"
 import type { FloatingContext } from "vfloat" // Or actual path
 import type { MaybeRefOrGetter } from "vue" // Or from '@vueuse/core'
-
 type TrackingMode = "follow" | "static"
 
 interface UseClientPointOptions {
   enabled?: MaybeRefOrGetter<boolean>
-  axis?: MaybeRefOrGetter<"x" | "y" | "both">
+  axis?: MaybeRefOrGetter<'x' | 'y' | 'both'>
   x?: MaybeRefOrGetter<number | null> // External x coordinate (disables mouse tracking)
   y?: MaybeRefOrGetter<number | null> // External y coordinate (disables mouse tracking)
-  trackingMode?: MaybeRefOrGetter<TrackingMode> // Tracking behavior mode
+  trackingMode?: TrackingMode // Tracking behavior mode: "follow" for continuous cursor tracking, "static" for initial position only
 }
 
 interface UseClientPointReturn {
   coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>
   updatePosition: (x: number, y: number) => void
+{{ ... }}
 }
 
 function useClientPoint(
@@ -311,7 +311,7 @@ function useClientPoint(
 | -------------- | ---------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------- |
 | `enabled`      | `MaybeRefOrGetter<boolean>`              | `true`     | Whether the client point tracking is enabled.                                                                 |
 | `axis`         | `MaybeRefOrGetter<'x' \| 'y' \| 'both'>` | `'both'`   | Specifies which axis/axes the virtual element should follow. `'x'`, `'y'`, or `'both'`.                       |
-| `trackingMode` | `MaybeRefOrGetter<TrackingMode>`         | `'follow'` | Tracking behavior: `'follow'` for continuous cursor tracking, `'static'` for initial position only.           |
+| `trackingMode` | `TrackingMode`                          | `'follow'` | Tracking behavior: `'follow'` for continuous cursor tracking, `'static'` for initial position only.           |
 | `x`            | `MaybeRefOrGetter<number \| null>`       | `null`     | External x-coordinate. When provided, mouse tracking is automatically disabled for full programmatic control. |
 | `y`            | `MaybeRefOrGetter<number \| null>`       | `null`     | External y-coordinate. When provided, mouse tracking is automatically disabled for full programmatic control. |
 

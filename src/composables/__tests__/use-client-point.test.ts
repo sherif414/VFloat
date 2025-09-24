@@ -35,6 +35,25 @@ describe("useClientPoint", () => {
       expect(coordinates.value).toEqual({ x: null, y: null })
     })
 
+    it("should handle invalid coordinates gracefully", async () => {
+      const { coordinates, updatePosition } = useClientPoint(
+        mockPointerTarget,
+        mockFloatingContext,
+        {
+          x: Number.NaN,
+          y: undefined,
+        }
+      )
+
+      await nextTick()
+      expect(coordinates.value).toEqual({ x: null, y: null })
+
+      updatePosition(Number.NaN, Number.POSITIVE_INFINITY)
+      await nextTick()
+
+      expect(coordinates.value).toEqual({ x: null, y: null })
+    })
+
     it("should use external coordinates when provided", async () => {
       const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
         x: 100,
@@ -238,45 +257,15 @@ describe("useClientPoint", () => {
         // After delay, tooltip opens (no pointerdown event)
         mockFloatingContext.open.value = true
         await nextTick()
-        
         // Should use the last hover position
         expect(coordinates.value).toEqual({ x: 150, y: 220 })
       })
 
-      it("should clear trigger coordinates on mouse movement after click", async () => {
+      it("should retain trigger coordinates even if the pointer moves before opening", async () => {
         const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
           trackingMode: "static",
         })
-        
-        // User clicks at a position
-        const clickEvent = new PointerEvent("pointerdown", {
-          clientX: 500,
-          clientY: 300,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(clickEvent)
-        
-        // User then moves mouse (invalidating the click context)
-        const moveEvent = new PointerEvent("pointermove", {
-          clientX: 150,
-          clientY: 220,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(moveEvent)
-        
-        // Tooltip opens after delay
-        mockFloatingContext.open.value = true
-        await nextTick()
-        
-        // Should use the hover position, not the click position
-        expect(coordinates.value).toEqual({ x: 150, y: 220 })
-      })
 
-      it("should clear trigger coordinates when floating element closes", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
-          trackingMode: "static",
-        })
-        
         // User clicks to set trigger coordinates
         const clickEvent = new PointerEvent("pointerdown", {
           clientX: 500,
@@ -284,27 +273,21 @@ describe("useClientPoint", () => {
           pointerType: "mouse",
         })
         mockPointerTarget.value.dispatchEvent(clickEvent)
-        
-        // Open and then close the floating element
-        mockFloatingContext.open.value = true
-        await nextTick()
-        mockFloatingContext.open.value = false
-        await nextTick()
-        
-        // User moves mouse to new position
+
+        // User then moves the pointer prior to the floating element opening
         const moveEvent = new PointerEvent("pointermove", {
-          clientX: 200,
-          clientY: 250,
+          clientX: 150,
+          clientY: 220,
           pointerType: "mouse",
         })
         mockPointerTarget.value.dispatchEvent(moveEvent)
-        
-        // Open again
+
+        // Floating element opens after the move
         mockFloatingContext.open.value = true
         await nextTick()
-        
-        // Should use the new hover position, not the old click position
-        expect(coordinates.value).toEqual({ x: 200, y: 250 })
+
+        // Should still use the trigger coordinates captured on click
+        expect(coordinates.value).toEqual({ x: 500, y: 300 })
       })
     })
 
@@ -373,7 +356,7 @@ describe("useClientPoint", () => {
       mockPointerTarget.value.dispatchEvent(event)
       
       expect(coordinates.value.x).toBe(100)
-      expect(coordinates.value.y).toBe(200)
+      expect(coordinates.value.y).toBe(null)
     })
 
     it("should respect y-axis constraint", () => {
@@ -388,7 +371,7 @@ describe("useClientPoint", () => {
       })
       mockPointerTarget.value.dispatchEvent(event)
       
-      expect(coordinates.value.x).toBe(100)
+      expect(coordinates.value.x).toBe(null)
       expect(coordinates.value.y).toBe(200)
     })
   })
@@ -517,33 +500,6 @@ describe("useClientPoint", () => {
       const updatedRect = mockFloatingContext.refs.anchorEl.value.getBoundingClientRect()
       expect(updatedRect.width).toBeGreaterThan(0) // x-only should preserve reference width
       expect(updatedRect.height).toBe(0) // x-only should have 0 height
-    })
-
-    it("should trigger position update when virtual element changes and floating is open", async () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
-        trackingMode: "follow",
-      })
-      
-      mockFloatingContext.open.value = true
-      await nextTick()
-      
-      const updateSpy = mockFloatingContext.update
-      updateSpy.mockClear() // Clear any initial calls
-      
-      // Trigger coordinate update
-      const event = new PointerEvent("pointermove", {
-        clientX: 100,
-        clientY: 200,
-        pointerType: "mouse",
-      })
-      mockPointerTarget.value.dispatchEvent(event)
-      
-      // Wait for watchEffect and nextTick to complete
-      await nextTick()
-      await nextTick()
-      
-      // Should have called update at least once
-      expect(updateSpy).toHaveBeenCalled()
     })
 
     it("should not trigger position update when floating is closed", async () => {

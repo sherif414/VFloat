@@ -43,14 +43,6 @@ export type AxisConstraint = "x" | "y" | "both"
 export type TrackingMode = "follow" | "static"
 
 /**
- * Dimensions for bounding rectangles
- */
-interface Dimensions {
-  width: number
-  height: number
-}
-
-/**
  * Processed pointer event data
  */
 interface PointerEventData {
@@ -67,15 +59,8 @@ interface TrackingContext {
   isOpen: boolean
 }
 
-/**
- * Virtual element configuration
- */
-interface VirtualElementConfig {
-  referenceElement: HTMLElement | null
-  coordinates: Coordinates
-  lockedCoordinates: Coordinates | null
-  axis: AxisConstraint
-  fallbackDimensions: Dimensions
+const sanitizeCoordinate = (value: number | null | undefined): number | null => {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
 export interface UseClientPointOptions {
@@ -109,7 +94,7 @@ export interface UseClientPointOptions {
    * - "static": Position at initial interaction, no subsequent tracking
    * @default "follow"
    */
-  trackingMode?: MaybeRefOrGetter<TrackingMode>
+  trackingMode?: TrackingMode
 }
 
 export interface UseClientPointReturn {
@@ -128,114 +113,179 @@ export interface UseClientPointReturn {
 //=======================================================================================
 
 /**
- * Service for calculating bounding rectangles for virtual elements
+ * Virtual element factory for floating positioning anchors.
+ * Creates virtual DOM elements that serve as positioning anchors.
  */
-class BoundingRectCalculator {
+class VirtualElementFactory {
+  private static readonly DEFAULT_DIMENSIONS = { width: 100, height: 30 }
+
   /**
-   * Create a virtual element with precise bounding rectangle calculations
+   * Create a virtual anchor element
    */
-  createVirtualElement(config: VirtualElementConfig): VirtualElement {
+  create(options: {
+    coordinates: Coordinates
+    referenceElement?: HTMLElement | null
+    baselineCoordinates?: Coordinates | null
+    axis?: AxisConstraint
+  }): VirtualElement {
+    const config = this.buildConfiguration(options)
+
     return {
       contextElement: config.referenceElement || undefined,
-      getBoundingClientRect: () => this.calculateBoundingRect(config),
+      getBoundingClientRect: () => this.buildBoundingRect(config),
     }
   }
 
   /**
-   * Calculate bounding rectangle based on configuration
+   * Build configuration from options with defaults
    */
-  private calculateBoundingRect(config: VirtualElementConfig): DOMRect {
-    const { referenceElement, coordinates, lockedCoordinates, axis, fallbackDimensions } = config
+  private buildConfiguration(options: {
+    coordinates: Coordinates
+    referenceElement?: HTMLElement | null
+    baselineCoordinates?: Coordinates | null
+    axis?: AxisConstraint
+  }): {
+    coordinates: Coordinates
+    referenceElement: HTMLElement | null
+    baselineCoordinates: Coordinates | null
+    axis: AxisConstraint
+  } {
+    return {
+      coordinates: options.coordinates,
+      referenceElement: options.referenceElement ?? null,
+      baselineCoordinates: options.baselineCoordinates ?? null,
+      axis: options.axis ?? "both",
+    }
+  }
 
-    const refRect = this.getReferenceRect(referenceElement, fallbackDimensions)
-    const position = this.calculatePosition(coordinates, axis, refRect, lockedCoordinates)
-    const dimensions = this.calculateDimensions(axis, refRect, fallbackDimensions)
+  /**
+   * Build the bounding rectangle for the virtual element
+   */
+  private buildBoundingRect(config: {
+    coordinates: Coordinates
+    referenceElement: HTMLElement | null
+    baselineCoordinates: Coordinates | null
+    axis: AxisConstraint
+  }): DOMRect {
+    const referenceRect = this.getReferenceRect(config.referenceElement)
+    const position = this.resolvePosition(config, referenceRect)
+    const size = this.calculateSize(config.axis, referenceRect)
 
-    return this.createDOMRect({
+    return this.buildDOMRect({
       x: position.x,
       y: position.y,
-      width: dimensions.width,
-      height: dimensions.height,
+      width: size.width,
+      height: size.height,
     })
   }
 
   /**
-   * Get reference element rectangle or fallback
+   * Get reference element bounds with fallback
    */
-  private getReferenceRect(referenceElement: HTMLElement | null, fallback: Dimensions): DOMRect {
-    if (referenceElement) {
+  private getReferenceRect(element: HTMLElement | null): DOMRect {
+    if (element) {
       try {
-        return referenceElement.getBoundingClientRect()
+        return element.getBoundingClientRect()
       } catch (error) {
-        console.warn("Failed to get reference element bounds:", error)
+        console.warn("VirtualElementFactory: Failed to get element bounds", { element, error })
       }
     }
 
-    // Return fallback rectangle
-    return this.createDOMRect({
+    return this.buildDOMRect({
       x: 0,
       y: 0,
-      width: fallback.width,
-      height: fallback.height,
+      width: VirtualElementFactory.DEFAULT_DIMENSIONS.width,
+      height: VirtualElementFactory.DEFAULT_DIMENSIONS.height,
     })
   }
 
   /**
-   * Calculate position based on coordinates and axis constraints
+   * Resolve final position from coordinate sources
    */
-  private calculatePosition(
-    coordinates: Coordinates,
-    axis: AxisConstraint,
-    refRect: DOMRect,
-    lockedCoordinates: Coordinates | null
+  private resolvePosition(
+    config: {
+      coordinates: Coordinates
+      baselineCoordinates: Coordinates | null
+      axis: AxisConstraint
+    },
+    referenceRect: DOMRect
   ): { x: number; y: number } {
-    const isXAxis = axis === "x" || axis === "both"
-    const isYAxis = axis === "y" || axis === "both"
-
-    // Use live coordinates when available and axis allows,
-    // otherwise prefer locked coordinates from the initial interaction,
-    // and finally fall back to the reference element's rect.
-    const x =
-      isXAxis && coordinates.x !== null ? coordinates.x : (lockedCoordinates?.x ?? refRect.x)
-    const y =
-      isYAxis && coordinates.y !== null ? coordinates.y : (lockedCoordinates?.y ?? refRect.y)
-
-    return { x, y }
-  }
-
-  /**
-   * Calculate dimensions based on axis constraints
-   */
-  private calculateDimensions(
-    axis: AxisConstraint,
-    refRect: DOMRect,
-    fallback: Dimensions
-  ): Dimensions {
-    switch (axis) {
-      case "both":
-        // Point positioning - zero dimensions
-        return { width: 0, height: 0 }
-
-      case "x":
-        // Horizontal line - full width, zero height
-        return { width: refRect.width || fallback.width, height: 0 }
-
-      case "y":
-        // Vertical line - zero width, full height
-        return { width: 0, height: refRect.height || fallback.height }
-
-      default:
-        return { width: 0, height: 0 }
+    return {
+      x: this.resolveAxisCoordinate({
+        current: config.coordinates.x,
+        baseline: config.baselineCoordinates?.x ?? null,
+        fallback: referenceRect.x,
+        isAxisEnabled: config.axis === "x" || config.axis === "both",
+      }),
+      y: this.resolveAxisCoordinate({
+        current: config.coordinates.y,
+        baseline: config.baselineCoordinates?.y ?? null,
+        fallback: referenceRect.y,
+        isAxisEnabled: config.axis === "y" || config.axis === "both",
+      }),
     }
   }
 
   /**
-   * Create a DOMRect-like object
+   * Resolve coordinate for a single axis with clear precedence
    */
-  private createDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
-    const { x, y, width, height } = rect
+  private resolveAxisCoordinate(
+    sources: {
+      current: number | null
+      baseline: number | null
+      fallback: number
+      isAxisEnabled: boolean
+    }
+  ): number {
+    const { current, baseline, fallback, isAxisEnabled } = sources
 
-    // Ensure non-negative dimensions
+    // Priority 1: Current coordinates if axis allows
+    if (isAxisEnabled && current !== null) {
+      return current
+    }
+
+    // Priority 2: Baseline coordinates
+    if (baseline !== null) {
+      return baseline
+    }
+
+    // Priority 3: Reference element fallback
+    return fallback
+  }
+
+  /**
+   * Calculate virtual element size based on axis constraints
+   */
+  private calculateSize(axis: AxisConstraint, referenceRect: DOMRect): {
+    width: number
+    height: number
+  } {
+    const ensurePositive = (value: number, fallback: number) => Math.max(0, value || fallback)
+
+    switch (axis) {
+      case "both":
+        return { width: 0, height: 0 }
+      case "x":
+        return {
+          width: ensurePositive(referenceRect.width, VirtualElementFactory.DEFAULT_DIMENSIONS.width),
+          height: 0,
+        }
+      case "y":
+        return {
+          width: 0,
+          height: ensurePositive(
+            referenceRect.height,
+            VirtualElementFactory.DEFAULT_DIMENSIONS.height
+          ),
+        }
+    }
+  }
+
+  /**
+   * Build a DOMRect object
+   */
+  private buildDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
+    const { x, y, width, height } = rect
     const safeWidth = Math.max(0, width)
     const safeHeight = Math.max(0, height)
 
@@ -496,7 +546,7 @@ export function useClientPoint(
   const { open, refs } = context
 
   // Services
-  const rectCalculator = new BoundingRectCalculator()
+  const virtualElementFactory = new VirtualElementFactory()
 
   // Tracking strategies
   const followTracker = new FollowTracker()
@@ -510,9 +560,8 @@ export function useClientPoint(
   // Computed options
   const axis = computed(() => toValue(options.axis ?? "both"))
   const enabled = computed(() => toValue(options.enabled ?? true))
-  const externalX = computed(() => toValue(options.x ?? null))
-  const externalY = computed(() => toValue(options.y ?? null))
-  const trackingMode = computed(() => toValue(options.trackingMode ?? "follow"))
+  const externalX = computed(() => sanitizeCoordinate(toValue(options.x ?? null)))
+  const externalY = computed(() => sanitizeCoordinate(toValue(options.y ?? null)))
   const isExternallyControlled = computed(
     () => externalX.value !== null || externalY.value !== null
   )
@@ -548,9 +597,8 @@ export function useClientPoint(
   })
 
   // Current tracking strategy
-  const trackingStrategy = computed<TrackingStrategy>(() => {
-    return trackingMode.value === "follow" ? followTracker : staticTracker
-  })
+  const trackingStrategy: TrackingStrategy =
+    (options.trackingMode ?? "follow") === "follow" ? followTracker : staticTracker
 
   /**
    * Set coordinates programmatically
@@ -558,7 +606,10 @@ export function useClientPoint(
   const setCoordinates = (x: number | null, y: number | null): void => {
     // Don't update if externally controlled
     if (isExternallyControlled.value) return
-    internalCoordinates.value = { x, y }
+    internalCoordinates.value = {
+      x: sanitizeCoordinate(x),
+      y: sanitizeCoordinate(y),
+    }
   }
 
   /**
@@ -568,21 +619,6 @@ export function useClientPoint(
     if (!isExternallyControlled.value) {
       internalCoordinates.value = { x: null, y: null }
     }
-  }
-
-  /**
-   * Create virtual element based on current coordinates
-   */
-  const createVirtualElement = (): VirtualElement => {
-    const config: VirtualElementConfig = {
-      referenceElement: pointerTarget.value,
-      coordinates: constrainedCoordinates.value,
-      lockedCoordinates: lockedCoordinates.value,
-      axis: axis.value,
-      fallbackDimensions: { width: 100, height: 30 },
-    }
-
-    return rectCalculator.createVirtualElement(config)
   }
 
   /**
@@ -599,9 +635,7 @@ export function useClientPoint(
       originalEvent: event,
     }
 
-    const strategy = trackingStrategy.value
-
-    const coordinates = strategy.process(eventData, {
+    const coordinates = trackingStrategy.process(eventData, {
       axis: axis.value,
       isOpen: open.value,
     })
@@ -613,9 +647,14 @@ export function useClientPoint(
 
   // Update virtual element when coordinates change
   watch(
-    [constrainedCoordinates, lockedCoordinates, axis],
+    [constrainedCoordinates, lockedCoordinates, axis, pointerTarget],
     () => {
-      refs.anchorEl.value = createVirtualElement()
+      refs.anchorEl.value = virtualElementFactory.create({
+        coordinates: constrainedCoordinates.value,
+        referenceElement: pointerTarget.value,
+        baselineCoordinates: lockedCoordinates.value,
+        axis: axis.value,
+      })
     },
     { immediate: true }
   )
@@ -637,10 +676,8 @@ export function useClientPoint(
       return
     }
 
-    const strategy = trackingStrategy.value
-
     if (isOpen) {
-      const openingCoords = strategy.getCoordinatesForOpening()
+      const openingCoords = trackingStrategy.getCoordinatesForOpening()
 
       if (openingCoords) {
         setCoordinates(openingCoords.x, openingCoords.y)
@@ -649,9 +686,9 @@ export function useClientPoint(
         lockedCoordinates.value = { ...internalCoordinates.value }
       }
 
-      strategy.onOpen()
+      trackingStrategy.onOpen()
     } else {
-      strategy.onClose()
+      trackingStrategy.onClose()
       reset()
       lockedCoordinates.value = null
     }
