@@ -1,6 +1,135 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { ref, nextTick } from "vue"
-import { useClientPoint } from "../interactions/use-client-point"
+import {
+  useClientPoint,
+  VirtualElementFactory,
+  FollowTracker,
+  StaticTracker,
+} from "../interactions/use-client-point"
+
+const createRect = ({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+}: {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+}): DOMRect => ({
+  x,
+  y,
+  width,
+  height,
+  top: y,
+  right: x + width,
+  bottom: y + height,
+  left: x,
+  toJSON: () => ({ x, y, width, height }),
+}) as DOMRect
+
+const createPointerEventData = (
+  type: "pointerdown" | "pointermove" | "pointerenter",
+  coordinates: { x: number; y: number },
+  pointerType: string = "mouse"
+) => ({
+  type,
+  coordinates,
+  originalEvent: new PointerEvent(type, {
+    pointerType,
+    clientX: coordinates.x,
+    clientY: coordinates.y,
+  }),
+})
+
+describe("VirtualElementFactory", () => {
+  it("creates a virtual element using provided coordinates", () => {
+    const reference = document.createElement("div")
+    const referenceRect = createRect({ x: 10, y: 20, width: 120, height: 40 })
+    vi.spyOn(reference, "getBoundingClientRect").mockReturnValue(referenceRect)
+
+    const factory = new VirtualElementFactory()
+    const virtualElement = factory.create({
+      coordinates: { x: 150, y: 260 },
+      referenceElement: reference,
+      axis: "both",
+    })
+
+    const rect = virtualElement.getBoundingClientRect()
+    expect(rect.x).toBe(150)
+    expect(rect.y).toBe(260)
+    expect(rect.width).toBe(0)
+    expect(rect.height).toBe(0)
+    expect(reference.getBoundingClientRect).toHaveBeenCalled()
+  })
+
+  it("falls back to baseline coordinates and reference sizing for constrained axes", () => {
+    const reference = document.createElement("div")
+    const referenceRect = createRect({ x: 5, y: 15, width: 200, height: 80 })
+    vi.spyOn(reference, "getBoundingClientRect").mockReturnValue(referenceRect)
+
+    const factory = new VirtualElementFactory()
+    const virtualElement = factory.create({
+      coordinates: { x: null, y: 220 },
+      baselineCoordinates: { x: 120, y: null },
+      referenceElement: reference,
+      axis: "x",
+    })
+
+    const rect = virtualElement.getBoundingClientRect()
+    expect(rect.x).toBe(120)
+    expect(rect.y).toBe(15)
+    expect(rect.width).toBe(200)
+    expect(rect.height).toBe(0)
+  })
+})
+
+describe("FollowTracker", () => {
+  it("returns constrained coordinates on pointerdown regardless of open state", () => {
+    const tracker = new FollowTracker()
+    const event = createPointerEventData("pointerdown", { x: 80, y: 120 })
+
+    const result = tracker.process(event, { axis: "y", isOpen: false })
+
+    expect(result).toEqual({ x: null, y: 120 })
+  })
+
+  it("returns coordinates for pointermove only when open and pointer is mouse-like", () => {
+    const tracker = new FollowTracker()
+    const mouseEvent = createPointerEventData("pointermove", { x: 40, y: 60 })
+    const touchEvent = createPointerEventData("pointermove", { x: 50, y: 70 }, "touch")
+
+    expect(tracker.process(mouseEvent, { axis: "both", isOpen: false })).toBeNull()
+    expect(tracker.process(touchEvent, { axis: "both", isOpen: true })).toBeNull()
+    expect(tracker.process(mouseEvent, { axis: "x", isOpen: true })).toEqual({ x: 40, y: null })
+  })
+})
+
+describe("StaticTracker", () => {
+  it("captures trigger coordinates on pointerdown and exposes them when opened", () => {
+    const tracker = new StaticTracker()
+    const pointerdown = createPointerEventData("pointerdown", { x: 200, y: 300 })
+
+    const resultWhenClosed = tracker.process(pointerdown, { axis: "both", isOpen: false })
+    expect(resultWhenClosed).toBeNull()
+    expect(tracker.getCoordinatesForOpening()).toEqual({ x: 200, y: 300 })
+
+    const resultWhenOpen = tracker.process(pointerdown, { axis: "both", isOpen: true })
+    expect(resultWhenOpen).toEqual({ x: 200, y: 300 })
+  })
+
+  it("tracks hover coordinates as fallback and resets state", () => {
+    const tracker = new StaticTracker()
+    const hover = createPointerEventData("pointermove", { x: 90, y: 110 })
+
+    expect(tracker.process(hover, { axis: "y", isOpen: false })).toBeNull()
+    expect(tracker.getCoordinatesForOpening()).toEqual({ x: null, y: 110 })
+
+    tracker.reset()
+    expect(tracker.getCoordinatesForOpening()).toBeNull()
+  })
+})
 
 describe("useClientPoint", () => {
   let mockFloatingContext: any
