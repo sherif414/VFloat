@@ -17,8 +17,8 @@ import {
   watch,
   watchEffect,
 } from "vue"
-import type { FloatingContext } from "@/composables"
 import { isMouseLikePointerType } from "./utils"
+import type { AnchorElement } from "../use-floating"
 
 //=======================================================================================
 // 📌 Types
@@ -108,6 +108,13 @@ export interface UseClientPointReturn {
   updatePosition: (x: number, y: number) => void
 }
 
+export interface UseClientPointContext {
+  open: Readonly<Ref<boolean>>
+  refs: {
+    anchorEl: Ref<AnchorElement>
+  }
+}
+
 //=======================================================================================
 // 📌 Services
 //=======================================================================================
@@ -116,7 +123,7 @@ export interface UseClientPointReturn {
  * Virtual element factory for floating positioning anchors.
  * Creates virtual DOM elements that serve as positioning anchors.
  */
-class VirtualElementFactory {
+export class VirtualElementFactory {
   private static readonly DEFAULT_DIMENSIONS = { width: 100, height: 30 }
 
   /**
@@ -310,7 +317,7 @@ class VirtualElementFactory {
 /**
  * Abstract base class for tracking strategies
  */
-abstract class TrackingStrategy {
+export abstract class TrackingStrategy {
   abstract readonly name: TrackingMode
 
   // The core state every strategy needs: the last known good coordinates
@@ -395,7 +402,7 @@ abstract class TrackingStrategy {
 /**
  * Strategy for continuous cursor tracking
  */
-class FollowTracker extends TrackingStrategy {
+export class FollowTracker extends TrackingStrategy {
   readonly name = "follow" as const
 
   /**
@@ -443,7 +450,7 @@ class FollowTracker extends TrackingStrategy {
 /**
  * Strategy for static positioning at initial interaction
  */
-class StaticTracker extends TrackingStrategy {
+export class StaticTracker extends TrackingStrategy {
   readonly name = "static" as const
 
   // Static strategy needs to remember the "trigger" coordinates from clicks
@@ -540,7 +547,7 @@ class StaticTracker extends TrackingStrategy {
  */
 export function useClientPoint(
   pointerTarget: Ref<HTMLElement | null>,
-  context: FloatingContext,
+  context: UseClientPointContext,
   options: UseClientPointOptions = {}
 ): UseClientPointReturn {
   const { open, refs } = context
@@ -615,7 +622,7 @@ export function useClientPoint(
   /**
    * Reset coordinates to null
    */
-  const reset = (): void => {
+  const resetCoordinates = (): void => {
     if (!isExternallyControlled.value) {
       internalCoordinates.value = { x: null, y: null }
     }
@@ -689,7 +696,7 @@ export function useClientPoint(
       trackingStrategy.onOpen()
     } else {
       trackingStrategy.onClose()
-      reset()
+      resetCoordinates()
       lockedCoordinates.value = null
     }
   })
