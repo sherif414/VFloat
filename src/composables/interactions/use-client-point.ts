@@ -344,15 +344,6 @@ export abstract class TrackingStrategy {
   }
 
   /**
-   * Called when the floating element opens
-   * Strategies can use this to adjust their behavior for the "open" state
-   */
-  onOpen(): void {
-    // Most strategies don't need special opening behavior
-    // But this gives them a hook if needed
-  }
-
-  /**
    * Called when the floating element closes
    * This is where strategies should clean up any temporary state
    */
@@ -366,40 +357,6 @@ export abstract class TrackingStrategy {
    */
   reset(): void {
     this.lastKnownCoordinates = null
-  }
-
-  /**
-   * Helper to update coordinates with axis constraints applied
-   * This centralizes the axis logic so strategies don't need to think about it
-   */
-  protected applyAxisConstraints(coordinates: Coordinates, axis: AxisConstraint): Coordinates {
-    switch (axis) {
-      case "x":
-        return { x: coordinates.x, y: null }
-      case "y":
-        return { x: null, y: coordinates.y }
-      case "both":
-        return coordinates
-      default:
-        return coordinates
-    }
-  }
-
-  /**
-   * Helper to check if coordinates are valid for the current axis
-   * This prevents strategies from trying to use invalid coordinate combinations
-   */
-  protected isValidForAxis(coordinates: Coordinates, axis: AxisConstraint): boolean {
-    switch (axis) {
-      case "x":
-        return coordinates.x !== null
-      case "y":
-        return coordinates.y !== null
-      case "both":
-        return coordinates.x !== null && coordinates.y !== null
-      default:
-        return false
-    }
   }
 }
 
@@ -416,34 +373,26 @@ export class FollowTracker extends TrackingStrategy {
   process(event: PointerEventData, context: TrackingContext): Coordinates | null {
     const coordinates = event.coordinates
 
-    // First, check if these coordinates work with our current axis constraints
-    if (!this.isValidForAxis(coordinates, context.axis)) {
-      return null
-    }
-
-    // Apply axis constraints to get the final coordinates
-    const constrainedCoordinates = this.applyAxisConstraints(coordinates, context.axis)
-
-    // Always remember the latest valid coordinates for future use
-    this.lastKnownCoordinates = constrainedCoordinates
+    // Always remember the latest coordinates for future use
+    this.lastKnownCoordinates = coordinates
 
     // The follow strategy's key behavior: different rules for different events
     switch (event.type) {
       case "pointerdown":
         // Always respond to clicks for immediate feedback
-        return constrainedCoordinates
+        return coordinates
 
       case "pointermove":
         // Only track mouse movements when the floating element is open
         // This prevents unnecessary updates when the element isn't visible
         if (context.isOpen && isMouseLikePointerType(event.originalEvent.pointerType, true)) {
-          return constrainedCoordinates
+          return coordinates
         }
         return null
 
       case "pointerenter":
         // Respond to hover for initial positioning
-        return constrainedCoordinates
+        return coordinates
 
       default:
         return null
@@ -468,30 +417,22 @@ export class StaticTracker extends TrackingStrategy {
   process(event: PointerEventData, context: TrackingContext): Coordinates | null {
     const coordinates = event.coordinates
 
-    // First, check if these coordinates work with our current axis constraints
-    if (!this.isValidForAxis(coordinates, context.axis)) {
-      return null
-    }
-
-    // Apply axis constraints to get the final coordinates
-    const constrainedCoordinates = this.applyAxisConstraints(coordinates, context.axis)
-
     // Static strategy behavior: different handling for different event types
     switch (event.type) {
       case "pointerdown":
         // Clicks are "trigger events" - they set the position for static mode
-        this.triggerCoordinates = constrainedCoordinates
-        this.lastKnownCoordinates = constrainedCoordinates
+        this.triggerCoordinates = coordinates
+        this.lastKnownCoordinates = coordinates
 
         // If the floating element is already open, update position immediately
         // This handles cases like clicking while a context menu is open
-        return context.isOpen ? constrainedCoordinates : null
+        return context.isOpen ? coordinates : null
 
       case "pointermove":
       case "pointerenter":
         // Movement and hover update our fallback coordinates but don't trigger positioning
         // This gives us something to fall back to if we don't have trigger coordinates
-        this.lastKnownCoordinates = constrainedCoordinates
+        this.lastKnownCoordinates = coordinates
         return null
 
       default:
@@ -674,8 +615,6 @@ export function useClientPoint(
       } else {
         lockedCoordinates.value = { ...internalCoordinates.value }
       }
-
-      trackingStrategy.onOpen()
     } else {
       trackingStrategy.onClose()
       resetCoordinates()
