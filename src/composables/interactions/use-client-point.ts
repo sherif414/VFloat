@@ -334,6 +334,12 @@ export abstract class TrackingStrategy {
   abstract process(event: PointerEventData, context: TrackingContext): Coordinates | null
 
   /**
+   * Get the list of pointer events this strategy needs to listen for
+   * This allows strategies to optimize performance by only registering necessary events
+   */
+  abstract getRequiredEvents(): PointerEventData["type"][]
+
+  /**
    * Get coordinates to use when the floating element opens
    * This lets each strategy decide its opening behavior without client code needing to know the details
    */
@@ -365,6 +371,13 @@ export abstract class TrackingStrategy {
  */
 export class FollowTracker extends TrackingStrategy {
   readonly name = "follow" as const
+
+  /**
+   * Follow strategy needs all pointer events for continuous tracking
+   */
+  getRequiredEvents(): PointerEventData["type"][] {
+    return ["pointerdown", "pointermove", "pointerenter"]
+  }
 
   /**
    * Follow strategy: always update coordinates based on the current pointer position
@@ -411,33 +424,26 @@ export class StaticTracker extends TrackingStrategy {
   private triggerCoordinates: Coordinates | null = null
 
   /**
+   * Static strategy only needs click events, not hover or continuous movement
+   * This optimization avoids registering unnecessary pointer events
+   */
+  getRequiredEvents(): PointerEventData["type"][] {
+    return ["pointerdown"]
+  }
+
+  /**
    * Static strategy: capture coordinates from trigger events, ignore movement
    * This creates stable positioning that doesn't jump around
    */
   process(event: PointerEventData, context: TrackingContext): Coordinates | null {
     const coordinates = event.coordinates
+    // Clicks are "trigger events" - they set the position for static mode
+    this.triggerCoordinates = coordinates
+    this.lastKnownCoordinates = coordinates
 
-    // Static strategy behavior: different handling for different event types
-    switch (event.type) {
-      case "pointerdown":
-        // Clicks are "trigger events" - they set the position for static mode
-        this.triggerCoordinates = coordinates
-        this.lastKnownCoordinates = coordinates
-
-        // If the floating element is already open, update position immediately
-        // This handles cases like clicking while a context menu is open
-        return context.isOpen ? coordinates : null
-
-      case "pointermove":
-      case "pointerenter":
-        // Movement and hover update our fallback coordinates but don't trigger positioning
-        // This gives us something to fall back to if we don't have trigger coordinates
-        this.lastKnownCoordinates = coordinates
-        return null
-
-      default:
-        return null
-    }
+    // If the floating element is already open, update position immediately
+    // This handles cases like clicking while a context menu is open
+    return context.isOpen ? coordinates : null
   }
 
   /**
@@ -635,20 +641,38 @@ export function useClientPoint(
     processPointerEvent(e, "pointermove")
   }
 
-  // Setup event listeners
+  // Setup event listeners based on strategy requirements
   watchEffect(() => {
     if (isExternallyControlled.value || !enabled.value) return
     const el = pointerTarget.value
     if (!el) return
 
-    el.addEventListener("pointerenter", onPointerenter)
-    el.addEventListener("pointerdown", onPointerdown)
-    el.addEventListener("pointermove", onPointermove)
+    // Get required events from the current strategy
+    const requiredEvents = trackingStrategy.getRequiredEvents()
+
+    // Only register listeners for events the strategy actually needs
+    const handlers: Partial<Record<PointerEventData["type"], (e: PointerEvent) => void>> = {
+      pointerenter: onPointerenter,
+      pointerdown: onPointerdown,
+      pointermove: onPointermove,
+    }
+
+    // Register only required event listeners
+    requiredEvents.forEach((eventType) => {
+      const handler = handlers[eventType]
+      if (handler) {
+        el.addEventListener(eventType, handler)
+      }
+    })
 
     onWatcherCleanup(() => {
-      el?.removeEventListener("pointerenter", onPointerenter)
-      el?.removeEventListener("pointerdown", onPointerdown)
-      el?.removeEventListener("pointermove", onPointermove)
+      // Clean up only the events we registered
+      requiredEvents.forEach((eventType) => {
+        const handler = handlers[eventType]
+        if (handler) {
+          el.removeEventListener(eventType, handler)
+        }
+      })
     })
   })
 
