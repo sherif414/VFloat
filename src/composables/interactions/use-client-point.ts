@@ -675,7 +675,7 @@ export function useClientPoint(
   })
 
   return {
-    coordinates: readonly(coordinates),
+    coordinates: readonly(constrainedCoordinates),
     updatePosition: (x: number, y: number) => setCoordinates(x, y),
   }
 }
