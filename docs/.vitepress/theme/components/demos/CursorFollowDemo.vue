@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from "vue"
-import { useFloating, useClientPoint, useHover } from "v-float"
+import { useFloating, useClientPoint, useHover, flip, shift } from "v-float"
 
 const trackingArea = useTemplateRef("trackingArea")
 const cursorTooltip = useTemplateRef("cursorTooltip")
@@ -103,7 +103,8 @@ const isEnabled = ref(true)
 const followMode = ref("smooth")
 
 const cursorContext = useFloating(ref(null), cursorTooltip, {
-  placement: "bottom-start",
+  placement: "top-end",
+  middlewares: [flip(), shift({ padding: 8 })],
 })
 
 useHover(cursorContext, {
