@@ -559,10 +559,6 @@ export function useClientPoint(
   // Services
   const virtualElementFactory = new VirtualElementFactory()
 
-  // Tracking strategies
-  const followTracker = new FollowTracker()
-  const staticTracker = new StaticTracker()
-
   // Internal state
   const internalCoordinates = ref<Coordinates>({ x: null, y: null })
   // Locked initial coordinates captured when opening to avoid jumps on constrained axes
@@ -606,7 +602,7 @@ export function useClientPoint(
 
   // Current tracking strategy
   const trackingStrategy: TrackingStrategy =
-    (options.trackingMode ?? "follow") === "follow" ? followTracker : staticTracker
+    (options.trackingMode ?? "follow") === "follow" ? new FollowTracker() : new StaticTracker()
 
   /**
    * Set coordinates programmatically
