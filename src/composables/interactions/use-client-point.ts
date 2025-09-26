@@ -17,8 +17,8 @@ import {
   watch,
   watchEffect,
 } from "vue"
-import { isMouseLikePointerType } from "./utils"
 import type { AnchorElement } from "../use-floating"
+import { isMouseLikePointerType } from "./utils"
 
 //=======================================================================================
 // 📌 Types
@@ -236,14 +236,12 @@ export class VirtualElementFactory {
   /**
    * Resolve coordinate for a single axis with clear precedence
    */
-  private resolveAxisCoordinate(
-    sources: {
-      current: number | null
-      baseline: number | null
-      fallback: number
-      isAxisEnabled: boolean
-    }
-  ): number {
+  private resolveAxisCoordinate(sources: {
+    current: number | null
+    baseline: number | null
+    fallback: number
+    isAxisEnabled: boolean
+  }): number {
     const { current, baseline, fallback, isAxisEnabled } = sources
 
     // Priority 1: Current coordinates if axis allows
@@ -263,7 +261,10 @@ export class VirtualElementFactory {
   /**
    * Calculate virtual element size based on axis constraints
    */
-  private calculateSize(axis: AxisConstraint, referenceRect: DOMRect): {
+  private calculateSize(
+    axis: AxisConstraint,
+    referenceRect: DOMRect
+  ): {
     width: number
     height: number
   } {
@@ -274,7 +275,10 @@ export class VirtualElementFactory {
         return { width: 0, height: 0 }
       case "x":
         return {
-          width: ensurePositive(referenceRect.width, VirtualElementFactory.DEFAULT_DIMENSIONS.width),
+          width: ensurePositive(
+            referenceRect.width,
+            VirtualElementFactory.DEFAULT_DIMENSIONS.width
+          ),
           height: 0,
         }
       case "y":
@@ -570,7 +574,7 @@ export function useClientPoint(
   const externalX = computed(() => sanitizeCoordinate(toValue(options.x ?? null)))
   const externalY = computed(() => sanitizeCoordinate(toValue(options.y ?? null)))
   const isExternallyControlled = computed(
-    () => externalX.value !== null || externalY.value !== null
+    () => externalX.value !== null && externalY.value !== null
   )
 
   // Primary coordinates - external takes precedence over internal
