@@ -629,10 +629,6 @@ export function useClientPoint(
    * Process pointer event with current tracking strategy
    */
   const processPointerEvent = (event: PointerEvent, type: PointerEventData["type"]): void => {
-    if (!enabled.value || isExternallyControlled.value) {
-      return
-    }
-
     const eventData: PointerEventData = {
       type,
       coordinates: { x: event.clientX, y: event.clientY },
@@ -702,9 +698,9 @@ export function useClientPoint(
 
   // Setup event listeners
   watchEffect(() => {
-    if (isExternallyControlled.value) return
+    if (isExternallyControlled.value || !enabled.value) return
     const el = pointerTarget.value
-    if (!el || !enabled.value) return
+    if (!el) return
 
     el.addEventListener("pointerenter", onPointerenter)
     el.addEventListener("pointerdown", onPointerdown)
