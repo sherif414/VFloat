@@ -579,13 +579,10 @@ export function useClientPoint(
 
   // Primary coordinates - external takes precedence over internal
   const coordinates = computed<Coordinates>(() => {
-    const hasExternalX = externalX.value !== null
-    const hasExternalY = externalY.value !== null
-
-    if (hasExternalX || hasExternalY) {
+    if (isExternallyControlled.value) {
       return {
-        x: hasExternalX ? externalX.value : internalCoordinates.value.x,
-        y: hasExternalY ? externalY.value : internalCoordinates.value.y,
+        x: externalX.value,
+        y: externalY.value,
       }
     }
 
@@ -670,17 +667,6 @@ export function useClientPoint(
     { immediate: true }
   )
 
-  // Handle controlled coordinates
-  watch(
-    [externalX, externalY, enabled],
-    ([x, y, isEnabled]) => {
-      if (isEnabled && x != null && y != null) {
-        setCoordinates(x, y)
-      }
-    },
-    { immediate: true }
-  )
-
   // Core logic for opening/closing
   watch(open, (isOpen) => {
     if (!enabled.value || isExternallyControlled.value) {
@@ -720,7 +706,7 @@ export function useClientPoint(
 
   // Setup event listeners
   watchEffect(() => {
-    if (externalX.value != null || externalY.value != null) return
+    if (isExternallyControlled.value) return
     const el = pointerTarget.value
     if (!el || !enabled.value) return
 
