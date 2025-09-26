@@ -55,7 +55,6 @@ interface PointerEventData {
  * Context for tracking strategy operations
  */
 interface TrackingContext {
-  axis: AxisConstraint
   isOpen: boolean
 }
 
@@ -583,7 +582,6 @@ export function useClientPoint(
     }
 
     const coordinates = trackingStrategy.process(eventData, {
-      axis: axis.value,
       isOpen: open.value,
     })
 
