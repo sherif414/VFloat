@@ -90,9 +90,9 @@ describe("FollowTracker", () => {
     const tracker = new FollowTracker()
     const event = createPointerEventData("pointerdown", { x: 80, y: 120 })
 
-    const result = tracker.process(event, { axis: "y", isOpen: false })
+    const result = tracker.process(event, { isOpen: false })
 
-    expect(result).toEqual({ x: null, y: 120 })
+    expect(result).toEqual({ x: 80, y: 120 })
   })
 
   it("returns coordinates for pointermove only when open and pointer is mouse-like", () => {
@@ -100,9 +100,9 @@ describe("FollowTracker", () => {
     const mouseEvent = createPointerEventData("pointermove", { x: 40, y: 60 })
     const touchEvent = createPointerEventData("pointermove", { x: 50, y: 70 }, "touch")
 
-    expect(tracker.process(mouseEvent, { axis: "both", isOpen: false })).toBeNull()
-    expect(tracker.process(touchEvent, { axis: "both", isOpen: true })).toBeNull()
-    expect(tracker.process(mouseEvent, { axis: "x", isOpen: true })).toEqual({ x: 40, y: null })
+    expect(tracker.process(mouseEvent, { isOpen: false })).toBeNull()
+    expect(tracker.process(touchEvent, { isOpen: true })).toBeNull()
+    expect(tracker.process(mouseEvent, { isOpen: true })).toEqual({ x: 40, y: 60 })
   })
 })
 
@@ -111,11 +111,11 @@ describe("StaticTracker", () => {
     const tracker = new StaticTracker()
     const pointerdown = createPointerEventData("pointerdown", { x: 200, y: 300 })
 
-    const resultWhenClosed = tracker.process(pointerdown, { axis: "both", isOpen: false })
+    const resultWhenClosed = tracker.process(pointerdown, { isOpen: false })
     expect(resultWhenClosed).toBeNull()
     expect(tracker.getCoordinatesForOpening()).toEqual({ x: 200, y: 300 })
 
-    const resultWhenOpen = tracker.process(pointerdown, { axis: "both", isOpen: true })
+    const resultWhenOpen = tracker.process(pointerdown, { isOpen: true })
     expect(resultWhenOpen).toEqual({ x: 200, y: 300 })
   })
 
@@ -123,8 +123,8 @@ describe("StaticTracker", () => {
     const tracker = new StaticTracker()
     const hover = createPointerEventData("pointermove", { x: 90, y: 110 })
 
-    expect(tracker.process(hover, { axis: "y", isOpen: false })).toBeNull()
-    expect(tracker.getCoordinatesForOpening()).toEqual({ x: null, y: 110 })
+    expect(tracker.process(hover, { isOpen: false })).toBeNull()
+    expect(tracker.getCoordinatesForOpening()).toEqual({ x: 90, y: 110 })
 
     tracker.reset()
     expect(tracker.getCoordinatesForOpening()).toBeNull()
@@ -243,62 +243,13 @@ describe("useClientPoint", () => {
     })
 
     describe("static mode", () => {
-      it("should track coordinates continuously but only set position when floating element opens", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
-          trackingMode: "static",
-        })
-        
-        // Initially no coordinates set
-        expect(coordinates.value).toEqual({ x: null, y: null })
-        
-        // Mouse movements while closed should not set coordinates in the context
-        const event1 = new PointerEvent("pointerenter", {
-          clientX: 100,
-          clientY: 200,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(event1)
-        
-        // Coordinates should still be null since floating element is not open
-        expect(coordinates.value).toEqual({ x: null, y: null })
-        
-        // Move mouse to a different position
-        const event2 = new PointerEvent("pointermove", {
-          clientX: 150,
-          clientY: 250,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(event2)
-        
-        // Still no coordinates set in context
-        expect(coordinates.value).toEqual({ x: null, y: null })
-        
-        // Now open the floating element
-        mockFloatingContext.open.value = true
-        await nextTick()
-        
-        // Should capture the last known position (150, 250)
-        expect(coordinates.value).toEqual({ x: 150, y: 250 })
-        
-        // Further movements should not update the position
-        const event3 = new PointerEvent("pointermove", {
-          clientX: 200,
-          clientY: 300,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(event3)
-        
-        // Position should remain static at the captured coordinates
-        expect(coordinates.value).toEqual({ x: 150, y: 250 })
-      })
-
       it("should reset coordinates when floating element closes and allow new positioning", async () => {
         const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
           trackingMode: "static",
         })
         
-        // Move mouse to initial position
-        const event1 = new PointerEvent("pointermove", {
+        // user clicks on the element
+        const event1 = new PointerEvent("pointerdown", {
           clientX: 100,
           clientY: 200,
           pointerType: "mouse",
@@ -318,8 +269,8 @@ describe("useClientPoint", () => {
         // Coordinates should be reset
         expect(coordinates.value).toEqual({ x: null, y: null })
         
-        // Move to new position
-        const event2 = new PointerEvent("pointermove", {
+        // user clicks on the element
+        const event2 = new PointerEvent("pointerdown", {
           clientX: 150,
           clientY: 250,
           pointerType: "mouse",
@@ -360,34 +311,6 @@ describe("useClientPoint", () => {
         
         // Should use the click coordinates, not the hover coordinates
         expect(coordinates.value).toEqual({ x: 500, y: 300 })
-      })
-
-      it("should fall back to last hover coordinates when no trigger event occurred", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
-          trackingMode: "static",
-        })
-        
-        // User moves mouse over the element
-        const hoverEvent1 = new PointerEvent("pointermove", {
-          clientX: 100,
-          clientY: 200,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(hoverEvent1)
-        
-        // User continues moving
-        const hoverEvent2 = new PointerEvent("pointermove", {
-          clientX: 150,
-          clientY: 220,
-          pointerType: "mouse",
-        })
-        mockPointerTarget.value.dispatchEvent(hoverEvent2)
-        
-        // After delay, tooltip opens (no pointerdown event)
-        mockFloatingContext.open.value = true
-        await nextTick()
-        // Should use the last hover position
-        expect(coordinates.value).toEqual({ x: 150, y: 220 })
       })
 
       it("should retain trigger coordinates even if the pointer moves before opening", async () => {
