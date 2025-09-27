@@ -1,1 +1,1 @@
-export { flip, hide, offset, shift } from "@floating-ui/dom"
+export { flip, hide, offset, shift, arrow, autoPlacement, size } from "@floating-ui/dom"
