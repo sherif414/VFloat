@@ -37,10 +37,10 @@
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
     "@vueuse/core": "^13.7.0",
-    "vitepress-plugin-demo": "^0.8.1",
     "vue": "^3.5.20"
   },
   "devDependencies": {
+    "vitepress-plugin-demo": "^0.8.1",
     "@21st-extension/toolbar-vue": "^0.5.14",
     "@21st-extension/vue": "^0.5.14",
     "@biomejs/biome": "2.2.2",
