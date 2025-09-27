@@ -32,32 +32,20 @@
       </div>
 
       <div class="demo-area">
-        <button ref="triggerRef" class="demo-trigger" @click="toggleTooltip">
-          {{ isOpen ? "Hide" : "Show" }} Tooltip
+        <button ref="triggerRef" class="demo-trigger">
+          Tooltip
         </button>
 
         <Teleport to="body">
           <div
-            v-if="floatingContext.open.value"
+            v-if="context.open.value"
             ref="floatingRef"
-            :style="floatingContext.floatingStyles.value"
+            :style="context.floatingStyles.value"
             class="tooltip floating-element"
           >
-            <div v-show="floatingContext.isPositioned.value" class="tooltip-content">
-              <div class="tooltip-header">Middleware Demo</div>
+            <div v-show="context.isPositioned.value" class="tooltip-content">
               <div class="tooltip-body">
-                <div class="placement-info">
-                  Placement: <code>{{ floatingContext.placement.value }}</code>
-                </div>
-                <div class="middleware-info">
-                  Active middleware:
-                  <ul class="middleware-list">
-                    <li v-if="enabledMiddleware.offset">offset({{ offsetValue }})</li>
-                    <li v-if="enabledMiddleware.flip">flip()</li>
-                    <li v-if="enabledMiddleware.shift">shift({{ shiftPadding }}px padding)</li>
-                    <li v-if="enabledMiddleware.arrow">arrow()</li>
-                  </ul>
-                </div>
+                <p>Middleware Demo: Observe positioning and arrow adjustments.</p>
               </div>
               <div
                 v-if="enabledMiddleware.arrow"
@@ -93,7 +81,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from "vue"
-import { useFloating, useArrow, offset, flip, shift } from "v-float"
+import { useFloating, useArrow, offset, flip, shift, useClick } from "v-float"
 import type { Placement, Middleware } from "@floating-ui/dom"
 
 const triggerRef = useTemplateRef("triggerRef")
@@ -101,7 +89,7 @@ const floatingRef = useTemplateRef("floatingRef")
 const arrowRef = useTemplateRef("arrowRef")
 
 const isOpen = ref(false)
-const placement = ref<Placement>("top")
+const placement = ref<Placement>("bottom")
 const offsetValue = ref(8)
 const shiftPadding = ref(8)
 
@@ -135,17 +123,15 @@ const middlewaresList = computed(() => {
   return mw
 })
 
-const floatingContext = useFloating(triggerRef, floatingRef, {
+const context = useFloating(triggerRef, floatingRef, {
   open: isOpen,
   placement,
-  middlewares: middlewaresList.value,
+  middlewares: middlewaresList,
 })
 
-const { arrowStyles } = useArrow(arrowRef, floatingContext)
+useClick(context, { toggle: true, outsideClick: false })
 
-function toggleTooltip() {
-  isOpen.value = !isOpen.value
-}
+const { arrowStyles } = useArrow(arrowRef, context)
 </script>
 
 <style scoped>
@@ -231,37 +217,33 @@ function toggleTooltip() {
   transition: all 0.2s ease;
 }
 
-.demo-trigger:hover {
-  background: var(--vp-c-brand-2);
-  transform: translateY(-1px);
-}
 
 .floating-element {
   z-index: 1000;
 }
 
 .tooltip {
-  max-width: 280px;
+  max-width: 300px;
 }
 
 .tooltip-content {
   background: var(--vp-c-bg);
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: visible;
 }
 
-.tooltip-header {
-  background: var(--vp-c-brand-1);
-  color: white;
-  padding: 0.5rem 0.75rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
 
 .tooltip-body {
-  padding: 0.75rem;
+  padding: 1rem;
+}
+
+.tooltip-body p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--vp-c-text-1);
+  line-height: 1.4;
 }
 
 .placement-info {
@@ -299,8 +281,8 @@ function toggleTooltip() {
   position: absolute;
   width: 8px;
   height: 8px;
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-brand-1);
+  border: 1px solid var(--vp-c-brand-1);
   transform: rotate(45deg);
   z-index: -1;
 }
