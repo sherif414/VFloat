@@ -15,7 +15,7 @@
       "style": {
         "useConst": "error",
         "noNegationElse": "error",
-        "noNonNullAssertion": "info"
+        "noNonNullAssertion": "off"
       }
     }
   },
@@ -34,7 +34,7 @@
   },
   "files": {
     "includes": [
-      "**",
+      "src/**",
       "!**/dist/**/*",
       "!**/node_modules/**/*",
       "!**/.vitepress/**/*",

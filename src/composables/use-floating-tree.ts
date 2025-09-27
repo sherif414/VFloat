@@ -482,7 +482,6 @@ export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): 
       return false
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: <Root case is handled, so parent must exist>
     const parent = nodeToRemove.parent.value!
 
     // 1. Handle children based on strategy
@@ -583,7 +582,6 @@ export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): 
     if (strategy === "dfs") {
       const stack: TreeNode<T>[] = [startNode]
       while (stack.length > 0) {
-        // biome-ignore lint/style/noNonNullAssertion: <stack is initialized with items>
         const node = stack.pop()!
         result.push(node)
         // Add children in reverse for pre-order pop()
@@ -595,7 +593,6 @@ export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): 
       // bfs
       const queue: TreeNode<T>[] = [startNode]
       while (queue.length > 0) {
-        // biome-ignore lint/style/noNonNullAssertion: <stack is initialized with items>
         const node = queue.shift()!
         result.push(node)
         for (const child of node.children.value) {
