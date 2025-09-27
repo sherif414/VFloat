@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+# [0.6.0](https://github.com/sherif414/VFloat/compare/v0.5.0...v0.6.0) (2025-09-27)
+
+
+### Bug Fixes
+
+* **demos:** refine context menu and cursor follow behavior ([2ecd624](https://github.com/sherif414/VFloat/commit/2ecd624d07bee6fe44a53541ba7e16ef14c90f69))
+* **docs:** add click handlers to menu items to close popover on selection ([8d006a3](https://github.com/sherif414/VFloat/commit/8d006a304098dfebb2c22a7e423cf5a6d901750b))
+* **docs:** close dropdown on item click and Esc key press ([a2f0d2e](https://github.com/sherif414/VFloat/commit/a2f0d2e18669576b00f798c6cbf54a0ec7e9dbc9))
+* **interactions:** initialize anchorEl with virtual element on pointer target ([11a542d](https://github.com/sherif414/VFloat/commit/11a542df9fb14d70aff8f014f1a632d7166ea42e))
+* **popover:** reduce hover delay time from 200ms to 50ms ([c746604](https://github.com/sherif414/VFloat/commit/c74660471707c27142fa38e4a69c4d4b1ea916ff))
+* **useClientPoint:** made both x and y required for externally controlled coords ([e72eff2](https://github.com/sherif414/VFloat/commit/e72eff22a79e579becf45f321dcff31d243f3140))
+
+
+### Features
+
+* **docs:** add new demos and enhance useClientPoint API docs ([1a799c0](https://github.com/sherif414/VFloat/commit/1a799c0520027b1d5750f7a779b1c905e2a4808a))
+* **use-escape-key:** add tree-aware escape key handling and update API ([e66cdef](https://github.com/sherif414/VFloat/commit/e66cdefb5d27eb0ff85cfa354c81678cee374d16))
+
 # [0.5.0](https://github.com/sherif414/VFloat/compare/v0.4.0...v0.5.0) (2025-08-29)
 
 # 0.1.0 (2025-08-29)
