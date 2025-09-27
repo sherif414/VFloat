@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+# [0.7.0](https://github.com/sherif414/VFloat/compare/v0.6.1...v0.7.0) (2025-09-27)
+
+
+### Features
+
+* **middlewares:** added new middlewares ([0f08641](https://github.com/sherif414/VFloat/commit/0f08641c05d4bba47f431f43a4178549d8a94687))
+
 ## [0.6.1](https://github.com/sherif414/VFloat/compare/v0.6.0...v0.6.1) (2025-09-27)
 
 # [0.6.0](https://github.com/sherif414/VFloat/compare/v0.5.0...v0.6.0) (2025-09-27)
