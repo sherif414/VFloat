@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.6.1](https://github.com/sherif414/VFloat/compare/v0.6.0...v0.6.1) (2025-09-27)
+
 # [0.6.0](https://github.com/sherif414/VFloat/compare/v0.5.0...v0.6.0) (2025-09-27)
 
 
