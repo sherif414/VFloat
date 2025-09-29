@@ -34,7 +34,13 @@ export interface CreateTreeOptions {
   deleteStrategy?: "orphan" | "recursive"
 }
 
-// Removed UseTreeReturn interface as the class itself serves this purpose
+interface AddNodeOptions extends UseFloatingOptions {
+  /**
+   * Parent node ID for tree hierarchy.
+   * @default undefined
+   */
+  parentId?: string
+}
 
 export interface TreeNode<T> {
   readonly id: string
@@ -75,7 +81,7 @@ export interface UseFloatingTreeReturn extends Omit<Tree<FloatingContext>, "addN
   addNode: (
     anchorEl: Ref<AnchorElement>,
     floatingEl: Ref<FloatingElement>,
-    options?: UseFloatingOptions
+    options?: AddNodeOptions
   ) => TreeNode<FloatingContext> | null
   getAllOpenNodes: () => TreeNode<FloatingContext>[]
   getTopmostOpenNode: () => TreeNode<FloatingContext> | null
@@ -290,7 +296,7 @@ export function useFloatingTree(
   const addNode = (
     anchorEl: Ref<AnchorElement>,
     floatingEl: Ref<FloatingElement>,
-    options: UseFloatingOptions = {}
+    options: AddNodeOptions = {}
   ): TreeNode<FloatingContext> | null => {
     // Extract parentId from options
     const { parentId, ...floatingOptions } = options

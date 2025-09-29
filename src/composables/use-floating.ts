@@ -98,13 +98,6 @@ export interface UseFloatingOptions {
    * @default false
    */
   open?: Ref<boolean>
-
-  /**
-   * Parent node ID for tree hierarchy.
-   * Used when adding nodes to floating trees.
-   * @default null
-   */
-  parentId?: string | null
 }
 
 /**
