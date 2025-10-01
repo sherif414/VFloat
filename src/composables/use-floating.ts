@@ -98,6 +98,12 @@ export interface UseFloatingOptions {
    * @default false
    */
   open?: Ref<boolean>
+
+  /**
+   * Function to explicitly set the open state of the floating element.
+   * If not provided, the default `setOpen` will be used.
+   */
+  setOpen?: (open: boolean) => void
 }
 
 /**
@@ -198,10 +204,15 @@ export function useFloating(
     middlewares,
     autoUpdate: autoUpdateOptions = true,
     open = ref(false),
+    setOpen: customSetOpen,
   } = options
 
   const setOpen = (value: boolean) => {
-    open.value = value
+    if (customSetOpen) {
+      customSetOpen(value)
+    } else {
+      open.value = value
+    }
   }
 
   const initialPlacement = computed(() => toValue(options.placement) ?? "bottom")

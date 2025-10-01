@@ -1,15 +1,16 @@
 import { ref } from "vue"
 import { describe, expect, it, vi } from "vitest"
 import { fireEvent } from "@testing-library/vue"
+import { useEventListener } from "@vueuse/core"
 import { useEscapeKey } from "../interactions/use-escape-key"
 import type { FloatingContext } from "../use-floating"
 import type { TreeNode } from "../use-floating-tree"
 
 // Mock dependencies
 vi.mock("@vueuse/core", () => ({
-  useEventListener: vi.fn((target, event, handler) => {
-    document.addEventListener(event, handler)
-    return () => document.removeEventListener(event, handler)
+  useEventListener: vi.fn((target, event, handler, options) => {
+    document.addEventListener(event, handler, options)
+    return () => document.removeEventListener(event, handler, options)
   }),
 }))
 
@@ -248,8 +249,6 @@ describe("useEscapeKey", () => {
 
     it("should handle capture option", () => {
       const context = createMockFloatingContext()
-      const { useEventListener } = require("@vueuse/core")
-
       useEscapeKey(context, { capture: true })
 
       expect(useEventListener).toHaveBeenCalledWith(

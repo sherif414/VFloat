@@ -135,8 +135,10 @@ function getTopmostOpenNodeInTree(
       }
     }
 
-    for (const child of currentNode.children.value) {
-      traverseNode(child)
+    if (Array.isArray(currentNode.children?.value)) {
+      for (const child of currentNode.children.value) {
+        traverseNode(child)
+      }
     }
   }
 

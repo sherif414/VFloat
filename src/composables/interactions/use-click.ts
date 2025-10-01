@@ -148,6 +148,10 @@ export function useClick(
       return
     }
 
+    if (pointerType === undefined && toValue(ignoreKeyboard)) {
+      return
+    }
+
     if (shouldIgnorePointerType(pointerType)) {
       resetInteractionState()
       return

@@ -1,14 +1,23 @@
 /// <reference types="@vitest/browser/matchers" />
-import { defineConfig } from "vitest/config"
+import { mergeConfig } from "vite"
+import { defineConfig, configDefaults } from "vitest/config"
+import viteConfig from "./vite.config"
 
-export default defineConfig({
-  test: {
-    browser: {
-      enabled: true,
-      provider: "playwright",
-      instances: [{ browser: "chromium" }],
-      headless: true,
+export default mergeConfig(
+  viteConfig,
+  defineConfig({
+    test: {
+      ...configDefaults,
+      browser: {
+        enabled: true,
+        provider: "playwright",
+        instances: [{ browser: "chromium" }],
+        headless: true,
+      },
+      includeTaskLocation: true,
     },
-    includeTaskLocation: true,
-  },
-})
+    define: {
+      "process.env": {},
+    },
+  }),
+)

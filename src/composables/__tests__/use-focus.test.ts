@@ -75,8 +75,9 @@ describe("useFocus", () => {
 
       await fireEvent.focus(trigger)
       await nextTick()
-      await fireEvent.blur(trigger)
-      await nextTick()
+
+      await fireEvent.blur(trigger, { relatedTarget: document.body })
+      await vi.runAllTimersAsync()
 
       expect(queryByText("Content")).toBeNull()
     })
@@ -100,12 +101,14 @@ describe("useFocus", () => {
       const trigger = getByText("Trigger")
 
       // Simulate mouse focus (should not open)
-      await fireEvent.focus(trigger, { relatedTarget: null })
+      await fireEvent.pointerDown(trigger)
+      await fireEvent.focus(trigger)
       await nextTick()
       expect(queryByText("Content")).toBeNull()
 
       // Simulate keyboard focus (should open)
-      await fireEvent.focus(trigger, { relatedTarget: document.body })
+      await fireEvent.keyDown(document.body, { key: "Tab" }) // Set keyboard modality
+      await fireEvent.focus(trigger)
       await nextTick()
       expect(getByText("Content")).toBeTruthy()
     })

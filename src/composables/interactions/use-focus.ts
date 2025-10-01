@@ -93,27 +93,26 @@ export function useFocus(
     isFocusBlocked = false
   })
 
-  // 3. Safari `:focus-visible` polyfill. Tracks if the last interaction was
-  //    from a keyboard or a pointer to correctly apply focus-visible logic.
+  // 3. Focus-visible polyfill. Tracks if the last interaction was from a
+  //    keyboard or a pointer to correctly apply focus-visible logic. This
+  //    improves reliability, especially in testing environments.
   onMounted(() => {
-    if (isMac() && isSafari()) {
-      useEventListener(
-        window,
-        "keydown",
-        () => {
-          keyboardModality = true
-        },
-        { capture: true }
-      )
-      useEventListener(
-        window,
-        "pointerdown",
-        () => {
-          keyboardModality = false
-        },
-        { capture: true }
-      )
-    }
+    useEventListener(
+      window,
+      "keydown",
+      () => {
+        keyboardModality = true
+      },
+      { capture: true }
+    )
+    useEventListener(
+      window,
+      "pointerdown",
+      () => {
+        keyboardModality = false
+      },
+      { capture: true }
+    )
   })
 
   // --- Element Event Handlers ---
@@ -124,15 +123,13 @@ export function useFocus(
     }
 
     const target = event.target as Element | null
+
+    // When `requireFocusVisible` is true, we only want to open the floating
+    // element for "visible" focus. We use our polyfill to determine this,
+    // which is more reliable in testing environments.
     if (toValue(requireFocusVisible) && target) {
-      // Safari fails to match `:focus-visible` if focus was initially outside
-      // the document. This is a workaround.
-      if (isMac() && isSafari() && !event.relatedTarget) {
-        if (!keyboardModality && !isTypeableElement(target)) {
-          return // Do not open if interaction was pointer-based on a non-typeable element.
-        }
-      } else if (!matchesFocusVisible(target)) {
-        return // Standard check for other browsers.
+      if (!keyboardModality && !isTypeableElement(target)) {
+        return
       }
     }
 

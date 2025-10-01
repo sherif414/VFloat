@@ -208,16 +208,12 @@ export function useHover(
     if (!restCoords) return
     const newCoords = { x: e.clientX, y: e.clientY }
 
-    const dx = Math.abs(newCoords.x - restCoords.x)
-    const dy = Math.abs(newCoords.y - restCoords.y)
-
-    if (dx > POINTER_MOVE_THRESHOLD || dy > POINTER_MOVE_THRESHOLD) {
-      restCoords = newCoords
-      clearTimeout(restTimeoutId)
-      restTimeoutId = setTimeout(() => {
-        show(0)
-      }, restMs.value)
-    }
+    // Any movement should reset the rest timer.
+    restCoords = newCoords
+    clearTimeout(restTimeoutId)
+    restTimeoutId = setTimeout(() => {
+      show(0)
+    }, restMs.value)
   }
 
   function onPointerEnterForRest(e: PointerEvent) {

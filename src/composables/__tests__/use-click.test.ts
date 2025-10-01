@@ -1,5 +1,6 @@
-import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { fireEvent } from "@testing-library/vue"
 import { effectScope, nextTick, type Ref, ref } from "vue"
 import { type UseClickOptions, useClick } from "@/composables"
 
@@ -236,8 +237,8 @@ describe("useClick", () => {
       expect(context.open.value).toBe(false)
 
       // Simulate a touch pointer event
-      // This will fire pointerdown, pointerup, and click events.
-      await userEvent.pointer({ keys: "[TouchA>]", target: referenceEl })
+      await fireEvent.pointerDown(referenceEl, { pointerType: "touch" })
+      await fireEvent.click(referenceEl)
 
       expect(setOpenMock).toHaveBeenCalledTimes(1)
       expect(setOpenMock).toHaveBeenCalledWith(true)
