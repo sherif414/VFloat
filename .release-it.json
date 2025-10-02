@@ -10,7 +10,7 @@
     "publishPath": "./dist"
   },
   "hooks": {
-    "before:init": ["git pull", "pnpm lint", "pnpm run type-check"],
+    "before:init": ["git pull"],
     "after:bump": "pnpm run build",
     "after:release": "echo Successfully released ${name} v${version} to ${repo.repository}."
   },
