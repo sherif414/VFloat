@@ -1,3 +1,5 @@
+import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-floating-tree"
 import { useEventListener } from "@vueuse/core"
 import {
   computed,
@@ -5,11 +7,10 @@ import {
   onMounted,
   onScopeDispose,
   onWatcherCleanup,
+  type Ref,
   toValue,
-  watchPostEffect,
+  watchPostEffect
 } from "vue"
-import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-floating-tree"
 import {
   getContextFromParameter,
   isMac,
@@ -18,6 +19,17 @@ import {
   isTypeableElement,
   matchesFocusVisible,
 } from "./utils"
+
+//=======================================================================================
+// 📌 Constants
+//=======================================================================================
+
+/**
+ * Delay in milliseconds for checking active element after blur event.
+ * Using 0ms ensures check happens in next event loop tick, which is more
+ * reliable than relatedTarget for Shadow DOM and programmatic focus changes.
+ */
+const BLUR_CHECK_DELAY = 0
 
 //=======================================================================================
 // 📌 Main Composable
@@ -69,6 +81,12 @@ export function useFocus(
   } = floatingContext
 
   const { enabled = true, requireFocusVisible = true } = options
+
+  /**
+   * Computed anchor element that handles both HTMLElement and virtual element references.
+   * Virtual elements (from libraries like Floating UI) use a `contextElement` property
+   * to reference the actual DOM element for positioning calculations.
+   */
   const anchorEl = computed(() => {
     if (!_anchorEl.value) return null
     return _anchorEl.value instanceof HTMLElement ? _anchorEl.value : _anchorEl.value.contextElement
@@ -76,7 +94,13 @@ export function useFocus(
 
   let isFocusBlocked = false
   let keyboardModality = true // Assume keyboard modality initially.
+  const isSafariOnMac = isMac() && isSafari()
   let timeoutId: number
+
+  // Select focus strategy based on context type
+  const focusStrategy: FocusStrategy = treeContext
+    ? new TreeAwareFocusStrategy(treeContext)
+    : new StandaloneFocusStrategy(floatingEl)
 
   // --- Window Event Listeners for Edge Cases ---
 
@@ -96,7 +120,7 @@ export function useFocus(
   // 3. Safari `:focus-visible` polyfill. Tracks if the last interaction was
   //    from a keyboard or a pointer to correctly apply focus-visible logic.
   onMounted(() => {
-    if (isMac() && isSafari()) {
+    if (isSafariOnMac) {
       useEventListener(
         window,
         "keydown",
@@ -123,11 +147,11 @@ export function useFocus(
       return
     }
 
-    const target = event.target as Element | null
+    const target = event.target instanceof Element ? event.target : null
     if (toValue(requireFocusVisible) && target) {
       // Safari fails to match `:focus-visible` if focus was initially outside
       // the document. This is a workaround.
-      if (isMac() && isSafari() && !event.relatedTarget) {
+      if (isSafariOnMac && !event.relatedTarget) {
         if (!keyboardModality && !isTypeableElement(target)) {
           return // Do not open if interaction was pointer-based on a non-typeable element.
         }
@@ -136,7 +160,11 @@ export function useFocus(
       }
     }
 
-    setOpen(true)
+    try {
+      setOpen(true)
+    } catch (error) {
+      console.error("[useFocus] Error in onFocus handler:", error)
+    }
   }
 
   function onBlur(event: FocusEvent): void {
@@ -157,27 +185,23 @@ export function useFocus(
         return
       }
 
-      // Tree-aware focus checking
-      if (treeContext) {
-        if (activeEl && isFocusWithinNodeHierarchy(treeContext, activeEl)) {
-          return // Focus is within hierarchy - keep open
-        }
-      } else {
-        // Case 2: Focus has moved to an element within the floating element.
-        // This is the primary way we keep it open during keyboard navigation.
-        if (floatingEl.value && activeEl && floatingEl.value.contains(activeEl)) {
-          return
-        }
+      // Case 2: Delegate to focus strategy to determine if we should remain open
+      if (focusStrategy.shouldRemainOpen(activeEl)) {
+        return
       }
 
       // If neither of the above conditions are met, focus has moved elsewhere,
       // so it's safe to close the floating element.
-      setOpen(false)
-    }, 0)
+      try {
+        setOpen(false)
+      } catch (error) {
+        console.error("[useFocus] Error in onBlur handler:", error)
+      }
+    }, BLUR_CHECK_DELAY)
   }
 
   // --- Attach Listeners to the Anchor Element ---
-  watchPostEffect(() => {
+  const removeWatcher = watchPostEffect(() => {
     if (!toValue(enabled)) return
     const el = anchorEl.value
     if (!el || !(el instanceof HTMLElement)) return
@@ -195,6 +219,17 @@ export function useFocus(
   onScopeDispose(() => {
     clearTimeout(timeoutId)
   })
+
+  return {
+    /**
+     * Cleanup function that removes all event listeners and clears pending timeouts.
+     * Useful for manual cleanup in testing scenarios.
+     */
+    cleanup: () => {
+      clearTimeout(timeoutId)
+      removeWatcher()
+    },
+  }
 }
 
 //=======================================================================================
@@ -219,62 +254,80 @@ export interface UseFocusOptions {
 /**
  * Return value of the useFocus composable
  */
-export type UseFocusReturn = undefined
+export interface UseFocusReturn {
+  /**
+   * Cleanup function that removes all event listeners and clears pending timeouts.
+   * Useful for manual cleanup in testing scenarios.
+   */
+  cleanup: () => void
+}
 
 //=======================================================================================
-// 📌 Tree-Aware Logic Helpers
+// 📌 Focus Strategy Pattern
 //=======================================================================================
 
 /**
- * Determines if focus is within the current node's hierarchy.
- *
- * Returns true if focus is on the current node or any of its descendants,
- * false if focus is outside the hierarchy.
- *
- * @param currentNode - The tree node to check against
- * @param target - The focused element
- * @returns True if focus is within the node hierarchy
+ * Strategy interface for determining if focus should remain on the floating element
  */
-function isFocusWithinNodeHierarchy(
-  currentNode: TreeNode<FloatingContext>,
-  target: Element
-): boolean {
-  // Check if focus is within current node's elements
-  if (
-    isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
-    isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
-  ) {
-    return true // Focus on current node
-  }
-
-  // Check if focus is within any descendant
-  const descendantNode = findDescendantContainingFocus(currentNode, target)
-  return descendantNode !== null
+interface FocusStrategy {
+  shouldRemainOpen(activeEl: Element | null): boolean
 }
 
 /**
- * Finds a descendant node that contains the focused element.
- * @param node - The parent node to search from
- * @param target - The focused element to find
- * @returns The descendant node containing the target, or null
+ * Standalone focus strategy - checks if focus is within the floating element only
  */
-function findDescendantContainingFocus(
-  node: TreeNode<FloatingContext>,
-  target: Element
-): TreeNode<FloatingContext> | null {
-  for (const child of node.children.value) {
-    if (child.data.open.value) {
-      if (
-        isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
-        isTargetWithinElement(target, child.data.refs.floatingEl.value)
-      ) {
-        return child
-      }
+class StandaloneFocusStrategy implements FocusStrategy {
+  constructor(private floatingEl: Ref<HTMLElement | null>) {}
 
-      // Recursively check descendants
-      const descendant = findDescendantContainingFocus(child, target)
-      if (descendant) return descendant
-    }
+  shouldRemainOpen(activeEl: Element | null): boolean {
+    if (!activeEl || !this.floatingEl.value) return false
+    return this.floatingEl.value.contains(activeEl)
   }
-  return null
+}
+
+/**
+ * Tree-aware focus strategy - checks if focus is within the node hierarchy
+ */
+class TreeAwareFocusStrategy implements FocusStrategy {
+  constructor(private treeContext: TreeNode<FloatingContext>) {}
+
+  shouldRemainOpen(activeEl: Element | null): boolean {
+    if (!activeEl) return false
+    return this.isFocusWithinNodeHierarchy(this.treeContext, activeEl)
+  }
+
+  private isFocusWithinNodeHierarchy(currentNode: TreeNode<FloatingContext>, target: Element): boolean {
+    // Check if focus is within current node's elements
+    if (
+      isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
+      isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+    ) {
+      return true // Focus on current node
+    }
+
+    // Check if focus is within any descendant
+    const descendantNode = this.findDescendantContainingFocus(currentNode, target)
+    return descendantNode !== null
+  }
+
+  private findDescendantContainingFocus(
+    node: TreeNode<FloatingContext>,
+    target: Element
+  ): TreeNode<FloatingContext> | null {
+    for (const child of node.children.value) {
+      if (child.data.open.value) {
+        if (
+          isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
+          isTargetWithinElement(target, child.data.refs.floatingEl.value)
+        ) {
+          return child
+        }
+
+        // Recursively check descendants
+        const descendant = this.findDescendantContainingFocus(child, target)
+        if (descendant) return descendant
+      }
+    }
+    return null
+  }
 }
