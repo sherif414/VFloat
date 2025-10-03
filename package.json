@@ -43,7 +43,7 @@
     "@21st-extension/toolbar-vue": "^0.5.14",
     "@21st-extension/vue": "^0.5.14",
     "@biomejs/biome": "2.2.2",
-    "@release-it/conventional-changelog": "^8.0.1",
+    "@release-it/conventional-changelog": "^10.0.1",
     "@testing-library/vue": "^8.1.0",
     "@tsconfig/node22": "^22.0.2",
     "@types/jsdom": "^21.1.7",
