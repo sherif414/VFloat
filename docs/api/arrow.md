@@ -1,6 +1,6 @@
 # arrow
 
-A middleware that positions an arrow element pointing toward the reference.
+A middleware that positions an arrow element pointing toward the anchor element.
 
 ## Usage
 
@@ -12,9 +12,9 @@ import { arrow } from 'v-float'
 
 const arrowEl = ref(null)
 
-const { x, y, strategy } = useFloating(anchorEl, floatingEl, {
+const { x, y, strategy } = useFloating(..., {
   middlewares: [
-    arrow({ element: () => arrowEl.value })
+    arrow({ element: arrowEl })
   ]
 })
 </script>
@@ -27,10 +27,15 @@ const { x, y, strategy } = useFloating(anchorEl, floatingEl, {
 ## Options
 
 ```ts
-interface ArrowOptions {
-  // The arrow HTMLElement/SVGElement that should be positioned
-  element: HTMLElement | SVGElement | (() => HTMLElement | SVGElement | null)
-  // Optional padding between arrow tip and edges used in collision checks
-  padding?: number | Partial<Record<'top' | 'right' | 'bottom' | 'left', number>>
+export interface ArrowMiddlewareOptions {
+  /**
+   * Padding to apply around the arrow element
+   */
+  padding?: Padding
+
+  /**
+   * Reference to the arrow element
+   */
+  element: Ref<HTMLElement | null>
 }
 ```

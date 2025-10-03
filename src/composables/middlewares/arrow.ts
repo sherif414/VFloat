@@ -26,13 +26,12 @@ export interface ArrowMiddlewareOptions {
 //=======================================================================================
 
 /**
- * Positions an inner element of the floating element such that it is centered to the reference element.
+ * Positions an inner element of the floating element such that it is centered to the anchor element.
  *
  * This middleware is used to position arrow elements within floating elements.
  *
  * @param options - The arrow options including padding and element reference
  * @returns A middleware function for arrow positioning
- * @see https://floating-ui.com/docs/arrow
  */
 export function arrow(options: ArrowMiddlewareOptions): Middleware {
   return {
