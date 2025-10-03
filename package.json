@@ -60,7 +60,6 @@
     "playwright": "^1.55.0",
     "prettier": "^3.6.2",
     "release-it": "^19.0.4",
-    "release-it-pnpm": "^4.6.6",
     "typescript": "~5.7.3",
     "unocss": "66.1.0-beta.7",
     "vite": "^6.3.5",
@@ -71,14 +70,6 @@
     "vitest": "^3.2.4",
     "vitest-browser-vue": "^0.2.0",
     "vue-tsc": "^2.2.12"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "core-js",
-      "esbuild",
-      "msw"
-    ]
   },
   "packageManager": "npm@10.9.2"
 }

@@ -11,7 +11,7 @@
   },
   "hooks": {
     "before:init": ["git pull"],
-    "after:bump": "pnpm run build",
+    "after:bump": "npm run build",
     "after:release": "echo Successfully released ${name} v${version} to ${repo.repository}."
   },
   "github": {
@@ -19,7 +19,6 @@
     "releaseName": "v${version}"
   },
   "plugins": {
-    "release-it-pnpm": {},
     "@release-it/conventional-changelog": {
       "preset": "angular",
       "infile": "CHANGELOG.md",
