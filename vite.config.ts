@@ -3,12 +3,14 @@ import vue from "@vitejs/plugin-vue"
 import unocss from "unocss/vite"
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
+import vueDevtools from "vite-plugin-vue-devtools"
 
 export default defineConfig({
   plugins: [
     vue(),
     unocss(),
     dts({ tsconfigPath: "./tsconfig.build.json", outDir: "dist", entryRoot: "src" }),
+    vueDevtools(),
   ],
   resolve: {
     alias: {
