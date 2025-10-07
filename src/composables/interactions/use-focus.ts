@@ -1,5 +1,3 @@
-import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-floating-tree"
 import { useEventListener } from "@vueuse/core"
 import {
   computed,
@@ -9,8 +7,10 @@ import {
   onWatcherCleanup,
   type Ref,
   toValue,
-  watchPostEffect
+  watchPostEffect,
 } from "vue"
+import type { FloatingContext } from "@/composables"
+import type { TreeNode } from "@/composables/use-floating-tree"
 import {
   getContextFromParameter,
   isMac,
@@ -296,7 +296,10 @@ class TreeAwareFocusStrategy implements FocusStrategy {
     return this.isFocusWithinNodeHierarchy(this.treeContext, activeEl)
   }
 
-  private isFocusWithinNodeHierarchy(currentNode: TreeNode<FloatingContext>, target: Element): boolean {
+  private isFocusWithinNodeHierarchy(
+    currentNode: TreeNode<FloatingContext>,
+    target: Element
+  ): boolean {
     // Check if focus is within current node's elements
     if (
       isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
