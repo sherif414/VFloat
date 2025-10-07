@@ -573,6 +573,11 @@ export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): 
    * @param strategy The traversal strategy ('dfs' or 'bfs'). Defaults to 'dfs'.
    * @param startNode The node to start traversal from. Defaults to the root node.
    * @returns An array of nodes in the order they were visited.
+   *
+   * Ordering guarantee:
+   * - The returned array will always begin with the provided `startNode` (the target node),
+   *   regardless of whether `strategy` is 'dfs' or 'bfs'.
+   * - When `startNode` is omitted, traversal begins at the root and the first element will be `root`.
    */
   const traverse = (
     strategy: "dfs" | "bfs" = "dfs",

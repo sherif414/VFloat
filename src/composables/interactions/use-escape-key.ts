@@ -2,7 +2,7 @@ import { useEventListener } from "@vueuse/core"
 import { type MaybeRefOrGetter, ref, toValue } from "vue"
 import type { FloatingContext } from "@/composables"
 import type { TreeNode } from "@/composables/use-floating-tree"
-import { getContextFromParameter } from "./utils"
+import { getContextFromParameter } from "@/utils"
 
 // =======================================================================================
 // 📌 Types

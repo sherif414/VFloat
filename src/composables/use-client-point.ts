@@ -18,7 +18,7 @@ import {
 } from "vue"
 import type { VirtualElement } from "@/types"
 import type { AnchorElement } from "./use-floating"
-import { isMouseLikePointerType } from "./interactions/utils"
+import { isMouseLikePointerType } from "@/utils"
 
 //=======================================================================================
 // 📌 Types

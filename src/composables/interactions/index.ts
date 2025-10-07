@@ -7,8 +7,7 @@ export {
   type UseClientPointOptions,
   type UseClientPointReturn,
   useClientPoint,
-} from "./use-client-point"
+} from "../use-client-point"
 export * from "./use-escape-key"
 export * from "./use-focus"
 export * from "./use-hover"
-export * from "./utils"

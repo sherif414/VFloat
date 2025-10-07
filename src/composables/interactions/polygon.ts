@@ -2,7 +2,7 @@ import { computed } from "vue"
 import type { TreeNode } from "@/composables/use-floating-tree"
 import { isHTMLElement } from "@/utils"
 import type { AnchorElement, FloatingContext, FloatingElement } from "../use-floating"
-import { clearTimeoutIfSet, contains, getCurrentTime, getTarget } from "./utils"
+import { clearTimeoutIfSet, contains, getCurrentTime, getTarget } from "@/utils"
 
 type Point = [number, number]
 type Polygon = Point[]

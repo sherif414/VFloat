@@ -13,7 +13,7 @@ import {
   isMouseLikePointerType,
   isSpaceIgnored,
   isTargetWithinElement,
-} from "./utils"
+} from "@/utils"
 
 //=======================================================================================
 // 📌 Main
