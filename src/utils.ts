@@ -1,14 +1,15 @@
 import type { AnyFn } from "@/types"
+export { useId } from "vue"
 
-let idCounter = 0
-/**
- * Generates a unique ID.
- * The ID is incremented with each call.
- * @returns A unique string ID.
- */
-export function useId(): string {
-  return `vfloat-id-${idCounter++}`
-}
+// let idCounter = 0
+// /**
+//  * Generates a unique ID.
+//  * The ID is incremented with each call.
+//  * @returns A unique string ID.
+//  */
+// export function useId(): string {
+//   return `vfloat-id-${idCounter++}`
+// }
 
 /**
  * Checks if a value is a function
