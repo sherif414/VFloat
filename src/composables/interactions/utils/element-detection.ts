@@ -5,7 +5,7 @@
  * input validation, and UI interaction logic.
  */
 
-import type { VirtualElement } from "@floating-ui/dom"
+import type { VirtualElement } from "@/types"
 
 /**
  * Checks if the pointer type is mouse-like (mouse or pen).

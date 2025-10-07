@@ -5,7 +5,6 @@
  * for easier maintenance while preserving the architectural benefits of separation of concerns.
  */
 
-import type { VirtualElement } from "@floating-ui/dom"
 import {
   computed,
   type MaybeRefOrGetter,
@@ -17,6 +16,7 @@ import {
   watch,
   watchEffect,
 } from "vue"
+import type { VirtualElement } from "@/types"
 import type { AnchorElement } from "../use-floating"
 import { isMouseLikePointerType } from "./utils"
 

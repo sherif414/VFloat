@@ -4,11 +4,11 @@ import type {
   MiddlewareData,
   Placement,
   Strategy,
-  VirtualElement,
 } from "@floating-ui/dom"
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { MaybeRefOrGetter, Ref } from "vue"
 import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
+import type { VirtualElement } from "@/types"
 import { arrow } from "./middlewares/arrow"
 
 //=======================================================================================
