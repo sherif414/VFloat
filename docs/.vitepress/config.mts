@@ -68,7 +68,7 @@ export default defineConfig({
           items: [
             { text: "Overview", link: "/api/" },
             { text: "useFloating", link: "/api/use-floating" },
-            { text: "useFloatingTree", link: "/guide/floating-tree/api-reference" },
+            { text: "useFloatingTree", link: "/api/use-floating-tree" },
             { text: "useArrow", link: "/api/use-arrow" },
           ],
         },
