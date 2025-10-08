@@ -21,6 +21,8 @@ describe("useClick", () => {
   let scope: ReturnType<typeof effectScope>
 
   const dispatchTouchPointerSequence = async (element: HTMLElement) => {
+    // Ensure watchers in useClick have attached event listeners before dispatching
+    await nextTick()
     const pointerDownEvent = new PointerEvent("pointerdown", {
       bubbles: true,
       cancelable: true,
@@ -63,10 +65,11 @@ describe("useClick", () => {
     referenceEl.id = "reference"
     referenceEl.textContent = "Trigger"
     document.body.appendChild(referenceEl)
-
+    
     floatingEl = document.createElement("div")
     floatingEl.id = "floating"
     floatingEl.textContent = "Content"
+    document.body.appendChild(floatingEl)
 
     setOpenMock = vi.fn()
 
@@ -322,6 +325,16 @@ describe("useClick", () => {
     beforeEach(() => {
       outsideElement = document.createElement("div")
       outsideElement.id = "outside"
+      // Ensure the element is visible and clickable in Playwright (non-zero size within viewport)
+      outsideElement.textContent = "Outside"
+      Object.assign(outsideElement.style, {
+        position: "fixed",
+        bottom: "0",
+        left: "0",
+        width: "100px",
+        height: "100px",
+        zIndex: "1",
+      })
       document.body.appendChild(outsideElement)
     })
 
