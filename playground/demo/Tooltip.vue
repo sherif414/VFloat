@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating } from "@/composables";
+import { useFloating, useHover, type Placement } from "@/composables";
 
 const props = withDefaults(defineProps<{
-  placement: string
+  placement: Placement
 }>(), {
   placement: 'top'
 })
@@ -16,13 +16,7 @@ const context = useFloating(anchorEl, floatingEl, {
   placement: props.placement,
 });
 
-const showTooltip = () => {
-  context.setOpen(true)
-};
-
-const hideTooltip = () => {
-  context.setOpen(false)
-};
+useHover(context)
 </script>
 
 <template>
@@ -30,7 +24,7 @@ const hideTooltip = () => {
     Hover me
   </button>
 
-  <div ref="floatingEl" :style="{ ...context.floatingStyles.value }">
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     This is a tooltip positioned by V-Float
   </div>
 </template>
