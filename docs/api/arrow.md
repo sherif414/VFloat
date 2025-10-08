@@ -1,94 +1,72 @@
 # arrow
 
-A middleware that positions an arrow element pointing toward the anchor element.
+A middleware that provides positioning data for an arrow element pointing toward the reference element.
 
-## Usage
+## Signature
 
-There are two common ways to use the arrow functionality:
-
-1) Recommended: use the `useArrow` composable, which auto-registers the middleware and returns ready-to-apply styles.
-2) Advanced: register the `arrow()` middleware manually and handle positioning styles yourself.
-
-### Recommended: useArrow (auto-registered middleware)
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useArrow, offset, flip, shift } from 'v-float'
-
-const referenceEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const arrowEl = ref<HTMLElement | null>(null)
-
-const ctx = useFloating(referenceEl, floatingEl, {
-  placement: 'top',
-  middleware: [offset(8), flip(), shift()], // arrow is auto-registered by useArrow
-})
-
-// Automatically registers the arrow middleware internally and returns styles
-const { arrowStyles } = useArrow(arrowEl, ctx, { offset: '-4px' })
-</script>
-
-<template>
-  <button ref="referenceEl">Hover me</button>
-  <div ref="floatingEl" :style="ctx.floatingStyles.value" class="tooltip">
-    Tooltip content
-    <div ref="arrowEl" class="arrow" :style="arrowStyles" />
-  </div>
-  
-</template>
-
-<style scoped>
-.arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: white;
-  border: 1px solid #ddd;
-  transform: rotate(45deg);
-  z-index: -1; /* keep the arrow behind the panel's content */
-}
-</style>
+```ts
+function arrow(options: ArrowOptions): Middleware
 ```
 
-See [useArrow](/api/use-arrow) for a full guide.
+## Options
 
-### Advanced: manual middleware registration
+```ts
+interface ArrowOptions {
+  element: Ref<HTMLElement | null>
+  padding?: Padding
+}
+```
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| element | `Ref<HTMLElement \| null>` | Yes | Reference to the arrow element |
+| padding | `Padding` | No | Padding from the floating element edges |
+
+## Return Value
+
+The middleware provides data in `middlewareData.arrow`:
+
+```ts
+interface ArrowData {
+  x?: number
+  y?: number
+  centerOffset: number
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| x | `number \| undefined` | X-axis position of the arrow |
+| y | `number \| undefined` | Y-axis position of the arrow |
+| centerOffset | `number` | Offset from the center of the reference element |
+
+## Examples
+
+### Basic Usage
 
 ```vue
-<script setup lang="ts">
+<script setup>
 import { ref, computed } from 'vue'
 import { useFloating, arrow, offset } from 'v-float'
 
-const referenceEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const arrowEl = ref<HTMLElement | null>(null)
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+const arrowEl = ref(null)
 
-const ctx = useFloating(referenceEl, floatingEl, {
-  placement: 'bottom',
+const context = useFloating(anchorEl, floatingEl, {
   middleware: [
     offset(8),
-    arrow({ element: arrowEl }),
-  ],
+    arrow({ element: arrowEl })
+  ]
 })
 
-// When using the middleware directly, you must read ctx.middlewareData to position the arrow.
-// The useArrow composable does this for you automatically.
 const arrowStyles = computed(() => {
-  const md = ctx.middlewareData.value?.arrow
-  if (!md) return {}
-
-  // Logical properties for RTL/LTR-friendly positioning
-  const styles: Record<string, string> = {}
-  if (md.x != null) styles['inset-inline-start'] = `${md.x}px`
-  if (md.y != null) styles['inset-block-start'] = `${md.y}px`
-  // Pull the square outward so the rotated diamond forms a triangle
-  // Adjust based on placement main-axis
-  const mainAxis = ctx.placement.value.split('-')[0]
-  if (mainAxis === 'top') styles['inset-block-end'] = '-4px'
-  else if (mainAxis === 'bottom') styles['inset-block-start'] = '-4px'
-  else if (mainAxis === 'left') styles['inset-inline-end'] = '-4px'
-  else if (mainAxis === 'right') styles['inset-inline-start'] = '-4px'
+  const arrowData = context.middlewareData.value?.arrow
+  if (!arrowData) return {}
+  
+  const styles = {}
+  if (arrowData.x != null) styles.left = `${arrowData.x}px`
+  if (arrowData.y != null) styles.top = `${arrowData.y}px`
   return styles
 })
 </script>
@@ -96,50 +74,29 @@ const arrowStyles = computed(() => {
 <template>
   <div ref="floatingEl">
     Content
-    <div ref="arrowEl" class="arrow" :style="arrowStyles" />
+    <div ref="arrowEl" :style="arrowStyles" />
   </div>
 </template>
 ```
 
-## Options
+### With Padding
 
-```ts
-export interface ArrowMiddlewareOptions {
-  /**
-   * Padding to apply around the arrow element
-   */
-  padding?: Padding
+```vue
+<script setup>
+import { useFloating, arrow } from 'v-float'
 
-  /**
-   * Reference to the arrow element
-   */
-  element: Ref<HTMLElement | null>
-}
+const context = useFloating(anchorEl, floatingEl, {
+  middleware: [
+    arrow({ 
+      element: arrowEl,
+      padding: 8
+    })
+  ]
+})
+</script>
 ```
 
-## Styling the arrow
+## See Also
 
-- **Basic shape**: a small square rotated 45° to create a diamond that peeks out from the edge.
-- **Positioning**: use the styles provided by `useArrow` (recommended) or compute from `middlewareData.arrow` when using the middleware directly.
-- **Borders and background**: match the floating panel so the arrow looks seamless.
-
-Minimal CSS example:
-
-```css
-.arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: white;
-  border: 1px solid #ddd;
-  transform: rotate(45deg);
-  z-index: -1;
-}
-```
-
-For more patterns (shadows, two-color arrows, and placement-conditional borders), see [useArrow](/api/use-arrow).
-
-## See also
-
-- [useArrow](/api/use-arrow)
-- [useFloating](/api/use-floating)
+- [useArrow](/api/use-arrow) - Composable that auto-registers this middleware and provides ready-to-use styles
+- [offset](/api/offset) - Commonly used with arrow for spacing

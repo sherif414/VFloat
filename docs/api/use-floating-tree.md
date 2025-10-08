@@ -19,16 +19,14 @@ Creates and manages a hierarchical tree of floating elements.
 
 - **Example:**
 
-  ```ts
-  const tree = useFloatingTree(anchorEl, floatingEl, {
-    placement: "bottom-start",
-    open: isOpen,
-    middlewares: [offset(5), flip(), shift({ padding: 5 })]
-  }, { deleteStrategy: "recursive" })
-  
-  // Access the root context if needed
-  const { floatingStyles } = tree.rootContext
-  ```
+```ts
+const tree = useFloatingTree(anchorEl,
+  floatingEl,
+  { placement: 'bottom-start' },
+  { deleteStrategy: 'recursive'}
+)
+const { floatingStyles } = tree.rootContext
+```
 
 **See also:** [Guide - Managing Floating UI Hierarchies](/guide/floating-ui/hierarchies)
 
@@ -49,7 +47,11 @@ A reactive map containing all nodes in the tree, keyed by their IDs.
 - **Example:**
 
   ```ts
-  const tree = useFloatingTree(rootContext)
+  const tree = useFloatingTree(anchorEl,
+    floatingEl,
+    { placement: "bottom" },
+    { deleteStrategy: "recursive"}
+  )
   console.log(tree.nodeMap.value.get("node-id")) // Get specific node
   console.log(tree.nodeMap.value.size) // Total node count
   ```
@@ -71,7 +73,11 @@ Access to the root floating context created by useFloatingTree.
 - **Example:**
 
   ```ts
-  const tree = useFloatingTree(anchorEl, floatingEl, { placement: "bottom" })
+  const tree = useFloatingTree(anchorEl,
+    floatingEl,
+    { placement: "bottom" },
+    { deleteStrategy: "recursive"}
+  )
   
   // Access root floating styles
   const { floatingStyles } = tree.rootContext
@@ -146,6 +152,30 @@ Adds a new floating element to the tree by creating its context internally.
   const { floatingStyles } = submenuNode.data
   ```
 
+## TreeNode structure
+
+Nodes returned by `tree.addNode()`, `tree.findNodeById()`, and traversal helpers are reactive objects with the following shape:
+
+<!-- @tsdoc src="src/composables/use-floating-tree.ts" symbol="TreeNode" kind="interface" -->
+
+### TreeNode example
+
+```ts
+const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, { parentId: menuNode.id })
+
+if (submenuNode) {
+  // Access floating context
+  submenuNode.data.open.value = true
+
+  // Inspect hierarchy
+  const parentId = submenuNode.parent.value?.id
+  const descendantIds = submenuNode.children.value.map((child) => child.id)
+
+  // Work with the path from root → submenu
+  const path = submenuNode.getPath().map((node) => node.id)
+}
+```
+
 ## tree.removeNode()
 
 Removes a node from the tree by its ID.
@@ -165,7 +195,7 @@ Removes a node from the tree by its ID.
   ```ts
   const success = tree.removeNode("main-menu")
   // With recursive: removes main-menu and all children
-  // With orphan: removes main-menu, children become root-level
+  // With orphan: removes main-menu; children become orphans (no parent)
   console.log(success) // true if node existed and was removed
 
   // Override with 'orphan' strategy
@@ -241,6 +271,10 @@ Traverses the tree using depth-first or breadth-first search.
 - **Details:**
 
   Traverses the tree using depth-first search (DFS) or breadth-first search (BFS) and returns nodes in visit order. If no start node is provided, traversal begins from the root.
+
+  Ordering guarantee (VEX-31):
+  - The returned array always begins with the provided `startNode` (target node), for both `dfs` and `bfs` modes.
+  - When `startNode` is omitted, the first element will be the `root` node.
 
 - **Example:**
 
@@ -407,8 +441,6 @@ Defines the set of nodes to target relative to a given node.
 - **Details:**
 
   Defines the set of nodes to target in the `applyToNodes` method, relative to a given node. Each relationship type specifies a different pattern of node selection for bulk operations.
-
-- **Example:**
 
   ```ts
   // Different relationship examples

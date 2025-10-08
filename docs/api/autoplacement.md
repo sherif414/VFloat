@@ -1,81 +1,89 @@
 # autoPlacement
 
-A middleware that automatically chooses the best placement to keep the floating element in view.
+A middleware that automatically chooses the best placement from available options to keep the floating element in view.
 
-## Usage
+## Signature
+
+```ts
+function autoPlacement(options?: AutoPlacementOptions): Middleware
+```
+
+## Options
+
+```ts
+interface AutoPlacementOptions {
+  crossAxis?: boolean
+  alignment?: 'start' | 'end' | null
+  autoAlignment?: boolean
+  allowedPlacements?: Array<Placement>
+  boundary?: Boundary
+  rootBoundary?: RootBoundary
+  elementContext?: ElementContext
+  altBoundary?: boolean
+  padding?: Padding
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| crossAxis | `boolean` | `false` | Consider placements on the cross axis |
+| alignment | `'start' \| 'end' \| null` | `undefined` | Lock alignment to specific value |
+| autoAlignment | `boolean` | `false` | Automatically infer alignment from preferred side |
+| allowedPlacements | `Array<Placement>` | All placements | Restrict which placements can be chosen |
+| boundary | `Boundary` | `'clippingAncestors'` | Clipping boundary |
+| rootBoundary | `RootBoundary` | `'viewport'` | Root boundary (viewport or document) |
+| elementContext | `ElementContext` | `'floating'` | Element context for overflow detection |
+| altBoundary | `boolean` | `false` | Use alternate element for boundary |
+| padding | `Padding` | `0` | Padding from the boundary edges |
+
+## Examples
+
+### Basic Usage
 
 ```vue
 <script setup>
 import { useFloating, autoPlacement } from 'v-float'
 
-const { x, y, strategy } = useFloating(..., {
-  middlewares: [
-    autoPlacement()
+const context = useFloating(anchorEl, floatingEl, {
+  middleware: [autoPlacement()]
+})
+</script>
+```
+
+### Allowed Placements
+
+```vue
+<script setup>
+import { useFloating, autoPlacement } from 'v-float'
+
+const context = useFloating(anchorEl, floatingEl, {
+  middleware: [
+    autoPlacement({
+      allowedPlacements: ['top', 'bottom']
+    })
   ]
 })
 </script>
 ```
 
-## Why not use `autoPlacement()` and `flip()` together?
+### With Alignment
 
-Both `autoPlacement()` and `flip()` attempt to choose a placement based on available space, but they do so using different strategies. Running both at once causes them to compete with each other on every update cycle:
+```vue
+<script setup>
+import { useFloating, autoPlacement } from 'v-float'
 
-- **Conflict of responsibility**: `autoPlacement()` explores and selects from all valid placements (optionally considering cross-axis and alignment) to find the best fit, while `flip()` starts from a preferred side and flips through a predefined fallback list. Using both means each middleware may override the other's decision, leading to unpredictable results.
+const context = useFloating(anchorEl, floatingEl, {
+  middleware: [
+    autoPlacement({
+      alignment: 'start',
+      crossAxis: true
+    })
+  ]
+})
+</script>
+```
 
-Choose one based on your intent:
-- **Use `autoPlacement()`** when you want the library to freely pick the best placement from a broad set (optionally constrained via `allowedPlacements`, `alignment`, and `crossAxis`).
-- **Use `flip()`** when you have a strong preferred placement and want to try a specific, ordered set of fallbacks (e.g., start at `top`, then try `right`, then `bottom`, etc.).
+## See Also
 
-## Options
-
-```ts
-/**
- * Options for the `autoPlacement()` middleware.
- */
-interface AutoPlacementOptions {
-  /**
-   * If true, placement candidates on the cross axis are also considered.
-   */
-  crossAxis?: boolean
-
-  /**
-   * Lock the alignment to a specific one or disable it with null.
-   */
-  alignment?: 'start' | 'end' | null
-
-  /**
-   * Automatically infer alignment from the preferred side.
-   */
-  autoAlignment?: boolean
-
-  /**
-   * Restrict the set of placements that can be chosen.
-   */
-  allowedPlacements?: Array<Placement>
-
-  /**
-   * The clipping boundary to check against for overflow.
-   */
-  boundary?: Boundary
-
-  /**
-   * The root clipping boundary for the viewport/document.
-   */
-  rootBoundary?: RootBoundary
-
-  /**
-   * Which element's box to consider for overflow calculations.
-   */
-  elementContext?: ElementContext
-
-  /**
-   * Whether to use the alternative boundary (floating vs reference).
-   */
-  altBoundary?: boolean
-
-  /**
-   * Padding applied when checking for overflow.
-   */
-  padding?: Padding
-}
-
+- [flip](/api/flip) - Alternative middleware for placement fallbacks with a preferred initial placement
+- [shift](/api/shift) - Shifts element to keep it in view
