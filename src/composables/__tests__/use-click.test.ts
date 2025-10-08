@@ -20,6 +20,35 @@ describe("useClick", () => {
   let setOpenMock: ReturnType<typeof vi.fn>
   let scope: ReturnType<typeof effectScope>
 
+  const dispatchTouchPointerSequence = async (element: HTMLElement) => {
+    const pointerDownEvent = new PointerEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+      pointerType: "touch",
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    })
+    element.dispatchEvent(pointerDownEvent)
+
+    const pointerUpEvent = new PointerEvent("pointerup", {
+      bubbles: true,
+      cancelable: true,
+      pointerType: "touch",
+      pointerId: 1,
+      isPrimary: true,
+      button: 0,
+    })
+    element.dispatchEvent(pointerUpEvent)
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    })
+    element.dispatchEvent(clickEvent)
+  }
+
   // Helper to initialize useClick and wait for effects
   const initClick = (options?: UseClickOptions) => {
     scope = effectScope()
@@ -236,8 +265,7 @@ describe("useClick", () => {
       expect(context.open.value).toBe(false)
 
       // Simulate a touch pointer event
-      // This will fire pointerdown, pointerup, and click events.
-      await userEvent.pointer({ keys: "[TouchA>]", target: referenceEl })
+      await dispatchTouchPointerSequence(referenceEl)
 
       expect(setOpenMock).toHaveBeenCalledTimes(1)
       expect(setOpenMock).toHaveBeenCalledWith(true)
@@ -249,7 +277,7 @@ describe("useClick", () => {
       expect(context.open.value).toBe(false)
 
       // Simulate a touch pointer event
-      await userEvent.pointer({ keys: "[TouchA>]", target: referenceEl })
+      await dispatchTouchPointerSequence(referenceEl)
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)
