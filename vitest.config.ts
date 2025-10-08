@@ -1,4 +1,5 @@
-/// <reference types="@vitest/browser/matchers" />
+/// <reference types="@vitest/browser/providers/playwright" />
+
 import { defineConfig } from "vitest/config"
 import { fileURLToPath, URL } from "node:url"
 
