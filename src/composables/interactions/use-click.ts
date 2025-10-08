@@ -141,7 +141,14 @@ export function useClick(
     handleOpenChange()
   }
 
-  function onClick(): void {
+  function onClick(e: MouseEvent): void {
+    // Ignore synthetic keyboard clicks (detail === 0) when keyboard interactions are disabled.
+    // Browsers dispatch a native click after keyboard activation (Enter/Space) on certain elements.
+    if (toValue(ignoreKeyboard) && e.detail === 0) {
+      resetInteractionState()
+      return
+    }
+
     if (toValue(eventOption) === "mousedown" && pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
       resetInteractionState()
