@@ -64,6 +64,10 @@ export type FloatingStyles = {
  */
 export interface UseFloatingOptions {
   /**
+   * Optional stable identifier for this floating context. Only required for tree-aware behavior.
+   */
+  id?: string
+  /**
    * Where to place the floating element relative to its anchor element.
    * @default 'bottom'
    */
@@ -104,6 +108,10 @@ export interface UseFloatingOptions {
  * Context object returned by useFloating containing all necessary data and methods
  */
 export interface FloatingContext {
+  /**
+   * Stable identifier for this floating context. Used for tree-aware interactions.
+   */
+  id?: string
   /**
    * The x-coordinate of the floating element
    */
@@ -235,18 +243,24 @@ export function useFloating(
   const update = async () => {
     if (!anchorEl.value || !floatingEl.value) return
 
-    const result = await computePosition(anchorEl.value, floatingEl.value, {
-      placement: initialPlacement.value,
-      strategy: initialStrategy.value,
-      middleware: reactiveMiddlewares.value,
-    })
+    try {
+      const result = await computePosition(anchorEl.value, floatingEl.value, {
+        placement: initialPlacement.value,
+        strategy: initialStrategy.value,
+        middleware: reactiveMiddlewares.value,
+      })
 
-    x.value = result.x
-    y.value = result.y
-    placement.value = result.placement
-    strategy.value = result.strategy
-    middlewareData.value = result.middlewareData
-    isPositioned.value = open.value
+      x.value = result.x
+      y.value = result.y
+      placement.value = result.placement
+      strategy.value = result.strategy
+      middlewareData.value = result.middlewareData
+      isPositioned.value = open.value
+    } catch (err) {
+      if (import.meta.env?.DEV) {
+        console.error("[useFloating] Failed to compute position:", err)
+      }
+    }
   }
 
   watch([initialPlacement, initialStrategy, reactiveMiddlewares], () => {
@@ -328,6 +342,7 @@ export function useFloating(
   )
 
   return {
+    id: options.id,
     x,
     y,
     strategy,

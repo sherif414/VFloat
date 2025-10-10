@@ -298,12 +298,13 @@ export function useFloatingTree(
     floatingEl: Ref<FloatingElement>,
     options: AddNodeOptions = {}
   ): TreeNode<FloatingContext> | null => {
-    // Extract parentId from options
     const { parentId, ...floatingOptions } = options
 
-    // Create floating context internally
-    const context = useFloating(anchorEl, floatingEl, floatingOptions)
-    return tree.addNode(context, parentId)
+    const nodeId = useId()
+    const context = useFloating(anchorEl, floatingEl, { ...floatingOptions, id: nodeId })
+    const newNode = tree.addNode(context, parentId, { id: nodeId })
+    
+    return newNode
   }
 
   return {
