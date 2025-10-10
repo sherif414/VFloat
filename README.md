@@ -1,5 +1,9 @@
 # V-Float
 
+[![status: WIP](https://img.shields.io/badge/status-WIP-orange.svg)](#project-status)
+
+> Work in progress: This library is under active development. APIs may change without notice and breaking changes can land without deprecation windows or warnings. Not recommended for production use yet.
+
 A Vue 3 library for positioning floating UI elements like tooltips, popovers, dropdowns, and modals. Built on top
 of [VFloat](https://vfloat.pages.com/) with Vue 3 Composition API.
 
@@ -173,6 +177,12 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 - **`hide`**: Hide floating element when anchor is not visible
 
 **Arrow positioning** is handled by the [`useArrow`](/api/use-arrow) composable, which automatically registers the necessary middleware.
+
+## Project Status
+
+- WIP and evolving rapidly; expect breaking changes without deprecations.
+- API, docs, and examples are subject to change and may be incomplete.
+- Feedback and contributions are welcome while the API stabilizes.
 
 ## Advanced Features
 
