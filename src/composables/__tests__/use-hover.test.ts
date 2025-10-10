@@ -557,6 +557,165 @@ describe("useHover", () => {
     })
   })
 
+  // --- Safe polygon behavior ---
+  describe("safePolygon behavior", () => {
+    it("keeps open when leaving reference towards floating with safePolygon enabled", async () => {
+      initHover({ safePolygon: true })
+
+      // Open by hovering reference
+      await userEvent.hover(referenceEl)
+      vi.runAllTimers()
+      await nextTick()
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      // Simulate pointerleave from reference with coordinates near its bottom edge
+      const refRect = referenceEl.getBoundingClientRect()
+      const leaveEvt = new PointerEvent("pointerleave", {
+        bubbles: true,
+        cancelable: true,
+        pointerType: "mouse",
+        clientX: Math.floor(refRect.left + refRect.width / 2),
+        clientY: Math.floor(refRect.bottom - 1),
+        // Move towards the floating element
+        relatedTarget: floatingEl,
+      })
+      referenceEl.dispatchEvent(leaveEvt)
+
+      // Immediately hover floating; safe polygon flow should avoid closing
+      await userEvent.hover(floatingEl)
+      vi.runAllTimers()
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalledWith(false)
+      expect(context.open.value).toBe(true)
+
+      // Leaving floating should close
+      await userEvent.unhover(floatingEl)
+      vi.advanceTimersByTime(1)
+      expect(setOpenMock).toHaveBeenCalledWith(false)
+    })
+  })
+
+  // --- Tree-aware behavior ---
+  describe("tree-aware hover", () => {
+    function createMockTreeNode(
+      ctx: any,
+      isRoot = false,
+      parent: any = null
+    ) {
+      const children = ref<any[]>([])
+      const parentRef = ref(parent)
+      const node: any = {
+        id: `node-${Math.random().toString(36).slice(2)}`,
+        data: ctx,
+        children,
+        parent: parentRef,
+        isRoot,
+        getPath: vi.fn(() => ["root", node.id]),
+      }
+      return node
+    }
+
+    it("does not close parent when pointer leaves to an open descendant", async () => {
+      // Build parent/child DOM
+      const parentRefEl = document.createElement("div")
+      const parentFloatEl = document.createElement("div")
+      parentFloatEl.tabIndex = -1
+      document.body.appendChild(parentRefEl)
+      document.body.appendChild(parentFloatEl)
+
+      const childRefEl = document.createElement("div")
+      const childFloatEl = document.createElement("div")
+      childFloatEl.tabIndex = -1
+      document.body.appendChild(childRefEl)
+      document.body.appendChild(childFloatEl)
+
+      const parentOpen = ref(false)
+      const childOpen = ref(true)
+      const parentSetOpen = vi.fn((v: boolean) => (parentOpen.value = v))
+
+      const parentCtx = {
+        refs: { anchorEl: ref(parentRefEl), floatingEl: ref(parentFloatEl) },
+        placement: ref("bottom"),
+        strategy: ref("absolute" as Strategy),
+        middlewareData: ref({}),
+        x: ref(0),
+        y: ref(0),
+        isPositioned: ref(true),
+        open: parentOpen,
+        setOpen: parentSetOpen,
+        update: () => {},
+        floatingStyles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
+      }
+      const childCtx = {
+        refs: { anchorEl: ref(childRefEl), floatingEl: ref(childFloatEl) },
+        placement: ref("bottom"),
+        strategy: ref("absolute" as Strategy),
+        middlewareData: ref({}),
+        x: ref(0),
+        y: ref(0),
+        isPositioned: ref(true),
+        open: childOpen,
+        setOpen: vi.fn(),
+        update: () => {},
+        floatingStyles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
+      }
+
+      const parentNode = createMockTreeNode(parentCtx, true)
+      const childNode = createMockTreeNode(childCtx, false, parentNode)
+      parentNode.children.value = [childNode]
+
+      scope = effectScope()
+      scope.run(() => {
+        // biome-ignore lint/suspicious/noExplicitAny: testing setup
+        useHover(parentNode as any, { delay: { close: 0 } })
+      })
+
+      // Open parent by entering
+      const enterParent = new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
+      parentRefEl.dispatchEvent(enterParent)
+      await nextTick()
+      expect(parentOpen.value).toBe(true)
+      parentSetOpen.mockClear()
+
+      // Leave parent reference towards child's floating (relatedTarget set)
+      const leaveToChild = new PointerEvent("pointerleave", {
+        bubbles: true,
+        pointerType: "mouse",
+        relatedTarget: childFloatEl,
+      })
+      parentRefEl.dispatchEvent(leaveToChild)
+      vi.runAllTimers()
+      await nextTick()
+
+      // Parent should stay open due to tree-aware logic
+      expect(parentSetOpen).not.toHaveBeenCalledWith(false)
+      expect(parentOpen.value).toBe(true)
+
+      // Now leave child's floating to outside -> parent may close
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      const childLeave = new PointerEvent("pointerleave", {
+        bubbles: true,
+        pointerType: "mouse",
+        relatedTarget: outside,
+      })
+      childFloatEl.dispatchEvent(childLeave)
+      vi.runAllTimers()
+      await nextTick()
+      expect(parentSetOpen).toHaveBeenCalledWith(false)
+
+      // Cleanup
+      document.body.removeChild(parentRefEl)
+      document.body.removeChild(parentFloatEl)
+      document.body.removeChild(childRefEl)
+      document.body.removeChild(childFloatEl)
+      document.body.removeChild(outside)
+      scope.stop()
+    })
+  })
+
   // --- Cleanup ---
   describe("Cleanup", () => {
     // Test for enable/disable is already in Core Functionality

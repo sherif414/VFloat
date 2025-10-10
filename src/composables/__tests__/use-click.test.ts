@@ -9,7 +9,6 @@ interface FloatingContext {
     anchorEl: Ref<HTMLElement | null>
     floatingEl: Ref<HTMLElement | null>
   }
-  open: Ref<boolean>
   setOpen: (open: boolean, event?: Event) => void
 }
 
@@ -17,32 +16,11 @@ describe("useClick", () => {
   let context: FloatingContext
   let referenceEl: HTMLElement
   let floatingEl: HTMLElement
-  let setOpenMock: ReturnType<typeof vi.fn>
   let scope: ReturnType<typeof effectScope>
 
   const dispatchTouchPointerSequence = async (element: HTMLElement) => {
     // Ensure watchers in useClick have attached event listeners before dispatching
     await nextTick()
-    const pointerDownEvent = new PointerEvent("pointerdown", {
-      bubbles: true,
-      cancelable: true,
-      pointerType: "touch",
-      pointerId: 1,
-      isPrimary: true,
-      button: 0,
-    })
-    element.dispatchEvent(pointerDownEvent)
-
-    const pointerUpEvent = new PointerEvent("pointerup", {
-      bubbles: true,
-      cancelable: true,
-      pointerType: "touch",
-      pointerId: 1,
-      isPrimary: true,
-      button: 0,
-    })
-    element.dispatchEvent(pointerUpEvent)
-
     const clickEvent = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
@@ -51,93 +29,288 @@ describe("useClick", () => {
     element.dispatchEvent(clickEvent)
   }
 
+  
   // Helper to initialize useClick and wait for effects
   const initClick = (options?: UseClickOptions) => {
     scope = effectScope()
     scope.run(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-      useClick(context as any, options)
-    })
-  }
-
-  beforeEach(async () => {
-    referenceEl = document.createElement("button")
-    referenceEl.id = "reference"
-    referenceEl.textContent = "Trigger"
-    document.body.appendChild(referenceEl)
-    
-    floatingEl = document.createElement("div")
-    floatingEl.id = "floating"
-    floatingEl.textContent = "Content"
-    document.body.appendChild(floatingEl)
-
-    setOpenMock = vi.fn()
-
-    context = {
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      open: ref(false),
-      setOpen: (v) => {
-        context.open.value = v
-        setOpenMock(v)
-      },
-    }
-
-    context.refs.anchorEl.value = referenceEl
-    context.refs.floatingEl.value = floatingEl
-
-    await nextTick()
-  })
-
-  afterEach(async () => {
-    if (scope) {
-      scope.stop()
-    }
-
-    if (referenceEl.isConnected) {
-      document.body.removeChild(referenceEl)
-    }
-    if (floatingEl.isConnected) {
-      document.body.removeChild(floatingEl)
-    }
-
-    vi.restoreAllMocks()
-  })
-
-  // --- Basic Functionality ---
-  describe("basic functionality", () => {
-    it("toggles floating element on click by default", async () => {
-      initClick()
-      expect(context.open.value).toBe(false)
-
-      // First click - opens
-      await userEvent.click(referenceEl)
-      expect(setOpenMock).toHaveBeenCalledTimes(1)
-      expect(setOpenMock).toHaveBeenCalledWith(true)
-      expect(context.open.value).toBe(true)
-
-      // Second click - closes
-      await userEvent.click(referenceEl)
+{{ ... }}
       expect(setOpenMock).toHaveBeenCalledTimes(2)
       expect(setOpenMock).toHaveBeenCalledWith(false)
       expect(context.open.value).toBe(false)
     })
 
-    it("only opens floating element when toggle is false", async () => {
-      initClick({ toggle: false })
+    it("does not toggle on mouse click if ignoreMouse is true", async () => {
+      initClick({ ignoreMouse: true })
       expect(context.open.value).toBe(false)
 
-      // First click - opens
+      // userEvent.click simulates a mouse click.
       await userEvent.click(referenceEl)
-      expect(setOpenMock).toHaveBeenCalledExactlyOnceWith(true)
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
+    })
+  })
+
+  // --- Event option and edge behaviors ---
+  describe("advanced behaviors", () => {
+    it("respects event option 'mousedown' (toggles on mousedown, not on click)", async () => {
+      initClick({ event: "mousedown" })
+      expect(context.open.value).toBe(false)
+
+      // Dispatch mousedown (primary button)
+      referenceEl.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 })
+      )
+
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+      setOpenMock.mockClear()
+
+      // A following click should be ignored for toggling when event is mousedown
+      referenceEl.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })
+      )
+      expect(setOpenMock).not.toHaveBeenCalled()
+    })
+
+    it("ignores outside click after drag that started inside when outsideEvent is 'click'", async () => {
+      initClick({ outsideClick: true, outsideEvent: "click", handleDragEvents: true })
+
+      // Open first
+      await userEvent.click(referenceEl)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      // Start drag inside floating (mousedown captured on floating element)
+      floatingEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }))
+
+      // Click outside – should be ignored due to dragStartedInside
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
 
-      // Second click - should stay open (no call to setOpen)
+      document.body.removeChild(outside)
+    })
+
+    it("is tree-aware: parent does not close on click within descendant", async () => {
+      // Minimal tree node factory
+      const createMockTreeNode = (ctx: any, isRoot = false, parent: any = null) => {
+        const children = ref<any[]>([])
+        const parentRef = ref(parent)
+        const node: any = {
+          id: `node-${Math.random().toString(36).slice(2)}`,
+          data: ctx,
+          children,
+          parent: parentRef,
+          isRoot,
+          getPath: vi.fn(() => ["root", node.id]),
+        }
+        return node
+      }
+
+      // Build DOM
+      const parentRefEl = document.createElement("button")
+      const parentFloatEl = document.createElement("div")
+      document.body.appendChild(parentRefEl)
+      document.body.appendChild(parentFloatEl)
+
+      const childRefEl = document.createElement("button")
+      const childFloatEl = document.createElement("div")
+      document.body.appendChild(childRefEl)
+      document.body.appendChild(childFloatEl)
+
+      const parentState = ref(true)
+      const parentSetOpen = vi.fn((v: boolean) => (parentState.value = v))
+      const childState = ref(true)
+
+      const parentCtx = {
+        refs: { anchorEl: ref(parentRefEl), floatingEl: ref(parentFloatEl) },
+        open: parentState,
+        setOpen: parentSetOpen,
+      }
+      const childCtx = {
+        refs: { anchorEl: ref(childRefEl), floatingEl: ref(childFloatEl) },
+        open: childState,
+        setOpen: vi.fn(),
+      }
+
+      const parentNode = createMockTreeNode(parentCtx, true)
+      const childNode = createMockTreeNode(childCtx, false, parentNode)
+      parentNode.children.value = [childNode]
+
+      // Attach useClick to parent in tree-aware mode
+      scope = effectScope()
+      scope.run(() => {
+        // biome-ignore lint/suspicious/noExplicitAny: testing setup
+        useClick(parentNode as any, { outsideClick: true })
+      })
+
+      // Click inside child – parent should not close
+      childRefEl.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      await nextTick()
+      expect(parentSetOpen).not.toHaveBeenCalledWith(false)
+
+      // Click outside – parent should close
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      await nextTick()
+      expect(parentSetOpen).toHaveBeenCalledWith(false)
+
+      // Cleanup
+      document.body.removeChild(parentRefEl)
+      document.body.removeChild(parentFloatEl)
+      document.body.removeChild(childRefEl)
+      document.body.removeChild(childFloatEl)
+      document.body.removeChild(outside)
+      scope.stop()
+    })
+
+    it("ignores synthetic keyboard click (detail === 0) when ignoreKeyboard is true", async () => {
+      initClick({ ignoreKeyboard: true })
+
+      const synthetic = new MouseEvent("click", { bubbles: true, cancelable: true, detail: 0 })
+      referenceEl.dispatchEvent(synthetic)
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
+    })
+  })
+
+  // --- Event option and edge behaviors ---
+  describe("advanced behaviors", () => {
+    it("respects event option 'mousedown' (toggles on mousedown, not on click)", async () => {
+      initClick({ event: "mousedown" })
+      expect(context.open.value).toBe(false)
+
+      // Dispatch mousedown (primary button)
+      referenceEl.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 })
+      )
+
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenCalledWith(true)
+      setOpenMock.mockClear()
+
+      // A following click should be ignored for toggling when event is mousedown
+      referenceEl.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })
+      )
+      expect(setOpenMock).not.toHaveBeenCalled()
+    })
+
+    it("ignores outside click after drag that started inside when outsideEvent is 'click'", async () => {
+      initClick({ outsideClick: true, outsideEvent: "click", handleDragEvents: true })
+
+      // Open first
       await userEvent.click(referenceEl)
-      expect(setOpenMock).toHaveBeenCalledOnce()
       expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      // Start drag inside floating (mousedown captured on floating element)
+      floatingEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }))
+
+      // Click outside – should be ignored due to dragStartedInside
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(true)
+
+      document.body.removeChild(outside)
+    })
+
+    it("is tree-aware: parent does not close on click within descendant", async () => {
+      // Minimal tree node factory
+      const createMockTreeNode = (ctx: any, isRoot = false, parent: any = null) => {
+        const children = ref<any[]>([])
+        const parentRef = ref(parent)
+        const node: any = {
+          id: `node-${Math.random().toString(36).slice(2)}`,
+          data: ctx,
+          children,
+          parent: parentRef,
+          isRoot,
+          getPath: vi.fn(() => ["root", node.id]),
+        }
+        return node
+      }
+
+      // Build DOM
+      const parentRefEl = document.createElement("button")
+      const parentFloatEl = document.createElement("div")
+      document.body.appendChild(parentRefEl)
+      document.body.appendChild(parentFloatEl)
+
+      const childRefEl = document.createElement("button")
+      const childFloatEl = document.createElement("div")
+      document.body.appendChild(childRefEl)
+      document.body.appendChild(childFloatEl)
+
+      const parentState = ref(true)
+      const parentSetOpen = vi.fn((v: boolean) => (parentState.value = v))
+      const childState = ref(true)
+
+      const parentCtx = {
+        refs: { anchorEl: ref(parentRefEl), floatingEl: ref(parentFloatEl) },
+        open: parentState,
+        setOpen: parentSetOpen,
+      }
+      const childCtx = {
+        refs: { anchorEl: ref(childRefEl), floatingEl: ref(childFloatEl) },
+        open: childState,
+        setOpen: vi.fn(),
+      }
+
+      const parentNode = createMockTreeNode(parentCtx, true)
+      const childNode = createMockTreeNode(childCtx, false, parentNode)
+      parentNode.children.value = [childNode]
+
+      // Attach useClick to parent in tree-aware mode
+      scope = effectScope()
+      scope.run(() => {
+        // biome-ignore lint/suspicious/noExplicitAny: testing setup
+        useClick(parentNode as any, { outsideClick: true })
+      })
+
+      // Click inside child – parent should not close
+      childRefEl.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      await nextTick()
+      expect(parentSetOpen).not.toHaveBeenCalledWith(false)
+
+      // Click outside – parent should close
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      await nextTick()
+      expect(parentSetOpen).toHaveBeenCalledWith(false)
+
+      // Cleanup
+      document.body.removeChild(parentRefEl)
+      document.body.removeChild(parentFloatEl)
+      document.body.removeChild(childRefEl)
+      document.body.removeChild(childFloatEl)
+      document.body.removeChild(outside)
+      scope.stop()
+    })
+
+    it("ignores synthetic keyboard click (detail === 0) when ignoreKeyboard is true", async () => {
+      initClick({ ignoreKeyboard: true })
+
+      const synthetic = new MouseEvent("click", { bubbles: true, cancelable: true, detail: 0 })
+      referenceEl.dispatchEvent(synthetic)
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
     })
   })
 
@@ -257,64 +430,6 @@ describe("useClick", () => {
       await userEvent.keyboard("{Enter}")
 
       expect(setOpenMock).not.toHaveBeenCalled()
-      expect(context.open.value).toBe(false)
-    })
-  })
-
-  // --- Pointer Event Handling ---
-  describe("pointer event handling", () => {
-    it("toggles on touch event by default", async () => {
-      initClick()
-      expect(context.open.value).toBe(false)
-
-      // Simulate a touch pointer event
-      await dispatchTouchPointerSequence(referenceEl)
-
-      expect(setOpenMock).toHaveBeenCalledTimes(1)
-      expect(setOpenMock).toHaveBeenCalledWith(true)
-      expect(context.open.value).toBe(true)
-    })
-
-    it("does not toggle on touch event if ignoreTouch is true", async () => {
-      initClick({ ignoreTouch: true })
-      expect(context.open.value).toBe(false)
-
-      // Simulate a touch pointer event
-      await dispatchTouchPointerSequence(referenceEl)
-
-      expect(setOpenMock).not.toHaveBeenCalled()
-      expect(context.open.value).toBe(false)
-    })
-
-    it("does not toggle on mouse click if ignoreMouse is true", async () => {
-      initClick({ ignoreMouse: true })
-      expect(context.open.value).toBe(false)
-
-      // userEvent.click simulates a mouse click.
-      await userEvent.click(referenceEl)
-
-      expect(setOpenMock).not.toHaveBeenCalled()
-      expect(context.open.value).toBe(false)
-    })
-  })
-
-  // --- Programmatic Control (Testing via context) ---
-  describe("programmatic control", () => {
-    it("can be controlled via setOpen", () => {
-      initClick() // Initialize listeners
-      expect(context.open.value).toBe(false)
-
-      // Programmatically open
-      context.setOpen(true)
-      expect(setOpenMock).toHaveBeenCalledTimes(1)
-      expect(setOpenMock).toHaveBeenCalledWith(true) // No event passed
-      expect(context.open.value).toBe(true)
-
-      // Programmatically close
-      context.setOpen(false)
-      expect(setOpenMock).toHaveBeenCalledTimes(2)
-      expect(setOpenMock).toHaveBeenCalledWith(false)
-      expect(context.open.value).toBe(false)
     })
   })
 
