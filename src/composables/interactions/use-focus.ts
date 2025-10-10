@@ -80,7 +80,11 @@ export function useFocus(
     refs: { floatingEl, anchorEl: _anchorEl },
   } = floatingContext
 
-  const { enabled = true, requireFocusVisible = true } = options
+  const {
+    enabled = true,
+    requireFocusVisible = true,
+    closeAncestorsOnOutsideFocus = true,
+  } = options
 
   /**
    * Computed anchor element that handles both HTMLElement and virtual element references.
@@ -190,9 +194,19 @@ export function useFocus(
         return
       }
 
-      // If neither of the above conditions are met, focus has moved elsewhere,
-      // so it's safe to close the floating element.
+      // If neither of the above conditions are met, focus has moved elsewhere.
       try {
+        // Close ancestors that do not contain the new focus (strategy-provided)
+        if (activeEl instanceof Element && toValue(closeAncestorsOnOutsideFocus)) {
+          const ancestorsToClose = focusStrategy.getAncestorsToClose(activeEl)
+          for (const node of ancestorsToClose) {
+            try {
+              node.data.setOpen(false)
+            } catch (e) {
+              console.error("[useFocus] Error closing ancestor on blur:", e)
+            }
+          }
+        }
         setOpen(false)
       } catch (error) {
         console.error("[useFocus] Error in onBlur handler:", error)
@@ -249,6 +263,13 @@ export interface UseFocusOptions {
    * @default true
    */
   requireFocusVisible?: MaybeRefOrGetter<boolean>
+
+  /**
+   * In tree-aware mode, also close ancestors whose subtree does not contain the new focus
+   * when focus moves outside the current node's hierarchy.
+   * @default true
+   */
+  closeAncestorsOnOutsideFocus?: MaybeRefOrGetter<boolean>
 }
 
 /**
@@ -271,6 +292,7 @@ export interface UseFocusReturn {
  */
 interface FocusStrategy {
   shouldRemainOpen(activeEl: Element | null): boolean
+  getAncestorsToClose(target: Element): TreeNode<FloatingContext>[]
 }
 
 /**
@@ -283,6 +305,10 @@ class StandaloneFocusStrategy implements FocusStrategy {
     if (!activeEl || !this.floatingEl.value) return false
     return this.floatingEl.value.contains(activeEl)
   }
+
+  getAncestorsToClose(_target: Element): TreeNode<FloatingContext>[] {
+    return []
+  }
 }
 
 /**
@@ -294,6 +320,26 @@ class TreeAwareFocusStrategy implements FocusStrategy {
   shouldRemainOpen(activeEl: Element | null): boolean {
     if (!activeEl) return false
     return this.isFocusWithinNodeHierarchy(this.treeContext, activeEl)
+  }
+
+  /**
+   * Returns a list of ancestors (starting from the immediate parent upward) that do not
+   * contain the provided target within their subtree. Useful for closing ancestors when
+   * focus moves outside the current branch.
+   */
+  getAncestorsToClose(target: Element): TreeNode<FloatingContext>[] {
+    const toClose: TreeNode<FloatingContext>[] = []
+    let ancestor = this.treeContext.parent.value
+    while (ancestor) {
+      const contains = this.isFocusWithinNodeHierarchy(ancestor, target)
+      if (!contains) {
+        toClose.push(ancestor)
+        ancestor = ancestor.parent.value
+        continue
+      }
+      break // Stop once we find an ancestor whose subtree contains the target
+    }
+    return toClose
   }
 
   private isFocusWithinNodeHierarchy(
