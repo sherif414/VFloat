@@ -90,13 +90,23 @@ jobs:
             fi
           # Automatic push to main
           elif [[ "${{ github.event_name }}" == "push" ]]; then
-            # Check if there are releasable changes
-            if git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -E "^[a-f0-9]+ (feat|fix|perf)(\(.+\))?(!)?: " > /dev/null; then
-              echo "Found releasable changes, creating release..."
-              npm run release -- --ci
+            echo "Checking commits since last tag for release type..."
+            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [[ -n "$LAST_TAG" ]]; then RANGE="$LAST_TAG..HEAD"; else RANGE=""; fi
+
+            if git log --format=%B $RANGE | grep -E "BREAKING CHANGE|!:" > /dev/null; then
+              RELEASE_TYPE=major
+            elif git log --format=%s $RANGE | grep -E "^feat(\(.+\))?: " > /dev/null; then
+              RELEASE_TYPE=minor
+            elif git log --format=%s $RANGE | grep -E "^(fix|perf)(\(.+\))?: " > /dev/null; then
+              RELEASE_TYPE=patch
             else
               echo "No releasable changes found, skipping release."
+              exit 0
             fi
+
+            echo "Detected release type: $RELEASE_TYPE"
+            npm run release:$RELEASE_TYPE -- --ci
           fi
 
       - name: Upload build artifacts

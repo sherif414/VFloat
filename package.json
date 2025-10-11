@@ -32,7 +32,9 @@
     "release:patch": "release-it patch",
     "release:minor": "release-it minor",
     "release:major": "release-it major",
-    "release:dry": "release-it --dry-run"
+    "release:dry": "release-it --dry-run",
+    "changelog": "changelogen",
+    "changelog:preview": "changelogen --no-output"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
@@ -66,6 +68,7 @@
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-vue-devtools": "^7.7.7",
     "vitepress": "^1.6.4",
+    "changelogen": "^0.6.2",
     "vitepress-plugin-demo": "^0.8.1",
     "vitest": "^3.2.4",
     "vitest-browser-vue": "^0.2.0",
