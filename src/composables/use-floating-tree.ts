@@ -141,6 +141,11 @@ interface FilterNodesOptions {
 /**
  * Creates and manages a hierarchical tree of floating elements.
  *
+ * Each node in the tree is assigned a stable ID. For non-root nodes, `addNode` generates
+ * the ID and injects it into the created FloatingContext (passed to `useFloating`).
+ * Consumers should not provide a custom `id` in `UseFloatingOptions` when using `addNode`;
+ * it will be ignored in favor of the generated one.
+ *
  * @param anchorEl - The anchor element for the root floating context
  * @param floatingEl - The floating element for the root floating context
  * @param options - Options for the root floating context
@@ -298,6 +303,8 @@ export function useFloatingTree(
     floatingEl: Ref<FloatingElement>,
     options: AddNodeOptions = {}
   ): TreeNode<FloatingContext> | null => {
+    // A new stable ID is generated here and applied to both the tree node and the floating context.
+    // Any `options.id` from UseFloatingOptions is ignored for consistency.
     const { parentId, ...floatingOptions } = options
 
     const nodeId = useId()
