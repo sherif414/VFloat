@@ -1,6 +1,7 @@
 import type { Ref } from "vue"
 import { computed, shallowReactive, shallowRef } from "vue"
 import { useId } from "@/utils"
+import type { OpenChangeReason } from "@/types"
 import type {
   AnchorElement,
   FloatingContext,
@@ -159,9 +160,23 @@ export function useFloatingTree(
   treeOptions: FloatingTreeOptions = {}
 ): UseFloatingTreeReturn {
   const { ...floatingOptions } = options
-  const rootContext = useFloating(anchorEl, floatingEl, floatingOptions)
+  const userRootOnOpenChange = options.onOpenChange
+  let tree!: Tree<FloatingContext>
+  const rootContext = useFloating(anchorEl, floatingEl, {
+    ...floatingOptions,
+    onOpenChange: (open, reason, event) => {
+      userRootOnOpenChange?.(open, reason, event)
+      if (!open) {
+        for (const child of tree.root.children.value) {
+          if (child.data.open.value) {
+              child.data.setOpen(false, "tree-ancestor-close", event)
+          }
+        }
+      }
+    },
+  })
 
-  const tree = createTree(rootContext, treeOptions)
+  tree = createTree(rootContext, treeOptions)
 
   const applyToNodes = (
     nodeId: string,
@@ -308,9 +323,27 @@ export function useFloatingTree(
     const { parentId, ...floatingOptions } = options
 
     const nodeId = useId()
-    const context = useFloating(anchorEl, floatingEl, { ...floatingOptions, id: nodeId })
+    const userOnOpenChange = floatingOptions.onOpenChange
+    const context = useFloating(anchorEl, floatingEl, {
+      ...floatingOptions,
+      id: nodeId,
+      onOpenChange: (open, reason, event) => {
+        userOnOpenChange?.(open, reason, event)
+        if (!open) {
+          const currentNode = tree.findNodeById(nodeId)
+          if (currentNode) {
+            const children = currentNode.children.value
+            for (const child of children) {
+              if (child.data.open.value) {
+                child.data.setOpen(false, "tree-ancestor-close", event)
+              }
+            }
+          }
+        }
+      },
+    })
     const newNode = tree.addNode(context, parentId, { id: nodeId })
-    
+
     return newNode
   }
 
