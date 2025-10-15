@@ -1,7 +1,6 @@
+import { useId } from "@/utils"
 import type { Ref } from "vue"
 import { computed, shallowReactive, shallowRef } from "vue"
-import { useId } from "@/utils"
-import type { OpenChangeReason } from "@/types"
 import type {
   AnchorElement,
   FloatingContext,
@@ -59,7 +58,7 @@ export interface TreeNode<T> {
 }
 
 export interface Tree<T> {
-  readonly root: TreeNode<T>
+  readonly root: TreeNode<T> | null
   readonly nodeMap: Readonly<Map<string, TreeNode<T>>>
   findNodeById: (id: string) => TreeNode<T> | null
   addNode: (
@@ -78,7 +77,9 @@ export interface Tree<T> {
  */
 export interface FloatingTreeOptions extends CreateTreeOptions {}
 
-export interface UseFloatingTreeReturn extends Omit<Tree<FloatingContext>, "addNode"> {
+export interface UseFloatingTreeReturn
+  extends Omit<Tree<FloatingContext>, "addNode" | "root"> {
+  root: TreeNode<FloatingContext> | null
   addNode: (
     anchorEl: Ref<AnchorElement>,
     floatingEl: Ref<FloatingElement>,
@@ -154,29 +155,10 @@ interface FilterNodesOptions {
  * @returns UseFloatingTreeReturn with tree management methods and root context
  */
 export function useFloatingTree(
-  anchorEl: Ref<AnchorElement>,
-  floatingEl: Ref<FloatingElement>,
-  options: UseFloatingOptions = {},
   treeOptions: FloatingTreeOptions = {}
 ): UseFloatingTreeReturn {
-  const { ...floatingOptions } = options
-  const userRootOnOpenChange = options.onOpenChange
   let tree!: Tree<FloatingContext>
-  const rootContext = useFloating(anchorEl, floatingEl, {
-    ...floatingOptions,
-    onOpenChange: (open, reason, event) => {
-      userRootOnOpenChange?.(open, reason, event)
-      if (!open) {
-        for (const child of tree.root.children.value) {
-          if (child.data.open.value) {
-              child.data.setOpen(false, "tree-ancestor-close", event)
-          }
-        }
-      }
-    },
-  })
-
-  tree = createTree(rootContext, treeOptions)
+  tree = createTree<FloatingContext>(treeOptions)
 
   const applyToNodes = (
     nodeId: string,
@@ -349,6 +331,9 @@ export function useFloatingTree(
 
   return {
     ...tree,
+    get root() {
+      return tree.root
+    },
     addNode,
     getAllOpenNodes,
     getTopmostOpenNode,
@@ -462,12 +447,10 @@ export function createTreeNode<T>(
  * const childNode = myTree.addNode({ name: 'Child' }, myTree.root.id);
  * ```
  */
-export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): Tree<T> {
+export function createTree<T>(options?: CreateTreeOptions): Tree<T> {
   const deleteStrategy = options?.deleteStrategy ?? "recursive"
   const nodeMap = shallowReactive(new Map<string, TreeNode<T>>())
-  const root = createTreeNode<T>(initialRootData, null, {}, true)
-
-  nodeMap.set(root.id, root)
+  let root: TreeNode<T> | null = null
 
   /**
    * Finds a node anywhere in the tree by its ID.
@@ -490,6 +473,20 @@ export function createTree<T>(initialRootData: T, options?: CreateTreeOptions): 
     parentId: string | null = null,
     nodeOptions: CreateTreeNodeOptions = {}
   ): TreeNode<T> | null => {
+    // If root doesn't exist, the first node added becomes the root.
+    if (!root) {
+      if (parentId != null) {
+        console.error(
+          `Tree addNode: Cannot add a non-root node before a root exists. Received parentId=${parentId}.`
+        )
+        return null
+      }
+      const newRoot = createTreeNode<T>(data, null, nodeOptions, true)
+      nodeMap.set(newRoot.id, newRoot)
+      root = newRoot
+      return newRoot
+    }
+
     const parentNode = parentId ? findNodeById(parentId) : root
     if (!parentNode) {
       console.error(`Tree addNode: Parent node with ID ${parentId} not found.`)
