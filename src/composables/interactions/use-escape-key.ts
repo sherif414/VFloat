@@ -93,11 +93,11 @@ export function useEscapeKey(
       // Tree-aware behavior: close topmost open node
       const topmostNode = getTopmostOpenNodeInTree(treeContext)
       if (topmostNode) {
-        topmostNode.data.setOpen(false)
+        topmostNode.data.setOpen(false, "escape-key", event)
       }
     } else {
       // Standalone behavior: close current context
-      floatingContext.setOpen(false)
+      floatingContext.setOpen(false, "escape-key", event)
     }
   }
 

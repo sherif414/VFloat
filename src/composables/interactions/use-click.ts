@@ -1,19 +1,20 @@
 import type { PointerType } from "@vueuse/core"
-import { useEventListener } from "@vueuse/core"
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
-import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-floating-tree"
-import {
-  findDescendantContainingTarget,
-  getContextFromParameter,
-  isButtonTarget,
-  isClickOnScrollbar,
-  isEventTargetWithin,
-  isHTMLElement,
-  isMouseLikePointerType,
-  isSpaceIgnored,
-  isTargetWithinElement,
-} from "@/utils"
+  import { useEventListener } from "@vueuse/core"
+  import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+  import type { FloatingContext } from "@/composables"
+  import type { TreeNode } from "@/composables/use-floating-tree"
+  import type { OpenChangeReason } from "@/types"
+  import {
+    findDescendantContainingTarget,
+    getContextFromParameter,
+    isButtonTarget,
+    isClickOnScrollbar,
+    isEventTargetWithin,
+    isHTMLElement,
+    isMouseLikePointerType,
+    isSpaceIgnored,
+    isTargetWithinElement,
+  } from "@/utils"
 
 //=======================================================================================
 // 📌 Main
@@ -106,13 +107,13 @@ export function useClick(
 
   // --- Event Handlers --- //
 
-  function handleOpenChange() {
+  function handleOpenChange(reason: OpenChangeReason, event: Event) {
     interactionInProgress = true
     try {
       if (open.value) {
-        toValue(toggle) && setOpen(false)
+        toValue(toggle) && setOpen(false, reason, event)
       } else {
-        setOpen(true)
+        setOpen(true, reason, event)
       }
     } finally {
       // Reset interaction state after a micro-task to allow events to complete
@@ -138,7 +139,7 @@ export function useClick(
     if (toValue(eventOption) === "click") return
     if (shouldIgnorePointerType(pointerType)) return
 
-    handleOpenChange()
+    handleOpenChange("anchor-click", e)
   }
 
   function onClick(e: MouseEvent): void {
@@ -160,7 +161,7 @@ export function useClick(
       return
     }
 
-    handleOpenChange()
+    handleOpenChange("anchor-click", e)
     resetInteractionState()
   }
 
@@ -181,7 +182,7 @@ export function useClick(
     }
 
     if (e.key === "Enter") {
-      handleOpenChange()
+      handleOpenChange("keyboard-activate", e)
     }
   }
 
@@ -195,7 +196,7 @@ export function useClick(
 
     if (e.key === " " && didKeyDown) {
       didKeyDown = false
-      handleOpenChange()
+      handleOpenChange("keyboard-activate", e)
     }
   }
 
@@ -248,7 +249,7 @@ export function useClick(
     if (onOutsideClick) {
       onOutsideClick(event, floatingContext)
     } else {
-      setOpen(false)
+      setOpen(false, "outside-pointer", event)
     }
   }
 

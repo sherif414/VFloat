@@ -10,15 +10,8 @@ import {
   watchPostEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-floating-tree"
-import {
-  getContextFromParameter,
-  isMac,
-  isSafari,
-  isTargetWithinElement,
-  isTypeableElement,
-  matchesFocusVisible,
-} from "@/utils"
+import type { Tree, TreeNode } from "@/composables/use-floating-tree"
+import { isMac, isSafari, isTargetWithinElement, isTypeableElement, matchesFocusVisible } from "@/utils"
 
 //=======================================================================================
 // 📌 Constants
@@ -36,55 +29,45 @@ const BLUR_CHECK_DELAY = 0
 //=======================================================================================
 
 /**
- * Enables showing/hiding the floating element when focusing the reference element.
+ * Enables showing/hiding the floating element when the reference element receives or loses focus.
  *
- * This composable is responsible for KEYBOARD-ONLY interactions. For a complete user experience,
- * it should be composed with other hooks like `useClick`, `useHover`, and `useEscapeKey`.
+ * Keyboard-only interaction hook. Compose with `useClick`, `useHover`, `useEscapeKey` for a complete UX.
  *
- * The composable supports both standalone usage with FloatingContext and tree-aware
- * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
+ * Tree-aware behavior is enabled by providing a `tree` option and passing the corresponding
+ * FloatingContext (i.e., the node's `.data`). IDs are only relevant for tree-aware usage and are
+ * automatically assigned when using `useFloatingTree().addNode(...)`.
  *
- * @param context - The floating context or tree node with open state and change handler.
- * @param options - Configuration options for focus behavior.
+ * @param context - The floating context for this element (not a TreeNode).
+ * @param options - Configuration options. Provide `tree` to enable tree-aware behavior.
  *
- * @example Basic standalone usage
+ * @example Standalone
  * ```ts
- * const context = useFloating(...)
- * useFocus(context, {
- *   enabled: true,
- *   requireFocusVisible: true
- * })
+ * const ctx = useFloating(...)
+ * useFocus(ctx)
  * ```
  *
- * @example Tree-aware usage for nested floating elements
+ * @example Tree-aware
  * ```ts
- * const tree = useFloatingTree(rootContext)
- * const parentNode = tree.root
- * const childNode = tree.addNode(childContext, parentNode.id)
+ * const tree = useFloatingTree(rootAnchor, rootFloating)
+ * const parent = tree.root
+ * const child = tree.addNode(childAnchor, childFloating, { parentId: parent.id })
  *
- * // Tree-aware behavior: parent stays open when focus moves to child,
- * // but closes when focus moves outside hierarchy
- * useFocus(parentNode, { requireFocusVisible: true })
- * useFocus(childNode, { requireFocusVisible: true })
+ * useFocus(parent.data, { tree })
+ * useFocus(child.data, { tree })
  * ```
  */
+
 export function useFocus(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options: UseFocusOptions = {}
 ): UseFocusReturn {
-  // Extract floating context from either standalone context or tree node
-  const { floatingContext, treeContext } = getContextFromParameter(context)
   const {
     open,
     setOpen,
     refs: { floatingEl, anchorEl: _anchorEl },
-  } = floatingContext
+  } = context
 
-  const {
-    enabled = true,
-    requireFocusVisible = true,
-    closeAncestorsOnOutsideFocus = true,
-  } = options
+  const { enabled = true, requireFocusVisible = true, tree } = options
 
   /**
    * Computed anchor element that handles both HTMLElement and virtual element references.
@@ -101,10 +84,31 @@ export function useFocus(
   const isSafariOnMac = isMac() && isSafari()
   let timeoutId: number
 
-  // Select focus strategy based on context type
-  const focusStrategy: FocusStrategy = treeContext
-    ? new TreeAwareFocusStrategy(treeContext)
-    : new StandaloneFocusStrategy(floatingEl)
+  // Select focus strategy based on explicit tree option
+  let focusStrategy: FocusStrategy = new StandaloneFocusStrategy(floatingEl)
+  if (tree) {
+    let node: TreeNode<FloatingContext> | null = null
+    // Prefer lookup by id when provided
+    if (context.id) {
+      node = tree.findNodeById(context.id)
+    }
+    // Fallback: resolve by reference equality if id is missing or not found
+    if (!node) {
+      for (const candidate of tree.nodeMap.values()) {
+        if (candidate.data === context) {
+          node = candidate
+          break
+        }
+      }
+    }
+    if (node) {
+      focusStrategy = new TreeAwareFocusStrategy(node)
+    } else if (import.meta.env?.DEV) {
+      console.warn(
+        `[useFocus] 'tree' provided but could not resolve node for the given context. Falling back to standalone behavior.`
+      )
+    }
+  }
 
   // --- Window Event Listeners for Edge Cases ---
 
@@ -165,7 +169,7 @@ export function useFocus(
     }
 
     try {
-      setOpen(true)
+      setOpen(true, "focus", event)
     } catch (error) {
       console.error("[useFocus] Error in onFocus handler:", error)
     }
@@ -197,22 +201,56 @@ export function useFocus(
       // If neither of the above conditions are met, focus has moved elsewhere.
       try {
         // Close ancestors that do not contain the new focus (strategy-provided)
-        if (activeEl instanceof Element && toValue(closeAncestorsOnOutsideFocus)) {
+        if (activeEl instanceof Element) {
           const ancestorsToClose = focusStrategy.getAncestorsToClose(activeEl)
           for (const node of ancestorsToClose) {
             try {
-              node.data.setOpen(false)
+              node.data.setOpen(false, "tree-ancestor-close", event)
             } catch (e) {
               console.error("[useFocus] Error closing ancestor on blur:", e)
             }
           }
         }
-        setOpen(false)
+        setOpen(false, "blur", event)
       } catch (error) {
         console.error("[useFocus] Error in onBlur handler:", error)
       }
     }, BLUR_CHECK_DELAY)
   }
+
+  // In addition to element-level blur, observe focus changes at the document level
+  // to handle cases where focus moves between descendants and outside elements
+  // without triggering another blur on the original anchor.
+  useEventListener(
+    document,
+    "focusin",
+    (evt: FocusEvent) => {
+      if (!toValue(enabled)) return
+      const target = evt.target
+      if (!(target instanceof Element)) return
+
+      // Ignore focus entering the anchor itself
+      const anchor = anchorEl.value
+      if (anchor && isTargetWithinElement(target, anchor)) return
+
+      if (focusStrategy.shouldRemainOpen(target)) return
+
+      try {
+        const ancestorsToClose = focusStrategy.getAncestorsToClose(target)
+        for (const node of ancestorsToClose) {
+          try {
+            node.data.setOpen(false, "tree-ancestor-close", evt)
+          } catch (e) {
+            console.error("[useFocus] Error closing ancestor on focusin:", e)
+          }
+        }
+        setOpen(false, "blur", evt)
+      } catch (error) {
+        console.error("[useFocus] Error in document focusin handler:", error)
+      }
+    },
+    { capture: true }
+  )
 
   // --- Attach Listeners to the Anchor Element ---
   const removeWatcher = watchPostEffect(() => {
@@ -265,11 +303,9 @@ export interface UseFocusOptions {
   requireFocusVisible?: MaybeRefOrGetter<boolean>
 
   /**
-   * In tree-aware mode, also close ancestors whose subtree does not contain the new focus
-   * when focus moves outside the current node's hierarchy.
-   * @default true
+   * When provided, enables tree-aware focus handling.
    */
-  closeAncestorsOnOutsideFocus?: MaybeRefOrGetter<boolean>
+  tree?: Tree<FloatingContext>
 }
 
 /**

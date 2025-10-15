@@ -75,7 +75,11 @@ interface UseDelayedOpenOptions {
   delay: MaybeRef<number | { open?: number; close?: number }>
 }
 
-function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
+function useDelayedOpen(
+  show: (event?: Event) => void,
+  hide: (event?: Event) => void,
+  options: UseDelayedOpenOptions
+) {
   const { delay } = options
 
   const showDelay = computed<number>(() => {
@@ -98,20 +102,20 @@ function useDelayedOpen(show: Fn, hide: Fn, options: UseDelayedOpenOptions) {
   onScopeDispose(clearTimeouts)
 
   return {
-    show: (overrideDelay?: number) => {
+    show: (overrideDelay?: number, event?: Event) => {
       clearTimeouts()
       const resolvedDelay = overrideDelay ?? showDelay.value
 
-      if (resolvedDelay === 0) show()
-      else showTimeoutID = setTimeout(show, resolvedDelay)
+      if (resolvedDelay === 0) show(event)
+      else showTimeoutID = setTimeout(() => show(event), resolvedDelay)
     },
 
-    hide: (overrideDelay?: number) => {
+    hide: (overrideDelay?: number, event?: Event) => {
       clearTimeouts()
       const resolvedDelay = overrideDelay ?? hideDelay.value
 
-      if (resolvedDelay === 0) hide()
-      else hideTimeoutID = setTimeout(hide, resolvedDelay)
+      if (resolvedDelay === 0) hide(event)
+      else hideTimeoutID = setTimeout(() => hide(event), resolvedDelay)
     },
 
     showDelay,
@@ -186,11 +190,11 @@ export function useHover(
   })
 
   const { hide, show, showDelay, clearTimeouts } = useDelayedOpen(
-    () => {
-      open.value || setOpen(true)
+    (event?: Event) => {
+      open.value || setOpen(true, "hover", event)
     },
-    () => {
-      open.value && setOpen(false)
+    (event?: Event) => {
+      open.value && setOpen(false, "hover", event)
     },
     { delay }
   )
@@ -215,7 +219,7 @@ export function useHover(
       restCoords = newCoords
       clearTimeout(restTimeoutId)
       restTimeoutId = setTimeout(() => {
-        show(0)
+        show(0, e)
       }, restMs.value)
     }
   }
@@ -224,7 +228,7 @@ export function useHover(
     if (!enabled.value || !isValidPointerType(e) || !isRestMsEnabled.value) return
     restCoords = { x: e.clientX, y: e.clientY }
     restTimeoutId = setTimeout(() => {
-      show(0)
+      show(0, e)
     }, restMs.value)
   }
 
@@ -266,7 +270,7 @@ export function useHover(
   function onPointerEnterReference(e: PointerEvent): void {
     if (!enabled.value || !isValidPointerType(e) || isRestMsEnabled.value) return
     cleanupPolygon()
-    show()
+    show(undefined, e)
   }
 
   function onPointerEnterFloating(e: PointerEvent): void {
@@ -310,7 +314,7 @@ export function useHover(
         const floatEl = floatingEl.value
 
         if (!refEl || !floatEl) {
-          hide()
+          hide(undefined, e)
           return
         }
 
@@ -343,7 +347,7 @@ export function useHover(
           buffer: safePolygonOptions.value?.buffer ?? 1,
           onClose: () => {
             cleanupPolygon()
-            hide()
+            hide(undefined)
           },
           nodeId,
           tree: treeMap ? { nodes: treeMap } : undefined,
@@ -366,7 +370,7 @@ export function useHover(
         }
       }
 
-      hide()
+      hide(undefined, e)
     }
   }
 
