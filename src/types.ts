@@ -12,3 +12,17 @@ export interface VirtualElement {
    */
   contextElement?: Element
 }
+
+/**
+ * Primary interaction reasons for open state changes. Minimal and extensible.
+ */
+export type OpenChangeReason =
+  | "anchor-click"
+  | "keyboard-activate"
+  | "outside-pointer"
+  | "focus"
+  | "blur"
+  | "hover"
+  | "escape-key"
+  | "tree-ancestor-close"
+  | "programmatic"
