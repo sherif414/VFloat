@@ -25,14 +25,12 @@ function useArrow(
 ```ts
 interface UseArrowOptions {
   offset?: string
-  padding?: Padding
 }
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | offset | `string` | `'-4px'` | Distance of arrow from floating element edge |
-| padding | `Padding` | `undefined` | Padding from floating element edges |
 
 ## Return Value
 
@@ -64,14 +62,14 @@ const floatingEl = ref(null)
 const arrowEl = ref(null)
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [offset(8)]
+  middlewares: [offset(8)]
 })
 
 const { arrowStyles } = useArrow(arrowEl, context)
 </script>
 
 <template>
-  <div ref="floatingEl" :style="context.floatingStyles.value">
+  <div ref="floatingEl" :style="context.floatingStyles">
     Content
     <div ref="arrowEl" :style="arrowStyles" />
   </div>

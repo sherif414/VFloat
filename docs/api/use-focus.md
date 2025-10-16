@@ -246,9 +246,9 @@ const menuContext = useFloating(menuTriggerRef, menuRef)
 const submenuContext = useFloating(submenuTriggerRef, submenuRef)
 
 // Create floating tree
-const tree = useFloatingTree(menuContext)
-const menuNode = tree.root
-const submenuNode = tree.addNode(submenuContext, menuNode.id)
+const tree = useFloatingTree()
+const menuNode = tree.addNode(menuTriggerRef, menuRef)
+const submenuNode = tree.addNode(submenuTriggerRef, submenuRef, { parentId: menuNode?.id })
 
 // Tree-aware focus behavior
 // Parent stays open when focus moves to child

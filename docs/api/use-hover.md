@@ -134,12 +134,13 @@ useHover(context, {
 <script setup>
 import { useFloating, useFloatingTree, useHover } from 'v-float'
 
+const tree = useFloatingTree()
+
 const parentContext = useFloating(parentRef, parentFloatingRef)
-const tree = useFloatingTree(parentContext)
-const parentNode = tree.root
+const parentNode = tree.addNode(parentRef, parentFloatingRef)
 
 const childContext = useFloating(childRef, childFloatingRef)
-const childNode = tree.addNode(childContext, parentNode.id)
+const childNode = tree.addNode(childRef, childFloatingRef, { parentId: parentNode?.id })
 
 useHover(parentNode, {
   delay: { open: 100, close: 300 },

@@ -106,40 +106,43 @@ When used with nested floating elements in a tree structure, `useEscapeKey` auto
 ```vue twoslash
 <script setup lang="ts">
 import { ref } from "vue"
-import { useFloatingTree, useEscapeKey } from "v-float"
+import { useFloating, useFloatingTree, useEscapeKey } from "v-float"
 
 const rootAnchorRef = ref<HTMLElement | null>(null)
 const rootFloatingRef = ref<HTMLElement | null>(null)
 const submenuAnchorRef = ref<HTMLElement | null>(null)
 const submenuFloatingRef = ref<HTMLElement | null>(null)
 
-// Create tree with root menu
-const tree = useFloatingTree(rootAnchorRef, rootFloatingRef)
+// Create floating contexts
+const rootContext = useFloating(rootAnchorRef, rootFloatingRef)
+const submenuContext = useFloating(submenuAnchorRef, submenuFloatingRef)
 
-// Add submenu to the tree
+// Create tree
+const tree = useFloatingTree()
+const rootNode = tree.addNode(rootAnchorRef, rootFloatingRef)
 const submenuNode = tree.addNode(submenuAnchorRef, submenuFloatingRef, {
-  parentId: tree.root.id
+  parentId: rootNode?.id
 })
 
 // Tree-aware behavior: closes the deepest open menu first
-useEscapeKey(tree.root)     // Works for root
+useEscapeKey(rootNode)     // Works for root
 useEscapeKey(submenuNode)   // Works for submenu - closes topmost open
 </script>
 
 <template>
   <!-- Root menu -->
-  <button ref="rootAnchorRef" @click="tree.root.data.setOpen(true)">
+  <button ref="rootAnchorRef" @click="rootContext.setOpen(true)">
     Open Menu
   </button>
   
-  <div v-if="tree.root.data.open.value" ref="rootFloatingRef">
-    <button ref="submenuAnchorRef" @click="submenuNode.data.setOpen(true)">
+  <div v-if="rootContext.open.value" ref="rootFloatingRef">
+    <button ref="submenuAnchorRef" @click="submenuContext.setOpen(true)">
       Open Submenu
     </button>
   </div>
 
   <!-- Submenu -->
-  <div v-if="submenuNode.data.open.value" ref="submenuFloatingRef">
+  <div v-if="submenuContext.open.value" ref="submenuFloatingRef">
     <p>Press Escape to close this submenu first, then the root menu</p>
   </div>
 </template>
@@ -199,14 +202,15 @@ When working with nested floating elements, the composable intelligently closes 
 
 ```vue
 <script setup>
-import { useFloatingTree, useEscapeKey } from "v-float"
+import { useFloating, useFloatingTree, useEscapeKey } from "v-float"
 
-const tree = useFloatingTree(rootAnchor, rootFloating)
-const level1 = tree.addNode(anchor1, floating1, { parentId: tree.root.id })
-const level2 = tree.addNode(anchor2, floating2, { parentId: level1.id })
+const tree = useFloatingTree()
+const rootNode = tree.addNode(rootAnchor, rootFloating)
+const level1 = tree.addNode(anchor1, floating1, { parentId: rootNode?.id })
+const level2 = tree.addNode(anchor2, floating2, { parentId: level1?.id })
 
 // Any of these will close the deepest open element first
-useEscapeKey(tree.root)
+useEscapeKey(rootNode)
 useEscapeKey(level1)
 useEscapeKey(level2)
 </script>
