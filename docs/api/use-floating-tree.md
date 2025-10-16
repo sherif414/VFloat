@@ -6,26 +6,29 @@ Creates and manages a hierarchical tree of floating elements.
 
   ```ts
   function useFloatingTree(
-    anchorEl: Ref<AnchorElement>,
-    floatingEl: Ref<FloatingElement>,
-    options?: UseFloatingOptions,
     treeOptions?: FloatingTreeOptions
   ): UseFloatingTreeReturn
   ```
 
 - **Details:**
 
-  Creates a new floating tree instance that internally creates the root floating context using the provided anchor and floating elements. This eliminates the need for separate `useFloating` calls when building hierarchical structures. The tree provides methods to add child nodes with automatic context creation.
+  Creates a new floating tree instance for managing hierarchical floating UI elements. The tree starts empty and you add nodes using the `addNode()` method. Each node wraps a `FloatingContext` created internally.
 
 - **Example:**
 
 ```ts
-const tree = useFloatingTree(anchorEl,
-  floatingEl,
-  { placement: 'bottom-start' },
-  { deleteStrategy: 'recursive'}
-)
-const { floatingStyles } = tree.rootContext
+const tree = useFloatingTree({ deleteStrategy: 'recursive' })
+
+// Add root node
+const root = tree.addNode(rootAnchorEl, rootFloatingEl, {
+  placement: 'bottom-start'
+})
+
+// Add child node
+const child = tree.addNode(childAnchorEl, childFloatingEl, {
+  parentId: root?.id,
+  placement: 'right-start'
+})
 ```
 
 **See also:** [Guide - Managing Floating UI Hierarchies](/guide/floating-ui/hierarchies)
@@ -47,46 +50,9 @@ A reactive map containing all nodes in the tree, keyed by their IDs.
 - **Example:**
 
   ```ts
-  const tree = useFloatingTree(anchorEl,
-    floatingEl,
-    { placement: "bottom" },
-    { deleteStrategy: "recursive"}
-  )
-  console.log(tree.nodeMap.value.get("node-id")) // Get specific node
-  console.log(tree.nodeMap.value.size) // Total node count
-  ```
-
-## tree.rootContext
-
-Access to the root floating context created by useFloatingTree.
-
-- **Type:**
-
-  ```ts
-  readonly rootContext: FloatingContext
-  ```
-
-- **Details:**
-
-  Provides direct access to the root floating context that was automatically created when initializing the tree. This context contains the positioning data, styles, and methods for the root floating element.
-
-- **Example:**
-
-  ```ts
-  const tree = useFloatingTree(anchorEl,
-    floatingEl,
-    { placement: "bottom" },
-    { deleteStrategy: "recursive"}
-  )
-  
-  // Access root floating styles
-  const { floatingStyles } = tree.rootContext
-  
-  // Manually update root position
-  tree.rootContext.update()
-  
-  // Check if root is open
-  console.log(tree.rootContext.open.value)
+  const tree = useFloatingTree({ deleteStrategy: "recursive" })
+  console.log(tree.nodeMap.get("node-id")) // Get specific node
+  console.log(tree.nodeMap.size) // Total node count
   ```
 
 ## tree.root
@@ -96,18 +62,23 @@ Reference to the root TreeNode instance.
 - **Type:**
 
   ```ts
-  readonly root: Readonly<TreeNode<FloatingContext>>
+  readonly root: TreeNode<FloatingContext> | null
   ```
 
 - **Details:**
 
-  Reference to the root TreeNode instance. This is your entry point to the top of the hierarchy and contains the root data you provided during initialization.
+  Reference to the root TreeNode instance, or `null` if no nodes have been added yet. This is your entry point to the top of the hierarchy and contains the floating context of the root element.
 
 - **Example:**
 
   ```ts
-  const rootNode = tree.root
-  console.log(rootNode.children.length) // Number of direct children
+  const tree = useFloatingTree()
+  const root = tree.addNode(rootAnchorEl, rootFloatingEl)
+  
+  if (tree.root) {
+    console.log(tree.root.children.value.length) // Number of direct children
+    console.log(tree.root.data.open.value) // Check if root is open
+  }
   ```
 
 ## tree.addNode()
@@ -120,36 +91,38 @@ Adds a new floating element to the tree by creating its context internally.
   addNode(
     anchorEl: Ref<AnchorElement>,
     floatingEl: Ref<FloatingElement>,
-    options?: UseFloatingOptions
+    options?: AddNodeOptions
   ): TreeNode<FloatingContext> | null
   ```
 
 - **Details:**
 
   Adds a new floating element to the tree by internally creating a floating context using the provided anchor and floating elements. The `parentId` can be specified in the options to determine the parent node. If `parentId` is not provided, the node becomes a child of the root. Returns the created node or `null` if the parent doesn't exist.
+  
+  The node is assigned a stable ID automatically. When a parent node closes, all its open descendants are automatically closed with the reason `"tree-ancestor-close"`.
 
 - **Example:**
 
   ```ts
-  const tree = useFloatingTree(rootAnchorEl, rootFloatingEl)
+  const tree = useFloatingTree()
   
-  // Add as child of root (no parentId specified)
+  // Add root node
   const menuNode = tree.addNode(menuAnchorEl, menuFloatingEl, {
     placement: "bottom-start",
-    open: isMenuOpen,
-    middlewares: [offset(5), flip()]
+    open: ref(false)
   })
 
   // Add as child of specific parent using parentId
   const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
     placement: "right-start",
-    open: isSubmenuOpen,
-    middlewares: [offset(5), shift({ padding: 5 })],
-    parentId: menuNode.id
+    open: ref(false),
+    parentId: menuNode?.id
   })
   
   // Access the floating context of the created node
-  const { floatingStyles } = submenuNode.data
+  if (submenuNode) {
+    const { floatingStyles } = submenuNode.data
+  }
   ```
 
 ## TreeNode structure
@@ -263,16 +236,16 @@ Traverses the tree using depth-first or breadth-first search.
 
   ```ts
   traverse(
-    mode: 'dfs' | 'bfs',
-    startNode?: TreeNode<FloatingContext>
+    strategy?: 'dfs' | 'bfs',
+    startNode?: TreeNode<FloatingContext> | null
   ): TreeNode<FloatingContext>[]
   ```
 
 - **Details:**
 
-  Traverses the tree using depth-first search (DFS) or breadth-first search (BFS) and returns nodes in visit order. If no start node is provided, traversal begins from the root.
+  Traverses the tree using depth-first search (DFS) or breadth-first search (BFS) and returns nodes in visit order. If no start node is provided, traversal begins from the root. Defaults to DFS strategy.
 
-  Ordering guarantee (VEX-31):
+  Ordering guarantee:
   - The returned array always begins with the provided `startNode` (target node), for both `dfs` and `bfs` modes.
   - When `startNode` is omitted, the first element will be the `root` node.
 
@@ -288,27 +261,27 @@ Traverses the tree using depth-first or breadth-first search.
   const menuBranch = tree.traverse("bfs", menuNode)
   ```
 
-## tree.isTopmost()
+## tree.getDeepestOpenNode()
 
-Checks if a given open node is the topmost open node in its branch.
+Returns the deepest (most nested) open node in the tree.
 
 - **Type:**
 
   ```ts
-  isTopmost(nodeId: string): boolean
+  getDeepestOpenNode(): TreeNode<FloatingContext> | null
   ```
 
 - **Details:**
 
-  Checks if a given open node is the "highest" open node in its particular branch of the hierarchy. Useful for determining focus management or z-index priorities.
+  Finds and returns the open node with the greatest nesting depth. If multiple nodes are open at the same depth, returns the last one encountered. Returns `null` if no nodes are open.
 
 - **Example:**
 
   ```ts
-  // Check which menu should receive focus
-  if (tree.isTopmost("submenu")) {
-    // This submenu is the topmost open element in its branch
-    focusElement("submenu")
+  const deepest = tree.getDeepestOpenNode()
+  if (deepest) {
+    console.log(`Deepest open node: ${deepest.id}`)
+    console.log(`Nesting level: ${deepest.getPath().length}`)
   }
   ```
 
@@ -410,7 +383,7 @@ Cleans up the tree instance and prevents memory leaks.
   ```ts
   import { onUnmounted } from "vue"
 
-  const tree = useFloatingTree(rootContext)
+  const tree = useFloatingTree()
 
   onUnmounted(() => {
     tree.dispose()
