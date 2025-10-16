@@ -1,5 +1,17 @@
 import type { AnyFn } from "@/types"
-export { useId } from "vue"
+import { useId as vueUseId } from "vue"
+
+let idCounter = 0
+
+/**
+ * Wrapper around Vue's useId that provides a fallback counter-based ID generator.
+ * This ensures unique IDs even when useId() returns empty strings (e.g., in test environments).
+ */
+export function useId(): string {
+  const id = vueUseId()
+  // If Vue's useId returns an empty string, use a counter-based fallback
+  return id || `id-${++idCounter}`
+}
 
 import type { VirtualElement } from "@/types"
 import type { FloatingContext } from "@/composables"
