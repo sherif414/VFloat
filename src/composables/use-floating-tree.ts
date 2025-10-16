@@ -42,33 +42,125 @@ interface AddNodeOptions extends UseFloatingOptions {
   parentId?: string
 }
 
+/**
+ * Represents a single node in a tree structure with hierarchical relationships.
+ *
+ * A TreeNode maintains references to its parent and children, allowing bidirectional
+ * traversal of the tree. Each node stores generic data and provides methods for
+ * tree navigation and manipulation.
+ *
+ * @template T The type of data stored in the node
+ *
+ * @example
+ * ```ts
+ * const node = createTreeNode({ name: 'Parent' });
+ * const childNode = createTreeNode({ name: 'Child' }, node);
+ * node.addChild(childNode);
+ * ```
+ */
 export interface TreeNode<T> {
+  /**
+   * Unique identifier for this node
+   */
   readonly id: string
+  /**
+   * The data stored in this node
+   */
   readonly data: T
+  /**
+   * Reference to the parent node, or null if this is the root
+   */
   readonly parent: Ref<TreeNode<T> | null>
+  /**
+   * Array of child nodes
+   */
   readonly children: Ref<TreeNode<T>[]>
+  /**
+   * Whether this node is the root of the tree
+   */
   readonly isRoot: boolean
+  /**
+   * Computed property indicating whether this node has no children
+   */
   readonly isLeaf: Readonly<Ref<boolean>>
+  /**
+   * Adds a child node to this node's children array
+   */
   addChild: (childNode: TreeNode<T>) => void
+  /**
+   * Internal method to remove a child instance from this node
+   */
   _removeChildInstance: (childNode: TreeNode<T>) => boolean
+  /**
+   * Finds the first immediate child matching the predicate
+   */
   findChild: (predicate: (node: TreeNode<T>) => boolean) => TreeNode<T> | null
+  /**
+   * Recursively finds the first descendant matching the predicate
+   */
   findDescendant: (predicate: (node: TreeNode<T>) => boolean) => TreeNode<T> | null
+  /**
+   * Checks if this node is a descendant of the given ancestor
+   */
   isDescendantOf: (potentialAncestor: TreeNode<T>) => boolean
+  /**
+   * Returns the path from root to this node (inclusive)
+   */
   getPath: () => TreeNode<T>[]
 }
 
+/**
+ * Core tree data structure for managing hierarchical node relationships.
+ *
+ * Provides methods for adding, removing, moving, and traversing nodes.
+ * Maintains a root node and a map of all nodes for efficient lookups.
+ * Supports both orphaning and recursive deletion strategies.
+ *
+ * @template T The type of data stored in tree nodes
+ *
+ * @example
+ * ```ts
+ * const tree = createTree<{ name: string }>();
+ * const child = tree.addNode({ name: 'Child' }, tree.root?.id);
+ * tree.traverse('dfs'); // Get all nodes in depth-first order
+ * ```
+ */
 export interface Tree<T> {
+  /**
+   * The root node of the tree, or null if empty
+   */
   readonly root: TreeNode<T> | null
+  /**
+   * Read-only map of all nodes indexed by their ID for O(1) lookups
+   */
   readonly nodeMap: Readonly<Map<string, TreeNode<T>>>
+  /**
+   * Finds a node by its ID anywhere in the tree
+   */
   findNodeById: (id: string) => TreeNode<T> | null
+  /**
+   * Adds a new node to the tree as a child of the specified parent
+   */
   addNode: (
     data: T,
     parentId?: string | null,
     nodeOptions?: CreateTreeNodeOptions
   ) => TreeNode<T> | null
+  /**
+   * Removes a node from the tree using the specified deletion strategy
+   */
   removeNode: (nodeId: string, deleteStrategy?: "orphan" | "recursive") => boolean
+  /**
+   * Moves a node to become a child of a different parent
+   */
   moveNode: (nodeId: string, newParentId: string | null) => boolean
+  /**
+   * Traverses the tree using DFS or BFS strategy, optionally starting from a specific node
+   */
   traverse: (strategy?: "dfs" | "bfs", startNode?: TreeNode<T> | null) => TreeNode<T>[]
+  /**
+   * Clears all nodes from the tree to allow garbage collection
+   */
   dispose: () => void
 }
 
@@ -77,16 +169,45 @@ export interface Tree<T> {
  */
 export interface FloatingTreeOptions extends CreateTreeOptions {}
 
+/**
+ * Return type for the useFloatingTree composable.
+ *
+ * Extends the base Tree interface with floating-specific methods for managing
+ * a hierarchical tree of floating UI elements. Each node wraps a FloatingContext
+ * and provides methods to query and manipulate open states across the tree.
+ *
+ * @example
+ * ```ts
+ * const tree = useFloatingTree();
+ * const childNode = tree.addNode(anchorEl, floatingEl, { parentId: tree.root?.id });
+ * const deepest = tree.getDeepestOpenNode();
+ * tree.applyToNodes(childNode.id, (node) => node.data.setOpen(false), {
+ *   relationship: 'descendants-only'
+ * });
+ * ```
+ */
 export interface UseFloatingTreeReturn
   extends Omit<Tree<FloatingContext>, "addNode" | "root"> {
+  /**
+   * The root node of the floating tree
+   */
   root: TreeNode<FloatingContext> | null
+  /**
+   * Adds a new floating element node to the tree with the specified anchor and floating elements
+   */
   addNode: (
     anchorEl: Ref<AnchorElement>,
     floatingEl: Ref<FloatingElement>,
     options?: AddNodeOptions
   ) => TreeNode<FloatingContext> | null
+  /**
+   * Returns an array of all nodes that are currently open
+   */
   getAllOpenNodes: () => TreeNode<FloatingContext>[]
-  getTopmostOpenNode: () => TreeNode<FloatingContext> | null
+  /**
+   * Returns the deepest (most nested) open node in the tree, or null if none are open
+   */
+  getDeepestOpenNode: () => TreeNode<FloatingContext> | null
   /**
    * Executes a provided function once for each tree node that matches the specified relationship.
    * This is a flexible iteration method that can target nodes based on their relationship to a target node.
@@ -127,7 +248,7 @@ type NodeRelationship =
 type NodeActionFn = (node: TreeNode<FloatingContext>) => void
 
 /**
- * Options for the filterNodes function
+ * Options for the applyToNodes function
  */
 interface FilterNodesOptions {
   /** The relationship to use for filtering nodes based on their relationship to the target */
@@ -148,15 +269,10 @@ interface FilterNodesOptions {
  * Consumers should not provide a custom `id` in `UseFloatingOptions` when using `addNode`;
  * it will be ignored in favor of the generated one.
  *
- * @param anchorEl - The anchor element for the root floating context
- * @param floatingEl - The floating element for the root floating context
- * @param options - Options for the root floating context
  * @param treeOptions - Options for tree behavior
  * @returns UseFloatingTreeReturn with tree management methods and root context
  */
-export function useFloatingTree(
-  treeOptions: FloatingTreeOptions = {}
-): UseFloatingTreeReturn {
+export function useFloatingTree(treeOptions: FloatingTreeOptions = {}): UseFloatingTreeReturn {
   let tree!: Tree<FloatingContext>
   tree = createTree<FloatingContext>(treeOptions)
 
@@ -278,8 +394,16 @@ export function useFloatingTree(
     return openNodes
   }
 
-  const getTopmostOpenNode = (): TreeNode<FloatingContext> | null => {
-    let topmostNode: TreeNode<FloatingContext> | null = null
+  /**
+   * Retrieves the deepest (most nested) open node in the tree.
+   *
+   * Finds the open node with the greatest nesting depth. If multiple nodes
+   * are open at the same depth, returns the last one encountered.
+   *
+   * @returns The deepest open node, or null if no nodes are open.
+   */
+  const getDeepestOpenNode = (): TreeNode<FloatingContext> | null => {
+    let deepestNode: TreeNode<FloatingContext> | null = null
     let maxLevel = -1
 
     for (const node of tree.nodeMap.values()) {
@@ -287,12 +411,12 @@ export function useFloatingTree(
         const level = node.getPath().length
         if (level > maxLevel) {
           maxLevel = level
-          topmostNode = node
+          deepestNode = node
         }
       }
     }
 
-    return topmostNode
+    return deepestNode
   }
 
   const addNode = (
@@ -336,7 +460,7 @@ export function useFloatingTree(
     },
     addNode,
     getAllOpenNodes,
-    getTopmostOpenNode,
+    getDeepestOpenNode,
     applyToNodes,
   }
 }
@@ -437,14 +561,13 @@ export function createTreeNode<T>(
  * traversal and search functionality.
  *
  * @template T The type of data stored in the tree nodes.
- * @param initialRootData Data for the root node.
  * @param options Configuration options for the tree behavior.
  * @returns A tree management object with methods and reactive properties
  *
  * @example
  * ```ts
- * const myTree = createTree({ name: 'Root' });
- * const childNode = myTree.addNode({ name: 'Child' }, myTree.root.id);
+ * const myTree = createTree<{ name: string }>();
+ * const childNode = myTree.addNode({ name: 'Child' }, myTree.root?.id);
  * ```
  */
 export function createTree<T>(options?: CreateTreeOptions): Tree<T> {
