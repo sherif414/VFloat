@@ -118,7 +118,7 @@ function getTopmostOpenNodeInTree(
 ): TreeNode<FloatingContext> | null {
   // Navigate to root of the tree
   let rootNode = node
-  while (rootNode.parent.value && !rootNode.isRoot) {
+  while (rootNode.parent?.value && !rootNode.isRoot) {
     rootNode = rootNode.parent.value
   }
 
@@ -135,7 +135,8 @@ function getTopmostOpenNodeInTree(
       }
     }
 
-    for (const child of currentNode.children.value) {
+    const children = currentNode.children?.value ?? []
+    for (const child of children) {
       traverseNode(child)
     }
   }
