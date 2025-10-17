@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import { useFloating, offset, flip, shift, useHover } from "@/composables"
+import { useFloating, offset, flip, shift, useHover, useClick } from "@/composables"
 import { useArrow } from "@/composables/use-arrow"
 import type { Placement } from "@floating-ui/dom"
 
@@ -18,12 +18,12 @@ const arrowRef = ref<HTMLElement | null>(null)
 
 const context = useFloating(buttonRef, tooltipRef, {
   placement: props.placement,
-  open: ref(true),
   middlewares: [offset(8), flip(), shift()], // arrow middleware auto-registered
 })
 
 // useHover(context)
 // Arrow middleware is automatically registered when calling useArrow
+useClick(context, {ignoreKeyboard: true})
 const { arrowStyles } = useArrow(arrowRef, context, { offset: "-4px" })
 </script>
 

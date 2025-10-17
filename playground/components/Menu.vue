@@ -26,7 +26,7 @@ provide<string>("currentMenuId", tree.root.id) // Root menu ID
 
 useEscapeKey({
   onEscape() {
-    tree.getTopmostOpenNode()?.data.setOpen(false)
+    tree.getDeepestOpenNode()?.data.setOpen(false)
   },
 })
 useClick(tree.root, { outsideClick: true })
