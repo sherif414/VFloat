@@ -1,7 +1,6 @@
 import { ref } from "vue"
 import { describe, expect, it, vi } from "vitest"
-import { fireEvent } from "@testing-library/vue"
-import { useEscapeKey } from "../interactions/use-escape-key"
+import { useEscapeKey } from "@/composables/interactions/use-escape-key"
 import type { FloatingContext } from "../use-floating"
 import type { TreeNode } from "../use-floating-tree"
 
@@ -16,11 +15,20 @@ vi.mock("@vueuse/core", () => ({
 // Test utilities
 function createMockFloatingContext(): FloatingContext {
   const open = ref(false)
-  const setOpen = vi.fn((value: boolean) => {
+  const setOpen = vi.fn((value: boolean, reason?: string, event?: KeyboardEvent) => {
     open.value = value
   })
 
   return {
+    id: `mock-${Math.random().toString(36).substr(2, 9)}`,
+    x: ref(0),
+    y: ref(0),
+    strategy: ref("absolute"),
+    placement: ref("bottom"),
+    middlewareData: ref({}),
+    isPositioned: ref(false),
+    floatingStyles: ref({ position: "absolute", top: "0px", left: "0px" }),
+    update: vi.fn(),
     open,
     setOpen,
     refs: {
@@ -46,14 +54,11 @@ function createMockTreeNode(
     parent: parentRef,
     isRoot,
     getPath: vi.fn(() => {
-      const path = []
+      const path: TreeNode<FloatingContext>[] = []
       let current: TreeNode<FloatingContext> | null = mockNode
-      while (current && !current.isRoot) {
-        path.unshift(current.id)
+      while (current) {
+        path.unshift(current)
         current = current.parent.value
-      }
-      if (current?.isRoot) {
-        path.unshift(current.id)
       }
       return path
     }),
@@ -66,33 +71,34 @@ describe("useEscapeKey", () => {
   describe("FloatingContext behavior", () => {
     it("should close floating element on escape key press", async () => {
       const context = createMockFloatingContext()
-      context.open.value = true
+      context.setOpen(true)
 
       useEscapeKey(context)
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
-      expect(context.setOpen).toHaveBeenCalledWith(false)
+      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent))
     })
 
     it("should not trigger when floating element is already closed", async () => {
       const context = createMockFloatingContext()
-      context.open.value = false
+      context.setOpen(false)
 
       useEscapeKey(context)
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
-      expect(context.setOpen).toHaveBeenCalledWith(false)
+      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent))
     })
 
     it("should respect enabled option", async () => {
       const context = createMockFloatingContext()
-      context.open.value = true
+      context.setOpen(true)
+      ;(context.setOpen as any).mockClear()
 
       useEscapeKey(context, { enabled: false })
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
       expect(context.setOpen).not.toHaveBeenCalled()
     })
@@ -105,7 +111,7 @@ describe("useEscapeKey", () => {
         onEscape: customHandler,
       })
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
       expect(customHandler).toHaveBeenCalled()
       expect(context.setOpen).not.toHaveBeenCalled()
@@ -113,12 +119,13 @@ describe("useEscapeKey", () => {
 
     it("should ignore non-escape keys", async () => {
       const context = createMockFloatingContext()
-      context.open.value = true
+      context.setOpen(true)
+      ;(context.setOpen as any).mockClear()
 
       useEscapeKey(context)
 
-      await fireEvent.keyDown(document, { key: "Enter" })
-      await fireEvent.keyDown(document, { key: "Space" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }))
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32 } as any))
 
       expect(context.setOpen).not.toHaveBeenCalled()
     })
@@ -131,9 +138,12 @@ describe("useEscapeKey", () => {
       const childContext = createMockFloatingContext()
       const grandchildContext = createMockFloatingContext()
 
-      rootContext.open.value = true
-      childContext.open.value = true
-      grandchildContext.open.value = true
+      rootContext.setOpen(true)
+      childContext.setOpen(true)
+      grandchildContext.setOpen(true)
+      ;(rootContext.setOpen as any).mockClear()
+      ;(childContext.setOpen as any).mockClear()
+      ;(grandchildContext.setOpen as any).mockClear()
 
       const rootNode = createMockTreeNode(rootContext, true)
       const childNode = createMockTreeNode(childContext, false, rootNode)
@@ -145,33 +155,39 @@ describe("useEscapeKey", () => {
 
       useEscapeKey(grandchildNode)
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
       // Should close the deepest (topmost) open node
-      expect(grandchildContext.setOpen).toHaveBeenCalledWith(false)
+      expect(grandchildContext.setOpen).toHaveBeenCalledWith(
+        false,
+        "escape-key",
+        expect.any(KeyboardEvent)
+      )
       expect(childContext.setOpen).not.toHaveBeenCalled()
       expect(rootContext.setOpen).not.toHaveBeenCalled()
     })
 
     it("should handle tree with only root node open", async () => {
       const rootContext = createMockFloatingContext()
-      rootContext.open.value = true
+      rootContext.setOpen(true)
 
       const rootNode = createMockTreeNode(rootContext, true)
 
       useEscapeKey(rootNode)
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
-      expect(rootContext.setOpen).toHaveBeenCalledWith(false)
+      expect(rootContext.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent))
     })
 
     it("should do nothing when no nodes are open in tree", async () => {
       const rootContext = createMockFloatingContext()
       const childContext = createMockFloatingContext()
 
-      rootContext.open.value = false
-      childContext.open.value = false
+      rootContext.setOpen(false)
+      childContext.setOpen(false)
+      ;(rootContext.setOpen as any).mockClear()
+      ;(childContext.setOpen as any).mockClear()
 
       const rootNode = createMockTreeNode(rootContext, true)
       const childNode = createMockTreeNode(childContext, false, rootNode)
@@ -180,7 +196,7 @@ describe("useEscapeKey", () => {
 
       useEscapeKey(childNode)
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
       expect(rootContext.setOpen).not.toHaveBeenCalled()
       expect(childContext.setOpen).not.toHaveBeenCalled()
@@ -195,7 +211,7 @@ describe("useEscapeKey", () => {
         onEscape: customHandler,
       })
 
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
       expect(customHandler).toHaveBeenCalled()
       expect(rootContext.setOpen).not.toHaveBeenCalled()
@@ -205,25 +221,24 @@ describe("useEscapeKey", () => {
   describe("Composition event handling", () => {
     it("should ignore escape during composition", async () => {
       const context = createMockFloatingContext()
-      context.open.value = true
+      context.setOpen(true)
+      ;(context.setOpen as any).mockClear()
 
       useEscapeKey(context)
 
       // Start composition
-      await fireEvent(document, new Event("compositionstart"))
-
-      // Try to press escape during composition
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new CompositionEvent("compositionstart"))
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
       expect(context.setOpen).not.toHaveBeenCalled()
 
       // End composition
-      await fireEvent(document, new Event("compositionend"))
+      document.dispatchEvent(new CompositionEvent("compositionend"))
 
       // Now escape should work
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
 
-      expect(context.setOpen).toHaveBeenCalledWith(false)
+      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent))
     })
   })
 
@@ -235,14 +250,14 @@ describe("useEscapeKey", () => {
       useEscapeKey(context, { enabled })
 
       // Initially enabled
-      await fireEvent.keyDown(document, { key: "Escape" })
-      expect(context.setOpen).toHaveBeenCalledWith(false)
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
+      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent))
 
-      context.setOpen.mockClear()
+      vi.clearAllMocks()
       enabled.value = false
 
       // Now disabled
-      await fireEvent.keyDown(document, { key: "Escape" })
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
       expect(context.setOpen).not.toHaveBeenCalled()
     })
 

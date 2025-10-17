@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { effectScope, nextTick, type Ref, ref, shallowRef } from "vue"
-import { type UseFocusOptions, useFocus } from "@/composables"
+import { type FloatingContext, type UseFocusOptions, useFocus } from "@/composables"
 
 // Mock the utils module to allow spying on matchesFocusVisible
 vi.mock("@/utils", async (importOriginal) => {
@@ -12,17 +12,6 @@ vi.mock("@/utils", async (importOriginal) => {
 })
 
 import { matchesFocusVisible } from "@/utils"
-
-// Minimal FloatingContext used by tests (mirrors the shape expected by useFocus)
-interface FloatingContext {
-  id: string
-  refs: {
-    anchorEl: Ref<HTMLElement | null>
-    floatingEl: Ref<HTMLElement | null>
-  }
-  open: Ref<boolean>
-  setOpen: (open: boolean, event?: Event) => void
-}
 
 describe("useFocus", () => {
   let context: FloatingContext
@@ -52,20 +41,33 @@ describe("useFocus", () => {
     floatingEl.textContent = "Content"
     document.body.appendChild(floatingEl)
 
+    const openRef = ref(false)
+    const setOpenMock = vi.fn((v: boolean) => {
+      openRef.value = v
+    })
+
     context = {
       id: "ctx-standalone",
+      x: ref(0),
+      y: ref(0),
+      strategy: ref("absolute"),
+      placement: ref("bottom"),
+      middlewareData: shallowRef({}),
+      isPositioned: ref(false),
+      floatingStyles: ref({
+        position: "absolute",
+        top: "0px",
+        left: "0px",
+      }),
+      update: vi.fn(),
       refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
+        anchorEl: ref(referenceEl),
+        floatingEl: ref(floatingEl),
+        arrowEl: ref(null),
       },
-      open: ref(false),
-      setOpen: (v) => {
-        context.open.value = v
-      },
-    }
-
-    context.refs.anchorEl.value = referenceEl
-    context.refs.floatingEl.value = floatingEl
+      open: openRef,
+      setOpen: setOpenMock,
+    } as any
 
     await nextTick()
   })
