@@ -15,6 +15,7 @@ import { matchesFocusVisible } from "@/utils"
 
 // Minimal FloatingContext used by tests (mirrors the shape expected by useFocus)
 interface FloatingContext {
+  id: string
   refs: {
     anchorEl: Ref<HTMLElement | null>
     floatingEl: Ref<HTMLElement | null>
@@ -52,6 +53,7 @@ describe("useFocus", () => {
     document.body.appendChild(floatingEl)
 
     context = {
+      id: "ctx-standalone",
       refs: {
         anchorEl: ref(null),
         floatingEl: ref(null),
@@ -247,11 +249,7 @@ describe("useFocus", () => {
   // --- Tree-aware behavior ---
   describe("tree-aware focus strategy", () => {
     // Minimal TreeNode factory (aligned with use-escape-key tests)
-    function createMockTreeNode(
-      ctx: any,
-      isRoot = false,
-      parent: any = null
-    ) {
+    function createMockTreeNode(ctx: any, isRoot = false, parent: any = null) {
       const children = shallowRef<any[]>([])
       const parentRef = shallowRef(parent)
       const node: any = {
@@ -296,11 +294,13 @@ describe("useFocus", () => {
       const childOpen = ref(true) // descendant is open
 
       const parentCtx = {
+        id: "",
         refs: { anchorEl: ref(parentRef), floatingEl: ref(parentFloat) },
         open: parentOpen,
         setOpen: (v: boolean) => (parentOpen.value = v),
       }
       const childCtx = {
+        id: "",
         refs: { anchorEl: ref(childRef), floatingEl: ref(childFloat) },
         open: childOpen,
         setOpen: (v: boolean) => (childOpen.value = v),
@@ -310,11 +310,24 @@ describe("useFocus", () => {
       const childNode = createMockTreeNode(childCtx, false, parentNode)
       parentNode.children.value = [childNode]
 
+      // Sync context ids with node ids as in real tree integration
+      parentCtx.id = parentNode.id
+      childCtx.id = childNode.id
+
+      // Minimal tree impl for this test
+      const tree = {
+        findNodeById: (id: string) => {
+          if (id === parentNode.id) return parentNode
+          if (id === childNode.id) return childNode
+          return null
+        },
+      } as any
+
       // Attach useFocus to the parent node (tree-aware)
       scope = effectScope()
       scope.run(() => {
         // biome-ignore lint/suspicious/noExplicitAny: testing setup
-        useFocus(parentNode as any, { requireFocusVisible: false })
+        useFocus(parentCtx as any, { requireFocusVisible: false, tree })
       })
       await nextTick()
 

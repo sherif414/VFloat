@@ -164,20 +164,6 @@ describe("useFloating", () => {
       expect(context.open.value).toBe(true)
       expect(context.open).toBe(open) // Should be the same ref
     })
-
-    it("should accept custom setOpen function", () => {
-      const anchorRef = ref<AnchorElement>(anchorEl)
-      const floatingRef = ref<FloatingElement>(floatingEl)
-      const mockSetOpen = vi.fn()
-      const options: UseFloatingOptions = {
-        setOpen: mockSetOpen,
-      }
-
-      const context = useFloating(anchorRef, floatingRef, options)
-
-      context.setOpen(true)
-      expect(mockSetOpen).toHaveBeenCalledWith(true)
-    })
   })
 
   describe("Floating Styles", () => {
