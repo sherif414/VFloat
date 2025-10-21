@@ -13,7 +13,7 @@ of [VFloat](https://vfloat.pages.com/) with Vue 3 Composition API.
 - **Vue 3 Composables**: Reactive composables designed for the Composition API
 - **Interaction Handling**: Built-in hover, focus, click, and dismiss behaviors
 - **Nested Elements**: Support for floating element trees and hierarchies
-- **Ready-to-use Components**: Pre-built components like `FloatingArrow`
+- **Arrow Positioning**: `useArrow` composable for positioning arrow elements
 - **Lightweight**: Tree-shakable with minimal bundle impact
 - **Cross-platform**: Works on desktop, mobile, and touch devices
 - **TypeScript**: Full TypeScript support with comprehensive type definitions
@@ -175,6 +175,8 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 - **`flip`**: Flip placement when there's insufficient space
 - **`shift`**: Shift floating element to stay in view
 - **`hide`**: Hide floating element when anchor is not visible
+- **`autoPlacement`**: Automatically choose the best placement
+- **`size`**: Resize floating element to fit within viewport
 
 **Arrow positioning** is handled by the [`useArrow`](/api/use-arrow) composable, which automatically registers the necessary middleware.
 
@@ -331,6 +333,13 @@ For complete documentation with interactive examples, visit the [V-Float Documen
 
 Contributions are welcome! Please read our contributing guidelines and submit pull requests to
 our [GitHub repository](https://github.com/sherif414/VFloat).
+
+## Credits
+
+V-Float is built on top of the excellent work of:
+
+- [Floating UI](https://floating-ui.com/) - For the core positioning and collision detection algorithms
+- [VueUse](https://vueuse.org/) - For Vue composition utilities and best practices
 
 ## License
 
