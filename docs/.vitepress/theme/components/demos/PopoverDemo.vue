@@ -4,14 +4,14 @@
       <button ref="popoverTrigger" class="demo-button">Open popover</button>
       <Teleport to="body">
         <div
-          v-show="tree.root.data.isPositioned.value"
+          v-show="popoverNode.data.isPositioned.value"
           ref="popoverFloating"
           class="popover floating-element"
-          :style="tree.root.data.floatingStyles.value"
+          :style="popoverNode.data.floatingStyles.value"
         >
           <div class="popover-header">
             <h4>Positioning Options</h4>
-            <button @click="tree.root.data.setOpen(false)" class="close-btn">×</button>
+            <button @click="popoverNode.data.setOpen(false)" class="close-btn">×</button>
           </div>
           <ul class="menu">
             <li ref="fileTrigger" class="menu-item" :class="{ open: fileNode.data.open.value }">
@@ -77,19 +77,15 @@ const popoverTrigger = useTemplateRef("popoverTrigger")
 const popoverFloating = useTemplateRef("popoverFloating")
 
 // Create floating hierarchy tree
-const tree = useFloatingTree(
-  popoverTrigger,
-  popoverFloating,
-  {
-    placement: "bottom-start",
-    open: ref(false),
-    middlewares: [offset(4)],
-  },
-  { deleteStrategy: "recursive" }
-)
+const tree = useFloatingTree({ deleteStrategy: "recursive" })
+const popoverNode = tree.addNode(popoverTrigger, popoverFloating, {
+  placement: "bottom-start",
+  open: ref(false),
+  middlewares: [offset(4)],
+})!
 
-useClick(tree.root, { outsideClick: true })
-useEscapeKey(tree.root)
+useClick(popoverNode, { outsideClick: true })
+useEscapeKey(popoverNode)
 
 // File submenu
 const fileTrigger = useTemplateRef("fileTrigger")
@@ -98,7 +94,7 @@ const fileNode = tree.addNode(fileTrigger, fileFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-  parentId: tree.root.id,
+  parentId: popoverNode.id,
 })!
 useHover(fileNode, { delay: 50, safePolygon: true })
 
@@ -120,7 +116,7 @@ const viewNode = tree.addNode(viewTrigger, viewFloating, {
   placement: "right-start",
   open: ref(false),
   middlewares: [offset(2), shift({ padding: 8 })],
-  parentId: tree.root.id,
+  parentId: popoverNode.id,
 })!
 useHover(viewNode, { delay: 50, safePolygon: true })
 
