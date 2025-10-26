@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { effectScope, nextTick, type Ref, ref, shallowRef } from "vue"
-import { type FloatingContext, type UseFocusOptions, useFocus } from "@/composables"
+import { type FloatingContext, type UseFocusOptions, useFocus } from "@/composables/interactions"
 
 // Mock the utils module to allow spying on matchesFocusVisible
 vi.mock("@/utils", async (importOriginal) => {

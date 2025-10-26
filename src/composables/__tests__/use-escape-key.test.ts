@@ -1,8 +1,8 @@
 import { ref } from "vue"
 import { describe, expect, it, vi } from "vitest"
 import { useEscapeKey } from "@/composables/interactions/use-escape-key"
-import type { FloatingContext } from "../use-floating"
-import type { TreeNode } from "../use-floating-tree"
+import type { FloatingContext } from "../positioning/use-floating"
+import type { TreeNode } from "../positioning/use-floating-tree"
 
 // Mock dependencies
 vi.mock("@vueuse/core", () => ({

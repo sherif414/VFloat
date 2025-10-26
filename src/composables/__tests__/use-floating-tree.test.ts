@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { nextTick, ref } from "vue"
-import type { AnchorElement, FloatingElement } from "@/composables"
-import { createTree, createTreeNode, useFloatingTree } from "@/composables"
+import type { AnchorElement, FloatingElement } from "@/composables/positioning"
+import { createTree, createTreeNode, useFloatingTree } from "@/composables/positioning"
 
 const createMockElement = (tagName = "div", attributes: Record<string, any> = {}) => {
   const element = document.createElement(tagName)

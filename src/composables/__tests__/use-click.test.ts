@@ -1,7 +1,7 @@
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { effectScope, nextTick, type Ref, ref, shallowRef } from "vue"
-import { type FloatingContext, type UseClickOptions, useClick } from "@/composables"
+import { type FloatingContext, type UseClickOptions, useClick } from "@/composables/interactions"
 
 describe("useClick", () => {
   let context: FloatingContext

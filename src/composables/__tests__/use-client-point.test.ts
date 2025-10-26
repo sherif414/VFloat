@@ -5,7 +5,7 @@ import {
   VirtualElementFactory,
   FollowTracker,
   StaticTracker,
-} from "@/composables/use-client-point"
+} from "@/composables/positioning/use-client-point"
 
 const createRect = ({
   x = 0,
