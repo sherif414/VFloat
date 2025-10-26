@@ -14,8 +14,8 @@ export function useId(): string {
 }
 
 import type { VirtualElement } from "@/types"
-import type { FloatingContext } from "@/composables"
-import type { TreeNode } from "@/composables/use-floating-tree"
+import type { FloatingContext } from "@/composables/positioning/use-floating"
+import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 
 //=======================================================================================
 // 📌 General Utilities
