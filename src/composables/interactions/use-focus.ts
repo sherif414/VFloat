@@ -9,8 +9,8 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
-import type { FloatingContext } from "@/composables"
-import type { Tree, TreeNode } from "@/composables/use-floating-tree"
+import type { FloatingContext } from "@/composables/positioning/use-floating"
+import type { Tree, TreeNode } from "@/composables/positioning/use-floating-tree"
 import { isMac, isSafari, isTargetWithinElement, isTypeableElement, matchesFocusVisible } from "@/utils"
 
 //=======================================================================================

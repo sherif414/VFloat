@@ -7,9 +7,9 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
-import type { TreeNode } from "@/composables/use-floating-tree"
+import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import type { Fn } from "@/types"
-import type { FloatingContext } from "../use-floating"
+import type { FloatingContext } from "../positioning/use-floating"
 import { type SafePolygonOptions, safePolygon } from "./polygon"
 import {
   findDescendantContainingTarget,
