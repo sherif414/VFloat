@@ -16,8 +16,7 @@ Leverage the `tree.applyToNodes` method with the `{ relationship: 'siblings-only
 
 ```vue
 <script setup lang="ts">
-import { useFloatingTree } from "@/composables/use-floating-tree"
-import { offset, flip, shift } from "@floating-ui/dom"
+import { useFloatingTree, offset, flip, shift } from "v-float"
 import { ref } from "vue"
 
 interface MenuItem {
@@ -33,7 +32,8 @@ const isRootOpen = ref(false)
 const rootAnchorEl = ref<HTMLElement | null>(null)
 const rootFloatingEl = ref<HTMLElement | null>(null)
 
-const tree = useFloatingTree(rootAnchorEl, rootFloatingEl, {
+const tree = useFloatingTree()
+const rootNode = tree.addNode(rootAnchorEl, rootFloatingEl, {
   placement: "bottom-start",
   open: isRootOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
@@ -87,8 +87,7 @@ Use `tree.getTopmostOpenNode()` to identify the highest-level open node and clos
 
 ```vue
 <script setup lang="ts">
-import { useFloatingTree } from "@/composables/use-floating-tree"
-import { useEscapeKey } from "@/composables/interactions"
+import { useFloatingTree, useEscapeKey } from "v-float"
 import { ref, onUnmounted } from "vue"
 
 // Setup tree with root menu
@@ -96,7 +95,8 @@ const isMenuOpen = ref(false)
 const menuAnchorEl = ref<HTMLElement | null>(null)
 const menuFloatingEl = ref<HTMLElement | null>(null)
 
-const tree = useFloatingTree(menuAnchorEl, menuFloatingEl, {
+const tree = useFloatingTree()
+const menuNode = tree.addNode(menuAnchorEl, menuFloatingEl, {
   placement: "bottom-start",
   open: isMenuOpen,
   middlewares: [offset(5), flip()],
@@ -106,13 +106,13 @@ const tree = useFloatingTree(menuAnchorEl, menuFloatingEl, {
 const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
   placement: "right-start",
   open: isSubmenuOpen,
-  parentId: tree.root.id,
+  parentId: menuNode?.id,
 })
 
 // Intelligent escape key handling
 useEscapeKey({
   onEscape() {
-    const topmostNode = tree.getTopmostOpenNode()
+    const topmostNode = tree.getDeepestOpenNode()
     if (topmostNode) {
       topmostNode.data.setOpen(false)
     }
@@ -123,7 +123,7 @@ useEscapeKey({
 const handleEscapeKey = (event: KeyboardEvent) => {
   if (event.key === "Escape") {
     const openNodes = tree.getAllOpenNodes()
-    const topmostNode = tree.getTopmostOpenNode()
+    const topmostNode = tree.getDeepestOpenNode()
     
     if (topmostNode) {
       topmostNode.data.setOpen(false)
@@ -153,7 +153,7 @@ Use `tree.applyToNodes` with the `{ relationship: 'self-and-descendants' }` opti
 
 ```vue
 <script setup lang="ts">
-import { useFloatingTree } from "@/composables/use-floating-tree"
+import { useFloatingTree } from "v-float"
 import { ref } from "vue"
 
 // Setup profile popover tree
@@ -161,7 +161,8 @@ const isProfileOpen = ref(false)
 const profileAnchorEl = ref<HTMLElement | null>(null)
 const profileFloatingEl = ref<HTMLElement | null>(null)
 
-const tree = useFloatingTree(profileAnchorEl, profileFloatingEl, {
+const tree = useFloatingTree()
+const rootNode = tree.addNode(profileAnchorEl, profileFloatingEl, {
   placement: "bottom-end",
   open: isProfileOpen,
   middlewares: [offset(8), flip()],
@@ -192,7 +193,7 @@ const logoutNode = tree.addNode(logoutAnchorEl, logoutFloatingEl, {
 const closeProfileBranch = () => {
   // Close the profile popover and all its descendants
   tree.applyToNodes(
-    tree.root.id,
+    rootNode!.id,
     (node) => {
       node.data.setOpen(false)
     },
@@ -219,7 +220,7 @@ const closeSettingsBranch = () => {
   </button>
   
   <!-- Profile popover -->
-  <div v-if="isProfileOpen" ref="profileFloatingEl" :style="tree.rootContext.floatingStyles">
+  <div v-if="isProfileOpen" ref="profileFloatingEl" :style="rootNode!.data.floatingStyles">
     <h3>Profile Menu</h3>
     <button ref="settingsAnchorEl" @click="isSettingsOpen = !isSettingsOpen">
       Settings
@@ -259,8 +260,7 @@ Use `tree.applyToNodes` with `{ relationship: 'all-except-branch' }` to apply th
 
 ```vue
 <script setup lang="ts">
-import { useFloatingTree } from "@/composables/use-floating-tree"
-import { useEscapeKey } from "@/composables/interactions"
+import { useFloatingTree, useEscapeKey } from "v-float"
 import { ref, watchEffect, onUnmounted } from "vue"
 
 // Setup application with multiple floating elements
@@ -268,7 +268,8 @@ const isMenuOpen = ref(false)
 const menuAnchorEl = ref<HTMLElement | null>(null)
 const menuFloatingEl = ref<HTMLElement | null>(null)
 
-const menuTree = useFloatingTree(menuAnchorEl, menuFloatingEl, {
+const menuTree = useFloatingTree()
+const menuRoot = menuTree.addNode(menuAnchorEl, menuFloatingEl, {
   placement: "bottom-start",
   open: isMenuOpen,
 })
@@ -278,7 +279,8 @@ const isModalOpen = ref(false)
 const modalAnchorEl = ref<HTMLElement | null>(null)
 const modalFloatingEl = ref<HTMLElement | null>(null)
 
-const modalTree = useFloatingTree(modalAnchorEl, modalFloatingEl, {
+const modalTree = useFloatingTree()
+const modalRoot = modalTree.addNode(modalAnchorEl, modalFloatingEl, {
   placement: "center",
   open: isModalOpen,
   strategy: "fixed",
@@ -320,7 +322,7 @@ useEscapeKey({
       isModalOpen.value = false
     } else {
       // Handle other floating elements
-      const topmostNode = menuTree.getTopmostOpenNode()
+      const topmostNode = menuTree.getDeepestOpenNode()
       if (topmostNode) {
         topmostNode.data.setOpen(false)
       }
@@ -344,7 +346,7 @@ onUnmounted(() => {
     Open Menu
   </button>
   
-  <div v-if="isMenuOpen" ref="menuFloatingEl" :style="menuTree.rootContext.floatingStyles">
+  <div v-if="isMenuOpen" ref="menuFloatingEl" :style="menuRoot!.data.floatingStyles">
     <div>Regular Menu Content</div>
     <button ref="modalAnchorEl" @click="isModalOpen = true">
       Open Modal
@@ -352,7 +354,7 @@ onUnmounted(() => {
   </div>
   
   <!-- Modal dialog -->
-  <div v-if="isModalOpen" ref="modalFloatingEl" :style="modalTree.rootContext.floatingStyles">
+  <div v-if="isModalOpen" ref="modalFloatingEl" :style="modalRoot!.data.floatingStyles">
     <div class="modal-backdrop">
       <div class="modal-content">
         <h2>Critical Dialog</h2>

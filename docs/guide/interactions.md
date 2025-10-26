@@ -1,5 +1,27 @@
 # Interactions
 
+## Learning Outcomes
+
+- Understand how interaction composables coordinate via `FloatingContext`
+- Compose `useClick`, `useHover`, `useFocus`, and `useEscapeKey`
+- Add outside click and keyboard dismissal safely
+
+## TL;DR (Quick Start)
+
+```vue
+<script setup>
+import { ref } from "vue"
+import { useFloating, useClick, useEscapeKey } from "v-float"
+
+const anchorEl = ref(null)
+const floatingEl = ref(null)
+
+const context = useFloating(anchorEl, floatingEl)
+useClick(context, { outsideClick: true })
+useEscapeKey(context)
+</script>
+```
+
 ## Philosophy & Guiding Principles
 
 Interaction composables are the heart of creating dynamic, user-responsive floating elements. Their design is guided by a few core principles:
@@ -43,6 +65,13 @@ useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 </script>
 ```
 
+## See Also
+
+- [useClick](/api/use-click)
+- [useHover](/api/use-hover)
+- [useFocus](/api/use-focus)
+- [useEscapeKey](/api/use-escape-key)
+
 ## Building a Component: The Dropdown Menu
 
 Instead of looking at each interaction in isolation, let's build a common UI pattern: a fully-featured dropdown menu. This will demonstrate how different composables work together to create a robust user experience. A good dropdown should:
@@ -58,9 +87,7 @@ We can achieve all of this by composing four interactions: `useClick`, `useFocus
 ```vue
 <script setup>
 import { ref } from "vue"
-import { useFloating, autoUpdate, offset } from "v-float"
-// Assume these are imported from your library
-import { useClick, useFocus, useEscapeKey, useRole } from "./composables"
+import { useFloating, offset, useClick, useFocus, useEscapeKey } from "v-float"
 
 // 1. Core Floating UI setup
 const reference = ref(null)
@@ -73,8 +100,8 @@ const { floatingStyles, context } = useFloating(reference, floating, {
     open.value = value
   },
   placement: "bottom-start",
-  whileElementsMounted: autoUpdate,
-  middleware: [offset(5)],
+  autoUpdate: true,
+  middlewares: [offset(5)],
 })
 
 // 2. Composing the Interactions
@@ -89,15 +116,14 @@ useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 // Supports both standalone and tree-aware usage for nested menus.
 useFocus(context)
 
-// Adds the necessary ARIA attributes for a `menu` role.
-useRole(context, { role: "menu" })
+// Add appropriate ARIA attributes in your template as needed
 </script>
 
 <template>
-  <!-- `useRole` adds aria-haspopup, aria-expanded, etc. -->
+  <!-- Add aria-haspopup, aria-expanded, etc. as appropriate -->
   <button ref="reference" type="button">Dropdown</button>
 
-  <!-- `useRole` adds role="menu" and manages focus -->
+  <!-- Manage focus/roles per your accessibility requirements -->
   <div v-if="open" ref="floating" :style="floatingStyles">
     <ul>
       <li><a href="#">Item 1</a></li>
@@ -112,7 +138,7 @@ useRole(context, { role: "menu" })
 - **`useClick(context)`** listens for clicks on the anchor. When a click occurs, it calls `onOpenChange` to toggle the `open` state.
 - **`useEscapeKey(context)`** adds a global listener for the Escape key. When pressed _while the menu is open_, it calls `onOpenChange(false)` to close it.
 - **`useFocus(context)`** listens for focus events on the anchor. When the element is focused (e.g., via the Tab key), it calls `onOpenChange(true)`. This ensures keyboard users can access the menu without a mouse.
-- **`useRole(context)`** enhances accessibility by managing ARIA attributes like `aria-expanded` (which it syncs with the `open` state) and `aria-controls`.
+// Add ARIA attributes in your template to announce menu state and relationships
 
 Notice there are no conflicts. Each composable operates on the same shared `open` state but is triggered by different, non-overlapping events. This is the power of the compositional model.
 
@@ -135,8 +161,7 @@ useFocus(context)
 // Allow closing with the Escape key.
 useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 
-// Apply the `tooltip` role for screen readers.
-useRole(context, { role: 'tooltip' })
+// Add role="tooltip" and related ARIA in the template as needed
 ```
 
 Here, `useHover` and `useFocus` work in tandem. Whichever happens first will open the tooltip. `useEscapeKey` provides a consistent way to close it.
@@ -191,7 +216,7 @@ function showContextMenu(event: MouseEvent) {
 </template>
 ```
 
-The `useClientPoint` composable with `trackingMode: "static"` ensures the menu appears exactly where the user right-clicked and doesn't move with subsequent mouse movements.
+> **Note:** `useClientPoint` is a positioning utility, not an interaction handler. It works alongside `useFloating` to position elements at pointer coordinates. While this example demonstrates its use with interaction composables like `useClick`, `useClientPoint` itself focuses on determining WHERE the floating element should appear. See the [Virtual Elements guide](/guide/virtual-elements) for more details on positioning strategies.
 
 ### Pitfall: Conflicting Triggers (`useClick` vs. `useHover`)
 
@@ -221,9 +246,9 @@ useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 
 In this scenario, `useHover` can only _open_ the popover. Once `open` is `true`, the hover logic is disabled, preventing it from interfering with the clicked-open state.
 
-### Pattern: Choosing the Right Tracking Mode for `useClientPoint`
+### Pattern: Choosing the Right Tracking Mode for Pointer-Based Positioning
 
-The `useClientPoint` composable supports different tracking behaviors depending on your use case:
+When using pointer-based positioning with `useClientPoint`, different tracking behaviors suit different use cases:
 
 - **`"follow"` mode** (default): For tooltips that should track cursor movement
 - **`"static"` mode**: For context menus that appear at click location
@@ -250,7 +275,7 @@ useClientPoint(reference, controlledContext, {
 </script>
 ```
 
-Choosing the appropriate mode ensures the positioning behavior matches user expectations for each interaction pattern.
+Choosing the appropriate mode ensures the positioning behavior matches user expectations for each interaction pattern. For more details on `useClientPoint` and other positioning utilities, see the [Virtual Elements guide](/guide/virtual-elements).
 
 ### Pitfall: Managing Focus
 

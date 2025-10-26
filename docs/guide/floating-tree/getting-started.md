@@ -13,22 +13,22 @@ The new API eliminates redundant `useFloating` calls. Initialize the tree direct
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { useFloatingTree } from "@/composables/use-floating-tree"
-import { offset, flip, shift } from "@floating-ui/dom"
+import { useFloatingTree, offset, flip, shift } from "v-float"
 
 const isOpen = ref(false)
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
-// Create tree with root context automatically
-const tree = useFloatingTree(anchorEl, floatingEl, {
+// Create a tree, then add a root node (creates its FloatingContext internally)
+const tree = useFloatingTree({ deleteStrategy: "recursive" })
+const rootNode = tree.addNode(anchorEl, floatingEl, {
   placement: "bottom-start",
   open: isOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-}, { deleteStrategy: "recursive" })
+})
 
-// Access root floating styles from tree.rootContext
-const { floatingStyles } = tree.rootContext
+// Access root floating styles from the root node's context
+const { floatingStyles } = rootNode!.data
 </script>
 
 <template>
@@ -56,7 +56,7 @@ const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
   placement: "right-start",
   open: isSubmenuOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-  parentId: tree.root.id, // Link to parent using parentId in options
+  parentId: rootNode?.id, // Link to parent using parentId in options
 })
 
 // Access submenu floating styles from the node's data
@@ -85,18 +85,18 @@ The tree works seamlessly with interaction composables:
 
 ```vue
 <script setup lang="ts">
-import { useClick, useEscapeKey } from "@/composables/interactions"
+import { useClick, useEscapeKey } from "v-float"
 
 // ... existing tree setup ...
 
 // Add click interactions
-useClick(tree.root, { outsideClick: true })
+useClick(rootNode!, { outsideClick: true })
 useClick(submenuNode, { outsideClick: true })
 
 // Add escape key handling
 useEscapeKey({
   onEscape() {
-    tree.getTopmostOpenNode()?.data.setOpen(false)
+    tree.getDeepestOpenNode()?.data.setOpen(false)
   },
 })
 </script>
@@ -126,22 +126,21 @@ Here's the full code for a basic parent-child menu setup using the new API:
 ```vue
 <script setup lang="ts">
 import { ref, onUnmounted } from "vue"
-import { useFloatingTree } from "@/composables/use-floating-tree"
-import { useClick, useEscapeKey } from "@/composables/interactions"
-import { offset, flip, shift } from "@floating-ui/dom"
+import { useFloatingTree, useClick, useEscapeKey, offset, flip, shift } from "v-float"
 
 // Root menu setup
 const isOpen = ref(false)
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
-const tree = useFloatingTree(anchorEl, floatingEl, {
+const tree = useFloatingTree({ deleteStrategy: "recursive" })
+const rootNode = tree.addNode(anchorEl, floatingEl, {
   placement: "bottom-start",
   open: isOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-}, { deleteStrategy: "recursive" })
+})
 
-const { floatingStyles } = tree.rootContext
+const { floatingStyles } = rootNode!.data
 
 // Submenu setup
 const isSubmenuOpen = ref(false)
@@ -152,18 +151,18 @@ const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
   placement: "right-start",
   open: isSubmenuOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-  parentId: tree.root.id,
+  parentId: rootNode?.id,
 })
 
 const { floatingStyles: submenuFloatingStyles } = submenuNode.data
 
 // Interactions
-useClick(tree.root, { outsideClick: true })
+useClick(rootNode!, { outsideClick: true })
 useClick(submenuNode, { outsideClick: true })
 
 useEscapeKey({
   onEscape() {
-    tree.getTopmostOpenNode()?.data.setOpen(false)
+    tree.getDeepestOpenNode()?.data.setOpen(false)
   },
 })
 
@@ -216,12 +215,12 @@ const childNode = tree.addNode(childContext, rootContext.nodeId)
 
 **After (New API):**
 ```ts
-// Single call creates tree with root context
-const tree = useFloatingTree(anchorEl, floatingEl, options)
-// addNode creates child context internally
-const childNode = tree.addNode(childAnchorEl, childFloatingEl, { 
+// Create a tree, then add nodes (contexts are created internally)
+const tree = useFloatingTree()
+const rootNode = tree.addNode(anchorEl, floatingEl, options)
+const childNode = tree.addNode(childAnchorEl, childFloatingEl, {
   ...childOptions,
-  parentId: tree.root.id 
+  parentId: rootNode?.id,
 })
 ```
 

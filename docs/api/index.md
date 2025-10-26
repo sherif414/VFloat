@@ -8,12 +8,15 @@
  - [`useFloatingTree`](./use-floating-tree.md) - Tree-aware floating element management
  - [`useArrow`](./use-arrow.md) - Arrow positioning for floating elements
  
+ ## Positioning Utilities
+ 
+ - [`useClientPoint`](./use-client-point.md) - Pointer-based positioning with multiple tracking modes
+ 
  ## Interaction Composables
  
  - [`useClick`](./use-click.md) - Click interaction handling
  - [`useHover`](./use-hover.md) - Hover interaction with safe polygon support
  - [`useFocus`](./use-focus.md) - Focus interaction handling
- - [`useClientPoint`](./use-client-point.md) - Pointer-based positioning with multiple tracking modes
  - [`useEscapeKey`](./use-escape-key.md) - Escape key handling
  
  ## Middleware

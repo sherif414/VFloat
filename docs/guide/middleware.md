@@ -151,7 +151,7 @@ import { useFloating, offset, flip, shift, arrow } from "v-float";
 const arrowRef = ref(null);
 
 const { x, y, strategy, middlewareData } = useFloating(reference, floating, {
-  middleware: [
+  middlewares: [
     offset(10),
     flip(),
     shift({ padding: 5 }),
@@ -200,13 +200,13 @@ import { ref, computed } from "vue";
 import { useFloating, offset } from "v-float";
 
 const distance = ref(8);
-const middleware = computed(() => [
+const middlewares = computed(() => [
   offset(distance.value),
   // Other middleware...
 ]);
 
 const floating = useFloating(reference, floating, {
-  middleware,
+  middlewares,
 });
 
 // Later, you can change the distance and the positioning will update
@@ -216,3 +216,14 @@ function increaseOffset() {
 ```
 
 This makes your floating UI elements highly adaptable to changing application state.
+
+## See Also
+
+- [useFloating](/api/use-floating)
+- [offset](/api/offset)
+- [flip](/api/flip)
+- [shift](/api/shift)
+- [arrow](/api/arrow)
+- [size](/api/size)
+- [autoplacement](/api/autoplacement)
+- [hide](/api/hide)

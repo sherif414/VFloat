@@ -15,7 +15,7 @@ function useEscapeKey(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext | TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
+| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
 | options | `UseEscapeKeyOptions` | No | Configuration options. |
 
 ## Options

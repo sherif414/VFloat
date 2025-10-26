@@ -137,7 +137,7 @@ const context = useFloating(anchorEl, floatingEl, {
 useHover(context, { delay: { open: 100, close: 300 } })
 useClick(context, { outsideClick: true })
 useFocus(context)
-useEscapeKey({
+useEscapeKey(context, {
   onEscape: () => context.setOpen(false),
 })
 </script>
@@ -172,85 +172,6 @@ useEscapeKey({
 })
 ```
 
-## Clear Separation of Concerns
-
-V-Float provides a clear architectural separation between standalone floating elements and hierarchical tree structures:
-
-### Standalone Floating Elements
-
-Use `useFloating` for isolated floating elements that don't require hierarchical management:
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating, useHover } from "v-float"
-
-// Standalone tooltip
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-
-const context = useFloating(anchorEl, floatingEl, {
-  placement: "top",
-  open: isOpen,
-})
-
-// Add interactions
-useHover(context, { delay: 200 })
-</script>
-
-<template>
-  <button ref="anchorEl">Hover for tooltip</button>
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
-    Standalone tooltip
-  </div>
-</template>
-```
-
-### Hierarchical Tree Structures
-
-Use `useFloatingTree` for building hierarchical floating structures like nested menus:
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloatingTree } from "v-float"
-
-// Root menu with tree management
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-const isOpen = ref(false)
-
-const tree = useFloatingTree(anchorEl, floatingEl, {
-  placement: "bottom-start",
-  open: isOpen,
-})
-
-// Add submenu as child node
-const submenuAnchorEl = ref(null)
-const submenuFloatingEl = ref(null)
-const isSubmenuOpen = ref(false)
-
-const submenuNode = tree.addNode(submenuAnchorEl, submenuFloatingEl, {
-  placement: "right-start",
-  open: isSubmenuOpen,
-  parentId: tree.root.id, // Links to parent in hierarchy
-})
-</script>
-```
-
-### When to Use Which
-
-| Use Case | API Choice | Reason |
-|----------|------------|---------|
-| Simple tooltip | `useFloating` | Isolated, no hierarchy needed |
-| Standalone modal | `useFloating` | Independent floating element |
-| Single dropdown | `useFloating` | No nested children |
-| Nested menus | `useFloatingTree` | Requires hierarchical management |
-| Submenus | `tree.addNode` | Part of a tree structure |
-| Complex UI with relationships | `useFloatingTree` | Benefits from tree coordination |
-
-This separation ensures your code remains clean and uses the appropriate level of complexity for each use case.
-
 ## Composition Pattern
 
 V-Float follows Vue's composition pattern, allowing you to compose complex behaviors from simple primitives:
@@ -260,3 +181,11 @@ V-Float follows Vue's composition pattern, allowing you to compose complex behav
 3. Manage the visibility state with Vue's reactivity system
 
 This approach provides flexibility and allows you to build exactly what you need.
+
+## See Also
+
+- [useFloating](/api/use-floating)
+- [useHover](/api/use-hover)
+- [useClick](/api/use-click)
+- [useFocus](/api/use-focus)
+- [useEscapeKey](/api/use-escape-key)

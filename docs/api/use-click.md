@@ -15,7 +15,7 @@ function useClick(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext | TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
+| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
 | options | `UseClickOptions` | No | Configuration options. |
 
 ## Options
@@ -40,13 +40,13 @@ interface UseClickOptions {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | enabled | `MaybeRefOrGetter<boolean>` | `true` | Enable/disable click interaction. |
-| event | `MaybeRefOrGetter<'click' | 'mousedown'>` | `'click'` | Inside click trigger event. |
+| event | `MaybeRefOrGetter<'click' \| 'mousedown'>` | `'click'` | Inside click trigger event. |
 | toggle | `MaybeRefOrGetter<boolean>` | `true` | Toggle open state on reference click. |
 | ignoreMouse | `MaybeRefOrGetter<boolean>` | `false` | Ignore mouse events. |
 | ignoreKeyboard | `MaybeRefOrGetter<boolean>` | `false` | Ignore Enter/Space keyboard activation. |
 | ignoreTouch | `MaybeRefOrGetter<boolean>` | `false` | Ignore touch events. |
 | outsideClick | `MaybeRefOrGetter<boolean>` | `false` | Enable outside-click dismissal. |
-| outsideEvent | `MaybeRefOrGetter<'pointerdown' | 'mousedown' | 'click'>` | `'pointerdown'` | Event used for outside detection. |
+| outsideEvent | `MaybeRefOrGetter<'pointerdown' \| 'mousedown' \| 'click'>` | `'pointerdown'` | Event used for outside detection. |
 | outsideCapture | `MaybeRefOrGetter<boolean>` | `true` | Use capture phase for outside listener. |
 | onOutsideClick | `(event, context) => void` | `undefined` | Custom outside-click handler. |
 | preventScrollbarClick | `MaybeRefOrGetter<boolean>` | `true` | Ignore scrollbar clicks. |

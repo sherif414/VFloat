@@ -15,7 +15,7 @@ function useFocus(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext | TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
+| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
 | options | `UseFocusOptions` | No | Configuration options. |
 
 ## Options

@@ -16,7 +16,7 @@ function useClientPoint(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| pointerTarget | `Ref<HTMLElement | null>` | Yes | Element whose pointer events are tracked. `null` disables tracking. |
+| pointerTarget | `Ref<HTMLElement \| null>` | Yes | Element whose pointer events are tracked. `null` disables tracking. |
 | context | `UseClientPointContext` | Yes | Floating context created by `useFloating`. Updates its `refs.anchorEl` to a virtual element. |
 | options | `UseClientPointOptions` | No | Configuration options. |
 
@@ -35,10 +35,10 @@ interface UseClientPointOptions {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | enabled | `MaybeRefOrGetter<boolean>` | `true` | Enable/disable pointer tracking. |
-| axis | `MaybeRefOrGetter<'x' | 'y' | 'both'>` | `'both'` | Constrain movement to an axis. |
-| trackingMode | `'follow' | 'static'` | `'follow'` | Follow pointer continuously or keep initial point. |
-| x | `MaybeRefOrGetter<number | null>` | `null` | External X coordinate for controlled mode. |
-| y | `MaybeRefOrGetter<number | null>` | `null` | External Y coordinate for controlled mode. |
+| axis | `MaybeRefOrGetter<'x' \| 'y' \| 'both'>` | `'both'` | Constrain movement to an axis. |
+| trackingMode | `'follow' \| 'static'` | `'follow'` | Follow pointer continuously or keep initial point. |
+| x | `MaybeRefOrGetter<number \| null>` | `null` | External X coordinate for controlled mode. |
+| y | `MaybeRefOrGetter<number \| null>` | `null` | External Y coordinate for controlled mode. |
 
 ## Return Value
 
@@ -51,7 +51,7 @@ interface UseClientPointReturn {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| coordinates | `Readonly<Ref<{ x: number | null; y: number | null }>>` | Current pointer/controlled coordinates. |
+| coordinates | `Readonly<Ref<{ x: number \| null; y: number \| null }>>` | Current pointer/controlled coordinates. |
 | updatePosition | `(x: number, y: number) => void` | Programmatically update position (used in controlled mode). |
 
 ## Examples
@@ -93,5 +93,12 @@ useClientPoint(area, ctx, { x, y })
 
 ## See Also
 
-- [useFloating](/api/use-floating)
-- [useHover](/api/use-hover)
+### Related Positioning Utilities
+
+- [useFloating](/api/use-floating) - Core positioning composable that works with `useClientPoint`
+- [useArrow](/api/use-arrow) - Arrow positioning for floating elements
+
+### Guides
+
+- [Virtual Elements](/guide/virtual-elements) - Learn about pointer-based positioning strategies
+- [Positioning](/guide/positioning) - Comprehensive guide to positioning floating elements
