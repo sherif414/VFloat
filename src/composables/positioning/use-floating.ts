@@ -9,7 +9,7 @@ import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-u
 import type { MaybeRefOrGetter, Ref } from "vue"
 import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
 import type { OpenChangeReason, VirtualElement } from "@/types"
-import { arrow } from "./middlewares/arrow"
+import { arrow } from "../middlewares"
 
 //=======================================================================================
 // 📌 Types & Interfaces

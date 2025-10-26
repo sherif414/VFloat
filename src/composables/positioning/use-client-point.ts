@@ -17,8 +17,8 @@ import {
   watchEffect,
 } from "vue"
 import type { VirtualElement } from "@/types"
-import type { AnchorElement } from "./use-floating"
 import { isMouseLikePointerType } from "@/utils"
+import type { AnchorElement } from "./use-floating"
 
 //=======================================================================================
 // 📌 Types
