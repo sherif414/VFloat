@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress"
 import { demoMdPlugin } from "vitepress-plugin-demo"
 
 export default defineConfig({
-  head: [["meta", { name: "algolia-site-verification", content: "3A8199582DC4CB2E" }]],
+  head: [],
   vite: {
     build: {
       sourcemap: true,
@@ -21,10 +21,8 @@ export default defineConfig({
   title: "V-Float",
   description: "A library for positioning floating elements",
   themeConfig: {
-    algolia: {
-      appId: "YOUR_ALGOLIA_APP_ID",
-      apiKey: "YOUR_ALGOLIA_API_KEY",
-      indexName: "YOUR_ALGOLIA_INDEX_NAME",
+    search: {
+      provider: "local",
     },
     nav: [
       { text: "Home", link: "/" },
