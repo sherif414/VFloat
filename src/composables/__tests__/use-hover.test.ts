@@ -30,13 +30,15 @@ describe("useHover", () => {
   let scope: ReturnType<typeof effectScope>
 
   // Helper to initialize useHover and wait for effects
-  const initHover = (options?: UseHoverOptions) => {
+  const initHover = async (options?: UseHoverOptions) => {
     // Create a proper effect scope for Vue composables
     scope = effectScope()
     scope.run(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       useHover(context as any, options)
     })
+    // Wait for watchPostEffect to set up event listeners
+    await nextTick()
+    await nextTick()
   }
 
   beforeEach(async () => {
@@ -73,7 +75,7 @@ describe("useHover", () => {
       setOpen: (v) => {
         context.open.value = v
       },
-      update: () => {},
+      update: () => { },
       floatingStyles: computed<FloatingStyles>(() => ({
         position: "absolute" as Strategy,
         top: "0px",
@@ -115,42 +117,44 @@ describe("useHover", () => {
   // --- Core Functionality ---
   describe("Core Functionality", () => {
     it("should open when pointer enters reference element", async () => {
-      initHover()
-      await userEvent.hover(referenceEl)
+      await initHover()
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
     })
 
     it("should close when pointer leaves reference element (and floating is closed)", async () => {
-      initHover()
-      await userEvent.hover(referenceEl)
+      await initHover()
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       await nextTick()
 
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       expect(context.open.value).toBe(false)
     })
 
     it("should not close immediately if pointer moves from reference to floating element (default behavior)", async () => {
-      initHover({ delay: 10 })
+      await initHover({ delay: 10 })
 
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       vi.runAllTimers()
       await nextTick()
       expect(context.open.value).toBe(true)
 
-      await userEvent.unhover(referenceEl)
-      await userEvent.hover(floatingEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: floatingEl }))
+      floatingEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
 
       vi.runAllTimers()
 
       expect(context.open.value).toBe(true)
 
-      await userEvent.unhover(floatingEl)
+      floatingEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
       vi.runAllTimers()
       expect(context.open.value).toBe(false)
     })
 
     it("should attach/reattach listeners when element refs change", async () => {
-      initHover()
+      await initHover()
 
       // Detach original element
       const oldRef = referenceEl
@@ -158,7 +162,8 @@ describe("useHover", () => {
       await nextTick()
 
       // Hovering old ref should do nothing now
-      await userEvent.hover(oldRef)
+      oldRef.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(false)
 
       // Create and attach new element
@@ -170,7 +175,8 @@ describe("useHover", () => {
       await nextTick()
 
       // Hovering new ref should work
-      await userEvent.hover(newRef)
+      newRef.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
 
       // Cleanup new element
@@ -179,10 +185,11 @@ describe("useHover", () => {
 
     it("should disable the functionality when `enabled` becomes false", async () => {
       const enabled = ref(true)
-      initHover({ enabled })
+      await initHover({ enabled })
 
       // Check it works initially
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
 
       // Disable
@@ -194,21 +201,24 @@ describe("useHover", () => {
       await nextTick()
 
       // Try hovering again
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       vi.runAllTimers()
+      await nextTick()
       expect(context.open.value).toBe(false)
 
       // Try unhovering
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
       vi.runAllTimers()
+      await nextTick()
       expect(context.open.value).toBe(false)
     })
   })
 
   describe("Delay configuration", () => {
     it("should respect `delay.open` (object notation)", async () => {
-      initHover({ delay: { open: 100 } })
-      await userEvent.hover(referenceEl)
+      await initHover({ delay: { open: 100 } })
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
 
       expect(context.open.value).toBe(false)
       vi.advanceTimersByTime(99)
@@ -218,11 +228,13 @@ describe("useHover", () => {
     })
 
     it("should respect `delay.close` (object notation)", async () => {
-      initHover({ delay: { close: 100 } })
-      await userEvent.hover(referenceEl)
+      await initHover({ delay: { close: 100 } })
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
 
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       expect(context.open.value).toBe(true)
       vi.advanceTimersByTime(99)
       expect(context.open.value).toBe(true)
@@ -231,10 +243,11 @@ describe("useHover", () => {
     })
 
     it("should respect `delay` (number notation)", async () => {
-      initHover({ delay: 150 })
+      await initHover({ delay: 150 })
 
       // Test open delay
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(false)
       vi.advanceTimersByTime(149)
       expect(context.open.value).toBe(false)
@@ -242,7 +255,8 @@ describe("useHover", () => {
       expect(context.open.value).toBe(true)
 
       // Test close delay
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       expect(context.open.value).toBe(true)
       vi.advanceTimersByTime(149)
       expect(context.open.value).toBe(true)
@@ -253,10 +267,11 @@ describe("useHover", () => {
 
   describe("Rest period (`restMs`)", () => {
     it("should wait for `restMs` before opening if pointer rests", async () => {
-      initHover({ restMs: 50 })
+      await initHover({ restMs: 50 })
 
       // Initial hover shouldn't open immediately
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse", clientX: 10, clientY: 10 }))
+      await nextTick()
       expect(context.open.value).toBe(false)
 
       // Simulate pointer resting by advancing time without moving
@@ -268,7 +283,7 @@ describe("useHover", () => {
 
     it.skip("should NOT open if pointer moves significantly before `restMs` expires", async () => {
       // TODO: This test needs investigation - the timer reset logic may not work as expected
-      initHover({ restMs: 50 })
+      await initHover({ restMs: 50 })
 
       const pointerEnterEvent = new PointerEvent("pointerenter", {
         bubbles: true,
@@ -312,20 +327,23 @@ describe("useHover", () => {
     })
 
     it("should cancel rest period timer if pointer leaves before `restMs` expires", async () => {
-      initHover({ restMs: 50 })
-      await userEvent.hover(referenceEl)
+      await initHover({ restMs: 50 })
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse", clientX: 10, clientY: 10 }))
+      await nextTick()
       expect(context.open.value).toBe(false)
 
       vi.advanceTimersByTime(30)
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
 
       vi.advanceTimersByTime(100)
       expect(context.open.value).toBe(false)
     })
 
     it("should ignore `restMs` if `delay.open` is greater than 0", async () => {
-      initHover({ delay: { open: 100 }, restMs: 50 })
-      await userEvent.hover(referenceEl)
+      await initHover({ delay: { open: 100 }, restMs: 50 })
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
 
       expect(context.open.value).toBe(false)
 
@@ -339,7 +357,7 @@ describe("useHover", () => {
 
   describe("Mouse-only mode (`mouseOnly`)", () => {
     it("should ignore non-mouse pointer types when `mouseOnly` is true", async () => {
-      initHover({ mouseOnly: true })
+      await initHover({ mouseOnly: true })
 
       const touchEnterEvent = new PointerEvent("pointerenter", {
         bubbles: true,
@@ -408,26 +426,30 @@ describe("useHover", () => {
 
   describe("Edge Case Handling", () => {
     it("should cancel pending open delay if pointer leaves reference", async () => {
-      initHover({ delay: { open: 100 } })
-      await userEvent.hover(referenceEl)
+      await initHover({ delay: { open: 100 } })
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       vi.advanceTimersByTime(50)
       expect(context.open.value).toBe(false)
 
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       vi.runAllTimers()
       expect(context.open.value).toBe(false)
     })
 
     it("should cancel pending close delay if pointer re-enters reference", async () => {
-      initHover({ delay: { close: 100 } })
-      await userEvent.hover(referenceEl)
+      await initHover({ delay: { close: 100 } })
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
 
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       vi.advanceTimersByTime(50)
       expect(context.open.value).toBe(true)
 
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       await nextTick()
       expect(context.open.value).toBe(true)
 
@@ -436,17 +458,20 @@ describe("useHover", () => {
     })
 
     it("should close (respecting delay) if pointer leaves floating element (when not moving back to ref)", async () => {
-      initHover({ delay: { close: 100 } })
+      await initHover({ delay: { close: 100 } })
 
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
-      await userEvent.unhover(referenceEl)
-      await userEvent.hover(floatingEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: floatingEl }))
+      floatingEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
 
       vi.advanceTimersByTime(150)
       expect(context.open.value).toBe(true)
 
-      await userEvent.unhover(floatingEl)
+      floatingEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       expect(context.open.value).toBe(true)
       vi.advanceTimersByTime(99)
       expect(context.open.value).toBe(true)
@@ -455,7 +480,7 @@ describe("useHover", () => {
     })
 
     it("should react to external state changes", async () => {
-      initHover()
+      await initHover()
 
       // External open
       context.setOpen(true)
@@ -464,7 +489,8 @@ describe("useHover", () => {
 
       // Hover while already open - should stay open
       const initialValue = context.open.value
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(initialValue)
 
       // External close
@@ -473,16 +499,17 @@ describe("useHover", () => {
       expect(context.open.value).toBe(false)
 
       // Unhover while already closed - should stay closed
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
+      await nextTick()
       expect(context.open.value).toBe(false)
     })
   })
 
   describe("safePolygon behavior", () => {
     it("keeps open when leaving reference towards floating with safePolygon enabled", async () => {
-      initHover({ safePolygon: true })
+      await initHover({ safePolygon: true })
 
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       vi.runAllTimers()
       await nextTick()
       expect(context.open.value).toBe(true)
@@ -498,14 +525,17 @@ describe("useHover", () => {
       })
       referenceEl.dispatchEvent(leaveEvt)
 
-      await userEvent.hover(floatingEl)
+      floatingEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       vi.runAllTimers()
       await nextTick()
 
       expect(context.open.value).toBe(true)
 
-      await userEvent.unhover(floatingEl)
-      vi.advanceTimersByTime(1)
+      floatingEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body, clientX: 0, clientY: 0 }))
+      // Dispatch a pointermove event outside the polygon to trigger close
+      document.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse", clientX: 0, clientY: 0 }))
+      vi.runAllTimers()
+      await nextTick()
       expect(context.open.value).toBe(false)
     })
   })
@@ -558,7 +588,7 @@ describe("useHover", () => {
         isPositioned: ref(true),
         open: parentOpen,
         setOpen: parentSetOpen,
-        update: () => {},
+        update: () => { },
         floatingStyles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
       }
       const childCtx = {
@@ -572,7 +602,7 @@ describe("useHover", () => {
         isPositioned: ref(true),
         open: childOpen,
         setOpen: vi.fn(),
-        update: () => {},
+        update: () => { },
         floatingStyles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
       }
 
@@ -628,10 +658,11 @@ describe("useHover", () => {
 
   describe("Cleanup", () => {
     it("should remove event listeners on cleanup (simulated unmount)", async () => {
-      initHover()
+      await initHover()
 
       // Verify it works initially
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      await nextTick()
       expect(context.open.value).toBe(true)
 
       // Stop the effect to simulate unmount and trigger cleanup
@@ -642,20 +673,24 @@ describe("useHover", () => {
       context.open.value = false
 
       // Try interacting again - listeners should be gone
-      await userEvent.hover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
       vi.runAllTimers()
+      await nextTick()
       expect(context.open.value).toBe(false)
 
-      await userEvent.unhover(referenceEl)
+      referenceEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
       vi.runAllTimers()
+      await nextTick()
       expect(context.open.value).toBe(false)
 
       // Also check floating element interaction is gone
       context.open.value = true
-      await userEvent.hover(floatingEl)
-      await userEvent.unhover(floatingEl)
+      floatingEl.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }))
+      floatingEl.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse", relatedTarget: document.body }))
       vi.runAllTimers()
+      await nextTick()
       expect(context.open.value).toBe(true) // Should stay true since no listeners
     })
   })
 })
+

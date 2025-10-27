@@ -1,9 +1,23 @@
 import type { Middleware, Placement } from "@floating-ui/dom"
-import { waitFor } from "@testing-library/vue"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { nextTick, ref } from "vue"
 import type { AnchorElement, FloatingElement, UseFloatingOptions } from "@/composables/positioning"
 import { useFloating } from "@/composables/positioning"
+
+// Simple waitFor utility
+async function waitFor(callback: () => boolean | void, options = { timeout: 1000, interval: 50 }) {
+  const startTime = Date.now()
+  while (Date.now() - startTime < options.timeout) {
+    try {
+      const result = callback()
+      if (result !== false) return
+    } catch (e) {
+      // Continue waiting
+    }
+    await new Promise(resolve => setTimeout(resolve, options.interval))
+  }
+  throw new Error('waitFor timeout exceeded')
+}
 
 // Mock DOM elements
 const createMockElement = (tagName = "div", attributes = {}) => {

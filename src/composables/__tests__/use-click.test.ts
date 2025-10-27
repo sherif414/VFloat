@@ -66,14 +66,17 @@ describe("useClick", () => {
   describe("basic toggle behavior", () => {
     it("toggles open state on click", async () => {
       initClick({ toggle: true })
+      await nextTick()
       expect(context.open.value).toBe(false)
 
       await userEvent.click(referenceEl)
+      await nextTick()
       expect(setOpenMock).toHaveBeenCalledTimes(1)
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
       expect(context.open.value).toBe(true)
 
       await userEvent.click(referenceEl)
+      await nextTick()
       expect(setOpenMock).toHaveBeenCalledTimes(2)
       expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object))
       expect(context.open.value).toBe(false)
