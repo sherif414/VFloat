@@ -7,7 +7,7 @@
   },
   "npm": {
     "publish": true,
-    "publishPath": "./dist"
+    "publishPath": "."
   },
   "hooks": {
     "before:init": ["git pull"],
