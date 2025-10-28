@@ -15,13 +15,13 @@
 
         <div class="hero-actions">
           <a href="/guide/" class="action-button primary"> Get Started </a>
-          <a href="/examples/" class="action-button secondary"> Browse Examples </a>
+          <a href="/api/" class="action-button secondary"> API Reference </a>
         </div>
       </div>
     </div>
 
     <!-- Interactive Demo Section -->
-    <div class="demo-section">
+    <div v-if="isDesktop" class="demo-section">
       <div class="demo-tabs">
         <button
           v-for="demo in demos"
@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { onBeforeUnmount, onMounted, ref } from "vue"
 import TooltipDemo from "./demos/TooltipDemo.vue"
 import DropdownDemo from "./demos/DropdownDemo.vue"
 import PopoverDemo from "./demos/PopoverDemo.vue"
@@ -89,6 +89,41 @@ const demos = [
 ]
 
 const activeDemo = ref(demos[0].id)
+const isDesktop = ref(false)
+
+let cleanupMediaListener: (() => void) | undefined
+
+const desktopQuery = "(min-width: 768px)"
+
+onMounted(() => {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  const mediaQueryList = window.matchMedia(desktopQuery)
+
+  const setMatchState = (matches: boolean) => {
+    isDesktop.value = matches
+  }
+
+  const handleChange = (event: MediaQueryListEvent) => {
+    setMatchState(event.matches)
+  }
+
+  setMatchState(mediaQueryList.matches)
+
+  if (typeof mediaQueryList.addEventListener === "function") {
+    mediaQueryList.addEventListener("change", handleChange)
+    cleanupMediaListener = () => mediaQueryList.removeEventListener("change", handleChange)
+  } else {
+    mediaQueryList.addListener(handleChange)
+    cleanupMediaListener = () => mediaQueryList.removeListener(handleChange)
+  }
+})
+
+onBeforeUnmount(() => {
+  cleanupMediaListener?.()
+})
 </script>
 
 <style scoped>
