@@ -5,7 +5,7 @@
 > Work in progress: This library is under active development. APIs may change without notice and breaking changes can land without deprecation windows or warnings. Not recommended for production use yet.
 
 A Vue 3 library for positioning floating UI elements like tooltips, popovers, dropdowns, and modals. Built on top
-of [VFloat](https://vfloat.pages.com/) with Vue 3 Composition API.
+of [@floating-ui/core](https://floating-ui.com/) with Vue 3 Composition API.
 
 ## Features
 
