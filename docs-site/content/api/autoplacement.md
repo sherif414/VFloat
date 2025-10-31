@@ -45,7 +45,7 @@ interface AutoPlacementOptions {
 import { useFloating, autoPlacement } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [autoPlacement()]
+  middlewares: [autoPlacement()]
 })
 </script>
 ```
@@ -57,7 +57,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, autoPlacement } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     autoPlacement({
       allowedPlacements: ['top', 'bottom']
     })
@@ -73,7 +73,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, autoPlacement } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     autoPlacement({
       alignment: 'start',
       crossAxis: true

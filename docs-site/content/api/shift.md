@@ -46,7 +46,7 @@ interface ShiftOptions {
 import { useFloating, shift } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [shift()]
+  middlewares: [shift()]
 })
 </script>
 ```
@@ -58,7 +58,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, shift } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     shift({ padding: 8 })
   ]
 })
@@ -72,7 +72,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, shift } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     shift({ 
       mainAxis: true,
       crossAxis: true 

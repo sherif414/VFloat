@@ -39,7 +39,7 @@ interface FlipOptions {
 import { useFloating, flip } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [flip()]
+  middlewares: [flip()]
 })
 </script>
 ```
@@ -51,7 +51,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, flip } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     flip({
       fallbackPlacements: ['top', 'right', 'bottom']
     })

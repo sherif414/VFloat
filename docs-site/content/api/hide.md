@@ -56,7 +56,7 @@ import { computed } from 'vue'
 import { useFloating, hide } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [hide()]
+  middlewares: [hide()]
 })
 
 const visibility = computed(() => {
@@ -79,7 +79,7 @@ const visibility = computed(() => {
 import { useFloating, hide } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     hide({ strategy: 'escaped' })
   ]
 })

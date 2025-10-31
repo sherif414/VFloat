@@ -54,7 +54,7 @@ interface OffsetFunctionArgs {
 import { useFloating, offset } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [offset(10)]
+  middlewares: [offset(10)]
 })
 </script>
 ```
@@ -66,7 +66,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, offset } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     offset({ 
       mainAxis: 8,
       crossAxis: 4
@@ -84,7 +84,7 @@ import { useFloating, offset } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: 'top-start',
-  middleware: [
+  middlewares: [
     offset({ 
       mainAxis: 8,
       alignmentAxis: 12
@@ -101,7 +101,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, offset } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     offset(({ placement, rects }) => {
       if (placement.startsWith('top')) {
         return 8

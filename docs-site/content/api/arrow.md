@@ -54,7 +54,7 @@ const floatingEl = ref(null)
 const arrowEl = ref(null)
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     offset(8),
     arrow({ element: arrowEl })
   ]
@@ -86,7 +86,7 @@ const arrowStyles = computed(() => {
 import { useFloating, arrow } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     arrow({ 
       element: arrowEl,
       padding: 8

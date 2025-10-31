@@ -48,7 +48,7 @@ interface SizeState extends MiddlewareState {
 import { useFloating, size } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     size({
       apply({ availableWidth, availableHeight, elements }) {
         Object.assign(elements.floating.style, {
@@ -69,7 +69,7 @@ const context = useFloating(anchorEl, floatingEl, {
 import { useFloating, size } from 'v-float'
 
 const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
+  middlewares: [
     size({
       apply({ rects, elements }) {
         Object.assign(elements.floating.style, {
