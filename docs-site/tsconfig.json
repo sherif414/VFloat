@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "v-float": ["../src"],
+      "v-float/*": ["../src/*"]
+    },
+    "types": ["nuxt", "node"],
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "module": "ESNext",
+    "jsx": "preserve",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "skipLibCheck": true
+  }
+}

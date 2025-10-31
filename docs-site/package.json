@@ -1,0 +1,13 @@
+{
+  "name": "vfloat-docs",
+  "private": true,
+  "scripts": {
+    "dev": "npx nuxi dev",
+    "build": "npx nuxi build",
+    "preview": "npx nuxi preview"
+  },
+  "dependencies": {
+    "docus": "latest",
+    "nuxt": "^3.12.0"
+  }
+}
