@@ -39,3 +39,22 @@ docs/.vitepress/cache
 .npmrc
 
 src/**/__tests__/__screenshots__/
+
+# Nuxt
+.nuxt
+.output
+
+# Docs site
+docs-site/.nuxt
+docs-site/.output
+docs-site/dist
+docs-site/.env.local
+
+# Build cache
+.wrangler/tmp
+
+# AI
+openspec/changes
+openspec/specs
+
+.trae/documents
