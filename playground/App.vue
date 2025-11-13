@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // import Tooltip from "./demo/Tooltip.vue";
-import ArrowDemo from "./demo/ArrowDemo.vue"
+// import ArrowDemo from "./demo/ArrowDemo.vue"
 // import MenuDemo from "./demo/MenuDemo.vue"
 // import ArrowAutoDemo from "./demo/ArrowAutoDemo.vue"
 // import ClientPointAxisDemo from "./demo/ClientPointAxisDemo.vue"
@@ -10,8 +10,9 @@ import ArrowDemo from "./demo/ArrowDemo.vue"
 // import DemoContainer from "./demo/DemoContainer.vue"
 // import { VuePlugin } from "@21st-extension/vue"
 // import Temp from "./demo/Temp.vue"
+import ListNavigationDemo from "./demo/ListNavigationDemo.vue"
 </script>
 
 <template>
-  <ArrowDemo />
+  <ListNavigationDemo />
 </template>
