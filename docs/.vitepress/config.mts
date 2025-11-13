@@ -48,6 +48,7 @@ export default defineConfig({
               ],
             },
             { text: "Interactions", link: "/guide/interactions" },
+            { text: "Keyboard List Navigation", link: "/guide/list-navigation" },
           ],
         },
         {
@@ -79,6 +80,7 @@ export default defineConfig({
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useClientPoint", link: "/api/use-client-point" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
+            { text: "useListNavigation", link: "/api/use-list-navigation" },
           ],
         },
         {
