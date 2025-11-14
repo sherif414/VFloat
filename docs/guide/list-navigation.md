@@ -49,6 +49,21 @@ useListNavigation(ctx, {
 </template>
 ```
 
+## Choosing a Focus Strategy
+
+`useListNavigation` supports two accessibility patterns that serve different widget needs:
+
+| Strategy | When to use | Key traits |
+| --- | --- | --- |
+| **DOM focus (roving tabindex)** | Default for menus, listboxes, navigation grids, or anytime each item should be a real focus target. | Moves actual DOM focus to each item via `element.focus()`, keeps browser focus rings and works reliably across assistive tech. Requires updating tabindex (`0` for active, `-1` for others). |
+| **Virtual focus (`aria-activedescendant`)** | Use when the anchor (often an `<input>` or combobox trigger) must keep DOM focus so typing, caret position, or IME usage is uninterrupted. | Only the anchor is tabbable; keyboard events update `aria-activedescendant` to point at the active option. Each option needs a stable `id`, and focus rings stay on the anchor. |
+
+Practical guidance:
+
+1. Start with DOM focus for most floating menus and selects—users can Tab into the list and arrows move real focus between options.
+2. Switch to virtual focus only when the anchor must stay focused (combobox/autocomplete, `contenteditable`, inputs with validation). Enable it with `virtual: true` (plus `virtualItemRef` if you need the active DOM node).
+3. Document which pattern your component relies on so nested composables remain consistent (e.g., a combobox might mix virtual focus on the input with DOM focus inside submenus).
+
 ## Step-by-Step
 
 ### 1) Positioning and Refs
