@@ -13,23 +13,34 @@ const isOpen = ref(false)
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
-// 1. Direct tree creation with new API - no separate useFloating call needed
-const tree = useFloatingTree(anchorEl, floatingEl, {
+const tree = useFloatingTree({ deleteStrategy: "recursive" })
+
+const rootNode = tree.addNode(anchorEl, floatingEl, {
   placement: "bottom-start",
   open: isOpen,
   middlewares: [offset(5), flip(), shift({ padding: 5 })],
-}, { deleteStrategy: "recursive" })
+})!
 
 // Provide tree reference for child components (instead of separate context)
 provide<UseFloatingTreeReturn>("floatingTree", tree)
-provide<string>("currentMenuId", tree.root.id) // Root menu ID
+provide<string>("currentMenuId", rootNode.id) // Root menu ID
 
-useEscapeKey({
-  onEscape() {
-    tree.getDeepestOpenNode()?.data.setOpen(false)
+useEscapeKey(rootNode, {
+  onEscape(event) {
+    const deepest = tree.getDeepestOpenNode()
+    if (!deepest) return
+
+    deepest.data.setOpen(false, "escape-key", event)
+    const anchor = deepest.data.refs.anchorEl.value
+    if (anchor instanceof HTMLElement) {
+      anchor.focus({ preventScroll: true })
+    } else if ((anchor as any)?.contextElement instanceof HTMLElement) {
+      ;(anchor as any).contextElement.focus({ preventScroll: true })
+    }
   },
 })
-useClick(tree.root, { outsideClick: true })
+
+useClick(rootNode, { outsideClick: true })
 
 onUnmounted(() => {
   tree.dispose()

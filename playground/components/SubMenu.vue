@@ -40,7 +40,13 @@ onUnmounted(() => {
 // Provide context for nested submenus/items
 provide("currentMenuId", node.id) // This submenu is now the current menu for its children
 
-// useHover(context, { safePolygon: true })
+useHover(node, {
+  delay: { open: 75, close: 150 },
+  safePolygon: {
+    buffer: 8,
+  },
+})
+
 useClick(node, { outsideClick: true })
 </script>
 
