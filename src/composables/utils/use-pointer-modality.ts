@@ -1,20 +1,27 @@
-import { ref } from "vue"
+import { ref, readonly } from "vue"
 import { useEventListener } from "@vueuse/core"
 
-export function usePointerModality() {
-  const isPointer = ref(true)
+const mutableRef = ref(false)
 
+// Add listeners only on client-side
+if (typeof window !== 'undefined') {
   useEventListener(window, "keydown", () => {
-    isPointer.value = false
+    mutableRef.value = true
   }, { capture: true })
 
   useEventListener(window, "pointerdown", () => {
-    isPointer.value = true
+    mutableRef.value = false
   }, { capture: true })
 
   useEventListener(window, "pointermove", () => {
-    isPointer.value = true
+    mutableRef.value = false
   }, { capture: true })
-
-  return isPointer
 }
+
+/**
+ * Track whether the user is currently interacting via the keyboard.
+ *
+ * A readonly ref that is true when keyboard interactions are detected,
+ * false when pointer interactions are detected.
+ */
+export const isUsingKeyboard = readonly(mutableRef)

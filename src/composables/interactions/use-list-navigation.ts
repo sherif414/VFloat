@@ -4,7 +4,7 @@ import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import { getContextFromParameter, isTypeableElement } from "@/utils"
 import { useActiveDescendant } from "../utils/use-active-descendant"
-import { usePointerModality } from "../utils/use-pointer-modality"
+import { isUsingKeyboard } from "../utils/use-pointer-modality"
 
 type Dimensions = { width: number; height: number }
 
@@ -165,14 +165,13 @@ export function useListNavigation(
     } else {
       el.focus({ preventScroll: true })
       const opts = scrollItemIntoView
-      const shouldScroll = !!opts && (forceScroll || !pointerModality.value)
+      const shouldScroll = !!opts && (forceScroll || isUsingKeyboard.value)
       if (shouldScroll) {
         el.scrollIntoView?.(typeof opts === "boolean" ? { block: "nearest", inline: "nearest" } : opts)
       }
     }
   }
 
-  const pointerModality = usePointerModality()
   let lastKey: string | null = null
 
   const handleAnchorKeyDown = (e: KeyboardEvent) => {
@@ -183,7 +182,6 @@ export function useListNavigation(
 
     const key = e.key
     const ori = toValue(orientation)
-    pointerModality.value = false
     lastKey = key
     if (open.value && isVirtual.value) {
       handleFloatingKeyDown(e)
@@ -212,7 +210,6 @@ export function useListNavigation(
 
     const key = e.key
     const ori = toValue(orientation)
-    pointerModality.value = false
 
     const current = getActiveIndex()
     const items = listRef.value
@@ -335,7 +332,8 @@ export function useListNavigation(
       if (!isOpen) return
       if (idx == null) return
       focusItem(idx)
-    }
+    },
+    { flush: "post" }
   )
 
   const stopAnchor = useEventListener(() => (isEnabled.value ? anchorEl.value : null), "keydown", handleAnchorKeyDown)
@@ -382,7 +380,8 @@ export function useListNavigation(
         }
       }
       prevOpen.value = isOpen
-    }
+    },
+    { flush: "post" }
   )
 
   // Manage aria-activedescendant and virtualItemRef via dedicated composable

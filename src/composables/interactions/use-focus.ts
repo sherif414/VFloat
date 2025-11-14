@@ -12,6 +12,7 @@ import {
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { Tree, TreeNode } from "@/composables/positioning/use-floating-tree"
 import { isMac, isSafari, isTargetWithinElement, isTypeableElement, matchesFocusVisible } from "@/utils"
+import { isUsingKeyboard } from "../utils/use-pointer-modality"
 
 //=======================================================================================
 // 📌 Constants
@@ -80,7 +81,6 @@ export function useFocus(
   })
 
   let isFocusBlocked = false
-  let keyboardModality = true // Assume keyboard modality initially.
   const isSafariOnMac = isMac() && isSafari()
   let timeoutId: number
 
@@ -125,29 +125,6 @@ export function useFocus(
     isFocusBlocked = false
   })
 
-  // 3. Safari `:focus-visible` polyfill. Tracks if the last interaction was
-  //    from a keyboard or a pointer to correctly apply focus-visible logic.
-  onMounted(() => {
-    if (isSafariOnMac) {
-      useEventListener(
-        window,
-        "keydown",
-        () => {
-          keyboardModality = true
-        },
-        { capture: true }
-      )
-      useEventListener(
-        window,
-        "pointerdown",
-        () => {
-          keyboardModality = false
-        },
-        { capture: true }
-      )
-    }
-  })
-
   // --- Element Event Handlers ---
   function onFocus(event: FocusEvent): void {
     if (isFocusBlocked) {
@@ -160,7 +137,7 @@ export function useFocus(
       // Safari fails to match `:focus-visible` if focus was initially outside
       // the document. This is a workaround.
       if (isSafariOnMac && !event.relatedTarget) {
-        if (!keyboardModality && !isTypeableElement(target)) {
+        if (!isUsingKeyboard.value && !isTypeableElement(target)) {
           return // Do not open if interaction was pointer-based on a non-typeable element.
         }
       } else if (!matchesFocusVisible(target)) {
