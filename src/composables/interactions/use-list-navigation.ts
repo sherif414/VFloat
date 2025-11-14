@@ -4,7 +4,7 @@ import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import { getContextFromParameter, isTypeableElement } from "@/utils"
 import { useActiveDescendant } from "../utils/use-active-descendant"
-import { isUsingKeyboard } from "../utils/use-pointer-modality"
+import { isUsingKeyboard } from "../utils/is-using-keyboard"
 
 type Dimensions = { width: number; height: number }
 
