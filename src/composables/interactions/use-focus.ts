@@ -12,7 +12,7 @@ import {
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { Tree, TreeNode } from "@/composables/positioning/use-floating-tree"
 import { isMac, isSafari, isTargetWithinElement, isTypeableElement, matchesFocusVisible } from "@/utils"
-import { isUsingKeyboard } from "../utils/use-pointer-modality"
+import { isUsingKeyboard } from "../utils/is-using-keyboard"
 
 //=======================================================================================
 // 📌 Constants
