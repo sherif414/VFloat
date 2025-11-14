@@ -71,6 +71,8 @@ useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 - [useHover](/api/use-hover)
 - [useFocus](/api/use-focus)
 - [useEscapeKey](/api/use-escape-key)
+- [useListNavigation](/api/use-list-navigation)
+- [Keyboard List Navigation](/guide/list-navigation)
 
 ## Building a Component: The Dropdown Menu
 
