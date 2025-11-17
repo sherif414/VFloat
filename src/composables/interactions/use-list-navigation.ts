@@ -276,37 +276,31 @@ export function useListNavigation(
   let lastKey: string | null = null
 
   const handleAnchorKeyDown = (e: KeyboardEvent) => {
-    if (!isEnabled.value) return
     if (e.defaultPrevented) return
+
     const target = e.target as Element | null
     if (target && isTypeableElement(target)) return
 
     const key = e.key
     const ori = toValue(orientation)
     lastKey = key
+
     if (open.value && isVirtual.value) {
       handleFloatingKeyDown(e)
       return
     }
-    const isMainKey =
-      (ori === "vertical" && (key === "ArrowDown" || key === "ArrowUp")) ||
-      (ori === "horizontal" && (key === "ArrowLeft" || key === "ArrowRight")) ||
-      (ori === "both" && (key === "ArrowDown" || key === "ArrowUp" || key === "ArrowLeft" || key === "ArrowRight"))
 
-    if (!isMainKey) return
+    if (!isMainOrientationKey(key, ori)) return
+    if (open.value || !toValue(openOnArrowKeyDown)) return
 
-    if (!open.value && toValue(openOnArrowKeyDown)) {
-      e.preventDefault()
-      setOpen(true, "keyboard-activate", e)
-      const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
-      const initial = sel ?? (isMainOrientationToEndKey(key, ori, isRtl.value) ? getFirstEnabledIndex() : getLastEnabledIndex())
-      if (initial != null) onNavigate?.(initial)
-      return
-    }
+    e.preventDefault()
+    setOpen(true, "keyboard-activate", e)
+    const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
+    const initial = sel ?? (isMainOrientationToEndKey(key, ori, isRtl.value) ? getFirstEnabledIndex() : getLastEnabledIndex())
+    if (initial != null) onNavigate?.(initial)
   }
 
   const handleFloatingKeyDown = (e: KeyboardEvent) => {
-    if (!isEnabled.value) return
     if (e.defaultPrevented) return
 
     const key = e.key
