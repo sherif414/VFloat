@@ -1,12 +1,26 @@
 import { useEventListener } from "@vueuse/core"
-import { computed, type MaybeRefOrGetter, type Ref, onScopeDispose, onWatcherCleanup, ref, toValue, watch, watchPostEffect } from "vue"
+import {
+  computed,
+  type MaybeRefOrGetter,
+  onWatcherCleanup,
+  type Ref,
+  ref,
+  toValue,
+  watch,
+  watchPostEffect,
+} from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import { getContextFromParameter, isTypeableElement } from "@/utils"
-import { useActiveDescendant } from "../utils/use-active-descendant"
 import { isUsingKeyboard } from "../utils/is-using-keyboard"
-
-type Dimensions = { width: number; height: number }
+import { useActiveDescendant } from "../utils/use-active-descendant"
+import {
+  GridNavigationStrategy,
+  HorizontalNavigationStrategy,
+  type NavigationStrategy,
+  type StrategyContext,
+  VerticalNavigationStrategy,
+} from "./navigation-strategies"
 
 /**
  * Options for configuring list-style keyboard/mouse navigation behavior.
@@ -117,17 +131,6 @@ export interface UseListNavigationOptions {
   cols?: MaybeRefOrGetter<number>
 
   /**
-   * Optional per-item dimensions for more accurate grid movement,
-   * particularly when items have irregular sizes.
-   */
-  itemSizes?: Dimensions[]
-
-  /**
-   * Dense navigation behavior (e.g., minimize scrolling).
-   */
-  dense?: MaybeRefOrGetter<boolean>
-
-  /**
    * If true, allows escaping to a null active index via keyboard (e.g., ArrowDown on last).
    */
   allowEscape?: MaybeRefOrGetter<boolean>
@@ -165,26 +168,28 @@ export function useListNavigation(
     allowEscape = false,
   } = options
 
-  const isEnabled = computed(() => toValue(enabled))
-  const anchorEl = computed(() => (
-    refs.anchorEl.value instanceof HTMLElement
-      ? refs.anchorEl.value
-      : refs.anchorEl.value?.contextElement instanceof HTMLElement
-        ? (refs.anchorEl.value as any).contextElement
-        : null
-  ))
-  const floatingEl = computed(() => refs.floatingEl.value)
+  const derived = {
+    isEnabled: computed(() => toValue(enabled)),
+    anchorEl: computed(() => {
+      const el = refs.anchorEl.value
+      if (el instanceof HTMLElement) return el
+      if (el && "contextElement" in el && el.contextElement instanceof HTMLElement) {
+        return el.contextElement
+      }
+      return null
+    }),
+    floatingEl: computed(() => refs.floatingEl.value),
+    isVirtual: computed(() => !!toValue(virtual)),
+    isRtl: computed(() => !!toValue(rtl)),
+    gridCols: computed(() => Math.max(1, Number(toValue(cols) ?? 1))),
+  }
 
-  const isVirtual = computed(() => !!toValue(virtual))
-  const isRtl = computed(() => !!toValue(rtl))
-  const gridCols = computed(() => Math.max(1, Number(toValue(cols) ?? 1)))
+  const { isEnabled, anchorEl, floatingEl, isVirtual, isRtl, gridCols } = derived
 
   const getActiveIndex = () => (activeIndex !== undefined ? toValue(activeIndex) : null)
   const isDisabled = (idx: number) => {
     if (!disabledIndices) return false
-    return Array.isArray(disabledIndices)
-      ? disabledIndices.includes(idx)
-      : !!disabledIndices(idx)
+    return Array.isArray(disabledIndices) ? disabledIndices.includes(idx) : !!disabledIndices(idx)
   }
 
   const getFirstEnabledIndex = () => {
@@ -195,6 +200,17 @@ export function useListNavigation(
     return null
   }
 
+  const cleanupFns: Array<() => void> = []
+  const registerCleanup = (fn: () => void) => {
+    cleanupFns.push(fn)
+    return fn
+  }
+  const runCleanups = () => {
+    while (cleanupFns.length) {
+      cleanupFns.pop()?.()
+    }
+  }
+
   const getLastEnabledIndex = () => {
     const items = listRef.value
     for (let i = items.length - 1; i >= 0; i--) {
@@ -203,7 +219,11 @@ export function useListNavigation(
     return null
   }
 
-  function doSwitch(ori: "vertical" | "horizontal" | "both", vertical: boolean, horizontal: boolean) {
+  function doSwitch(
+    ori: "vertical" | "horizontal" | "both",
+    vertical: boolean,
+    horizontal: boolean
+  ) {
     switch (ori) {
       case "vertical":
         return vertical
@@ -220,25 +240,14 @@ export function useListNavigation(
     return doSwitch(ori, vertical, horizontal)
   }
 
-  function isMainOrientationToEndKey(key: string, ori: "vertical" | "horizontal" | "both", rtlFlag: boolean) {
+  function isMainOrientationToEndKey(
+    key: string,
+    ori: "vertical" | "horizontal" | "both",
+    rtlFlag: boolean
+  ) {
     const vertical = key === "ArrowDown"
     const horizontal = rtlFlag ? key === "ArrowLeft" : key === "ArrowRight"
     return doSwitch(ori, vertical, horizontal) || key === "Enter" || key === " " || key === ""
-  }
-
-  function isCrossOrientationOpenKey(key: string, ori: "vertical" | "horizontal" | "both", rtlFlag: boolean) {
-    const vertical = rtlFlag ? key === "ArrowLeft" : key === "ArrowRight"
-    const horizontal = key === "ArrowDown"
-    return doSwitch(ori, vertical, horizontal)
-  }
-
-  function isCrossOrientationCloseKey(key: string, ori: "vertical" | "horizontal" | "both", rtlFlag: boolean, c?: number) {
-    const vertical = rtlFlag ? key === "ArrowRight" : key === "ArrowLeft"
-    const horizontal = key === "ArrowUp"
-    if (ori === "both" || (ori === "horizontal" && c && c > 1)) {
-      return false
-    }
-    return doSwitch(ori, vertical, horizontal)
   }
 
   const findNextEnabled = (start: number, dir: 1 | -1, wrap: boolean) => {
@@ -268,7 +277,9 @@ export function useListNavigation(
       const opts = scrollItemIntoView
       const shouldScroll = !!opts && (forceScroll || isUsingKeyboard.value)
       if (shouldScroll) {
-        el.scrollIntoView?.(typeof opts === "boolean" ? { block: "nearest", inline: "nearest" } : opts)
+        el.scrollIntoView?.(
+          typeof opts === "boolean" ? { block: "nearest", inline: "nearest" } : opts
+        )
       }
     }
   }
@@ -279,7 +290,8 @@ export function useListNavigation(
     if (e.defaultPrevented) return
 
     const target = e.target as Element | null
-    if (target && isTypeableElement(target)) return
+    // Allow navigation if the target is the anchor (e.g. input)
+    if (target && isTypeableElement(target) && target !== anchorEl.value) return
 
     const key = e.key
     const ori = toValue(orientation)
@@ -296,7 +308,11 @@ export function useListNavigation(
     e.preventDefault()
     setOpen(true, "keyboard-activate", e)
     const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
-    const initial = sel ?? (isMainOrientationToEndKey(key, ori, isRtl.value) ? getFirstEnabledIndex() : getLastEnabledIndex())
+    const initial =
+      sel ??
+      (isMainOrientationToEndKey(key, ori, isRtl.value)
+        ? getFirstEnabledIndex()
+        : getLastEnabledIndex())
     if (initial != null) onNavigate?.(initial)
   }
 
@@ -305,122 +321,79 @@ export function useListNavigation(
 
     const key = e.key
     const ori = toValue(orientation)
-
-    const current = getActiveIndex()
     const items = listRef.value
     if (!items.length) return
 
-    const wrap = !!toValue(loop)
-
-    if (key === "Home") {
-      e.preventDefault()
-      const idx = getFirstEnabledIndex()
-      if (idx != null) onNavigate?.(idx)
-      return
-    }
-    if (key === "End") {
-      e.preventDefault()
-      const idx = getLastEnabledIndex()
-      if (idx != null) onNavigate?.(idx)
-      return
-    }
-
-    if (toValue(nested) && isCrossOrientationCloseKey(key, ori, isRtl.value, gridCols.value)) {
-      e.preventDefault()
-      setOpen(false, "programmatic", e)
-      const parent = treeContext?.parent.value
-      const parentAnchor = parent?.data.refs.anchorEl.value
-      if (parentAnchor instanceof HTMLElement) {
-        parentAnchor.focus({ preventScroll: true })
-      } else if ((parentAnchor as any)?.contextElement instanceof HTMLElement) {
-        ;(parentAnchor as any).contextElement.focus({ preventScroll: true })
-      }
-      return
-    }
-
-    const go = (dir: 1 | -1) => {
-      const start = current == null ? (dir === 1 ? -1 : items.length) : current + dir
-      let next = findNextEnabled(start, dir, wrap)
-      if (next == null && wrap) {
-        if (toValue(allowEscape) && isVirtual.value) {
-          e.preventDefault()
-          onNavigate?.(null)
-          return
-        }
-        next = dir === 1 ? getFirstEnabledIndex() : getLastEnabledIndex()
-      }
-      if (next != null) {
+    // 1. Handle Home/End
+    // In virtual mode (e.g. Command Palette), let the input handle Home/End for text cursor
+    if (!isVirtual.value) {
+      if (key === "Home") {
         e.preventDefault()
-        onNavigate?.(next)
+        const idx = getFirstEnabledIndex()
+        if (idx != null) onNavigate?.(idx)
+        return
+      }
+      if (key === "End") {
+        e.preventDefault()
+        const idx = getLastEnabledIndex()
+        if (idx != null) onNavigate?.(idx)
+        return
       }
     }
 
-    if (gridCols.value > 1 && (ori === "horizontal" || ori === "both")) {
-      if (key === "ArrowRight") return go(1)
-      if (key === "ArrowLeft") return go(-1)
-      if (key === "ArrowDown") {
-        const idx = current == null ? -gridCols.value : current
-        let candidate = idx + gridCols.value
-        while (candidate < items.length && isDisabled(candidate)) candidate += gridCols.value
-        if (candidate < items.length) {
-          e.preventDefault()
-          onNavigate?.(candidate)
-          return
-        }
-        if (wrap) {
-          if (toValue(allowEscape) && isVirtual.value) {
-            e.preventDefault()
-            onNavigate?.(null)
-            return
-          }
-          const first = getFirstEnabledIndex()
-          if (first != null) {
-            e.preventDefault()
-            onNavigate?.(first)
-            return
-          }
-        }
-      }
-      if (key === "ArrowUp") {
-        const idx = current == null ? items.length : current
-        let candidate = idx - gridCols.value
-        while (candidate >= 0 && isDisabled(candidate)) candidate -= gridCols.value
-        if (candidate >= 0) {
-          e.preventDefault()
-          onNavigate?.(candidate)
-          return
-        }
-        if (wrap) {
-          if (toValue(allowEscape) && isVirtual.value) {
-            e.preventDefault()
-            onNavigate?.(null)
-            return
-          }
-          const last = getLastEnabledIndex()
-          if (last != null) {
-            e.preventDefault()
-            onNavigate?.(last)
-            return
-          }
-        }
-      }
-    }
-
+    // 2. Determine Strategy
+    let strategy: NavigationStrategy
     if (ori === "vertical") {
-      if (key === "ArrowDown") return go(1)
-      if (key === "ArrowUp") return go(-1)
+      strategy = new VerticalNavigationStrategy()
     } else if (ori === "horizontal") {
-      if ((isRtl.value && key === "ArrowLeft") || (!isRtl.value && key === "ArrowRight")) return go(1)
-      if ((isRtl.value && key === "ArrowRight") || (!isRtl.value && key === "ArrowLeft")) return go(-1)
+      strategy =
+        gridCols.value > 1 ? new GridNavigationStrategy(false) : new HorizontalNavigationStrategy()
     } else {
-      if (key === "ArrowDown") return go(1)
-      if (key === "ArrowUp") return go(-1)
-      if ((isRtl.value && key === "ArrowLeft") || (!isRtl.value && key === "ArrowRight")) return go(1)
-      if ((isRtl.value && key === "ArrowRight") || (!isRtl.value && key === "ArrowLeft")) return go(-1)
+      // both
+      strategy = new GridNavigationStrategy(true)
+    }
+
+    // 3. Execute Strategy
+    const context: StrategyContext = {
+      current: getActiveIndex(),
+      items,
+      isRtl: isRtl.value,
+      loop: !!toValue(loop),
+      allowEscape: !!toValue(allowEscape),
+      isVirtual: isVirtual.value,
+      cols: gridCols.value,
+      nested: !!toValue(nested),
+      isDisabled,
+      findNextEnabled,
+      getFirstEnabledIndex,
+      getLastEnabledIndex,
+    }
+
+    const result = strategy.handleKey(key, context)
+
+    if (result) {
+      if (result.type === "navigate") {
+        e.preventDefault()
+        onNavigate?.(result.index)
+      } else if (result.type === "close") {
+        e.preventDefault()
+        setOpen(false, "programmatic", e)
+        const parent = treeContext?.parent.value
+        const parentAnchor = parent?.data.refs.anchorEl.value
+        if (parentAnchor instanceof HTMLElement) {
+          parentAnchor.focus({ preventScroll: true })
+        } else if (
+          parentAnchor &&
+          "contextElement" in parentAnchor &&
+          parentAnchor.contextElement instanceof HTMLElement
+        ) {
+          parentAnchor.contextElement.focus({ preventScroll: true })
+        }
+      }
     }
   }
 
-  watch(
+  const stopActiveItemWatch = watch(
     [open, computed(() => getActiveIndex())],
     ([isOpen, idx]) => {
       if (!isEnabled.value) return
@@ -430,15 +403,40 @@ export function useListNavigation(
     },
     { flush: "post" }
   )
+  registerCleanup(stopActiveItemWatch)
 
-  const stopAnchor = useEventListener(() => (isEnabled.value ? anchorEl.value : null), "keydown", handleAnchorKeyDown)
-  const stopFloating = useEventListener(() => (isEnabled.value ? floatingEl.value : null), "keydown", handleFloatingKeyDown)
+  registerCleanup(
+    useEventListener(
+      () => (isEnabled.value ? anchorEl.value : null),
+      "keydown",
+      handleAnchorKeyDown
+    )
+  )
+  registerCleanup(
+    useEventListener(
+      () => (isEnabled.value ? floatingEl.value : null),
+      "keydown",
+      handleFloatingKeyDown
+    )
+  )
 
   const removeItemHoverWatch = watchPostEffect(() => {
     if (!isEnabled.value || !toValue(focusItemOnHover)) return
     const container = floatingEl.value
     if (!container) return
-    const onOver = (evt: MouseEvent) => {
+
+    let lastX: number | null = null
+    let lastY: number | null = null
+
+    const onMove = (evt: MouseEvent) => {
+      // "State-Driven Hover" pattern:
+      // Only update selection if the mouse *actually moved*.
+      // This prevents "ghost hovers" where the list scrolls/updates under a stationary mouse,
+      // which would otherwise steal selection from the keyboard.
+      if (lastX === evt.clientX && lastY === evt.clientY) return
+      lastX = evt.clientX
+      lastY = evt.clientY
+
       const target = evt.target as Element | null
       if (!target) return
       const items = listRef.value
@@ -452,14 +450,15 @@ export function useListNavigation(
       }
       if (idx >= 0) onNavigate?.(idx)
     }
-    container.addEventListener("mouseover", onOver)
+    container.addEventListener("mousemove", onMove)
     onWatcherCleanup(() => {
-      container.removeEventListener("mouseover", onOver)
+      container.removeEventListener("mousemove", onMove)
     })
   })
+  registerCleanup(removeItemHoverWatch)
 
-  const prevOpen = ref(open.value)
-  watch(
+  const prevOpen = ref(false)
+  const stopOpenWatch = watch(
     () => open.value,
     (isOpen) => {
       if (!isEnabled.value) return
@@ -467,7 +466,11 @@ export function useListNavigation(
         const f = toValue(focusItemOnOpen)
         if (f === true || (f === "auto" && lastKey != null)) {
           const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
-          let idx = sel ?? (lastKey && isMainOrientationToEndKey(lastKey, toValue(orientation), isRtl.value) ? getFirstEnabledIndex() : getLastEnabledIndex())
+          const idx =
+            sel ??
+            (lastKey && isMainOrientationToEndKey(lastKey, toValue(orientation), isRtl.value)
+              ? getFirstEnabledIndex()
+              : getLastEnabledIndex())
           if (idx != null) {
             onNavigate?.(idx)
             focusItem(idx, true)
@@ -476,17 +479,17 @@ export function useListNavigation(
       }
       prevOpen.value = isOpen
     },
-    { flush: "post" }
+    { flush: "post", immediate: true }
   )
+  registerCleanup(stopOpenWatch)
 
   // Manage aria-activedescendant and virtualItemRef via dedicated composable
-  useActiveDescendant(anchorEl, listRef, computed(() => getActiveIndex()), { virtual, open, virtualItemRef })
+  useActiveDescendant(
+    anchorEl,
+    listRef,
+    computed(() => getActiveIndex()),
+    { virtual, open, virtualItemRef }
+  )
 
-  onScopeDispose(() => {
-    stopAnchor()
-    stopFloating()
-    removeItemHoverWatch()
-  })
-
-  return { cleanup: () => { stopAnchor(); stopFloating(); removeItemHoverWatch() } }
+  return { cleanup: runCleanups }
 }
