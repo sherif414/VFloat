@@ -2,7 +2,6 @@ import { useEventListener } from "@vueuse/core"
 import {
   computed,
   type MaybeRefOrGetter,
-  onMounted,
   onScopeDispose,
   onWatcherCleanup,
   type Ref,
@@ -11,7 +10,13 @@ import {
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { Tree, TreeNode } from "@/composables/positioning/use-floating-tree"
-import { isMac, isSafari, isTargetWithinElement, isTypeableElement, matchesFocusVisible } from "@/utils"
+import {
+  isMac,
+  isSafari,
+  isTargetWithinElement,
+  isTypeableElement,
+  matchesFocusVisible,
+} from "@/utils"
 import { isUsingKeyboard } from "../utils/is-using-keyboard"
 
 //=======================================================================================
@@ -58,10 +63,7 @@ const BLUR_CHECK_DELAY = 0
  * ```
  */
 
-export function useFocus(
-  context: FloatingContext,
-  options: UseFocusOptions = {}
-): UseFocusReturn {
+export function useFocus(context: FloatingContext, options: UseFocusOptions = {}): UseFocusReturn {
   const {
     open,
     setOpen,
