@@ -17,6 +17,7 @@ import {
   getContextFromParameter,
   isHTMLElement,
   isTargetWithinElement,
+  isVirtualElement,
 } from "@/utils"
 
 //=======================================================================================
@@ -115,7 +116,6 @@ export function useFocusTrap(
   let afterGuardCleanup: (() => void) | null = null
 
   const tabbableIndexRef = ref(-1)
-  let isPointerDown = false
   let skipReturnFocus = false
 
   const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype
@@ -173,21 +173,20 @@ export function useFocusTrap(
     const content = getTabbableElements(container)
     const reference = anchorEl.value
     return wrapOrder.value
-      .map((segment) => {
+      .flatMap((segment) => {
         if (segment === "floating") {
           return container
         }
         if (segment === "reference") {
-          return isHTMLElement(reference)
-            ? reference
-            : (reference as any)?.contextElement instanceof HTMLElement
-              ? ((reference as any).contextElement as HTMLElement)
-              : null
+          if (isHTMLElement(reference)) return reference
+          if (isVirtualElement(reference) && reference.contextElement instanceof HTMLElement) {
+            return reference.contextElement
+          }
+          return null
         }
         return content
       })
-      .flat()
-      .filter((item): item is HTMLElement => !!item)
+      .filter((item): item is HTMLElement => !!item && item !== beforeGuard && item !== afterGuard)
   }
 
   function createGuard(): HTMLElement {
@@ -214,13 +213,17 @@ export function useFocusTrap(
     afterGuardCleanup?.()
     beforeGuardCleanup = null
     afterGuardCleanup = null
-    if (beforeGuard && beforeGuard.parentNode) beforeGuard.parentNode.removeChild(beforeGuard)
-    if (afterGuard && afterGuard.parentNode) afterGuard.parentNode.removeChild(afterGuard)
+    if (beforeGuard?.parentNode) beforeGuard.parentNode.removeChild(beforeGuard)
+    if (afterGuard?.parentNode) afterGuard.parentNode.removeChild(afterGuard)
     beforeGuard = null
     afterGuard = null
   }
 
-  function attachGuardBehavior(guard: HTMLElement, location: "before" | "after", container: HTMLElement) {
+  function attachGuardBehavior(
+    guard: HTMLElement,
+    location: "before" | "after",
+    container: HTMLElement
+  ) {
     const handler = (event: FocusEvent) => {
       event.preventDefault()
       const orderElements = getOrderElements(container)
@@ -229,9 +232,9 @@ export function useFocusTrap(
         return
       }
       if (location === "before") {
-        focusElement(orderElements[orderElements.length - 1])
-      } else {
         focusElement(orderElements[0])
+      } else {
+        focusElement(orderElements[orderElements.length - 1])
       }
     }
     guard.addEventListener("focus", handler)
@@ -265,7 +268,9 @@ export function useFocusTrap(
     if (!isModal.value || !shouldInertOutside.value) return () => {}
     const doc = container.ownerDocument
     const body = doc.body
-    const toInert = Array.from(body.children).filter((el) => !el.contains(container)) as (HTMLElement & {
+    const toInert = Array.from(body.children).filter(
+      (el) => !el.contains(container)
+    ) as (HTMLElement & {
       inert?: boolean
     })[]
     const snapshots = toInert.map((el) => ({
@@ -435,24 +440,10 @@ export function useFocusTrap(
         if (active && active !== doc.body) return
         const tabbables = getTabbableElements(container)
         const fallback =
-          tabbables[tabbableIndexRef.value] ??
-          tabbables[tabbables.length - 1] ??
-          container
+          tabbables[tabbableIndexRef.value] ?? tabbables[tabbables.length - 1] ?? container
         focusElement(fallback)
       })
     }
-  )
-
-  useEventListener(
-    () => (isEnabled.value && open.value ? document : null),
-    "pointerdown",
-    () => {
-      isPointerDown = true
-      queueMicrotask(() => {
-        isPointerDown = false
-      })
-    },
-    { capture: true }
   )
 
   const removeWatcher = watchPostEffect(() => {
