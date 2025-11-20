@@ -173,7 +173,7 @@ describe("useListNavigation", () => {
     activeIndex.value = items.length - 2
     floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))
     await nextTick()
-    expect(activeIndex.value).toBe(0)
+    expect(activeIndex.value).toBe(2)
   })
 
   it("hover updates active index when enabled", async () => {
@@ -183,7 +183,8 @@ describe("useListNavigation", () => {
     open.value = true
     await nextTick()
     const target = items[4]
-    target.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }))
+    // Simulate mouse move with coordinates to bypass the "ghost hover" check
+    target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 10, clientY: 10 }))
     await nextTick()
     expect(activeIndex.value).toBe(4)
   })
@@ -254,5 +255,45 @@ describe("useListNavigation", () => {
     floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))
     await nextTick()
     expect(onNavigate).not.toHaveBeenCalled()
+  })
+
+  it("grid navigation with loopDirection='next'", async () => {
+    const ctx = makeContext()
+    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx))
+    // 4 cols, 8 items. Row 0: [0, 1, 2, 3], Row 1: [4, 5, 6, 7]
+    useListNavigation(ctx, {
+      listRef,
+      activeIndex,
+      onNavigate,
+      orientation: "both",
+      cols: 4,
+      loop: true,
+      gridLoopDirection: "next",
+    })
+    open.value = true
+    
+    // Move right from end of row 0 -> start of row 1
+    activeIndex.value = 3
+    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }))
+    await nextTick()
+    expect(activeIndex.value).toBe(4)
+
+    // Move left from start of row 1 -> end of row 0
+    activeIndex.value = 4
+    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }))
+    await nextTick()
+    expect(activeIndex.value).toBe(3)
+
+    // Move right from end of last row -> start of first row (full loop)
+    activeIndex.value = 7
+    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }))
+    await nextTick()
+    expect(activeIndex.value).toBe(0)
+
+    // Move left from start of first row -> end of last row (full loop)
+    activeIndex.value = 0
+    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }))
+    await nextTick()
+    expect(activeIndex.value).toBe(7)
   })
 })

@@ -40,9 +40,8 @@ interface UseListNavigationOptions {
   virtual?: MaybeRefOrGetter<boolean>
   virtualItemRef?: Ref<HTMLElement | null>
   cols?: MaybeRefOrGetter<number>
-  itemSizes?: { width: number; height: number }[]
-  dense?: MaybeRefOrGetter<boolean>
   allowEscape?: MaybeRefOrGetter<boolean>
+  gridLoopDirection?: MaybeRefOrGetter<'row' | 'next'>
 }
 ```
 
@@ -66,9 +65,8 @@ interface UseListNavigationOptions {
 | virtual | `MaybeRefOrGetter<boolean>` | `false` | Keep DOM focus on anchor and manage active with `aria-activedescendant`. |
 | virtualItemRef | `Ref<HTMLElement|null>` | — | Populated with the virtually focused item element when `virtual` is enabled. |
 | cols | `MaybeRefOrGetter<number>` | `1` | Grid columns when `> 1`; ArrowUp/Down move by ±`cols` (uniform grid). |
-| itemSizes | `{width:number;height:number}[]` | `undefined` | Reserved for non-uniform grids. Not currently used. |
-| dense | `MaybeRefOrGetter<boolean>` | `false` | Reserved for non-uniform grids. Not currently used. |
 | allowEscape | `MaybeRefOrGetter<boolean>` | `false` | With `virtual` and `loop`, navigating past ends yields `onNavigate(null)`. |
+| gridLoopDirection | `MaybeRefOrGetter<'row'\|'next'>` | `'row'` | Grid horizontal wrapping behavior. `'row'` wraps within same row, `'next'` moves to next/prev row. |
 
 ## Return Value
 
@@ -163,7 +161,14 @@ useListNavigation(childNode, { nested: true, orientation: 'horizontal' })
 ### Uniform Grid Navigation
 
 ```ts
-useListNavigation(ctx, { listRef: itemsRef, activeIndex, onNavigate: i => activeIndex.value = i, cols: 4, orientation: 'both' })
+useListNavigation(ctx, {
+  listRef: itemsRef,
+  activeIndex,
+  onNavigate: i => activeIndex.value = i,
+  cols: 4,
+  orientation: 'both',
+  gridLoopDirection: 'next' // Optional
+})
 ```
 
 ## See Also
