@@ -134,6 +134,13 @@ export interface UseListNavigationOptions {
    * If true, allows escaping to a null active index via keyboard (e.g., ArrowDown on last).
    */
   allowEscape?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Defines the wrapping behavior for grid navigation when moving horizontally past the end of a row.
+   * - "row": Wraps to the start of the *same* row (default).
+   * - "next": Moves to the start of the *next* row (or previous row if moving left).
+   */
+  gridLoopDirection?: MaybeRefOrGetter<"row" | "next">
 }
 
 export interface UseListNavigationReturn {
@@ -347,10 +354,12 @@ export function useListNavigation(
       strategy = new VerticalNavigationStrategy()
     } else if (ori === "horizontal") {
       strategy =
-        gridCols.value > 1 ? new GridNavigationStrategy(false) : new HorizontalNavigationStrategy()
+        gridCols.value > 1
+          ? new GridNavigationStrategy(false, toValue(options.gridLoopDirection) ?? "row")
+          : new HorizontalNavigationStrategy()
     } else {
       // both
-      strategy = new GridNavigationStrategy(true)
+      strategy = new GridNavigationStrategy(true, toValue(options.gridLoopDirection) ?? "row")
     }
 
     // 3. Execute Strategy
