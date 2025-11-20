@@ -50,30 +50,3 @@ onUnmounted(() => {
 <template>
   <slot />
 </template>
-
-<style>
-.menu-container {
-  position: relative;
-  display: inline-block;
-  /* Or block, depending on layout needs */
-}
-
-.menu-arrow {
-  transition: transform 0.2s ease-in-out;
-}
-
-.menu-arrow--open {
-  transform: rotate(180deg);
-}
-
-.menu-panel {
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-radius: 4px;
-  z-index: 1000;
-  min-width: 200px;
-  padding: 4px 0;
-  /* For MenuItems to have some space */
-}
-</style>

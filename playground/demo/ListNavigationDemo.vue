@@ -1,95 +1,58 @@
 <script setup lang="ts">
-import { ref, nextTick, type Ref } from 'vue'
-import { useFloating } from '@/composables'
+import { ref } from 'vue'
+import { useFloating, useClick, useEscapeKey } from '@/composables'
 import { useListNavigation } from '@/composables/interactions/use-list-navigation'
-import { useClick, useEscapeKey } from '@/composables'
-import { offset, flip, shift } from '@floating-ui/dom'
+import { offset, flip, shift, autoUpdate } from '@floating-ui/dom'
 
-// Helper function to focus first item
-const focusFirstItem = async (listRefs: Ref<Array<HTMLElement | null>>, activeIndex: Ref<number | null>) => {
-  await nextTick()
-  if (listRefs.value[0]) {
-    listRefs.value[0].focus()
-    activeIndex.value = 0
-  }
-}
+// --- 1. Basic Vertical List ---
+const verticalOpen = ref(false)
+const verticalAnchor = ref<HTMLElement | null>(null)
+const verticalFloating = ref<HTMLElement | null>(null)
+const verticalActiveIndex = ref<number | null>(null)
+const verticalItems = ['Dashboard', 'Settings', 'Profile', 'Messages', 'Sign Out']
+const verticalListRefs = ref<(HTMLElement | null)[]>([])
 
-// Basic dropdown example
-const isOpen = ref(false)
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const activeIndex = ref<number | null>(null)
-
-const items = ref([
-  'Apple',
-  'Banana', 
-  'Cherry',
-  'Date',
-  'Elderberry',
-  'Fig',
-  'Grape',
-  'Honeydew'
-])
-
-const listRefs = ref<Array<HTMLElement | null>>([])
-
-const floating = useFloating(anchorEl, floatingEl, {
+const vertical = useFloating(verticalAnchor, verticalFloating, {
+  open: verticalOpen,
+  onOpenChange: (v) => verticalOpen.value = v,
   placement: 'bottom-start',
-  open: isOpen,
-  onOpenChange: async (open) => {
-    isOpen.value = open
-    if (open) {
-      await focusFirstItem(listRefs, activeIndex)
-    }
-  },
-  middlewares: [offset(5), flip(), shift({ padding: 5 })]
+  middleware: [offset(6), flip(), shift({ padding: 10 })],
+  whileElementsMounted: autoUpdate
 })
 
-useListNavigation(floating, {
-  listRef: listRefs,
-  activeIndex,
-  onNavigate: (index) => activeIndex.value = index,
+useListNavigation(vertical, {
+  listRef: verticalListRefs,
+  activeIndex: verticalActiveIndex,
+  onNavigate: (i) => verticalActiveIndex.value = i,
   loop: true,
   orientation: 'vertical',
   focusItemOnHover: true,
   openOnArrowKeyDown: true
 })
 
-useClick(floating)
+useClick(vertical)
+useEscapeKey(vertical)
 
-useEscapeKey(floating)
-
-// Grid example
-const isGridOpen = ref(false)
-const gridAnchorEl = ref<HTMLElement | null>(null)
-const gridFloatingEl = ref<HTMLElement | null>(null)
+// --- 2. Grid Navigation (4x4) ---
+const gridOpen = ref(false)
+const gridAnchor = ref<HTMLElement | null>(null)
+const gridFloating = ref<HTMLElement | null>(null)
 const gridActiveIndex = ref<number | null>(null)
+const gridItems = Array.from({ length: 16 }, (_, i) => `Item ${i + 1}`)
+const gridListRefs = ref<(HTMLElement | null)[]>([])
 
-const gridItems = ref([
-  'A1', 'A2', 'A3', 'A4',
-  'B1', 'B2', 'B3', 'B4', 
-  'C1', 'C2', 'C3', 'C4',
-  'D1', 'D2', 'D3', 'D4'
-])
-
-const gridListRefs = ref<Array<HTMLElement | null>>([])
-
-const gridFloating = useFloating(gridAnchorEl, gridFloatingEl, {
+const grid = useFloating(gridAnchor, gridFloating, {
+  open: gridOpen,
+  onOpenChange: (v) => gridOpen.value = v,
   placement: 'bottom-start',
-  open: isGridOpen,
-  onOpenChange: async (open) => {
-    isGridOpen.value = open
-    if (open) {
-      await focusFirstItem(gridListRefs, gridActiveIndex)
-    }
-  },
-  middlewares: [offset(5), flip(), shift({ padding: 5 })]
+  middleware: [offset(6), flip(), shift({ padding: 10 })],
+  whileElementsMounted: autoUpdate
 })
 
-useListNavigation(gridFloating, {
+useListNavigation(grid, {
   listRef: gridListRefs,
   activeIndex: gridActiveIndex,
-  onNavigate: (index) => gridActiveIndex.value = index,
+  onNavigate: (i) => gridActiveIndex.value = i,
   loop: true,
   orientation: 'both',
   cols: 4,
@@ -97,452 +60,240 @@ useListNavigation(gridFloating, {
   openOnArrowKeyDown: true
 })
 
-useClick(gridFloating)
+useClick(grid)
+useEscapeKey(grid)
 
-useEscapeKey(gridFloating)
-
-// Virtual navigation example
-const isVirtualOpen = ref(false)
-const virtualAnchorEl = ref<HTMLElement | null>(null)
-const virtualFloatingEl = ref<HTMLElement | null>(null)
+// --- 3. Virtual Navigation (aria-activedescendant) ---
+const virtualOpen = ref(false)
+const virtualAnchor = ref<HTMLElement | null>(null)
+const virtualFloating = ref<HTMLElement | null>(null)
 const virtualActiveIndex = ref<number | null>(null)
-const virtualItemRef = ref<HTMLElement | null>(null)
+const virtualItems = ['Virtual 1', 'Virtual 2', 'Virtual 3', 'Virtual 4', 'Virtual 5']
+const virtualListRefs = ref<(HTMLElement | null)[]>([])
+const virtualItemRef = ref<HTMLElement | null>(null) // For aria-activedescendant
 
-const virtualItems = ref([
-  'Virtual Item 1',
-  'Virtual Item 2',
-  'Virtual Item 3',
-  'Virtual Item 4',
-  'Virtual Item 5'
-])
-
-const virtualListRefs = ref<Array<HTMLElement | null>>([])
-
-const virtualFloating = useFloating(virtualAnchorEl, virtualFloatingEl, {
+const virtual = useFloating(virtualAnchor, virtualFloating, {
+  open: virtualOpen,
+  onOpenChange: (v) => virtualOpen.value = v,
   placement: 'bottom-start',
-  open: isVirtualOpen,
-  onOpenChange: async (open) => {
-    isVirtualOpen.value = open
-    if (open) {
-      await nextTick()
-      virtualActiveIndex.value = 0 // Just set active index for virtual mode
-    }
-  },
-  middlewares: [offset(5), flip(), shift({ padding: 5 })]
+  middleware: [offset(6), flip(), shift({ padding: 10 })],
+  whileElementsMounted: autoUpdate
 })
 
-useListNavigation(virtualFloating, {
+useListNavigation(virtual, {
   listRef: virtualListRefs,
   activeIndex: virtualActiveIndex,
-  onNavigate: (index) => virtualActiveIndex.value = index,
+  onNavigate: (i) => virtualActiveIndex.value = i,
   loop: true,
-  orientation: 'vertical',
   virtual: true,
   virtualItemRef,
-  focusItemOnHover: false,
-  openOnArrowKeyDown: true
-})
-
-useClick(virtualFloating)
-
-useEscapeKey(virtualFloating)
-
-// Disabled items example
-const isDisabledOpen = ref(false)
-const disabledAnchorEl = ref<HTMLElement | null>(null)
-const disabledFloatingEl = ref<HTMLElement | null>(null)
-const disabledActiveIndex = ref<number | null>(null)
-
-const disabledItems = ref([
-  'Enabled Item 1',
-  'Disabled Item 2',
-  'Enabled Item 3',
-  'Disabled Item 4',
-  'Enabled Item 5',
-  'Disabled Item 6'
-])
-
-const disabledListRefs = ref<Array<HTMLElement | null>>([])
-
-const disabledFloating = useFloating(disabledAnchorEl, disabledFloatingEl, {
-  placement: 'bottom-start',
-  open: isDisabledOpen,
-  onOpenChange: async (open) => {
-    isDisabledOpen.value = open
-    if (open) {
-      await nextTick()
-      // Find first enabled item (not indices 1, 3, 5)
-      const firstEnabledIndex = disabledListRefs.value.findIndex((_, i) => ![1, 3, 5].includes(i))
-      if (firstEnabledIndex >= 0 && disabledListRefs.value[firstEnabledIndex]) {
-        disabledListRefs.value[firstEnabledIndex].focus()
-        disabledActiveIndex.value = firstEnabledIndex
-      }
-    }
-  },
-  middlewares: [offset(5), flip(), shift({ padding: 5 })]
-})
-
-useListNavigation(disabledFloating, {
-  listRef: disabledListRefs,
-  activeIndex: disabledActiveIndex,
-  onNavigate: (index) => disabledActiveIndex.value = index,
-  loop: true,
-  orientation: 'vertical',
-  disabledIndices: [1, 3, 5],
   focusItemOnHover: true,
   openOnArrowKeyDown: true
 })
 
-useClick(disabledFloating)
+useClick(virtual)
+useEscapeKey(virtual)
 
-useEscapeKey(disabledFloating)
+// --- 4. Disabled Items ---
+const disabledOpen = ref(false)
+const disabledAnchor = ref<HTMLElement | null>(null)
+const disabledFloating = ref<HTMLElement | null>(null)
+const disabledActiveIndex = ref<number | null>(null)
+const disabledItemsList = ['Enabled 1', 'Disabled 2', 'Enabled 3', 'Disabled 4', 'Enabled 5']
+const disabledListRefs = ref<(HTMLElement | null)[]>([])
+const disabledIndices = [1, 3]
+
+const disabled = useFloating(disabledAnchor, disabledFloating, {
+  open: disabledOpen,
+  onOpenChange: (v) => disabledOpen.value = v,
+  placement: 'bottom-start',
+  middleware: [offset(6), flip(), shift({ padding: 10 })],
+  whileElementsMounted: autoUpdate
+})
+
+useListNavigation(disabled, {
+  listRef: disabledListRefs,
+  activeIndex: disabledActiveIndex,
+  onNavigate: (i) => disabledActiveIndex.value = i,
+  loop: true,
+  disabledIndices,
+  focusItemOnHover: true,
+  openOnArrowKeyDown: true
+})
+
+useClick(disabled)
+useEscapeKey(disabled)
+
 </script>
 
 <template>
-  <div class="list-navigation-demo">
-    <h1>useListNavigation Demo</h1>
-    
-    <!-- Basic Vertical List -->
-    <div class="demo-section">
-      <h2>Basic Vertical List</h2>
-      <p>Arrow keys navigate, Enter to select, hover to focus</p>
-      
-      <button 
-        ref="anchorEl"
-        @click="isOpen = !isOpen"
-        class="trigger-button"
-      >
-        Select Fruit ▾
-      </button>
-      
-      <div
-        ref="floatingEl"
-        :style="floating.floatingStyles"
-        v-show="isOpen"
-        class="dropdown-menu"
-        role="listbox"
-        aria-label="Fruits"
-      >
-        <div
-          v-for="(item, index) in items"
-          :key="item"
-          :ref="(el) => listRefs[index] = el as HTMLElement"
-          class="menu-item"
-          :class="{ active: activeIndex === index }"
-          role="option"
-          tabindex="-1"
-          :aria-selected="activeIndex === index"
-          @click="() => { activeIndex = index; isOpen = false }"
-        >
-          {{ item }}
-        </div>
+  <div class="min-h-screen bg-gray-50 p-8 font-sans text-gray-900">
+    <div class="max-w-4xl mx-auto space-y-8">
+      <div class="text-center space-y-2">
+        <h1 class="text-3xl font-bold text-gray-800">List Navigation Demo</h1>
+        <p class="text-gray-500">Explore different navigation strategies with keyboard support.</p>
       </div>
-      
-      <div v-if="activeIndex !== null" class="selection">
-        Selected: {{ items[activeIndex] }}
-      </div>
-    </div>
 
-    <!-- Grid Navigation -->
-    <div class="demo-section">
-      <h2>Grid Navigation (4x4)</h2>
-      <p>Arrow keys navigate in 2D grid</p>
-      
-      <button 
-        ref="gridAnchorEl"
-        @click="isGridOpen = !isGridOpen"
-        class="trigger-button"
-      >
-        Open Grid ▾
-      </button>
-      
-      <div
-        ref="gridFloatingEl"
-        :style="gridFloating.floatingStyles"
-        v-show="isGridOpen"
-        class="grid-menu"
-        role="grid"
-        aria-label="Grid navigation"
-      >
-        <div class="grid-row" v-for="row in 4" :key="row">
-          <div
-            v-for="col in 4"
-            :key="`${row}-${col}`"
-            :ref="(el) => gridListRefs[(row-1) * 4 + (col-1)] = el as HTMLElement"
-            class="grid-item"
-            :class="{ active: gridActiveIndex === (row-1) * 4 + (col-1) }"
-            role="gridcell"
-            tabindex="-1"
-            @click="() => { gridActiveIndex = (row-1) * 4 + (col-1); isGridOpen = false }"
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Card 1: Vertical -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-4">
+          <h2 class="text-lg font-semibold text-gray-700">Vertical List</h2>
+          <p class="text-sm text-gray-500 text-center">Standard dropdown with up/down navigation.</p>
+          
+          <button 
+            ref="verticalAnchor"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors flex items-center gap-2"
           >
-            {{ gridItems[(row-1) * 4 + (col-1)] }}
+            Options <span class="text-xs opacity-70">▼</span>
+          </button>
+
+          <div 
+            v-if="verticalOpen"
+            ref="verticalFloating"
+            :style="vertical.floatingStyles"
+            class="bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-50 flex flex-col focus:outline-none"
+          >
+            <div
+              v-for="(item, index) in verticalItems"
+              :key="item"
+              :ref="el => verticalListRefs[index] = el as HTMLElement"
+              class="px-4 py-2 text-sm cursor-pointer outline-none transition-colors"
+              :class="[
+                verticalActiveIndex === index ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+              ]"
+              tabindex="-1"
+              @click="verticalOpen = false; verticalActiveIndex = index"
+            >
+              {{ item }}
+            </div>
+          </div>
+          
+          <div class="h-6 text-sm text-blue-600 font-medium">
+            {{ verticalActiveIndex !== null ? `Selected: ${verticalItems[verticalActiveIndex]}` : '' }}
           </div>
         </div>
-      </div>
-      
-      <div v-if="gridActiveIndex !== null" class="selection">
-        Selected: {{ gridItems[gridActiveIndex] }}
-      </div>
-    </div>
 
-    <!-- Virtual Navigation -->
-    <div class="demo-section">
-      <h2>Virtual Navigation</h2>
-      <p>Uses aria-activedescendant instead of focus management</p>
-      
-      <button 
-        ref="virtualAnchorEl"
-        @click="isVirtualOpen = !isVirtualOpen"
-        class="trigger-button"
-      >
-        Virtual List ▾
-      </button>
-      
-      <div
-        ref="virtualFloatingEl"
-        :style="virtualFloating.floatingStyles"
-        v-show="isVirtualOpen"
-        class="dropdown-menu"
-        role="listbox"
-        aria-label="Virtual items"
-      >
-        <div
-          v-for="(item, index) in virtualItems"
-          :key="item"
-          :ref="(el) => { if (el) virtualListRefs[index] = el as HTMLElement }"
-          :id="`virtual-item-${index}`"
-          class="menu-item"
-          :class="{ active: virtualActiveIndex === index }"
-          role="option"
-          tabindex="-1"
-          :aria-selected="virtualActiveIndex === index"
-          @click="() => { virtualActiveIndex = index; isVirtualOpen = false }"
-        >
-          {{ item }}
+        <!-- Card 2: Grid -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-4">
+          <h2 class="text-lg font-semibold text-gray-700">Grid Navigation</h2>
+          <p class="text-sm text-gray-500 text-center">2D navigation with arrow keys (4x4).</p>
+          
+          <button 
+            ref="gridAnchor"
+            class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors flex items-center gap-2"
+          >
+            Grid Menu <span class="text-xs opacity-70">▼</span>
+          </button>
+
+          <div 
+            v-if="gridOpen"
+            ref="gridFloating"
+            :style="grid.floatingStyles"
+            class="bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50 grid grid-cols-4 gap-1 focus:outline-none"
+          >
+            <div
+              v-for="(item, index) in gridItems"
+              :key="item"
+              :ref="el => gridListRefs[index] = el as HTMLElement"
+              class="w-10 h-10 flex items-center justify-center text-xs rounded cursor-pointer outline-none transition-all border"
+              :class="[
+                gridActiveIndex === index 
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-700 font-bold' 
+                  : 'bg-gray-50 border-gray-100 text-gray-600 hover:border-emerald-200'
+              ]"
+              tabindex="-1"
+              @click="gridOpen = false; gridActiveIndex = index"
+            >
+              {{ index + 1 }}
+            </div>
+          </div>
+           <div class="h-6 text-sm text-emerald-600 font-medium">
+            {{ gridActiveIndex !== null ? `Selected: ${gridItems[gridActiveIndex]}` : '' }}
+          </div>
         </div>
-      </div>
-      
-      <div v-if="virtualActiveIndex !== null" class="selection">
-        Selected: {{ virtualItems[virtualActiveIndex] }}
-      </div>
-    </div>
 
-    <!-- Disabled Items -->
-    <div class="demo-section">
-      <h2>Disabled Items</h2>
-      <p>Navigation skips disabled items</p>
-      
-      <button 
-        ref="disabledAnchorEl"
-        @click="isDisabledOpen = !isDisabledOpen"
-        class="trigger-button"
-      >
-        Mixed List ▾
-      </button>
-      
-      <div
-        ref="disabledFloatingEl"
-        :style="disabledFloating.floatingStyles"
-        v-show="isDisabledOpen"
-        class="dropdown-menu"
-        role="listbox"
-        aria-label="Mixed enabled/disabled items"
-      >
-        <div
-          v-for="(item, index) in disabledItems"
-          :key="item"
-          :ref="(el) => disabledListRefs[index] = el as HTMLElement"
-          class="menu-item"
-          :class="{ 
-            active: disabledActiveIndex === index,
-            disabled: [1, 3, 5].includes(index)
-          }"
-          :aria-disabled="[1, 3, 5].includes(index)"
-          role="option"
-          tabindex="-1"
-          :aria-selected="disabledActiveIndex === index"
-          @click="() => { 
-            if (![1, 3, 5].includes(index)) {
-              disabledActiveIndex = index; 
-              isDisabledOpen = false 
-            }
-          }"
-        >
-          {{ item }}
+        <!-- Card 3: Virtual Focus -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-4">
+          <h2 class="text-lg font-semibold text-gray-700">Virtual Focus</h2>
+          <p class="text-sm text-gray-500 text-center">Uses aria-activedescendant (focus stays on input).</p>
+          
+          <input 
+            ref="virtualAnchor"
+            placeholder="Type to search..."
+            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none w-full max-w-[200px]"
+            @click="virtualOpen = true"
+          />
+
+          <div 
+            v-if="virtualOpen"
+            ref="virtualFloating"
+            :style="virtual.floatingStyles"
+            class="bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[200px] z-50 flex flex-col"
+            role="listbox"
+            :aria-activedescendant="virtualActiveIndex !== null ? `virtual-item-${virtualActiveIndex}` : undefined"
+          >
+            <div
+              v-for="(item, index) in virtualItems"
+              :key="item"
+              :id="`virtual-item-${index}`"
+              :ref="el => { if(el) virtualListRefs[index] = el as HTMLElement }"
+              class="px-4 py-2 text-sm cursor-pointer transition-colors"
+              :class="[
+                virtualActiveIndex === index ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-gray-50'
+              ]"
+              role="option"
+              :aria-selected="virtualActiveIndex === index"
+              @click="virtualOpen = false; virtualActiveIndex = index"
+            >
+              {{ item }}
+            </div>
+          </div>
+          <div class="h-6 text-sm text-purple-600 font-medium">
+            {{ virtualActiveIndex !== null ? `Active: ${virtualItems[virtualActiveIndex]}` : '' }}
+          </div>
         </div>
-      </div>
-      
-      <div v-if="disabledActiveIndex !== null" class="selection">
-        Selected: {{ disabledItems[disabledActiveIndex] }}
-      </div>
-    </div>
 
-    <!-- Instructions -->
-    <div class="instructions">
-      <h2>Keyboard Controls</h2>
-      <ul>
-        <li><strong>Arrow Keys:</strong> Navigate through items</li>
-        <li><strong>Home/End:</strong> Jump to first/last item</li>
-        <li><strong>Enter/Space:</strong> Select focused item</li>
-        <li><strong>Escape:</strong> Close dropdown</li>
-      </ul>
-      <h2>Dismissal Methods</h2>
-      <ul>
-        <li><strong>Click Item:</strong> Select and close dropdown</li>
-        <li><strong>Click Outside:</strong> Close dropdown</li>
-        <li><strong>Click Trigger:</strong> Toggle dropdown</li>
-        <li><strong>Escape Key:</strong> Close dropdown</li>
-      </ul>
+        <!-- Card 4: Disabled Items -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-4">
+          <h2 class="text-lg font-semibold text-gray-700">Disabled Items</h2>
+          <p class="text-sm text-gray-500 text-center">Skips disabled items during navigation.</p>
+          
+          <button 
+            ref="disabledAnchor"
+            class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-colors flex items-center gap-2"
+          >
+            Mixed List <span class="text-xs opacity-70">▼</span>
+          </button>
+
+          <div 
+            v-if="disabledOpen"
+            ref="disabledFloating"
+            :style="disabled.floatingStyles"
+            class="bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] z-50 flex flex-col focus:outline-none"
+          >
+            <div
+              v-for="(item, index) in disabledItemsList"
+              :key="item"
+              :ref="el => disabledListRefs[index] = el as HTMLElement"
+              class="px-4 py-2 text-sm outline-none transition-colors"
+              :class="[
+                disabledIndices.includes(index) 
+                  ? 'opacity-40 cursor-not-allowed text-gray-400' 
+                  : (disabledActiveIndex === index ? 'bg-orange-50 text-orange-700 cursor-pointer' : 'text-gray-700 hover:bg-gray-50 cursor-pointer')
+              ]"
+              tabindex="-1"
+              @click="!disabledIndices.includes(index) && (disabledOpen = false, disabledActiveIndex = index)"
+            >
+              {{ item }}
+            </div>
+          </div>
+          <div class="h-6 text-sm text-orange-600 font-medium">
+            {{ disabledActiveIndex !== null ? `Selected: ${disabledItemsList[disabledActiveIndex]}` : '' }}
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.list-navigation-demo {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 24px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-h1 {
-  margin: 0;
-  font-size: 24px;
-  color: #111827;
-}
-
-h2 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  color: #111827;
-}
-
-.demo-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-}
-
-.demo-section p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.trigger-button {
-  padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #f9fafb;
-  cursor: pointer;
-  font-size: 14px;
-  align-self: flex-start;
-}
-
-.trigger-button:hover {
-  background: #f3f4f6;
-}
-
-.dropdown-menu {
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  padding: 4px;
-  min-width: 200px;
-  z-index: 1000;
-}
-
-.menu-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.menu-item:hover,
-.menu-item.active {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.menu-item.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  color: #9ca3af;
-}
-
-.menu-item.disabled:hover {
-  background: transparent;
-  color: #9ca3af;
-}
-
-.grid-menu {
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  padding: 8px;
-  z-index: 1000;
-}
-
-.grid-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-}
-
-.grid-item {
-  padding: 12px;
-  cursor: pointer;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  font-size: 14px;
-  text-align: center;
-  min-width: 60px;
-}
-
-.grid-item:hover,
-.grid-item.active {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #3b82f6;
-}
-
-.selection {
-  padding: 8px 12px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #0369a1;
-  align-self: flex-start;
-}
-
-.instructions {
-  padding: 16px;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.instructions h2 {
-  margin-bottom: 12px;
-}
-
-.instructions ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.instructions li {
-  margin-bottom: 4px;
-  font-size: 14px;
-  color: #4b5563;
-}
-</style>

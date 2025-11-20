@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useListNavigation, type UseFloatingTreeReturn } from "@/composables"
-import { inject, provide, ref } from "vue"
+import { useFocusTrap, useListNavigation, type UseFloatingTreeReturn } from "@/composables"
+import { computed, inject, provide, ref } from "vue"
 
 interface MenuListContext {
   registerItem: (el: HTMLElement | null, disabled?: boolean) => number
@@ -20,6 +20,11 @@ const floatingEl = node?.data.refs.floatingEl ?? ref(null)
 const listRefs = ref<Array<HTMLElement | null>>([])
 const activeIndex = ref<number | null>(null)
 const disabledLookup = ref<Record<number, boolean>>({})
+const isTopLevelMenu = computed(() => {
+  if (!node) return false
+  return !node.parent.value
+})
+const shouldCloseOnFocusOut = computed(() => !isTopLevelMenu.value)
 
 const registerItem = (el: HTMLElement | null, disabled?: boolean) => {
   const index = listRefs.value.length
@@ -32,6 +37,16 @@ const registerItem = (el: HTMLElement | null, disabled?: boolean) => {
 
 const isActive = (index: number) => activeIndex.value === index
 
+const getInitialFocusTarget = () => {
+  for (let i = 0; i < listRefs.value.length; i += 1) {
+    if (!disabledLookup.value[i]) {
+      const el = listRefs.value[i]
+      if (el) return el
+    }
+  }
+  return floatingEl.value
+}
+
 if (node) {
   useListNavigation(node, {
     listRef: listRefs,
@@ -43,9 +58,18 @@ if (node) {
     orientation: "vertical",
     disabledIndices: (index) => !!disabledLookup.value[index],
     focusItemOnHover: true,
-    openOnArrowKeyDown: true,
+    openOnArrowKeyDown: !node.parent.value,
     focusItemOnOpen: "auto",
     nested: !!node.parent.value,
+  })
+
+  useFocusTrap(node, {
+    order: ["reference", "content"],
+    modal: isTopLevelMenu,
+    outsideElementsInert: isTopLevelMenu,
+    closeOnFocusOut: shouldCloseOnFocusOut,
+    restoreFocus: true,
+    initialFocus: () => getInitialFocusTarget(),
   })
 }
 
@@ -61,7 +85,6 @@ provide<MenuListContext>("menuListContext", {
     :style="{ ...node?.data.floatingStyles.value }"
     v-if="node?.data.open.value"
     :id="`menu-panel-${node.id}`"
-    class="menu-panel flex flex-col items-start"
     role="menu"
     :aria-labelledby="`menu-trigger-${node.id}`"
   >

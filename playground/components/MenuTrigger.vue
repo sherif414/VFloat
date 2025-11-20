@@ -42,7 +42,6 @@ const onKeyDown = (event: KeyboardEvent) => {
 <template>
   <button
     :ref="setAnchorRef"
-    class="menu-trigger-button"
     type="button"
     :id="node ? `menu-trigger-${node.id}` : undefined"
     :aria-expanded="node?.data.open.value"

@@ -14,5 +14,5 @@ import ListNavigationDemo from "./demo/ListNavigationDemo.vue"
 </script>
 
 <template>
-  <MenuDemo />
+  <ListNavigationDemo />
 </template>
