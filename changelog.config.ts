@@ -8,6 +8,11 @@ export default <Partial<ChangelogConfig>>{
   // Output changelog file (kept default path)
   output: "CHANGELOG.md",
 
+  // Generate changelog from the last tag to current HEAD
+  // This helps when running manually to see what would be in the next release
+  from: "", // Will be auto-detected to the latest tag
+  to: "HEAD",
+
   // Keep release commit/tag format consistent with existing release-it style
   templates: {
     commitMessage: "chore: release v{{newVersion}}",
