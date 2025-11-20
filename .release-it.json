@@ -13,7 +13,8 @@
     "before:init": ["git pull"],
     "after:bump": [
       "npm run build",
-      "changelogen"
+      "changelogen",
+      "git add CHANGELOG.md"
     ],
     "after:release": [
       "changelogen gh release",
