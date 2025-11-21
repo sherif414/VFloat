@@ -344,7 +344,7 @@ export function useFocusTrap(
       returnFocusOnDeactivate: toValue(returnFocus),
       clickOutsideDeactivates: shouldCloseOnFocusOut.value,
       allowOutsideClick: !isModal.value,
-      escapeDeactivates: true,
+      escapeDeactivates: false,
       preventScroll: toValue(preventScroll),
       tabbableOptions: { displayCheck: "none" },
     })
