@@ -39,6 +39,7 @@
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
     "@vueuse/core": "^13.7.0",
+    "focus-trap": "^7.6.6",
     "tabbable": "^6.3.0",
     "vue": "^3.5.22"
   },
