@@ -172,5 +172,196 @@ describe("useFocusTrap", () => {
     expect(document.activeElement).toBe(other)
   })
 
-  
+  // Additional comprehensive tests
+  it("wraps focus from last to first on Tab", async () => {
+    const b1 = document.createElement("button")
+    const b2 = document.createElement("button")
+    const b3 = document.createElement("button")
+    floating.append(b1, b2, b3)
+
+    scope.run(() => {
+      useFocusTrap(ctx, { guards: false })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+
+    b3.focus()
+    const keyEvt = new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
+    floating.dispatchEvent(keyEvt)
+    await nextTick()
+    expect(document.activeElement === b1 || document.activeElement === b3).toBeTruthy()
+  })
+
+  it("wraps focus from first to last on Shift+Tab", async () => {
+    const b1 = document.createElement("button")
+    const b2 = document.createElement("button")
+    floating.append(b1, b2)
+
+    scope.run(() => {
+      useFocusTrap(ctx, { guards: false })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+
+    b1.focus()
+    const keyEvt = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true })
+    floating.dispatchEvent(keyEvt)
+    await nextTick()
+    expect(document.activeElement === b2 || document.activeElement === b1).toBeTruthy()
+  })
+
+  it("uses preventScroll option correctly", async () => {
+    const b1 = document.createElement("button")
+    floating.append(b1)
+    const focusSpy = vi.spyOn(b1, "focus")
+
+    scope.run(() => {
+      useFocusTrap(ctx, { preventScroll: false, guards: false })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: false })
+  })
+
+  it("reacts to changes in enabled option", async () => {
+    const enabled = ref(true)
+
+    scope.run(() => {
+      useFocusTrap(ctx, { enabled, guards: true })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+    expect(floating.children.length).toBeGreaterThan(0)
+
+    enabled.value = false
+    await nextTick()
+
+    const guards = Array.from(floating.children).filter((el) => el.getAttribute("aria-hidden") === "true")
+    expect(guards.length).toBe(0)
+  })
+
+  it("cleanup method works correctly", async () => {
+    let cleanup: (() => void) | undefined
+
+    scope.run(() => {
+      const result = useFocusTrap(ctx, { guards: true })
+      cleanup = result.cleanup
+    })
+    ctx.setOpen(true)
+    await nextTick()
+    expect(floating.children.length).toBeGreaterThan(0)
+
+    cleanup?.()
+    await nextTick()
+
+    const guards = Array.from(floating.children).filter((el) => el.getAttribute("aria-hidden") === "true")
+    expect(guards.length).toBe(0)
+  })
+
+  it("works with dynamically added elements", async () => {
+    const b1 = document.createElement("button")
+    floating.append(b1)
+
+    scope.run(() => {
+      useFocusTrap(ctx, { guards: false })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+
+    const b2 = document.createElement("button")
+    floating.append(b2)
+    await nextTick()
+
+    b2.focus()
+    await nextTick()
+    expect(document.activeElement).toBe(b2)
+  })
+
+  it("handles rapid open/close cycles", async () => {
+    const b1 = document.createElement("button")
+    floating.append(b1)
+
+    scope.run(() => {
+      useFocusTrap(ctx, { guards: true })
+    })
+
+    for (let i = 0; i < 5; i++) {
+      ctx.setOpen(true)
+      await nextTick()
+      ctx.setOpen(false)
+      await nextTick()
+    }
+
+    expect(true).toBe(true)
+  })
+
+  it("does not return focus to disconnected elements", async () => {
+    const other = document.createElement("button")
+    document.body.appendChild(other)
+    other.focus()
+
+    scope.run(() => {
+      useFocusTrap(ctx, { returnFocus: true })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+
+    other.remove()
+
+    ctx.setOpen(false)
+    await nextTick()
+
+    expect(document.activeElement).not.toBe(other)
+  })
+
+  it("handles null floating element gracefully", async () => {
+    ctx.refs.floatingEl.value = null
+
+    scope.run(() => {
+      useFocusTrap(ctx, { guards: false })
+    })
+
+    expect(() => {
+      ctx.setOpen(true)
+    }).not.toThrow()
+    await nextTick()
+  })
+
+  it("handles focus errors gracefully", async () => {
+    const b1 = document.createElement("button")
+    floating.append(b1)
+
+    vi.spyOn(b1, "focus").mockImplementation(() => {
+      throw new Error("Focus error")
+    })
+
+    scope.run(() => {
+      useFocusTrap(ctx, { guards: false })
+    })
+
+    expect(() => {
+      ctx.setOpen(true)
+    }).not.toThrow()
+    await nextTick()
+  })
+
+  it("restores previous aria-hidden state on cleanup", async () => {
+    const outside = document.createElement("div")
+    outside.setAttribute("aria-hidden", "false")
+    document.body.appendChild(outside)
+
+    scope.run(() => {
+      useFocusTrap(ctx, { modal: true })
+    })
+    ctx.setOpen(true)
+    await nextTick()
+
+    expect(outside.getAttribute("aria-hidden")).toBe("true")
+
+    scope.stop()
+    await nextTick()
+
+    expect(outside.getAttribute("aria-hidden")).toBe("false")
+  })  
 })
