@@ -24,11 +24,8 @@ function useFocusTrap(
 interface UseFocusTrapOptions {
   enabled?: MaybeRefOrGetter<boolean>
   modal?: MaybeRefOrGetter<boolean>
-  guards?: MaybeRefOrGetter<boolean>
-  order?: MaybeRefOrGetter<Array<"content" | "reference" | "floating">>
-  initialFocus?: MaybeRefOrGetter<number | HTMLElement | (() => HTMLElement | null) | "first" | "last">
+  initialFocus?: MaybeRefOrGetter<HTMLElement | (() => HTMLElement | null) | string | false>
   returnFocus?: MaybeRefOrGetter<boolean>
-  restoreFocus?: MaybeRefOrGetter<boolean>
   closeOnFocusOut?: MaybeRefOrGetter<boolean>
   preventScroll?: MaybeRefOrGetter<boolean>
   outsideElementsInert?: MaybeRefOrGetter<boolean>
@@ -39,11 +36,8 @@ interface UseFocusTrapOptions {
 |--------|------|---------|-------------|
 | enabled | `MaybeRefOrGetter<boolean>` | `true` | Enable/disable focus trap listeners. |
 | modal | `MaybeRefOrGetter<boolean>` | `false` | When true, hides/inerts content outside the trap and prevents focus from escaping. |
-| guards | `MaybeRefOrGetter<boolean>` | `true` | When true, inserts hidden focus guards to aid wrap-around Tab navigation. |
-| order | `MaybeRefOrGetter<Array<...>>` | `['content']` | Wrap order preference when cycling with Tab. |
-| initialFocus | `MaybeRefOrGetter<...>` | `'first'` | Initial focus target policy on activation: index, element, function, or 'first'/'last'. |
+| initialFocus | `MaybeRefOrGetter<...>` | `undefined` | Element to focus when trap activates: CSS selector, HTMLElement, or function returning element. |
 | returnFocus | `MaybeRefOrGetter<boolean>` | `true` | Returns focus to previously focused element when trap deactivates. |
-| restoreFocus | `MaybeRefOrGetter<boolean>` | `false` | Restores focus to nearest tabbable if active element disappears. |
 | closeOnFocusOut | `MaybeRefOrGetter<boolean>` | `false` | On non-modal, close floating when focus escapes the trap. |
 | preventScroll | `MaybeRefOrGetter<boolean>` | `true` | Pass `preventScroll` to focus operations. |
 | outsideElementsInert | `MaybeRefOrGetter<boolean>` | `false` | Apply `inert` attribute (when supported) to outside elements while modal. |
@@ -273,53 +267,7 @@ useFocusTrap(context, {
 </template>
 ```
 
-## Custom Tab Order
 
-Control the order in which elements are cycled through with Tab:
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating, useFocusTrap } from "v-float"
-
-const referenceRef = ref(null)
-const floatingRef = ref(null)
-const open = ref(false)
-
-const context = useFloating(referenceRef, floatingRef, {
-  open,
-  onOpenChange: (value) => open.value = value
-})
-
-// Custom tab order: content -> reference -> floating container
-useFocusTrap(context, {
-  order: ['content', 'reference', 'floating']
-})
-</script>
-```
-
-Available order segments:
-- `'content'` - Tabbable elements within the floating element
-- `'reference'` - The reference element itself
-- `'floating'` - The floating container element
-
-## Focus Guards
-
-Focus guards are invisible elements that help with Tab/Shift+Tab wrapping:
-
-```vue
-<script setup>
-// Guards enabled by default
-useFocusTrap(context, {
-  guards: true // Default
-})
-
-// Disable guards if you have custom focus management
-useFocusTrap(context, {
-  guards: false
-})
-</script>
-```
 
 ## Focus Return Behavior
 
@@ -345,16 +293,7 @@ useFocusTrap(context, {
 </script>
 ```
 
-### Restore Focus if Element Disappears
 
-```vue
-<script setup>
-// If focused element is removed from DOM, restore to nearest tabbable
-useFocusTrap(context, {
-  restoreFocus: true
-})
-</script>
-```
 
 ## Nested Focus Traps
 
@@ -605,8 +544,6 @@ useFocusTrap(context, {
 7. **Nested Traps**: Use `useFloatingTree` for nested floating elements to enable intelligent hierarchical focus trapping.
 
 8. **Prevent Scroll**: Keep `preventScroll: true` (default) to avoid unwanted scrolling when focus moves.
-
-9. **Guards**: Keep `guards: true` (default) for reliable Tab wrapping behavior.
 
 10. **Inert Outside Elements**: For critical modal dialogs, consider using `outsideElementsInert: true` in browsers that support the `inert` attribute.
 
