@@ -17,6 +17,7 @@ This section provides detailed API documentation for the composables and utiliti
 - [`useClick`](./use-click.md) - Click interaction handling
 - [`useHover`](./use-hover.md) - Hover interaction with safe polygon support
 - [`useFocus`](./use-focus.md) - Focus interaction handling
+- [`useFocusTrap`](./use-focus-trap.md) - Focus trap management for modal dialogs and floating elements
 - [`useEscapeKey`](./use-escape-key.md) - Escape key handling
 - [`useListNavigation`](./use-list-navigation.md) - Keyboard/virtual list navigation for menus and grids
  

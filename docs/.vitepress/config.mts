@@ -78,6 +78,7 @@ export default defineConfig({
             { text: "useClick", link: "/api/use-click" },
             { text: "useHover", link: "/api/use-hover" },
             { text: "useFocus", link: "/api/use-focus" },
+            { text: "useFocusTrap", link: "/api/use-focus-trap" },
             { text: "useClientPoint", link: "/api/use-client-point" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
             { text: "useListNavigation", link: "/api/use-list-navigation" },
