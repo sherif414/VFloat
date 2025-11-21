@@ -371,7 +371,6 @@ export function useFocusTrap(
 
   // Single watcher to manage trap lifecycle
   watchPostEffect(() => {
-    console.log('watcher ran')
     if (isEnabled.value && open.value && floatingEl.value) {
       createTrap()
     } else {
