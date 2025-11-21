@@ -1,16 +1,29 @@
 <script setup lang="ts">
-import { flip, offset, shift, useFloating } from "v-float"
+import { flip, offset, shift, useFloating, useListNavigation, useFocusTrap } from "v-float"
 import { onMounted, onUnmounted, ref } from "vue"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
+const itemsRef = ref<Array<HTMLElement | null>>([])
+const activeIndex = ref<number | null>(null)
 
-const { floatingStyles, update } = useFloating(anchorEl, floatingEl, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
   open: isOpen,
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
 })
+
+const { floatingStyles, update } = context
+
+useListNavigation(context, {
+  listRef: itemsRef,
+  activeIndex,
+  onNavigate: (index) => (activeIndex.value = index),
+  loop: true,
+})
+
+useFocusTrap(context)
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value
@@ -21,6 +34,7 @@ const toggleDropdown = () => {
 
 const closeDropdown = () => {
   isOpen.value = false
+  activeIndex.value = null
 }
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -86,11 +100,14 @@ const handleItemClick = (item: (typeof menuItems)[0]) => {
 
     <div v-if="isOpen" ref="floatingEl" :style="floatingStyles" class="dropdown-menu" role="menu">
       <button
-        v-for="item in menuItems"
+        v-for="(item, index) in menuItems"
         :key="item.label"
+        :ref="(el) => (itemsRef[index] = el as HTMLElement)"
         @click="handleItemClick(item)"
         class="dropdown-item"
+        :class="{ active: activeIndex === index }"
         role="menuitem"
+        :tabindex="activeIndex === index ? 0 : -1"
       >
         {{ item.label }}
       </button>
@@ -164,7 +181,8 @@ const handleItemClick = (item: (typeof menuItems)[0]) => {
   color: #1f2937;
 }
 
-.dropdown-item:hover {
+.dropdown-item:hover,
+.dropdown-item.active {
   background: #f3f4f6;
 }
 

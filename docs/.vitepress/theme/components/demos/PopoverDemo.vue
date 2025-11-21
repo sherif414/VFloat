@@ -14,7 +14,13 @@
             <button @click="popoverNode.data.setOpen(false)" class="close-btn">×</button>
           </div>
           <ul class="menu">
-            <li ref="fileTrigger" class="menu-item" :class="{ open: fileNode.data.open.value }">
+            <li
+              ref="fileTrigger"
+              class="menu-item"
+              :class="{ open: fileNode.data.open.value }"
+              tabindex="-1"
+              @keydown.right.prevent="fileNode.data.setOpen(true)"
+            >
               File <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
                 <ul
@@ -23,12 +29,18 @@
                   class="submenu floating-element"
                   :style="fileNode.data.floatingStyles.value"
                 >
-                  <li class="menu-item" @click="handleActionClick">New</li>
-                  <li class="menu-item" @click="handleActionClick">Open</li>
+                  <li ref="newFileItem" class="menu-item" @click="handleActionClick" tabindex="-1">
+                    New
+                  </li>
+                  <li ref="openFileItem" class="menu-item" @click="handleActionClick" tabindex="-1">
+                    Open
+                  </li>
                   <li
                     ref="exportTrigger"
                     class="menu-item"
                     :class="{ open: exportNode.data.open.value }"
+                    tabindex="-1"
+                    @keydown.right.prevent="exportNode.data.setOpen(true)"
                   >
                     Export <span class="submenu-arrow">▶︎</span>
                     <Teleport to="body">
@@ -38,16 +50,33 @@
                         class="sub-submenu floating-element"
                         :style="exportNode.data.floatingStyles.value"
                       >
-                        <li class="menu-item" @click="handleActionClick">PDF</li>
-                        <li class="menu-item" @click="handleActionClick">DOCX</li>
+                        <li ref="pdfItem" class="menu-item" @click="handleActionClick" tabindex="-1">
+                          PDF
+                        </li>
+                        <li ref="docxItem" class="menu-item" @click="handleActionClick" tabindex="-1">
+                          DOCX
+                        </li>
                       </ul>
                     </Teleport>
                   </li>
                 </ul>
               </Teleport>
             </li>
-            <li ref="editItem" class="menu-item" @click="handleActionClick">Edit</li>
-            <li ref="viewTrigger" class="menu-item" :class="{ open: viewNode.data.open.value }">
+            <li
+              ref="editItem"
+              class="menu-item"
+              @click="handleActionClick"
+              tabindex="-1"
+            >
+              Edit
+            </li>
+            <li
+              ref="viewTrigger"
+              class="menu-item"
+              :class="{ open: viewNode.data.open.value }"
+              tabindex="-1"
+              @keydown.right.prevent="viewNode.data.setOpen(true)"
+            >
               View <span class="submenu-arrow">▶︎</span>
               <Teleport to="body">
                 <ul
@@ -56,12 +85,23 @@
                   class="submenu floating-element"
                   :style="viewNode.data.floatingStyles.value"
                 >
-                  <li class="menu-item" @click="handleActionClick">Zoom In</li>
-                  <li class="menu-item" @click="handleActionClick">Zoom Out</li>
+                  <li ref="zoomInItem" class="menu-item" @click="handleActionClick" tabindex="-1">
+                    Zoom In
+                  </li>
+                  <li ref="zoomOutItem" class="menu-item" @click="handleActionClick" tabindex="-1">
+                    Zoom Out
+                  </li>
                 </ul>
               </Teleport>
             </li>
-            <li ref="helpItem" class="menu-item" @click="handleActionClick">Help</li>
+            <li
+              ref="helpItem"
+              class="menu-item"
+              @click="handleActionClick"
+              tabindex="-1"
+            >
+              Help
+            </li>
           </ul>
         </div>
       </Teleport>
@@ -70,8 +110,8 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, ref } from "vue"
-import { useFloatingTree, useClick, useHover, offset, shift, useEscapeKey } from "v-float"
+import { useTemplateRef, ref, computed } from "vue"
+import { useFloatingTree, useClick, useHover, offset, shift, useEscapeKey, useListNavigation, useFocusTrap } from "v-float"
 
 const popoverTrigger = useTemplateRef("popoverTrigger")
 const popoverFloating = useTemplateRef("popoverFloating")
@@ -119,6 +159,76 @@ const viewNode = tree.addNode(viewTrigger, viewFloating, {
   parentId: popoverNode.id,
 })!
 useHover(viewNode, { delay: 50, safePolygon: true })
+
+// Navigation & Focus Trap Setup
+const popoverActiveIndex = ref<number | null>(null)
+const fileActiveIndex = ref<number | null>(null)
+const exportActiveIndex = ref<number | null>(null)
+const viewActiveIndex = ref<number | null>(null)
+
+const editItem = useTemplateRef("editItem")
+const helpItem = useTemplateRef("helpItem")
+const newFileItem = useTemplateRef("newFileItem")
+const openFileItem = useTemplateRef("openFileItem")
+const pdfItem = useTemplateRef("pdfItem")
+const docxItem = useTemplateRef("docxItem")
+const zoomInItem = useTemplateRef("zoomInItem")
+const zoomOutItem = useTemplateRef("zoomOutItem")
+
+const popoverItems = computed(() => [
+  fileTrigger.value,
+  editItem.value,
+  viewTrigger.value,
+  helpItem.value,
+])
+
+const fileItems = computed(() => [
+  newFileItem.value,
+  openFileItem.value,
+  exportTrigger.value,
+])
+
+const exportItems = computed(() => [pdfItem.value, docxItem.value])
+
+const viewItems = computed(() => [zoomInItem.value, zoomOutItem.value])
+
+useListNavigation(popoverNode, {
+  listRef: popoverItems,
+  activeIndex: popoverActiveIndex,
+  onNavigate: (i) => (popoverActiveIndex.value = i),
+  loop: true,
+})
+useFocusTrap(popoverNode)
+
+useListNavigation(fileNode, {
+  listRef: fileItems,
+  activeIndex: fileActiveIndex,
+  onNavigate: (i) => (fileActiveIndex.value = i),
+  loop: true,
+  nested: true,
+  selectedIndex: 0,
+})
+useFocusTrap(fileNode)
+
+useListNavigation(exportNode, {
+  listRef: exportItems,
+  activeIndex: exportActiveIndex,
+  onNavigate: (i) => (exportActiveIndex.value = i),
+  loop: true,
+  nested: true,
+  selectedIndex: 0,
+})
+useFocusTrap(exportNode)
+
+useListNavigation(viewNode, {
+  listRef: viewItems,
+  activeIndex: viewActiveIndex,
+  onNavigate: (i) => (viewActiveIndex.value = i),
+  loop: true,
+  nested: true,
+  selectedIndex: 0,
+})
+useFocusTrap(viewNode)
 
 // Handle action clicks to close popover
 const handleActionClick = () => {
@@ -207,8 +317,10 @@ const handleActionClick = () => {
   white-space: nowrap;
 }
 .menu-item:hover,
-.menu-item.open {
+.menu-item.open,
+.menu-item:focus {
   background: var(--vp-c-bg-soft);
+  outline: none;
 }
 .submenu,
 .sub-submenu {
