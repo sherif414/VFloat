@@ -1,7 +1,7 @@
 import { createFocusTrap, type FocusTrap } from "focus-trap"
 import {
-  computed,
   type ComputedRef,
+  computed,
   type MaybeRefOrGetter,
   onScopeDispose,
   shallowRef,
@@ -10,7 +10,7 @@ import {
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-import { getContextFromParameter, isHTMLElement, isVirtualElement } from "@/utils"
+import { getContextFromParameter } from "@/utils"
 
 //=======================================================================================
 // 📌 Types
@@ -32,22 +32,15 @@ export interface UseFocusTrapOptions {
    */
   modal?: MaybeRefOrGetter<boolean>
   /**
-   * Defines the preferred order for cycling focus when tabbing within the trap.
-   * This is useful when you have multiple distinct areas within your floating
-   * element system (e.g., the floating content itself, the reference element).
-   * @default ['content']
-   */
-  order?: MaybeRefOrGetter<Array<"content" | "reference" | "floating">>
-  /**
    * Specifies the element that should receive initial focus when the trap is activated.
    * - `undefined` or omitted: Focuses the first tabbable element within the trap.
    * - CSS selector string: Queries and focuses the first matching element.
    * - `HTMLElement`: Focuses the specific provided HTML element.
-   * - `Function`: A function that returns an `HTMLElement` or `null`. The returned
+   * - `Function`: A function that returns an `HTMLElement` or `false`. The returned
    *   element will receive focus.
    * - `false`: Prevents any initial focus from being set by the trap.
    */
-  initialFocus?: MaybeRefOrGetter<HTMLElement | (() => HTMLElement | null) | string | false>
+  initialFocus?: HTMLElement | (() => HTMLElement | false) | string | false
   /**
    * When `true`, focus will be returned to the element that was focused
    * immediately before the trap was activated, upon deactivation.
@@ -119,7 +112,7 @@ export function useFocusTrap(
 ): UseFocusTrapReturn {
   const { floatingContext } = getContextFromParameter(context)
   const {
-    refs: { floatingEl, anchorEl },
+    refs: { floatingEl },
     open,
     setOpen,
   } = floatingContext
@@ -128,7 +121,6 @@ export function useFocusTrap(
   const {
     enabled = true,
     modal = false,
-    order = ["content"],
     initialFocus,
     returnFocus = true,
     closeOnFocusOut = false,
@@ -153,96 +145,23 @@ export function useFocusTrap(
   // Guard to prevent double-deactivation
   let isDeactivating = false
 
-  // Memoized containers to avoid recalculation
-  let cachedContainers: HTMLElement[] | null = null
-  let lastAnchor: unknown = null
-  let lastFloating: unknown = null
-  let lastOrder: string = ""
-
-  /**
-   * Gets the containers for the focus trap with memoization.
-   * Only recalculates if refs or order have changed.
-   */
-  const getContainers = (): HTMLElement[] => {
-    const reference = anchorEl.value
-    const content = floatingEl.value
-    const currentOrder = JSON.stringify(toValue(order))
-
-    // Return cached result if nothing changed
-    if (
-      cachedContainers &&
-      lastAnchor === reference &&
-      lastFloating === content &&
-      lastOrder === currentOrder
-    ) {
-      return cachedContainers
-    }
-
-    // Update cache keys
-    lastAnchor = reference
-    lastFloating = content
-    lastOrder = currentOrder
-
-    if (!content) {
-      cachedContainers = []
-      return []
-    }
-
-    const containers: HTMLElement[] = []
-    const containerSet = new Set<HTMLElement>() // Use Set for O(1) duplicate checking
-    const orderArray = Array.isArray(toValue(order)) ? toValue(order) : ["content"]
-
-    for (const segment of orderArray) {
-      if (segment === "content" || segment === "floating") {
-        if (content && !containerSet.has(content)) {
-          containers.push(content)
-          containerSet.add(content)
-        }
-      } else if (segment === "reference") {
-        let refElement: HTMLElement | null = null
-
-        if (isHTMLElement(reference)) {
-          refElement = reference
-        } else if (isVirtualElement(reference) && reference.contextElement instanceof HTMLElement) {
-          refElement = reference.contextElement
-        }
-
-        if (refElement && !containerSet.has(refElement)) {
-          containers.push(refElement)
-          containerSet.add(refElement)
-        }
-      }
-    }
-
-    // Fallback: ensure at least the floating element is included
-    if (containers.length === 0) {
-      containers.push(content)
-    }
-
-    cachedContainers = containers
-    return containers
-  }
-
   /**
    * Applies modal state to outside elements (inert or aria-hidden).
    * Returns a cleanup function to restore original state.
    */
-  function applyOutsideState(containers: HTMLElement[]): () => void {
+  function applyOutsideState(container: HTMLElement): () => void {
     if (!isModal.value) return () => {}
 
-    const body = (containers[0]?.ownerDocument ?? document).body
+    const body = (container.ownerDocument ?? document).body
 
     // Cache body children to avoid repeated queries
     const allChildren = Array.from(body.children) as HTMLElement[]
-    const containerSet = new Set(containers)
 
     // Filter outside elements efficiently
     const outsideElements = allChildren.filter((el) => {
-      // Check if element is a container or contains/is contained by a container
-      if (containerSet.has(el)) return false
-      for (const container of containers) {
-        if (container.contains(el) || el.contains(container)) return false
-      }
+      // Check if element is the container or contains/is contained by the container
+      if (el === container) return false
+      if (container.contains(el) || el.contains(container)) return false
       return true
     })
 
@@ -301,18 +220,18 @@ export function useFocusTrap(
     // Deactivate existing trap first
     deactivateTrap()
 
-    const containers = getContainers()
-    if (containers.length === 0) {
+    const container = floatingEl.value
+    if (!container) {
       if (import.meta.env.DEV) {
-        console.warn("[useFocusTrap] No containers available for focus trap")
+        console.warn("[useFocusTrap] No floating element available for focus trap")
       }
       return
     }
-    
+
     // Create the focus trap instance
-    trapRef.value = createFocusTrap(containers, {
+    trapRef.value = createFocusTrap(container, {
       onActivate: () => {
-        restoreOutsideState = applyOutsideState(containers)
+        restoreOutsideState = applyOutsideState(container)
       },
       onDeactivate: () => {
         // Restore outside element state
@@ -326,21 +245,10 @@ export function useFocusTrap(
           setOpen(false)
         }
       },
-      initialFocus: () => {
-        const init = toValue(initialFocus)
-        // undefined = first tabbable (focus-trap default)
-        // string = CSS selector (focus-trap will query)
-        // HTMLElement = specific element
-        // function = custom logic
-        // false = no initial focus
-        if (init === undefined) return undefined
-        if (typeof init === "string") return init
-        if (isHTMLElement(init)) return init
-        if (typeof init === "function") return init() || false
-        if (init === false) return false
-        return undefined
-      },
-      fallbackFocus: () => containers[0],
+      initialFocus: () => 
+        typeof initialFocus === "function" ? initialFocus() : initialFocus
+      ,
+      fallbackFocus: () => container,
       returnFocusOnDeactivate: toValue(returnFocus),
       clickOutsideDeactivates: shouldCloseOnFocusOut.value,
       allowOutsideClick: !isModal.value,
@@ -381,8 +289,6 @@ export function useFocusTrap(
   // Cleanup on scope disposal
   onScopeDispose(() => {
     deactivateTrap()
-    // Clear memoization cache
-    cachedContainers = null
   })
 
   return {
