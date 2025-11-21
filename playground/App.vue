@@ -10,9 +10,10 @@ import MenuDemo from "./demo/MenuDemo.vue"
 // import DemoContainer from "./demo/DemoContainer.vue"
 // import { VuePlugin } from "@21st-extension/vue"
 // import Temp from "./demo/Temp.vue"
-import ListNavigationDemo from "./demo/ListNavigationDemo.vue"
+// import FocusTrapDemo from "./demo/FocusTrapDemo.vue"
+import FocusTrapPlayground from "./demo/FocusTrapPlayground.vue"
 </script>
 
 <template>
-  <ListNavigationDemo />
+  <FocusTrapPlayground />
 </template>
