@@ -1,11 +1,11 @@
 import { createFocusTrap, type FocusTrap } from "focus-trap"
 import {
   computed,
+  type ComputedRef,
   type MaybeRefOrGetter,
   onScopeDispose,
-  ref,
+  shallowRef,
   toValue,
-  watch,
   watchPostEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
@@ -17,30 +17,77 @@ import { getContextFromParameter, isHTMLElement, isVirtualElement } from "@/util
 //=======================================================================================
 
 export interface UseFocusTrapOptions {
-  /** Enables the focus trap when true. @default true */
+  /**
+   * Determines if the focus trap should be enabled.
+   * When `true`, the focus trap is active.
+   * @default true
+   */
   enabled?: MaybeRefOrGetter<boolean>
-  /** When true, hides/inerts content outside the trap. @default false */
+  /**
+   * When `true`, content outside the trap will be hidden from accessibility
+   * trees (via `aria-hidden`) and potentially made inert (via `inert` attribute
+   * if `outsideElementsInert` is `true` and supported).
+   * This mimics modal behavior.
+   * @default false
+   */
   modal?: MaybeRefOrGetter<boolean>
-  /** When true, inserts hidden focus guards to aid wrap-around. @default true */
-  guards?: MaybeRefOrGetter<boolean>
-  /** Wrap order preference when cycling with Tab. @default ['content'] */
+  /**
+   * Defines the preferred order for cycling focus when tabbing within the trap.
+   * This is useful when you have multiple distinct areas within your floating
+   * element system (e.g., the floating content itself, the reference element).
+   * @default ['content']
+   */
   order?: MaybeRefOrGetter<Array<"content" | "reference" | "floating">>
-  /** Initial focus target policy on activation. @default 'first' */
-  initialFocus?: MaybeRefOrGetter<HTMLElement | (() => HTMLElement | null) | "first" | false>
-  /** Returns focus to previously focused element on deactivate. @default true */
+  /**
+   * Specifies the element that should receive initial focus when the trap is activated.
+   * - `undefined` or omitted: Focuses the first tabbable element within the trap.
+   * - CSS selector string: Queries and focuses the first matching element.
+   * - `HTMLElement`: Focuses the specific provided HTML element.
+   * - `Function`: A function that returns an `HTMLElement` or `null`. The returned
+   *   element will receive focus.
+   * - `false`: Prevents any initial focus from being set by the trap.
+   */
+  initialFocus?: MaybeRefOrGetter<HTMLElement | (() => HTMLElement | null) | string | false>
+  /**
+   * When `true`, focus will be returned to the element that was focused
+   * immediately before the trap was activated, upon deactivation.
+   * @default true
+   */
   returnFocus?: MaybeRefOrGetter<boolean>
-  /** Restores focus to nearest tabbable if active node disappears. @default false */
-  restoreFocus?: MaybeRefOrGetter<boolean>
-  /** On non-modal, close when focus escapes the trap. @default false */
+  /**
+   * When `true` and the trap is not `modal`, the trap will deactivate (and potentially close
+   * the associated component) if focus moves outside the defined trap elements.
+   * @default false
+   */
   closeOnFocusOut?: MaybeRefOrGetter<boolean>
-  /** Pass preventScroll to focus operations. @default true */
+  /**
+   * Controls whether the browser should scroll to the focused element.
+   * Passed directly to the `focus()` method's `preventScroll` option.
+   * @default true
+   */
   preventScroll?: MaybeRefOrGetter<boolean>
-  /** Apply `inert` (when supported) to outside elements while modal. @default false */
+  /**
+   * When `true` and `modal` is `true`, applies the `inert` attribute (if supported
+   * by the browser) to elements outside the focus trap to prevent user interaction
+   * and assistive technology access.
+   * @default false
+   */
   outsideElementsInert?: MaybeRefOrGetter<boolean>
+  /**
+   * An optional error handler function that will be called if there's an
+   * issue during the focus trap activation process.
+   * @param error - The error object.
+   */
+  onError?: (error: unknown) => void
 }
 
 export interface UseFocusTrapReturn {
-  cleanup: () => void
+  /** Check if the focus trap is currently active */
+  isActive: ComputedRef<boolean>
+  /** Manually activate the focus trap (if enabled and open) */
+  activate: () => void
+  /** Manually deactivate the focus trap */
+  deactivate: () => void
 }
 
 //=======================================================================================
@@ -58,6 +105,14 @@ const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLEleme
 // 📌 Main Composable
 //=======================================================================================
 
+/**
+ * Creates a focus trap for a floating element using focus-trap library.
+ * Manages focus containment, modal behavior, and accessibility features.
+ *
+ * @param context - FloatingContext or TreeNode containing floating element refs
+ * @param options - Configuration options for the focus trap
+ * @returns Object with isActive state, and manual control methods
+ */
 export function useFocusTrap(
   context: FloatingContext | TreeNode<FloatingContext>,
   options: UseFocusTrapOptions = {}
@@ -69,87 +124,145 @@ export function useFocusTrap(
     setOpen,
   } = floatingContext
 
-  // Normalize options
+  // Normalize options with defaults
   const {
     enabled = true,
     modal = false,
     order = ["content"],
-    initialFocus = "first",
+    initialFocus,
     returnFocus = true,
     closeOnFocusOut = false,
     preventScroll = true,
     outsideElementsInert = false,
+    onError,
   } = options
 
+  // Lazy-evaluated computed values (only created once)
   const isEnabled = computed(() => !!toValue(enabled))
   const isModal = computed(() => !!toValue(modal))
-  const wrapOrder = computed(() => {
-    const val = toValue(order)
-    return Array.isArray(val) ? val : ["content"]
-  })
-  const shouldCloseOnFocusOut = computed(() => !!toValue(closeOnFocusOut))
+  const shouldCloseOnFocusOut = computed(() => !isModal.value && !!toValue(closeOnFocusOut))
   const shouldInertOutside = computed(() => !!toValue(outsideElementsInert))
-  const focusPreventScroll = computed(() => !!toValue(preventScroll))
 
-  const trapRef = ref<FocusTrap | null>(null)
+  // Use shallowRef for trap instance (don't need deep reactivity)
+  const trapRef = shallowRef<FocusTrap | null>(null)
+  const isActive = computed(() => trapRef.value !== null)
+
+  // State restoration callback
   let restoreOutsideState: (() => void) | null = null
 
-  // Helper to resolve containers based on order
-  const getContainers = () => {
-    const containers: HTMLElement[] = []
+  // Guard to prevent double-deactivation
+  let isDeactivating = false
+
+  // Memoized containers to avoid recalculation
+  let cachedContainers: HTMLElement[] | null = null
+  let lastAnchor: unknown = null
+  let lastFloating: unknown = null
+  let lastOrder: string = ""
+
+  /**
+   * Gets the containers for the focus trap with memoization.
+   * Only recalculates if refs or order have changed.
+   */
+  const getContainers = (): HTMLElement[] => {
     const reference = anchorEl.value
     const content = floatingEl.value
+    const currentOrder = JSON.stringify(toValue(order))
 
-    if (!content) return []
+    // Return cached result if nothing changed
+    if (
+      cachedContainers &&
+      lastAnchor === reference &&
+      lastFloating === content &&
+      lastOrder === currentOrder
+    ) {
+      return cachedContainers
+    }
 
-    for (const segment of wrapOrder.value) {
+    // Update cache keys
+    lastAnchor = reference
+    lastFloating = content
+    lastOrder = currentOrder
+
+    if (!content) {
+      cachedContainers = []
+      return []
+    }
+
+    const containers: HTMLElement[] = []
+    const containerSet = new Set<HTMLElement>() // Use Set for O(1) duplicate checking
+    const orderArray = Array.isArray(toValue(order)) ? toValue(order) : ["content"]
+
+    for (const segment of orderArray) {
       if (segment === "content" || segment === "floating") {
-        if (content && !containers.includes(content)) containers.push(content)
+        if (content && !containerSet.has(content)) {
+          containers.push(content)
+          containerSet.add(content)
+        }
       } else if (segment === "reference") {
-        if (isHTMLElement(reference) && !containers.includes(reference)) {
-          containers.push(reference)
+        let refElement: HTMLElement | null = null
+
+        if (isHTMLElement(reference)) {
+          refElement = reference
         } else if (isVirtualElement(reference) && reference.contextElement instanceof HTMLElement) {
-          if (!containers.includes(reference.contextElement)) {
-            containers.push(reference.contextElement)
-          }
+          refElement = reference.contextElement
+        }
+
+        if (refElement && !containerSet.has(refElement)) {
+          containers.push(refElement)
+          containerSet.add(refElement)
         }
       }
     }
 
-    if (containers.length === 0 && content) {
+    // Fallback: ensure at least the floating element is included
+    if (containers.length === 0) {
       containers.push(content)
     }
 
+    cachedContainers = containers
     return containers
   }
 
   /**
    * Applies modal state to outside elements (inert or aria-hidden).
+   * Returns a cleanup function to restore original state.
    */
   function applyOutsideState(containers: HTMLElement[]): () => void {
     if (!isModal.value) return () => {}
 
-    const doc = containers[0]?.ownerDocument || document
-    const body = doc.body
-    const outsideElements = Array.from(body.children).filter(
-      (el) => !containers.some((c) => c === el || c.contains(el) || el.contains(c))
-    ) as HTMLElement[]
+    const body = (containers[0]?.ownerDocument ?? document).body
+
+    // Cache body children to avoid repeated queries
+    const allChildren = Array.from(body.children) as HTMLElement[]
+    const containerSet = new Set(containers)
+
+    // Filter outside elements efficiently
+    const outsideElements = allChildren.filter((el) => {
+      // Check if element is a container or contains/is contained by a container
+      if (containerSet.has(el)) return false
+      for (const container of containers) {
+        if (container.contains(el) || el.contains(container)) return false
+      }
+      return true
+    })
+
+    // Apply state based on inert support
+    const useInert = shouldInertOutside.value && supportsInert
 
     for (const el of outsideElements) {
-      if (shouldInertOutside.value && supportsInert) {
-        const currentInert = el.inert ?? null
-        inertStateMap.set(el, currentInert)
+      if (useInert) {
+        inertStateMap.set(el, el.inert ?? null)
         el.inert = true
       } else {
-        const currentAriaHidden = el.getAttribute("aria-hidden")
-        ariaHiddenStateMap.set(el, currentAriaHidden)
+        ariaHiddenStateMap.set(el, el.getAttribute("aria-hidden"))
         el.setAttribute("aria-hidden", "true")
       }
     }
 
+    // Return cleanup function
     return () => {
       for (const el of outsideElements) {
-        if (shouldInertOutside.value && supportsInert) {
+        if (useInert) {
           const originalInert = inertStateMap.get(el)
           el.inert = originalInert ?? false
           inertStateMap.delete(el)
@@ -166,62 +279,99 @@ export function useFocusTrap(
     }
   }
 
+  /**
+   * Deactivates the focus trap and cleans up state.
+   */
   const deactivateTrap = () => {
-    if (trapRef.value) {
+    if (isDeactivating || !trapRef.value) return
+
+    isDeactivating = true
+    try {
       trapRef.value.deactivate()
       trapRef.value = null
+    } finally {
+      isDeactivating = false
     }
   }
 
+  /**
+   * Creates and activates the focus trap.
+   */
   const createTrap = () => {
+    // Deactivate existing trap first
     deactivateTrap()
 
     const containers = getContainers()
-    if (containers.length === 0) return
-
+    if (containers.length === 0) {
+      if (import.meta.env.DEV) {
+        console.warn("[useFocusTrap] No containers available for focus trap")
+      }
+      return
+    }
+    
+    // Create the focus trap instance
     trapRef.value = createFocusTrap(containers, {
       onActivate: () => {
         restoreOutsideState = applyOutsideState(containers)
       },
       onDeactivate: () => {
+        // Restore outside element state
         if (restoreOutsideState) {
           restoreOutsideState()
           restoreOutsideState = null
         }
 
-        if (!isModal.value && shouldCloseOnFocusOut.value) {
+        // Close on focus out (only in non-modal mode)
+        if (shouldCloseOnFocusOut.value) {
           setOpen(false)
         }
       },
       initialFocus: () => {
         const init = toValue(initialFocus)
-        if (init === "first") return undefined // focus-trap default
+        // undefined = first tabbable (focus-trap default)
+        // string = CSS selector (focus-trap will query)
+        // HTMLElement = specific element
+        // function = custom logic
+        // false = no initial focus
+        if (init === undefined) return undefined
+        if (typeof init === "string") return init
         if (isHTMLElement(init)) return init
         if (typeof init === "function") return init() || false
         if (init === false) return false
-
         return undefined
       },
-      fallbackFocus: () => {
-        return containers[0]
-      },
+      fallbackFocus: () => containers[0],
       returnFocusOnDeactivate: toValue(returnFocus),
-      clickOutsideDeactivates: !isModal.value && shouldCloseOnFocusOut.value,
+      clickOutsideDeactivates: shouldCloseOnFocusOut.value,
       allowOutsideClick: !isModal.value,
       escapeDeactivates: true,
-      preventScroll: focusPreventScroll.value,
+      preventScroll: toValue(preventScroll),
       tabbableOptions: { displayCheck: "none" },
     })
 
+    // Activate with proper error handling
     try {
       trapRef.value.activate()
-    } catch (e) {
-      console.error("Failed to activate focus trap", e)
+    } catch (error) {
+      // Ensure state is cleaned up even on error
+      if (restoreOutsideState) {
+        restoreOutsideState()
+        restoreOutsideState = null
+      }
+      trapRef.value = null
+
+      // Call custom error handler if provided
+      if (onError) {
+        onError(error)
+      } else if (import.meta.env.DEV) {
+        console.error("[useFocusTrap] Failed to activate focus trap:", error)
+      }
     }
   }
 
-  // Watchers
+  // Single watcher to manage trap lifecycle
   watchPostEffect(() => {
+    console.log('watcher ran')
     if (isEnabled.value && open.value && floatingEl.value) {
       createTrap()
     } else {
@@ -229,17 +379,16 @@ export function useFocusTrap(
     }
   })
 
-  watch(open, (isOpen) => {
-    if (!isOpen) {
-      deactivateTrap()
-    }
-  })
-
+  // Cleanup on scope disposal
   onScopeDispose(() => {
     deactivateTrap()
+    // Clear memoization cache
+    cachedContainers = null
   })
 
   return {
-    cleanup: deactivateTrap,
+    isActive,
+    activate: createTrap,
+    deactivate: deactivateTrap,
   }
 }
