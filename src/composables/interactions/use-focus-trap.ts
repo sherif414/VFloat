@@ -54,18 +54,116 @@ export interface UseFocusTrapReturn {
 }
 
 //=======================================================================================
+// 📌 Constants & State Management
+//=======================================================================================
+
+// WeakMap for storing element state - better performance and memory management
+const ariaHiddenStateMap = new WeakMap<HTMLElement, string | null>()
+const inertStateMap = new WeakMap<HTMLElement, boolean | null>()
+
+// Check for inert support once
+const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype
+
+//=======================================================================================
+// 📌 Helper Functions
+//=======================================================================================
+
+/**
+ * Safely gets tabbable elements from a root element.
+ * Catches errors from the tabbable library to prevent crashes.
+ */
+function getTabbableElements(root: HTMLElement): HTMLElement[] {
+  try {
+    return tabbable(root, { displayCheck: "full", includeContainer: false }) as HTMLElement[]
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Safely focuses an element with consistent preventScroll handling.
+ */
+function focusElement(
+  el: HTMLElement | null,
+  preventScroll: boolean
+): void {
+  if (!el || !el.isConnected) return
+  try {
+    el.focus({ preventScroll })
+  } catch {
+    // Element might not be focusable or in a bad state
+  }
+}
+
+/**
+ * Ensures a container element is focusable by setting tabindex="-1" if needed.
+ * Returns a cleanup function that restores the original state.
+ */
+function ensureContainerFocusable(el: HTMLElement): () => void {
+  const hadTabindex = el.hasAttribute("tabindex")
+  const prevValue = el.getAttribute("tabindex")
+  
+  if (!hadTabindex) {
+    el.setAttribute("tabindex", "-1")
+  }
+  
+  return () => {
+    if (!hadTabindex) {
+      el.removeAttribute("tabindex")
+    } else if (prevValue != null) {
+      el.setAttribute("tabindex", prevValue)
+    }
+  }
+}
+
+/**
+ * Creates a hidden focus guard element for tab wrapping.
+ */
+function createGuard(): HTMLElement {
+  const g = document.createElement("div")
+  g.setAttribute("tabindex", "0")
+  g.setAttribute("aria-hidden", "true")
+  g.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+  return g
+}
+
+/**
+ * Checks if an element is valid and connected to the DOM.
+ */
+function isElementValid(el: HTMLElement | null): boolean {
+  return !!el && el.isConnected && el.ownerDocument.contains(el)
+}
+
+//=======================================================================================
 // 📌 Main Composable
 //=======================================================================================
 
 /**
  * Traps keyboard focus within the floating element, optionally in a modal manner.
  *
- * Supports nested traps; only the deepest open node activates trapping when used with a tree.
- * Provides optional focus guards, initial focus, focus return, and close-on-escape behavior.
- *
  * @param context - FloatingContext or TreeNode<FloatingContext> to trap within
  * @param options - Configuration options controlling trap behavior
  * @returns Cleanup API
+ *
+ * @example Basic usage
+ * ```ts
+ * const context = useFloating(anchorEl, floatingEl)
+ * useFocusTrap(context, { modal: true })
+ * ```
+ *
+ * @example With useListNavigation
+ * ```ts
+ * const context = useFloating(anchorEl, floatingEl)
+ * useListNavigation(context, { listRef: items, activeIndex })
+ * useFocusTrap(context) // Focus trap wraps the list navigation
+ * ```
+ *
+ * @example Tree-aware nested traps
+ * ```ts
+ * const tree = useFloatingTree()
+ * const node = tree.addNode(anchorEl, floatingEl)
+ * useFocusTrap(node, { modal: true }) // Only deepest open node traps focus
+ * ```
  */
 export function useFocusTrap(
   context: FloatingContext | TreeNode<FloatingContext>,
@@ -78,6 +176,7 @@ export function useFocusTrap(
     setOpen,
   } = floatingContext
 
+  // Normalize options to computed refs for reactivity
   const {
     enabled = true,
     modal = false,
@@ -94,9 +193,10 @@ export function useFocusTrap(
   const isEnabled = computed(() => !!toValue(enabled))
   const isModal = computed(() => !!toValue(modal))
   const useGuards = computed(() => !!toValue(guards))
-  const wrapOrder = computed<Array<"content" | "reference" | "floating">>(() =>
-    Array.isArray(toValue(order)) ? (toValue(order) as any) : ["content"]
-  )
+  const wrapOrder = computed<Array<"content" | "reference" | "floating">>(() => {
+    const val = toValue(order)
+    return Array.isArray(val) ? val : ["content"]
+  })
   const shouldReturnFocus = computed(() => !!toValue(returnFocus))
   const shouldRestoreFocus = computed(() => !!toValue(restoreFocus))
   const shouldCloseOnFocusOut = computed(() => !!toValue(closeOnFocusOut))
@@ -105,78 +205,61 @@ export function useFocusTrap(
 
   const containerEl = computed<HTMLElement | null>(() => floatingEl.value)
 
+  // State management
   const previouslyFocused = ref<HTMLElement | null>(null)
-  let restoreContainerTabindex: (() => void) | null = null
-  let restoreAriaHiddenOutside: (() => void) | null = null
-  let restoreOutsideInert: (() => void) | null = null
+  const tabbableIndexRef = ref(-1)
+  let skipReturnFocus = false
 
+  // Guard elements (persistent, created once)
   let beforeGuard: HTMLElement | null = null
   let afterGuard: HTMLElement | null = null
   let beforeGuardCleanup: (() => void) | null = null
   let afterGuardCleanup: (() => void) | null = null
 
-  const tabbableIndexRef = ref(-1)
-  let skipReturnFocus = false
+  // Cleanup functions
+  let restoreContainerTabindex: (() => void) | null = null
+  let restoreOutsideState: (() => void) | null = null
 
-  const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype
-
-  const previouslyFocusedStack: HTMLElement[] = []
-
-  function pushPreviouslyFocusedElement(element: HTMLElement | null) {
-    if (!element || !element.isConnected) return
-    if (element === element.ownerDocument.body) return
-    previouslyFocusedStack.push(element)
-    if (previouslyFocusedStack.length > 20) {
-      previouslyFocusedStack.shift()
-    }
-  }
-
-  function popPreviouslyFocusedElement(): HTMLElement | null {
-    while (previouslyFocusedStack.length) {
-      const el = previouslyFocusedStack.pop()!
-      if (el.isConnected) return el
-    }
-    return null
-  }
-
-  function isCurrentNodeDeepestOpen(): boolean {
+  // Cached tree check - only recompute when tree structure changes
+  const isDeepestOpen = computed(() => {
     if (!treeContext) return true
-    const hasOpenDescendant = (node: TreeNode<FloatingContext>): boolean => {
-      for (const child of node.children.value) {
-        if (child.data.open.value) return true
-        if (hasOpenDescendant(child)) return true
-      }
-      return false
-    }
     return !hasOpenDescendant(treeContext)
-  }
+  })
 
-  function ensureContainerFocusable(el: HTMLElement): () => void {
-    const hadTabindex = el.hasAttribute("tabindex")
-    const prevValue = el.getAttribute("tabindex")
-    if (!hadTabindex) el.setAttribute("tabindex", "-1")
-    return () => {
-      if (!hadTabindex) el.removeAttribute("tabindex")
-      else if (prevValue != null) el.setAttribute("tabindex", prevValue)
+  /**
+   * Recursively checks if a node has any open descendants.
+   */
+  function hasOpenDescendant(node: TreeNode<FloatingContext>): boolean {
+    for (const child of node.children.value) {
+      if (child.data.open.value) return true
+      if (hasOpenDescendant(child)) return true
     }
+    return false
   }
 
-  function getTabbableElements(root: HTMLElement): HTMLElement[] {
-    try {
-      return tabbable(root, { displayCheck: "full", includeContainer: false }) as HTMLElement[]
-    } catch {
-      return []
+  /**
+   * Checks if focus is within the node hierarchy (for tree-aware behavior).
+   */
+  function isFocusInsideNodeHierarchy(target: Element): boolean {
+    if (!treeContext) {
+      return !!containerEl.value && containerEl.value.contains(target)
     }
+    
+    if (isTargetWithinElement(target, treeContext.data.refs.anchorEl.value)) return true
+    if (isTargetWithinElement(target, treeContext.data.refs.floatingEl.value)) return true
+    return !!findDescendantContainingTarget(treeContext, target)
   }
 
+  /**
+   * Gets elements in the configured tab order.
+   */
   function getOrderElements(container: HTMLElement): HTMLElement[] {
     const content = getTabbableElements(container)
     const reference = anchorEl.value
+
     return wrapOrder.value
       .flatMap((segment) => {
-        if (segment === "floating") {
-          return container
-        }
+        if (segment === "floating") return container
         if (segment === "reference") {
           if (isHTMLElement(reference)) return reference
           if (isVirtualElement(reference) && reference.contextElement instanceof HTMLElement) {
@@ -186,193 +269,209 @@ export function useFocusTrap(
         }
         return content
       })
-      .filter((item): item is HTMLElement => !!item && item !== beforeGuard && item !== afterGuard)
+      .filter((item): item is HTMLElement => 
+        !!item && item !== beforeGuard && item !== afterGuard
+      )
   }
 
-  function createGuard(): HTMLElement {
-    const g = document.createElement("div")
-    g.setAttribute("tabindex", "0")
-    g.setAttribute("aria-hidden", "true")
-    g.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;"
-    return g
-  }
-
+  /**
+   * Inserts focus guards before and after container for tab wrapping.
+   */
   function insertGuards(container: HTMLElement): void {
-    if (!useGuards.value) return
-    if (beforeGuard || afterGuard) return
+    if (!useGuards.value || (beforeGuard && afterGuard)) return
+
     beforeGuard = createGuard()
     afterGuard = createGuard()
+
     container.insertBefore(beforeGuard, container.firstChild)
     container.appendChild(afterGuard)
+
     beforeGuardCleanup = attachGuardBehavior(beforeGuard, "before", container)
     afterGuardCleanup = attachGuardBehavior(afterGuard, "after", container)
   }
 
+  /**
+   * Removes focus guards from the container.
+   */
   function removeGuards(): void {
     beforeGuardCleanup?.()
     afterGuardCleanup?.()
     beforeGuardCleanup = null
     afterGuardCleanup = null
+
     if (beforeGuard?.parentNode) beforeGuard.parentNode.removeChild(beforeGuard)
     if (afterGuard?.parentNode) afterGuard.parentNode.removeChild(afterGuard)
+
     beforeGuard = null
     afterGuard = null
   }
 
+  /**
+   * Attaches focus behavior to a guard element.
+   */
   function attachGuardBehavior(
     guard: HTMLElement,
     location: "before" | "after",
     container: HTMLElement
-  ) {
-    const handler = (event: FocusEvent) => {
-      event.preventDefault()
-      const orderElements = getOrderElements(container)
-      if (!orderElements.length) {
-        focusElement(container)
-        return
-      }
-      if (location === "before") {
-        focusElement(orderElements[0])
-      } else {
-        focusElement(orderElements[orderElements.length - 1])
+  ): () => void {
+    const handler = () => {
+      try {
+        const orderElements = getOrderElements(container)
+        if (!orderElements.length) {
+          focusElement(container, focusPreventScroll.value)
+          return
+        }
+
+        if (location === "before") {
+          focusElement(orderElements[orderElements.length - 1], focusPreventScroll.value)
+        } else {
+          focusElement(orderElements[0], focusPreventScroll.value)
+        }
+      } catch (error) {
+        console.error("[useFocusTrap] Error in guard focus handler:", error)
       }
     }
+
     guard.addEventListener("focus", handler)
     return () => guard.removeEventListener("focus", handler)
   }
 
-  function applyAriaHiddenOutside(container: HTMLElement): () => void {
+  /**
+   * Applies modal state to outside elements (inert or aria-hidden).
+   * Uses WeakMap for state storage to prevent memory leaks.
+   */
+  function applyOutsideState(container: HTMLElement): () => void {
     if (!isModal.value) return () => {}
-    const affected: Array<HTMLElement> = []
-    const root = container.ownerDocument.body
-    const children = Array.from(root.children) as HTMLElement[]
-    for (const child of children) {
-      if (!child.contains(container)) {
-        const prev = child.getAttribute("aria-hidden")
-        affected.push(child)
-        child.setAttribute("aria-hidden", "true")
-        ;(child as any).__prevAriaHidden = prev
-      }
-    }
-    return () => {
-      for (const el of affected) {
-        const prev = (el as any).__prevAriaHidden as string | null
-        if (prev == null) el.removeAttribute("aria-hidden")
-        else el.setAttribute("aria-hidden", prev)
-        delete (el as any).__prevAriaHidden
-      }
-    }
-  }
 
-  function applyInertOutside(container: HTMLElement): () => void {
-    if (!isModal.value || !shouldInertOutside.value) return () => {}
     const doc = container.ownerDocument
     const body = doc.body
-    const toInert = Array.from(body.children).filter(
+    const outsideElements = Array.from(body.children).filter(
       (el) => !el.contains(container)
-    ) as (HTMLElement & {
-      inert?: boolean
-    })[]
-    const snapshots = toInert.map((el) => ({
-      el,
-      ariaHidden: el.getAttribute("aria-hidden"),
-      inert: (el as any).inert ?? null,
-    }))
-    for (const { el } of snapshots) {
-      if (supportsInert) {
-        ;(el as HTMLElement & { inert?: boolean }).inert = true
+    ) as HTMLElement[]
+
+    // Store original state in WeakMaps
+    for (const el of outsideElements) {
+      if (shouldInertOutside.value && supportsInert) {
+        // Store and apply inert
+        const currentInert = el.inert ?? null
+        inertStateMap.set(el, currentInert)
+        el.inert = true
       } else {
+        // Store and apply aria-hidden
+        const currentAriaHidden = el.getAttribute("aria-hidden")
+        ariaHiddenStateMap.set(el, currentAriaHidden)
         el.setAttribute("aria-hidden", "true")
       }
     }
-    return () => {
-      for (const snapshot of snapshots) {
-        if (supportsInert) {
-          const inertElement = snapshot.el as HTMLElement & { inert?: boolean }
-          if (snapshot.inert == null) {
-            inertElement.inert = false
-            inertElement.removeAttribute?.("inert")
-          } else {
-            inertElement.inert = snapshot.inert
-          }
-        }
 
-        if (snapshot.ariaHidden == null) {
-          snapshot.el.removeAttribute("aria-hidden")
+    // Return cleanup function
+    return () => {
+      for (const el of outsideElements) {
+        if (shouldInertOutside.value && supportsInert) {
+          const originalInert = inertStateMap.get(el)
+          if (originalInert == null) {
+            el.inert = false
+          } else {
+            el.inert = originalInert
+          }
+          inertStateMap.delete(el)
         } else {
-          snapshot.el.setAttribute("aria-hidden", snapshot.ariaHidden)
+          const originalAriaHidden = ariaHiddenStateMap.get(el)
+          if (originalAriaHidden == null) {
+            el.removeAttribute("aria-hidden")
+          } else {
+            el.setAttribute("aria-hidden", originalAriaHidden)
+          }
+          ariaHiddenStateMap.delete(el)
         }
       }
     }
   }
 
-  function focusElement(el: HTMLElement | null, opts?: FocusOptions): void {
-    if (!el) return
-    try {
-      el.focus(opts ?? { preventScroll: focusPreventScroll.value })
-    } catch {}
-  }
-
+  /**
+   * Focuses the initial element based on configuration.
+   */
   function focusInitial(container: HTMLElement): void {
     const init = toValue(initialFocus)
+    const prevent = focusPreventScroll.value
+
+    // Get tabbables once
     const tabbables = getTabbableElements(container)
+
     if (typeof init === "number") {
       const target = tabbables[init] ?? null
-      focusElement(target)
+      focusElement(target, prevent)
       return
     }
+
     if (typeof init === "function") {
-      focusElement(init(), { preventScroll: focusPreventScroll.value })
+      const target = init()
+      focusElement(target, prevent)
       return
     }
+
     if (isHTMLElement(init)) {
-      focusElement(init, { preventScroll: focusPreventScroll.value })
+      focusElement(init, prevent)
       return
     }
+
     if (init === "last") {
-      focusElement(tabbables[tabbables.length - 1] ?? null)
+      focusElement(tabbables[tabbables.length - 1] ?? null, prevent)
       return
     }
+
+    // Default: "first"
     if (tabbables.length > 0) {
-      focusElement(tabbables[0])
+      focusElement(tabbables[0], prevent)
     } else {
+      // Fallback: make container focusable
       restoreContainerTabindex = ensureContainerFocusable(container)
-      focusElement(container)
+      focusElement(container, prevent)
     }
   }
 
+  /**
+   * Handles Tab key for wrapping behavior.
+   */
   function handleTabKey(e: KeyboardEvent, container: HTMLElement): void {
     if (e.key !== "Tab") return
+
     const ordered = getOrderElements(container)
+    
     if (!ordered.length) {
-      restoreContainerTabindex ??= ensureContainerFocusable(container)
+      // No tabbable elements: keep focus on container
+      if (!restoreContainerTabindex) {
+        restoreContainerTabindex = ensureContainerFocusable(container)
+      }
       e.preventDefault()
-      focusElement(container)
+      focusElement(container, focusPreventScroll.value)
       return
     }
+
     const current = document.activeElement as HTMLElement | null
     const first = ordered[0]
     const last = ordered[ordered.length - 1]
+
     if (e.shiftKey) {
+      // Shift+Tab: wrap from first to last
       if (!current || current === first) {
         e.preventDefault()
-        focusElement(last)
+        focusElement(last, focusPreventScroll.value)
       }
     } else {
+      // Tab: wrap from last to first
       if (!current || current === last) {
         e.preventDefault()
-        focusElement(first)
+        focusElement(first, focusPreventScroll.value)
       }
     }
   }
 
-  function isFocusInsideNodeHierarchy(target: Element): boolean {
-    if (!treeContext) return !!containerEl.value && containerEl.value.contains(target)
-    if (isTargetWithinElement(target, treeContext.data.refs.anchorEl.value)) return true
-    if (isTargetWithinElement(target, treeContext.data.refs.floatingEl.value)) return true
-    return !!findDescendantContainingTarget(treeContext, target)
-  }
+  //=======================================================================================
+  // 📌 Event Listeners
+  //=======================================================================================
 
+  // Keydown listener for Tab handling
   const stopKeydown = useEventListener(
     () => (isEnabled.value && open.value ? containerEl.value : null),
     "keydown",
@@ -384,21 +483,26 @@ export function useFocusTrap(
     { capture: true }
   )
 
+  // Global focusin listener for modal behavior and focus out detection
   const stopFocusin = useEventListener(
     () => (isEnabled.value && open.value ? document : null),
     "focusin",
     (evt: FocusEvent) => {
       const container = containerEl.value
       const target = evt.target as Element | null
+      
       if (!container || !target) return
-      if (!isCurrentNodeDeepestOpen()) return
+      if (!isDeepestOpen.value) return
       if (container.contains(target)) return
       if (isFocusInsideNodeHierarchy(target)) return
+
       if (isModal.value) {
+        // Modal: force focus back inside
         const ordered = getOrderElements(container)
         const fallback = ordered[0] ?? container
-        focusElement(fallback)
+        focusElement(fallback, focusPreventScroll.value)
       } else if (shouldCloseOnFocusOut.value) {
+        // Non-modal with closeOnFocusOut: close the floating element
         skipReturnFocus = true
         try {
           setOpen(false, "blur", evt)
@@ -410,107 +514,125 @@ export function useFocusTrap(
     { capture: true }
   )
 
+  // Track active tabbable index for focus restoration
   useEventListener(
     () => (isEnabled.value && open.value ? containerEl.value : null),
     "focusin",
     (evt: FocusEvent) => {
       const container = containerEl.value
       if (!container) return
-      const tabbables = getTabbableElements(container)
+
       const target = evt.target
       if (!(target instanceof HTMLElement)) {
         tabbableIndexRef.value = -1
         return
       }
+
+      const tabbables = getTabbableElements(container)
       tabbableIndexRef.value = tabbables.indexOf(target)
     }
   )
 
+  // Focusout listener for focus restoration
   useEventListener(
     () => (isEnabled.value && open.value ? containerEl.value : null),
     "focusout",
-    (evt: FocusEvent) => {
+    () => {
       if (!shouldRestoreFocus.value) return
+      
       const container = containerEl.value
       if (!container) return
+
       queueMicrotask(() => {
         const doc = container.ownerDocument
         const active = doc.activeElement
+
+        // Only restore if focus left the container
         if (active && container.contains(active)) return
         if (active && active !== doc.body) return
+
         const tabbables = getTabbableElements(container)
-        const fallback =
-          tabbables[tabbableIndexRef.value] ?? tabbables[tabbables.length - 1] ?? container
-        focusElement(fallback)
+        const fallback = tabbables[tabbableIndexRef.value] ?? tabbables[tabbables.length - 1] ?? container
+        focusElement(fallback, focusPreventScroll.value)
       })
     }
   )
 
+  //=======================================================================================
+  // 📌 Lifecycle Management
+  //=======================================================================================
+
+  // Watch for open state changes to activate/deactivate trap
   const removeWatcher = watchPostEffect(() => {
     if (!isEnabled.value || !open.value) return
+
     const container = containerEl.value
     if (!container) return
+
     const doc = container.ownerDocument
     const active = doc.activeElement as HTMLElement | null
-    previouslyFocused.value = active
-    pushPreviouslyFocusedElement(active)
+
+    // Store previously focused element
+    if (isElementValid(active) && active !== doc.body) {
+      previouslyFocused.value = active
+    }
+
+    // Setup trap
     insertGuards(container)
-    restoreAriaHiddenOutside = applyAriaHiddenOutside(container)
-    restoreOutsideInert = applyInertOutside(container)
+    restoreOutsideState = applyOutsideState(container)
+
+    // Focus initial element after DOM updates
     queueMicrotask(() => focusInitial(container))
+
+    // Cleanup when trap deactivates
     onWatcherCleanup(() => {
       removeGuards()
+      
       if (restoreContainerTabindex) {
         restoreContainerTabindex()
         restoreContainerTabindex = null
       }
-      if (restoreAriaHiddenOutside) {
-        restoreAriaHiddenOutside()
-        restoreAriaHiddenOutside = null
-      }
-      if (restoreOutsideInert) {
-        restoreOutsideInert()
-        restoreOutsideInert = null
+      
+      if (restoreOutsideState) {
+        restoreOutsideState()
+        restoreOutsideState = null
       }
     })
   })
 
+  // Watch for close to return focus
   watch(
     () => open.value,
-    (isOpen, prev) => {
-      if (!isOpen && prev) {
+    (isOpen, wasOpen) => {
+      if (!isOpen && wasOpen) {
         const prev = previouslyFocused.value
         previouslyFocused.value = null
-        if (shouldReturnFocus.value && !skipReturnFocus) {
-          const target = popPreviouslyFocusedElement() ?? prev ?? resolveAnchorElement()
-          if (target) {
-            const tabbables = getTabbableElements(target)
-            focusElement(tabbables[0] ?? target, { preventScroll: true })
-          }
+
+        if (shouldReturnFocus.value && !skipReturnFocus && isElementValid(prev)) {
+          // Return focus to the previously focused element
+          focusElement(prev, true) // Always preventScroll on return focus
         }
+
         skipReturnFocus = false
       }
     },
     { flush: "post" }
   )
 
-  function resolveAnchorElement(): HTMLElement | null {
-    const anchor = anchorEl.value
-    if (anchor instanceof HTMLElement) return anchor
-    if ((anchor as any)?.contextElement instanceof HTMLElement) {
-      return (anchor as any).contextElement as HTMLElement
-    }
-    return null
-  }
-
+  // Cleanup on scope disposal
   onScopeDispose(() => {
     stopKeydown()
     stopFocusin()
+    removeWatcher()
     removeGuards()
+    
     if (restoreContainerTabindex) restoreContainerTabindex()
-    if (restoreAriaHiddenOutside) restoreAriaHiddenOutside()
-    if (restoreOutsideInert) restoreOutsideInert()
+    if (restoreOutsideState) restoreOutsideState()
   })
+
+  //=======================================================================================
+  // 📌 Return API
+  //=======================================================================================
 
   return {
     cleanup: () => {
@@ -518,9 +640,9 @@ export function useFocusTrap(
       stopFocusin()
       removeWatcher()
       removeGuards()
+      
       if (restoreContainerTabindex) restoreContainerTabindex()
-      if (restoreAriaHiddenOutside) restoreAriaHiddenOutside()
-      if (restoreOutsideInert) restoreOutsideInert()
+      if (restoreOutsideState) restoreOutsideState()
     },
   }
 }
