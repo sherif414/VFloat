@@ -24,11 +24,12 @@ function useFocusTrap(
 interface UseFocusTrapOptions {
   enabled?: MaybeRefOrGetter<boolean>
   modal?: MaybeRefOrGetter<boolean>
-  initialFocus?: MaybeRefOrGetter<HTMLElement | (() => HTMLElement | null) | string | false>
+  initialFocus?: HTMLElement | (() => HTMLElement | false) | string | false
   returnFocus?: MaybeRefOrGetter<boolean>
   closeOnFocusOut?: MaybeRefOrGetter<boolean>
   preventScroll?: MaybeRefOrGetter<boolean>
   outsideElementsInert?: MaybeRefOrGetter<boolean>
+  onError?: (error: unknown) => void
 }
 ```
 
@@ -36,23 +37,28 @@ interface UseFocusTrapOptions {
 |--------|------|---------|-------------|
 | enabled | `MaybeRefOrGetter<boolean>` | `true` | Enable/disable focus trap listeners. |
 | modal | `MaybeRefOrGetter<boolean>` | `false` | When true, hides/inerts content outside the trap and prevents focus from escaping. |
-| initialFocus | `MaybeRefOrGetter<...>` | `undefined` | Element to focus when trap activates: CSS selector, HTMLElement, or function returning element. |
+| initialFocus | `HTMLElement \| (() => HTMLElement \| false) \| string \| false` | `undefined` | Element to focus when trap activates: CSS selector, HTMLElement, function returning element, or `false` to disable. |
 | returnFocus | `MaybeRefOrGetter<boolean>` | `true` | Returns focus to previously focused element when trap deactivates. |
 | closeOnFocusOut | `MaybeRefOrGetter<boolean>` | `false` | On non-modal, close floating when focus escapes the trap. |
 | preventScroll | `MaybeRefOrGetter<boolean>` | `true` | Pass `preventScroll` to focus operations. |
 | outsideElementsInert | `MaybeRefOrGetter<boolean>` | `false` | Apply `inert` attribute (when supported) to outside elements while modal. |
+| onError | `(error: unknown) => void` | `undefined` | Error handler called if trap activation fails. |
 
 ## Return Value
 
 ```ts
 interface UseFocusTrapReturn {
-  cleanup: () => void
+  isActive: ComputedRef<boolean>
+  activate: () => void
+  deactivate: () => void
 }
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| cleanup | `() => void` | Manual cleanup function to remove all listeners and restore DOM state. |
+| isActive | `ComputedRef<boolean>` | Whether the focus trap is currently active. |
+| activate | `() => void` | Manually activate the focus trap (if enabled and open). |
+| deactivate | `() => void` | Manually deactivate the focus trap. |
 
 ## Examples
 
