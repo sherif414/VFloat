@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useFloating, useFocusTrap } from '../../src'
+import { useClick, useEscapeKey, useFloating, useFocusTrap } from '../../src'
 import { offset, flip, shift } from '../../src'
 
 const open = ref(false)
@@ -20,8 +20,7 @@ const { floatingStyles } = context
 const enabled = ref(true)
 const isModal = ref(true)
 const useGuards = ref(true)
-const orderConfig = ref<Array<'content' | 'reference' | 'floating'>>(['content'])
-const initialFocus = ref<string>('first') // 'first', 'last', 'close-btn', 'input-1', 'input-2', 'number-0'
+const initialFocus = ref<string | false | (() => HTMLElement | null)>('#input-1')
 const returnFocus = ref(true)
 const restoreFocus = ref(false)
 const closeOnFocusOut = ref(false)
@@ -35,35 +34,12 @@ const dynamicItems = ref([
   { id: 3, name: 'Item 3' }
 ])
 
-// Computed initialFocus target based on selection
-const initialFocusTarget = computed<number | HTMLElement | (() => HTMLElement | null) | 'first' | 'last'>(() => {
-  switch (initialFocus.value) {
-    case 'first':
-      return 'first'
-    case 'last':
-      return 'last'
-    case 'close-btn':
-      return () => document.getElementById('close-btn')
-    case 'input-1':
-      return () => document.getElementById('input-1')
-    case 'input-2':
-      return () => document.getElementById('input-2')
-    case 'number-0':
-      return 0
-    default:
-      return 'first'
-  }
-})
-
 // Focus trap setup
 useFocusTrap(context, {
   enabled,
   modal: isModal,
-  guards: useGuards,
-  order: orderConfig,
-  initialFocus: initialFocusTarget,
+  initialFocus: initialFocus,
   returnFocus,
-  restoreFocus,
   closeOnFocusOut,
   preventScroll,
   outsideElementsInert
@@ -79,21 +55,15 @@ function addDynamicItem() {
   dynamicItems.value.push({ id: newId, name: `Item ${newId}` })
 }
 
-// Order configuration helpers
-const orderOptions = [
-  { value: ['content'], label: 'Content only' },
-  { value: ['reference', 'content'], label: 'Reference → Content' },
-  { value: ['content', 'reference'], label: 'Content → Reference' },
-  { value: ['floating', 'content'], label: 'Floating → Content' },
-  { value: ['reference', 'floating', 'content'], label: 'Reference → Floating → Content' }
-]
 
-function getOrderLabel() {
-  const option = orderOptions.find(opt => 
-    JSON.stringify(opt.value) === JSON.stringify(orderConfig.value)
-  )
-  return option?.label || 'Custom'
-}
+
+useEscapeKey(context, {
+  onEscape(event) {
+    context.setOpen(false)
+  },
+})
+
+useClick(context)
 </script>
 
 <template>
@@ -103,7 +73,7 @@ function getOrderLabel() {
       <p class="text-center text-slate-600 mb-8">Comprehensive testing for all focus trap features</p>
 
       <!-- Configuration Panel -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <!-- Core Options -->
         <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
           <h3 class="font-semibold text-lg mb-4 text-slate-700 border-b pb-2">Core Options</h3>
@@ -165,45 +135,25 @@ function getOrderLabel() {
           <h3 class="font-semibold text-lg mb-4 text-slate-700 border-b pb-2">Initial Focus</h3>
           <div class="space-y-2">
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="radio" v-model="initialFocus" value="first" name="initial" class="text-blue-600 focus:ring-blue-500">
-              <span class="text-sm">First Element</span>
+              <input type="radio" v-model="initialFocus" value="#close-btn-x" name="initial" class="text-blue-600 focus:ring-blue-500">
+              <span class="text-sm">X Button (Selector)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="radio" v-model="initialFocus" value="last" name="initial" class="text-blue-600 focus:ring-blue-500">
-              <span class="text-sm">Last Element</span>
+              <input type="radio" v-model="initialFocus" value="#input-1" name="initial" class="text-blue-600 focus:ring-blue-500">
+              <span class="text-sm">First Input (Selector)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="radio" v-model="initialFocus" value="close-btn" name="initial" class="text-blue-600 focus:ring-blue-500">
-              <span class="text-sm">Close Button (Function)</span>
+              <input type="radio" v-model="initialFocus" value="#input-2" name="initial" class="text-blue-600 focus:ring-blue-500">
+              <span class="text-sm">Second Input (Selector)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="radio" v-model="initialFocus" value="input-1" name="initial" class="text-blue-600 focus:ring-blue-500">
-              <span class="text-sm">First Input (Function)</span>
+              <input type="radio" v-model="initialFocus" value="#close-btn" name="initial" class="text-blue-600 focus:ring-blue-500">
+              <span class="text-sm">Close Button (Selector)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="radio" v-model="initialFocus" value="number-0" name="initial" class="text-blue-600 focus:ring-blue-500">
-              <span class="text-sm">Index 0 (Number)</span>
+              <input type="radio" v-model="initialFocus" :value="false" name="initial" class="text-blue-600 focus:ring-blue-500">
+              <span class="text-sm">Disable Initial Focus (false)</span>
             </label>
-          </div>
-        </div>
-
-        <!-- Tab Order -->
-        <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
-          <h3 class="font-semibold text-lg mb-4 text-slate-700 border-b pb-2">Tab Order</h3>
-          <div class="space-y-2">
-            <label v-for="option in orderOptions" :key="option.label" class="flex items-center gap-2 cursor-pointer select-none">
-              <input 
-                type="radio" 
-                :value="option.value"
-                v-model="orderConfig"
-                name="order"
-                class="text-blue-600 focus:ring-blue-500"
-              >
-              <span class="text-sm">{{ option.label }}</span>
-            </label>
-          </div>
-          <div class="mt-3 text-xs text-slate-500">
-            <span class="font-medium">Current:</span> {{ getOrderLabel() }}
           </div>
         </div>
 
@@ -233,7 +183,6 @@ function getOrderLabel() {
       <div class="flex justify-center mb-8">
         <button
           ref="reference"
-          @click="open = !open"
           class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all font-medium text-lg shadow-lg"
         >
           {{ open ? 'Close Floating Element' : 'Open Floating Element' }}
@@ -250,6 +199,7 @@ function getOrderLabel() {
         <div class="flex justify-between items-start">
           <h2 class="text-xl font-semibold text-slate-800">Focus Trap Content</h2>
           <button 
+            id="close-btn-x"
             @click="open = false" 
             class="text-slate-400 hover:text-slate-600 rounded p-1 hover:bg-slate-100 transition-colors" 
             aria-label="Close"
@@ -332,13 +282,13 @@ function getOrderLabel() {
         </div>
 
         <div class="pt-2 border-t mt-2">
-          <!-- <button
+          <button
             id="close-btn"
             @click="open = false"
             class="w-full px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 focus:ring-2 focus:ring-red-500 transition-colors font-medium"
           >
             Close
-          </button> -->
+          </button>
         </div>
       </div>
     </div>
@@ -388,7 +338,7 @@ function getOrderLabel() {
           <ul class="space-y-1 list-disc list-inside">
             <li>Enable <strong>Restore Focus</strong>, focus a dynamic item, then remove it</li>
             <li>Disable Modal, enable <strong>Close on Focus Out</strong>, click outside</li>
-            <li>Try different <strong>Tab Order</strong> configurations</li>
+
             <li>Toggle <strong>Outside Inert</strong> in modal mode (check browser DevTools)</li>
           </ul>
         </div>

@@ -64,11 +64,9 @@ if (node) {
   })
 
   useFocusTrap(node, {
-    order: ["reference", "content"],
     modal: isTopLevelMenu,
     outsideElementsInert: isTopLevelMenu,
     closeOnFocusOut: shouldCloseOnFocusOut,
-    restoreFocus: true,
     initialFocus: () => getInitialFocusTarget(),
   })
 }

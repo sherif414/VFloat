@@ -18,21 +18,19 @@ const { floatingStyles } = context
 
 // Options for the demo
 const isModal = ref(true)
-const useGuards = ref(true)
 const returnFocus = ref(true)
-const initialFocus = ref('first') // 'first', 'last', 'close-btn'
+const initialFocus = ref('first') // 'first', 'close-btn'
 
-const initialFocusTarget = computed<number | HTMLElement | (() => HTMLElement | null) | 'first' | 'last'>(() => {
+const initialFocusTarget = computed<HTMLElement | (() => HTMLElement | null) | 'first' | false>(() => {
   if (initialFocus.value === 'close-btn') {
     return () => document.getElementById('close-btn')
   }
-  return initialFocus.value as 'first' | 'last'
+  return initialFocus.value as 'first'
 })
 
 useFocusTrap(context, {
   enabled: open,
   modal: isModal,
-  guards: useGuards,
   returnFocus,
   initialFocus: initialFocusTarget
 })
@@ -48,16 +46,12 @@ useFocusTrap(context, {
         <input type="checkbox" v-model="isModal" class="rounded text-blue-600 focus:ring-blue-500"> Modal
       </label>
       <label class="flex items-center gap-2 cursor-pointer select-none">
-        <input type="checkbox" v-model="useGuards" class="rounded text-blue-600 focus:ring-blue-500"> Guards
-      </label>
-      <label class="flex items-center gap-2 cursor-pointer select-none">
         <input type="checkbox" v-model="returnFocus" class="rounded text-blue-600 focus:ring-blue-500"> Return Focus
       </label>
       <div class="flex items-center gap-2">
         <span class="text-sm font-medium">Initial Focus:</span>
         <select v-model="initialFocus" class="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="first">First Element</option>
-          <option value="last">Last Element</option>
           <option value="close-btn">Close Button</option>
         </select>
       </div>
