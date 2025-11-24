@@ -1,5 +1,7 @@
-import type { AnyFn } from "@/types"
 import { useId as vueUseId } from "vue"
+import type { FloatingContext } from "@/composables/positioning/use-floating"
+import type { TreeNode } from "@/composables/positioning/use-floating-tree"
+import type { AnyFn, VirtualElement } from "@/types"
 
 let idCounter = 0
 
@@ -12,10 +14,6 @@ export function useId(): string {
   // If Vue's useId returns an empty string, use a counter-based fallback
   return id || `id-${++idCounter}`
 }
-
-import type { VirtualElement } from "@/types"
-import type { FloatingContext } from "@/composables/positioning/use-floating"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 
 //=======================================================================================
 // 📌 General Utilities
@@ -198,9 +196,7 @@ export function clearTimeoutIfSet(timeoutId: number): void {
 /**
  * Type guard to determine if the context parameter is a TreeNode.
  */
-export function isTreeNode(
-  context: FloatingContext | TreeNode<FloatingContext>
-): context is TreeNode<FloatingContext> {
+export function isTreeNode<T>(context: T | TreeNode<T>): context is TreeNode<T> {
   return (
     context !== null &&
     typeof context === "object" &&
@@ -214,11 +210,9 @@ export function isTreeNode(
 /**
  * Extracts floating context and tree context from the parameter.
  */
-export function getContextFromParameter(
-  context: FloatingContext | TreeNode<FloatingContext>
-): {
-  floatingContext: FloatingContext
-  treeContext: TreeNode<FloatingContext> | null
+export function getContextFromParameter<T>(context: T | TreeNode<T>): {
+  floatingContext: T
+  treeContext: TreeNode<T> | null
 } {
   if (isTreeNode(context)) {
     return {
@@ -258,10 +252,10 @@ export function isTargetWithinElement(target: Node, element: unknown): boolean {
 /**
  * Finds a descendant node that contains the target element.
  */
-export function findDescendantContainingTarget(
-  node: TreeNode<FloatingContext>,
+export function findDescendantContainingTarget<T extends Pick<FloatingContext, "refs" | "open">>(
+  node: TreeNode<T>,
   target: Node
-): TreeNode<FloatingContext> | null {
+): TreeNode<T> | null {
   for (const child of node.children.value) {
     if (child.data.open.value) {
       if (
