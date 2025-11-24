@@ -1,7 +1,6 @@
-/// <reference types="@vitest/browser/providers/playwright" />
-
 import { defineConfig } from "vitest/config"
 import { fileURLToPath, URL } from "node:url"
+import { playwright } from "@vitest/browser-playwright"
 
 export default defineConfig({
   resolve: {
@@ -12,9 +11,12 @@ export default defineConfig({
   test: {
     browser: {
       enabled: true,
-      provider: "playwright",
+      provider: playwright({
+        launchOptions:{
+          headless: true,
+        }
+      }),
       instances: [{ browser: "chromium" }],
-      headless: true,
     },
     silent: 'passed-only',
     includeTaskLocation: true,
