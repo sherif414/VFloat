@@ -99,9 +99,9 @@ export interface UseFloatingOptions {
   autoUpdate?: boolean | AutoUpdateOptions
 
   /**
- * Whether the floating element is open.
- * @default false
- */
+   * Whether the floating element is open.
+   * @default false
+   */
   open?: Ref<boolean>
 
   /**
