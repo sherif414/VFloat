@@ -31,7 +31,7 @@ interface UseClickOptions {
   outsideClick?: MaybeRefOrGetter<boolean>
   outsideEvent?: MaybeRefOrGetter<'pointerdown' | 'mousedown' | 'click'>
   outsideCapture?: MaybeRefOrGetter<boolean>
-  onOutsideClick?: (event: MouseEvent, context: FloatingContext) => void
+  onOutsideClick?: (event: MouseEvent) => void
   preventScrollbarClick?: MaybeRefOrGetter<boolean>
   handleDragEvents?: MaybeRefOrGetter<boolean>
 }
@@ -48,7 +48,7 @@ interface UseClickOptions {
 | outsideClick | `MaybeRefOrGetter<boolean>` | `false` | Enable outside-click dismissal. |
 | outsideEvent | `MaybeRefOrGetter<'pointerdown' \| 'mousedown' \| 'click'>` | `'pointerdown'` | Event used for outside detection. |
 | outsideCapture | `MaybeRefOrGetter<boolean>` | `true` | Use capture phase for outside listener. |
-| onOutsideClick | `(event, context) => void` | `undefined` | Custom outside-click handler. |
+| onOutsideClick | `(event: MouseEvent) => void` | `undefined` | Custom outside-click handler. |
 | preventScrollbarClick | `MaybeRefOrGetter<boolean>` | `true` | Ignore scrollbar clicks. |
 | handleDragEvents | `MaybeRefOrGetter<boolean>` | `true` | Handle drag-in/out sequences. |
 
@@ -67,8 +67,8 @@ import { useFloating, useClick } from 'v-float'
 
 const referenceRef = ref<HTMLElement | null>(null)
 const floatingRef = ref<HTMLElement | null>(null)
-const ctx = useFloating(referenceRef, floatingRef)
-useClick(ctx)
+const context = useFloating(referenceRef, floatingRef)
+useClick(context)
 </script>
 ```
 
@@ -76,7 +76,7 @@ useClick(ctx)
 
 ```vue
 <script setup lang="ts">
-useClick(ctx, { outsideClick: true, outsideEvent: 'pointerdown' })
+useClick(context, { outsideClick: true, outsideEvent: 'pointerdown' })
 </script>
 ```
 
@@ -129,14 +129,14 @@ useClick(submenuNode, { outsideClick: true }) // Closes when: outside, siblings,
   <!-- Root Menu -->
   <button ref="menuTriggerRef">Menu</button>
   <Teleport to="body">
-    <div v-if="menuContext.open.value" ref="menuRef" :style="menuContext.floatingStyles">
+    <div v-if="menuContext.open.value" ref="menuRef" :style="menuContext.floatingStyles.value">
       <div ref="submenuTriggerRef">Item with Submenu</div>
     </div>
   </Teleport>
 
   <!-- Submenu (Teleported) -->
   <Teleport to="body">
-    <div v-if="submenuContext.open.value" ref="submenuRef" :style="submenuContext.floatingStyles">
+    <div v-if="submenuContext.open.value" ref="submenuRef" :style="submenuContext.floatingStyles.value">
       <div>Submenu Item 1</div>
       <div>Submenu Item 2</div>
     </div>
@@ -175,7 +175,7 @@ useClick(context)
 <template>
   <button ref="referenceRef">Click Me</button>
 
-  <div v-if="context.open.value" ref="floatingRef" :style="{ ...context.floatingStyles }">
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles.value">
     This element appears when the button is clicked
   </div>
 </template>
@@ -205,7 +205,7 @@ useClick(context, {
 <template>
   <button ref="referenceRef">Click Me</button>
 
-  <div v-if="context.open.value" ref="floatingRef" :style="{ ...context.floatingStyles }">
+  <div v-if="context.open.value" ref="floatingRef" :style="context.floatingStyles.value">
     Click outside to close this element
   </div>
 </template>
@@ -248,7 +248,7 @@ The `useClick` composable accepts several options to customize its behavior. The
 | outsideClick           | `MaybeRefOrGetter<boolean>`                 | `false`        | Whether to enable outside click detection to close the floating element.                 |
 | outsideEvent           | `MaybeRefOrGetter<'pointerdown' \| 'mousedown' \| 'click'>` | `'pointerdown'` | The event to use for outside click detection.                                            |
 | outsideCapture         | `MaybeRefOrGetter<boolean>`                 | `true`         | Whether to use capture phase for document outside click listener.                        |
-| onOutsideClick         | `(event: MouseEvent, context: FloatingContext) => void` | `undefined`    | Custom function to handle outside clicks instead of default behavior.                    |
+| onOutsideClick         | `(event: MouseEvent) => void` | `undefined`    | Custom function to handle outside clicks instead of default behavior.                    |
 | preventScrollbarClick  | `MaybeRefOrGetter<boolean>`                 | `true`         | Whether to prevent clicks on scrollbars from triggering outside click.                   |
 | handleDragEvents       | `MaybeRefOrGetter<boolean>`                 | `true`         | Whether to handle drag events that start inside and end outside.                         |
 
@@ -273,14 +273,14 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Trigger on mousedown instead of click.
 // useClick directly attaches event listeners to the reference element.
-useClick(floating.context, {
+useClick(context, {
   event: "mousedown",
 })
 
@@ -293,7 +293,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Trigger on mousedown
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Floating content
   </div>
 </template>
@@ -314,14 +314,14 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Disable toggle behavior (clicking again won't close if already open)
 // useClick directly attaches event listeners.
-useClick(floating.context, {
+useClick(context, {
   toggle: false,
 })
 </script>
@@ -329,7 +329,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Clicking again won't close
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Floating content
   </div>
 </template>
@@ -350,14 +350,14 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Ignore mouse clicks (only keyboard or programmatic opening through isOpen ref)
 // useClick directly attaches event listeners.
-useClick(floating.context, {
+useClick(context, {
   ignoreMouse: true,
 })
 </script>
@@ -365,7 +365,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Mouse clicks ignored (try keyboard)
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Floating content
   </div>
 </template>
@@ -386,13 +386,13 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Ignore touch events
-useClick(floating.context, {
+useClick(context, {
   ignoreTouch: true,
 })
 </script>
@@ -400,7 +400,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Touch events ignored
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Floating content
   </div>
 </template>
@@ -424,13 +424,13 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Enable outside click detection
-useClick(floating.context, {
+useClick(context, {
   outsideClick: true,
 })
 </script>
@@ -438,7 +438,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Click me, then click outside
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Click outside this element to close it
   </div>
 </template>
@@ -457,13 +457,13 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Custom outside click handler
-function handleOutsideClick(event, context) {
+function handleOutsideClick(event) {
   console.log('Outside click detected', event)
   // You can implement custom logic here
   if (confirm('Close the floating element?')) {
@@ -471,7 +471,7 @@ function handleOutsideClick(event, context) {
   }
 }
 
-useClick(floating.context, {
+useClick(context, {
   outsideClick: true,
   onOutsideClick: handleOutsideClick,
 })
@@ -480,7 +480,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Custom outside click handler
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Outside clicks will show a confirmation dialog
   </div>
 </template>
@@ -499,13 +499,13 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Use mousedown for faster response
-useClick(floating.context, {
+useClick(context, {
   outsideClick: true,
   outsideEvent: 'mousedown', // More responsive than 'click'
 })
@@ -514,7 +514,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Fast outside click detection
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Closes on mousedown outside
   </div>
 </template>
@@ -533,13 +533,13 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Disable scrollbar click prevention (not recommended)
-useClick(floating.context, {
+useClick(context, {
   outsideClick: true,
   preventScrollbarClick: false, // Scrollbar clicks will close the element
 })
@@ -548,7 +548,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Scrollbar clicks enabled
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Even scrollbar clicks will close this
   </div>
 </template>
@@ -568,13 +568,13 @@ const referenceRef = ref(null)
 const floatingRef = ref(null)
 const outsideClickEnabled = ref(true)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Reactive outside click control
-useClick(floating.context, {
+useClick(context, {
   outsideClick: outsideClickEnabled,
 })
 
@@ -590,7 +590,7 @@ function toggleOutsideClick() {
     <button @click="toggleOutsideClick">
       {{ outsideClickEnabled ? 'Disable' : 'Enable' }} outside click
     </button>
-    <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+    <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
       Outside click is {{ outsideClickEnabled ? 'enabled' : 'disabled' }}
     </div>
   </div>
@@ -632,7 +632,7 @@ const context = useFloating(referenceRef, floatingRef)
 useClick(context, {
   toggle: true,
   outsideClick: true,
-  onOutsideClick: (event, context) => console.log('Outside click'),
+  onOutsideClick: (event) => console.log('Outside click'),
 })
 </script>
 ```
@@ -650,13 +650,13 @@ const isOpen = ref(false)
 const referenceRef = ref(null)
 const floatingRef = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Ignore keyboard handling (Enter/Space keys won't trigger)
-useClick(floating.context, {
+useClick(context, {
   ignoreKeyboard: true,
 })
 </script>
@@ -664,7 +664,7 @@ useClick(floating.context, {
   <button ref="referenceRef" :aria-expanded="isOpen.value">
     Keyboard handlers ignored
   </button>
-  <div v-if="isOpen.value" ref="floatingRef" :style="floating.floatingStyles">
+  <div v-if="isOpen.value" ref="floatingRef" :style="context.floatingStyles.value">
     Floating content
   </div>
 </template>
@@ -689,16 +689,16 @@ const referenceRef = ref(null);
 const floatingRef = ref(null);
 const floatingId = "my-floating-element"; // Example ID for ARIA
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 });
 
 // useClick sets up click listeners on the reference element.
-useClick(floating.context);
+useClick(context);
 
 // useEscapeKey sets up escape key listener.
-useEscapeKey(floating.context, {
+useEscapeKey(context, {
   onEscape: () => {
     isOpen.value = false;
   }
@@ -720,7 +720,7 @@ useEscapeKey(floating.context, {
     v-if="isOpen.value"
     :id="floatingId"
     ref="floatingRef"
-    :style="floating.floatingStyles"
+    :style="context.floatingStyles.value"
     role="dialog"
     aria-modal="true"
     aria-labelledby="dialog-title" /* Assuming a title element exists */
@@ -829,7 +829,7 @@ function selectMenuItem(item) {
     <div
       v-if="menuContext.open.value"
       ref="menuRef"
-      :style="menuContext.floatingStyles"
+      :style="menuContext.floatingStyles.value"
       class="menu"
     >
       <div
@@ -856,7 +856,7 @@ function selectMenuItem(item) {
     <div
       v-if="viewSubmenuContext.open.value"
       ref="viewSubmenuRef"
-      :style="viewSubmenuContext.floatingStyles"
+      :style="viewSubmenuContext.floatingStyles.value"
       class="menu submenu"
     >
       <div
@@ -875,7 +875,7 @@ function selectMenuItem(item) {
     <div
       v-if="insertSubmenuContext.open.value"
       ref="insertSubmenuRef"
-      :style="insertSubmenuContext.floatingStyles"
+      :style="insertSubmenuContext.floatingStyles.value"
       class="menu submenu"
     >
       <div
@@ -1003,7 +1003,7 @@ const listRef = ref([])
 const isOpen = ref(false)
 const activeIndex = ref(null)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   placement: "bottom-start",
   middleware: [offset(5), flip(), shift({ padding: 5 })],
   open: isOpen,
@@ -1011,18 +1011,18 @@ const floating = useFloating(referenceRef, floatingRef, {
 })
 
 // Click to open the dropdown
-const click = useClick(floating.context)
+const click = useClick(context)
 
 // Close when pressing escape
-const escapeKey = useEscapeKey(floating.context, {
-  onEscape: () => floating.setOpen(false)
+const escapeKey = useEscapeKey(context, {
+  onEscape: () => context.setOpen(false)
 })
 
 // Set ARIA attributes
-const role = useRole(floating.context, { role: "menu" })
+const role = useRole(context, { role: "menu" })
 
 // Handle keyboard navigation
-const listNav = useListNavigation(floating.context, {
+const listNav = useListNavigation(context, {
   listRef,
   activeIndex,
   onNavigate: (index) => {
@@ -1063,7 +1063,7 @@ function selectItem(index) {
   <button
     ref="referenceRef"
     <!-- getReferenceProps() from useInteractions is not used here -->
-    <!-- Event listeners for click are attached by useClick(floating.context) -->
+    <!-- Event listeners for click are attached by useClick(context) -->
     aria-haspopup="menu"
     :aria-expanded="isOpen.value"
     class="dropdown-button"
@@ -1076,7 +1076,7 @@ function selectItem(index) {
     v-if="isOpen.value"
     ref="floatingRef"
     <!-- getFloatingProps() from useInteractions is not used here -->
-    :style="floating.floatingStyles"
+    :style="context.floatingStyles.value"
     role="menu" <!-- Assuming useRole would handle this, or it's manual -->
     class="dropdown-menu"
   >
@@ -1157,28 +1157,28 @@ const referenceRef = ref(null)
 const floatingRef = ref(null)
 const isOpen = ref(false)
 
-const floating = useFloating(referenceRef, floatingRef, {
+const context = useFloating(referenceRef, floatingRef, {
   open: isOpen,
   setOpen: (value) => (isOpen.value = value),
 })
 
 // Click to open the modal
-const click = useClick(floating.context)
+const click = useClick(context)
 
 // Close when pressing escape (but not when clicking outside)
-const escapeKey = useEscapeKey(floating.context, {
-  onEscape: () => floating.setOpen(false)
+const escapeKey = useEscapeKey(context, {
+  onEscape: () => context.setOpen(false)
 })
 
 // Set ARIA attributes for accessibility
-const role = useRole(floating.context, { role: "dialog" })
+const role = useRole(context, { role: "dialog" })
 
 // Event listeners from useClick and useEscapeKey are attached directly.
 // ARIA roles from useRole would need manual application or its own prop mechanism.
 // Since useInteractions is not available in v-float as per source,
 // props need to be managed differently.
-useClick(floating.context); // Attaches click listeners
-useEscapeKey(floating.context, { onEscape: () => floating.setOpen(false) }); // Attaches escape key listener
+useClick(context); // Attaches click listeners
+useEscapeKey(context, { onEscape: () => context.setOpen(false) }); // Attaches escape key listener
 
 // ARIA attributes are shown manually in the template.
 </script>
@@ -1195,7 +1195,7 @@ useEscapeKey(floating.context, { onEscape: () => floating.setOpen(false) }); // 
   </button>
 
   <FloatingOverlay v-if="isOpen.value" lock-scroll>
-    <FloatingFocusManager :context="floating.context" modal>
+    <FloatingFocusManager :context="context" modal>
       <div
         ref="floatingRef"
         id="modal-dialog"
@@ -1203,7 +1203,7 @@ useEscapeKey(floating.context, { onEscape: () => floating.setOpen(false) }); // 
         aria-modal="true"
         aria-labelledby="modal-title"
         class="modal"
-        :style="floating.floatingStyles"
+        :style="context.floatingStyles.value"
       >
         <div class="modal-header">
           <h2 id="modal-title">Modal Title</h2>
