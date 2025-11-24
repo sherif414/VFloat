@@ -1,12 +1,14 @@
 import { useEventListener } from "@vueuse/core"
 import { type MaybeRefOrGetter, ref, toValue } from "vue"
-import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import { getContextFromParameter } from "@/utils"
+import type { FloatingContext } from "../positioning"
 
 // =======================================================================================
 // 📌 Types
 // =======================================================================================
+
+export interface UseEscapeKeyContext extends Pick<FloatingContext, "open" | "setOpen"> {}
 
 export interface UseEscapeKeyOptions {
   /**
@@ -68,7 +70,7 @@ export interface UseEscapeKeyOptions {
  * ```
  */
 export function useEscapeKey(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: UseEscapeKeyContext | TreeNode<UseEscapeKeyContext>,
   options: UseEscapeKeyOptions = {}
 ): void {
   // Extract context information
@@ -114,8 +116,8 @@ export function useEscapeKey(
  * and then traversing to find the deepest open node.
  */
 function getTopmostOpenNodeInTree(
-  node: TreeNode<FloatingContext>
-): TreeNode<FloatingContext> | null {
+  node: TreeNode<UseEscapeKeyContext>
+): TreeNode<UseEscapeKeyContext> | null {
   // Navigate to root of the tree
   let rootNode = node
   while (rootNode.parent?.value && !rootNode.isRoot) {
@@ -123,10 +125,10 @@ function getTopmostOpenNodeInTree(
   }
 
   // Find topmost (deepest) open node from root
-  let topmostNode: TreeNode<FloatingContext> | null = null
+  let topmostNode: TreeNode<UseEscapeKeyContext> | null = null
   let maxLevel = -1
 
-  const traverseNode = (currentNode: TreeNode<FloatingContext>) => {
+  const traverseNode = (currentNode: TreeNode<UseEscapeKeyContext>) => {
     if (currentNode.data.open.value) {
       const level = currentNode.getPath().length
       if (level > maxLevel) {
