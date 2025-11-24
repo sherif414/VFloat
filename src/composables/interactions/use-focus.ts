@@ -9,15 +9,16 @@ import {
   watchPostEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
-import type { Tree, TreeNode } from "@/composables/positioning/use-floating-tree"
+import type { TreeNode } from "@/composables/positioning/use-floating-tree"
+import { isUsingKeyboard } from "@/composables/utils/is-using-keyboard"
 import {
+  getContextFromParameter,
   isMac,
   isSafari,
   isTargetWithinElement,
   isTypeableElement,
   matchesFocusVisible,
 } from "@/utils"
-import { isUsingKeyboard } from "../utils/is-using-keyboard"
 
 //=======================================================================================
 // 📌 Constants
@@ -63,14 +64,18 @@ const BLUR_CHECK_DELAY = 0
  * ```
  */
 
-export function useFocus(context: FloatingContext, options: UseFocusOptions = {}): UseFocusReturn {
+export function useFocus(
+  context: UseFocusContext | TreeNode<UseFocusContext>,
+  options: UseFocusOptions = {}
+): UseFocusReturn {
+  const { floatingContext, node } = getContextFromParameter(context)
   const {
     open,
     setOpen,
     refs: { floatingEl, anchorEl: _anchorEl },
-  } = context
+  } = floatingContext
 
-  const { enabled = true, requireFocusVisible = true, tree } = options
+  const { enabled = true, requireFocusVisible = true } = options
 
   /**
    * Computed anchor element that handles both HTMLElement and virtual element references.
@@ -86,30 +91,11 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
   const isSafariOnMac = isMac() && isSafari()
   let timeoutId: number
 
-  // Select focus strategy based on explicit tree option
-  let focusStrategy: FocusStrategy = new StandaloneFocusStrategy(floatingEl)
-  if (tree) {
-    let node: TreeNode<FloatingContext> | null = null
-    // Prefer lookup by id when provided
-    if (context.id) {
-      node = tree.findNodeById(context.id)
-    }
-    // Fallback: resolve by reference equality if id is missing or not found
-    if (!node) {
-      for (const candidate of tree.nodeMap.values()) {
-        if (candidate.data === context) {
-          node = candidate
-          break
-        }
-      }
-    }
-    if (node) {
-      focusStrategy = new TreeAwareFocusStrategy(node)
-    } else if (import.meta.env?.DEV) {
-      console.warn(
-        `[useFocus] 'tree' provided but could not resolve node for the given context. Falling back to standalone behavior.`
-      )
-    }
+  let focusStrategy: FocusStrategy
+  if (node) {
+    focusStrategy = new TreeAwareFocusStrategy(node)
+  } else {
+    focusStrategy = new StandaloneFocusStrategy(floatingEl)
   }
 
   // --- Window Event Listeners for Edge Cases ---
@@ -267,6 +253,8 @@ export function useFocus(context: FloatingContext, options: UseFocusOptions = {}
 // 📌 Types
 //=======================================================================================
 
+export interface UseFocusContext extends Pick<FloatingContext, "open" | "setOpen" | "refs"> {}
+
 export interface UseFocusOptions {
   /**
    * Whether focus event listeners are enabled
@@ -280,11 +268,6 @@ export interface UseFocusOptions {
    * @default true
    */
   requireFocusVisible?: MaybeRefOrGetter<boolean>
-
-  /**
-   * When provided, enables tree-aware focus handling.
-   */
-  tree?: Tree<FloatingContext>
 }
 
 /**
@@ -307,7 +290,7 @@ export interface UseFocusReturn {
  */
 interface FocusStrategy {
   shouldRemainOpen(activeEl: Element | null): boolean
-  getAncestorsToClose(target: Element): TreeNode<FloatingContext>[]
+  getAncestorsToClose(target: Element): TreeNode<UseFocusContext>[]
 }
 
 /**
@@ -321,7 +304,7 @@ class StandaloneFocusStrategy implements FocusStrategy {
     return this.floatingEl.value.contains(activeEl)
   }
 
-  getAncestorsToClose(_target: Element): TreeNode<FloatingContext>[] {
+  getAncestorsToClose(_target: Element): TreeNode<UseFocusContext>[] {
     return []
   }
 }
@@ -330,7 +313,7 @@ class StandaloneFocusStrategy implements FocusStrategy {
  * Tree-aware focus strategy - checks if focus is within the node hierarchy
  */
 class TreeAwareFocusStrategy implements FocusStrategy {
-  constructor(private treeContext: TreeNode<FloatingContext>) {}
+  constructor(private treeContext: TreeNode<UseFocusContext>) {}
 
   shouldRemainOpen(activeEl: Element | null): boolean {
     if (!activeEl) return false
@@ -342,8 +325,8 @@ class TreeAwareFocusStrategy implements FocusStrategy {
    * contain the provided target within their subtree. Useful for closing ancestors when
    * focus moves outside the current branch.
    */
-  getAncestorsToClose(target: Element): TreeNode<FloatingContext>[] {
-    const toClose: TreeNode<FloatingContext>[] = []
+  getAncestorsToClose(target: Element): TreeNode<UseFocusContext>[] {
+    const toClose: TreeNode<UseFocusContext>[] = []
     let ancestor = this.treeContext.parent.value
     while (ancestor) {
       const contains = this.isFocusWithinNodeHierarchy(ancestor, target)
@@ -358,7 +341,7 @@ class TreeAwareFocusStrategy implements FocusStrategy {
   }
 
   private isFocusWithinNodeHierarchy(
-    currentNode: TreeNode<FloatingContext>,
+    currentNode: TreeNode<UseFocusContext>,
     target: Element
   ): boolean {
     // Check if focus is within current node's elements
@@ -375,9 +358,9 @@ class TreeAwareFocusStrategy implements FocusStrategy {
   }
 
   private findDescendantContainingFocus(
-    node: TreeNode<FloatingContext>,
+    node: TreeNode<UseFocusContext>,
     target: Element
-  ): TreeNode<FloatingContext> | null {
+  ): TreeNode<UseFocusContext> | null {
     for (const child of node.children.value) {
       if (child.data.open.value) {
         if (
