@@ -418,7 +418,7 @@ export function useListNavigation(
   context: FloatingContext | TreeNode<FloatingContext>,
   options: UseListNavigationOptions
 ): UseListNavigationReturn {
-  const { floatingContext, treeContext } = getContextFromParameter(context)
+  const { floatingContext, node } = getContextFromParameter(context)
   const { refs, open, setOpen } = floatingContext
 
   const {
@@ -654,7 +654,7 @@ export function useListNavigation(
       } else if (result.type === "close") {
         e.preventDefault()
         setOpen(false, "programmatic", e)
-        const parent = treeContext?.parent.value
+        const parent = node?.parent.value
         const parentAnchor = parent?.data.refs.anchorEl.value
         if (parentAnchor instanceof HTMLElement) {
           parentAnchor.focus({ preventScroll: true })

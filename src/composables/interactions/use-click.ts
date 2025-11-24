@@ -71,7 +71,7 @@ export function useClick(
   options: UseClickOptions = {}
 ): void {
   // Extract floating context from either standalone context or tree node
-  const { floatingContext, treeContext } = getContextFromParameter(context)
+  const { floatingContext, node } = getContextFromParameter(context)
   const { open, setOpen, refs } = floatingContext
   const {
     enabled = true,
@@ -232,8 +232,8 @@ export function useClick(
     }
 
     // Use tree-aware logic if tree context is available
-    if (treeContext) {
-      if (!isClickOutsideNodeHierarchy(treeContext, target)) {
+    if (node) {
+      if (!isClickOutsideNodeHierarchy(node, target)) {
         return
       }
     } else {

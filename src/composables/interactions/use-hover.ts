@@ -8,14 +8,13 @@ import {
   watchPostEffect,
 } from "vue"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-import type { Fn } from "@/types"
-import type { FloatingContext } from "../positioning/use-floating"
-import { type SafePolygonOptions, safePolygon } from "./polygon"
 import {
   findDescendantContainingTarget,
   getContextFromParameter,
   isTargetWithinElement,
 } from "@/utils"
+import type { FloatingContext } from "../positioning/use-floating"
+import { type SafePolygonOptions, safePolygon } from "./polygon"
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -167,7 +166,7 @@ export function useHover(
   options: UseHoverOptions = {}
 ): void {
   // Extract floating context from either standalone context or tree node
-  const { floatingContext, treeContext } = getContextFromParameter(context)
+  const { floatingContext, node } = getContextFromParameter(context)
   const {
     open,
     setOpen,
@@ -322,7 +321,7 @@ export function useHover(
         let treeMap: Map<string, TreeNode<FloatingContext>> | undefined
         let nodeId: string | undefined
 
-        if (treeContext) {
+        if (node) {
           // Build a simple node map for tree-aware functionality
           treeMap = new Map()
           const addToMap = (node: TreeNode<FloatingContext>) => {
@@ -331,8 +330,8 @@ export function useHover(
               addToMap(child)
             }
           }
-          addToMap(treeContext)
-          nodeId = treeContext.id
+          addToMap(node)
+          nodeId = node.id
         }
 
         // Use the enhanced safe polygon with unified functionality
@@ -359,8 +358,8 @@ export function useHover(
       }, 0)
     } else {
       // Use tree-aware logic if tree context is available
-      if (treeContext) {
-        if (!isPointerLeavingNodeHierarchy(treeContext, relatedTarget)) {
+      if (node) {
+        if (!isPointerLeavingNodeHierarchy(node, relatedTarget)) {
           return // Pointer moved to current node or descendant - don't hide
         }
       } else {

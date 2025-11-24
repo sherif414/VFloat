@@ -212,17 +212,17 @@ export function isTreeNode<T>(context: T | TreeNode<T>): context is TreeNode<T> 
  */
 export function getContextFromParameter<T>(context: T | TreeNode<T>): {
   floatingContext: T
-  treeContext: TreeNode<T> | null
+  node: TreeNode<T> | null
 } {
   if (isTreeNode(context)) {
     return {
       floatingContext: context.data,
-      treeContext: context,
+      node: context,
     }
   }
   return {
     floatingContext: context,
-    treeContext: null,
+    node: null,
   }
 }
 

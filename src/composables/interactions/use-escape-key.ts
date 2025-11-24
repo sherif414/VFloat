@@ -74,7 +74,7 @@ export function useEscapeKey(
   options: UseEscapeKeyOptions = {}
 ): void {
   // Extract context information
-  const { floatingContext, treeContext } = getContextFromParameter(context)
+  const { floatingContext, node } = getContextFromParameter(context)
   const { enabled = true, capture = false, onEscape } = options
   const { isComposing } = useComposition()
 
@@ -91,9 +91,9 @@ export function useEscapeKey(
     }
 
     // Default behavior based on context type
-    if (treeContext) {
+    if (node) {
       // Tree-aware behavior: close topmost open node
-      const topmostNode = getTopmostOpenNodeInTree(treeContext)
+      const topmostNode = getTopmostOpenNodeInTree(node)
       if (topmostNode) {
         topmostNode.data.setOpen(false, "escape-key", event)
       }
