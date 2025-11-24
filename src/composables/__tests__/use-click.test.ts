@@ -1,10 +1,10 @@
 import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { effectScope, nextTick, type Ref, ref, shallowRef } from "vue"
-import { type FloatingContext, type UseClickOptions, useClick } from "@/composables/interactions"
+import { effectScope, nextTick, ref, shallowRef } from "vue"
+import { type UseClickOptions,type UseClickContext, useClick } from "@/composables/interactions"
 
 describe("useClick", () => {
-  let context: FloatingContext
+  let context: UseClickContext
   let referenceEl: HTMLElement
   let floatingEl: HTMLElement
   let scope: ReturnType<typeof effectScope>
@@ -26,27 +26,14 @@ describe("useClick", () => {
       openRef.value = open
     })
     context = {
-      id: "test-context",
-      x: ref(0),
-      y: ref(0),
-      strategy: ref("absolute"),
-      placement: ref("bottom"),
-      middlewareData: shallowRef({}),
-      isPositioned: ref(false),
-      floatingStyles: ref({
-        position: "absolute",
-        top: "0px",
-        left: "0px",
-      }),
-      update: vi.fn(),
       refs: {
         anchorEl: ref(referenceEl),
         floatingEl: ref(floatingEl),
-        arrowEl: ref(null),
+        arrowEl: ref(null)
       },
       open: openRef,
-      setOpen: setOpenMock,
-    } as any
+      setOpen: setOpenMock as ()=> void,
+    }
   })
 
   afterEach(() => {

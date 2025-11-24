@@ -1,20 +1,20 @@
 import type { PointerType } from "@vueuse/core"
-  import { useEventListener } from "@vueuse/core"
-  import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
-  import type { FloatingContext } from "@/composables/positioning/use-floating"
-  import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-  import type { OpenChangeReason } from "@/types"
-  import {
-    findDescendantContainingTarget,
-    getContextFromParameter,
-    isButtonTarget,
-    isClickOnScrollbar,
-    isEventTargetWithin,
-    isHTMLElement,
-    isMouseLikePointerType,
-    isSpaceIgnored,
-    isTargetWithinElement,
-  } from "@/utils"
+import { useEventListener } from "@vueuse/core"
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import type { FloatingContext } from "@/composables/positioning/use-floating"
+import type { TreeNode } from "@/composables/positioning/use-floating-tree"
+import type { OpenChangeReason } from "@/types"
+import {
+  findDescendantContainingTarget,
+  getContextFromParameter,
+  isButtonTarget,
+  isClickOnScrollbar,
+  isEventTargetWithin,
+  isHTMLElement,
+  isMouseLikePointerType,
+  isSpaceIgnored,
+  isTargetWithinElement,
+} from "@/utils"
 
 //=======================================================================================
 // 📌 Main
@@ -67,7 +67,7 @@ import type { PointerType } from "@vueuse/core"
  * ```
  */
 export function useClick(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: UseClickContext | TreeNode<UseClickContext>,
   options: UseClickOptions = {}
 ): void {
   // Extract floating context from either standalone context or tree node
@@ -247,7 +247,7 @@ export function useClick(
 
     // Use custom handler if provided, otherwise use default behavior
     if (onOutsideClick) {
-      onOutsideClick(event, floatingContext)
+      onOutsideClick(event)
     } else {
       setOpen(false, "outside-pointer", event)
     }
@@ -346,7 +346,7 @@ export function useClick(
  * @returns True if the click is outside the node hierarchy and should close the node
  */
 function isClickOutsideNodeHierarchy(
-  currentNode: TreeNode<FloatingContext>,
+  currentNode: TreeNode<UseClickContext>,
   target: Node
 ): boolean {
   // Check if click is within current node's elements
@@ -370,6 +370,8 @@ function isClickOutsideNodeHierarchy(
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+export interface UseClickContext extends Pick<FloatingContext, "refs" | "open" | "setOpen"> {}
 
 /**
  * Options for configuring the useClick behavior.
@@ -437,11 +439,9 @@ export interface UseClickOptions {
   /**
    * Custom function to handle outside clicks.
    * If provided, this function will be called instead of the default behavior.
-   * The function receives the event and context as parameters.
    * @param event - The mouse event that triggered the outside click
-   * @param context - The floating context containing refs and state
    */
-  onOutsideClick?: (event: MouseEvent, context: FloatingContext) => void
+  onOutsideClick?: (event: MouseEvent) => void
 
   /**
    * Whether to prevent clicks on scrollbars from triggering outside click.
