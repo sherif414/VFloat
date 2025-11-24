@@ -16,6 +16,10 @@ import { getContextFromParameter } from "@/utils"
 // 📌 Types
 //=======================================================================================
 
+export interface UseFocusTrapContext extends Pick<FloatingContext, "open" | "setOpen"> {
+  refs: Pick<FloatingContext["refs"], "floatingEl">
+}
+
 export interface UseFocusTrapOptions {
   /**
    * Determines if the focus trap should be enabled.
@@ -107,7 +111,7 @@ const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLEleme
  * @returns Object with isActive state, and manual control methods
  */
 export function useFocusTrap(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: UseFocusTrapContext | TreeNode<UseFocusTrapContext>,
   options: UseFocusTrapOptions = {}
 ): UseFocusTrapReturn {
   const { floatingContext } = getContextFromParameter(context)
@@ -245,9 +249,7 @@ export function useFocusTrap(
           setOpen(false)
         }
       },
-      initialFocus: () => 
-        typeof initialFocus === "function" ? initialFocus() : initialFocus
-      ,
+      initialFocus: () => (typeof initialFocus === "function" ? initialFocus() : initialFocus),
       fallbackFocus: () => container,
       returnFocusOnDeactivate: toValue(returnFocus),
       clickOutsideDeactivates: shouldCloseOnFocusOut.value,
