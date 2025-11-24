@@ -38,11 +38,15 @@ const dynamicItems = ref([
 useFocusTrap(context, {
   enabled,
   modal: isModal,
-  initialFocus: initialFocus,
+  // initialFocus: initialFocus,
   returnFocus,
   closeOnFocusOut,
   preventScroll,
   outsideElementsInert
+})
+
+useClick(context, {
+  outsideClick: true
 })
 
 // Helper functions for testing
@@ -62,8 +66,6 @@ useEscapeKey(context, {
     context.setOpen(false)
   },
 })
-
-useClick(context)
 </script>
 
 <template>

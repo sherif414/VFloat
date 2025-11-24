@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useFloating, useFocusTrap } from '../../src'
+import { useClick, useFloating, useFocusTrap } from '../../src'
 import { offset, flip, shift } from '../../src'
 
 const open = ref(false)
@@ -21,18 +21,22 @@ const isModal = ref(true)
 const returnFocus = ref(true)
 const initialFocus = ref('first') // 'first', 'close-btn'
 
-const initialFocusTarget = computed<HTMLElement | (() => HTMLElement | null) | 'first' | false>(() => {
+const initialFocusTarget = computed(() => {
   if (initialFocus.value === 'close-btn') {
     return () => document.getElementById('close-btn')
   }
-  return initialFocus.value as 'first'
+  return initialFocus.value
 })
 
 useFocusTrap(context, {
   enabled: open,
   modal: isModal,
   returnFocus,
-  initialFocus: initialFocusTarget
+  initialFocus: ()=> initialFocusTarget.value ?? false
+})
+
+useClick(context, {
+  outsideClick: true
 })
 
 </script>
