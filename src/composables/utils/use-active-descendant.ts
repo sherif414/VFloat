@@ -1,4 +1,4 @@
-import { computed, type ComputedRef, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue"
+import { type ComputedRef, computed, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue"
 
 export interface UseActiveDescendantOptions {
   virtual: MaybeRefOrGetter<boolean>
@@ -14,20 +14,17 @@ export function useActiveDescendant(
 ): void {
   const virt = computed(() => !!toValue(options.virtual))
 
-  watch(
-    [virt, options.open, computed(() => toValue(activeIndex))],
-    ([isVirtual, isOpen, idx]) => {
-      const anchor = anchorEl.value
-      if (!anchor) return
-      if (!isVirtual || !isOpen || idx == null) {
-        anchor.removeAttribute("aria-activedescendant")
-        return
-      }
-      const el = listRef.value[idx]
-      if (!el) return
-      if (!el.id) el.id = `vfloat-option-${Math.random().toString(16).slice(2, 10)}`
-      anchor.setAttribute("aria-activedescendant", el.id)
-      if (options.virtualItemRef) options.virtualItemRef.value = el
+  watch([virt, options.open, computed(() => toValue(activeIndex))], ([isVirtual, isOpen, idx]) => {
+    const anchor = anchorEl.value
+    if (!anchor) return
+    if (!isVirtual || !isOpen || idx == null) {
+      anchor.removeAttribute("aria-activedescendant")
+      return
     }
-  )
+    const el = listRef.value[idx]
+    if (!el) return
+    if (!el.id) el.id = `vfloat-option-${Math.random().toString(16).slice(2, 10)}`
+    anchor.setAttribute("aria-activedescendant", el.id)
+    if (options.virtualItemRef) options.virtualItemRef.value = el
+  })
 }

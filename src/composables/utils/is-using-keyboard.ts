@@ -1,5 +1,5 @@
-import { ref, readonly } from "vue"
 import { useEventListener } from "@vueuse/core"
+import { readonly, ref } from "vue"
 
 const mutableRef = ref(false)
 

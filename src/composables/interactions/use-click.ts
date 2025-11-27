@@ -332,7 +332,7 @@ export function useClick(
 }
 
 //=======================================================================================
-// 📌 Tree-Aware Logic Helpers
+// 📌 Helpers
 //=======================================================================================
 
 /**
@@ -377,17 +377,15 @@ export interface UseClickContext extends Pick<FloatingContext, "refs" | "open" |
  * Options for configuring the useClick behavior.
  */
 export interface UseClickOptions {
-  // --- Inside Click Options ---
-
   /**
-   * Whether the Hook is enabled.
+   * Whether the composable is enabled.
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>
 
   /**
    * The type of event to use to determine a "click" with mouse input.
-   * Keyboard clicks work as normal.
+   * This option does not effect keyboard interactions.
    * @default 'click'
    */
   event?: MaybeRefOrGetter<"click" | "mousedown">

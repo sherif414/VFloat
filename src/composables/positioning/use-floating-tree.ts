@@ -1,6 +1,6 @@
-import { useId } from "@/utils"
 import type { Ref } from "vue"
 import { computed, shallowReactive, shallowRef } from "vue"
+import { useId } from "@/utils"
 import type {
   AnchorElement,
   FloatingContext,
@@ -186,8 +186,7 @@ export interface FloatingTreeOptions extends CreateTreeOptions {}
  * });
  * ```
  */
-export interface UseFloatingTreeReturn
-  extends Omit<Tree<FloatingContext>, "addNode" | "root"> {
+export interface UseFloatingTreeReturn extends Omit<Tree<FloatingContext>, "addNode" | "root"> {
   /**
    * The root node of the floating tree
    */
