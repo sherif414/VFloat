@@ -57,7 +57,7 @@ export function isSafari(): boolean {
  * A simple utility to check if an element matches `:focus-visible`.
  */
 export function matchesFocusVisible(element: Element): boolean {
-  if (typeof (element as any)?.matches !== "function") return false
+  if (typeof (element as Element)?.matches !== "function") return false
   return element.matches(":focus-visible")
 }
 
@@ -118,8 +118,11 @@ export function isVirtualElement(el: unknown): el is VirtualElement {
  */
 export function isEventTargetWithin(event: Event, element: Element | null | undefined): boolean {
   if (!element) return false
-  if ("composedPath" in event && typeof (event as any).composedPath === "function") {
-    return ((event as any).composedPath() as Node[]).includes(element)
+  if (
+    "composedPath" in event &&
+    typeof (event as Event & { composedPath?: () => EventTarget[] }).composedPath === "function"
+  ) {
+    return (event as Event & { composedPath: () => Node[] }).composedPath().includes(element)
   }
   return element.contains(event.target as Node)
 }
@@ -233,8 +236,8 @@ export function isTargetWithinElement(target: Node, element: unknown): boolean {
   if (!element) return false
 
   // Handle VirtualElement (has contextElement)
-  if (typeof element === "object" && element !== null && "contextElement" in (element as any)) {
-    const contextElement = (element as any).contextElement
+  if (typeof element === "object" && element !== null && "contextElement" in (element as object)) {
+    const contextElement = (element as { contextElement: unknown }).contextElement
     if (contextElement instanceof Element) {
       return contextElement.contains(target)
     }
