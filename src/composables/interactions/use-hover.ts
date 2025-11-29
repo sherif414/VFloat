@@ -9,9 +9,10 @@ import {
 } from "vue"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import {
-  findDescendantContainingTarget,
+  findDescendantInEventPath,
   getContextFromParameter,
-  isTargetWithinElement,
+  getDomPath,
+  isElementInEventPath,
 } from "@/utils"
 import type { FloatingContext } from "../positioning/use-floating"
 import { type SafePolygonOptions, safePolygon } from "./polygon"
@@ -427,15 +428,17 @@ function isPointerLeavingNodeHierarchy(
   }
 
   // Check if pointer moved to current node's elements
+  const path = getDomPath(target)
+  
   if (
-    isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
-    isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+    isElementInEventPath(currentNode.data.refs.anchorEl.value, path) ||
+    isElementInEventPath(currentNode.data.refs.floatingEl.value, path)
   ) {
     return false // Pointer moved to current node - don't end hover
   }
 
   // Check if pointer moved to any open descendant
-  const descendantNode = findDescendantContainingTarget(currentNode, target)
+  const descendantNode = findDescendantInEventPath(currentNode, path)
   if (descendantNode) {
     return false // Pointer moved to descendant - don't end hover
   }

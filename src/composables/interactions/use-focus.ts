@@ -12,10 +12,12 @@ import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import { isUsingKeyboard } from "@/composables/utils/is-using-keyboard"
 import {
+  findDescendantInEventPath,
   getContextFromParameter,
+  getDomPath,
+  isElementInEventPath,
   isMac,
   isSafari,
-  isTargetWithinElement,
   isTypeableElement,
   matchesFocusVisible,
 } from "@/utils"
@@ -196,7 +198,7 @@ export function useFocus(
 
       // Ignore focus entering the anchor itself
       const anchor = anchorEl.value
-      if (anchor && isTargetWithinElement(target, anchor)) return
+      if (anchor && isElementInEventPath(anchor, getDomPath(target))) return
 
       if (focusStrategy.shouldRemainOpen(target)) return
 
@@ -344,37 +346,18 @@ class TreeAwareFocusStrategy implements FocusStrategy {
     currentNode: TreeNode<UseFocusContext>,
     target: Element
   ): boolean {
+    const path = getDomPath(target)
+    
     // Check if focus is within current node's elements
     if (
-      isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
-      isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+      isElementInEventPath(currentNode.data.refs.anchorEl.value, path) ||
+      isElementInEventPath(currentNode.data.refs.floatingEl.value, path)
     ) {
       return true // Focus on current node
     }
 
     // Check if focus is within any descendant
-    const descendantNode = this.findDescendantContainingFocus(currentNode, target)
+    const descendantNode = findDescendantInEventPath(currentNode, path)
     return descendantNode !== null
-  }
-
-  private findDescendantContainingFocus(
-    node: TreeNode<UseFocusContext>,
-    target: Element
-  ): TreeNode<UseFocusContext> | null {
-    for (const child of node.children.value) {
-      if (child.data.open.value) {
-        if (
-          isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
-          isTargetWithinElement(target, child.data.refs.floatingEl.value)
-        ) {
-          return child
-        }
-
-        // Recursively check descendants
-        const descendant = this.findDescendantContainingFocus(child, target)
-        if (descendant) return descendant
-      }
-    }
-    return null
   }
 }

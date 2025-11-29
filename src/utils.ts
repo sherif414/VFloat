@@ -229,49 +229,58 @@ export function getContextFromParameter<T>(context: T | TreeNode<T>): {
   }
 }
 
-/**
- * Checks if a target node is within an anchor or floating element, handling VirtualElement.
- */
-export function isTargetWithinElement(target: Node, element: unknown): boolean {
-  if (!element) return false
 
-  // Handle VirtualElement (has contextElement)
-  if (typeof element === "object" && element !== null && "contextElement" in (element as object)) {
-    const contextElement = (element as { contextElement: unknown }).contextElement
-    if (contextElement instanceof Element) {
-      return contextElement.contains(target)
-    }
-    return false
-  }
-
-  // Handle regular Element
-  if (element instanceof Element) {
-    return element.contains(target)
-  }
-
-  return false
-}
 
 /**
- * Finds a descendant node that contains the target element.
+ * Finds a descendant node that is in the event path.
  */
-export function findDescendantContainingTarget<T extends Pick<FloatingContext, "refs" | "open">>(
+export function findDescendantInEventPath<T extends Pick<FloatingContext, "refs" | "open">>(
   node: TreeNode<T>,
-  target: Node
+  path: EventTarget[]
 ): TreeNode<T> | null {
   for (const child of node.children.value) {
     if (child.data.open.value) {
       if (
-        isTargetWithinElement(target, child.data.refs.anchorEl.value) ||
-        isTargetWithinElement(target, child.data.refs.floatingEl.value)
+        isElementInEventPath(child.data.refs.anchorEl.value, path) ||
+        isElementInEventPath(child.data.refs.floatingEl.value, path)
       ) {
         return child
       }
 
       // Recursively check descendants
-      const descendant = findDescendantContainingTarget(child, target)
+      const descendant = findDescendantInEventPath(child, path)
       if (descendant) return descendant
     }
   }
   return null
+}
+
+/**
+ * Checks if an element (or virtual element's context) is present in the event path.
+ */
+export function isElementInEventPath(element: unknown, path: EventTarget[]): boolean {
+  if (element instanceof Element) {
+    return path.includes(element)
+  }
+  if (isVirtualElement(element) && element.contextElement instanceof Element) {
+    return path.includes(element.contextElement)
+  }
+  return false
+}
+
+/**
+ * Returns the composed path of a node, handling Shadow DOM.
+ */
+export function getDomPath(node: Node | null): EventTarget[] {
+  const path: EventTarget[] = []
+  let current: Node | null = node
+  while (current) {
+    path.push(current)
+    if (current instanceof ShadowRoot) {
+      current = current.host
+    } else {
+      current = current.parentNode
+    }
+  }
+  return path
 }

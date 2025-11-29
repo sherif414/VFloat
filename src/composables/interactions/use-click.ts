@@ -5,15 +5,16 @@ import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import type { OpenChangeReason } from "@/types"
 import {
-  findDescendantContainingTarget,
+  findDescendantInEventPath,
   getContextFromParameter,
+  getDomPath,
   isButtonTarget,
   isClickOnScrollbar,
+  isElementInEventPath,
   isEventTargetWithin,
   isHTMLElement,
   isMouseLikePointerType,
   isSpaceIgnored,
-  isTargetWithinElement,
 } from "@/utils"
 
 //=======================================================================================
@@ -233,7 +234,7 @@ export function useClick(
 
     // Use tree-aware logic if tree context is available
     if (node) {
-      if (!isClickOutsideNodeHierarchy(node, target)) {
+      if (!isClickOutsideNodeHierarchy(node, event)) {
         return
       }
     } else {
@@ -342,28 +343,27 @@ export function useClick(
  * false if the click should be ignored (click is on current node or descendants).
  *
  * @param currentNode - The tree node to check against
- * @param target - The click target
+ * @param event - The mouse event
  * @returns True if the click is outside the node hierarchy and should close the node
  */
 function isClickOutsideNodeHierarchy(
   currentNode: TreeNode<UseClickContext>,
-  target: Node
+  event: MouseEvent
 ): boolean {
-  // Check if click is within current node's elements
+  // Optimization: Use composedPath if available to avoid repeated DOM traversals
+  const path = typeof event.composedPath === "function" ? event.composedPath() : getDomPath(event.target as Node)
+  
   if (
-    isTargetWithinElement(target, currentNode.data.refs.anchorEl.value) ||
-    isTargetWithinElement(target, currentNode.data.refs.floatingEl.value)
+    isElementInEventPath(currentNode.data.refs.anchorEl.value, path) ||
+    isElementInEventPath(currentNode.data.refs.floatingEl.value, path)
   ) {
-    return false // Click on current node - don't close
+    return false
   }
 
-  // Check if click is within any descendant
-  const descendantNode = findDescendantContainingTarget(currentNode, target)
-  if (descendantNode) {
-    return false // Click on descendant - don't close
+  if (findDescendantInEventPath(currentNode, path)) {
+    return false
   }
 
-  // Click is outside the node hierarchy - should close
   return true
 }
 
