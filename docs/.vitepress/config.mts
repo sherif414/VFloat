@@ -63,7 +63,7 @@ export default defineConfig({
       "/api/": [
         {
           text: "Core",
-          collapsed: true,
+          collapsed: false,
           items: [
             { text: "Overview", link: "/api/" },
             { text: "useFloating", link: "/api/use-floating" },
@@ -73,7 +73,7 @@ export default defineConfig({
         },
         {
           text: "Interactions",
-          collapsed: true,
+          collapsed: false,
           items: [
             { text: "useClick", link: "/api/use-click" },
             { text: "useHover", link: "/api/use-hover" },
@@ -86,7 +86,7 @@ export default defineConfig({
         },
         {
           text: "Middleware",
-          collapsed: true,
+          collapsed: false,
           items: [
             { text: "offset", link: "/api/offset" },
             { text: "flip", link: "/api/flip" },
