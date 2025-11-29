@@ -117,7 +117,9 @@ export function useClick(
         setOpen(true, reason, event)
       }
     } finally {
-      // Reset interaction state after a micro-task to allow events to complete
+      // Reset interaction state after a micro-task to allow events to complete bubbling.
+      // This protects against the event reaching the document "outside click" listener
+      // in the same tick, which would immediately close the element we just opened.
       queueMicrotask(() => {
         interactionInProgress = false
       })
