@@ -117,7 +117,7 @@ export function useClick(
       }
     } finally {
       // Reset interaction state after a micro-task to allow events to complete
-      Promise.resolve().then(() => {
+      queueMicrotask(() => {
         interactionInProgress = false
       })
     }
