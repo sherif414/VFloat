@@ -1,35 +1,25 @@
-import { useEventListener } from "@vueuse/core"
 import { readonly, ref } from "vue"
 
 const mutableRef = ref(false)
 
 if (typeof window !== "undefined") {
-  useEventListener(
-    window,
-    "keydown",
-    () => {
-      mutableRef.value = true
-    },
-    { capture: true }
-  )
+  const options = { capture: true }
 
-  useEventListener(
-    window,
-    "pointerdown",
-    () => {
-      mutableRef.value = false
-    },
-    { capture: true }
-  )
+  function switchToKeyboard() {
+    mutableRef.value = true
 
-  useEventListener(
-    window,
-    "pointermove",
-    () => {
-      mutableRef.value = false
-    },
-    { capture: true }
-  )
+    window.removeEventListener("keydown", switchToKeyboard, options)
+    window.addEventListener("pointerdown", switchToPointer, options)
+  }
+
+  function switchToPointer() {
+    mutableRef.value = false
+
+    window.removeEventListener("pointerdown", switchToPointer, options)
+    window.addEventListener("keydown", switchToKeyboard, options)
+  }
+
+  switchToPointer()
 }
 
 export const isUsingKeyboard = readonly(mutableRef)
