@@ -760,12 +760,24 @@ export function useListNavigation(
   registerCleanup(stopOpenWatch)
 
   // Manage aria-activedescendant and virtualItemRef via dedicated composable
-  useActiveDescendant(
+  const { activeItem } = useActiveDescendant(
     anchorEl,
     listRef,
     computed(() => getActiveIndex()),
-    { virtual, open, virtualItemRef }
+    { virtual, open }
   )
+
+  // Sync the activeItem with the user-provided virtualItemRef if it exists
+  if (virtualItemRef) {
+    const stopActiveItemSync = watch(
+      activeItem,
+      (item) => {
+        virtualItemRef.value = item
+      },
+      { flush: "post" }
+    )
+    registerCleanup(stopActiveItemSync)
+  }
 
   return { cleanup: runCleanups }
 }
