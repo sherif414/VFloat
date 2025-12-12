@@ -286,6 +286,41 @@ export class GridNavigationStrategy implements NavigationStrategy {
 }
 
 // ============================================================================
+// Orientation Helpers
+// ============================================================================
+
+function doSwitch(
+  ori: "vertical" | "horizontal" | "both",
+  vertical: boolean,
+  horizontal: boolean
+): boolean {
+  switch (ori) {
+    case "vertical":
+      return vertical
+    case "horizontal":
+      return horizontal
+    default:
+      return vertical || horizontal
+  }
+}
+
+function isMainOrientationKey(key: string, ori: "vertical" | "horizontal" | "both"): boolean {
+  const vertical = key === "ArrowUp" || key === "ArrowDown"
+  const horizontal = key === "ArrowLeft" || key === "ArrowRight"
+  return doSwitch(ori, vertical, horizontal)
+}
+
+function isMainOrientationToEndKey(
+  key: string,
+  ori: "vertical" | "horizontal" | "both",
+  rtlFlag: boolean
+): boolean {
+  const vertical = key === "ArrowDown"
+  const horizontal = rtlFlag ? key === "ArrowLeft" : key === "ArrowRight"
+  return doSwitch(ori, vertical, horizontal) || key === "Enter" || key === " " || key === ""
+}
+
+// ============================================================================
 // List Navigation Composable
 // ============================================================================
 
@@ -442,37 +477,27 @@ export function useListNavigation(
     allowEscape = false,
   } = options
 
-  const derived = {
-    isEnabled: computed(() => toValue(enabled)),
-    anchorEl: computed(() => {
-      const el = refs.anchorEl.value
-      if (el instanceof HTMLElement) return el
-      if (el && "contextElement" in el && el.contextElement instanceof HTMLElement) {
-        return el.contextElement
-      }
-      return null
-    }),
-    floatingEl: computed(() => refs.floatingEl.value),
-    isVirtual: computed(() => !!toValue(virtual)),
-    isRtl: computed(() => !!toValue(rtl)),
-    gridCols: computed(() => Math.max(1, Number(toValue(cols) ?? 1))),
-  }
+  // --------------------------------------------------------------------------
+  // Derived State
+  // --------------------------------------------------------------------------
 
-  const { isEnabled, anchorEl, floatingEl, isVirtual, isRtl, gridCols } = derived
-
-  const getActiveIndex = () => (activeIndex !== undefined ? toValue(activeIndex) : null)
-  const isDisabled = (idx: number) => {
-    if (!disabledIndices) return false
-    return Array.isArray(disabledIndices) ? disabledIndices.includes(idx) : !!disabledIndices(idx)
-  }
-
-  const getFirstEnabledIndex = () => {
-    const items = listRef.value
-    for (let i = 0; i < items.length; i++) {
-      if (items[i] && !isDisabled(i)) return i
+  const isEnabled = computed(() => toValue(enabled))
+  const anchorEl = computed(() => {
+    const el = refs.anchorEl.value
+    if (el instanceof HTMLElement) return el
+    if (el && "contextElement" in el && el.contextElement instanceof HTMLElement) {
+      return el.contextElement
     }
     return null
-  }
+  })
+  const floatingEl = computed(() => refs.floatingEl.value)
+  const isVirtual = computed(() => !!toValue(virtual))
+  const isRtl = computed(() => !!toValue(rtl))
+  const gridCols = computed(() => Math.max(1, Number(toValue(cols) ?? 1)))
+
+  // --------------------------------------------------------------------------
+  // Cleanup Registry
+  // --------------------------------------------------------------------------
 
   const cleanupFns: Array<() => void> = []
   const registerCleanup = (fn: () => void) => {
@@ -485,7 +510,26 @@ export function useListNavigation(
     }
   }
 
-  const getLastEnabledIndex = () => {
+  // --------------------------------------------------------------------------
+  // Index Helpers
+  // --------------------------------------------------------------------------
+
+  const getActiveIndex = () => (activeIndex !== undefined ? toValue(activeIndex) : null)
+
+  const isDisabled = (idx: number): boolean => {
+    if (!disabledIndices) return false
+    return Array.isArray(disabledIndices) ? disabledIndices.includes(idx) : !!disabledIndices(idx)
+  }
+
+  const getFirstEnabledIndex = (): number | null => {
+    const items = listRef.value
+    for (let i = 0; i < items.length; i++) {
+      if (items[i] && !isDisabled(i)) return i
+    }
+    return null
+  }
+
+  const getLastEnabledIndex = (): number | null => {
     const items = listRef.value
     for (let i = items.length - 1; i >= 0; i--) {
       if (items[i] && !isDisabled(i)) return i
@@ -493,38 +537,7 @@ export function useListNavigation(
     return null
   }
 
-  function doSwitch(
-    ori: "vertical" | "horizontal" | "both",
-    vertical: boolean,
-    horizontal: boolean
-  ) {
-    switch (ori) {
-      case "vertical":
-        return vertical
-      case "horizontal":
-        return horizontal
-      default:
-        return vertical || horizontal
-    }
-  }
-
-  function isMainOrientationKey(key: string, ori: "vertical" | "horizontal" | "both") {
-    const vertical = key === "ArrowUp" || key === "ArrowDown"
-    const horizontal = key === "ArrowLeft" || key === "ArrowRight"
-    return doSwitch(ori, vertical, horizontal)
-  }
-
-  function isMainOrientationToEndKey(
-    key: string,
-    ori: "vertical" | "horizontal" | "both",
-    rtlFlag: boolean
-  ) {
-    const vertical = key === "ArrowDown"
-    const horizontal = rtlFlag ? key === "ArrowLeft" : key === "ArrowRight"
-    return doSwitch(ori, vertical, horizontal) || key === "Enter" || key === " " || key === ""
-  }
-
-  const findNextEnabled = (start: number, dir: 1 | -1, wrap: boolean) => {
+  const findNextEnabled = (start: number, dir: 1 | -1, wrap: boolean): number | null => {
     const items = listRef.value
     const len = items.length
     let i = start
@@ -539,28 +552,35 @@ export function useListNavigation(
     return null
   }
 
-  const focusItem = (index: number | null, forceScroll = false) => {
+  // --------------------------------------------------------------------------
+  // Focus Management
+  // --------------------------------------------------------------------------
+
+  const focusItem = (index: number | null, forceScroll = false): void => {
     if (index == null) return
     const el = listRef.value[index]
     if (!el) return
-    if (isVirtual.value) {
-      // In virtual mode, ARIA and virtualItemRef management is handled by useActiveDescendant
-      return
-    } else {
-      el.focus({ preventScroll: true })
-      const opts = scrollItemIntoView
-      const shouldScroll = !!opts && (forceScroll || isUsingKeyboard.value)
-      if (shouldScroll) {
-        el.scrollIntoView?.(
-          typeof opts === "boolean" ? { block: "nearest", inline: "nearest" } : opts
-        )
-      }
+
+    // In virtual mode, ARIA and virtualItemRef management is handled by useActiveDescendant
+    if (isVirtual.value) return
+
+    el.focus({ preventScroll: true })
+    const opts = scrollItemIntoView
+    const shouldScroll = !!opts && (forceScroll || isUsingKeyboard.value)
+    if (shouldScroll) {
+      el.scrollIntoView?.(
+        typeof opts === "boolean" ? { block: "nearest", inline: "nearest" } : opts
+      )
     }
   }
 
+  // --------------------------------------------------------------------------
+  // Event Handlers
+  // --------------------------------------------------------------------------
+
   let lastKey: string | null = null
 
-  const handleAnchorKeyDown = (e: KeyboardEvent) => {
+  const handleAnchorKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented) return
 
     const target = e.target as Element | null
@@ -571,6 +591,7 @@ export function useListNavigation(
     const ori = toValue(orientation)
     lastKey = key
 
+    // In virtual mode, delegate to floating handler
     if (open.value && isVirtual.value) {
       handleFloatingKeyDown(e)
       return
@@ -581,6 +602,7 @@ export function useListNavigation(
 
     e.preventDefault()
     setOpen(true, "keyboard-activate", e)
+
     const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
     const initial =
       sel ??
@@ -590,7 +612,7 @@ export function useListNavigation(
     if (initial != null) onNavigate?.(initial)
   }
 
-  const handleFloatingKeyDown = (e: KeyboardEvent) => {
+  const handleFloatingKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented) return
 
     const key = e.key
@@ -598,8 +620,7 @@ export function useListNavigation(
     const items = listRef.value
     if (!items.length) return
 
-    // 1. Handle Home/End
-    // In virtual mode (e.g. Command Palette), let the input handle Home/End for text cursor
+    // Handle Home/End (skip in virtual mode to allow text cursor navigation)
     if (!isVirtual.value) {
       if (key === "Home") {
         e.preventDefault()
@@ -615,22 +636,15 @@ export function useListNavigation(
       }
     }
 
-    // 2. Determine Strategy
-    let strategy: NavigationStrategy
-    if (ori === "vertical") {
-      strategy = new VerticalNavigationStrategy()
-    } else if (ori === "horizontal") {
-      strategy =
-        gridCols.value > 1
-          ? new GridNavigationStrategy(false, toValue(options.gridLoopDirection) ?? "row")
-          : new HorizontalNavigationStrategy()
-    } else {
-      // both
-      strategy = new GridNavigationStrategy(true, toValue(options.gridLoopDirection) ?? "row")
-    }
+    // Determine navigation strategy based on orientation
+    const strategy = createNavigationStrategy(
+      ori,
+      gridCols.value,
+      toValue(options.gridLoopDirection) ?? "row"
+    )
 
-    // 3. Execute Strategy
-    const context: StrategyContext = {
+    // Build strategy context
+    const strategyContext: StrategyContext = {
       current: getActiveIndex(),
       items,
       isRtl: isRtl.value,
@@ -645,42 +659,50 @@ export function useListNavigation(
       getLastEnabledIndex,
     }
 
-    const result = strategy.handleKey(key, context)
+    const result = strategy.handleKey(key, strategyContext)
+    if (!result) return
 
-    if (result) {
-      if (result.type === "navigate") {
-        e.preventDefault()
-        onNavigate?.(result.index)
-      } else if (result.type === "close") {
-        e.preventDefault()
-        setOpen(false, "programmatic", e)
-        const parent = node?.parent.value
-        const parentAnchor = parent?.data.refs.anchorEl.value
-        if (parentAnchor instanceof HTMLElement) {
-          parentAnchor.focus({ preventScroll: true })
-        } else if (
-          parentAnchor &&
-          "contextElement" in parentAnchor &&
-          parentAnchor.contextElement instanceof HTMLElement
-        ) {
-          parentAnchor.contextElement.focus({ preventScroll: true })
-        }
-      }
+    e.preventDefault()
+
+    if (result.type === "navigate") {
+      onNavigate?.(result.index)
+    } else if (result.type === "close") {
+      setOpen(false, "programmatic", e)
+      focusParentAnchor()
     }
   }
 
-  const stopActiveItemWatch = watch(
-    [open, computed(() => getActiveIndex())],
-    ([isOpen, idx]) => {
-      if (!isEnabled.value) return
-      if (!isOpen) return
-      if (idx == null) return
-      focusItem(idx)
-    },
-    { flush: "post" }
-  )
-  registerCleanup(stopActiveItemWatch)
+  const focusParentAnchor = (): void => {
+    const parent = node?.parent.value
+    const parentAnchor = parent?.data.refs.anchorEl.value
+    if (parentAnchor instanceof HTMLElement) {
+      parentAnchor.focus({ preventScroll: true })
+    } else if (
+      parentAnchor &&
+      "contextElement" in parentAnchor &&
+      parentAnchor.contextElement instanceof HTMLElement
+    ) {
+      parentAnchor.contextElement.focus({ preventScroll: true })
+    }
+  }
 
+  // --------------------------------------------------------------------------
+  // Watchers & Event Listeners
+  // --------------------------------------------------------------------------
+
+  // Focus active item when it changes
+  registerCleanup(
+    watch(
+      [open, computed(() => getActiveIndex())],
+      ([isOpen, idx]) => {
+        if (!isEnabled.value || !isOpen || idx == null) return
+        focusItem(idx)
+      },
+      { flush: "post" }
+    )
+  )
+
+  // Keyboard navigation on anchor element
   registerCleanup(
     useEventListener(
       () => (isEnabled.value ? anchorEl.value : null),
@@ -688,6 +710,8 @@ export function useListNavigation(
       handleAnchorKeyDown
     )
   )
+
+  // Keyboard navigation on floating element
   registerCleanup(
     useEventListener(
       () => (isEnabled.value ? floatingEl.value : null),
@@ -696,70 +720,79 @@ export function useListNavigation(
     )
   )
 
-  const removeItemHoverWatch = watchPostEffect(() => {
-    if (!isEnabled.value || !toValue(focusItemOnHover)) return
-    const container = floatingEl.value
-    if (!container) return
+  // Hover-to-focus behavior
+  registerCleanup(
+    watchPostEffect(() => {
+      if (!isEnabled.value || !toValue(focusItemOnHover)) return
+      const container = floatingEl.value
+      if (!container) return
 
-    let lastX: number | null = null
-    let lastY: number | null = null
+      let lastX: number | null = null
+      let lastY: number | null = null
 
-    const onMove = (evt: MouseEvent) => {
       // "State-Driven Hover" pattern:
       // Only update selection if the mouse *actually moved*.
-      // This prevents "ghost hovers" where the list scrolls/updates under a stationary mouse,
-      // which would otherwise steal selection from the keyboard.
-      if (lastX === evt.clientX && lastY === evt.clientY) return
-      lastX = evt.clientX
-      lastY = evt.clientY
+      // This prevents "ghost hovers" where the list scrolls/updates under a stationary mouse.
+      const onMove = (evt: MouseEvent) => {
+        if (lastX === evt.clientX && lastY === evt.clientY) return
+        lastX = evt.clientX
+        lastY = evt.clientY
 
-      const target = evt.target as Element | null
-      if (!target) return
-      const items = listRef.value
-      let idx = -1
-      for (let i = 0; i < items.length; i++) {
-        const el = items[i]
-        if (el && (el === target || el.contains(target))) {
-          idx = i
-          break
-        }
+        const target = evt.target as Element | null
+        if (!target) return
+
+        const idx = findItemIndexFromTarget(target)
+        if (idx >= 0) onNavigate?.(idx)
       }
-      if (idx >= 0) onNavigate?.(idx)
-    }
-    container.addEventListener("mousemove", onMove)
-    onWatcherCleanup(() => {
-      container.removeEventListener("mousemove", onMove)
-    })
-  })
-  registerCleanup(removeItemHoverWatch)
 
+      container.addEventListener("mousemove", onMove)
+      onWatcherCleanup(() => container.removeEventListener("mousemove", onMove))
+    })
+  )
+
+  // Focus item when list opens
   const prevOpen = ref(false)
-  const stopOpenWatch = watch(
-    () => open.value,
-    (isOpen) => {
-      if (!isEnabled.value) return
-      if (isOpen && !prevOpen.value) {
-        const f = toValue(focusItemOnOpen)
-        if (f === true || (f === "auto" && lastKey != null)) {
-          const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
-          const idx =
-            sel ??
-            (lastKey && isMainOrientationToEndKey(lastKey, toValue(orientation), isRtl.value)
-              ? getFirstEnabledIndex()
-              : getLastEnabledIndex())
-          if (idx != null) {
-            onNavigate?.(idx)
-            focusItem(idx, true)
+  registerCleanup(
+    watch(
+      () => open.value,
+      (isOpen) => {
+        if (!isEnabled.value) return
+
+        if (isOpen && !prevOpen.value) {
+          const f = toValue(focusItemOnOpen)
+          if (f === true || (f === "auto" && lastKey != null)) {
+            const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null
+            const idx =
+              sel ??
+              (lastKey && isMainOrientationToEndKey(lastKey, toValue(orientation), isRtl.value)
+                ? getFirstEnabledIndex()
+                : getLastEnabledIndex())
+            if (idx != null) {
+              onNavigate?.(idx)
+              focusItem(idx, true)
+            }
           }
         }
-      }
-      prevOpen.value = isOpen
-    },
-    { flush: "post", immediate: true }
-  )
-  registerCleanup(stopOpenWatch)
 
-  // Manage aria-activedescendant and virtualItemRef via dedicated composable
+        prevOpen.value = isOpen
+      },
+      { flush: "post", immediate: true }
+    )
+  )
+
+  const findItemIndexFromTarget = (target: Element): number => {
+    const items = listRef.value
+    for (let i = 0; i < items.length; i++) {
+      const el = items[i]
+      if (el && (el === target || el.contains(target))) return i
+    }
+    return -1
+  }
+
+  // --------------------------------------------------------------------------
+  // Active Descendant (Virtual Focus)
+  // --------------------------------------------------------------------------
+
   const { activeItem } = useActiveDescendant(
     anchorEl,
     listRef,
@@ -767,17 +800,39 @@ export function useListNavigation(
     { virtual, open }
   )
 
-  // Sync the activeItem with the user-provided virtualItemRef if it exists
+  // Sync activeItem with user-provided virtualItemRef
   if (virtualItemRef) {
-    const stopActiveItemSync = watch(
-      activeItem,
-      (item) => {
-        virtualItemRef.value = item
-      },
-      { flush: "post" }
+    registerCleanup(
+      watch(
+        activeItem,
+        (item) => {
+          virtualItemRef.value = item
+        },
+        { flush: "post" }
+      )
     )
-    registerCleanup(stopActiveItemSync)
   }
 
   return { cleanup: runCleanups }
+}
+
+// ============================================================================
+// Strategy Factory
+// ============================================================================
+
+function createNavigationStrategy(
+  orientation: "vertical" | "horizontal" | "both",
+  cols: number,
+  gridLoopDirection: "row" | "next"
+): NavigationStrategy {
+  if (orientation === "vertical") {
+    return new VerticalNavigationStrategy()
+  }
+  if (orientation === "horizontal") {
+    return cols > 1
+      ? new GridNavigationStrategy(false, gridLoopDirection)
+      : new HorizontalNavigationStrategy()
+  }
+  // "both" orientation
+  return new GridNavigationStrategy(true, gridLoopDirection)
 }
