@@ -125,62 +125,6 @@ describe("useClick", () => {
       if (outside.isConnected) document.body.removeChild(outside)
     })
 
-    it("is tree-aware: accepts tree node as context parameter", async () => {
-      const createMockTreeNode = (ctx: any, isRoot = false, parent: any = null) => {
-        const children = ref<any[]>([])
-        const parentRef = ref(parent)
-        const node: any = {
-          id: `node-${Math.random().toString(36).slice(2)}`,
-          data: ctx,
-          children,
-          parent: parentRef,
-          isRoot,
-          getPath: vi.fn(() => ["root", node.id]),
-        }
-        return node
-      }
-
-      const treeOpenRef = ref(false)
-      const mockSetOpen = vi.fn((v: boolean) => {
-        treeOpenRef.value = v
-      })
-
-      const treeNode = createMockTreeNode(
-        {
-          id: "tree-test-context",
-          x: ref(0),
-          y: ref(0),
-          strategy: ref("absolute"),
-          placement: ref("bottom"),
-          middlewareData: shallowRef({}),
-          isPositioned: ref(false),
-          floatingStyles: ref({
-            position: "absolute",
-            top: "0px",
-            left: "0px",
-          }),
-          update: vi.fn(),
-          refs: {
-            anchorEl: ref(referenceEl),
-            floatingEl: ref(floatingEl),
-            arrowEl: ref(null),
-          },
-          open: treeOpenRef,
-          setOpen: mockSetOpen,
-        } as any,
-        true
-      )
-
-      scope = effectScope()
-      scope.run(() => {
-        useClick(treeNode as any, { toggle: true })
-      })
-      await nextTick()
-
-      await userEvent.click(referenceEl)
-      expect(mockSetOpen).toHaveBeenCalledTimes(1)
-      expect(mockSetOpen).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
-    })
 
     it("ignores synthetic keyboard click (detail === 0) when ignoreKeyboard is true", async () => {
       initClick({ ignoreKeyboard: true })

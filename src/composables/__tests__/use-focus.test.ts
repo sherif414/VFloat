@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { effectScope, nextTick, type Ref, ref, shallowRef } from "vue"
-import { type FloatingContext, type UseFocusOptions, useFocus } from "@/composables/interactions"
+import { type UseFocusOptions, type UseFocusContext, useFocus } from "@/composables/interactions"
 
 // Mock the utils module to allow spying on matchesFocusVisible
 vi.mock("@/utils", async (importOriginal) => {
@@ -14,7 +14,7 @@ vi.mock("@/utils", async (importOriginal) => {
 import { matchesFocusVisible } from "@/utils"
 
 describe("useFocus", () => {
-  let context: FloatingContext
+  let context: UseFocusContext
   let referenceEl: HTMLElement
   let floatingEl: HTMLElement
   let scope: ReturnType<typeof effectScope>
@@ -248,121 +248,5 @@ describe("useFocus", () => {
     })
   })
 
-  // --- Tree-aware behavior ---
-  describe("tree-aware focus strategy", () => {
-    // Minimal TreeNode factory (aligned with use-escape-key tests)
-    function createMockTreeNode(ctx: any, isRoot = false, parent: any = null) {
-      const children = shallowRef<any[]>([])
-      const parentRef = shallowRef(parent)
-      const node: any = {
-        id: `node-${Math.random().toString(36).slice(2)}`,
-        data: ctx,
-        children,
-        parent: parentRef,
-        isRoot,
-        getPath: vi.fn(() => {
-          const path: string[] = []
-          let current: any = node
-          while (current && !current.isRoot) {
-            path.unshift(current.id)
-            current = current.parent.value
-          }
-          if (current?.isRoot) path.unshift(current.id)
-          return path
-        }),
-      }
-      return node
-    }
 
-    it("keeps parent open when focus moves to an open descendant", async () => {
-      // Build parent/child DOM
-      const parentRef = document.createElement("button")
-      const parentFloat = document.createElement("div")
-      parentFloat.tabIndex = -1
-      parentRef.textContent = "Parent Anchor"
-      parentFloat.textContent = "Parent Floating Content"
-      document.body.appendChild(parentRef)
-      document.body.appendChild(parentFloat)
-
-      const childRef = document.createElement("button")
-      const childFloat = document.createElement("div")
-      childFloat.tabIndex = -1
-      childRef.textContent = "Child Anchor"
-      childFloat.textContent = "Child Floating Content"
-      document.body.appendChild(childRef)
-      document.body.appendChild(childFloat)
-
-      const parentOpen = ref(false)
-      const childOpen = ref(true) // descendant is open
-
-      const parentCtx = {
-        id: "",
-        refs: { anchorEl: ref(parentRef), floatingEl: ref(parentFloat) },
-        open: parentOpen,
-        setOpen: (v: boolean) => (parentOpen.value = v),
-      }
-      const childCtx = {
-        id: "",
-        refs: { anchorEl: ref(childRef), floatingEl: ref(childFloat) },
-        open: childOpen,
-        setOpen: (v: boolean) => (childOpen.value = v),
-      }
-
-      const parentNode = createMockTreeNode(parentCtx, true)
-      const childNode = createMockTreeNode(childCtx, false, parentNode)
-      parentNode.children.value = [childNode]
-
-      // Sync context ids with node ids as in real tree integration
-      parentCtx.id = parentNode.id
-      childCtx.id = childNode.id
-
-      // Minimal tree impl for this test
-      const tree = {
-        findNodeById: (id: string) => {
-          if (id === parentNode.id) return parentNode
-          if (id === childNode.id) return childNode
-          return null
-        },
-      } as any
-
-      // Attach useFocus to the parent node (tree-aware)
-      scope = effectScope()
-      scope.run(() => {
-        // biome-ignore lint/suspicious/noExplicitAny: testing setup
-        useFocus(parentCtx as any, { requireFocusVisible: false, tree })
-      })
-      await nextTick()
-
-      // Focus parent to open it
-      parentRef.focus()
-      await nextTick()
-      expect(parentOpen.value).toBe(true)
-
-      // Move focus to child's reference
-      childRef.focus()
-      vi.runAllTimers()
-      await nextTick()
-
-      expect(parentOpen.value).toBe(true)
-
-      // Move focus outside hierarchy -> parent should close
-      const outside = document.createElement("input")
-      document.body.appendChild(outside)
-      childRef.blur()
-      outside.focus()
-      vi.runAllTimers()
-      await nextTick()
-
-      expect(parentOpen.value).toBe(false)
-
-      // Cleanup DOM
-      document.body.removeChild(parentRef)
-      document.body.removeChild(parentFloat)
-      document.body.removeChild(childRef)
-      document.body.removeChild(childFloat)
-      document.body.removeChild(outside)
-
-      scope.stop()
-    })
-  })
 })

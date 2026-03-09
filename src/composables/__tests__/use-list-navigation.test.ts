@@ -203,6 +203,12 @@ describe("useListNavigation", () => {
     const ctx = makeContext()
     const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx))
     const virtualItemRef = ref<HTMLElement | null>(null)
+
+    // Ensure our mock items all have IDs for aria-activedescendant to work
+    items.forEach((item, index) => {
+      item.id = `mock-item-${index}`
+    })
+
     useListNavigation(ctx, {
       listRef,
       activeIndex,
@@ -219,10 +225,15 @@ describe("useListNavigation", () => {
     await nextTick()
     expect(anchorEl.getAttribute("aria-activedescendant")).toBe(items[0].id)
     expect(virtualItemRef.value).toBe(items[0])
+    
     activeIndex.value = items.length - 1
     floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))
+    
+    await nextTick()
     await nextTick()
     expect(activeIndex.value).toBeNull()
+    const updatedDescendant = anchorEl.getAttribute("aria-activedescendant")
+    expect(updatedDescendant === null || updatedDescendant === "").toBeTruthy()
   })
 
   it("nested close focuses parent", async () => {

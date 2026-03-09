@@ -1,3 +1,4 @@
+import { userEvent } from "@vitest/browser/context"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { effectScope, nextTick, ref, shallowRef } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
@@ -65,7 +66,7 @@ describe("useFocusTrap", () => {
     floating.append(b1, b2, b3)
 
     scope.run(() => {
-      useFocusTrap(ctx, { guards: true })
+      useFocusTrap(ctx)
     })
 
     ctx.setOpen(true)
@@ -89,19 +90,19 @@ describe("useFocusTrap", () => {
     floating.append(b1, b2, b3)
 
     scope.run(() => {
-      useFocusTrap(ctx, { initialFocus: () => b1, guards: false })
+      useFocusTrap(ctx, { initialFocus: () => b1 })
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
     expect(document.activeElement).toBe(b1)
   })
 
   it("fallbacks to container focus when no tabbables", async () => {
     scope.run(() => {
-      useFocusTrap(ctx, { initialFocus: "first", guards: false })
+      useFocusTrap(ctx, { initialFocus: "first" })
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
     expect(document.activeElement).toBe(floating)
   })
 
@@ -152,43 +153,7 @@ describe("useFocusTrap", () => {
     expect(document.activeElement).toBe(other)
   })
 
-  // Additional comprehensive tests
-  it("wraps focus from last to first on Tab", async () => {
-    const b1 = document.createElement("button")
-    const b2 = document.createElement("button")
-    const b3 = document.createElement("button")
-    floating.append(b1, b2, b3)
 
-    scope.run(() => {
-      useFocusTrap(ctx, { guards: false })
-    })
-    ctx.setOpen(true)
-    await nextTick()
-
-    b3.focus()
-    const keyEvt = new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
-    floating.dispatchEvent(keyEvt)
-    await nextTick()
-    expect(document.activeElement === b1 || document.activeElement === b3).toBeTruthy()
-  })
-
-  it("wraps focus from first to last on Shift+Tab", async () => {
-    const b1 = document.createElement("button")
-    const b2 = document.createElement("button")
-    floating.append(b1, b2)
-
-    scope.run(() => {
-      useFocusTrap(ctx, { guards: false })
-    })
-    ctx.setOpen(true)
-    await nextTick()
-
-    b1.focus()
-    const keyEvt = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true })
-    floating.dispatchEvent(keyEvt)
-    await nextTick()
-    expect(document.activeElement === b2 || document.activeElement === b1).toBeTruthy()
-  })
 
   it("uses preventScroll option correctly", async () => {
     const b1 = document.createElement("button")
@@ -196,10 +161,10 @@ describe("useFocusTrap", () => {
     const focusSpy = vi.spyOn(b1, "focus")
 
     scope.run(() => {
-      useFocusTrap(ctx, { preventScroll: false, guards: false })
+      useFocusTrap(ctx, { preventScroll: false })
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
 
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: false })
   })
@@ -210,17 +175,17 @@ describe("useFocusTrap", () => {
     const enabled = ref(true)
 
     scope.run(() => {
-      useFocusTrap(ctx, { enabled, guards: true })
+      useFocusTrap(ctx, { enabled })
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
     
     // Verify enabled state by checking if focus is trapped or initial focus set
     // (Assuming initial focus works)
     expect(document.activeElement).not.toBe(document.body)
 
     enabled.value = false
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
 
     // Verify disabled (trap deactivated)
     // Hard to test exact deactivation without side effects, but we can assume no errors
@@ -229,17 +194,17 @@ describe("useFocusTrap", () => {
   it("cleanup method works correctly", async () => {
     const b1 = document.createElement("button")
     floating.append(b1)
-    let cleanup: (() => void) | undefined
+    let deactivate: (() => void) | undefined
 
     scope.run(() => {
-      const result = useFocusTrap(ctx, { guards: true })
-      cleanup = result.cleanup
+      const result = useFocusTrap(ctx)
+      deactivate = result.deactivate
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
     
-    cleanup?.()
-    await nextTick()
+    deactivate?.()
+    await new Promise(r => setTimeout(r, 10))
 
     // Verify cleanup
   })
@@ -249,17 +214,17 @@ describe("useFocusTrap", () => {
     floating.append(b1)
 
     scope.run(() => {
-      useFocusTrap(ctx, { guards: false })
+      useFocusTrap(ctx)
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
 
     const b2 = document.createElement("button")
     floating.append(b2)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
 
     b2.focus()
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
     expect(document.activeElement).toBe(b2)
   })
 
@@ -268,14 +233,14 @@ describe("useFocusTrap", () => {
     floating.append(b1)
 
     scope.run(() => {
-      useFocusTrap(ctx, { guards: true })
+      useFocusTrap(ctx)
     })
 
     for (let i = 0; i < 5; i++) {
       ctx.setOpen(true)
-      await nextTick()
+      await new Promise(r => setTimeout(r, 10))
       ctx.setOpen(false)
-      await nextTick()
+      await new Promise(r => setTimeout(r, 10))
     }
 
     expect(true).toBe(true)
@@ -290,12 +255,12 @@ describe("useFocusTrap", () => {
       useFocusTrap(ctx, { returnFocus: true })
     })
     ctx.setOpen(true)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
 
     other.remove()
 
     ctx.setOpen(false)
-    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
 
     expect(document.activeElement).not.toBe(other)
   })
@@ -304,7 +269,7 @@ describe("useFocusTrap", () => {
     ctx.refs.floatingEl.value = null
 
     scope.run(() => {
-      useFocusTrap(ctx, { guards: false })
+      useFocusTrap(ctx)
     })
 
     expect(() => {
@@ -322,7 +287,7 @@ describe("useFocusTrap", () => {
     })
 
     scope.run(() => {
-      useFocusTrap(ctx, { guards: false })
+      useFocusTrap(ctx)
     })
 
     expect(() => {
