@@ -7,13 +7,6 @@ import {
   toValue,
   watchPostEffect,
 } from "vue"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-import {
-  findDescendantInEventPath,
-  getContextFromParameter,
-  getDomPath,
-  isElementInEventPath,
-} from "@/utils"
 import type { FloatingContext } from "../positioning/use-floating"
 import { type SafePolygonOptions, safePolygon } from "./polygon"
 
@@ -162,17 +155,12 @@ function useDelayedOpen(
  * })
  * ```
  */
-export function useHover(
-  context: FloatingContext | TreeNode<FloatingContext>,
-  options: UseHoverOptions = {}
-): void {
-  // Extract floating context from either standalone context or tree node
-  const { floatingContext, node } = getContextFromParameter(context)
+export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
   const {
     open,
     setOpen,
     refs: { anchorEl, floatingEl },
-  } = floatingContext
+  } = context
   const {
     enabled: enabledOption = true,
     delay = 0,
@@ -318,28 +306,11 @@ export function useHover(
           return
         }
 
-        // Create tree map for tree-aware functionality
-        let treeMap: Map<string, TreeNode<FloatingContext>> | undefined
-        let nodeId: string | undefined
-
-        if (node) {
-          // Build a simple node map for tree-aware functionality
-          treeMap = new Map()
-          const addToMap = (node: TreeNode<FloatingContext>) => {
-            treeMap?.set(node.id, node)
-            for (const child of node.children.value) {
-              addToMap(child)
-            }
-          }
-          addToMap(node)
-          nodeId = node.id
-        }
-
         // Use the enhanced safe polygon with unified functionality
         polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
           x: clientX,
           y: clientY,
-          placement: floatingContext.placement.value,
+          placement: context.placement.value,
           elements: {
             domReference: refEl,
             floating: floatEl,
@@ -349,8 +320,6 @@ export function useHover(
             cleanupPolygon()
             hide(undefined)
           },
-          nodeId,
-          tree: treeMap ? { nodes: treeMap } : undefined,
         })
 
         if (polygonMouseMoveHandler) {
@@ -358,16 +327,9 @@ export function useHover(
         }
       }, 0)
     } else {
-      // Use tree-aware logic if tree context is available
-      if (node) {
-        if (!isPointerLeavingNodeHierarchy(node, relatedTarget)) {
-          return // Pointer moved to current node or descendant - don't hide
-        }
-      } else {
-        // Standard logic for standalone usage
-        if (floatingEl.value?.contains(relatedTarget)) {
-          return // Pointer moved to floating element - don't hide
-        }
+      // Standard logic for standalone usage
+      if (floatingEl.value?.contains(relatedTarget)) {
+        return // Pointer moved to floating element - don't hide
       }
 
       hide(undefined, e)
@@ -403,46 +365,4 @@ export function useHover(
   onScopeDispose(() => {
     cleanupPolygon()
   })
-}
-
-//=======================================================================================
-// 📌 Tree-Aware Logic Helpers
-//=======================================================================================
-
-/**
- * Determines if the pointer is leaving to an area outside the current node's hierarchy.
- *
- * Returns true if the hover should end (pointer left to outside area),
- * false if the hover should continue (pointer moved to current node or descendants).
- *
- * @param currentNode - The tree node to check against
- * @param target - The related target from the pointer leave event
- * @returns True if the pointer left to outside the node hierarchy
- */
-function isPointerLeavingNodeHierarchy(
-  currentNode: TreeNode<FloatingContext>,
-  target: Node | null
-): boolean {
-  if (!target) {
-    return true // No related target means leaving to outside
-  }
-
-  // Check if pointer moved to current node's elements
-  const path = getDomPath(target)
-  
-  if (
-    isElementInEventPath(currentNode.data.refs.anchorEl.value, path) ||
-    isElementInEventPath(currentNode.data.refs.floatingEl.value, path)
-  ) {
-    return false // Pointer moved to current node - don't end hover
-  }
-
-  // Check if pointer moved to any open descendant
-  const descendantNode = findDescendantInEventPath(currentNode, path)
-  if (descendantNode) {
-    return false // Pointer moved to descendant - don't end hover
-  }
-
-  // Pointer left to outside the node hierarchy - should end hover
-  return true
 }

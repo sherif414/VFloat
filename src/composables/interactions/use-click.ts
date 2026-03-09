@@ -2,15 +2,10 @@ import type { PointerType } from "@vueuse/core"
 import { useEventListener } from "@vueuse/core"
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import type { OpenChangeReason } from "@/types"
 import {
-  findDescendantInEventPath,
-  getContextFromParameter,
-  getDomPath,
   isButtonTarget,
   isClickOnScrollbar,
-  isElementInEventPath,
   isEventTargetWithin,
   isHTMLElement,
   isMouseLikePointerType,
@@ -44,17 +39,6 @@ import {
  * })
  * ```
  *
- * @example Tree-aware usage for nested floating elements
- * ```ts
- * const tree = useFloatingTree(rootContext)
- * const parentNode = tree.root
- * const childNode = tree.addNode(childContext, parentNode.id)
- *
- * // Tree-aware behavior: child won't close when clicked,
- * // but will close when parent or outside is clicked
- * useClick(childNode, { outsideClick: true })
- * ```
- *
  * @example Custom outside click handler
  * ```ts
  * useClick(context, {
@@ -67,13 +51,8 @@ import {
  * })
  * ```
  */
-export function useClick(
-  context: UseClickContext | TreeNode<UseClickContext>,
-  options: UseClickOptions = {}
-): void {
-  // Extract floating context from either standalone context or tree node
-  const { floatingContext, node } = getContextFromParameter(context)
-  const { open, setOpen, refs } = floatingContext
+export function useClick(context: UseClickContext, options: UseClickOptions = {}): void {
+  const { open, setOpen, refs } = context
   const {
     enabled = true,
     event: eventOption = "click",
@@ -234,18 +213,11 @@ export function useClick(
       return
     }
 
-    // Use tree-aware logic if tree context is available
-    if (node) {
-      if (!isClickOutsideNodeHierarchy(node, event)) {
-        return
-      }
-    } else {
-      if (
-        isEventTargetWithin(event, anchorEl.value) ||
-        isEventTargetWithin(event, floatingEl.value)
-      ) {
-        return
-      }
+    if (
+      isEventTargetWithin(event, anchorEl.value) ||
+      isEventTargetWithin(event, floatingEl.value)
+    ) {
+      return
     }
 
     // Use custom handler if provided, otherwise use default behavior
@@ -332,41 +304,6 @@ export function useClick(
     onFloatingMouseUp,
     { capture: true }
   )
-}
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-/**
- * Determines if a click occurred outside the current node's hierarchy.
- *
- * Returns true if the click should close the current node (click is outside),
- * false if the click should be ignored (click is on current node or descendants).
- *
- * @param currentNode - The tree node to check against
- * @param event - The mouse event
- * @returns True if the click is outside the node hierarchy and should close the node
- */
-function isClickOutsideNodeHierarchy(
-  currentNode: TreeNode<UseClickContext>,
-  event: MouseEvent
-): boolean {
-  // Optimization: Use composedPath if available to avoid repeated DOM traversals
-  const path = typeof event.composedPath === "function" ? event.composedPath() : getDomPath(event.target as Node)
-  
-  if (
-    isElementInEventPath(currentNode.data.refs.anchorEl.value, path) ||
-    isElementInEventPath(currentNode.data.refs.floatingEl.value, path)
-  ) {
-    return false
-  }
-
-  if (findDescendantInEventPath(currentNode, path)) {
-    return false
-  }
-
-  return true
 }
 
 //=======================================================================================

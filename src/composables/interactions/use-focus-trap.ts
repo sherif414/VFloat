@@ -9,8 +9,6 @@ import {
   watchPostEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-import { getContextFromParameter } from "@/utils"
 
 //=======================================================================================
 // 📌 Types
@@ -111,10 +109,10 @@ const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLEleme
  * @returns Object with isActive state, and manual control methods
  */
 export function useFocusTrap(
-  context: UseFocusTrapContext | TreeNode<UseFocusTrapContext>,
+  context: UseFocusTrapContext,
   options: UseFocusTrapOptions = {}
 ): UseFocusTrapReturn {
-  const { floatingContext } = getContextFromParameter(context)
+  const floatingContext = context
   const {
     refs: { floatingEl },
     open,
