@@ -229,8 +229,6 @@ export function getContextFromParameter<T>(context: T | TreeNode<T>): {
   }
 }
 
-
-
 /**
  * Finds a descendant node that is in the event path.
  */

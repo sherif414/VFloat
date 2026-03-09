@@ -518,7 +518,7 @@ export function createTreeNode<T>(
         }
         // Add children in reverse order for pre-order DFS via pop()
         for (let i = currentNode.children.value.length - 1; i >= 0; i--) {
-          stack.push(currentNode.children.value[i])
+          stack.push(currentNode.children.value[i]!)
         }
       }
       return null
@@ -757,7 +757,7 @@ export function createTree<T>(options?: CreateTreeOptions): Tree<T> {
         result.push(node)
         // Add children in reverse for pre-order pop()
         for (let i = node.children.value.length - 1; i >= 0; i--) {
-          stack.push(node.children.value[i])
+          stack.push(node.children.value[i]!)
         }
       }
     } else {
