@@ -26,93 +26,6 @@ import type { AnchorElement, FloatingContext, FloatingElement } from "../positio
  *    on initial entry may indicate accidental hovering and schedules a close.
  */
 
-// ─── Geometry Types ──────────────────────────────────────────────────────────
-
-type Point = [number, number]
-type Polygon = Point[]
-
-type Rect = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-type Side = "top" | "right" | "bottom" | "left"
-
-// ─── Geometry Helpers ────────────────────────────────────────────────────────
-
-/**
- * Returns `true` when {@link point} lies inside the axis-aligned {@link rect}
- * (inclusive of edges).
- */
-function isInside(point: Point, rect: Rect): boolean {
-  return (
-    point[0] >= rect.x &&
-    point[0] <= rect.x + rect.width &&
-    point[1] >= rect.y &&
-    point[1] <= rect.y + rect.height
-  )
-}
-
-/**
- * Ray-casting point-in-polygon test.
- *
- * Casts a horizontal ray from {@link point} toward +∞ and counts the number of
- * polygon edges it crosses. An odd crossing count means the point is inside.
- *
- * @see https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
- */
-function isPointInPolygon(point: Point, polygon: Polygon) {
-  const [x, y] = point
-  let isInside = false
-  const length = polygon.length
-  for (let i = 0, j = length - 1; i < length; j = i++) {
-    const [xi, yi] = polygon[i] || [0, 0]
-    const [xj, yj] = polygon[j] || [0, 0]
-    const intersect = yi >= y !== yj >= y && x <= ((xj - xi) * (y - yi)) / (yj - yi) + xi
-    if (intersect) {
-      isInside = !isInside
-    }
-  }
-  return isInside
-}
-
-/**
- * Computes cursor speed between two consecutive `pointermove` events.
- * Returns `null` speed on the very first invocation (no previous point).
- */
-function getCursorSpeed(
-  x: number,
-  y: number,
-  lastX: number | null,
-  lastY: number | null,
-  lastCursorTime: number
-): { speed: number | null; lastX: number; lastY: number; lastCursorTime: number } {
-  const currentTime = getCurrentTime()
-  const elapsedTime = currentTime - lastCursorTime
-
-  if (lastX === null || lastY === null || elapsedTime === 0) {
-    return {
-      speed: null,
-      lastX: x,
-      lastY: y,
-      lastCursorTime: currentTime,
-    }
-  }
-
-  const deltaX = x - lastX
-  const deltaY = y - lastY
-  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-  const speed = distance / elapsedTime // px / ms
-
-  return {
-    speed,
-    lastX: x,
-    lastY: y,
-    lastCursorTime: currentTime,
-  }
-}
-
 // ─── Public Types ────────────────────────────────────────────────────────────
 
 export interface SafePolygonOptions {
@@ -246,22 +159,7 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       const rect = elements.floating?.getBoundingClientRect()
       const side = placement.split("-")[0] as Side
 
-      // Determine which quadrant the cursor left from — used to orient the polygon.
-      const cursorLeaveFromRight = x > (rect?.right ?? 0) - (rect?.width ?? 0) / 2
-      const cursorLeaveFromBottom = y > (rect?.bottom ?? 0) - (rect?.height ?? 0) / 2
-
       const isOverReferenceRect = refRect ? isInside(clientPoint, refRect) : false
-
-      // When the floating element is wider/taller than the reference, the
-      // rectangular trough is anchored to the *reference* rect. Otherwise
-      // it is anchored to the *floating* rect. This prevents the trough from
-      // extending beyond the narrower element.
-      const isFloatingWider = (rect?.width ?? 0) > (refRect?.width ?? 0)
-      const isFloatingTaller = (rect?.height ?? 0) > (refRect?.height ?? 0)
-      const left = (isFloatingWider ? refRect : rect)?.left ?? 0
-      const right = (isFloatingWider ? refRect : rect)?.right ?? 0
-      const top = (isFloatingTaller ? refRect : rect)?.top ?? 0
-      const bottom = (isFloatingTaller ? refRect : rect)?.bottom ?? 0
 
       // ── Pointer over floating element ─────────────────────────────────
       if (isOverFloatingEl) {
@@ -294,224 +192,15 @@ export function safePolygon(options: SafePolygonOptions = {}) {
       }
 
       // ── Opposite-side guard ───────────────────────────────────────────
-      // If the pointer is leaving from the side *opposite* to where the
-      // floating element lives, there is no meaningful safe zone — close
-      // immediately. A constant of 1px accounts for floating-point rounding.
-      if (
-        (side === "top" && y >= (refRect?.bottom ?? 0) - 1) ||
-        (side === "bottom" && y <= (refRect?.top ?? 0) + 1) ||
-        (side === "left" && x >= (refRect?.right ?? 0) - 1) ||
-        (side === "right" && x <= (refRect?.left ?? 0) + 1)
-      ) {
+      if (isPointerLeavingOppositeSide(side, x, y, refRect)) {
         return close()
       }
 
-      // ── Rectangular trough ────────────────────────────────────────────
-      // The trough is the rectangular gap between the reference and
-      // floating elements. Moving within this gap is always safe.
-      let rectPoly: Point[] = []
-
-      switch (side) {
-        case "top":
-          rectPoly = [
-            [left, (refRect?.top ?? 0) + 1],
-            [left, (rect?.bottom ?? 0) - 1],
-            [right, (rect?.bottom ?? 0) - 1],
-            [right, (refRect?.top ?? 0) + 1],
-          ]
-          break
-        case "bottom":
-          rectPoly = [
-            [left, (rect?.top ?? 0) + 1],
-            [left, (refRect?.bottom ?? 0) - 1],
-            [right, (refRect?.bottom ?? 0) - 1],
-            [right, (rect?.top ?? 0) + 1],
-          ]
-          break
-        case "left":
-          rectPoly = [
-            [(rect?.right ?? 0) - 1, bottom],
-            [(rect?.right ?? 0) - 1, top],
-            [(refRect?.left ?? 0) + 1, top],
-            [(refRect?.left ?? 0) + 1, bottom],
-          ]
-          break
-        case "right":
-          rectPoly = [
-            [(refRect?.right ?? 0) - 1, bottom],
-            [(refRect?.right ?? 0) - 1, top],
-            [(rect?.left ?? 0) + 1, top],
-            [(rect?.left ?? 0) + 1, bottom],
-          ]
-          break
-      }
-
-      // ── Triangular / trapezoidal safe polygon ─────────────────────────
-      // Two "cursor points" sit near the leave position (offset by the
-      // buffer). Two "common points" sit on the edges of the floating
-      // element. Together they form a trapezoid that fans outward from the
-      // cursor toward the floating element, giving the user a generous
-      // corridor to traverse.
-      function getPolygon([x, y]: Point): Array<Point> {
-        const actualBuffer = contextBuffer
-        switch (side) {
-          case "top": {
-            const cursorPointOne: Point = [
-              isFloatingWider
-                ? x + actualBuffer / 2
-                : cursorLeaveFromRight
-                  ? x + actualBuffer * 4
-                  : x - actualBuffer * 4,
-              y + actualBuffer + 1,
-            ]
-            const cursorPointTwo: Point = [
-              isFloatingWider
-                ? x - actualBuffer / 2
-                : cursorLeaveFromRight
-                  ? x + actualBuffer * 4
-                  : x - actualBuffer * 4,
-              y + actualBuffer + 1,
-            ]
-            const commonPoints: [Point, Point] = [
-              [
-                rect?.left ?? 0,
-                cursorLeaveFromRight
-                  ? (rect?.bottom ?? 0) - actualBuffer
-                  : isFloatingWider
-                    ? (rect?.bottom ?? 0) - actualBuffer
-                    : (rect?.top ?? 0),
-              ],
-              [
-                rect?.right ?? 0,
-                cursorLeaveFromRight
-                  ? isFloatingWider
-                    ? (rect?.bottom ?? 0) - actualBuffer
-                    : (rect?.top ?? 0)
-                  : (rect?.bottom ?? 0) - actualBuffer,
-              ],
-            ]
-
-            return [cursorPointOne, cursorPointTwo, ...commonPoints]
-          }
-          case "bottom": {
-            const cursorPointOne: Point = [
-              isFloatingWider
-                ? x + actualBuffer / 2
-                : cursorLeaveFromRight
-                  ? x + actualBuffer * 4
-                  : x - actualBuffer * 4,
-              y - actualBuffer,
-            ]
-            const cursorPointTwo: Point = [
-              isFloatingWider
-                ? x - actualBuffer / 2
-                : cursorLeaveFromRight
-                  ? x + actualBuffer * 4
-                  : x - actualBuffer * 4,
-              y - actualBuffer,
-            ]
-            const commonPoints: [Point, Point] = [
-              [
-                rect?.left ?? 0,
-                cursorLeaveFromRight
-                  ? (rect?.top ?? 0) + actualBuffer
-                  : isFloatingWider
-                    ? (rect?.top ?? 0) + actualBuffer
-                    : (rect?.bottom ?? 0),
-              ],
-              [
-                rect?.right ?? 0,
-                cursorLeaveFromRight
-                  ? isFloatingWider
-                    ? (rect?.top ?? 0) + actualBuffer
-                    : (rect?.bottom ?? 0)
-                  : (rect?.top ?? 0) + actualBuffer,
-              ],
-            ]
-
-            return [cursorPointOne, cursorPointTwo, ...commonPoints]
-          }
-          case "left": {
-            const cursorPointOne: Point = [
-              x + actualBuffer + 1,
-              isFloatingTaller
-                ? y + actualBuffer / 2
-                : cursorLeaveFromBottom
-                  ? y + actualBuffer * 4
-                  : y - actualBuffer * 4,
-            ]
-            const cursorPointTwo: Point = [
-              x + actualBuffer + 1,
-              isFloatingTaller
-                ? y - actualBuffer / 2
-                : cursorLeaveFromBottom
-                  ? y + actualBuffer * 4
-                  : y - actualBuffer * 4,
-            ]
-            const commonPoints: [Point, Point] = [
-              [
-                cursorLeaveFromBottom
-                  ? (rect?.right ?? 0) - actualBuffer
-                  : isFloatingTaller
-                    ? (rect?.right ?? 0) - actualBuffer
-                    : (rect?.left ?? 0),
-                rect?.top ?? 0,
-              ],
-              [
-                cursorLeaveFromBottom
-                  ? isFloatingTaller
-                    ? (rect?.right ?? 0) - actualBuffer
-                    : (rect?.left ?? 0)
-                  : (rect?.right ?? 0) - actualBuffer,
-                rect?.bottom ?? 0,
-              ],
-            ]
-
-            return [...commonPoints, cursorPointOne, cursorPointTwo]
-          }
-          case "right": {
-            const cursorPointOne: Point = [
-              x - actualBuffer,
-              isFloatingTaller
-                ? y + actualBuffer / 2
-                : cursorLeaveFromBottom
-                  ? y + actualBuffer * 4
-                  : y - actualBuffer * 4,
-            ]
-            const cursorPointTwo: Point = [
-              x - actualBuffer,
-              isFloatingTaller
-                ? y - actualBuffer / 2
-                : cursorLeaveFromBottom
-                  ? y + actualBuffer * 4
-                  : y - actualBuffer * 4,
-            ]
-            const commonPoints: [Point, Point] = [
-              [
-                cursorLeaveFromBottom
-                  ? (rect?.left ?? 0) + actualBuffer
-                  : isFloatingTaller
-                    ? (rect?.left ?? 0) + actualBuffer
-                    : (rect?.right ?? 0),
-                rect?.top ?? 0,
-              ],
-              [
-                cursorLeaveFromBottom
-                  ? isFloatingTaller
-                    ? (rect?.left ?? 0) + actualBuffer
-                    : (rect?.right ?? 0)
-                  : (rect?.left ?? 0) + actualBuffer,
-                rect?.bottom ?? 0,
-              ],
-            ]
-
-            return [cursorPointOne, cursorPointTwo, ...commonPoints]
-          }
-        }
-      }
+      // ── Protective Shapes (Safe Zones) ────────────────────────────────
+      const rectPoly = buildRectangularTrough(side, rect, refRect)
+      const polygon = buildSafePolygon(side, x, y, rect, refRect, contextBuffer)
 
       // Notify debug visualisation of the current polygon shape
-      const polygon = getPolygon([x, y])
       options.onPolygonChange?.(polygon)
 
       // ── Hit testing ───────────────────────────────────────────────────
@@ -538,6 +227,7 @@ export function safePolygon(options: SafePolygonOptions = {}) {
           // Very slow cursor movement may be accidental — schedule close
           const cursorSpeedThreshold = 0.1 // px/ms
           if (speedResult.speed !== null && speedResult.speed < cursorSpeedThreshold) {
+            // TODO: why do we schedule a close here instead of just closing? 
             timeoutId = window.setTimeout(close, 40)
           }
         }
@@ -558,4 +248,265 @@ export function safePolygon(options: SafePolygonOptions = {}) {
   }
 
   return fn
+}
+
+
+
+// ─── Geometry Math & Helpers ─────────────────────────────────────────────────
+// These are placed at the bottom to keep the main logic readable. All math
+// and protective zone building happens here.
+
+export type Point = [number, number]
+export type Polygon = Point[]
+
+type Rect = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+type Side = "top" | "right" | "bottom" | "left"
+
+/**
+ * Returns `true` when {@link point} lies inside the axis-aligned {@link rect}
+ * (inclusive of edges).
+ */
+function isInside(point: Point, rect: Rect): boolean {
+  return (
+    point[0] >= rect.x &&
+    point[0] <= rect.x + rect.width &&
+    point[1] >= rect.y &&
+    point[1] <= rect.y + rect.height
+  )
+}
+
+/**
+ * Ray-casting point-in-polygon test.
+ *
+ * Casts a horizontal ray from {@link point} toward +∞ and counts the number of
+ * polygon edges it crosses. An odd crossing count means the point is inside.
+ *
+ * @see https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
+ */
+function isPointInPolygon(point: Point, polygon: Polygon) {
+  const [x, y] = point
+  let isInside = false
+  const length = polygon.length
+  for (let i = 0, j = length - 1; i < length; j = i++) {
+    const [xi, yi] = polygon[i] || [0, 0]
+    const [xj, yj] = polygon[j] || [0, 0]
+    const intersect = yi >= y !== yj >= y && x <= ((xj - xi) * (y - yi)) / (yj - yi) + xi
+    if (intersect) {
+      isInside = !isInside
+    }
+  }
+  return isInside
+}
+
+/**
+ * Computes cursor speed between two consecutive `pointermove` events.
+ * Returns `null` speed on the very first invocation (no previous point).
+ */
+function getCursorSpeed(
+  x: number,
+  y: number,
+  lastX: number | null,
+  lastY: number | null,
+  lastCursorTime: number
+): { speed: number | null; lastX: number; lastY: number; lastCursorTime: number } {
+  const currentTime = getCurrentTime()
+  const elapsedTime = currentTime - lastCursorTime
+
+  if (lastX === null || lastY === null || elapsedTime === 0) {
+    return {
+      speed: null,
+      lastX: x,
+      lastY: y,
+      lastCursorTime: currentTime,
+    }
+  }
+
+  const deltaX = x - lastX
+  const deltaY = y - lastY
+  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+  const speed = distance / elapsedTime // px / ms
+
+  return {
+    speed,
+    lastX: x,
+    lastY: y,
+    lastCursorTime: currentTime,
+  }
+}
+
+/**
+ * Validates if the pointer is leaving from the side *opposite* to where the
+ * floating element lives. If true, there is no meaningful safe zone.
+ */
+function isPointerLeavingOppositeSide(side: Side, leaveX: number, leaveY: number, refRect: DOMRect | undefined): boolean {
+  return (
+    (side === "top" && leaveY >= (refRect?.bottom ?? 0) - 1) ||
+    (side === "bottom" && leaveY <= (refRect?.top ?? 0) + 1) ||
+    (side === "left" && leaveX >= (refRect?.right ?? 0) - 1) ||
+    (side === "right" && leaveX <= (refRect?.left ?? 0) + 1)
+  )
+}
+
+/**
+ * The trough is the rectangular gap between the reference and
+ * floating elements. Moving within this gap is always safe.
+ */
+function buildRectangularTrough(side: Side, rect: DOMRect | undefined, refRect: DOMRect | undefined): Polygon {
+  // When the floating element is wider/taller than the reference, the
+  // rectangular trough is anchored to the *reference* rect. Otherwise
+  // it is anchored to the *floating* rect. This prevents the trough from
+  // extending beyond the narrower element.
+  const isFloatingWider = (rect?.width ?? 0) > (refRect?.width ?? 0)
+  const isFloatingTaller = (rect?.height ?? 0) > (refRect?.height ?? 0)
+  const left = (isFloatingWider ? refRect : rect)?.left ?? 0
+  const right = (isFloatingWider ? refRect : rect)?.right ?? 0
+  const top = (isFloatingTaller ? refRect : rect)?.top ?? 0
+  const bottom = (isFloatingTaller ? refRect : rect)?.bottom ?? 0
+
+  switch (side) {
+    case "top":
+      return [
+        [left, (refRect?.top ?? 0) + 1],
+        [left, (rect?.bottom ?? 0) - 1],
+        [right, (rect?.bottom ?? 0) - 1],
+        [right, (refRect?.top ?? 0) + 1],
+      ]
+    case "bottom":
+      return [
+        [left, (rect?.top ?? 0) + 1],
+        [left, (refRect?.bottom ?? 0) - 1],
+        [right, (refRect?.bottom ?? 0) - 1],
+        [right, (rect?.top ?? 0) + 1],
+      ]
+    case "left":
+      return [
+        [(rect?.right ?? 0) - 1, bottom],
+        [(rect?.right ?? 0) - 1, top],
+        [(refRect?.left ?? 0) + 1, top],
+        [(refRect?.left ?? 0) + 1, bottom],
+      ]
+    case "right":
+      return [
+        [(refRect?.right ?? 0) - 1, bottom],
+        [(refRect?.right ?? 0) - 1, top],
+        [(rect?.left ?? 0) + 1, top],
+        [(rect?.left ?? 0) + 1, bottom],
+      ]
+  }
+}
+
+/**
+ * Builds the triangular / trapezoidal safe polygon.
+ * Two "cursor points" sit near the leave position (offset by the
+ * buffer). Two "common points" sit on the edges of the floating
+ * element. Together they form a trapezoid that fans outward from the
+ * cursor toward the floating element, giving the user a generous
+ * corridor to traverse.
+ */
+function buildSafePolygon(
+  side: Side,
+  leaveX: number,
+  leaveY: number,
+  rect: DOMRect | undefined,
+  refRect: DOMRect | undefined,
+  buffer: number
+): Polygon {
+  const isFloatingWider = (rect?.width ?? 0) > (refRect?.width ?? 0)
+  const isFloatingTaller = (rect?.height ?? 0) > (refRect?.height ?? 0)
+  
+  // Determine which quadrant the cursor left from — used to orient the polygon.
+  const cursorLeaveFromRight = leaveX > (rect?.right ?? 0) - (rect?.width ?? 0) / 2
+  const cursorLeaveFromBottom = leaveY > (rect?.bottom ?? 0) - (rect?.height ?? 0) / 2
+
+  switch (side) {
+    case "top": {
+      const cursorPointOne: Point = [
+        isFloatingWider ? leaveX + buffer / 2 : cursorLeaveFromRight ? leaveX + buffer * 4 : leaveX - buffer * 4,
+        leaveY + buffer + 1,
+      ]
+      const cursorPointTwo: Point = [
+        isFloatingWider ? leaveX - buffer / 2 : cursorLeaveFromRight ? leaveX + buffer * 4 : leaveX - buffer * 4,
+        leaveY + buffer + 1,
+      ]
+      const commonPoints: [Point, Point] = [
+        [
+          rect?.left ?? 0,
+          cursorLeaveFromRight ? (rect?.bottom ?? 0) - buffer : isFloatingWider ? (rect?.bottom ?? 0) - buffer : (rect?.top ?? 0),
+        ],
+        [
+          rect?.right ?? 0,
+          cursorLeaveFromRight ? isFloatingWider ? (rect?.bottom ?? 0) - buffer : (rect?.top ?? 0) : (rect?.bottom ?? 0) - buffer,
+        ],
+      ]
+      return [cursorPointOne, cursorPointTwo, ...commonPoints]
+    }
+    case "bottom": {
+      const cursorPointOne: Point = [
+        isFloatingWider ? leaveX + buffer / 2 : cursorLeaveFromRight ? leaveX + buffer * 4 : leaveX - buffer * 4,
+        leaveY - buffer,
+      ]
+      const cursorPointTwo: Point = [
+        isFloatingWider ? leaveX - buffer / 2 : cursorLeaveFromRight ? leaveX + buffer * 4 : leaveX - buffer * 4,
+        leaveY - buffer,
+      ]
+      const commonPoints: [Point, Point] = [
+        [
+          rect?.left ?? 0,
+          cursorLeaveFromRight ? (rect?.top ?? 0) + buffer : isFloatingWider ? (rect?.top ?? 0) + buffer : (rect?.bottom ?? 0),
+        ],
+        [
+          rect?.right ?? 0,
+          cursorLeaveFromRight ? isFloatingWider ? (rect?.top ?? 0) + buffer : (rect?.bottom ?? 0) : (rect?.top ?? 0) + buffer,
+        ],
+      ]
+      return [cursorPointOne, cursorPointTwo, ...commonPoints]
+    }
+    case "left": {
+      const cursorPointOne: Point = [
+        leaveX + buffer + 1,
+        isFloatingTaller ? leaveY + buffer / 2 : cursorLeaveFromBottom ? leaveY + buffer * 4 : leaveY - buffer * 4,
+      ]
+      const cursorPointTwo: Point = [
+        leaveX + buffer + 1,
+        isFloatingTaller ? leaveY - buffer / 2 : cursorLeaveFromBottom ? leaveY + buffer * 4 : leaveY - buffer * 4,
+      ]
+      const commonPoints: [Point, Point] = [
+        [
+          cursorLeaveFromBottom ? (rect?.right ?? 0) - buffer : isFloatingTaller ? (rect?.right ?? 0) - buffer : (rect?.left ?? 0),
+          rect?.top ?? 0,
+        ],
+        [
+          cursorLeaveFromBottom ? isFloatingTaller ? (rect?.right ?? 0) - buffer : (rect?.left ?? 0) : (rect?.right ?? 0) - buffer,
+          rect?.bottom ?? 0,
+        ],
+      ]
+      return [...commonPoints, cursorPointOne, cursorPointTwo]
+    }
+    case "right": {
+      const cursorPointOne: Point = [
+        leaveX - buffer,
+        isFloatingTaller ? leaveY + buffer / 2 : cursorLeaveFromBottom ? leaveY + buffer * 4 : leaveY - buffer * 4,
+      ]
+      const cursorPointTwo: Point = [
+        leaveX - buffer,
+        isFloatingTaller ? leaveY - buffer / 2 : cursorLeaveFromBottom ? leaveY + buffer * 4 : leaveY - buffer * 4,
+      ]
+      const commonPoints: [Point, Point] = [
+        [
+          cursorLeaveFromBottom ? (rect?.left ?? 0) + buffer : isFloatingTaller ? (rect?.left ?? 0) + buffer : (rect?.right ?? 0),
+          rect?.top ?? 0,
+        ],
+        [
+          cursorLeaveFromBottom ? isFloatingTaller ? (rect?.left ?? 0) + buffer : (rect?.right ?? 0) : (rect?.left ?? 0) + buffer,
+          rect?.bottom ?? 0,
+        ],
+      ]
+      return [cursorPointOne, cursorPointTwo, ...commonPoints]
+    }
+  }
 }
