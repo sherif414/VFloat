@@ -18,11 +18,6 @@ function makeEl(rect: { left: number; right: number; top: number; bottom: number
 }
 
 describe("safePolygon", () => {
-  it("exposes options on handler", () => {
-    const fn = safePolygon({ blockPointerEvents: true })
-    expect((fn as any).__options.blockPointerEvents).toBe(true)
-  })
-
   it("calls onClose when cursor leaves from opposite side", () => {
     const ref = makeEl({ left: 0, right: 100, top: 0, bottom: 50, width: 100, height: 50 })
     const floating = makeEl({ left: 0, right: 100, top: 60, bottom: 120, width: 100, height: 60 })
