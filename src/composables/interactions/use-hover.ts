@@ -306,7 +306,6 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
           return
         }
 
-        // Use the enhanced safe polygon with unified functionality
         polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
           x: clientX,
           y: clientY,
