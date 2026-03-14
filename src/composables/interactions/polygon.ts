@@ -37,14 +37,6 @@ export interface SafePolygonOptions {
   buffer?: number
 
   /**
-   * When `true`, the floating element's `pointerEvents` style is set to
-   * `none` while the safe polygon is active, preventing the floating element
-   * from capturing hover events during traversal.
-   * @default false
-   */
-  blockPointerEvents?: boolean
-
-  /**
    * When `true`, enables cursor-speed based intent detection. If the cursor
    * moves very slowly on initial entry into the polygon, it is treated as
    * "accidental" and a short close timer is scheduled.
@@ -58,6 +50,21 @@ export interface SafePolygonOptions {
    */
   onPolygonChange?: (polygon: Polygon) => void
 }
+
+/**
+ * Result of the {@link safePolygon} factory.
+ *
+ * It is a factory itself that, when given a traversal context, returns the
+ * actual event handler used to track the mouse.
+ */
+export type SafePolygon = (context: CreateSafePolygonHandlerContext) => SafePolygonHandler
+
+
+/**
+ * The mouse event handler that performs the safe-polygon hit testing.
+ */
+export type SafePolygonHandler = (event: MouseEvent) => void
+
 
 /**
  * Context object provided to the safe-polygon handler factory.
@@ -106,8 +113,8 @@ export interface CreateSafePolygonHandlerContext {
  *
  * @see https://floating-ui.com/docs/useHover#safepolygon
  */
-export function safePolygon(options: SafePolygonOptions = {}) {
-  const { blockPointerEvents = false, requireIntent = true } = options
+export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
+  const { requireIntent = true } = options
 
   let timeoutId = -1
   let hasLanded = false
@@ -243,12 +250,9 @@ export function safePolygon(options: SafePolygonOptions = {}) {
     }
   }
 
-  fn.__options = {
-    blockPointerEvents,
-  }
-
   return fn
 }
+
 
 
 
