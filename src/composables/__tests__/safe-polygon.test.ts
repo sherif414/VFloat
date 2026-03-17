@@ -20,14 +20,13 @@ function makeMouseEvent(
   } as unknown as MouseEvent
 }
 
-/**
- * Creates a realistic test context with reference+floating elements.
- * refRect centered at (100,50), floatingRect positioned based on placement.
- */
+type SafePolygonTestContext = CreateSafePolygonHandlerContext & { onCloseMock: ReturnType<typeof vi.fn> }
+const activeContexts: SafePolygonTestContext[] = []
+
 function createContext(
   placement: string,
   overrides: Partial<CreateSafePolygonHandlerContext> = {}
-): CreateSafePolygonHandlerContext & { onCloseMock: ReturnType<typeof vi.fn> } {
+): SafePolygonTestContext {
   const refEl = document.createElement("div")
   const floatEl = document.createElement("div")
   document.body.appendChild(refEl)
@@ -48,7 +47,7 @@ function createContext(
 
   const onCloseMock = vi.fn()
 
-  return {
+  const ctx: SafePolygonTestContext = {
     x: overrides.x ?? 100,
     y: overrides.y ?? 50,
     placement: placement as any,
@@ -57,19 +56,25 @@ function createContext(
     onClose: onCloseMock,
     onCloseMock,
   }
-}
-
-function cleanupContext(ctx: ReturnType<typeof createContext>) {
-  const { domReference, floating } = ctx.elements
-  if (domReference instanceof HTMLElement && domReference.parentNode) domReference.remove()
-  if (floating instanceof HTMLElement && floating.parentNode) (floating as HTMLElement).remove()
+  activeContexts.push(ctx)
+  return ctx
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("safePolygon", () => {
   beforeEach(() => { vi.useFakeTimers() })
-  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
+  afterEach(() => {
+    for (const ctx of activeContexts) {
+      const { domReference, floating } = ctx.elements
+      if (domReference instanceof HTMLElement && domReference.parentNode) domReference.remove()
+      if (floating instanceof HTMLElement && floating.parentNode) (floating as HTMLElement).remove()
+    }
+    activeContexts.length = 0
+    document.body.innerHTML = ""
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
 
   // ── Factory / API shape ──────────────────────────────────────────────────
 
@@ -83,7 +88,6 @@ describe("safePolygon", () => {
       const ctx = createContext("bottom")
       const handler = safePolygon()(ctx)
       expect(typeof handler).toBe("function")
-      cleanupContext(ctx)
     })
 
     it("accepts empty options", () => {
@@ -101,7 +105,6 @@ describe("safePolygon", () => {
       const handler = safePolygon()(ctx)
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("returns early when floating is null", () => {
@@ -110,7 +113,6 @@ describe("safePolygon", () => {
       const handler = safePolygon()(ctx)
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("returns early when placement is null", () => {
@@ -119,7 +121,6 @@ describe("safePolygon", () => {
       const handler = safePolygon()(ctx)
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("returns early when x is null", () => {
@@ -128,7 +129,6 @@ describe("safePolygon", () => {
       const handler = safePolygon()(ctx)
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("returns early when y is null", () => {
@@ -137,7 +137,6 @@ describe("safePolygon", () => {
       const handler = safePolygon()(ctx)
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -155,7 +154,6 @@ describe("safePolygon", () => {
       }))
 
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("sets hasLanded state when pointer enters floating (subsequent leave from floating triggers close)", () => {
@@ -170,7 +168,6 @@ describe("safePolygon", () => {
       vi.runAllTimers()
 
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -184,7 +181,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 80, clientY: 50, target: refEl }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -202,7 +198,6 @@ describe("safePolygon", () => {
       }))
 
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -216,7 +211,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: -10 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("closes when pointer leaves from the opposite side of placement=top", () => {
@@ -226,7 +220,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 200 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("closes when pointer leaves from the opposite side of placement=left", () => {
@@ -235,7 +228,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 300, clientY: 50 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("closes when pointer leaves from the opposite side of placement=right", () => {
@@ -244,7 +236,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: -10, clientY: 50 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -258,7 +249,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("closes when pointer is outside all safe zones", () => {
@@ -268,7 +258,6 @@ describe("safePolygon", () => {
       // Move far away from both ref and floating
       handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     for (const side of ["top", "bottom", "left", "right"] as const) {
@@ -279,7 +268,6 @@ describe("safePolygon", () => {
         // Move far outside → expect close
         handler(makeMouseEvent("pointermove", { clientX: 900, clientY: 900 }))
         expect(ctx.onCloseMock).toHaveBeenCalled()
-        cleanupContext(ctx)
       })
     }
   })
@@ -303,7 +291,6 @@ describe("safePolygon", () => {
         expect(typeof pt[0]).toBe("number")
         expect(typeof pt[1]).toBe("number")
       }
-      cleanupContext(ctx)
     })
 
     it("is NOT called when guard clauses return early", () => {
@@ -314,7 +301,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(onPolygonChange).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -344,7 +330,6 @@ describe("safePolygon", () => {
       vi.advanceTimersByTime(40)
       expect(ctx.onCloseMock).toHaveBeenCalled()
       perfSpy.mockRestore()
-      cleanupContext(ctx)
     })
 
     it("does NOT schedule close when requireIntent is false", () => {
@@ -357,7 +342,6 @@ describe("safePolygon", () => {
       vi.advanceTimersByTime(100)
 
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("does NOT schedule close after hasLanded (pointer visited floating)", () => {
@@ -377,7 +361,6 @@ describe("safePolygon", () => {
 
       // Intent check is skipped after landing
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -401,7 +384,6 @@ describe("safePolygon", () => {
       vi.advanceTimersByTime(100)
       // Should still have been called from the new check, but the key point is
       // the old timer was cleared (no double-call)
-      cleanupContext(ctx)
     })
   })
 
@@ -416,7 +398,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       const poly1: Polygon = onPolygonChange.mock.calls[0]![0] as Polygon
-      cleanupContext(ctx)
 
       // Now test with larger buffer
       const onPolygonChange2 = vi.fn()
@@ -429,7 +410,6 @@ describe("safePolygon", () => {
 
       // Larger buffer should produce different polygon vertices
       expect(poly1).not.toEqual(poly2)
-      cleanupContext(ctx2)
     })
   })
 
@@ -443,7 +423,6 @@ describe("safePolygon", () => {
       // Should not crash; should work like "bottom"
       handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
 
     it("extracts the side correctly from 'top-end'", () => {
@@ -452,7 +431,6 @@ describe("safePolygon", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -477,8 +455,6 @@ describe("safePolygon", () => {
       handler2(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }))
       expect(ctx2.onCloseMock).toHaveBeenCalled()
 
-      cleanupContext(ctx1)
-      cleanupContext(ctx2)
     })
   })
 
@@ -493,7 +469,6 @@ describe("safePolygon", () => {
       // Point in the gap between ref and floating
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }))
       expect(ctx.onCloseMock).not.toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 
@@ -511,7 +486,6 @@ describe("safePolygon", () => {
       // Move far outside everything
       handler(makeMouseEvent("pointermove", { clientX: 900, clientY: 900 }))
       expect(ctx.onCloseMock).toHaveBeenCalled()
-      cleanupContext(ctx)
     })
   })
 })
