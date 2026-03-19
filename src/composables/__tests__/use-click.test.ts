@@ -1,7 +1,15 @@
-import { userEvent } from "@vitest/browser/context"
+import { userEvent } from "vitest/browser"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { effectScope, nextTick, ref, shallowRef } from "vue"
 import { type UseClickOptions,type UseClickContext, useClick } from "@/composables/interactions"
+
+// Track elements created during tests for cleanup
+const elementsToCleanUp: HTMLElement[] = []
+
+function trackElement(el: HTMLElement): HTMLElement {
+  elementsToCleanUp.push(el)
+  return el
+}
 
 describe("useClick", () => {
   let context: UseClickContext
@@ -10,13 +18,13 @@ describe("useClick", () => {
   let scope: ReturnType<typeof effectScope>
   let setOpenMock: ReturnType<typeof vi.fn>
 
-  beforeEach(() => {
-    referenceEl = document.createElement("button")
+  const createElements = () => {
+    referenceEl = trackElement(document.createElement("button"))
     referenceEl.id = "reference"
     referenceEl.textContent = "Trigger"
     document.body.appendChild(referenceEl)
 
-    floatingEl = document.createElement("div")
+    floatingEl = trackElement(document.createElement("div"))
     floatingEl.id = "floating"
     floatingEl.textContent = "Floating"
     document.body.appendChild(floatingEl)
@@ -34,12 +42,21 @@ describe("useClick", () => {
       open: openRef,
       setOpen: setOpenMock as ()=> void,
     }
+  }
+
+  beforeEach(() => {
+    createElements()
   })
 
   afterEach(() => {
     scope?.stop()
-    if (referenceEl?.isConnected) document.body.removeChild(referenceEl)
-    if (floatingEl?.isConnected) document.body.removeChild(floatingEl)
+    // Clean up all tracked elements
+    for (const el of elementsToCleanUp) {
+      if (el.isConnected) {
+        document.body.removeChild(el)
+      }
+    }
+    elementsToCleanUp.length = 0
     vi.clearAllMocks()
   })
 
@@ -114,15 +131,14 @@ describe("useClick", () => {
 
       floatingEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }))
 
-      const outside = document.createElement("div")
+      const outside = trackElement(document.createElement("div"))
       document.body.appendChild(outside)
       outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
       await nextTick()
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
-
-      if (outside.isConnected) document.body.removeChild(outside)
+      // outside is tracked and will be cleaned up in afterEach
     })
 
 
@@ -215,21 +231,24 @@ describe("useClick", () => {
     })
 
     it("does not trigger on Space key press if ignoreKeyboard is true", async () => {
-      document.body.removeChild(referenceEl)
-      referenceEl = document.createElement("div")
-      referenceEl.id = "reference"
-      referenceEl.textContent = "Trigger"
-      document.body.appendChild(referenceEl)
-      context.refs.anchorEl.value = referenceEl
+      // Create a non-focusable div to test ignoreKeyboard on space
+      const nonFocusableEl = trackElement(document.createElement("div"))
+      nonFocusableEl.id = "reference"
+      nonFocusableEl.textContent = "Trigger"
+      document.body.appendChild(nonFocusableEl)
+
+      // Update context to use the new element
+      context.refs.anchorEl.value = nonFocusableEl
 
       initClick({ ignoreKeyboard: true })
       expect(context.open.value).toBe(false)
 
-      referenceEl.focus()
+      nonFocusableEl.focus()
       await userEvent.keyboard(" ")
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)
+      // nonFocusableEl is tracked and will be cleaned up in afterEach
     })
 
     it("does not trigger on Enter key press if ignoreKeyboard is true", async () => {
@@ -244,10 +263,8 @@ describe("useClick", () => {
   })
 
   describe("integration: inside and outside clicks", () => {
-    let outsideElement: HTMLElement
-
-    beforeEach(() => {
-      outsideElement = document.createElement("div")
+    it("supports complete interaction flow: open with inside click, close with outside click", async () => {
+      const outsideElement = trackElement(document.createElement("div"))
       outsideElement.id = "outside"
       outsideElement.textContent = "Outside"
       Object.assign(outsideElement.style, {
@@ -259,15 +276,7 @@ describe("useClick", () => {
         zIndex: "1",
       })
       document.body.appendChild(outsideElement)
-    })
 
-    afterEach(() => {
-      if (outsideElement?.isConnected) {
-        document.body.removeChild(outsideElement)
-      }
-    })
-
-    it("supports complete interaction flow: open with inside click, close with outside click", async () => {
       initClick({ outsideClick: true, toggle: true })
       expect(context.open.value).toBe(false)
 
@@ -287,6 +296,18 @@ describe("useClick", () => {
     })
 
     it("supports toggle behavior with outside click enabled", async () => {
+      const outsideElement = trackElement(document.createElement("div"))
+      outsideElement.id = "outside"
+      Object.assign(outsideElement.style, {
+        position: "fixed",
+        bottom: "0",
+        left: "0",
+        width: "100px",
+        height: "100px",
+        zIndex: "1",
+      })
+      document.body.appendChild(outsideElement)
+
       initClick({ outsideClick: true, toggle: true })
 
       await userEvent.click(referenceEl)
@@ -308,6 +329,18 @@ describe("useClick", () => {
     })
 
     it("respects disabled state for both inside and outside clicks", async () => {
+      const outsideElement = trackElement(document.createElement("div"))
+      outsideElement.id = "outside"
+      Object.assign(outsideElement.style, {
+        position: "fixed",
+        bottom: "0",
+        left: "0",
+        width: "100px",
+        height: "100px",
+        zIndex: "1",
+      })
+      document.body.appendChild(outsideElement)
+
       const enabled = ref(false)
       initClick({ enabled, outsideClick: true })
 

@@ -4,6 +4,14 @@ import { nextTick, ref } from "vue"
 import type { AnchorElement, FloatingElement, UseFloatingOptions } from "@/composables/positioning"
 import { useFloating } from "@/composables/positioning"
 
+// Track elements created during tests for cleanup
+const elementsToCleanUp: HTMLElement[] = []
+
+function trackElement(el: HTMLElement): HTMLElement {
+  elementsToCleanUp.push(el)
+  return el
+}
+
 // Simple waitFor utility
 async function waitFor(callback: () => boolean | void, options = { timeout: 1000, interval: 50 }) {
   const startTime = Date.now()
@@ -42,7 +50,7 @@ describe("useFloating", () => {
   let cleanup: (() => void)[]
 
   beforeEach(() => {
-    anchorEl = createMockElement("button", {
+    anchorEl = trackElement(createMockElement("button", {
       getBoundingClientRect: () => ({
         x: 10,
         y: 10,
@@ -53,8 +61,8 @@ describe("useFloating", () => {
         right: 110,
         bottom: 60,
       }),
-    })
-    floatingEl = createMockElement("div", {
+    }))
+    floatingEl = trackElement(createMockElement("div", {
       getBoundingClientRect: () => ({
         x: 0,
         y: 0,
@@ -65,7 +73,7 @@ describe("useFloating", () => {
         right: 200,
         bottom: 100,
       }),
-    })
+    }))
     cleanup = []
 
     // Mock document.body for element mounting
@@ -78,7 +86,13 @@ describe("useFloating", () => {
       fn()
     }
     cleanup = []
-    document.body.innerHTML = ""
+    // Clean up all tracked elements
+    for (const el of elementsToCleanUp) {
+      if (el.isConnected) {
+        el.remove()
+      }
+    }
+    elementsToCleanUp.length = 0
     vi.clearAllMocks()
   })
 
@@ -222,7 +236,7 @@ describe("useFloating", () => {
 
       await nextTick()
 
-      vi.waitFor(() => {
+      await vi.waitFor(() => {
         expect(context.isPositioned.value).toBeTruthy()
         expect(context.floatingStyles.value.transform).toBeDefined()
       })
@@ -455,7 +469,7 @@ describe("useFloating", () => {
       await nextTick()
 
       // Position should be recalculated
-      waitFor(() => {
+      await waitFor(() => {
         expect(context.isPositioned.value).toBe(true)
       })
     })
@@ -572,8 +586,6 @@ describe("useFloating", () => {
   })
 })
 
-function flushPromises() {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0)
-  })
+function flushPromises(): Promise<void> {
+  return new Promise(resolve => queueMicrotask(resolve))
 }

@@ -21,7 +21,9 @@ function makeMouseEvent(
 }
 
 type SafePolygonTestContext = CreateSafePolygonHandlerContext & { onCloseMock: ReturnType<typeof vi.fn> }
-const activeContexts: SafePolygonTestContext[] = []
+
+// Use Set for better cleanup semantics and automatic tracking
+const activeContexts = new Set<SafePolygonTestContext>()
 
 function createContext(
   placement: string,
@@ -56,7 +58,8 @@ function createContext(
     onClose: onCloseMock,
     onCloseMock,
   }
-  activeContexts.push(ctx)
+  // Register at creation time to ensure cleanup always happens
+  activeContexts.add(ctx)
   return ctx
 }
 
@@ -65,13 +68,14 @@ function createContext(
 describe("safePolygon", () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => {
+    // Clean up all registered contexts
     for (const ctx of activeContexts) {
       const { domReference, floating } = ctx.elements
       if (domReference instanceof HTMLElement && domReference.parentNode) domReference.remove()
       if (floating instanceof HTMLElement && floating.parentNode) (floating as HTMLElement).remove()
     }
-    activeContexts.length = 0
-    document.body.innerHTML = ""
+    // Clear the set
+    activeContexts.clear()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -171,7 +175,7 @@ describe("safePolygon", () => {
     })
   })
 
-  // ── Pointer over reference element ───────────────────────────────────────
+  // ── Pointer over reference element ────────────────────────────────────────
 
   describe("pointer over reference element", () => {
     it("does NOT close when pointer is over reference (non-leave event)", () => {
@@ -434,7 +438,7 @@ describe("safePolygon", () => {
     })
   })
 
-  // ── Multiple handler instances (closure isolation) ───────────────────────
+  // ── Multiple handler instances (closure isolation) ────────────────────────
 
   describe("closure isolation", () => {
     it("separate safePolygon() calls have independent state", () => {

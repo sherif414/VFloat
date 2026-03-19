@@ -22,10 +22,19 @@ function makeDOMRect(x: number, y: number, w: number, h: number): DOMRect {
   return { x, y, width: w, height: h, top: y, right: x + w, bottom: y + h, left: x, toJSON() {} } as DOMRect
 }
 
-type HoverTestContext = { referenceEl: HTMLDivElement; floatingEl: HTMLDivElement; context: FloatingContext; scope: ReturnType<typeof effectScope>; setOpen: ReturnType<typeof vi.fn> }
-const activeContexts: HoverTestContext[] = []
+type HoverTestContext = {
+  referenceEl: HTMLDivElement
+  floatingEl: HTMLDivElement
+  context: FloatingContext
+  scope: ReturnType<typeof effectScope>
+  setOpen: ReturnType<typeof vi.fn>
+  cleanup: () => void
+}
 
-async function createHoverContext(options: UseHoverOptions = {}) {
+// Track contexts for cleanup - but register at creation time to ensure cleanup always happens
+const activeContexts = new Set<HoverTestContext>()
+
+async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverTestContext> {
   const referenceEl = document.createElement("div")
   const floatingEl = document.createElement("div")
 
@@ -67,8 +76,16 @@ async function createHoverContext(options: UseHoverOptions = {}) {
   await nextTick()
   await nextTick()
 
-  const ctx = { referenceEl, floatingEl, context, scope, setOpen }
-  activeContexts.push(ctx)
+  const cleanup = () => {
+    scope.stop()
+    if (referenceEl.parentNode) referenceEl.remove()
+    if (floatingEl.parentNode) floatingEl.remove()
+    activeContexts.delete(ctx)
+  }
+
+  const ctx: HoverTestContext = { referenceEl, floatingEl, context, scope, setOpen, cleanup }
+  // Register cleanup at creation time, not at the end
+  activeContexts.add(ctx)
   return ctx
 }
 
@@ -78,13 +95,12 @@ async function createHoverContext(options: UseHoverOptions = {}) {
 describe("useHover", () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(async () => {
+    // Clean up all registered contexts
     for (const ctx of activeContexts) {
-      ctx.scope.stop()
-      if (ctx.referenceEl.parentNode) ctx.referenceEl.remove()
-      if (ctx.floatingEl.parentNode) ctx.floatingEl.remove()
+      ctx.cleanup()
     }
-    activeContexts.length = 0
-    document.body.innerHTML = ""
+    // Verify cleanup happened
+    activeContexts.clear()
     await nextTick()
     vi.useRealTimers()
     vi.restoreAllMocks()
@@ -95,34 +111,34 @@ describe("useHover", () => {
   describe("core functionality", () => {
     it("opens when pointer enters reference element", async () => {
       const ctx = await createHoverContext()
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
-      
+
       expect(ctx.context.open.value).toBe(true)
       expect(ctx.setOpen).toHaveBeenCalledWith(true, "hover", expect.any(Event))
-      
+
     })
 
     it("closes when pointer leaves reference element", async () => {
       const ctx = await createHoverContext()
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
-      
+
       // leaves to body
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       await nextTick()
-      
+
       expect(ctx.context.open.value).toBe(false)
       expect(ctx.setOpen).toHaveBeenCalledWith(false, "hover", expect.any(Event))
-      
+
     })
 
     it("does NOT close immediately if pointer moves from reference to floating element", async () => {
       // delay helps us check timer logic, but even without delay, pointer leave is handled
       const ctx = await createHoverContext({ delay: 10 })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       vi.runAllTimers()
       await nextTick()
@@ -140,15 +156,15 @@ describe("useHover", () => {
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       vi.runAllTimers()
       await nextTick()
-      
+
       expect(ctx.context.open.value).toBe(false)
-      
+
     })
 
     it("attaches/reattaches listeners when element refs change", async () => {
       const ctx = await createHoverContext()
       const oldRef = ctx.referenceEl
-      
+
       // Detach old
       ctx.context.refs.anchorEl.value = null
       await nextTick()
@@ -182,7 +198,7 @@ describe("useHover", () => {
       // toggle off
       enabled.value = false
       await nextTick()
-      
+
       ctx.context.setOpen(false) // reset
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       vi.runAllTimers()
@@ -197,7 +213,7 @@ describe("useHover", () => {
   describe("delay configuration", () => {
     it("respects delay.open (object notation)", async () => {
       const ctx = await createHoverContext({ delay: { open: 100 } })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
 
@@ -211,7 +227,7 @@ describe("useHover", () => {
 
     it("respects delay.close (object notation)", async () => {
       const ctx = await createHoverContext({ delay: { close: 100 } })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
       expect(ctx.context.open.value).toBe(true)
@@ -219,7 +235,7 @@ describe("useHover", () => {
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       await nextTick()
       expect(ctx.context.open.value).toBe(true)
-      
+
       vi.advanceTimersByTime(99)
       expect(ctx.context.open.value).toBe(true)
       vi.advanceTimersByTime(1)
@@ -232,14 +248,14 @@ describe("useHover", () => {
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
-      
+
       expect(ctx.context.open.value).toBe(false)
       vi.advanceTimersByTime(150)
       expect(ctx.context.open.value).toBe(true)
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       await nextTick()
-      
+
       expect(ctx.context.open.value).toBe(true)
       vi.advanceTimersByTime(150)
       expect(ctx.context.open.value).toBe(false)
@@ -272,7 +288,7 @@ describe("useHover", () => {
       expect(ctx.context.open.value).toBe(false)
 
       vi.advanceTimersByTime(25)
-      
+
       // move significantly > threshold (10px)
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 30, clientY: 10 }))
       await nextTick()
@@ -290,7 +306,7 @@ describe("useHover", () => {
 
     it("cancels rest period timer if pointer leaves before restMs expires", async () => {
       const ctx = await createHoverContext({ restMs: 50 })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }))
       await nextTick()
 
@@ -305,7 +321,7 @@ describe("useHover", () => {
 
     it("ignores restMs if delay.open is greater than 0", async () => {
       const ctx = await createHoverContext({ delay: { open: 100 }, restMs: 50 })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
 
@@ -360,32 +376,32 @@ describe("useHover", () => {
   describe("edge case handling", () => {
     it("cancels pending open delay if pointer leaves reference", async () => {
       const ctx = await createHoverContext({ delay: { open: 100 } })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
       vi.advanceTimersByTime(50)
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       await nextTick()
       vi.runAllTimers()
-      
+
       expect(ctx.context.open.value).toBe(false)
     })
 
     it("cancels pending close delay if pointer re-enters reference", async () => {
       const ctx = await createHoverContext({ delay: { close: 100 } })
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       await nextTick()
       vi.advanceTimersByTime(50)
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
       vi.advanceTimersByTime(100)
-      
+
       expect(ctx.context.open.value).toBe(true)
     })
 
@@ -394,7 +410,7 @@ describe("useHover", () => {
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
-      
+
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }))
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"))
       await nextTick()
@@ -403,7 +419,7 @@ describe("useHover", () => {
 
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }))
       await nextTick()
-      
+
       vi.advanceTimersByTime(99)
       expect(ctx.context.open.value).toBe(true)
       vi.advanceTimersByTime(1)
@@ -451,7 +467,7 @@ describe("useHover", () => {
         relatedTarget: document.body // simulating leaving to space between elements
       })
       ctx.referenceEl.dispatchEvent(leaveEvt)
-      
+
       // wait for safePolygon setTimeout(..., 0) to attach listener
       vi.advanceTimersByTime(0)
       await nextTick()
@@ -469,18 +485,18 @@ describe("useHover", () => {
 
       // Leave floating and move completely outside
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body, clientX: 25, clientY: 110 }))
-      
+
       // Let the setTimeout delay in use-hover to execute and register safePolygon listener
       vi.advanceTimersByTime(0)
       await nextTick()
 
       document.dispatchEvent(makePointerEvent("pointermove", { clientX: 500, clientY: 500 }))
-      
+
       vi.runAllTimers()
       await nextTick()
-      
+
       expect(ctx.context.open.value).toBe(false)
-      
+
     })
   })
 
