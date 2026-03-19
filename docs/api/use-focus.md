@@ -1,12 +1,12 @@
 # useFocus
 
-The `useFocus` composable attaches focus-based handlers for showing/hiding a floating element. Supports `FloatingContext` and `TreeNode<FloatingContext>` for tree-aware behavior.
+The `useFocus` composable attaches focus-based handlers for showing/hiding a floating element.
 
 ## Signature
 
 ```ts
 function useFocus(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options?: UseFocusOptions
 ): UseFocusReturn
 ```
@@ -15,7 +15,7 @@ function useFocus(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
+| context | `FloatingContext` | Yes | Floating context to control. |
 | options | `UseFocusOptions` | No | Configuration options. |
 
 ## Options
@@ -68,7 +68,6 @@ useFocus(ctx, { requireFocusVisible: false })
 
 - [useClick](/api/use-click)
 - [useHover](/api/use-hover)
-- [useFloatingTree](/api/use-floating-tree)
 
 ## Additional Details
 
@@ -103,14 +102,14 @@ useFocus(context)
 
 ```ts
 function useFocus(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options?: UseFocusOptions
 ): UseFocusReturn
 ```
 
 | Parameter | Type                                           | Description                                                           |
 | --------- | ---------------------------------------------- | --------------------------------------------------------------------- |
-| context   | `FloatingContext \| TreeNode<FloatingContext>` | The floating context or tree node with open state and change handler. |
+| context   | `FloatingContext` | The floating context with open state and change handler. |
 | options   | `UseFocusOptions`                              | Optional configuration options for focus behavior.                    |
 
 ### Options (`UseFocusOptions`)
@@ -226,61 +225,6 @@ function enableFocus() {
   </div>
 </template>
 ```
-
-## Tree-Aware Focus Behavior
-
-When working with nested floating elements like dropdown menus with submenus, the `useFocus` composable can accept a `TreeNode<FloatingContext>` to enable intelligent hierarchical focus behavior:
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating, useFloatingTree, useFocus } from "v-float"
-
-const menuTriggerRef = ref(null)
-const menuRef = ref(null)
-const submenuTriggerRef = ref(null)
-const submenuRef = ref(null)
-
-// Create floating contexts
-const menuContext = useFloating(menuTriggerRef, menuRef)
-const submenuContext = useFloating(submenuTriggerRef, submenuRef)
-
-// Create floating tree
-const tree = useFloatingTree()
-const menuNode = tree.addNode(menuTriggerRef, menuRef)
-const submenuNode = tree.addNode(submenuTriggerRef, submenuRef, { parentId: menuNode?.id })
-
-// Tree-aware focus behavior
-// Parent stays open when focus moves to child
-// Closes when focus moves outside hierarchy
-useFocus(menuNode, { requireFocusVisible: true })
-useFocus(submenuNode, { requireFocusVisible: true })
-</script>
-
-<template>
-  <div>
-    <button ref="menuTriggerRef">Main Menu</button>
-
-    <div v-if="menuContext.open.value" ref="menuRef" :style="menuContext.floatingStyles">
-      <button ref="submenuTriggerRef">Submenu Trigger</button>
-
-      <div v-if="submenuContext.open.value" ref="submenuRef" :style="submenuContext.floatingStyles">
-        <input placeholder="Focus stays within hierarchy" />
-        <button>Submenu Item</button>
-      </div>
-    </div>
-  </div>
-</template>
-```
-
-### Tree-Aware Focus Logic
-
-When using tree-aware focus:
-
-- **Within Hierarchy**: Focus moving between elements in the same node hierarchy keeps all ancestors open
-- **Outside Hierarchy**: Focus moving outside the node hierarchy closes the node and its descendants
-- **Descendant Focus**: Focus moving to descendant nodes keeps the current node open
-- **Teleported Elements**: Works correctly with teleported floating elements by using logical tree hierarchy instead of DOM containment
 
 ## Combining with Other Interactions
 
@@ -460,9 +404,7 @@ const openModal = async () => {
 
 7. **Handle edge cases**: The composable automatically handles window blur/focus scenarios and browser-specific focus-visible behavior.
 
-8. **Use tree-aware focus for nested UIs**: When building nested floating elements like dropdown menus with submenus, use `TreeNode<FloatingContext>` for intelligent hierarchical focus behavior.
-
-9. **Test hierarchical focus**: For tree-aware usage, test focus movement between parent and child elements to ensure proper hierarchy behavior.
+8. **Test with different input methods**: Ensure the focus behavior works correctly with keyboard, mouse, and touch interactions.
 
 ## Accessibility Considerations
 
@@ -474,7 +416,8 @@ const openModal = async () => {
 
 ## Related Composables
 
-- [`useClick`](/api/use-click) - For click-based interactions (also supports tree-aware behavior)
-- [`useHover`](/api/use-hover) - For hover-based interactions (also supports tree-aware behavior)
-- [`useFloatingTree`](/api/use-floating-tree) - For managing hierarchical floating element structures
+- [`useClick`](/api/use-click) - For click-based interactions
+- [`useHover`](/api/use-hover) - For hover-based interactions
+- [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal
+- [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal
 - [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal

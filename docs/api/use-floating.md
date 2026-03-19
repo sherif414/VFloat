@@ -37,7 +37,7 @@ interface UseFloatingOptions {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| id | `string` | `undefined` | Optional stable identifier (used by `useFloatingTree`) |
+| id | `string` | `undefined` | Optional stable identifier |
 | placement | `MaybeRefOrGetter<Placement>` | `'bottom'` | Desired placement of the floating element |
 | strategy | `MaybeRefOrGetter<Strategy>` | `'absolute'` | Positioning strategy (`'absolute'` or `'fixed'`) |
 | transform | `MaybeRefOrGetter<boolean>` | `true` | Use CSS transform for positioning |
@@ -71,7 +71,7 @@ interface FloatingContext {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| id | `string \| undefined` | Stable identifier for tree-aware interactions |
+| id | `string \| undefined` | Stable identifier |
 | x | `Readonly<Ref<number>>` | X-coordinate of the floating element |
 | y | `Readonly<Ref<number>>` | Y-coordinate of the floating element |
 | strategy | `Readonly<Ref<Strategy>>` | Positioning strategy |
@@ -121,7 +121,6 @@ type OpenChangeReason =
   | 'focus'
   | 'blur'
   | 'escape-key'
-  | 'tree-ancestor-close'
 ```
 
 Describes the reason why the open state changed:
@@ -131,7 +130,6 @@ Describes the reason why the open state changed:
 - `'focus'` - Triggered by focusing the anchor
 - `'blur'` - Triggered by blurring the anchor
 - `'escape-key'` - Triggered by pressing the Escape key
-- `'tree-ancestor-close'` - Triggered by a parent node closing in a tree hierarchy
 
 ## Examples
 

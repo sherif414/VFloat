@@ -6,7 +6,7 @@ A composable that enables hover-based interactions for floating elements with su
 
 ```ts
 function useHover(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options?: UseHoverOptions
 ): void
 ```
@@ -15,7 +15,7 @@ function useHover(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Context from `useFloating` or tree node |
+| context | `FloatingContext` | Yes | Context from `useFloating` |
 | options | `UseHoverOptions` | No | Configuration options |
 
 ## Options
@@ -128,31 +128,6 @@ useHover(context, {
 </script>
 ```
 
-### Tree-Aware (Nested Menus)
-
-```vue
-<script setup>
-import { useFloating, useFloatingTree, useHover } from 'v-float'
-
-const tree = useFloatingTree()
-
-const parentContext = useFloating(parentRef, parentFloatingRef)
-const parentNode = tree.addNode(parentRef, parentFloatingRef)
-
-const childContext = useFloating(childRef, childFloatingRef)
-const childNode = tree.addNode(childRef, childFloatingRef, { parentId: parentNode?.id })
-
-useHover(parentNode, {
-  delay: { open: 100, close: 300 },
-  safePolygon: true
-})
-
-useHover(childNode, {
-  delay: { open: 200, close: 300 }
-})
-</script>
-```
-
 ### With Rest Detection
 
 ```vue
@@ -190,5 +165,4 @@ useHover(context, {
 
 - [useFocus](/api/use-focus) - Focus-based interactions
 - [useClick](/api/use-click) - Click-based interactions
-- [useFloatingTree](/api/use-floating-tree) - Tree structures for nested menus
 - [useFloating](/api/use-floating) - Core positioning composable

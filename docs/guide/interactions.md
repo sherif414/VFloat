@@ -82,7 +82,6 @@ Instead of looking at each interaction in isolation, let's build a common UI pat
 2.  Close when the **Escape** key is pressed.
 3.  Close when the user **clicks outside** the menu.
 4.  Be fully **keyboard accessible**, opening on focus and allowing navigation.
-5.  Support **hierarchical focus behavior** for nested menus with tree-aware interactions.
 
 We can achieve all of this by composing four interactions: `useClick`, `useFocus`, `useEscapeKey`, and `useRole`.
 
@@ -115,7 +114,6 @@ useClick(context)
 useEscapeKey(context, { onEscape: () => context.setOpen(false) })
 
 // Handles opening on keyboard focus for accessibility.
-// Supports both standalone and tree-aware usage for nested menus.
 useFocus(context)
 
 // Add appropriate ARIA attributes in your template as needed

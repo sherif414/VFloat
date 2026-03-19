@@ -1,10 +1,9 @@
 # Getting Started with V-Float
 
-V-Float is a comprehensive Vue 3 composable library for building sophisticated floating UI elements including tooltips, dropdowns, popovers, context menus, and complex nested menu systems. It provides a complete toolkit with precise positioning, interaction handling, hierarchical management, and accessibility features.
+V-Float is a comprehensive Vue 3 composable library for building sophisticated floating UI elements including tooltips, dropdowns, popovers, context menus, and complex nested menu systems. It provides a complete toolkit with precise positioning, interaction handling, and accessibility features.
 
 - **Precise positioning engine** - Inspired by Floating UI, handles complex positioning logic with collision detection and middleware support
 - **Interaction composables** - Declarative APIs for clicks, hovers, focus, escape key, and custom interactions
-- **Floating Tree system** - Hierarchical management for nested floating elements and complex menu structures
 - **Middleware system** - Extensible positioning and behavior customization with arrows, offset, and more
 - **Accessibility-first** - Built-in ARIA support, keyboard navigation, and screen reader compatibility
 - **TypeScript support** - Full type safety and excellent developer experience
@@ -15,7 +14,6 @@ V-Float is a comprehensive Vue 3 composable library for building sophisticated f
 - Use the `useFloating` composable for precise positioning
 - Compose interactions for robust user experiences
 - Build accessible tooltips, dropdowns, and nested menus
-- Leverage the Floating Tree for complex hierarchies
 
 ## What Can You Build with V-Float?
 
@@ -178,6 +176,5 @@ For older browser compatibility, you may need to provide polyfills for APIs such
 You have successfully created your first floating element with V-Float. To continue learning, explore the following resources:
 
 - [**Core Concepts**](./concepts.md)
-- [**Floating Tree**](./floating-tree/floating-tree-introduction.md)
 - [**Interactions**](./interactions.md)
 - [**V-Float on GitHub**](https://github.com/sherif414/VFloat): Report issues or contribute to the project.

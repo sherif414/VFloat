@@ -1,12 +1,12 @@
 # useClick
 
-The `useClick` composable attaches click handlers for opening/toggling a floating element and optional outside-click dismissal. Works with either a `FloatingContext` or a `TreeNode<FloatingContext>` for tree-aware behavior.
+The `useClick` composable attaches click handlers for opening/toggling a floating element and optional outside-click dismissal.
 
 ## Signature
 
 ```ts
 function useClick(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options?: UseClickOptions
 ): void
 ```
@@ -15,7 +15,7 @@ function useClick(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Floating context or tree node to control. |
+| context | `FloatingContext` | Yes | Floating context to control. |
 | options | `UseClickOptions` | No | Configuration options. |
 
 ## Options
@@ -84,77 +84,6 @@ useClick(context, { outsideClick: true, outsideEvent: 'pointerdown' })
 
 - [useEscapeKey](/api/use-escape-key)
 - [useFocus](/api/use-focus)
-- [useFloatingTree](/api/use-floating-tree)
-
-## Additional Details
-
-## Tree-Aware Usage (Enhanced)
-
-The `useClick` composable now supports tree-aware behavior for complex nested floating UI structures. This is particularly useful for menus with submenus where child elements are teleported to different DOM locations.
-
-### Key Tree-Aware Behaviors
-
-- **Descendant Protection**: A floating node does NOT close when any of its descendants are clicked
-- **Ancestral Authority**: A floating node DOES close when any of its ancestors/parents are clicked  
-- **Outside Closure**: A floating node closes when clicked outside the entire tree
-- **Sibling Isolation**: A floating node closes when any sibling nodes are clicked
-
-### Basic Tree-Aware Usage
-
-```vue twoslash
-<script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useFloatingTree, useClick } from "v-float"
-
-const menuTriggerRef = ref<HTMLElement | null>(null)
-const menuRef = ref<HTMLElement | null>(null)
-const submenuTriggerRef = ref<HTMLElement | null>(null)
-const submenuRef = ref<HTMLElement | null>(null)
-
-// Create floating contexts
-const menuContext = useFloating(menuTriggerRef, menuRef)
-const submenuContext = useFloating(submenuTriggerRef, submenuRef)
-
-// Create tree structure
-const tree = useFloatingTree(menuContext)
-const menuNode = tree.root
-const submenuNode = tree.addNode(submenuContext, menuNode.id)
-
-// Tree-aware click handling
-useClick(menuNode, { outsideClick: true }) // Closes when: outside, siblings clicked
-useClick(submenuNode, { outsideClick: true }) // Closes when: outside, siblings, parent clicked
-</script>
-
-<template>
-  <!-- Root Menu -->
-  <button ref="menuTriggerRef">Menu</button>
-  <Teleport to="body">
-    <div v-if="menuContext.open.value" ref="menuRef" :style="menuContext.floatingStyles.value">
-      <div ref="submenuTriggerRef">Item with Submenu</div>
-    </div>
-  </Teleport>
-
-  <!-- Submenu (Teleported) -->
-  <Teleport to="body">
-    <div v-if="submenuContext.open.value" ref="submenuRef" :style="submenuContext.floatingStyles.value">
-      <div>Submenu Item 1</div>
-      <div>Submenu Item 2</div>
-    </div>
-  </Teleport>
-</template>
-```
-
-### Tree-Aware Behavior Examples
-
-Consider a three-level menu hierarchy: **Root Menu** → **Submenu** → **Sub-submenu**
-
-| Action             | Root Menu     | Submenu       | Sub-submenu   | Explanation                           |
-| ------------------ | ------------- | ------------- | ------------- | ------------------------------------- |
-| Click Sub-submenu  | Open          | Open          | Handles Click | Descendants don't affect ancestors    |
-| Click Submenu      | Open          | Handles Click | **Closes**    | Parent click closes descendants       |
-| Click Root Menu    | Handles Click | **Closes**    | **Closes**    | Ancestor click closes all descendants |
-| Click Outside      | **Closes**    | **Closes**    | **Closes**    | Outside click closes entire tree      |
-| Click Sibling Menu | **Closes**    | **Closes**    | **Closes**    | Sibling interaction closes tree       |
 
 ## Basic Usage
 
@@ -211,27 +140,7 @@ useClick(context, {
 </template>
 ```
 
-## API Reference
 
-### Arguments
-
-```ts
-function useClick(
-  context: FloatingContext | TreeNode<FloatingContext>,
-  options?: UseClickOptions
-): void // useClick directly attaches event listeners and returns void
-```
-
-| Parameter | Type                                                   | Description                                                                    |
-| --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| context   | `FloatingContext \| TreeNode<FloatingContext>`         | The context object from `useFloating` or tree node from `useFloatingTree`.     |
-| options   | `UseClickOptions` (see below)                          | Optional configuration for the click behavior.                                 |
-
-**Context Parameter Behavior:**
-- `FloatingContext`: Enables standalone usage with standard DOM containment checks
-- `TreeNode<FloatingContext>`: Enables tree-aware usage with hierarchical click behavior for nested floating elements
-
-### Options (`UseClickOptions`)
 
 The `useClick` composable accepts several options to customize its behavior. These options can be reactive (e.g., a `Ref`).
 
@@ -734,245 +643,6 @@ useEscapeKey(context, {
 
 This creates a dialog that opens when the reference element is clicked, closes when clicking outside, and has proper ARIA attributes.
 
-## Example: Nested Menu with Tree-Aware Behavior
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating, useFloatingTree, useClick, offset, flip, shift } from "v-float"
-
-const menuItems = [
-  { label: "Edit", hasSubmenu: false },
-  { label: "View", hasSubmenu: true },
-  { label: "Insert", hasSubmenu: true },
-  { label: "Help", hasSubmenu: false },
-]
-
-const viewSubmenuItems = [
-  { label: "Zoom In" },
-  { label: "Zoom Out" },
-  { label: "Full Screen" },
-]
-
-const insertSubmenuItems = [
-  { label: "Image" },
-  { label: "Table" },
-  { label: "Link" },
-]
-
-// Main menu setup
-const menuTriggerRef = ref(null)
-const menuRef = ref(null)
-const menuContext = useFloating(menuTriggerRef, menuRef, {
-  placement: "bottom-start",
-  middleware: [offset(5), flip(), shift({ padding: 5 })],
-})
-
-// View submenu setup
-const viewTriggerRef = ref(null)
-const viewSubmenuRef = ref(null)
-const viewSubmenuContext = useFloating(viewTriggerRef, viewSubmenuRef, {
-  placement: "right-start",
-  middleware: [offset(5), flip(), shift({ padding: 5 })],
-})
-
-// Insert submenu setup
-const insertTriggerRef = ref(null)
-const insertSubmenuRef = ref(null)
-const insertSubmenuContext = useFloating(insertTriggerRef, insertSubmenuRef, {
-  placement: "right-start",
-  middleware: [offset(5), flip(), shift({ padding: 5 })],
-})
-
-// Create tree structure
-const tree = useFloatingTree()
-const menuNode = tree.addNode(menuContext)
-const viewSubmenuNode = tree.addNode(viewSubmenuContext, menuNode.id)
-const insertSubmenuNode = tree.addNode(insertSubmenuContext, menuNode.id)
-
-// Tree-aware click handling
-// - Main menu closes when clicked outside or on sibling elements
-// - Submenus close when parent menu items are clicked or when clicked outside
-// - Submenus do NOT close when their own items are clicked
-useClick(menuNode, { outsideClick: true })
-useClick(viewSubmenuNode, { outsideClick: true })
-useClick(insertSubmenuNode, { outsideClick: true })
-
-function openViewSubmenu() {
-  // Close other submenus when opening this one
-  insertSubmenuContext.setOpen(false)
-  viewSubmenuContext.setOpen(true)
-}
-
-function openInsertSubmenu() {
-  // Close other submenus when opening this one
-  viewSubmenuContext.setOpen(false)
-  insertSubmenuContext.setOpen(true)
-}
-
-function selectMenuItem(item) {
-  console.log('Selected:', item.label)
-  // Close all menus
-  menuContext.setOpen(false)
-  viewSubmenuContext.setOpen(false)
-  insertSubmenuContext.setOpen(false)
-}
-</script>
-
-<template>
-  <button ref="menuTriggerRef" class="menu-trigger">
-    Context Menu
-  </button>
-
-  <!-- Main Menu -->
-  <Teleport to="body">
-    <div
-      v-if="menuContext.open.value"
-      ref="menuRef"
-      :style="menuContext.floatingStyles.value"
-      class="menu"
-    >
-      <div
-        v-for="item in menuItems"
-        :key="item.label"
-        :ref="item.label === 'View' ? viewTriggerRef : item.label === 'Insert' ? insertTriggerRef : null"
-        class="menu-item"
-        :class="{ 'has-submenu': item.hasSubmenu }"
-        @click="item.hasSubmenu ? 
-          (item.label === 'View' ? openViewSubmenu() : openInsertSubmenu()) : 
-          selectMenuItem(item)"
-        @mouseenter="item.hasSubmenu ? 
-          (item.label === 'View' ? openViewSubmenu() : openInsertSubmenu()) : 
-          null"
-      >
-        {{ item.label }}
-        <span v-if="item.hasSubmenu" class="submenu-arrow">▶</span>
-      </div>
-    </div>
-  </Teleport>
-
-  <!-- View Submenu -->
-  <Teleport to="body">
-    <div
-      v-if="viewSubmenuContext.open.value"
-      ref="viewSubmenuRef"
-      :style="viewSubmenuContext.floatingStyles.value"
-      class="menu submenu"
-    >
-      <div
-        v-for="item in viewSubmenuItems"
-        :key="item.label"
-        class="menu-item"
-        @click="selectMenuItem(item)"
-      >
-        {{ item.label }}
-      </div>
-    </div>
-  </Teleport>
-
-  <!-- Insert Submenu -->
-  <Teleport to="body">
-    <div
-      v-if="insertSubmenuContext.open.value"
-      ref="insertSubmenuRef"
-      :style="insertSubmenuContext.floatingStyles.value"
-      class="menu submenu"
-    >
-      <div
-        v-for="item in insertSubmenuItems"
-        :key="item.label"
-        class="menu-item"
-        @click="selectMenuItem(item)"
-      >
-        {{ item.label }}
-      </div>
-    </div>
-  </Teleport>
-</template>
-
-<style scoped>
-.menu-trigger {
-  padding: 8px 16px;
-  background: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.menu {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  min-width: 150px;
-  z-index: 100;
-}
-
-.submenu {
-  z-index: 101;
-}
-
-.menu-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.menu-item:hover {
-  background-color: #f0f0f0;
-}
-
-.menu-item.has-submenu {
-  position: relative;
-}
-
-.submenu-arrow {
-  font-size: 10px;
-  color: #666;
-}
-</style>
-```
-
-## Migration from Standalone to Tree-Aware
-
-If you have existing dropdown/menu components that experience issues with nested teleported elements, here's how to migrate:
-
-### Before (Standalone - may have issues with nested menus)
-
-```vue
-<script setup>
-import { useFloating, useClick } from "v-float"
-
-// This approach may incorrectly close parent menus when child menus are clicked
-const parentContext = useFloating(parentRef, parentFloatingRef)
-const childContext = useFloating(childRef, childFloatingRef)
-
-useClick(parentContext, { outsideClick: true })
-useClick(childContext, { outsideClick: true }) // May conflict with parent
-</script>
-```
-
-### After (Tree-Aware - coordinated behavior)
-
-```vue
-<script setup>
-import { useFloating, useFloatingTree, useClick } from "v-float"
-
-// Tree-aware approach provides coordinated behavior
-const parentContext = useFloating(parentRef, parentFloatingRef)
-const childContext = useFloating(childRef, childFloatingRef)
-
-const tree = useFloatingTree()
-const parentNode = tree.addNode(parentContext)
-const childNode = tree.addNode(childContext, parentNode.id)
-
-useClick(parentNode, { outsideClick: true }) // Coordinates with children
-useClick(childNode, { outsideClick: true }) // Aware of parent relationship
-</script>
-```
-
 ## Example: Dropdown Menu
 
 ```vue
@@ -1307,18 +977,6 @@ useEscapeKey(context, { onEscape: () => context.setOpen(false) }); // Attaches e
 6. **Provide visual feedback**: Add hover and active states to indicate the element is clickable.
 
 7. **Handle escape key**: Use `useEscapeKey` to close the floating element when pressing the escape key.
-
-### Tree-Aware Usage
-
-8. **Use tree structure for nested menus**: When building menus with submenus, always use `useFloatingTree` and `TreeNode` contexts for proper hierarchical behavior.
-
-9. **Organize tree hierarchy logically**: Structure your tree to match the logical relationship between floating elements (parent-child relationships).
-
-10. **Handle sibling coordination**: Be aware that clicking on sibling elements will close the current floating element - use this for mutually exclusive dropdowns.
-
-11. **Performance optimization**: Tree traversal only occurs when necessary and only checks open floating elements for efficiency.
-
-12. **Backward compatibility**: Existing standalone usage continues to work unchanged - migrate to tree-aware usage only when needed for complex nested structures.
 
 ## Related Composables
 

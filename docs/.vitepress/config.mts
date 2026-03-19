@@ -37,16 +37,6 @@ export default defineConfig({
           items: [
             { text: "Getting Started", link: "/guide/" },
             { text: "Core Concepts", link: "/guide/concepts" },
-            {
-              text: "Floating Tree",
-              collapsed: false,
-              items: [
-                { text: "Introduction", link: "/guide/floating-tree/introduction" },
-                { text: "Getting Started", link: "/guide/floating-tree/getting-started" },
-                { text: "Cookbook & Advanced Recipes", link: "/guide/floating-tree/cookbook" },
-                { text: "API Reference", link: "/guide/floating-tree/api-reference" },
-              ],
-            },
             { text: "Interactions", link: "/guide/interactions" },
             { text: "Keyboard List Navigation", link: "/guide/list-navigation" },
           ],
@@ -67,7 +57,6 @@ export default defineConfig({
           items: [
             { text: "Overview", link: "/api/" },
             { text: "useFloating", link: "/api/use-floating" },
-            { text: "useFloatingTree", link: "/api/use-floating-tree" },
             { text: "useArrow", link: "/api/use-arrow" },
           ],
         },

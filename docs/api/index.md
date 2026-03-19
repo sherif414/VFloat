@@ -5,7 +5,6 @@ This section provides detailed API documentation for the composables and utiliti
 ## Core Composables
  
 - [`useFloating`](./use-floating.md) - Main floating positioning composable
-- [`useFloatingTree`](./use-floating-tree.md) - Tree-aware floating element management
 - [`useArrow`](./use-arrow.md) - Arrow positioning for floating elements
  
 ## Positioning Utilities

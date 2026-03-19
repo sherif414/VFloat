@@ -1,12 +1,12 @@
 # useListNavigation
 
-Adds arrow key-based navigation for a list/grid of items inside a floating element, with optional virtual focus (aria-activedescendant), RTL, nested close behavior, and looping.
+Adds arrow key-based navigation for a list/grid of items inside a floating element, with optional virtual focus (aria-activedescendant), RTL, and looping.
 
 ## Signature
 
 ```ts
 function useListNavigation(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options: UseListNavigationOptions
 ): UseListNavigationReturn
 ```
@@ -15,7 +15,7 @@ function useListNavigation(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Context from `useFloating` or a tree node for nested menus |
+| context | `FloatingContext` | Yes | Context from `useFloating` |
 | options | `UseListNavigationOptions` | Yes | Configuration options (see below) |
 
 ## Options
@@ -150,14 +150,6 @@ useListNavigation(ctx, {
 </template>
 ```
 
-### Nested Submenu (cross-axis close)
-
-```ts
-import { useFloatingTree, useListNavigation } from 'v-float'
-// ... create tree, add nodes
-useListNavigation(childNode, { nested: true, orientation: 'horizontal' })
-```
-
 ### Uniform Grid Navigation
 
 ```ts
@@ -174,7 +166,6 @@ useListNavigation(ctx, {
 ## See Also
 
 - [useFloating](/api/use-floating)
-- [useFloatingTree](/api/use-floating-tree)
 - [useClick](/api/use-click)
 - [useFocus](/api/use-focus)
 - [useEscapeKey](/api/use-escape-key)

@@ -1,12 +1,12 @@
 # useFocusTrap
 
-The `useFocusTrap` composable traps keyboard focus within the floating element, managing keyboard navigation with Tab/Shift+Tab keys. It supports both modal and non-modal modes, focus guards, initial focus placement, and intelligent focus restoration. When used with `TreeNode`, it enables nested trap behavior where only the deepest open node activates trapping.
+The `useFocusTrap` composable traps keyboard focus within the floating element, managing keyboard navigation with Tab/Shift+Tab keys. It supports both modal and non-modal modes, focus guards, initial focus placement, and intelligent focus restoration.
 
 ## Signature
 
 ```ts
 function useFocusTrap(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options?: UseFocusTrapOptions
 ): UseFocusTrapReturn
 ```
@@ -15,7 +15,7 @@ function useFocusTrap(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| context | `FloatingContext \| TreeNode<FloatingContext>` | Yes | Floating context or tree node to trap focus within. |
+| context | `FloatingContext` | Yes | Floating context to trap focus within. |
 | options | `UseFocusTrapOptions` | No | Configuration options. |
 
 ## Options
@@ -301,70 +301,6 @@ useFocusTrap(context, {
 
 
 
-## Nested Focus Traps
-
-When working with nested floating elements, use tree-aware focus trapping:
-
-```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating, useFloatingTree, useFocusTrap } from "v-float"
-
-const triggerRef = ref(null)
-const dialogRef = ref(null)
-const nestedTriggerRef = ref(null)
-const nestedDialogRef = ref(null)
-
-const dialogOpen = ref(false)
-const nestedOpen = ref(false)
-
-// Main dialog
-const dialogContext = useFloating(triggerRef, dialogRef, {
-  open: dialogOpen,
-  onOpenChange: (value) => dialogOpen.value = value
-})
-
-// Nested dialog
-const nestedContext = useFloating(nestedTriggerRef, nestedDialogRef, {
-  open: nestedOpen,
-  onOpenChange: (value) => nestedOpen.value = value
-})
-
-// Create tree
-const tree = useFloatingTree()
-const dialogNode = tree.addNode(triggerRef, dialogRef)
-const nestedNode = tree.addNode(nestedTriggerRef, nestedDialogRef, {
-  parentId: dialogNode?.id
-})
-
-// Tree-aware focus trapping
-// Only the deepest open node activates trapping
-useFocusTrap(dialogNode, { modal: true })
-useFocusTrap(nestedNode, { modal: true })
-</script>
-
-<template>
-  <button ref="triggerRef" @click="dialogOpen = true">
-    Open Dialog
-  </button>
-
-  <div v-if="dialogOpen" ref="dialogRef" role="dialog">
-    <h2>Main Dialog</h2>
-    <button ref="nestedTriggerRef" @click="nestedOpen = true">
-      Open Nested Dialog
-    </button>
-    <button @click="dialogOpen = false">Close</button>
-
-    <div v-if="nestedOpen" ref="nestedDialogRef" role="dialog">
-      <h3>Nested Dialog</h3>
-      <p>Focus is trapped in this nested dialog</p>
-      <input placeholder="Tab stays here" />
-      <button @click="nestedOpen = false">Close Nested</button>
-    </div>
-  </div>
-</template>
-```
-
 ## Combining with Other Interactions
 
 ```vue
@@ -547,11 +483,11 @@ useFocusTrap(context, {
 
 6. **Test Keyboard Navigation**: Thoroughly test Tab, Shift+Tab, and Escape key navigation to ensure the trap works correctly.
 
-7. **Nested Traps**: Use `useFloatingTree` for nested floating elements to enable intelligent hierarchical focus trapping.
+7. **Test Keyboard Navigation**: Thoroughly test Tab, Shift+Tab, and Escape key navigation to ensure the trap works correctly.
 
 8. **Prevent Scroll**: Keep `preventScroll: true` (default) to avoid unwanted scrolling when focus moves.
 
-10. **Inert Outside Elements**: For critical modal dialogs, consider using `outsideElementsInert: true` in browsers that support the `inert` attribute.
+9. **Inert Outside Elements**: For critical modal dialogs, consider using `outsideElementsInert: true` in browsers that support the `inert` attribute.
 
 ## Accessibility Considerations
 
@@ -568,5 +504,4 @@ useFocusTrap(context, {
 - [`useFocus`](/api/use-focus) - For focus-based show/hide interactions
 - [`useEscapeKey`](/api/use-escape-key) - For keyboard dismissal (commonly paired with focus traps)
 - [`useClick`](/api/use-click) - For click-based interactions
-- [`useFloatingTree`](/api/use-floating-tree) - For managing nested focus traps
 - [`useListNavigation`](/api/use-list-navigation) - For keyboard navigation within lists

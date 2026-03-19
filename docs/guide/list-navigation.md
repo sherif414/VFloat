@@ -11,7 +11,7 @@ Set up arrow key navigation for menus, listboxes, and grids using `useListNaviga
 
 - Implement roving active index for menus/listboxes with keyboard
 - Open menus from the anchor using arrow keys
-- Add nested submenu behavior and RTL support
+- Add submenu behavior and RTL support
 - Use virtual focus for `aria-activedescendant` patterns
 - Navigate uniform grids with ArrowUp/Down/Left/Right
 
@@ -108,23 +108,7 @@ useListNavigation(ctx, {
 - `loop: true` wraps at ends. With `virtual + allowEscape`, moving past ends yields `null`.
 - `Home`/`End` jump to first/last enabled item.
 
-### 5) Nested Submenus
-
-- When using `useFloatingTree()`, pass a `TreeNode<FloatingContext>` to `useListNavigation`.
-- Set `nested: true` to enable cross-axis close (e.g., ArrowLeft to close a right-opening submenu).
-
-```ts
-import { useFloatingTree } from 'v-float'
-
-const tree = useFloatingTree()
-const parentNode = tree.addNode(anchorEl, floatingEl)
-const childNode = tree.addNode(childAnchor, childFloating, { parentId: parentNode?.id })
-
-useListNavigation(parentNode, { listRef: parentItems, activeIndex, onNavigate: i => activeIndex.value = i, orientation: 'vertical' })
-useListNavigation(childNode, { listRef: childItems, activeIndex: childActive, onNavigate: i => childActive.value = i, nested: true, orientation: 'horizontal' })
-```
-
-### 6) RTL and Grids
+### 5) RTL and Grids
 
 - `rtl: true` flips Left/Right semantics for horizontal navigation.
 - For uniform grids, set `cols > 1` and `orientation: 'both' | 'horizontal'`.
@@ -183,11 +167,9 @@ useListNavigation(ctx, {
 
 - Active item not scrolling: pass `scrollItemIntoView: true | options` and ensure not in pointer modality.
 - Virtual focus not working: ensure anchor is focusable and items have `id`s.
-- Nested close not triggering: set `nested: true` and ensure tree parent/child are wired via `useFloatingTree`.
 
 ## See Also
 
 - [useListNavigation API](/api/use-list-navigation)
 - [useFloating](/api/use-floating)
-- [useFloatingTree](/api/use-floating-tree)
 - [Interactions](/guide/interactions)
