@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { nextTick, ref } from "vue"
 import type { AnchorElement, FloatingElement } from "@/composables/positioning"
-import { useFloating, useFloatingTree } from "@/composables/positioning"
+import { useFloating } from "@/composables/positioning"
 import { useListNavigation } from "@/composables/interactions"
 
 const createMockElement = (tagName = "div", attributes: Record<string, any> = {}) => {
@@ -234,27 +234,6 @@ describe("useListNavigation", () => {
     expect(activeIndex.value).toBeNull()
     const updatedDescendant = anchorEl.getAttribute("aria-activedescendant")
     expect(updatedDescendant === null || updatedDescendant === "").toBeTruthy()
-  })
-
-  it("nested close focuses parent", async () => {
-    const tree = useFloatingTree()
-    const parentAnchor = createMockElement("button")
-    const parentFloating = createMockElement("div")
-    document.body.appendChild(parentAnchor)
-    document.body.appendChild(parentFloating)
-    const parentNode = tree.addNode(ref<AnchorElement>(parentAnchor), ref<FloatingElement>(parentFloating), { open: ref(true) })!
-    const childNode = tree.addNode(ref<AnchorElement>(anchorEl), ref<FloatingElement>(floatingEl), { parentId: parentNode.id, open })!
-    const items2 = Array.from({ length: 4 }, () => createMockElement("button"))
-    items2.forEach((el) => floatingEl.appendChild(el))
-    const listRef2 = ref(items2)
-    const active2 = ref<number | null>(null)
-    const onNavigate2 = vi.fn((idx: number | null) => (active2.value = idx))
-    useListNavigation(childNode, { listRef: listRef2, activeIndex: active2, onNavigate: onNavigate2, nested: true, orientation: "vertical" })
-    open.value = true
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }))
-    await nextTick()
-    expect(open.value).toBe(false)
-    expect(document.activeElement).toBe(parentAnchor)
   })
 
   it("cleanup removes listeners", async () => {

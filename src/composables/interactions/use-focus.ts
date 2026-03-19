@@ -37,27 +37,13 @@ const BLUR_CHECK_DELAY = 0
  *
  * Keyboard-only interaction hook. Compose with `useClick`, `useHover`, `useEscapeKey` for a complete UX.
  *
- * Tree-aware behavior is enabled by providing a `tree` option and passing the corresponding
- * FloatingContext (i.e., the node's `.data`). IDs are only relevant for tree-aware usage and are
- * automatically assigned when using `useFloatingTree().addNode(...)`.
+ * @param context - The floating context with open state and change handler
+ * @param options - Configuration options
  *
- * @param context - The floating context for this element (not a TreeNode).
- * @param options - Configuration options. Provide `tree` to enable tree-aware behavior.
- *
- * @example Standalone
+ * @example
  * ```ts
  * const ctx = useFloating(...)
  * useFocus(ctx)
- * ```
- *
- * @example Tree-aware
- * ```ts
- * const tree = useFloatingTree(rootAnchor, rootFloating)
- * const parent = tree.root
- * const child = tree.addNode(childAnchor, childFloating, { parentId: parent.id })
- *
- * useFocus(parent.data, { tree })
- * useFocus(child.data, { tree })
  * ```
  */
 

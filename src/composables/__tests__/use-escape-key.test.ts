@@ -2,7 +2,6 @@ import { ref } from "vue"
 import { describe, expect, it, vi } from "vitest"
 import { useEscapeKey } from "@/composables/interactions/use-escape-key"
 import type { FloatingContext } from "../positioning/use-floating"
-import type { TreeNode } from "../positioning/use-floating-tree"
 
 // Test utilities
 function createMockFloatingContext(): FloatingContext {
@@ -29,34 +28,6 @@ function createMockFloatingContext(): FloatingContext {
       arrowEl: ref(null),
     },
   } as any
-}
-
-function createMockTreeNode(
-  context: FloatingContext,
-  isRoot = false,
-  parent: TreeNode<FloatingContext> | null = null
-): TreeNode<FloatingContext> {
-  const children = ref<TreeNode<FloatingContext>[]>([])
-  const parentRef = ref(parent)
-
-  const mockNode: TreeNode<FloatingContext> = {
-    id: `node-${Math.random().toString(36).substr(2, 9)}`,
-    data: context,
-    children,
-    parent: parentRef,
-    isRoot,
-    getPath: vi.fn(() => {
-      const path: TreeNode<FloatingContext>[] = []
-      let current: TreeNode<FloatingContext> | null = mockNode
-      while (current) {
-        path.unshift(current)
-        current = current.parent.value
-      }
-      return path
-    }),
-  } as any
-
-  return mockNode
 }
 
 describe("useEscapeKey", () => {
@@ -120,96 +91,6 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32 } as any))
 
       expect(context.setOpen).not.toHaveBeenCalled()
-    })
-  })
-
-  describe("TreeNode behavior", () => {
-    it.skip("should close topmost open node in tree", async () => {
-      // Create a simple tree structure
-      const rootContext = createMockFloatingContext()
-      const childContext = createMockFloatingContext()
-      const grandchildContext = createMockFloatingContext()
-
-      rootContext.setOpen(true)
-      childContext.setOpen(true)
-      grandchildContext.setOpen(true)
-      ;(rootContext.setOpen as any).mockClear()
-      ;(childContext.setOpen as any).mockClear()
-      ;(grandchildContext.setOpen as any).mockClear()
-
-      const rootNode = createMockTreeNode(rootContext, true)
-      const childNode = createMockTreeNode(childContext, false, rootNode)
-      const grandchildNode = createMockTreeNode(grandchildContext, false, childNode)
-
-      // Mock the children relationships
-      rootNode.children.value = [childNode]
-      childNode.children.value = [grandchildNode]
-
-      useEscapeKey(grandchildNode)
-      await new Promise(resolve => setTimeout(resolve, 50))
-
-      const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
-      document.dispatchEvent(event)
-      await new Promise(resolve => setTimeout(resolve, 10))
-
-      // Should close the deepest (topmost) open node
-      expect(grandchildContext.setOpen).toHaveBeenCalledWith(
-        false,
-        "escape-key",
-        expect.any(KeyboardEvent)
-      )
-      expect(childContext.setOpen).not.toHaveBeenCalled()
-      expect(rootContext.setOpen).not.toHaveBeenCalled()
-    })
-
-    it("should handle tree with only root node open", async () => {
-      const rootContext = createMockFloatingContext()
-      rootContext.setOpen(true)
-
-      const rootNode = createMockTreeNode(rootContext, true)
-
-      useEscapeKey(rootNode)
-
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
-
-      expect(rootContext.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent))
-    })
-
-    it("should do nothing when no nodes are open in tree", async () => {
-      const rootContext = createMockFloatingContext()
-      const childContext = createMockFloatingContext()
-
-      rootContext.setOpen(false)
-      childContext.setOpen(false)
-      ;(rootContext.setOpen as any).mockClear()
-      ;(childContext.setOpen as any).mockClear()
-
-      const rootNode = createMockTreeNode(rootContext, true)
-      const childNode = createMockTreeNode(childContext, false, rootNode)
-
-      rootNode.children.value = [childNode]
-
-      useEscapeKey(childNode)
-
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
-
-      expect(rootContext.setOpen).not.toHaveBeenCalled()
-      expect(childContext.setOpen).not.toHaveBeenCalled()
-    })
-
-    it("should work with custom onEscape handler for tree nodes", async () => {
-      const rootContext = createMockFloatingContext()
-      const rootNode = createMockTreeNode(rootContext, true)
-      const customHandler = vi.fn()
-
-      useEscapeKey(rootNode, {
-        onEscape: customHandler,
-      })
-
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
-
-      expect(customHandler).toHaveBeenCalled()
-      expect(rootContext.setOpen).not.toHaveBeenCalled()
     })
   })
 

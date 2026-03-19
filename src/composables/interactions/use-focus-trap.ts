@@ -104,7 +104,7 @@ const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLEleme
  * Creates a focus trap for a floating element using focus-trap library.
  * Manages focus containment, modal behavior, and accessibility features.
  *
- * @param context - FloatingContext or TreeNode containing floating element refs
+ * @param context - Floating context containing floating element refs
  * @param options - Configuration options for the focus trap
  * @returns Object with isActive state, and manual control methods
  */

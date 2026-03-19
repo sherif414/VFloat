@@ -126,32 +126,15 @@ function useDelayedOpen(
  * with enhanced behaviors like delayed open/close, rest detection, and custom
  * exit handling.
  *
- * The composable supports both standalone usage with FloatingContext and tree-aware
- * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
- *
- * @param context - The floating context or tree node with open state and change handler
+ * @param context - The floating context with open state and change handler
  * @param options - Configuration options for hover behavior
  *
- * @example Basic standalone usage
+ * @example Basic usage
  * ```ts
  * const context = useFloating(...)
  * useHover(context, {
  *   delay: { open: 100, close: 300 },
  *   restMs: 150
- * })
- * ```
- *
- * @example Tree-aware usage for nested floating elements
- * ```ts
- * const tree = useFloatingTree(rootContext)
- * const parentNode = tree.root
- * const childNode = tree.addNode(childContext, parentNode.id)
- *
- * // Tree-aware behavior: child hover won't end when hovering over child,
- * // but will end when hovering outside the entire hierarchy
- * useHover(childNode, {
- *   delay: { close: 300 },
- *   safePolygon: true
  * })
  * ```
  */

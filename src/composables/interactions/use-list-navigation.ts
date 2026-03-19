@@ -10,8 +10,7 @@ import {
   watchPostEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-import { getContextFromParameter, isTypeableElement } from "@/utils"
+import { isTypeableElement } from "@/utils"
 import { isUsingKeyboard } from "../utils/is-using-keyboard"
 import { useActiveDescendant } from "../utils/use-active-descendant"
 
@@ -450,11 +449,10 @@ export interface UseListNavigationReturn {
 }
 
 export function useListNavigation(
-  context: FloatingContext | TreeNode<FloatingContext>,
+  context: FloatingContext,
   options: UseListNavigationOptions
 ): UseListNavigationReturn {
-  const { floatingContext, node } = getContextFromParameter(context)
-  const { refs, open, setOpen } = floatingContext
+  const { refs, open, setOpen } = context
 
   const {
     listRef,
@@ -668,21 +666,6 @@ export function useListNavigation(
       onNavigate?.(result.index)
     } else if (result.type === "close") {
       setOpen(false, "programmatic", e)
-      focusParentAnchor()
-    }
-  }
-
-  const focusParentAnchor = (): void => {
-    const parent = node?.parent.value
-    const parentAnchor = parent?.data.refs.anchorEl.value
-    if (parentAnchor instanceof HTMLElement) {
-      parentAnchor.focus({ preventScroll: true })
-    } else if (
-      parentAnchor &&
-      "contextElement" in parentAnchor &&
-      parentAnchor.contextElement instanceof HTMLElement
-    ) {
-      parentAnchor.contextElement.focus({ preventScroll: true })
     }
   }
 

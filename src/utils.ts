@@ -1,6 +1,4 @@
 import { useId as vueUseId } from "vue"
-import type { FloatingContext } from "@/composables/positioning/use-floating"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
 import type { AnyFn, VirtualElement } from "@/types"
 
 let idCounter = 0
@@ -190,67 +188,6 @@ export function clearTimeoutIfSet(timeoutId: number): void {
   if (timeoutId !== -1) {
     clearTimeout(timeoutId)
   }
-}
-
-//=======================================================================================
-// 📌 Tree-Aware Context Utilities
-//=======================================================================================
-
-/**
- * Type guard to determine if the context parameter is a TreeNode.
- */
-export function isTreeNode<T>(context: T | TreeNode<T>): context is TreeNode<T> {
-  return (
-    context !== null &&
-    typeof context === "object" &&
-    "data" in context &&
-    "id" in context &&
-    "children" in context &&
-    "parent" in context
-  )
-}
-
-/**
- * Extracts floating context and tree context from the parameter.
- */
-export function getContextFromParameter<T>(context: T | TreeNode<T>): {
-  floatingContext: T
-  node: TreeNode<T> | null
-} {
-  if (isTreeNode(context)) {
-    return {
-      floatingContext: context.data,
-      node: context,
-    }
-  }
-  return {
-    floatingContext: context,
-    node: null,
-  }
-}
-
-/**
- * Finds a descendant node that is in the event path.
- */
-export function findDescendantInEventPath<T extends Pick<FloatingContext, "refs" | "open">>(
-  node: TreeNode<T>,
-  path: EventTarget[]
-): TreeNode<T> | null {
-  for (const child of node.children.value) {
-    if (child.data.open.value) {
-      if (
-        isElementInEventPath(child.data.refs.anchorEl.value, path) ||
-        isElementInEventPath(child.data.refs.floatingEl.value, path)
-      ) {
-        return child
-      }
-
-      // Recursively check descendants
-      const descendant = findDescendantInEventPath(child, path)
-      if (descendant) return descendant
-    }
-  }
-  return null
 }
 
 /**

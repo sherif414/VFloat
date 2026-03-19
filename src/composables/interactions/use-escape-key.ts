@@ -1,7 +1,5 @@
 import { useEventListener } from "@vueuse/core"
 import { type MaybeRefOrGetter, ref, toValue } from "vue"
-import type { TreeNode } from "@/composables/positioning/use-floating-tree"
-import { getContextFromParameter } from "@/utils"
 import type { FloatingContext } from "../positioning"
 
 // =======================================================================================
@@ -35,25 +33,17 @@ export interface UseEscapeKeyOptions {
 // =======================================================================================
 
 /**
- * A composable to handle the escape key press with tree-aware behavior and composition event handling.
+ * A composable to handle the escape key press with composition event handling.
  *
- * When passed a FloatingContext, it will close that floating element by setting open to false.
- * When passed a TreeNode<FloatingContext>, it will find and close the topmost open node in the tree.
+ * When triggered, it will close the floating element by setting open to false.
  *
- * @param context - The floating context or tree node with open state and change handler.
+ * @param context - The floating context with open state and change handler.
  * @param options - {@link UseEscapeKeyOptions}
  *
- * @example Basic standalone usage
+ * @example Basic usage
  * ```ts
  * const context = useFloating(...)
  * useEscapeKey(context) // Closes the floating element on escape
- * ```
- *
- * @example Tree-aware usage
- * ```ts
- * const tree = useFloatingTree(...)
- * const childNode = tree.addNode(...)
- * useEscapeKey(childNode) // Closes the topmost open node in the tree
  * ```
  *
  * @example Custom handler
@@ -70,15 +60,12 @@ export interface UseEscapeKeyOptions {
  * ```
  */
 export function useEscapeKey(
-  context: UseEscapeKeyContext | TreeNode<UseEscapeKeyContext>,
+  context: UseEscapeKeyContext,
   options: UseEscapeKeyOptions = {}
 ): void {
-  // Extract context information
-  const { floatingContext, node } = getContextFromParameter(context)
   const { enabled = true, capture = false, onEscape } = options
   const { isComposing } = useComposition()
 
-  // Enhanced escape handler with tree-aware logic
   const handleEscape = (event: KeyboardEvent) => {
     if (event.key !== "Escape" || !toValue(enabled) || isComposing()) {
       return
@@ -90,17 +77,8 @@ export function useEscapeKey(
       return
     }
 
-    // Default behavior based on context type
-    if (node) {
-      // Tree-aware behavior: close topmost open node
-      const topmostNode = getTopmostOpenNodeInTree(node)
-      if (topmostNode) {
-        topmostNode.data.setOpen(false, "escape-key", event)
-      }
-    } else {
-      // Standalone behavior: close current context
-      floatingContext.setOpen(false, "escape-key", event)
-    }
+    // Default behavior: close current context
+    context.setOpen(false, "escape-key", event)
   }
 
   // Event listener setup
@@ -110,42 +88,6 @@ export function useEscapeKey(
 // =======================================================================================
 // 📌 Helper Functions
 // =======================================================================================
-
-/**
- * Finds the topmost open node from any node in the tree by navigating to root
- * and then traversing to find the deepest open node.
- */
-function getTopmostOpenNodeInTree(
-  node: TreeNode<UseEscapeKeyContext>
-): TreeNode<UseEscapeKeyContext> | null {
-  // Navigate to root of the tree
-  let rootNode = node
-  while (rootNode.parent?.value && !rootNode.isRoot) {
-    rootNode = rootNode.parent.value
-  }
-
-  // Find topmost (deepest) open node from root
-  let topmostNode: TreeNode<UseEscapeKeyContext> | null = null
-  let maxLevel = -1
-
-  const traverseNode = (currentNode: TreeNode<UseEscapeKeyContext>) => {
-    if (currentNode.data.open.value) {
-      const level = currentNode.getPath().length
-      if (level > maxLevel) {
-        maxLevel = level
-        topmostNode = currentNode
-      }
-    }
-
-    const children = currentNode.children?.value ?? []
-    for (const child of children) {
-      traverseNode(child)
-    }
-  }
-
-  traverseNode(rootNode)
-  return topmostNode
-}
 
 function useComposition() {
   const isComposing = ref(false)

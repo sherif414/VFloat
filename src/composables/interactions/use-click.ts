@@ -23,13 +23,10 @@ import {
  * This composable provides unified event handlers for both inside click interactions
  * (to open/toggle floating elements) and outside click interactions (to close them).
  *
- * The composable supports both standalone usage with FloatingContext and tree-aware
- * usage with TreeNode<FloatingContext> for complex nested floating UI structures.
- *
- * @param context - The floating context or tree node with open state and change handler.
+ * @param context - The floating context with open state and change handler.
  * @param options - Configuration options for click behavior.
  *
- * @example Basic standalone usage with outside click enabled
+ * @example Basic usage with outside click enabled
  * ```ts
  * const context = useFloating(...)
  * useClick(context, {
