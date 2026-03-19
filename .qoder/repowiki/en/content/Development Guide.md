@@ -21,9 +21,22 @@
 - [src/composables/interactions/polygon.ts](file://src/composables/interactions/polygon.ts)
 - [src/composables/__tests__/use-floating.test.ts](file://src/composables/__tests__/use-floating.test.ts)
 - [src/composables/__tests__/safe-polygon.test.ts](file://src/composables/__tests__/safe-polygon.test.ts)
+- [src/composables/__tests__/use-client-point.test.ts](file://src/composables/__tests__/use-client-point.test.ts)
+- [src/composables/__tests__/use-hover.test.ts](file://src/composables/__tests__/use-hover.test.ts)
+- [src/composables/__tests__/use-focus.test.ts](file://src/composables/__tests__/use-focus.test.ts)
+- [src/composables/__tests__/use-click.test.ts](file://src/composables/__tests__/use-click.test.ts)
+- [src/utils.ts](file://src/utils.ts)
 - [playground/main.ts](file://playground/main.ts)
 - [env.d.ts](file://env.d.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced testing infrastructure documentation to reflect Set-based cleanup mechanisms
+- Added documentation for centralized element tracking with trackElement helper function
+- Updated timer handling documentation with explicit timer management patterns
+- Improved standardized import patterns documentation for better resource management
+- Added comprehensive testing utilities documentation including cleanup strategies
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -44,12 +57,12 @@
 16. [Conclusion](#conclusion)
 
 ## Introduction
-This development guide provides a comprehensive overview of the V-Float project’s contribution guidelines, development setup, testing strategy, release process, and maintenance procedures. It explains how to configure the development environment, adhere to coding standards enforced by Biome, leverage TypeScript configurations, run and extend tests with Vitest and browser testing, and participate in the project’s governance and CI/CD workflows.
+This development guide provides a comprehensive overview of the V-Float project's contribution guidelines, development setup, testing strategy, release process, and maintenance procedures. It explains how to configure the development environment, adhere to coding standards enforced by Biome, leverage TypeScript configurations, run and extend tests with Vitest and browser testing, and participate in the project's governance and CI/CD workflows.
 
 ## Project Structure
 The repository follows a modular structure centered around a Vue 3 library that exposes composables for floating UI positioning and interactions. Key areas:
 - Library source code under src/, organized by composables (positioning, interactions, middlewares).
-- Tests under src/composables/__tests__/.
+- Tests under src/composables/__tests__/ with enhanced cleanup infrastructure.
 - Playground for interactive demos under playground/.
 - Documentation site powered by VitePress under docs/.
 - Tooling configurations for building, linting, testing, and releasing.
@@ -177,7 +190,7 @@ UF-->>Dev : "Expose reactive x/y/strategy/placement/isPositioned/open"
 - [src/composables/__tests__/use-floating.test.ts](file://src/composables/__tests__/use-floating.test.ts)
 
 ### Safe Polygon Interaction: safePolygon
-The safe polygon interaction computes a polygonal “safe zone” around a floating element to prevent accidental closes when the pointer leaves the reference area. It supports:
+The safe polygon interaction computes a polygonal "safe zone" around a floating element to prevent accidental closes when the pointer leaves the reference area. It supports:
 - Guard clauses for null elements/placement.
 - Opposite-side guard logic based on placement.
 - Intent detection with configurable timing thresholds.
@@ -258,8 +271,6 @@ Pkg --> CL["changelogen"]
 - Avoid unnecessary reactive updates by passing stable refs and minimizing middleware churn.
 - Keep middleware lists concise; each middleware adds computational overhead.
 - Leverage autoUpdate only when needed; disable for static layouts.
-
-[No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 Common issues and remedies:
@@ -342,6 +353,36 @@ WF-->>Dev : "Report success/failure"
 - [package.json](file://package.json)
 
 ## Testing Strategy
+
+### Enhanced Testing Infrastructure
+The project has implemented comprehensive testing infrastructure improvements focusing on resource management and test reliability:
+
+**Set-based Cleanup Mechanisms**
+- Centralized tracking using Set collections for active test contexts
+- Automatic cleanup registration at context creation time
+- Reliable cleanup verification with Set.clear() operations
+- Prevents memory leaks and ensures test isolation
+
+**Centralized Element Tracking**
+- Standardized trackElement helper function for DOM element cleanup
+- Consistent element tracking across all test suites
+- Automated cleanup through elementsToCleanUp arrays
+- Improved resource management with proper DOM detachment
+
+**Explicit Timer Handling**
+- vi.useFakeTimers() integration for deterministic timing control
+- vi.advanceTimersByTime() for precise timeout simulation
+- vi.runAllTimers() for complete timeout execution
+- vi.clearAllMocks() for comprehensive cleanup
+- Proper timer cleanup in afterEach hooks
+
+**Standardized Import Patterns**
+- Consistent import statements using @ alias for src/
+- Centralized utility imports for shared test helpers
+- Standardized mock setup patterns across test files
+- Improved code organization and maintainability
+
+### Test Organization and Patterns
 - Unit tests are colocated with implementation under src/composables/__tests__/.
 - Vitest is configured with:
   - Browser runner using Playwright (Chromium headless).
@@ -375,6 +416,10 @@ Test-->>Runner : "Assertions and coverage"
 - [vitest.config.ts](file://vitest.config.ts)
 - [src/composables/__tests__/use-floating.test.ts](file://src/composables/__tests__/use-floating.test.ts)
 - [src/composables/__tests__/safe-polygon.test.ts](file://src/composables/__tests__/safe-polygon.test.ts)
+- [src/composables/__tests__/use-client-point.test.ts](file://src/composables/__tests__/use-client-point.test.ts)
+- [src/composables/__tests__/use-hover.test.ts](file://src/composables/__tests__/use-hover.test.ts)
+- [src/composables/__tests__/use-focus.test.ts](file://src/composables/__tests__/use-focus.test.ts)
+- [src/composables/__tests__/use-click.test.ts](file://src/composables/__tests__/use-click.test.ts)
 
 ## Coding Standards and TypeScript Configuration
 - Biome enforces:
@@ -383,7 +428,7 @@ Test-->>Runner : "Assertions and coverage"
   - Overrides for Vue files to align with template constraints.
 - TypeScript configuration:
   - Root tsconfig.json references multiple tsconfig.*.json files.
-  - tsconfig.app.json extends Vue’s DOM tsconfig and includes src, playground, and docs.
+  - tsconfig.app.json extends Vue's DOM tsconfig and includes src, playground, and docs.
   - tsconfig.vitest.json enables jsdom and node types for test environments.
   - Path aliases @/* mapped to src/ in both app and test configs.
 
@@ -398,11 +443,20 @@ Test-->>Runner : "Assertions and coverage"
 - Use Vue Devtools integration (vite-plugin-vue-devtools) for component inspection and reactive state tracing.
 - Enable silent logging for passed tests in Vitest to reduce noise; adjust verbosity as needed.
 - For browser tests, run in headless mode by default; switch to headed mode locally if needed for visual debugging.
-- Leverage Vitest’s coverage reports to identify untested code paths and optimize tests.
+- Leverage Vitest's coverage reports to identify untested code paths and optimize tests.
 
 **Section sources**
 - [vite.config.ts](file://vite.config.ts)
 - [vitest.config.ts](file://vitest.config.ts)
 
 ## Conclusion
-This guide consolidates the essential practices for developing, testing, releasing, and maintaining V-Float. By following the setup instructions, adhering to Biome and TypeScript standards, writing comprehensive unit and browser tests, and participating in the documented governance and CI/CD processes, contributors can efficiently collaborate and deliver high-quality updates to the library.
+This guide consolidates the essential practices for developing, testing, releasing, and maintaining V-Float. By following the setup instructions, adhering to Biome and TypeScript standards, writing comprehensive unit and browser tests with enhanced cleanup infrastructure, and participating in the documented governance and CI/CD processes, contributors can efficiently collaborate and deliver high-quality updates to the library.
+
+The enhanced testing infrastructure improvements ensure better resource management, improved test stability, and more reliable test execution through:
+- Set-based cleanup mechanisms for automatic resource management
+- Centralized element tracking with consistent cleanup patterns
+- Explicit timer handling for deterministic timing control
+- Standardized import patterns for better code organization
+- Comprehensive cleanup strategies in afterEach hooks
+
+These improvements collectively contribute to a more robust and maintainable testing framework that supports the project's development goals.
