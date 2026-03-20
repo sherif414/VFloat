@@ -45,11 +45,6 @@
             <DropdownDemo />
           </div>
 
-          <!-- Popover Demo -->
-          <div v-if="activeDemo === 'popover'" class="demo-content">
-            <PopoverDemo />
-          </div>
-
           <!-- Context Menu Demo -->
           <div v-if="activeDemo === 'context-menu'" class="demo-content">
             <ContextMenuDemo />
@@ -74,7 +69,6 @@
 import { onBeforeUnmount, onMounted, ref } from "vue"
 import TooltipDemo from "./demos/TooltipDemo.vue"
 import DropdownDemo from "./demos/DropdownDemo.vue"
-import PopoverDemo from "./demos/PopoverDemo.vue"
 import ContextMenuDemo from "./demos/ContextMenuDemo.vue"
 import MiddlewareDemo from "./demos/MiddlewareDemo.vue"
 import CursorFollowDemo from "./demos/CursorFollowDemo.vue"
@@ -82,7 +76,6 @@ import CursorFollowDemo from "./demos/CursorFollowDemo.vue"
 const demos = [
   { id: "tooltip", name: "Tooltip" },
   { id: "dropdown", name: "Dropdown" },
-  { id: "popover", name: "Popover" },
   { id: "context-menu", name: "Context Menu" },
   { id: "cursor-follow", name: "Cursor Follow" },
   { id: "middleware", name: "Middleware" },
