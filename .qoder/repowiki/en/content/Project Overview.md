@@ -18,6 +18,14 @@
 - [src/types.ts](file://src/types.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Removed references to floating tree capabilities and nested element support
+- Simplified feature list to reflect the current API approach
+- Updated core components section to focus on the streamlined composable architecture
+- Removed advanced features section that referenced complex nested scenarios
+- Updated introduction to emphasize the simplified, focused approach
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -30,13 +38,12 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-V-Float is a Vue 3 floating UI positioning library built on top of @floating-ui/dom. It provides a comprehensive set of composables for precise, reactive positioning of floating elements (tooltips, popovers, dropdowns, and modals) with robust interaction handling, middleware support, and advanced features like nested element trees and client-point positioning.
+V-Float is a Vue 3 floating UI positioning library built on top of @floating-ui/dom. It provides a streamlined set of composables for precise, reactive positioning of floating elements (tooltips, popovers, dropdowns, and modals) with robust interaction handling and middleware support.
 
 The library emphasizes:
 - Pixel-perfect positioning with automatic collision detection
-- Vue 3 Composition API-first design
+- Vue 3 Composition API-first design with simplified, focused composables
 - Built-in interaction behaviors (hover, focus, click, escape key)
-- Nested floating element hierarchies
 - Arrow positioning and client-point tracking
 - Lightweight, tree-shakeable architecture
 - Full TypeScript support with comprehensive type definitions
@@ -45,7 +52,7 @@ The library emphasizes:
 Project status: Work-in-progress with rapid evolution. Expect breaking changes without deprecation windows. APIs, documentation, and examples may change frequently.
 
 **Section sources**
-- [README.md:1-347](file://README.md#L1-L347)
+- [README.md:1-216](file://README.md#L1-L216)
 - [package.json:1-77](file://package.json#L1-L77)
 
 ## Project Structure
@@ -122,7 +129,7 @@ V-Float provides three primary categories of composables:
 - **Arrow middleware**: Automatic positioning of arrow elements based on placement data
 
 **Section sources**
-- [README.md:154-317](file://README.md#L154-L317)
+- [README.md:153-179](file://README.md#L153-L179)
 - [src/composables/positioning/use-floating.ts:196-362](file://src/composables/positioning/use-floating.ts#L196-L362)
 - [src/composables/positioning/use-arrow.ts:68-129](file://src/composables/positioning/use-arrow.ts#L68-L129)
 - [src/composables/positioning/use-client-point.ts:498-681](file://src/composables/positioning/use-client-point.ts#L498-L681)
@@ -323,29 +330,28 @@ VF -.-> UNO
 
 ## Performance Considerations
 V-Float implements several performance optimizations:
-
-- **Device Pixel Ratio Compensation**: Automatic rounding to prevent blurry positioning on high-DPI displays
-- **Transform-Based Positioning**: Defaults to CSS transforms for hardware acceleration
-- **Selective Event Listeners**: Only registers necessary pointer events based on tracking strategy
-- **Automatic Cleanup**: Proper cleanup of event listeners and watchers on component unmount
-- **Reactive Middleware**: Efficient middleware composition with automatic updates
+- Device Pixel Ratio Compensation: Automatic rounding to prevent blurry positioning on high-DPI displays
+- Transform-Based Positioning: Defaults to CSS transforms for hardware acceleration
+- Selective Event Listeners: Only registers necessary pointer events based on tracking strategy
+- Automatic Cleanup: Proper cleanup of event listeners and watchers on component unmount
+- Reactive Middleware: Efficient middleware composition with automatic updates
 
 ## Troubleshooting Guide
 Common issues and solutions:
 
 ### Positioning Issues
-- **Elements not positioning**: Verify anchor and floating elements are properly referenced and mounted
-- **Blurry text on high-DPI displays**: Ensure transform mode is enabled for crisp rendering
-- **Position not updating**: Check autoUpdate configuration and ensure elements are reactive
+- Elements not positioning: Verify anchor and floating elements are properly referenced and mounted
+- Blurry text on high-DPI displays: Ensure transform mode is enabled for crisp rendering
+- Position not updating: Check autoUpdate configuration and ensure elements are reactive
 
 ### Interaction Problems
-- **Hover not working**: Verify pointer type validation and safe polygon configuration
-- **Click outside detection failing**: Check event capture settings and document listener registration
-- **Keyboard navigation issues**: Ensure focus management and virtual focus configurations are correct
+- Hover not working: Verify pointer type validation and safe polygon configuration
+- Click outside detection failing: Check event capture settings and document listener registration
+- Keyboard navigation issues: Ensure focus management and virtual focus configurations are correct
 
 ### TypeScript Integration
-- **Missing type definitions**: Verify TypeScript configuration includes Vue and DOM libraries
-- **Type errors with virtual elements**: Ensure proper VirtualElement interface implementation
+- Missing type definitions: Verify TypeScript configuration includes Vue and DOM libraries
+- Type errors with virtual elements: Ensure proper VirtualElement interface implementation
 
 **Section sources**
 - [src/composables/positioning/use-floating.ts:371-383](file://src/composables/positioning/use-floating.ts#L371-L383)

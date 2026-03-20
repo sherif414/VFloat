@@ -4,6 +4,8 @@
 **Referenced Files in This Document**
 - [src/index.ts](file://src/index.ts)
 - [src/composables/index.ts](file://src/composables/index.ts)
+- [src/composables/positioning/index.ts](file://src/composables/positioning/index.ts)
+- [src/composables/interactions/index.ts](file://src/composables/interactions/index.ts)
 - [src/types.ts](file://src/types.ts)
 - [src/composables/positioning/use-floating.ts](file://src/composables/positioning/use-floating.ts)
 - [src/composables/positioning/use-arrow.ts](file://src/composables/positioning/use-arrow.ts)
@@ -18,7 +20,15 @@
 - [src/composables/utils/use-active-descendant.ts](file://src/composables/utils/use-active-descendant.ts)
 - [src/utils.ts](file://src/utils.ts)
 - [package.json](file://package.json)
+- [docs/.vitepress/config.mts](file://docs/.vitepress/config.mts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Removed useFloatingTree from the navigation system and API documentation
+- Updated VitePress configuration to eliminate floating tree section from both main navigation and API reference sections
+- Removed floating tree references from core components and detailed component analysis sections
+- Updated table of contents to reflect the removal of floating tree documentation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,6 +50,8 @@ This API reference documents the public interfaces of VFloat, a Vue 3 port of Fl
 - FloatingContext structure, floatingStyles object, and middleware contracts
 - Virtual element contracts and event callback signatures
 - Practical usage patterns and examples
+
+**Updated** Removed useFloatingTree from the API reference as it has been eliminated from the navigation system and documentation.
 
 ## Project Structure
 VFloat exposes its public API via barrel exports. The main export re-exports composables from three categories:
@@ -93,6 +105,8 @@ This section summarizes the primary exported APIs grouped by category.
 - Utilities
   - useActiveDescendant: Manages aria-activedescendant for virtual focus
   - General helpers: element/type guards, pointer detection, focus-visible, event utilities
+
+**Updated** Removed useFloatingTree from core components as it has been removed from the navigation system.
 
 **Section sources**
 - [src/composables/positioning/use-floating.ts:196-362](file://src/composables/positioning/use-floating.ts#L196-L362)
@@ -435,7 +449,7 @@ Common usage patterns:
   - padding: number | { top, bottom, left, right,[] }
   - element: Ref<HTMLElement | null>
 - Behavior:
-  - Wraps Floating UI’s arrow middleware
+  - Wraps Floating UI's arrow middleware
   - Returns middleware with name "arrow"
 
 Common usage patterns:
@@ -467,7 +481,7 @@ Common usage patterns:
 
 ### Event Callback Signatures and Reasons
 - OpenChangeReason union:
-  - "anchor-click", "keyboard-activate", "outside-pointer", "focus", "blur", "hover", "escape-key", "tree-ancestor-close", "programmatic"
+  - "anchor-click", "keyboard-activate", "outside-pointer", "focus", "blur", "hover", "escape-key", "programmatic"
 - Event callbacks:
   - onOpenChange(open, reason, event?) in useFloating
   - onOutsideClick(MouseEvent) in useClick
@@ -559,6 +573,8 @@ UAD["useActiveDescendant"] --> ULN
 ## Conclusion
 VFloat provides a comprehensive, reactive API for floating element positioning and interactions in Vue 3. By composing useFloating with interactions and middlewares, you can build accessible, performant overlays with minimal boilerplate. Use the FloatingContext contract to coordinate state and styles, and leverage the provided utilities for robust behavior across devices and input methods.
 
+**Updated** Removed references to useFloatingTree as it has been removed from the API surface.
+
 ## Appendices
 
 ### Type Definitions
@@ -579,3 +595,10 @@ VFloat provides a comprehensive, reactive API for floating element positioning a
 **Section sources**
 - [package.json:10-18](file://package.json#L10-L18)
 - [package.json:39-46](file://package.json#L39-L46)
+
+### VitePress Configuration
+The VitePress configuration has been updated to remove floating tree references from both the main navigation and API reference sections.
+
+**Section sources**
+- [docs/.vitepress/config.mts:27-31](file://docs/.vitepress/config.mts#L27-L31)
+- [docs/.vitepress/config.mts:53-89](file://docs/.vitepress/config.mts#L53-L89)
