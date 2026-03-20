@@ -89,6 +89,65 @@ describe("useClick", () => {
       expect(context.open.value).toBe(false)
     })
 
+    it("opens but does not toggle when toggle is false", async () => {
+      initClick({ toggle: false })
+      await nextTick()
+      expect(context.open.value).toBe(false)
+
+      // First click should open
+      await userEvent.click(referenceEl)
+      await nextTick()
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
+      expect(context.open.value).toBe(true)
+
+      // Second click should NOT close (toggle behavior disabled)
+      await userEvent.click(referenceEl)
+      await nextTick()
+      expect(setOpenMock).toHaveBeenCalledTimes(1) // Still only called once
+      expect(context.open.value).toBe(true)
+
+      // Third click should also NOT close
+      await userEvent.click(referenceEl)
+      await nextTick()
+      expect(setOpenMock).toHaveBeenCalledTimes(1) // Still only called once
+      expect(context.open.value).toBe(true)
+    })
+
+    it("can be closed via outside click when toggle is false", async () => {
+      const outsideElement = trackElement(document.createElement("div"))
+      outsideElement.id = "outside"
+      outsideElement.textContent = "Outside"
+      Object.assign(outsideElement.style, {
+        position: "fixed",
+        bottom: "0",
+        left: "0",
+        width: "100px",
+        height: "100px",
+        zIndex: "1",
+      })
+      document.body.appendChild(outsideElement)
+
+      initClick({ toggle: false, outsideClick: true })
+      await nextTick()
+      expect(context.open.value).toBe(false)
+
+      // Open with reference click
+      await userEvent.click(referenceEl)
+      await nextTick()
+      expect(context.open.value).toBe(true)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
+      setOpenMock.mockClear()
+
+      // But clicking outside SHOULD close it
+      await userEvent.click(outsideElement)
+      await nextTick()
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object))
+      expect(context.open.value).toBe(false)
+    })
+
     it("does not toggle on mouse click if ignoreMouse is true", async () => {
       initClick({ ignoreMouse: true })
       expect(context.open.value).toBe(false)
