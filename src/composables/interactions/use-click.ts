@@ -80,7 +80,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   // Timeout used to clear `dragStartedInside` after a `mouseup`.
   // Stored so we can cancel/avoid late updates on unmount/anchor change.
-  let dragResetTimeoutId: ReturnType<typeof window.setTimeout> | undefined
+  let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined
 
   const isEnabled = computed(() => toValue(enabled))
   const isOutsideClickEnabled = computed(() => toValue(outsideClick))
@@ -263,7 +263,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   function onFloatingMouseUp() {
     // Reset drag state after a brief delay to allow click events to process
     clearDragResetTimeout()
-    dragResetTimeoutId = window.setTimeout(() => {
+    dragResetTimeoutId = setTimeout(() => {
       interactionState.dragStartedInside = false
     }, 0)
   }
