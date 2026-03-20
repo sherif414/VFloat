@@ -36,7 +36,7 @@ useFocusTrap(context, {
 })
 
 useClick(context, {
-  outsideClick: true
+  closeOnOutsideClick: true
 })
 
 </script>

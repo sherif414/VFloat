@@ -46,7 +46,7 @@ useFocusTrap(context, {
 })
 
 useClick(context, {
-  outsideClick: true
+  closeOnOutsideClick: true
 })
 
 // Helper functions for testing

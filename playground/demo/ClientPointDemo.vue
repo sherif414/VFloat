@@ -67,7 +67,7 @@ const { coordinates: contextCoords } = useClientPoint(contextReference, contextM
 
 // Click handling for context menu outside clicks
 useClick(contextMenuContext, {
-  outsideClick: true,
+  closeOnOutsideClick: true,
 })
 
 // Format coordinates based on axis mode

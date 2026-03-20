@@ -31,7 +31,7 @@ import {
  * const context = useFloating(...)
  * useClick(context, {
  *   toggle: true,
- *   outsideClick: true,
+ *   closeOnOutsideClick: true,
  *   outsideEvent: 'pointerdown'
  * })
  * ```
@@ -39,7 +39,7 @@ import {
  * @example Custom outside click handler
  * ```ts
  * useClick(context, {
- *   outsideClick: true,
+ *   closeOnOutsideClick: true,
  *   onOutsideClick: (event) => {
  *     if (confirm("Close dialog?")) {
  *       context.setOpen(false)
@@ -58,12 +58,12 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     ignoreKeyboard = false,
     ignoreTouch = false,
     // Outside click options
-    outsideClick = false,
+    closeOnOutsideClick = false,
     outsideEvent = "pointerdown",
     outsideCapture = true,
     onOutsideClick,
-    preventScrollbarClick = true,
-    handleDragEvents = true,
+    ignoreScrollbar = true,
+    ignoreDrag = true,
   } = options
 
   //=====================================================================================
@@ -83,7 +83,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined
 
   const isEnabled = computed(() => toValue(enabled))
-  const isOutsideClickEnabled = computed(() => toValue(outsideClick))
+  const isOutsideClickEnabled = computed(() => toValue(closeOnOutsideClick))
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value
@@ -224,7 +224,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
     // Clicked on a scrollbar
     if (
-      toValue(preventScrollbarClick) &&
+      toValue(ignoreScrollbar) &&
       isHTMLElement(target) &&
       floatingEl.value &&
       isClickOnScrollbar(event, target)
@@ -249,7 +249,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   function suppressOutsideClickForDragSequence(): boolean {
     if (toValue(outsideEvent) !== "click") return false
-    if (!toValue(handleDragEvents)) return false
+    if (!toValue(ignoreDrag)) return false
     if (!interactionState.dragStartedInside) return false
 
     interactionState.dragStartedInside = false
@@ -326,7 +326,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   // Floating element listeners for drag detection
   useEventListener(
     () =>
-      isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents)
+      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDrag)
         ? floatingEl.value
         : null,
     "mousedown",
@@ -336,7 +336,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   useEventListener(
     () =>
-      isEnabled.value && isOutsideClickEnabled.value && toValue(handleDragEvents)
+      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDrag)
         ? floatingEl.value
         : null,
     "mouseup",
@@ -395,10 +395,10 @@ export interface UseClickOptions {
   // --- Outside Click Options ---
 
   /**
-   * Whether to enable outside click detection to close the floating element.
+   * Whether to close the floating element when clicking outside.
    * @default false
    */
-  outsideClick?: MaybeRefOrGetter<boolean>
+  closeOnOutsideClick?: MaybeRefOrGetter<boolean>
 
   /**
    * The event to use for outside click detection.
@@ -420,14 +420,15 @@ export interface UseClickOptions {
   onOutsideClick?: (event: MouseEvent) => void
 
   /**
-   * Whether to prevent clicks on scrollbars from triggering outside click.
+   * Whether to ignore clicks on scrollbars (prevent them from closing the floating element).
    * @default true
    */
-  preventScrollbarClick?: MaybeRefOrGetter<boolean>
+  ignoreScrollbar?: MaybeRefOrGetter<boolean>
 
   /**
-   * Whether to handle drag events that start inside and end outside.
+   * Whether to ignore outside clicks that are part of a drag sequence
+   * (where the drag started inside the floating element and ended outside).
    * @default true
    */
-  handleDragEvents?: MaybeRefOrGetter<boolean>
+  ignoreDrag?: MaybeRefOrGetter<boolean>
 }

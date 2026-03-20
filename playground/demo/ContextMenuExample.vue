@@ -55,7 +55,7 @@ useClientPoint(contextReference, contextMenuContext, {
 
 // Handle outside clicks to close menu
 useClick(contextMenuContext, {
-  outsideClick: true,
+  closeOnOutsideClick: true,
 })
 
 function showContextMenu(event: MouseEvent) {

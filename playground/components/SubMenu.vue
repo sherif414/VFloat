@@ -47,7 +47,7 @@ useHover(node, {
   },
 })
 
-useClick(node, { outsideClick: true })
+useClick(node, { closeOnOutsideClick: true })
 </script>
 
 <template>

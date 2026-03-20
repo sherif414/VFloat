@@ -132,7 +132,7 @@ describe("useClick", () => {
     it("can be closed via outside click when toggle is false", async () => {
       const outsideElement = createOutsideElement()
 
-      initClick({ toggle: false, outsideClick: true })
+      initClick({ toggle: false, closeOnOutsideClick: true })
       await nextTick()
       expect(context.open.value).toBe(false)
 
@@ -189,7 +189,7 @@ describe("useClick", () => {
     })
 
     it("ignores outside click after drag that started inside when outsideEvent is 'click'", async () => {
-      initClick({ outsideClick: true, outsideEvent: "click", handleDragEvents: true })
+      initClick({ closeOnOutsideClick: true, outsideEvent: "click", ignoreDrag: true })
 
       await userEvent.click(anchorEl)
       expect(context.open.value).toBe(true)
@@ -197,14 +197,12 @@ describe("useClick", () => {
 
       floatingEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }))
 
-      const outside = trackElement(document.createElement("div"))
-      document.body.appendChild(outside)
+      const outside = createOutsideElement()
       outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
       await nextTick()
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
-      // outside is tracked and will be cleaned up in afterEach
     })
 
 
@@ -332,7 +330,7 @@ describe("useClick", () => {
     it("supports complete interaction flow: open with inside click, close with outside click", async () => {
       const outsideElement = createOutsideElement()
 
-      initClick({ outsideClick: true, toggle: true })
+      initClick({ closeOnOutsideClick: true, toggle: true })
       expect(context.open.value).toBe(false)
 
       await userEvent.click(anchorEl)
@@ -353,7 +351,7 @@ describe("useClick", () => {
     it("supports toggle behavior with outside click enabled", async () => {
       const outsideElement = createOutsideElement()
 
-      initClick({ outsideClick: true, toggle: true })
+      initClick({ closeOnOutsideClick: true, toggle: true })
 
       await userEvent.click(anchorEl)
       expect(context.open.value).toBe(true)
@@ -377,7 +375,7 @@ describe("useClick", () => {
       const outsideElement = createOutsideElement()
 
       const enabled = ref(false)
-      initClick({ enabled, outsideClick: true })
+      initClick({ enabled, closeOnOutsideClick: true })
 
       await userEvent.click(anchorEl)
       expect(setOpenMock).not.toHaveBeenCalled()

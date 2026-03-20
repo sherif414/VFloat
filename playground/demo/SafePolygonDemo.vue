@@ -127,7 +127,7 @@ useHover(floatingTree.root, {
   },
 })
 
-useClick(floatingTree.root, { outsideClick: true })
+useClick(floatingTree.root, { closeOnOutsideClick: true })
 
 useHover(childNode, {
   delay: { open: 50, close: 150 },
@@ -140,7 +140,7 @@ useHover(childNode, {
   },
 })
 
-useClick(childNode, { outsideClick: true })
+useClick(childNode, { closeOnOutsideClick: true })
 
 useHover(grandChildNode, {
   delay: { open: 50, close: 100 },
@@ -153,7 +153,7 @@ useHover(grandChildNode, {
   },
 })
 
-useClick(grandChildNode, { outsideClick: true })
+useClick(grandChildNode, { closeOnOutsideClick: true })
 
 // Computed SVG points for visualization
 const basicSvgPoints = computed(() => {

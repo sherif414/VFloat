@@ -40,7 +40,7 @@ useEscapeKey(rootNode, {
   },
 })
 
-useClick(rootNode, { outsideClick: true })
+useClick(rootNode, { closeOnOutsideClick: true })
 
 onUnmounted(() => {
   tree.dispose()
