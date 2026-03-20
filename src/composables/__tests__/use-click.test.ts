@@ -1,6 +1,6 @@
 import { userEvent } from "vitest/browser"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { effectScope, nextTick, ref, shallowRef } from "vue"
+import { effectScope, nextTick, ref } from "vue"
 import { type UseClickOptions,type UseClickContext, useClick } from "@/composables/interactions"
 
 // Track elements created during tests for cleanup
@@ -9,6 +9,15 @@ const elementsToCleanUp: HTMLElement[] = []
 function trackElement(el: HTMLElement): HTMLElement {
   elementsToCleanUp.push(el)
   return el
+}
+
+function clearTrackedElements() {
+  for (const el of elementsToCleanUp) {
+    if (el.isConnected) {
+      document.body.removeChild(el)
+    }
+  }
+  elementsToCleanUp.length = 0
 }
 
 describe("useClick", () => {
@@ -50,13 +59,7 @@ describe("useClick", () => {
 
   afterEach(() => {
     scope?.stop()
-    // Clean up all tracked elements
-    for (const el of elementsToCleanUp) {
-      if (el.isConnected) {
-        document.body.removeChild(el)
-      }
-    }
-    elementsToCleanUp.length = 0
+    clearTrackedElements()
     vi.clearAllMocks()
   })
 
