@@ -1,6 +1,6 @@
 import type { PointerType } from "@vueuse/core"
 import { useEventListener } from "@vueuse/core"
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import { computed, type MaybeRefOrGetter, onScopeDispose, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import type { OpenChangeReason } from "@/types"
 import {
@@ -40,11 +40,11 @@ import {
  * ```ts
  * useClick(context, {
  *   outsideClick: true,
- *   onOutsideClick: (event, context) => {
- *     if (confirm('Close dialog?')) {
+ *   onOutsideClick: (event) => {
+ *     if (confirm("Close dialog?")) {
  *       context.setOpen(false)
  *     }
- *   }
+ *   },
  * })
  * ```
  */
@@ -66,10 +66,21 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     handleDragEvents = true,
   } = options
 
-  let pointerType: PointerType | undefined
-  let didKeyDown = false
-  let dragStartedInside = false
-  let interactionInProgress = false
+  //=====================================================================================
+  // Interaction State
+  //=====================================================================================
+  // Kept as plain locals (not refs/reactive) because they only coordinate
+  // intra-event ordering and short-lived suppression windows.
+  const interactionState = {
+    pointerType: undefined as PointerType | undefined,
+    didKeyDown: false,
+    dragStartedInside: false,
+    interactionInProgress: false,
+  }
+
+  // Timeout used to clear `dragStartedInside` after a `mouseup`.
+  // Stored so we can cancel/avoid late updates on unmount/anchor change.
+  let dragResetTimeoutId: ReturnType<typeof window.setTimeout> | undefined
 
   const isEnabled = computed(() => toValue(enabled))
   const isOutsideClickEnabled = computed(() => toValue(outsideClick))
@@ -82,60 +93,73 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   const floatingEl = computed(() => refs.floatingEl.value)
 
-  // --- Event Handlers --- //
+  //=====================================================================================
+  // Event Handlers (Anchor & Outside)
+  //=====================================================================================
+
+  function clearDragResetTimeout() {
+    if (dragResetTimeoutId == null) return
+    clearTimeout(dragResetTimeoutId)
+    dragResetTimeoutId = undefined
+  }
 
   function handleOpenChange(reason: OpenChangeReason, event: Event) {
-    interactionInProgress = true
+    interactionState.interactionInProgress = true
     try {
       if (open.value) {
+        // When `toggle` is enabled, anchor clicks toggle open/closed.
         toValue(toggle) && setOpen(false, reason, event)
       } else {
         setOpen(true, reason, event)
       }
     } finally {
-      // Reset interaction state after a micro-task to allow events to complete bubbling.
-      // This protects against the event reaching the document "outside click" listener
-      // in the same tick, which would immediately close the element we just opened.
+      // Reset after a micro-task so the same native event can finish bubbling
+      // before the document-level outside listener potentially closes the element.
       queueMicrotask(() => {
-        interactionInProgress = false
+        interactionState.interactionInProgress = false
       })
     }
   }
 
   function resetInteractionState() {
-    pointerType = undefined
-    didKeyDown = false
-    dragStartedInside = false
+    interactionState.pointerType = undefined
+    interactionState.didKeyDown = false
+    interactionState.dragStartedInside = false
+    clearDragResetTimeout()
   }
 
   function onPointerDown(e: PointerEvent) {
-    pointerType = e.pointerType as PointerType
+    interactionState.pointerType = e.pointerType as PointerType
+  }
+
+  function isSyntheticKeyboardClick(e: MouseEvent): boolean {
+    // When keyboard interactions are disabled, browsers may still dispatch a
+    // click after Enter/Space activation on some elements.
+    return toValue(ignoreKeyboard) && e.detail === 0
   }
 
   function onMouseDown(e: MouseEvent) {
     // Ignore non-primary buttons
     if (e.button !== 0) return
     if (toValue(eventOption) === "click") return
-    if (shouldIgnorePointerType(pointerType)) return
+    if (shouldIgnorePointerType(interactionState.pointerType)) return
 
     handleOpenChange("anchor-click", e)
   }
 
   function onClick(e: MouseEvent): void {
-    // Ignore synthetic keyboard clicks (detail === 0) when keyboard interactions are disabled.
-    // Browsers dispatch a native click after keyboard activation (Enter/Space) on certain elements.
-    if (toValue(ignoreKeyboard) && e.detail === 0) {
+    if (isSyntheticKeyboardClick(e)) {
       resetInteractionState()
       return
     }
 
-    if (toValue(eventOption) === "mousedown" && pointerType) {
+    if (toValue(eventOption) === "mousedown" && interactionState.pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
       resetInteractionState()
       return
     }
 
-    if (shouldIgnorePointerType(pointerType)) {
+    if (shouldIgnorePointerType(interactionState.pointerType)) {
       resetInteractionState()
       return
     }
@@ -145,7 +169,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    pointerType = undefined
+    interactionState.pointerType = undefined
 
     if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e)) {
       return
@@ -157,7 +181,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     if (e.key === " " && !isSpaceIgnored(el)) {
       // Prevent scrolling
       e.preventDefault()
-      didKeyDown = true
+      interactionState.didKeyDown = true
     }
 
     if (e.key === "Enter") {
@@ -173,8 +197,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return
     }
 
-    if (e.key === " " && didKeyDown) {
-      didKeyDown = false
+    if (e.key === " " && interactionState.didKeyDown) {
+      interactionState.didKeyDown = false
       handleOpenChange("keyboard-activate", e)
     }
   }
@@ -186,14 +210,12 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return
     }
 
-    // A `mousedown` or `pointerdown` event started inside and ended outside.
-    if (toValue(outsideEvent) === "click" && toValue(handleDragEvents) && dragStartedInside) {
-      dragStartedInside = false
-      return
-    }
+    // Suppress outside-close for click sequences caused by a drag that started
+    // inside the floating content.
+    if (suppressOutsideClickForDragSequence()) return
 
     // Don't process outside clicks during ongoing interactions
-    if (interactionInProgress) {
+    if (interactionState.interactionInProgress) {
       return
     }
 
@@ -225,18 +247,30 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     }
   }
 
+  function suppressOutsideClickForDragSequence(): boolean {
+    if (toValue(outsideEvent) !== "click") return false
+    if (!toValue(handleDragEvents)) return false
+    if (!interactionState.dragStartedInside) return false
+
+    interactionState.dragStartedInside = false
+    return true
+  }
+
   function onFloatingMouseDown() {
-    dragStartedInside = true
+    interactionState.dragStartedInside = true
   }
 
   function onFloatingMouseUp() {
     // Reset drag state after a brief delay to allow click events to process
-    setTimeout(() => {
-      dragStartedInside = false
+    clearDragResetTimeout()
+    dragResetTimeoutId = window.setTimeout(() => {
+      interactionState.dragStartedInside = false
     }, 0)
   }
 
-  // --- Helper Functions ---
+  //=====================================================================================
+  // Helper Functions
+  //=====================================================================================
 
   function shouldIgnorePointerType(type: PointerType | undefined): boolean {
     if (isMouseLikePointerType(type, true) && toValue(ignoreMouse)) {
@@ -248,7 +282,14 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     return false
   }
 
-  // --- Watch for changes in enabled state or reference element ---
+  // Ensure the drag suppression timer can't update state after unmount.
+  onScopeDispose(() => {
+    clearDragResetTimeout()
+  })
+
+  //=====================================================================================
+  // Wiring: attach handlers to the current anchor element
+  //=====================================================================================
 
   watchPostEffect(() => {
     const el = anchorEl.value
@@ -266,17 +307,18 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       el.removeEventListener("click", onClick)
       el.removeEventListener("keydown", onKeyDown)
       el.removeEventListener("keyup", onKeyUp)
-      // Reset state on cleanup
       resetInteractionState()
     })
   })
 
-  // --- Outside Click Listeners ---
+  //=====================================================================================
+  // Wiring: document outside-click listener + drag suppression on floating
+  //=====================================================================================
 
   // Document listener for outside clicks
   useEventListener(
     () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
-    () => toValue(outsideEvent),
+    outsideEvent,
     onOutsideClickHandler,
     { capture: toValue(outsideCapture) }
   )
