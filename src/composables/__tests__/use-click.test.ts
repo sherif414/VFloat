@@ -20,6 +20,21 @@ function clearTrackedElements() {
   elementsToCleanUp.length = 0
 }
 
+function createOutsideElement(): HTMLElement {
+  const outsideElement = trackElement(document.createElement("div"))
+  outsideElement.id = "outside"
+  Object.assign(outsideElement.style, {
+    position: "fixed",
+    bottom: "0",
+    left: "0",
+    width: "100px",
+    height: "100px",
+    zIndex: "1",
+  })
+  document.body.appendChild(outsideElement)
+  return outsideElement
+}
+
 describe("useClick", () => {
   let context: UseClickContext
   let referenceEl: HTMLElement
@@ -115,18 +130,7 @@ describe("useClick", () => {
     })
 
     it("can be closed via outside click when toggle is false", async () => {
-      const outsideElement = trackElement(document.createElement("div"))
-      outsideElement.id = "outside"
-      outsideElement.textContent = "Outside"
-      Object.assign(outsideElement.style, {
-        position: "fixed",
-        bottom: "0",
-        left: "0",
-        width: "100px",
-        height: "100px",
-        zIndex: "1",
-      })
-      document.body.appendChild(outsideElement)
+      const outsideElement = createOutsideElement()
 
       initClick({ toggle: false, outsideClick: true })
       await nextTick()
@@ -326,18 +330,7 @@ describe("useClick", () => {
 
   describe("integration: inside and outside clicks", () => {
     it("supports complete interaction flow: open with inside click, close with outside click", async () => {
-      const outsideElement = trackElement(document.createElement("div"))
-      outsideElement.id = "outside"
-      outsideElement.textContent = "Outside"
-      Object.assign(outsideElement.style, {
-        position: "fixed",
-        bottom: "0",
-        left: "0",
-        width: "100px",
-        height: "100px",
-        zIndex: "1",
-      })
-      document.body.appendChild(outsideElement)
+      const outsideElement = createOutsideElement()
 
       initClick({ outsideClick: true, toggle: true })
       expect(context.open.value).toBe(false)
@@ -358,17 +351,7 @@ describe("useClick", () => {
     })
 
     it("supports toggle behavior with outside click enabled", async () => {
-      const outsideElement = trackElement(document.createElement("div"))
-      outsideElement.id = "outside"
-      Object.assign(outsideElement.style, {
-        position: "fixed",
-        bottom: "0",
-        left: "0",
-        width: "100px",
-        height: "100px",
-        zIndex: "1",
-      })
-      document.body.appendChild(outsideElement)
+      const outsideElement = createOutsideElement()
 
       initClick({ outsideClick: true, toggle: true })
 
@@ -391,17 +374,7 @@ describe("useClick", () => {
     })
 
     it("respects disabled state for both inside and outside clicks", async () => {
-      const outsideElement = trackElement(document.createElement("div"))
-      outsideElement.id = "outside"
-      Object.assign(outsideElement.style, {
-        position: "fixed",
-        bottom: "0",
-        left: "0",
-        width: "100px",
-        height: "100px",
-        zIndex: "1",
-      })
-      document.body.appendChild(outsideElement)
+      const outsideElement = createOutsideElement()
 
       const enabled = ref(false)
       initClick({ enabled, outsideClick: true })
