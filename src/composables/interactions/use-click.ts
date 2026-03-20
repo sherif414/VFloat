@@ -17,8 +17,8 @@ import {
 //=======================================================================================
 
 /**
- * Enables showing/hiding the floating element when clicking the reference element
- * and optionally when clicking outside both the reference and floating elements.
+ * Enables showing/hiding the floating element when clicking the anchor element
+ * and optionally when clicking outside both the anchor and floating elements.
  *
  * This composable provides unified event handlers for both inside click interactions
  * (to open/toggle floating elements) and outside click interactions (to close them).
