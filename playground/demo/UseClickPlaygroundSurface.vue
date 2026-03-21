@@ -19,7 +19,7 @@ interface PlaygroundControls {
   ignoreKeyboard: boolean;
   ignoreTouch: boolean;
   closeOnOutsideClick: boolean;
-  outsideEvent: UseClickOutsideEvent;
+  outsideClickEvent: UseClickOutsideEvent;
   outsideCapture: boolean;
   ignoreScrollbar: boolean;
   ignoreDrag: boolean;
@@ -103,7 +103,7 @@ useClick(context, {
   ignoreKeyboard: () => props.controls.ignoreKeyboard,
   ignoreTouch: () => props.controls.ignoreTouch,
   closeOnOutsideClick: () => props.controls.closeOnOutsideClick,
-  outsideEvent: () => props.controls.outsideEvent,
+  outsideClickEvent: () => props.controls.outsideClickEvent,
   outsideCapture: () => props.controls.outsideCapture,
   ignoreScrollbar: () => props.controls.ignoreScrollbar,
   ignoreDrag: () => props.controls.ignoreDrag,
@@ -137,7 +137,7 @@ watch(
 const dragHintActive = computed(
   () =>
     props.controls.closeOnOutsideClick &&
-    props.controls.outsideEvent === "click",
+    props.controls.outsideClickEvent === "click",
 );
 
 const interactionLabels = computed(() => {
@@ -149,7 +149,7 @@ const interactionLabels = computed(() => {
   labels.push(props.controls.toggle ? "toggle on repeat click" : "open only");
 
   if (props.controls.closeOnOutsideClick) {
-    labels.push(`outside closes on ${props.controls.outsideEvent}`);
+    labels.push(`outside closes on ${props.controls.outsideClickEvent}`);
   } else {
     labels.push("outside dismissal disabled");
   }
@@ -290,7 +290,7 @@ function closeFromPanel() {
           {{ open ? "Open" : "Closed" }}
         </span>
         <span class="mode-pill">{{ props.controls.event }} trigger</span>
-        <span class="mode-pill">{{ props.controls.outsideEvent }} outside</span>
+    <span class="mode-pill">{{ props.controls.outsideClickEvent }} outside</span>
       </div>
     </header>
 
@@ -396,7 +396,7 @@ function closeFromPanel() {
         {{
           dragHintActive
             ? "Drag test is active. Press inside the floating panel, drag out, then release."
-            : "Set outsideEvent to click to test drag suppression with ignoreDrag."
+            : "Set outsideClickEvent to click to test drag suppression with ignoreDrag."
         }}
       </div>
     </footer>
@@ -434,7 +434,7 @@ function closeFromPanel() {
           <p>
             Press anywhere in this panel, drag the pointer outside, and release.
             When
-            <code>outsideEvent</code> is <code>click</code>,
+          <code>outsideClickEvent</code> is <code>click</code>,
             <code>ignoreDrag</code> decides whether that release should dismiss.
           </p>
         </div>

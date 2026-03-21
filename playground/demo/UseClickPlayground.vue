@@ -18,7 +18,7 @@ interface PlaygroundControls {
   ignoreKeyboard: boolean;
   ignoreTouch: boolean;
   closeOnOutsideClick: boolean;
-  outsideEvent: UseClickOutsideEvent;
+  outsideClickEvent: UseClickOutsideEvent;
   outsideCapture: boolean;
   ignoreScrollbar: boolean;
   ignoreDrag: boolean;
@@ -59,7 +59,7 @@ const presets: Preset[] = [
       event: "click",
       toggle: true,
       closeOnOutsideClick: true,
-      outsideEvent: "pointerdown",
+      outsideClickEvent: "pointerdown",
       outsideCapture: true,
       outsideHandlerMode: "default",
     },
@@ -72,7 +72,7 @@ const presets: Preset[] = [
       event: "mousedown",
       toggle: true,
       closeOnOutsideClick: true,
-      outsideEvent: "mousedown",
+      outsideClickEvent: "mousedown",
       outsideCapture: true,
       outsideHandlerMode: "default",
     },
@@ -85,7 +85,7 @@ const presets: Preset[] = [
       ignoreMouse: true,
       ignoreKeyboard: false,
       closeOnOutsideClick: true,
-      outsideEvent: "click",
+      outsideClickEvent: "click",
       outsideCapture: false,
       outsideHandlerMode: "default",
     },
@@ -96,7 +96,7 @@ const presets: Preset[] = [
     description: "Intercept outside clicks and keep the layer open.",
     values: {
       closeOnOutsideClick: true,
-      outsideEvent: "click",
+      outsideClickEvent: "click",
       outsideCapture: true,
       ignoreDrag: true,
       outsideHandlerMode: "custom-keep-open",
@@ -113,7 +113,7 @@ function createDefaultControls(): PlaygroundControls {
     ignoreKeyboard: false,
     ignoreTouch: false,
     closeOnOutsideClick: true,
-    outsideEvent: "pointerdown",
+    outsideClickEvent: "pointerdown",
     outsideCapture: true,
     ignoreScrollbar: true,
     ignoreDrag: true,
@@ -174,7 +174,7 @@ const codeSnippet = computed(() => {
     `ignoreKeyboard: ${controls.ignoreKeyboard}`,
     `ignoreTouch: ${controls.ignoreTouch}`,
     `closeOnOutsideClick: ${controls.closeOnOutsideClick}`,
-    `outsideEvent: "${controls.outsideEvent}"`,
+    `outsideClickEvent: "${controls.outsideClickEvent}"`,
     `outsideCapture: ${controls.outsideCapture}`,
     `ignoreScrollbar: ${controls.ignoreScrollbar}`,
     `ignoreDrag: ${controls.ignoreDrag}`,
@@ -407,8 +407,8 @@ onMounted(() => {
             :key="value"
             type="button"
             class="segmented-button"
-            :data-active="controls.outsideEvent === value"
-            @click="controls.outsideEvent = value as UseClickOutsideEvent"
+    :data-active="controls.outsideClickEvent === value"
+    @click="controls.outsideClickEvent = value as UseClickOutsideEvent"
           >
             {{ value }}
           </button>
@@ -592,7 +592,7 @@ onMounted(() => {
         <p class="section-kicker">Drag check</p>
         <h3>Release outside after dragging</h3>
         <p>
-          Switch <code>outsideEvent</code> to <code>click</code>. With
+      Switch <code>outsideClickEvent</code> to <code>click</code>. With
           <code>ignoreDrag</code> enabled, a drag sequence that starts inside
           the floating panel should not dismiss it when the release happens
           outside.

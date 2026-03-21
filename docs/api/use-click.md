@@ -27,7 +27,7 @@ interface UseClickOptions {
 
   // Outside click options
   closeOnOutsideClick?: MaybeRefOrGetter<boolean>
-  outsideEvent?: MaybeRefOrGetter<'pointerdown' | 'mousedown' | 'click'>
+  outsideClickEvent?: MaybeRefOrGetter<'pointerdown' | 'mousedown' | 'click'>
   outsideCapture?: MaybeRefOrGetter<boolean>
   onOutsideClick?: (event: MouseEvent) => void
   ignoreScrollbar?: MaybeRefOrGetter<boolean>
@@ -52,7 +52,7 @@ This composable attaches event listeners to the anchor element for click-based i
 - `ignoreKeyboard`: `false`
 - `ignoreTouch`: `false`
 - `closeOnOutsideClick`: `false`
-- `outsideEvent`: `'pointerdown'`
+- `outsideClickEvent`: `'pointerdown'`
 - `outsideCapture`: `true`
 - `ignoreScrollbar`: `true`
 - `ignoreDrag`: `true`
@@ -98,7 +98,7 @@ const floatingEl = ref<HTMLElement | null>(null)
 const context = useFloating(anchorEl, floatingEl)
 useClick(context, {
   closeOnOutsideClick: true, // [!code focus]
-  outsideEvent: 'pointerdown' // [!code focus]
+  outsideClickEvent: 'pointerdown' // [!code focus]
 })
 </script>
 
