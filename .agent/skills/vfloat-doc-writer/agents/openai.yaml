@@ -1,0 +1,7 @@
+interface:
+  display_name: "VFloat Docs Writer"
+  short_description: "Write VFloat docs with concrete API and guide rules"
+  default_prompt: "Use $vfloat-doc-writer to update VFloat docs in docs/api or docs/guide."
+
+policy:
+  allow_implicit_invocation: true
