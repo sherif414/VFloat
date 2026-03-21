@@ -32,7 +32,7 @@ import {
  * useClick(context, {
  *   toggle: true,
  *   closeOnOutsideClick: true,
- *   outsideEvent: 'pointerdown'
+ *   outsideClickEvent: 'pointerdown'
  * })
  * ```
  *
@@ -59,7 +59,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     ignoreTouch = false,
     // Outside click options
     closeOnOutsideClick = false,
-    outsideEvent = "pointerdown",
+    outsideClickEvent = "pointerdown",
     outsideCapture = true,
     onOutsideClick,
     ignoreScrollbar = true,
@@ -248,7 +248,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   }
 
   function suppressOutsideClickForDragSequence(): boolean {
-    if (toValue(outsideEvent) !== "click") return false
+    if (toValue(outsideClickEvent) !== "click") return false
     if (!toValue(ignoreDrag)) return false
     if (!interactionState.dragStartedInside) return false
 
@@ -318,7 +318,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   // Document listener for outside clicks
   useEventListener(
     () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
-    outsideEvent,
+    outsideClickEvent,
     onOutsideClickHandler,
     { capture: toValue(outsideCapture) }
   )
@@ -404,7 +404,7 @@ export interface UseClickOptions {
    * The event to use for outside click detection.
    * @default 'pointerdown'
    */
-  outsideEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
 
   /**
    * Whether to use capture phase for document outside click listener.

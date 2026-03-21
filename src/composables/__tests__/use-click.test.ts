@@ -131,10 +131,10 @@ describe("useClick", () => {
   })
 
   describe("outside dismissal behavior", () => {
-    it("closes on outside pointerdown when closeOnOutsideClick is enabled", async () => {
+    it("closes on outside click when closeOnOutsideClick is enabled", async () => {
       const outsideElement = createOutsideElement()
 
-      initClick({ toggle: false, closeOnOutsideClick: true })
+      initClick({ toggle: false, closeOnOutsideClick: true, outsideClickEvent: "click" })
       await nextTick()
       expect(context.open.value).toBe(false)
 
@@ -144,9 +144,7 @@ describe("useClick", () => {
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
       setOpenMock.mockClear()
 
-      outsideElement.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" })
-      )
+      await userEvent.click(outsideElement)
       await nextTick()
 
       expect(setOpenMock).toHaveBeenCalledTimes(1)
@@ -155,34 +153,28 @@ describe("useClick", () => {
     })
 
     it("does not close when clicking the anchor while outside dismissal is enabled", async () => {
-      initClick({ closeOnOutsideClick: true, toggle: false })
+      initClick({ closeOnOutsideClick: true, toggle: false, outsideClickEvent: "click" })
       await nextTick()
 
       await userEvent.click(anchorEl)
       expect(context.open.value).toBe(true)
       setOpenMock.mockClear()
 
-      anchorEl.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" })
-      )
-      await nextTick()
+      await userEvent.click(anchorEl)
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
     })
 
     it("does not close when clicking the floating element while outside dismissal is enabled", async () => {
-      initClick({ closeOnOutsideClick: true, toggle: false })
+      initClick({ closeOnOutsideClick: true, toggle: false, outsideClickEvent: "click" })
       await nextTick()
 
       await userEvent.click(anchorEl)
       expect(context.open.value).toBe(true)
       setOpenMock.mockClear()
 
-      floatingEl.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" })
-      )
-      await nextTick()
+      await userEvent.click(floatingEl)
 
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
@@ -226,8 +218,8 @@ describe("useClick", () => {
   })
 
   describe("drag behavior", () => {
-    it("ignores outside click after drag that started inside when outsideEvent is 'click'", async () => {
-      initClick({ closeOnOutsideClick: true, outsideEvent: "click", ignoreDrag: true })
+    it("ignores outside click after drag that started inside when outsideClickEvent is 'click'", async () => {
+      initClick({ closeOnOutsideClick: true, outsideClickEvent: "click", ignoreDrag: true })
 
       await userEvent.click(anchorEl)
       expect(context.open.value).toBe(true)
