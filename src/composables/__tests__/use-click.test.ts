@@ -85,7 +85,7 @@ describe("useClick", () => {
     })
   }
 
-  describe("basic toggle behavior", () => {
+  describe("click behavior", () => {
     it("toggles open state on click", async () => {
       initClick({ toggle: true })
       await nextTick()
@@ -128,30 +128,68 @@ describe("useClick", () => {
       expect(setOpenMock).toHaveBeenCalledTimes(1) // Still only called once
       expect(context.open.value).toBe(true)
     })
+  })
 
-    it("can be closed via outside click when toggle is false", async () => {
+  describe("outside dismissal behavior", () => {
+    it("closes on outside pointerdown when closeOnOutsideClick is enabled", async () => {
       const outsideElement = createOutsideElement()
 
       initClick({ toggle: false, closeOnOutsideClick: true })
       await nextTick()
       expect(context.open.value).toBe(false)
 
-      // Open with anchor click
       await userEvent.click(anchorEl)
-      await nextTick()
       expect(context.open.value).toBe(true)
       expect(setOpenMock).toHaveBeenCalledTimes(1)
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
       setOpenMock.mockClear()
 
-      // But clicking outside SHOULD close it
-      await userEvent.click(outsideElement)
+      outsideElement.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" })
+      )
       await nextTick()
+
       expect(setOpenMock).toHaveBeenCalledTimes(1)
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object))
       expect(context.open.value).toBe(false)
     })
 
+    it("does not close when clicking the anchor while outside dismissal is enabled", async () => {
+      initClick({ closeOnOutsideClick: true, toggle: false })
+      await nextTick()
+
+      await userEvent.click(anchorEl)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      anchorEl.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" })
+      )
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(true)
+    })
+
+    it("does not close when clicking the floating element while outside dismissal is enabled", async () => {
+      initClick({ closeOnOutsideClick: true, toggle: false })
+      await nextTick()
+
+      await userEvent.click(anchorEl)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      floatingEl.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" })
+      )
+      await nextTick()
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(true)
+    })
+  })
+
+  describe("pointer behavior", () => {
     it("does not toggle on mouse click if ignoreMouse is true", async () => {
       initClick({ ignoreMouse: true })
       expect(context.open.value).toBe(false)
@@ -161,9 +199,7 @@ describe("useClick", () => {
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)
     })
-  })
 
-  describe("advanced behaviors", () => {
     it("respects event option 'mousedown' (toggles on mousedown, not on click)", async () => {
       initClick({ event: "mousedown", toggle: true })
       expect(context.open.value).toBe(false)
@@ -187,7 +223,9 @@ describe("useClick", () => {
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object))
       expect(context.open.value).toBe(false)
     })
+  })
 
+  describe("drag behavior", () => {
     it("ignores outside click after drag that started inside when outsideEvent is 'click'", async () => {
       initClick({ closeOnOutsideClick: true, outsideEvent: "click", ignoreDrag: true })
 
@@ -204,8 +242,9 @@ describe("useClick", () => {
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(true)
     })
+  })
 
-
+  describe("keyboard behavior", () => {
     it("ignores synthetic keyboard click (detail === 0) when ignoreKeyboard is true", async () => {
       initClick({ ignoreKeyboard: true })
 
@@ -216,48 +255,7 @@ describe("useClick", () => {
       expect(setOpenMock).not.toHaveBeenCalled()
       expect(context.open.value).toBe(false)
     })
-  })
 
-  describe("disabled state", () => {
-    it("does not respond to interaction when disabled", async () => {
-      const enabled = ref(false)
-      initClick({ enabled })
-
-      expect(context.open.value).toBe(false)
-
-      await userEvent.click(anchorEl)
-
-      expect(setOpenMock).not.toHaveBeenCalled()
-      expect(context.open.value).toBe(false)
-
-      enabled.value = true
-      await nextTick()
-
-      await userEvent.click(anchorEl)
-      expect(setOpenMock).toHaveBeenCalledTimes(1)
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
-      expect(context.open.value).toBe(true)
-    })
-
-    it("stops responding if disabled after initialization", async () => {
-      const enabled = ref(true)
-      initClick({ enabled })
-
-      await userEvent.click(anchorEl)
-      expect(setOpenMock).toHaveBeenCalledTimes(1)
-      expect(context.open.value).toBe(true)
-      setOpenMock.mockClear()
-
-      enabled.value = false
-      await nextTick()
-
-      await userEvent.click(anchorEl)
-      expect(setOpenMock).not.toHaveBeenCalled()
-      expect(context.open.value).toBe(true)
-    })
-  })
-
-  describe("keyboard accessibility", () => {
     it("toggles on Enter key press", async () => {
       initClick()
       expect(context.open.value).toBe(false)
@@ -326,7 +324,46 @@ describe("useClick", () => {
     })
   })
 
-  describe("integration: inside and outside clicks", () => {
+  describe("enabled state", () => {
+    it("does not respond to interaction when disabled", async () => {
+      const enabled = ref(false)
+      initClick({ enabled })
+
+      expect(context.open.value).toBe(false)
+
+      await userEvent.click(anchorEl)
+
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(false)
+
+      enabled.value = true
+      await nextTick()
+
+      await userEvent.click(anchorEl)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
+      expect(context.open.value).toBe(true)
+    })
+
+    it("stops responding if disabled after initialization", async () => {
+      const enabled = ref(true)
+      initClick({ enabled })
+
+      await userEvent.click(anchorEl)
+      expect(setOpenMock).toHaveBeenCalledTimes(1)
+      expect(context.open.value).toBe(true)
+      setOpenMock.mockClear()
+
+      enabled.value = false
+      await nextTick()
+
+      await userEvent.click(anchorEl)
+      expect(setOpenMock).not.toHaveBeenCalled()
+      expect(context.open.value).toBe(true)
+    })
+  })
+
+  describe("combined interaction flows", () => {
     it("supports complete interaction flow: open with inside click, close with outside click", async () => {
       const outsideElement = createOutsideElement()
 
@@ -347,7 +384,9 @@ describe("useClick", () => {
       expect(context.open.value).toBe(true)
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object))
     })
+  })
 
+  describe("combined behavior with outside clicks", () => {
     it("supports toggle behavior with outside click enabled", async () => {
       const outsideElement = createOutsideElement()
 
@@ -370,7 +409,9 @@ describe("useClick", () => {
       expect(context.open.value).toBe(false)
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object))
     })
+  })
 
+  describe("combined behavior with disabled state", () => {
     it("respects disabled state for both inside and outside clicks", async () => {
       const outsideElement = createOutsideElement()
 
