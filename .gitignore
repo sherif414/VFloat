@@ -36,7 +36,11 @@ docs/.vitepress/cache
 *storybook.log
 .qodo
 .qoder/quests
+.qoder/repowiki/
 .npmrc
+
+# Playground scratch files
+playground/
 
 src/**/__tests__/__screenshots__/
 
