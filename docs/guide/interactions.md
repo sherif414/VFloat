@@ -17,7 +17,7 @@ const anchorEl = ref(null)
 const floatingEl = ref(null)
 
 const context = useFloating(anchorEl, floatingEl)
-useClick(context, { outsideClick: true })
+useClick(context, { closeOnOutsideClick: true })
 useEscapeKey(context)
 </script>
 ```
@@ -189,7 +189,7 @@ useClientPoint(contextReference, context, {
 })
 
 // Handle outside clicks to close menu
-useClick(context, { outsideClick: true })
+useClick(context, { closeOnOutsideClick: true })
 
 function showContextMenu(event: MouseEvent) {
   event.preventDefault()

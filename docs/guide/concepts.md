@@ -135,7 +135,7 @@ const context = useFloating(anchorEl, floatingEl, {
 
 // Add interaction behaviors
 useHover(context, { delay: { open: 100, close: 300 } })
-useClick(context, { outsideClick: true })
+useClick(context, { closeOnOutsideClick: true })
 useFocus(context)
 useEscapeKey(context, {
   onEscape: () => context.setOpen(false),
