@@ -1,3 +1,6 @@
+---
+alwaysApply: false
+---
 # Rules for AI Git Commit Message Generation
 
 This document outlines the rules an AI agent MUST follow when generating Git commit messages. The rules are based on the Conventional Commits specification and are designed to ensure clarity, consistency, and compatibility with automated tooling.

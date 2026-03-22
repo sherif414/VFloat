@@ -183,15 +183,8 @@ function formatData(data: any): string {
 
 ## 8. Dependencies
 
-*   **Package Manager:** Use `pnpm` consistently for package management. Ensure a `pnpm-lock.yaml` file is committed.
 *   **Minimize Dependencies:** Prefer standard Web APIs or well-established Vue/framework utilities over small, single-purpose external packages.
 *   **Local Utilities:** Create shared utilities within the project (`@/utils`) for common tasks instead of repeatedly installing micro-packages. Evaluate the trade-offs (maintenance vs. dependency management).
-
-## 9. Enforcement (New Section)
-
-*   **Linting:** Configure ESLint (`eslint`) with relevant plugins (e.g., `@typescript-eslint/eslint-plugin`, `eslint-plugin-vue`) to automatically check for many of these rules.
-*   **Formatting:** Use Prettier (`prettier`) configured consistently across the team to handle code formatting automatically.
-*   **TypeScript:** Enable strict mode (`"strict": true`) in `tsconfig.json` to catch type-related errors early.
 
 ---
 
