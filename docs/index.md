@@ -1,5 +1,5 @@
 ---
 layout: home
-title: V-Float
+title: VFloat
 titleTemplate: Vue 3 Positioning Library
 ---

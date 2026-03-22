@@ -1,175 +1,120 @@
 # Keyboard List Navigation
 
-Set up arrow key navigation for menus, listboxes, and grids using `useListNavigation`. Supports nested menus, RTL, virtual focus (`aria-activedescendant`), looping, and uniform grids.
+Set up robust keyboard navigation for menus, listboxes, and grids using `useListNavigation`.
 
-- **Audience:** Intermediate
-- **Prerequisites:** Vue 3.2+, Composition API, basic V-Float usage (`useFloating`)
-- **Estimated time:** 10–15 minutes
-- **Works with:** V-Float v0.x
+## The Basics
 
-## Learning Outcomes
-
-- Implement roving active index for menus/listboxes with keyboard
-- Open menus from the anchor using arrow keys
-- Add submenu behavior and RTL support
-- Use virtual focus for `aria-activedescendant` patterns
-- Navigate uniform grids with ArrowUp/Down/Left/Right
-
-## TL;DR (Quick Start)
+The `useListNavigation` composable adds arrow key support to navigate through a list of items. It manages an `activeIndex` and automatically focuses the corresponding item.
 
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useFloating, useListNavigation } from 'v-float'
 
-const anchorEl = ref<HTMLElement|null>(null)
-const floatingEl = ref<HTMLElement|null>(null)
-const itemsRef = ref<Array<HTMLElement|null>>([])
-const activeIndex = ref<number|null>(null)
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
 
-const ctx = useFloating(anchorEl, floatingEl)
+// 1. Maintain an array of item refs and the active index
+const itemsRef = ref<Array<HTMLElement | null>>([])
+const activeIndex = ref<number | null>(null)
 
-useListNavigation(ctx, {
+const context = useFloating(anchorEl, floatingEl)
+
+// 2. Setup navigation
+useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
-  onNavigate: (i) => (activeIndex.value = i),
-  orientation: 'vertical',
+  onNavigate: (index) => {
+    activeIndex.value = index
+  },
   loop: true,
   openOnArrowKeyDown: true,
 })
 </script>
 
 <template>
-  <button ref="anchorEl">Menu</button>
-  <ul v-if="ctx.open.value" ref="floatingEl" role="menu">
-    <li v-for="(opt, i) in 5" :key="i" :ref="el => itemsRef.value[i] = el" role="menuitem" tabindex="-1">
+  <button ref="anchorEl">Open Menu</button>
+  
+  <ul v-if="context.open.value" ref="floatingEl" role="menu">
+    <li
+      v-for="(item, i) in 5"
+      :key="i"
+      :ref="el => itemsRef[i] = el as HTMLElement"
+      role="menuitem"
+      tabindex="-1"
+    >
       Item {{ i + 1 }}
     </li>
   </ul>
 </template>
 ```
 
-## Choosing a Focus Strategy
+::: tip
+You must manually assign `itemsRef` using a function ref in the `v-for` loop so VFloat knows which elements to focus.
+:::
 
-`useListNavigation` supports two accessibility patterns that serve different widget needs:
+## Deep Dive
 
-| Strategy | When to use | Key traits |
-| --- | --- | --- |
-| **DOM focus (roving tabindex)** | Default for menus, listboxes, navigation grids, or anytime each item should be a real focus target. | Moves actual DOM focus to each item via `element.focus()`, keeps browser focus rings and works reliably across assistive tech. Requires updating tabindex (`0` for active, `-1` for others). |
-| **Virtual focus (`aria-activedescendant`)** | Use when the anchor (often an `<input>` or combobox trigger) must keep DOM focus so typing, caret position, or IME usage is uninterrupted. | Only the anchor is tabbable; keyboard events update `aria-activedescendant` to point at the active option. Each option needs a stable `id`, and focus rings stay on the anchor. |
+`useListNavigation` supports two main focus strategies depending on your use case: DOM focus and Virtual focus.
 
-Practical guidance:
+### DOM Focus (Roving Tabindex)
 
-1. Start with DOM focus for most floating menus and selects—users can Tab into the list and arrows move real focus between options.
-2. Switch to virtual focus only when the anchor must stay focused (combobox/autocomplete, `contenteditable`, inputs with validation). Enable it with `virtual: true` (plus `virtualItemRef` if you need the active DOM node).
-3. Document which pattern your component relies on so nested composables remain consistent (e.g., a combobox might mix virtual focus on the input with DOM focus inside submenus).
+By default, `useListNavigation` moves real DOM focus to the active item via `element.focus()`. This is ideal for standard menus and dropdowns. Users tab to the menu, and then arrow keys move the browser's focus ring.
 
-## Step-by-Step
+Make sure your items have `tabindex="-1"` so they are programmatically focusable but not part of the natural tab sequence.
 
-### 1) Positioning and Refs
+### Virtual Focus (`aria-activedescendant`)
 
-- Create `anchorEl` and `floatingEl` refs and initialize `useFloating`.
-- Keep an array ref `itemsRef` for your item elements in DOM order.
+When building a combobox or autocomplete, you need the focus to stay on the text `<input>` so the user can keep typing, but you still want arrow keys to highlight items in the dropdown. 
 
-### 2) Active Index State
-
-- Manage `activeIndex: Ref<number|null>` in your component state.
-- Pass `onNavigate` to update `activeIndex` on keyboard or hover changes.
-
-```ts
-const itemsRef = ref<Array<HTMLElement|null>>([])
-const activeIndex = ref<number|null>(null)
-
-useListNavigation(ctx, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate: (i) => (activeIndex.value = i),
-})
-```
-
-### 3) Open on Arrow Keys
-
-- Use `openOnArrowKeyDown: true` to open from the anchor when pressing an arrow key.
-- Use `focusItemOnOpen: 'auto' | true` to automatically activate an item on open.
-
-```ts
-useListNavigation(ctx, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate: (i) => (activeIndex.value = i),
-  openOnArrowKeyDown: true,
-  focusItemOnOpen: 'auto',
-})
-```
-
-### 4) Disabled, Looping, and Home/End
-
-- Skip items via `disabledIndices: number[] | (i:number)=>boolean`.
-- `loop: true` wraps at ends. With `virtual + allowEscape`, moving past ends yields `null`.
-- `Home`/`End` jump to first/last enabled item.
-
-### 5) RTL and Grids
-
-- `rtl: true` flips Left/Right semantics for horizontal navigation.
-- For uniform grids, set `cols > 1` and `orientation: 'both' | 'horizontal'`.
-
-```ts
-useListNavigation(ctx, { listRef: itemsRef, activeIndex, onNavigate: i => activeIndex.value = i, cols: 4, orientation: 'both', rtl: true })
-```
-
-### 7) Virtual Focus (aria-activedescendant)
-
-- Keep DOM focus on the anchor (e.g., `<input role="combobox">`) and control the active option via `aria-activedescendant`.
+Enable virtual focus by setting `virtual: true` and providing a `virtualItemRef`.
 
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useFloating, useListNavigation } from 'v-float'
 
-const anchorEl = ref<HTMLElement|null>(null) // e.g., input
-const floatingEl = ref<HTMLElement|null>(null)
-const itemsRef = ref<Array<HTMLElement|null>>([])
-const activeIndex = ref<number|null>(null)
-const virtItem = ref<HTMLElement|null>(null)
+const anchorEl = ref<HTMLElement | null>(null) // An input element
+const floatingEl = ref<HTMLElement | null>(null)
+const itemsRef = ref<Array<HTMLElement | null>>([])
+const activeIndex = ref<number | null>(null)
+const virtualItemRef = ref<HTMLElement | null>(null)
 
-const ctx = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl)
 
-useListNavigation(ctx, {
+useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
-  onNavigate: (i) => (activeIndex.value = i),
+  onNavigate: (index) => {
+    activeIndex.value = index
+  },
   virtual: true,
-  virtualItemRef: virtItem,
-  focusItemOnOpen: 'auto',
+  virtualItemRef,
 })
 </script>
 
 <template>
-  <input ref="anchorEl" role="combobox" :aria-expanded="ctx.open.value" />
-  <ul v-if="ctx.open.value" ref="floatingEl" role="listbox">
-    <li v-for="(opt, i) in 5" :key="i" :ref="el => itemsRef.value[i] = el" role="option">{{ i }}</li>
+  <input ref="anchorEl" role="combobox" :aria-expanded="context.open.value" />
+  
+  <ul v-if="context.open.value" ref="floatingEl" role="listbox">
+    <li
+      v-for="(item, i) in 5"
+      :key="i"
+      :ref="el => itemsRef[i] = el as HTMLElement"
+      :id="`option-${i}`"
+      role="option"
+    >
+      Option {{ i }}
+    </li>
   </ul>
 </template>
 ```
 
-## Accessibility
+::: warning
+With virtual focus, the anchor element is responsible for setting the `aria-activedescendant` attribute to the `id` of the active item. `useListNavigation` will handle the internal tracking, but you must ensure each item has a stable `id`.
+:::
 
-- Use appropriate roles: `role="menu"`/`menuitem`, `role="listbox"`/`option`.
-- With virtual focus, ensure each item has a stable `id` (generated if missing); anchor will set `aria-activedescendant`.
-- Consider `aria-selected`/`aria-current` for selected vs. active state.
+## Further Reading
 
-## Performance
-
-- Scrolling is suppressed when pointer modality is active to avoid jank; use `focusItemOnOpen` to force initial scroll.
-- Keep `listRef` in DOM order and avoid reindexing across renders.
-
-## Troubleshooting
-
-- Active item not scrolling: pass `scrollItemIntoView: true | options` and ensure not in pointer modality.
-- Virtual focus not working: ensure anchor is focusable and items have `id`s.
-
-## See Also
-
-- [useListNavigation API](/api/use-list-navigation)
-- [useFloating](/api/use-floating)
+- [`useListNavigation` API](/api/use-list-navigation)
 - [Interactions](/guide/interactions)

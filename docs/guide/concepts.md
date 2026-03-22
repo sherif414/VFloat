@@ -1,191 +1,92 @@
 # Core Concepts
 
-V-Float is a Vue 3 port of [Floating UI](https://floating-ui.com/), providing a flexible foundation for creating floating UI elements like tooltips, popovers, and dropdowns. Understanding these core concepts will help you use V-Float effectively.
+Understand the building blocks of VFloat to effectively position and control your floating elements.
 
-## Positioning Engine
+## The Basics
 
-At the heart of V-Float is a powerful positioning engine that handles the complex task of positioning floating elements relative to anchor elements. The positioning logic handles:
+VFloat relies on two main concepts: the **Anchor Element** and the **Floating Element**. 
 
-- Calculating the optimal position based on the chosen placement
-- Adjusting positions to avoid overflow at screen edges
-- Updating positions when scrolling or resizing
-
-## Anchor and Floating Elements
-
-V-Float's positioning is based on two key elements:
-
-1. **Anchor Element**: The trigger or anchor element to which the floating element is positioned relative to. This is typically a button, input, or any other DOM element.
-
-2. **Floating Element**: The element that floats next to the anchor element. This could be a tooltip, dropdown menu, popover, or any content that needs to be positioned.
+The anchor element is the trigger (like a button or an input) that you want to attach your floating element to. The floating element is the overlay content (like a tooltip or dropdown).
 
 ```vue
-<script setup>
-import { ref } from "vue"
-import { useFloating } from "v-float"
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useFloating } from 'v-float'
 
-const anchorEl = ref(null) // Reference to the anchor element
-const floatingEl = ref(null) // Reference to the floating element
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
 
-const context = useFloating(anchorEl, floatingEl)
+// The floating context manages positioning and state
+const context = useFloating(anchorEl, floatingEl, {
+  placement: 'right-start'
+})
 </script>
 
 <template>
-  <button ref="anchorEl">Trigger</button>
-  <div ref="floatingEl" :style="context.floatingStyles.value">Floating content</div>
-</template>
-```
-
-## Placement
-
-The placement determines where the floating element appears relative to the anchor element. V-Float supports the following placements:
-
-- **Primary placements**: `top`, `right`, `bottom`, `left`
-- **Alignment variations**: `top-start`, `top-end`, `right-start`, `right-end`, `bottom-start`, `bottom-end`, `left-start`, `left-end`
-
-```js
-const floating = useFloating(anchorEl, floatingEl, {
-  placement: "bottom-start", // Position at the bottom, aligned to the start
-})
-```
-
-## Arrow Positioning
-
-V-Float provides the `useArrow` composable to position an arrow element pointing to the anchor element. This is commonly used for tooltips and popovers.
-
-```vue
-<template>
-  <button ref="anchorEl">Hover me</button>
-  <div ref="floatingEl" :style="floating.floatingStyles">
-    Tooltip content
-    <div ref="arrowRef" class="arrow" :style="arrowStyles" />
+  <button ref="anchorEl">Anchor</button>
+  <div ref="floatingEl" :style="context.floatingStyles.value">
+    Floating Element
   </div>
 </template>
-
-<script setup>
-import { ref } from "vue"
-import { useFloating, useArrow, offset, flip } from "v-float"
-
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-const arrowEl = ref(null)
-
-const floating = useFloating(anchorEl, floatingEl, {
-  middlewares: [offset(8), flip()],
-})
-
-const { arrowStyles } = useArrow(arrowEl, floating, {
-  offset: "-4px", // Optional: controls arrow offset from floating element edge
-})
-</script>
 ```
 
-## State Management
+::: tip
+VFloat calculates the coordinates for you and exposes them as `floatingStyles.value`, which you can directly bind to your floating element's `:style` attribute.
+:::
 
-V-Float manages the position state of floating elements. You can control the visibility of the floating element using Vue's reactivity system:
+## Deep Dive
 
-```js
-const isOpen = ref(false)
+VFloat separates positioning from interactions, giving you fine-grained control over how elements behave.
 
-const context = useFloating(anchorEl, floatingEl, {
-  open: isOpen, // Control open state
-})
+### State Management
 
-// Use the setOpen property from the context object to update state
-context.setOpen(true)
-context.setOpen(false)
+VFloat uses the `FloatingContext` to manage the `open` state. You can read the current state via `context.open.value` and update it using `context.setOpen()`. The `setOpen` method accepts a `reason` and an `event` parameter, helping you track exactly what triggered the state change.
 
-// or update manually using the isOpen ref
-isOpen.value = true
-isOpen.value = false
+```ts
+// Open the floating element and log that it was triggered programmatically
+context.setOpen(true, 'programmatic-trigger')
+
+// Close the floating element
+context.setOpen(false, 'close-button-click')
 ```
 
-## Interaction Composables
+### Positioning and Middlewares
 
-V-Float provides a comprehensive set of interaction composables that work with the floating context to handle user interactions. These composables follow a consistent pattern where they accept a `FloatingContext` as their first parameter and manage the `open` state automatically.
+The core positioning engine computes the optimal coordinates based on your desired `placement`. To modify this behavior—such as adding distance between elements or preventing overflow—you pass an array of `middlewares`.
 
-### Available Interactions
+```ts
+import { useFloating, offset, flip, shift } from 'v-float'
 
-- **[`useHover`](/api/use-hover)**: Show/hide on mouse hover with configurable delays and safe polygon support
-- **[`useClick`](/api/use-click)**: Toggle on click with outside click detection
-- **[`useFocus`](/api/use-focus)**: Show on focus for keyboard accessibility
-- **[`useEscapeKey`](/api/use-escape-key)**: Close on Escape key press
-- **[`useClientPoint`](/api/use-client-point)**: Position at cursor/touch coordinates
-
-### Basic Usage Pattern
-
-```vue
-<template>
-  <button ref="anchorEl">Hover or click me</button>
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
-    Tooltip content
-  </div>
-</template>
-
-<script setup>
-import { ref } from "vue"
-import { useFloating, useHover, useClick, useFocus, useEscapeKey } from "v-float"
-
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-
-// Create the floating context
 const context = useFloating(anchorEl, floatingEl, {
-  placement: "top",
+  placement: 'top',
+  middlewares: [
+    offset(8), // Add an 8px gap
+    flip(),    // Flip to bottom if there's no space on top
+    shift({ padding: 5 }) // Keep it on screen
+  ]
 })
+```
 
-// Add interaction behaviors
-useHover(context, { delay: { open: 100, close: 300 } })
+::: warning
+The order of `middlewares` matters! For example, `offset` should generally be placed before `flip` and `shift` so that the distance is calculated before boundary checks happen.
+:::
+
+### Interaction Composables
+
+Instead of writing custom event listeners for clicks, hovers, and keyboard navigation, VFloat provides interaction composables that hook directly into the `FloatingContext`.
+
+```ts
+import { useClick, useEscapeKey } from 'v-float'
+
+// Composing behaviors onto the existing context
 useClick(context, { closeOnOutsideClick: true })
-useFocus(context)
 useEscapeKey(context, {
-  onEscape: () => context.setOpen(false),
-})
-</script>
-```
-
-### Composing Multiple Interactions
-
-Interaction composables are designed to work together seamlessly. You can combine multiple interactions for a rich user experience:
-
-```js
-// Create floating context
-const context = useFloating(anchorEl, floatingEl)
-
-// Hover for desktop users
-useHover(context, {
-  delay: 200,
-  mouseOnly: true, // Only respond to actual mouse, not touch
-})
-
-// Click for mobile and accessibility
-useClick(context, {
-  toggle: true,
-  outsideClick: true,
-})
-
-// Keyboard support
-useFocus(context)
-
-// Close on escape
-useEscapeKey({
-  onEscape: () => context.setOpen(false),
+  onEscape: () => context.setOpen(false, 'escape-key')
 })
 ```
 
-## Composition Pattern
+## Further Reading
 
-V-Float follows Vue's composition pattern, allowing you to compose complex behaviors from simple primitives:
-
-1. Set up positioning with `useFloating`
-2. Add interaction behaviors with interaction composables
-3. Manage the visibility state with Vue's reactivity system
-
-This approach provides flexibility and allows you to build exactly what you need.
-
-## See Also
-
-- [useFloating](/api/use-floating)
-- [useHover](/api/use-hover)
-- [useClick](/api/use-click)
-- [useFocus](/api/use-focus)
-- [useEscapeKey](/api/use-escape-key)
+- [Middlewares](/guide/middleware)
+- [Interactions](/guide/interactions)
+- [Getting Started](/guide/index)
