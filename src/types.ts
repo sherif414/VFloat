@@ -24,5 +24,4 @@ export type OpenChangeReason =
   | "blur"
   | "hover"
   | "escape-key"
-  | "tree-ancestor-close"
   | "programmatic"
