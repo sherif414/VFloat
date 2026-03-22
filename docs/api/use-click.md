@@ -30,13 +30,25 @@
 
 * Details
 
-    By default, clicking the anchor element opens the floating element. With `toggle` enabled (the default), clicking the anchor again closes it.
+    `useClick` is a composable designed to handle click-based activation for floating elements, such as dropdowns, menus, or tooltips. It simplifies the logic for toggling the open state, managing keyboard accessibility, and handling clicks outside the floating element.
 
-    The composable also responds to keyboard activation: pressing Enter or Space on the anchor element toggles the floating element open or closed. To disable this behavior, set `ignoreKeyboard` to `true`.
+    ### Key Features
 
-    When `closeOnOutsideClick` is enabled, clicking anywhere outside the floating element closes it. You can customize this behavior with `onOutsideClick` to perform additional actions when an outside click occurs, or use `ignoreScrollbar` to prevent clicks on the browser scrollbar from closing the floating element.
+    * **Toggle Behavior**: By default, clicking the anchor element will toggle the floating element's visibility. This can be controlled via the `toggle` option.
+    * **Keyboard Support**: Automatically supports accessibility by allowing the `Enter` and `Space` keys to toggle the floating element when the anchor is focused. This behavior can be disabled using `ignoreKeyboard`.
+    * **Outside Click Handling**: When `closeOnOutsideClick` is enabled (default), the floating element will close if the user clicks anywhere outside both the anchor and the floating element itself.
+    * **Flexible Events**: Customize which mouse event triggers the activation using the `event` option (e.g., `click` or `mousedown`).
+    * **Interaction Guards**: Provides options like `ignoreMouse`, `ignoreTouch`, and `ignoreScrollbar` to fine-tune which interactions should be ignored.
 
-    The `event` option lets you choose between `click` (default) or `mousedown` for when the anchor should respond to mouse interaction. This does not affect keyboard or touch interactions.
+    ### Configuration Options
+
+    | Option | Description | Default |
+    | :--- | :--- | :--- |
+    | `enabled` | Whether the click interaction is active. | `true` |
+    | `event` | The mouse event that triggers the toggle (`'click'` or `'mousedown'`). | `'click'` |
+    | `toggle` | Whether clicking the anchor when the floating element is already open should close it. | `true` |
+    | `closeOnOutsideClick` | Whether clicking outside the elements should close the floating element. | `true` |
+    | `onOutsideClick` | A callback function executed when an outside click is detected. | `undefined` |
 
 * Example
 

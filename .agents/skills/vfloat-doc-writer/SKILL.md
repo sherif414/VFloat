@@ -34,6 +34,22 @@ Use this skill to produce clear, consistent VFloat documentation that follows th
    - Keep code blocks language-tagged.
    - Make links and headings consistent with nearby docs.
 
+## Documentation Architecture
+
+Use a two-layer structure for VFloat docs:
+
+- `docs/api/` is the canonical reference layer.
+- `docs/guide/` is the learning and decision-making layer.
+
+Rules:
+
+- Keep API and guide responsibilities separate. Do not merge them into one page type.
+- Give every public export a single canonical API page.
+- Add a guide page only when the topic teaches a workflow, pattern, or tradeoff that is not obvious from the API reference alone.
+- For composables such as `useClick`, keep the API page as the reference source of truth and cover usage inside a broader guide such as `Interactions` unless the composable deserves a dedicated teaching page.
+- Avoid creating near-duplicate guide and API pages for the same symbol.
+- If a guide needs exact option or signature details, link to the API page instead of repeating them.
+
 ## API Docs
 
 Use API docs for reference material.
@@ -74,6 +90,8 @@ Rules:
 - Avoid long background sections or marketing language.
 - Keep explanations brief unless edge cases need extra detail.
 - Link to a guide when usage context matters more than the raw signature.
+- Keep composable API pages short enough to scan quickly, with one canonical example and links to the most relevant guide(s).
+- Include workflow notes only when they clarify edge cases, defaults, or interoperability with other composables.
 
 ## Guide Docs
 
@@ -116,6 +134,9 @@ Guidelines:
 - Use code highlights only when they clarify the point.
 - Explain the why and how, not just the API surface.
 - Move detailed reference material to API docs instead of repeating it.
+- Prefer task-oriented pages over symbol-oriented pages.
+- Use guides to teach combinations of composables, accessibility patterns, debugging, and real-world workflows.
+- If a composable already has API coverage, a guide should add context, sequencing, or tradeoffs rather than restating the signature.
 
 ## VFloat Conventions
 
