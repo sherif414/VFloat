@@ -1,11 +1,12 @@
-import DefaultTheme from "vitepress/theme";
+import { VPTheme } from "@vue/theme";
 import type { Theme } from "vitepress";
 import DemoPreview from "./components/demos/DemoPreview.vue"
 import * as Demos from "../../demos";
 import Layout from "./components/Layout.vue";
+import "./code.css";
 
 export default {
-  extends: DefaultTheme,
+  extends: VPTheme,
   enhanceApp({ app }) {
     app.component("demo-container", DemoPreview);
 
