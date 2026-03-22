@@ -1,6 +1,6 @@
 # useClick
 
-`useClick` handles click-driven activation for a floating element. It opens from the anchor, supports keyboard activation, and can optionally dismiss on outside clicks.
+`useClick` handles click-driven activation for a floating element.
 
 * Type
 
@@ -30,41 +30,33 @@
 
 * Details
 
-    `useClick` attaches click and keyboard handlers to the anchor element, and can also add a document-level outside-click listener.
+    By default, clicking the anchor element opens the floating element. With `toggle` enabled (the default), clicking the anchor again closes it.
 
-    - Anchor activation opens the floating element when it is closed.
-    - When `toggle` is `true`, activating the anchor again closes it.
-    - Enter activates on `keydown`.
-    - Space activates on `keyup` after preventing page scroll.
-    - `event` only changes the mouse trigger on the anchor; it does not affect keyboard activation.
-    - `ignoreKeyboard` skips keyboard handlers and synthetic keyboard clicks.
-    - Outside dismissal only runs when `closeOnOutsideClick` is enabled.
-    - `onOutsideClick` replaces the default close behavior.
-    - `ignoreDrag` only matters when `outsideClickEvent` is `click`.
-    - Open state changes use `anchor-click`, `keyboard-activate`, or `outside-pointer` as the reason passed to `setOpen`.
+    The composable also responds to keyboard activation: pressing Enter or Space on the anchor element toggles the floating element open or closed. To disable this behavior, set `ignoreKeyboard` to `true`.
+
+    When `closeOnOutsideClick` is enabled, clicking anywhere outside the floating element closes it. You can customize this behavior with `onOutsideClick` to perform additional actions when an outside click occurs, or use `ignoreScrollbar` to prevent clicks on the browser scrollbar from closing the floating element.
+
+    The `event` option lets you choose between `click` (default) or `mousedown` for when the anchor should respond to mouse interaction. This does not affect keyboard or touch interactions.
 
 * Example
 
     ```vue
     <script setup lang="ts">
-    import { ref } from "vue"
-    import { useFloating, useClick } from "v-float"
+    import { useTemplateRef } from "vue"
+    import { useClick, useFloating } from "v-float"
 
-    const anchorEl = ref<HTMLElement | null>(null)
-    const floatingEl = ref<HTMLElement | null>(null)
+    const anchorEl = useTemplateRef("anchorEl")
+    const floatingEl = useTemplateRef("floatingEl")
 
     const context = useFloating(anchorEl, floatingEl)
-
-    useClick(context, {
-      closeOnOutsideClick: true,
-    })
+    useClick(context)
     </script>
 
     <template>
       <button ref="anchorEl">Toggle</button>
 
       <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-        Click outside to close
+        Floating content
       </div>
     </template>
     ```
