@@ -1,6 +1,6 @@
 # useFloating
 
-The core composable for positioning floating elements relative to anchor elements.
+The core composable for positioning a floating element relative to another element.
 
 ## Signature
 

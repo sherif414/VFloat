@@ -1,31 +1,35 @@
-# API Documentation
- 
-This section provides detailed API documentation for the composables and utilities exported by V-Float.
- 
-## Core Composables
- 
-- [`useFloating`](./use-floating.md) - Main floating positioning composable
-- [`useArrow`](./use-arrow.md) - Arrow positioning for floating elements
- 
-## Positioning Utilities
- 
-- [`useClientPoint`](./use-client-point.md) - Pointer-based positioning with multiple tracking modes
- 
-## Interaction Composables
- 
-- [`useClick`](./use-click.md) - Click interaction handling
-- [`useHover`](./use-hover.md) - Hover interaction with safe polygon support
-- [`useFocus`](./use-focus.md) - Focus interaction handling
-- [`useFocusTrap`](./use-focus-trap.md) - Focus trap management for modal dialogs and floating elements
-- [`useEscapeKey`](./use-escape-key.md) - Escape key handling
-- [`useListNavigation`](./use-list-navigation.md) - Keyboard/virtual list navigation for menus and grids
- 
+# API Reference
+
+This page lists the public composables and middleware exported by VFloat.
+Use it for signatures, options, and return values. For walkthroughs, see the [Guide](/guide/).
+
+## Positioning
+
+These APIs place one element relative to another element.
+
+- [`useFloating`](./use-floating.md) - Positions a floating element relative to an anchor element
+- [`useArrow`](./use-arrow.md) - Positions an arrow element relative to a floating element
+- [`useClientPoint`](./use-client-point.md) - Positions a floating element relative to a pointer coordinate
+
+## Interactions
+
+These APIs react to user input.
+
+- [`useClick`](./use-click.md) - Opens and closes floating content on click
+- [`useHover`](./use-hover.md) - Opens and closes floating content on hover
+- [`useFocus`](./use-focus.md) - Opens and closes floating content on focus
+- [`useFocusTrap`](./use-focus-trap.md) - Keeps keyboard focus inside the floating content
+- [`useEscapeKey`](./use-escape-key.md) - Closes floating content when Escape is pressed
+- [`useListNavigation`](./use-list-navigation.md) - Moves between items with the keyboard
+
 ## Middleware
- 
-- [`arrow`](./arrow.md) - Arrow element alignment data
-- [`autoPlacement`](./autoplacement.md) - Automatically choose the best placement
-- [`flip`](./flip.md) - Flip positioning when out of bounds
-- [`hide`](./hide.md) - Provide data to hide when reference is hidden or escaped
-- [`offset`](./offset.md) - Offset positioning
-- [`shift`](./shift.md) - Shift positioning to stay in bounds
-- [`size`](./size.md) - Size-aware positioning
+
+These middleware refine the final placement.
+
+- [`arrow`](./arrow.md) - Aligns an arrow with the reference element
+- [`autoPlacement`](./autoplacement.md) - Picks a placement that fits available space
+- [`flip`](./flip.md) - Switches to another placement when space is limited
+- [`hide`](./hide.md) - Marks the element as hidden when the reference is out of view
+- [`offset`](./offset.md) - Adds distance between the reference and floating element
+- [`shift`](./shift.md) - Keeps the floating element within view
+- [`size`](./size.md) - Adjusts to the available space

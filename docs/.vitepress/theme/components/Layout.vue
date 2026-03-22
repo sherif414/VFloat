@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useData } from "vitepress"
-import { VPTheme } from "@vue/theme"
+import DefaultTheme from "vitepress/theme"
 import { nextTick, provide } from "vue"
 import Home from "./Home.vue"
 
@@ -42,11 +42,11 @@ provide("toggle-appearance", async ({ clientX: x, clientY: y }: MouseEvent) => {
 </script>
 
 <template>
-  <VPTheme.Layout id="vf-layout">
+  <DefaultTheme.Layout id="vf-layout">
     <template #home-hero-before>
       <Home />
     </template>
-  </VPTheme.Layout>
+  </DefaultTheme.Layout>
 </template>
 
 <style>
