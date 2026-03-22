@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { useData } from "vitepress"
-import DefaultTheme from "vitepress/theme"
+import { VPTheme } from "@vue/theme"
 import { nextTick, provide } from "vue"
 import Home from "./Home.vue"
-import { isClient } from "@vueuse/core"
 
 const { isDark } = useData()
 
 const enableTransitions = () =>
-  isClient &&
+  typeof window !== "undefined" &&
   "startViewTransition" in document &&
   window.matchMedia("(prefers-reduced-motion: no-preference)").matches
 
@@ -43,11 +42,11 @@ provide("toggle-appearance", async ({ clientX: x, clientY: y }: MouseEvent) => {
 </script>
 
 <template>
-  <DefaultTheme.Layout id="vf-layout">
+  <VPTheme.Layout id="vf-layout">
     <template #home-hero-before>
       <Home />
     </template>
-  </DefaultTheme.Layout>
+  </VPTheme.Layout>
 </template>
 
 <style>

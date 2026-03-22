@@ -1,15 +1,35 @@
 import { defineConfig } from "vitepress"
+import { fileURLToPath } from "node:url"
+import { resolve } from "node:path"
 import { demoMdPlugin } from "vitepress-plugin-demo"
+
+const vueThemeNodeModules = resolve(
+  fileURLToPath(new URL("../..", import.meta.url)),
+  "node_modules",
+  "@vue",
+  "theme",
+  "node_modules",
+)
 
 export default defineConfig({
   head: [],
+  scrollOffset: ["header", ".VPLocalNav"],
   vite: {
+    resolve: {
+      alias: {
+        "@vueuse/core": resolve(vueThemeNodeModules, "@vueuse/core", "index.mjs"),
+        "@vueuse/shared": resolve(vueThemeNodeModules, "@vueuse/shared", "index.mjs"),
+      },
+    },
+    optimizeDeps: {
+      exclude: ["@vue/theme", "@vueuse/core", "body-scroll-lock"],
+    },
     build: {
       sourcemap: true,
       minify: false,
     },
     ssr: {
-      noExternal: ["v-float"],
+      noExternal: ["@vue/theme", "@vueuse/core", "body-scroll-lock", "v-float"],
     },
   },
   markdown: {
