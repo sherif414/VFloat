@@ -1,89 +1,61 @@
 # autoPlacement
 
-A middleware that automatically chooses the best placement from available options to keep the floating element in view.
+`autoPlacement` chooses the best placement from the available space so the floating element stays in view.
 
-## Signature
+* Type
 
-```ts
-function autoPlacement(options?: AutoPlacementOptions): Middleware
-```
+    ```ts
+    function autoPlacement(options?: AutoPlacementOptions): Middleware
 
-## Options
+    interface AutoPlacementOptions {
+      crossAxis?: boolean
+      alignment?: "start" | "end" | null
+      autoAlignment?: boolean
+      allowedPlacements?: Array<Placement>
+      boundary?: Boundary
+      rootBoundary?: RootBoundary
+      elementContext?: ElementContext
+      altBoundary?: boolean
+      padding?: Padding
+    }
+    ```
 
-```ts
-interface AutoPlacementOptions {
-  crossAxis?: boolean
-  alignment?: 'start' | 'end' | null
-  autoAlignment?: boolean
-  allowedPlacements?: Array<Placement>
-  boundary?: Boundary
-  rootBoundary?: RootBoundary
-  elementContext?: ElementContext
-  altBoundary?: boolean
-  padding?: Padding
-}
-```
+* Details
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| crossAxis | `boolean` | `false` | Consider placements on the cross axis |
-| alignment | `'start' \| 'end' \| null` | `undefined` | Lock alignment to specific value |
-| autoAlignment | `boolean` | `false` | Automatically infer alignment from preferred side |
-| allowedPlacements | `Array<Placement>` | All placements | Restrict which placements can be chosen |
-| boundary | `Boundary` | `'clippingAncestors'` | Clipping boundary |
-| rootBoundary | `RootBoundary` | `'viewport'` | Root boundary (viewport or document) |
-| elementContext | `ElementContext` | `'floating'` | Element context for overflow detection |
-| altBoundary | `boolean` | `false` | Use alternate element for boundary |
-| padding | `Padding` | `0` | Padding from the boundary edges |
+    Use `autoPlacement` when the best side matters more than a preferred side. It can evaluate cross-axis placements, respect alignment, and limit the placements it is allowed to choose from.
 
-## Examples
+    If you want to keep a preferred placement and only fall back when needed, `flip()` is usually the better fit.
 
-### Basic Usage
+* Example
 
-```vue
-<script setup>
-import { useFloating, autoPlacement } from 'v-float'
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { autoPlacement, useFloating } from "v-float"
 
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [autoPlacement()]
-})
-</script>
-```
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-### Allowed Placements
-
-```vue
-<script setup>
-import { useFloating, autoPlacement } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    autoPlacement({
-      allowedPlacements: ['top', 'bottom']
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [
+        autoPlacement({
+          allowedPlacements: ["top", "bottom"],
+        }),
+      ],
     })
-  ]
-})
-</script>
-```
+    </script>
 
-### With Alignment
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-```vue
-<script setup>
-import { useFloating, autoPlacement } from 'v-float'
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Floating content
+      </div>
+    </template>
+    ```
 
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    autoPlacement({
-      alignment: 'start',
-      crossAxis: true
-    })
-  ]
-})
-</script>
-```
+* See also
 
-## See Also
-
-- [flip](/api/flip) - Alternative middleware for placement fallbacks with a preferred initial placement
-- [shift](/api/shift) - Shifts element to keep it in view
+    - [flip](/api/flip) - Keeps a preferred placement and falls back when needed
+    - [shift](/api/shift) - Nudges the floating element back into view
+    - [useFloating](/api/use-floating) - Core positioning composable

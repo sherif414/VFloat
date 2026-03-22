@@ -1,104 +1,77 @@
 # useClientPoint
 
-The `useClientPoint` composable positions floating elements relative to the user's pointer by updating the floating context's anchor to a virtual element at the pointer coordinates.
+`useClientPoint` positions a floating element relative to the pointer by swapping the floating context anchor for a virtual element at the current client coordinates.
 
-## Signature
+* Type
 
-```ts
-function useClientPoint(
-  pointerTarget: Ref<HTMLElement | null>,
-  context: UseClientPointContext,
-  options?: UseClientPointOptions
-): UseClientPointReturn
-```
+    ```ts
+    function useClientPoint(
+      pointerTarget: Ref<HTMLElement | null>,
+      context: UseClientPointContext,
+      options?: UseClientPointOptions
+    ): UseClientPointReturn
 
-## Parameters
+    interface UseClientPointOptions {
+      enabled?: MaybeRefOrGetter<boolean>
+      axis?: MaybeRefOrGetter<"x" | "y" | "both">
+      x?: MaybeRefOrGetter<number | null>
+      y?: MaybeRefOrGetter<number | null>
+      trackingMode?: "follow" | "static"
+    }
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| pointerTarget | `Ref<HTMLElement \| null>` | Yes | Element whose pointer events are tracked. `null` disables tracking. |
-| context | `UseClientPointContext` | Yes | Floating context created by `useFloating`. Updates its `refs.anchorEl` to a virtual element. |
-| options | `UseClientPointOptions` | No | Configuration options. |
+    interface UseClientPointReturn {
+      coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>
+      updatePosition: (x: number, y: number) => void
+    }
 
-## Options
+    interface UseClientPointContext {
+      open: Readonly<Ref<boolean>>
+      refs: {
+        anchorEl: Ref<AnchorElement>
+      }
+    }
+    ```
 
-```ts
-interface UseClientPointOptions {
-  enabled?: MaybeRefOrGetter<boolean>
-  axis?: MaybeRefOrGetter<'x' | 'y' | 'both'>
-  trackingMode?: 'follow' | 'static'
-  x?: MaybeRefOrGetter<number | null>
-  y?: MaybeRefOrGetter<number | null>
-}
-```
+* Details
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| enabled | `MaybeRefOrGetter<boolean>` | `true` | Enable/disable pointer tracking. |
-| axis | `MaybeRefOrGetter<'x' \| 'y' \| 'both'>` | `'both'` | Constrain movement to an axis. |
-| trackingMode | `'follow' \| 'static'` | `'follow'` | Follow pointer continuously or keep initial point. |
-| x | `MaybeRefOrGetter<number \| null>` | `null` | External X coordinate for controlled mode. |
-| y | `MaybeRefOrGetter<number \| null>` | `null` | External Y coordinate for controlled mode. |
+    `useClientPoint` only handles positioning. Pair it with an interaction composable such as `useHover()` or `useClick()` to decide when the floating element should open and close.
 
-## Return Value
+    `trackingMode: "follow"` keeps the floating element in sync with pointer movement. `trackingMode: "static"` captures the initial point and keeps the floating element anchored there, which is useful for context menus.
 
-```ts
-interface UseClientPointReturn {
-  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>
-  updatePosition: (x: number, y: number) => void
-}
-```
+    If both `x` and `y` are provided, the composable behaves like a controlled source of coordinates.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| coordinates | `Readonly<Ref<{ x: number \| null; y: number \| null }>>` | Current pointer/controlled coordinates. |
-| updatePosition | `(x: number, y: number) => void` | Programmatically update position (used in controlled mode). |
+* Example
 
-## Examples
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { useClientPoint, useFloating, useHover } from "v-float"
 
-### Basic Usage
+    const trackingArea = ref<HTMLElement | null>(null)
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useClientPoint, useHover } from 'v-float'
+    const context = useFloating(anchorEl, floatingEl, {
+      placement: "right-start",
+    })
 
-const anchor = ref<HTMLElement | null>(null)
-const floating = ref<HTMLElement | null>(null)
-const trackingArea = ref<HTMLElement | null>(null)
+    useClientPoint(trackingArea, context)
+    useHover(context)
+    </script>
 
-const ctx = useFloating(anchor, floating)
-useHover(ctx)
-useClientPoint(trackingArea, ctx)
-</script>
-```
+    <template>
+      <div ref="trackingArea">
+        Move the pointer here
 
-### Controlled Mode
+        <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+          Tooltip follows the pointer
+        </div>
+      </div>
+    </template>
+    ```
 
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useClientPoint } from 'v-float'
+* See also
 
-const area = ref<HTMLElement | null>(null)
-const anchor = ref<HTMLElement | null>(null)
-const el = ref<HTMLElement | null>(null)
-const x = ref<number | null>(200)
-const y = ref<number | null>(100)
-
-const ctx = useFloating(anchor, el)
-useClientPoint(area, ctx, { x, y })
-</script>
-```
-
-## See Also
-
-### Related Positioning Utilities
-
-- [useFloating](/api/use-floating) - Core positioning composable that works with `useClientPoint`
-- [useArrow](/api/use-arrow) - Arrow positioning for floating elements
-
-### Guides
-
-- [Virtual Elements](/guide/virtual-elements) - Learn about pointer-based positioning strategies
-- [Positioning](/guide/positioning) - Comprehensive guide to positioning floating elements
+    - [useFloating](/api/use-floating) - Core positioning composable
+    - [useHover](/api/use-hover) - Opens and closes the floating content
+    - [Virtual Elements](/guide/virtual-elements) - Learn how virtual anchors work

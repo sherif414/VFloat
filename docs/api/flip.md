@@ -1,67 +1,56 @@
 # flip
 
-A middleware that flips the floating element to an alternative placement to keep it in view.
+`flip` switches to alternative placements when the preferred placement does not fit.
 
-## Signature
+* Type
 
-```ts
-function flip(options?: FlipOptions): Middleware
-```
+    ```ts
+    function flip(options?: FlipOptions): Middleware
 
-## Options
+    interface FlipOptions {
+      mainAxis?: boolean
+      crossAxis?: boolean | "alignment"
+      fallbackAxisSideDirection?: "none" | "start" | "end"
+      flipAlignment?: boolean
+      fallbackPlacements?: Array<Placement>
+      fallbackStrategy?: "bestFit" | "initialPlacement"
+    }
+    ```
 
-```ts
-interface FlipOptions {
-  mainAxis?: boolean
-  crossAxis?: boolean | 'alignment'
-  fallbackAxisSideDirection?: 'none' | 'start' | 'end'
-  flipAlignment?: boolean
-  fallbackPlacements?: Array<Placement>
-  fallbackStrategy?: 'bestFit' | 'initialPlacement'
-}
-```
+* Details
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| mainAxis | `boolean` | `true` | Whether to flip on the main axis |
-| crossAxis | `boolean \| 'alignment'` | `true` | Whether to flip on the cross axis |
-| fallbackAxisSideDirection | `'none' \| 'start' \| 'end'` | `'none'` | Direction to try when both axes fail |
-| flipAlignment | `boolean` | `true` | Whether to flip alignment (e.g., start to end) |
-| fallbackPlacements | `Array<Placement>` | `[]` | Custom fallback placements to try |
-| fallbackStrategy | `'bestFit' \| 'initialPlacement'` | `'bestFit'` | Strategy when all placements fail |
+    `flip` is the common choice when you want to start from a preferred placement and only move elsewhere if that placement overflows. It can also flip alignment, try a custom fallback list, or choose between a best-fit and initial-placement strategy.
 
-## Examples
+* Example
 
-### Basic Usage
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { flip, useFloating } from "v-float"
 
-```vue
-<script setup>
-import { useFloating, flip } from 'v-float'
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [flip()]
-})
-</script>
-```
-
-### Custom Fallback Placements
-
-```vue
-<script setup>
-import { useFloating, flip } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    flip({
-      fallbackPlacements: ['top', 'right', 'bottom']
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [
+        flip({
+          fallbackPlacements: ["top", "right", "bottom"],
+        }),
+      ],
     })
-  ]
-})
-</script>
-```
+    </script>
 
-## See Also
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-- [autoPlacement](/api/autoplacement) - Alternative middleware for automatic placement selection
-- [shift](/api/shift) - Shifts the floating element to keep it in view
-- [offset](/api/offset) - Offsets the floating element from its anchor
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Floating content
+      </div>
+    </template>
+    ```
+
+* See also
+
+    - [autoPlacement](/api/autoplacement) - Picks the best placement automatically
+    - [shift](/api/shift) - Keeps the floating element inside the clipping area
+    - [offset](/api/offset) - Adds spacing before flip logic runs

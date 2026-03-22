@@ -1,89 +1,61 @@
 # shift
 
-A middleware that shifts the floating element along its axis to keep it in view.
+`shift` nudges the floating element back into view after placement has been chosen.
 
-## Signature
+* Type
 
-```ts
-function shift(options?: ShiftOptions): Middleware
-```
+    ```ts
+    function shift(options?: ShiftOptions): Middleware
 
-## Options
+    interface ShiftOptions {
+      mainAxis?: boolean
+      crossAxis?: boolean
+      limiter?: {
+        fn: (state: MiddlewareState) => Coords
+        options?: unknown
+      }
+      padding?: Padding
+      boundary?: Boundary
+      rootBoundary?: RootBoundary
+      elementContext?: ElementContext
+      altBoundary?: boolean
+    }
+    ```
 
-```ts
-interface ShiftOptions {
-  mainAxis?: boolean
-  crossAxis?: boolean
-  limiter?: {
-    fn: (state: MiddlewareState) => Coords
-    options?: any
-  }
-  padding?: Padding
-  boundary?: Boundary
-  rootBoundary?: RootBoundary
-  elementContext?: ElementContext
-  altBoundary?: boolean
-}
-```
+* Details
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| mainAxis | `boolean` | `true` | Whether to shift on the main axis |
-| crossAxis | `boolean` | `false` | Whether to shift on the cross axis |
-| limiter | `object` | `undefined` | Function to limit the shifting behavior |
-| padding | `Padding` | `0` | Padding from the boundary edges |
-| boundary | `Boundary` | `'clippingAncestors'` | Clipping boundary |
-| rootBoundary | `RootBoundary` | `'viewport'` | Root boundary (viewport or document) |
-| elementContext | `ElementContext` | `'floating'` | Element context for overflow detection |
-| altBoundary | `boolean` | `false` | Use alternate element for boundary |
+    `shift` is the right choice when you want to preserve the chosen placement and only adjust the coordinates enough to keep the floating element visible. It can shift on the main axis, the cross axis, or both.
 
-## Examples
+    Use it together with `flip()` when you want a stable preferred placement plus a fallback if that placement cannot fit.
 
-### Basic Usage
+* Example
 
-```vue
-<script setup>
-import { useFloating, shift } from 'v-float'
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { shift, useFloating } from "v-float"
 
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [shift()]
-})
-</script>
-```
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-### With Padding
-
-```vue
-<script setup>
-import { useFloating, shift } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    shift({ padding: 8 })
-  ]
-})
-</script>
-```
-
-### With Cross Axis
-
-```vue
-<script setup>
-import { useFloating, shift } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    shift({ 
-      mainAxis: true,
-      crossAxis: true 
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [
+        shift({ padding: 8, crossAxis: true }),
+      ],
     })
-  ]
-})
-</script>
-```
+    </script>
 
-## See Also
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-- [flip](/api/flip) - Flips the floating element to an alternative placement
-- [offset](/api/offset) - Offsets the floating element from its anchor
-- [size](/api/size) - Controls the size of the floating element
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Floating content
+      </div>
+    </template>
+    ```
+
+* See also
+
+    - [flip](/api/flip) - Chooses another placement when the preferred one overflows
+    - [offset](/api/offset) - Adds spacing before shifting
+    - [size](/api/size) - Adjusts the floating element to the available space

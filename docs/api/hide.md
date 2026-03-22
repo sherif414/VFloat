@@ -1,92 +1,66 @@
 # hide
 
-A middleware that provides data to hide the floating element when the reference is obscured or the floating element has escaped its clipping context.
+`hide` exposes visibility data so you can hide a floating element when the reference is clipped or the floating element escapes its boundary.
 
-## Signature
+* Type
 
-```ts
-function hide(options?: HideOptions): Middleware
-```
+    ```ts
+    function hide(options?: HideOptions): Middleware
 
-## Options
+    interface HideOptions {
+      strategy?: "referenceHidden" | "escaped"
+      padding?: Padding
+      boundary?: Boundary
+      rootBoundary?: RootBoundary
+      elementContext?: ElementContext
+      altBoundary?: boolean
+    }
 
-```ts
-interface HideOptions {
-  strategy?: 'referenceHidden' | 'escaped'
-  padding?: Padding
-  boundary?: Boundary
-  rootBoundary?: RootBoundary
-  elementContext?: ElementContext
-  altBoundary?: boolean
-}
-```
+    interface HideData {
+      referenceHidden?: boolean
+      escaped?: boolean
+    }
+    ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| strategy | `'referenceHidden' \| 'escaped'` | `'referenceHidden'` | Detection strategy for hiding |
-| padding | `Padding` | `0` | Padding from the boundary edges |
-| boundary | `Boundary` | `'clippingAncestors'` | Clipping boundary |
-| rootBoundary | `RootBoundary` | `'viewport'` | Root boundary (viewport or document) |
-| elementContext | `ElementContext` | `'floating'` | Element context for overflow detection |
-| altBoundary | `boolean` | `false` | Use alternate element for boundary |
+* Details
 
-### Strategy Options
+    Use `referenceHidden` when you want to hide the floating element if its anchor is fully obscured. Use `escaped` when you want to know whether the floating element has moved outside its clipping context.
 
-- **`referenceHidden`**: Detects when the reference element is fully hidden by its clipping context
-- **`escaped`**: Detects when the floating element has escaped the reference's clipping context
+    The middleware does not hide anything by itself. It only writes data to `middlewareData.hide`, which you can map to `visibility`, `display`, or an accessibility state.
 
-## Return Value
+* Example
 
-The middleware provides data in `middlewareData.hide`:
+    ```vue
+    <script setup lang="ts">
+    import { computed, ref } from "vue"
+    import { hide, useFloating } from "v-float"
 
-```ts
-interface HideData {
-  referenceHidden?: boolean
-  escaped?: boolean
-}
-```
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-## Examples
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [hide()],
+    })
 
-### Basic Usage
+    const visibility = computed(() => {
+      return context.middlewareData.value.hide?.referenceHidden ? "hidden" : "visible"
+    })
+    </script>
 
-```vue
-<script setup>
-import { computed } from 'vue'
-import { useFloating, hide } from 'v-float'
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [hide()]
-})
+      <div
+        v-if="context.open.value"
+        ref="floatingEl"
+        :style="{ ...context.floatingStyles, visibility }"
+      >
+        Floating content
+      </div>
+    </template>
+    ```
 
-const visibility = computed(() => {
-  const hideData = context.middlewareData.value?.hide
-  return hideData?.referenceHidden ? 'hidden' : 'visible'
-})
-</script>
+* See also
 
-<template>
-  <div ref="floatingEl" :style="{ ...context.floatingStyles.value, visibility }">
-    Content
-  </div>
-</template>
-```
-
-### Using Escaped Strategy
-
-```vue
-<script setup>
-import { useFloating, hide } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    hide({ strategy: 'escaped' })
-  ]
-})
-</script>
-```
-
-## See Also
-
-- [shift](/api/shift) - Shifts the floating element to keep it in view
-- [flip](/api/flip) - Flips the floating element to an alternative placement
+    - [shift](/api/shift) - Keeps the floating element in view
+    - [flip](/api/flip) - Moves to a better placement when space is limited

@@ -1,171 +1,97 @@
 # useListNavigation
 
-Adds arrow key-based navigation for a list/grid of items inside a floating element, with optional virtual focus (aria-activedescendant), RTL, and looping.
+`useListNavigation` adds arrow-key navigation for list and grid items inside a floating element.
 
-## Signature
+* Type
 
-```ts
-function useListNavigation(
-  context: FloatingContext,
-  options: UseListNavigationOptions
-): UseListNavigationReturn
-```
+    ```ts
+    function useListNavigation(
+      context: FloatingContext,
+      options: UseListNavigationOptions
+    ): UseListNavigationReturn
 
-## Parameters
+    interface UseListNavigationOptions {
+      listRef: Ref<Array<HTMLElement | null>>
+      activeIndex?: MaybeRefOrGetter<number | null>
+      onNavigate?: (index: number | null) => void
+      enabled?: MaybeRefOrGetter<boolean>
+      loop?: MaybeRefOrGetter<boolean>
+      orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">
+      disabledIndices?: Array<number> | ((index: number) => boolean)
+      focusItemOnHover?: MaybeRefOrGetter<boolean>
+      openOnArrowKeyDown?: MaybeRefOrGetter<boolean>
+      scrollItemIntoView?: boolean | ScrollIntoViewOptions
+      selectedIndex?: MaybeRefOrGetter<number | null>
+      focusItemOnOpen?: MaybeRefOrGetter<boolean | "auto">
+      nested?: MaybeRefOrGetter<boolean>
+      parentOrientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">
+      rtl?: MaybeRefOrGetter<boolean>
+      virtual?: MaybeRefOrGetter<boolean>
+      virtualItemRef?: Ref<HTMLElement | null>
+      cols?: MaybeRefOrGetter<number>
+      allowEscape?: MaybeRefOrGetter<boolean>
+      gridLoopDirection?: MaybeRefOrGetter<"row" | "next">
+    }
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| context | `FloatingContext` | Yes | Context from `useFloating` |
-| options | `UseListNavigationOptions` | Yes | Configuration options (see below) |
+    interface UseListNavigationReturn {
+      cleanup: () => void
+    }
+    ```
 
-## Options
+* Details
 
-```ts
-interface UseListNavigationOptions {
-  listRef: Ref<Array<HTMLElement | null>>
-  activeIndex?: MaybeRefOrGetter<number | null>
-  onNavigate?: (index: number | null) => void
-  enabled?: MaybeRefOrGetter<boolean>
-  loop?: MaybeRefOrGetter<boolean>
-  orientation?: MaybeRefOrGetter<'vertical' | 'horizontal' | 'both'>
-  disabledIndices?: Array<number> | ((index: number) => boolean)
-  focusItemOnHover?: MaybeRefOrGetter<boolean>
-  openOnArrowKeyDown?: MaybeRefOrGetter<boolean>
-  scrollItemIntoView?: boolean | ScrollIntoViewOptions
-  selectedIndex?: MaybeRefOrGetter<number | null>
-  focusItemOnOpen?: MaybeRefOrGetter<boolean | 'auto'>
-  nested?: MaybeRefOrGetter<boolean>
-  parentOrientation?: MaybeRefOrGetter<'vertical' | 'horizontal' | 'both'>
-  rtl?: MaybeRefOrGetter<boolean>
-  virtual?: MaybeRefOrGetter<boolean>
-  virtualItemRef?: Ref<HTMLElement | null>
-  cols?: MaybeRefOrGetter<number>
-  allowEscape?: MaybeRefOrGetter<boolean>
-  gridLoopDirection?: MaybeRefOrGetter<'row' | 'next'>
-}
-```
+    `listRef` should stay in DOM order so indexes remain stable. `openOnArrowKeyDown` can open the floating context and move to the initial item when the list is closed.
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| listRef | `Ref<HTMLElement[] | (HTMLElement\|null)[]>` | — | Items in DOM order. Keep indexes stable with your render. |
-| activeIndex | `MaybeRefOrGetter<number\|null>` | `null` | Current active/highlighted item index. |
-| onNavigate | `(index: number\|null) => void` | — | Called on navigation changes. You should update `activeIndex`. |
-| enabled | `MaybeRefOrGetter<boolean>` | `true` | Enable/disable all listeners. |
-| loop | `MaybeRefOrGetter<boolean>` | `false` | Wrap at boundaries. With `virtual` + `allowEscape` it can deselect. |
-| orientation | `MaybeRefOrGetter<'vertical'|'horizontal'|'both'>` | `'vertical'` | Main navigation axis. |
-| disabledIndices | `number[] \| (index:number)=>boolean` | `undefined` | Skip these indices when navigating. |
-| focusItemOnHover | `MaybeRefOrGetter<boolean>` | `true` | Hovering an item sets it active. |
-| openOnArrowKeyDown | `MaybeRefOrGetter<boolean>` | `true` | Arrow on anchor opens floating and activates an item. |
-| scrollItemIntoView | `boolean \| ScrollIntoViewOptions` | `true` | Scroll active item into view (nearest by default); suppressed during pointer modality. |
-| selectedIndex | `MaybeRefOrGetter<number\|null>` | `null` | Preferred item to activate on open if provided. |
-| focusItemOnOpen | `MaybeRefOrGetter<boolean|'auto'>` | `'auto'` | Auto-focus item on open (first/last based on arrow direction) or selected. |
-| nested | `MaybeRefOrGetter<boolean>` | `false` | Enables cross-axis close to return focus to parent anchor. |
-| parentOrientation | `MaybeRefOrGetter<'vertical'|'horizontal'|'both'>` | `undefined` | Reserved for advanced nested semantics. Not currently used. |
-| rtl | `MaybeRefOrGetter<boolean>` | `false` | Flips Left/Right behavior for horizontal/both orientations. |
-| virtual | `MaybeRefOrGetter<boolean>` | `false` | Keep DOM focus on anchor and manage active with `aria-activedescendant`. |
-| virtualItemRef | `Ref<HTMLElement|null>` | — | Populated with the virtually focused item element when `virtual` is enabled. |
-| cols | `MaybeRefOrGetter<number>` | `1` | Grid columns when `> 1`; ArrowUp/Down move by ±`cols` (uniform grid). |
-| allowEscape | `MaybeRefOrGetter<boolean>` | `false` | With `virtual` and `loop`, navigating past ends yields `onNavigate(null)`. |
-| gridLoopDirection | `MaybeRefOrGetter<'row'\|'next'>` | `'row'` | Grid horizontal wrapping behavior. `'row'` wraps within same row, `'next'` moves to next/prev row. |
+    `virtual: true` keeps DOM focus on the anchor and manages the active item with `aria-activedescendant`. `cols` and `gridLoopDirection` are only meaningful when you are using grid-style navigation.
 
-## Return Value
+    The returned `cleanup()` function removes the listeners and any watchers that were registered by the composable.
 
-```ts
-interface UseListNavigationReturn {
-  cleanup: () => void
-}
-```
+* Example
 
-| Property | Type | Description |
-|----------|------|-------------|
-| cleanup | `() => void` | Removes internal event listeners.
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { useFloating, useListNavigation } from "v-float"
 
-## Examples
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
+    const itemsRef = ref<Array<HTMLElement | null>>([])
+    const activeIndex = ref<number | null>(null)
 
-### Basic Menu Navigation
+    const context = useFloating(anchorEl, floatingEl)
 
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useListNavigation } from 'v-float'
+    useListNavigation(context, {
+      listRef: itemsRef,
+      activeIndex,
+      onNavigate: (index) => {
+        activeIndex.value = index
+      },
+      orientation: "vertical",
+      loop: true,
+    })
+    </script>
 
-const anchorEl = ref<HTMLElement|null>(null)
-const floatingEl = ref<HTMLElement|null>(null)
-const itemsRef = ref<Array<HTMLElement|null>>([])
-const activeIndex = ref<number|null>(null)
+    <template>
+      <button ref="anchorEl" @click="context.setOpen(!context.open.value)">
+        Open menu
+      </button>
 
-const ctx = useFloating(anchorEl, floatingEl)
+      <ul v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        <li
+          v-for="item in 3"
+          :key="item"
+          :ref="(el) => (itemsRef[item - 1] = el)"
+          tabindex="-1"
+        >
+          Item {{ item }}
+        </li>
+      </ul>
+    </template>
+    ```
 
-useListNavigation(ctx, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate: (i) => (activeIndex.value = i),
-  orientation: 'vertical',
-  loop: true,
-})
-</script>
+* See also
 
-<template>
-  <button ref="anchorEl">Open</button>
-  <ul v-if="ctx.open.value" ref="floatingEl">
-    <li v-for="(opt, i) in 5" :key="i" :ref="el => itemsRef.value[i] = el" tabindex="-1">
-      Item {{ i + 1 }}
-    </li>
-  </ul>
-</template>
-```
-
-### Virtual Listbox (aria-activedescendant)
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useListNavigation } from 'v-float'
-
-const anchorEl = ref<HTMLElement|null>(null)
-const floatingEl = ref<HTMLElement|null>(null)
-const itemsRef = ref<Array<HTMLElement|null>>([])
-const activeIndex = ref<number|null>(null)
-const virtItem = ref<HTMLElement|null>(null)
-
-const ctx = useFloating(anchorEl, floatingEl)
-
-useListNavigation(ctx, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate: (i) => (activeIndex.value = i),
-  virtual: true,
-  virtualItemRef: virtItem,
-  openOnArrowKeyDown: true,
-})
-</script>
-
-<template>
-  <input ref="anchorEl" role="combobox" :aria-expanded="ctx.open.value" />
-  <ul v-if="ctx.open.value" ref="floatingEl" role="listbox">
-    <li v-for="(opt, i) in 5" :key="i" :ref="el => itemsRef.value[i] = el" role="option">
-      {{ i }}
-    </li>
-  </ul>
-</template>
-```
-
-### Uniform Grid Navigation
-
-```ts
-useListNavigation(ctx, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate: i => activeIndex.value = i,
-  cols: 4,
-  orientation: 'both',
-  gridLoopDirection: 'next' // Optional
-})
-```
-
-## See Also
-
-- [useFloating](/api/use-floating)
-- [useClick](/api/use-click)
-- [useFocus](/api/use-focus)
-- [useEscapeKey](/api/use-escape-key)
+    - [useFloating](/api/use-floating) - Core positioning composable
+    - [useClick](/api/use-click) - Click-based activation
+    - [useFocus](/api/use-focus) - Focus-based activation
+    - [useEscapeKey](/api/use-escape-key) - Keyboard dismissal

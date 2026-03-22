@@ -1,168 +1,67 @@
 # useHover
 
-A composable that enables hover-based interactions for floating elements with support for delays, rest detection, and safe polygon traversal.
+`useHover` opens and closes a floating element when the pointer enters or leaves the anchor or floating element.
 
-## Signature
+* Type
 
-```ts
-function useHover(
-  context: FloatingContext,
-  options?: UseHoverOptions
-): void
-```
+    ```ts
+    function useHover(
+      context: FloatingContext,
+      options?: UseHoverOptions
+    ): void
 
-## Parameters
+    interface UseHoverOptions {
+      enabled?: MaybeRef<boolean>
+      delay?: MaybeRef<number | { open?: number; close?: number }>
+      restMs?: MaybeRef<number>
+      mouseOnly?: MaybeRef<boolean>
+      safePolygon?: MaybeRef<boolean | SafePolygonOptions>
+    }
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| context | `FloatingContext` | Yes | Context from `useFloating` |
-| options | `UseHoverOptions` | No | Configuration options |
+    interface SafePolygonOptions {
+      buffer?: number
+      requireIntent?: boolean
+      onPolygonChange?: (polygon: Polygon) => void
+    }
+    ```
 
-## Options
+* Details
 
-```ts
-interface UseHoverOptions {
-  enabled?: MaybeRef<boolean>
-  delay?: MaybeRef<number | { open?: number; close?: number }>
-  restMs?: MaybeRef<number>
-  mouseOnly?: MaybeRef<boolean>
-  safePolygon?: MaybeRef<boolean | SafePolygonOptions>
-}
+    `delay` can be a single number or separate open and close values. `restMs` only applies when the open delay is `0`, so it is used to open after the pointer settles instead of after a timer-based delay.
 
-interface SafePolygonOptions {
-  buffer?: number
-  blockPointerEvents?: boolean
-}
-```
+    `safePolygon` keeps the floating element open while the pointer moves between the anchor and floating surfaces. Use `mouseOnly` when you want to ignore pen, touch, or other non-mouse pointers.
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| enabled | `MaybeRef<boolean>` | `true` | Enable/disable hover listeners |
-| delay | `MaybeRef<number \| object>` | `0` | Delay before showing/hiding (ms) |
-| restMs | `MaybeRef<number>` | `0` | Time pointer must rest before opening (ms) |
-| mouseOnly | `MaybeRef<boolean>` | `false` | Only trigger for mouse-like pointers |
-| safePolygon | `MaybeRef<boolean \| SafePolygonOptions>` | `false` | Enable safe polygon traversal |
+* Example
 
-## Examples
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { useFloating, useHover } from "v-float"
 
-### Basic Usage
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating, useHover } from 'v-float'
+    const context = useFloating(anchorEl, floatingEl, {
+      placement: "top",
+    })
 
-const anchorEl = ref(null)
-const floatingEl = ref(null)
+    useHover(context, {
+      delay: { open: 100, close: 150 },
+      safePolygon: true,
+    })
+    </script>
 
-const context = useFloating(anchorEl, floatingEl)
-useHover(context)
-</script>
+    <template>
+      <button ref="anchorEl">Hover me</button>
 
-<template>
-  <button ref="anchorEl">Hover me</button>
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-    Tooltip
-  </div>
-</template>
-```
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Tooltip content
+      </div>
+    </template>
+    ```
 
-### With Delay
+* See also
 
-```vue
-<script setup>
-import { useFloating, useHover } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl)
-
-useHover(context, {
-  delay: 300
-})
-</script>
-```
-
-### Different Open/Close Delays
-
-```vue
-<script setup>
-import { useFloating, useHover } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl)
-
-useHover(context, {
-  delay: {
-    open: 500,
-    close: 150
-  }
-})
-</script>
-```
-
-### With Safe Polygon
-
-```vue
-<script setup>
-import { useFloating, useHover } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  placement: 'right-start'
-})
-
-useHover(context, {
-  safePolygon: true
-})
-</script>
-```
-
-### Mouse Only
-
-```vue
-<script setup>
-import { useFloating, useHover } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl)
-
-useHover(context, {
-  mouseOnly: true
-})
-</script>
-```
-
-### With Rest Detection
-
-```vue
-<script setup>
-import { useFloating, useHover } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl)
-
-useHover(context, {
-  restMs: 100
-})
-</script>
-```
-
-### Reactive Options
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating, useHover } from 'v-float'
-
-const enabled = ref(true)
-const delay = ref(300)
-
-const context = useFloating(anchorEl, floatingEl)
-
-useHover(context, {
-  enabled,
-  delay
-})
-</script>
-```
-
-## See Also
-
-- [useFocus](/api/use-focus) - Focus-based interactions
-- [useClick](/api/use-click) - Click-based interactions
-- [useFloating](/api/use-floating) - Core positioning composable
+    - [useFocus](/api/use-focus) - Focus-based activation
+    - [useClick](/api/use-click) - Click-based activation
+    - [useFloating](/api/use-floating) - Core positioning composable

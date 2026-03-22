@@ -1,232 +1,122 @@
 # useFloating
 
-The core composable for positioning a floating element relative to another element.
+`useFloating` positions a floating element relative to an anchor element and returns the reactive state needed to render and control it.
 
-## Signature
+* Type
 
-```ts
-function useFloating(
-  anchorEl: Ref<AnchorElement>,
-  floatingEl: Ref<FloatingElement>,
-  options?: UseFloatingOptions
-): FloatingContext
-```
+    ```ts
+    function useFloating(
+      anchorEl: Ref<AnchorElement>,
+      floatingEl: Ref<FloatingElement>,
+      options?: UseFloatingOptions
+    ): FloatingContext
 
-## Parameters
+    type AnchorElement = HTMLElement | VirtualElement | null
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| anchorEl | `Ref<AnchorElement>` | Yes | Reference to the anchor element |
-| floatingEl | `Ref<FloatingElement>` | Yes | Reference to the floating element |
-| options | `UseFloatingOptions` | No | Configuration options |
+    type FloatingElement = HTMLElement | null
 
-## Options
+    interface UseFloatingOptions {
+      placement?: MaybeRefOrGetter<Placement | undefined>
+      strategy?: MaybeRefOrGetter<Strategy | undefined>
+      transform?: MaybeRefOrGetter<boolean | undefined>
+      middlewares?: MaybeRefOrGetter<Middleware[]>
+      autoUpdate?: boolean | AutoUpdateOptions
+      open?: Ref<boolean>
+      onOpenChange?: (
+        open: boolean,
+        reason: OpenChangeReason,
+        event?: Event
+      ) => void
+    }
 
-```ts
-interface UseFloatingOptions {
-  id?: string
-  placement?: MaybeRefOrGetter<Placement>
-  strategy?: MaybeRefOrGetter<Strategy>
-  transform?: MaybeRefOrGetter<boolean>
-  middlewares?: MaybeRefOrGetter<Middleware[]>
-  autoUpdate?: boolean | AutoUpdateOptions
-  open?: Ref<boolean>
-  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void
-}
-```
+    interface FloatingContext {
+      x: Readonly<Ref<number>>
+      y: Readonly<Ref<number>>
+      strategy: Readonly<Ref<Strategy>>
+      placement: Readonly<Ref<Placement>>
+      middlewareData: Readonly<Ref<MiddlewareData>>
+      isPositioned: Readonly<Ref<boolean>>
+      floatingStyles: Readonly<Ref<FloatingStyles>>
+      update: () => void
+      refs: {
+        anchorEl: Ref<AnchorElement>
+        floatingEl: Ref<FloatingElement>
+        arrowEl: Ref<HTMLElement | null>
+      }
+      open: Readonly<Ref<boolean>>
+      setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void
+    }
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| id | `string` | `undefined` | Optional stable identifier |
-| placement | `MaybeRefOrGetter<Placement>` | `'bottom'` | Desired placement of the floating element |
-| strategy | `MaybeRefOrGetter<Strategy>` | `'absolute'` | Positioning strategy (`'absolute'` or `'fixed'`) |
-| transform | `MaybeRefOrGetter<boolean>` | `true` | Use CSS transform for positioning |
-| middlewares | `MaybeRefOrGetter<Middleware[]>` | `[]` | Array of middleware functions |
-| autoUpdate | `boolean \| AutoUpdateOptions` | `true` | Auto-update position on scroll/resize |
-| open | `Ref<boolean>` | `ref(false)` | Control open/closed state |
-| onOpenChange | `(open, reason, event?) => void` | `undefined` | Callback when open state changes |
+    type OpenChangeReason =
+      | "anchor-click"
+      | "keyboard-activate"
+      | "outside-pointer"
+      | "focus"
+      | "blur"
+      | "hover"
+      | "escape-key"
+      | "programmatic"
 
-## Return Value
+    interface FloatingStyles {
+      position: Strategy
+      top: string
+      left: string
+      transform?: string
+      "will-change"?: string
+    }
+    ```
 
-```ts
-interface FloatingContext {
-  id?: string
-  x: Readonly<Ref<number>>
-  y: Readonly<Ref<number>>
-  strategy: Readonly<Ref<Strategy>>
-  placement: Readonly<Ref<Placement>>
-  middlewareData: Readonly<Ref<MiddlewareData>>
-  isPositioned: Readonly<Ref<boolean>>
-  floatingStyles: Readonly<Ref<FloatingStyles>>
-  update: () => void
-  refs: {
-    anchorEl: Ref<AnchorElement>
-    floatingEl: Ref<FloatingElement>
-    arrowEl: Ref<HTMLElement | null>
-  }
-  open: Readonly<Ref<boolean>>
-  setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void
-}
-```
+* Details
 
-| Property | Type | Description |
-|----------|------|-------------|
-| id | `string \| undefined` | Stable identifier |
-| x | `Readonly<Ref<number>>` | X-coordinate of the floating element |
-| y | `Readonly<Ref<number>>` | Y-coordinate of the floating element |
-| strategy | `Readonly<Ref<Strategy>>` | Positioning strategy |
-| placement | `Readonly<Ref<Placement>>` | Final computed placement |
-| middlewareData | `Readonly<Ref<MiddlewareData>>` | Data from middleware |
-| isPositioned | `Readonly<Ref<boolean>>` | Whether element has been positioned |
-| floatingStyles | `Readonly<Ref<FloatingStyles>>` | CSS styles to apply |
-| update | `() => void` | Manually update position |
-| refs | `object` | References to anchor, floating, and arrow elements |
-| open | `Readonly<Ref<boolean>>` | Open/closed state |
-| setOpen | `(open, reason?, event?) => void` | Explicitly set open state with optional reason |
+    `useFloating` is the core positioning composable for tooltips, menus, popovers, dialogs, and other anchored surfaces. It computes coordinates from the anchor and floating refs, keeps them in sync with `autoUpdate` by default, and exposes the shared open state that interaction composables reuse.
 
-## Types
+    * `placement` controls the preferred side and alignment. It defaults to `"bottom"`.
+    * `strategy` controls whether the floating element uses `"absolute"` or `"fixed"` positioning. It defaults to `"absolute"`.
+    * `transform` is enabled by default and writes the position as a CSS transform.
+    * `middlewares` let you refine the computed position with helpers such as `offset()`, `flip()`, `shift()`, or `arrow()`.
+    * `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object to forward options to Floating UI.
+    * `open` defaults to `ref(false)`. If you pass your own ref, `useFloating` uses it as shared state.
+    * `setOpen(open, reason?, event?)` updates the open state and calls `onOpenChange`. If you omit `reason`, it falls back to `"programmatic"`.
+    * `refs.arrowEl` is filled by `useArrow()` so the arrow middleware can read the same context.
 
-### AnchorElement
+* Example
 
-```ts
-type AnchorElement = HTMLElement | VirtualElement | null
-```
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { offset, useFloating } from "v-float"
 
-### FloatingElement
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-```ts
-type FloatingElement = HTMLElement | null
-```
+    const context = useFloating(anchorEl, floatingEl, {
+      placement: "bottom-start",
+      middlewares: [offset(8)],
+    })
+    </script>
 
-### FloatingStyles
+    <template>
+      <button ref="anchorEl" @click="context.setOpen(!context.open.value)">
+        Toggle
+      </button>
 
-```ts
-interface FloatingStyles {
-  position: Strategy
-  top: string
-  left: string
-  transform?: string
-  'will-change'?: string
-  [key: `--${string}`]: any  // CSS custom properties
-}
-```
+      <div
+        v-if="context.open.value"
+        ref="floatingEl"
+        :style="context.floatingStyles"
+      >
+        Floating content
+      </div>
+    </template>
+    ```
 
-### OpenChangeReason
+* See also
 
-```ts
-type OpenChangeReason =
-  | 'programmatic'
-  | 'anchor-click'
-  | 'hover'
-  | 'focus'
-  | 'blur'
-  | 'escape-key'
-```
-
-Describes the reason why the open state changed:
-- `'programmatic'` - Changed via `setOpen()` or `open.value = ...`
-- `'anchor-click'` - Triggered by clicking the anchor element
-- `'hover'` - Triggered by hovering over the anchor
-- `'focus'` - Triggered by focusing the anchor
-- `'blur'` - Triggered by blurring the anchor
-- `'escape-key'` - Triggered by pressing the Escape key
-
-## Examples
-
-### Basic Usage
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating } from 'v-float'
-
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-
-const { floatingStyles } = useFloating(anchorEl, floatingEl)
-</script>
-
-<template>
-  <button ref="anchorEl">Anchor</button>
-  <div ref="floatingEl" :style="floatingStyles">
-    Floating content
-  </div>
-</template>
-```
-
-### With Placement
-
-```vue
-<script setup>
-import { useFloating } from 'v-float'
-
-const { floatingStyles } = useFloating(anchorEl, floatingEl, {
-  placement: 'top-start'
-})
-</script>
-```
-
-### With Middleware
-
-```vue
-<script setup>
-import { useFloating, offset, flip, shift } from 'v-float'
-
-const { floatingStyles } = useFloating(anchorEl, floatingEl, {
-  placement: 'top',
-  middlewares: [
-    offset(8),
-    flip(),
-    shift({ padding: 5 })
-  ]
-})
-</script>
-```
-
-### Reactive Placement
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating } from 'v-float'
-
-const placement = ref('top')
-
-const { floatingStyles } = useFloating(anchorEl, floatingEl, {
-  placement
-})
-
-// Change placement dynamically
-placement.value = 'bottom'
-</script>
-```
-
-### With Open State and Callback
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating } from 'v-float'
-
-const isOpen = ref(false)
-
-const { floatingStyles, setOpen } = useFloating(anchorEl, floatingEl, {
-  open: isOpen,
-  onOpenChange: (open, reason, event) => {
-    console.log(`Floating element ${open ? 'opened' : 'closed'} via ${reason}`)
-  }
-})
-
-// Programmatically control open state
-const toggleOpen = () => {
-  setOpen(!isOpen.value, 'programmatic')
-}
-</script>
-```
-
-## See Also
-
-- [offset](/api/offset) - Offset the floating element
-- [flip](/api/flip) - Flip to alternative placement
-- [shift](/api/shift) - Shift to keep in view
-- [arrow](/api/arrow) - Position an arrow element
+    - [useClick](/api/use-click) - Click-based activation
+    - [useHover](/api/use-hover) - Hover-based activation
+    - [useFocus](/api/use-focus) - Focus-based activation
+    - [useArrow](/api/use-arrow) - Arrow positioning styles
+    - [offset](/api/offset) - Add spacing
+    - [flip](/api/flip) - Flip to the opposite side when needed
+    - [shift](/api/shift) - Keep the floating element in view
+    - [Interactions Guide](/guide/interactions) - Combine positioning with interactions

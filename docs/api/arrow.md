@@ -1,102 +1,73 @@
 # arrow
 
-A middleware that provides positioning data for an arrow element pointing toward the reference element.
+`arrow` positions an arrow element so it points toward the reference element and exposes the resulting coordinates through `middlewareData.arrow`.
 
-## Signature
+* Type
 
-```ts
-function arrow(options: ArrowOptions): Middleware
-```
+    ```ts
+    function arrow(options: ArrowMiddlewareOptions): Middleware
 
-## Options
+    interface ArrowMiddlewareOptions {
+      element: Ref<HTMLElement | null>
+      padding?: Padding
+    }
 
-```ts
-interface ArrowOptions {
-  element: Ref<HTMLElement | null>
-  padding?: Padding
-}
-```
+    interface ArrowData {
+      x?: number
+      y?: number
+      centerOffset: number
+    }
+    ```
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| element | `Ref<HTMLElement \| null>` | Yes | Reference to the arrow element |
-| padding | `Padding` | No | Padding from the floating element edges |
+* Details
 
-## Return Value
+    `arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element.
 
-The middleware provides data in `middlewareData.arrow`:
+    The middleware writes its result to `middlewareData.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually.
 
-```ts
-interface ArrowData {
-  x?: number
-  y?: number
-  centerOffset: number
-}
-```
+* Example
 
-| Property | Type | Description |
-|----------|------|-------------|
-| x | `number \| undefined` | X-axis position of the arrow |
-| y | `number \| undefined` | Y-axis position of the arrow |
-| centerOffset | `number` | Offset from the center of the reference element |
+    ```vue
+    <script setup lang="ts">
+    import { computed, ref } from "vue"
+    import { arrow, offset, useFloating } from "v-float"
 
-## Examples
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
+    const arrowEl = ref<HTMLElement | null>(null)
 
-### Basic Usage
-
-```vue
-<script setup>
-import { ref, computed } from 'vue'
-import { useFloating, arrow, offset } from 'v-float'
-
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-const arrowEl = ref(null)
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    offset(8),
-    arrow({ element: arrowEl })
-  ]
-})
-
-const arrowStyles = computed(() => {
-  const arrowData = context.middlewareData.value?.arrow
-  if (!arrowData) return {}
-  
-  const styles = {}
-  if (arrowData.x != null) styles.left = `${arrowData.x}px`
-  if (arrowData.y != null) styles.top = `${arrowData.y}px`
-  return styles
-})
-</script>
-
-<template>
-  <div ref="floatingEl">
-    Content
-    <div ref="arrowEl" :style="arrowStyles" />
-  </div>
-</template>
-```
-
-### With Padding
-
-```vue
-<script setup>
-import { useFloating, arrow } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    arrow({ 
-      element: arrowEl,
-      padding: 8
+    const context = useFloating(anchorEl, floatingEl, {
+      placement: "top",
+      middlewares: [
+        offset(8),
+        arrow({ element: arrowEl, padding: 8 }),
+      ],
     })
-  ]
-})
-</script>
-```
 
-## See Also
+    const arrowStyles = computed(() => {
+      const data = context.middlewareData.value.arrow
+      const styles: Record<string, string> = {}
 
-- [useArrow](/api/use-arrow) - Composable that auto-registers this middleware and provides ready-to-use styles
-- [offset](/api/offset) - Commonly used with arrow for spacing
+      if (!data) return styles
+      if (data.x != null) styles.left = `${data.x}px`
+      if (data.y != null) styles.top = `${data.y}px`
+
+      return styles
+    })
+    </script>
+
+    <template>
+      <button ref="anchorEl">Anchor</button>
+
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        <div ref="arrowEl" :style="arrowStyles">^</div>
+        Floating content
+      </div>
+    </template>
+    ```
+
+* See also
+
+    - [useArrow](/api/use-arrow) - Wires the arrow ref into `useFloating`
+    - [useFloating](/api/use-floating) - Core positioning composable
+    - [offset](/api/offset) - Adds spacing between the anchor and floating element

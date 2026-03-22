@@ -1,123 +1,60 @@
 # offset
 
-A middleware that offsets the floating element from its reference element.
+`offset` adds distance between the reference element and the floating element.
 
-## Signature
+* Type
 
-```ts
-function offset(
-  value?: OffsetValue | OffsetFunction
-): Middleware
+    ```ts
+    function offset(value?: OffsetValue | OffsetFunction): Middleware
 
-type OffsetValue = number | OffsetOptions
-type OffsetFunction = (args: OffsetFunctionArgs) => OffsetValue
+    type OffsetValue = number | OffsetOptions
+    type OffsetFunction = (args: OffsetFunctionArgs) => OffsetValue
 
-interface OffsetOptions {
-  mainAxis?: number
-  crossAxis?: number
-  alignmentAxis?: number | null
-}
+    interface OffsetOptions {
+      mainAxis?: number
+      crossAxis?: number
+      alignmentAxis?: number | null
+    }
 
-interface OffsetFunctionArgs {
-  placement: Placement
-  rects: ElementRects
-  elements: Elements
-}
-```
+    interface OffsetFunctionArgs {
+      placement: Placement
+      rects: ElementRects
+      elements: Elements
+    }
+    ```
 
-## Parameters
+* Details
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| value | `number \| OffsetOptions \| OffsetFunction` | Offset value, options object, or function returning either |
+    A numeric value is shorthand for `mainAxis`. Use an options object when you need separate control over the main axis, cross axis, or alignment axis. Use a function when the offset needs to depend on the current placement or element sizes.
 
-### OffsetOptions
+    `mainAxis` follows the placement direction, `crossAxis` is perpendicular to it, and `alignmentAxis` overrides the cross-axis offset for aligned placements such as `top-start`.
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| mainAxis | `number` | `0` | Offset along the placement direction |
-| crossAxis | `number` | `0` | Offset perpendicular to placement direction |
-| alignmentAxis | `number \| null` | `null` | Offset for aligned placements (overrides crossAxis) |
+* Example
 
-### Axis Directions
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { offset, useFloating } from "v-float"
 
-- **Main axis**: Direction of the placement (e.g., vertical for `top`/`bottom`)
-- **Cross axis**: Perpendicular to the placement direction
-- **Alignment axis**: Used for aligned placements like `top-start`, `bottom-end`
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
 
-## Examples
-
-### Numeric Offset
-
-```vue
-<script setup>
-import { useFloating, offset } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [offset(10)]
-})
-</script>
-```
-
-### Object Form
-
-```vue
-<script setup>
-import { useFloating, offset } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    offset({ 
-      mainAxis: 8,
-      crossAxis: 4
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [offset(10)],
     })
-  ]
-})
-</script>
-```
+    </script>
 
-### Alignment Axis
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-```vue
-<script setup>
-import { useFloating, offset } from 'v-float'
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Floating content
+      </div>
+    </template>
+    ```
 
-const context = useFloating(anchorEl, floatingEl, {
-  placement: 'top-start',
-  middleware: [
-    offset({ 
-      mainAxis: 8,
-      alignmentAxis: 12
-    })
-  ]
-})
-</script>
-```
+* See also
 
-### Dynamic Offset
-
-```vue
-<script setup>
-import { useFloating, offset } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    offset(({ placement, rects }) => {
-      if (placement.startsWith('top')) {
-        return 8
-      }
-      return { 
-        mainAxis: rects.reference.height / 2,
-        crossAxis: 4
-      }
-    })
-  ]
-})
-</script>
-```
-
-## See Also
-
-- [arrow](/api/arrow) - Often used with offset for arrow positioning
-- [flip](/api/flip) - Flips placement when out of view
-- [shift](/api/shift) - Shifts element to keep it in view
+    - [arrow](/api/arrow) - Keeps the arrow away from the edge
+    - [flip](/api/flip) - Chooses another placement when space is limited
+    - [shift](/api/shift) - Keeps the floating element in view

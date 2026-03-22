@@ -1,106 +1,62 @@
 # useArrow
 
-A composable that automatically registers the arrow middleware and provides ready-to-use positioning styles for an arrow element.
+`useArrow` connects an arrow element to a floating context and returns ready-to-use arrow coordinates and styles.
 
-## Signature
+* Type
 
-```ts
-function useArrow(
-  arrowEl: Ref<HTMLElement | null>,
-  context: FloatingContext,
-  options?: UseArrowOptions
-): UseArrowReturn
-```
+    ```ts
+    function useArrow(
+      arrowEl: Ref<HTMLElement | null>,
+      context: FloatingContext,
+      options?: UseArrowOptions
+    ): UseArrowReturn
 
-## Parameters
+    interface UseArrowOptions {
+      offset?: string
+    }
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| arrowEl | `Ref<HTMLElement \| null>` | Yes | Reference to the arrow element |
-| context | `FloatingContext` | Yes | Context from `useFloating` |
-| options | `UseArrowOptions` | No | Configuration options |
+    interface UseArrowReturn {
+      arrowX: ComputedRef<number>
+      arrowY: ComputedRef<number>
+      arrowStyles: ComputedRef<Record<string, string>>
+    }
+    ```
 
-## Options
+* Details
 
-```ts
-interface UseArrowOptions {
-  offset?: string
-}
-```
+    `useArrow` keeps `context.refs.arrowEl` in sync with your arrow ref. That lets `useFloating()` add the arrow middleware automatically, so the arrow position stays aligned with the computed placement.
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| offset | `string` | `'-4px'` | Distance of arrow from floating element edge |
+    The composable reads `middlewareData.arrow` and returns logical positioning styles through `arrowStyles`. `offset` defaults to `"-4px"`.
 
-## Return Value
+* Example
 
-```ts
-interface UseArrowReturn {
-  arrowX: ComputedRef<number>
-  arrowY: ComputedRef<number>
-  arrowStyles: ComputedRef<Record<string, string>>
-}
-```
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { offset, useArrow, useFloating } from "v-float"
 
-| Property | Type | Description |
-|----------|------|-------------|
-| arrowX | `ComputedRef<number>` | X-coordinate of the arrow |
-| arrowY | `ComputedRef<number>` | Y-coordinate of the arrow |
-| arrowStyles | `ComputedRef<Record<string, string>>` | CSS styles using logical properties |
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
+    const arrowEl = ref<HTMLElement | null>(null)
 
-## Examples
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [offset(8)],
+    })
 
-### Basic Usage
+    const { arrowStyles } = useArrow(arrowEl, context)
+    </script>
 
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating, useArrow, offset } from 'v-float'
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-const arrowEl = ref(null)
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Floating content
+        <div ref="arrowEl" :style="arrowStyles">^</div>
+      </div>
+    </template>
+    ```
 
-const context = useFloating(anchorEl, floatingEl, {
-  middlewares: [offset(8)]
-})
+* See also
 
-const { arrowStyles } = useArrow(arrowEl, context)
-</script>
-
-<template>
-  <div ref="floatingEl" :style="context.floatingStyles">
-    Content
-    <div ref="arrowEl" :style="arrowStyles" />
-  </div>
-</template>
-```
-
-### With Custom Offset
-
-```vue
-<script setup>
-import { useFloating, useArrow } from 'v-float'
-
-const { arrowStyles } = useArrow(arrowEl, context, {
-  offset: '-6px'
-})
-</script>
-```
-
-### With Padding
-
-```vue
-<script setup>
-import { useFloating, useArrow } from 'v-float'
-
-const { arrowStyles } = useArrow(arrowEl, context, {
-  padding: 8
-})
-</script>
-```
-
-## See Also
-
-- [arrow](/api/arrow) - The underlying middleware
-- [useFloating](/api/use-floating) - Core positioning composable
+    - [arrow](/api/arrow) - The underlying middleware
+    - [useFloating](/api/use-floating) - Core positioning composable

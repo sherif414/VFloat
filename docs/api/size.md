@@ -1,88 +1,72 @@
 # size
 
-A middleware that provides available size data and allows resizing the floating element to fit within boundaries.
+`size` provides the available width and height around the floating element so you can resize it to fit the current boundary.
 
-## Signature
+* Type
 
-```ts
-function size(options?: SizeOptions): Middleware
-```
+    ```ts
+    function size(options?: SizeOptions): Middleware
 
-## Options
+    interface SizeOptions {
+      apply?: (state: SizeState) => void
+      padding?: Padding
+      boundary?: Boundary
+      rootBoundary?: RootBoundary
+      elementContext?: ElementContext
+      altBoundary?: boolean
+    }
 
-```ts
-interface SizeOptions {
-  apply?: (state: SizeState) => void
-  padding?: Padding
-  boundary?: Boundary
-  rootBoundary?: RootBoundary
-  elementContext?: ElementContext
-  altBoundary?: boolean
-}
-
-interface SizeState extends MiddlewareState {
-  availableWidth: number
-  availableHeight: number
-  elements: {
-    floating: HTMLElement
-    reference: Element | VirtualElement
-  }
-}
-```
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| apply | `(state: SizeState) => void` | `undefined` | Callback to apply size constraints |
-| padding | `Padding` | `0` | Padding from the boundary edges |
-| boundary | `Boundary` | `'clippingAncestors'` | Clipping boundary |
-| rootBoundary | `RootBoundary` | `'viewport'` | Root boundary (viewport or document) |
-| elementContext | `ElementContext` | `'floating'` | Element context for overflow detection |
-| altBoundary | `boolean` | `false` | Use alternate element for boundary |
-
-## Examples
-
-### Basic Usage
-
-```vue
-<script setup>
-import { useFloating, size } from 'v-float'
-
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    size({
-      apply({ availableWidth, availableHeight, elements }) {
-        Object.assign(elements.floating.style, {
-          maxWidth: `${availableWidth}px`,
-          maxHeight: `${availableHeight}px`
-        })
+    interface SizeState {
+      availableWidth: number
+      availableHeight: number
+      rects: MiddlewareState["rects"]
+      elements: {
+        floating: HTMLElement
+        reference: Element | VirtualElement
       }
+    }
+    ```
+
+* Details
+
+    `size` does not resize anything on its own. Use the `apply` callback to write styles such as `maxWidth`, `maxHeight`, or a matched reference width.
+
+    This middleware is useful for menus, popovers, and other surfaces that need to stay inside the viewport without overflowing.
+
+* Example
+
+    ```vue
+    <script setup lang="ts">
+    import { ref } from "vue"
+    import { size, useFloating } from "v-float"
+
+    const anchorEl = ref<HTMLElement | null>(null)
+    const floatingEl = ref<HTMLElement | null>(null)
+
+    const context = useFloating(anchorEl, floatingEl, {
+      middlewares: [
+        size({
+          apply({ availableWidth, availableHeight, elements }) {
+            Object.assign(elements.floating.style, {
+              maxWidth: `${availableWidth}px`,
+              maxHeight: `${availableHeight}px`,
+            })
+          },
+        }),
+      ],
     })
-  ]
-})
-</script>
-```
+    </script>
 
-### Match Reference Width
+    <template>
+      <button ref="anchorEl">Anchor</button>
 
-```vue
-<script setup>
-import { useFloating, size } from 'v-float'
+      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+        Floating content
+      </div>
+    </template>
+    ```
 
-const context = useFloating(anchorEl, floatingEl, {
-  middleware: [
-    size({
-      apply({ rects, elements }) {
-        Object.assign(elements.floating.style, {
-          width: `${rects.reference.width}px`
-        })
-      }
-    })
-  ]
-})
-</script>
-```
+* See also
 
-## See Also
-
-- [shift](/api/shift) - Shifts the floating element to keep it in view
-- [flip](/api/flip) - Flips the floating element to an alternative placement
+    - [shift](/api/shift) - Keeps the floating element in view
+    - [flip](/api/flip) - Chooses another placement when room is tight
