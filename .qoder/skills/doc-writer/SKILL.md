@@ -1,184 +1,133 @@
 ---
-name: doc-writer
-description: Write and maintain VFloat documentation following Vue.js documentation style. Use when creating, updating, or reviewing documentation in the docs/ directory.
+name: vfloat-doc-writer
+description: Write, edit, and review VFloat documentation in docs/api and docs/guide with concrete rules for API references, guides, VitePress syntax, and VFloat-specific examples. Use when creating new API references, guides, tutorials, doc updates, or docs reviews for VFloat.
 ---
 
-# Documentation Writer
+# VFloat Documentation Writer
 
-You are an expert technical writer and documentation maintainer for `VFloat`. Your primary goal is to write, format, and review documentation strictly adhering to the Vue.js documentation style (vuejs.org) and VitePress conventions.
+Use this skill to produce clear, consistent VFloat documentation that follows the rules below instead of relying on a vague style label.
 
-## When to Use This Skill
+## Use This Skill
 
-- Creating new API references in `docs/api/`
-- Writing guide and tutorial documentation in `docs/guide/`
-- Updating existing documentation to match source code changes
-- Reviewing documentation for style, tone, and formatting consistency
+- Creating or updating files in `docs/api/`
+- Creating or updating files in `docs/guide/`
+- Reviewing docs for tone, structure, links, and examples
+- Aligning docs with source changes in `src/`
 
-## Vue.js Documentation Style & Tone
+## Workflow
 
-The Vue.js docs are renowned for being approachable, clear, progressive, and developer-friendly. Apply these core principles:
+1. Identify the doc type.
+   - API references should stay concise and technical.
+   - Guides should teach a workflow and explain tradeoffs.
+2. Read the relevant source code before writing.
+   - Check the composable or utility implementation.
+   - Confirm signatures, defaults, edge cases, and naming.
+3. Follow the VFloat documentation rules.
+   - Keep the tone clear, direct, and practical.
+   - Prefer examples over long explanations.
+   - Introduce complexity gradually.
+4. Cross-link instead of duplicating.
+   - Link API docs to related guides.
+   - Link guides to the relevant API reference.
+5. Check formatting before finishing.
+   - Use valid VitePress markdown.
+   - Keep code blocks language-tagged.
+   - Make links and headings consistent with nearby docs.
 
-- **Tone and Voice**: Friendly, objective, and empathetic to beginners. Avoid overly academic or gatekeeping language (e.g., avoid "obviously", "simply", or "just").
-- **Progressive Disclosure**: Start simple, introduce complexity gradually.
-- **Show, Don't Tell**: Rely on clear code examples over lengthy textual explanations.
-- **Cross-linking**: Heavily interlink between API references and guide docs. Never duplicate information.
-- **Concise API Docs**: Focus strictly on the WHAT. Use the standard Type/Details/Example/See also structure.
+## API Docs
 
-## Documentation Types
+Use API docs for reference material.
 
-### 1. API Documentation (`docs/api/`)
-API docs are **reference material** — concise, technical, and focused on WHAT a function or type does.
+Required structure:
 
-**Required structure:**
-```markdown
+````markdown
 # functionName
 
-Brief 1-2 sentence description of what the function does.
+Brief 1-2 sentence description.
 
 ## Type
 
-\`\`\`ts
-function functionName<T>(
-  param: Type,
-  options?: OptionsType
-): ReturnType
-\`\`\`
+```ts
+function functionName(param: Type): ReturnType
+```
 
 ## Details
 
-Explain behavior, edge cases, and important notes. Keep it concise.
+Explain behavior, edge cases, and important notes.
 
 ## Example
 
-\`\`\`ts
-const result = functionName(param, { option: value })
-\`\`\`
+```ts
+const result = functionName(value)
+```
 
 ## See Also
 
-- [Guide - Related Topic](/guide/topic)
+- [Related Guide](/guide/related)
 - [`relatedApi`](/api/related-api)
-```
+````
 
-**API Doc Anti-patterns (DO NOT DO):**
-- Do NOT use Markdown tables for parameters (use TypeScript signatures instead).
-- Do NOT include "Why use this" or "Best practices" (these belong in Guide docs).
-- Do NOT write long explanatory text blocks.
+Rules:
 
-### 2. Guide Documentation (`docs/guide/`)
-Guide docs are **tutorials and explanations** — step-by-step, educational, and focused on HOW and WHY.
+- Use TypeScript signatures instead of parameter tables.
+- Keep the focus on what the API does.
+- Avoid long background sections or marketing language.
+- Keep explanations brief unless edge cases need extra detail.
+- Link to a guide when usage context matters more than the raw signature.
 
-**Required structure:**
-```markdown
+## Guide Docs
+
+Use guide docs for tutorials and conceptual explanations.
+
+Recommended structure:
+
+````markdown
 # Topic Title
 
-Brief introduction explaining WHAT the reader will learn.
+Short introduction explaining what the reader will learn.
 
 ## The Basics
 
-Start with the simplest possible runnable example:
-
-\`\`\`vue
-<script setup>
-import { ref } from 'vue'
-import { useFloating } from 'v-float'
-
-const anchorEl = ref(null)
-const floatingEl = ref(null)
-
-const { floatingStyles } = useFloating(anchorEl, floatingEl)
-</script>
-
-<template>
-  <button ref="anchorEl">Anchor</button>
-  <div ref="floatingEl" :style="floatingStyles">Floating</div>
-</template>
-\`\`\`
-
-[Try it in the Playground](/playground/)
+Start with the simplest working example.
 
 ::: tip
-Helpful context or tip that aids the reader's understanding.
+Helpful context or a small practical note.
 :::
 
 ## Deep Dive
 
-Explain concepts using progressive disclosure:
-1. Start with the basic concept.
-2. Show a slightly more complex example.
-3. Explain edge cases and caveats.
+Explain the concept progressively and add edge cases.
 
 ::: warning
-Important caveat, common mistake, or accessibility (a11y) consideration.
+Call out common mistakes, caveats, or accessibility concerns.
 :::
 
 ## Further Reading
 
--[API Reference](/api/function-name)
+- [API Reference](/api/function-name)
 - [Related Guide](/guide/related)
-```
+````
 
-## VitePress Syntax & Code Formatting
+Guidelines:
 
-As VFloat uses VitePress, strictly utilize its native features to enhance readability:
+- Use VitePress containers such as `::: tip`, `::: warning`, and `::: details`.
+- Prefer `<script setup>` examples.
+- Keep examples runnable and minimal.
+- Use code highlights only when they clarify the point.
+- Explain the why and how, not just the API surface.
+- Move detailed reference material to API docs instead of repeating it.
 
-**1. Callouts (Custom Containers)**
-```markdown
-::: info
-For general informational callouts.
-:::
-::: tip
-For best practices and helpful tips.
-:::
-::: warning
-For common pitfalls and edge cases.
-:::
-::: danger
-For dangerous edge cases or deprecated APIs.
-:::
-::: details Collapsible Title
-For advanced topics that shouldn't clutter the main reading flow.
-:::
-```
+## VFloat Conventions
 
-**2. Code Highlighting Marks**
-Use VitePress specific code comments to draw attention to code changes or focus areas:
-```vue
-<script setup>
-import { useFloating } from 'v-float'
+- Always use `middlewares` in examples, not `middleware`.
+- Use `setOpen(open: boolean, reason?: string, event?: Event)` and mention `reason` when relevant.
+- Use `ref<T | null>(null)` for template refs.
+- Import examples from `v-float`.
+- Keep docs aligned with the rewrite identity of VFloat. Do not describe it as a Floating UI fork.
 
-const { floatingStyles } = useFloating(anchorEl, floatingEl, {
-  middlewares: [offset(8)] // [!code focus]
-})
-</script>
-```
-*Supported marks:* `// [!code focus]`, `// [!code ++]`, `// [!code --]`, `// [!code error]`, `// [!code warning]`
+## Final Checks
 
-## VFloat Specific Code Style Rules
-- Always use `middlewares` (plural format), NOT `middleware`.
-- Correct `setOpen` signature is: `setOpen(open: boolean, reason?: string, event?: Event)`. Emphasize the `reason` parameter.
-- Always use Vue 3 Composition API with `<script setup>`.
-- Use `ref<T | null>(null)` for element template refs.
-- Always import from `v-float` in examples.
-
-## Instructions for the Agent
-
-When executing a documentation task, follow these sequential steps:
-
-1. **Context Gathering**: 
-   - Check if you are writing `docs/api/` or `docs/guide/`.
-   - Read the corresponding source code in `src/composables/` to extract accurate TypeScript signatures, `FloatingContext` details, and edge cases.
-2. **Determine Frontmatter**: Ensure the markdown file starts with appropriate YAML frontmatter (e.g., `--- \n title: FunctionName \n ---` or standard VitePress frontmatter).
-3. **Drafting**: Write the content using the strict templates provided above. Ensure proper progressive disclosure for guides or strict structural adherence for APIs.
-4. **Reviewing Code Blocks**: Verify that every code block has a language identifier (`vue` or `ts`), uses modern `<script setup>`, uses `// [!code focus]` where appropriate, and correctly utilizes VFloat specifics (`middlewares`, `setOpen`).
-5. **Cross-Reference Check**: Guarantee that Guide pages link to API references for deep technical details, and API pages link to Guide pages for usage context.
-
-## Example Links (Cross-Reference Format)
-
-```markdown
-// Inside an API doc, pointing to usage:
-See the [Interactions Guide](/guide/interactions) for detailed usage patterns.
-
-// Inside a Guide doc, pointing to API details:
-See [`useFloating`](/api/use-floating) for the complete parameter reference.
-```
+- Confirm the doc matches the correct folder and audience.
+- Confirm code examples use the right language tags.
+- Confirm internal links point to valid VFloat docs paths.
+- Confirm the text does not repeat information already covered elsewhere.
