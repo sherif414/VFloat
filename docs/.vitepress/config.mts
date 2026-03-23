@@ -33,31 +33,44 @@ export default defineConfig({
     sidebar: {
       "/guide/": [
         {
-          text: "Introduction",
+          text: "Orientation",
           items: [
-            { text: "Getting Started", link: "/guide/" },
-            { text: "Core Concepts", link: "/guide/concepts" },
-            { text: "Interactions", link: "/guide/interactions" },
-            { text: "Keyboard List Navigation", link: "/guide/list-navigation" },
+            { text: "Start Here", link: "/guide/" },
+            { text: "Philosophy", link: "/guide/philosophy" },
+            { text: "Reading Order", link: "/guide/reading-order" },
           ],
         },
         {
-          text: "Advanced",
+          text: "Mental Model",
+          items: [{ text: "Core Concepts", link: "/guide/concepts" }],
+        },
+        {
+          text: "Recipes",
           items: [
-            { text: "Middleware", link: "/guide/middleware" },
+            { text: "Interactions", link: "/guide/interactions" },
+            { text: "Keyboard List Navigation", link: "/guide/list-navigation" },
             { text: "Virtual Elements", link: "/guide/virtual-elements" },
             { text: "Safe Polygon", link: "/guide/safe-polygon" },
           ],
         },
+        {
+          text: "Positioning",
+          items: [{ text: "Middleware", link: "/guide/middleware" }],
+        },
       ],
       "/api/": [
         {
-          text: "Core",
+          text: "Reference",
+          collapsed: false,
+          items: [{ text: "Overview", link: "/api/" }],
+        },
+        {
+          text: "Positioning",
           collapsed: false,
           items: [
-            { text: "Overview", link: "/api/" },
             { text: "useFloating", link: "/api/use-floating" },
             { text: "useArrow", link: "/api/use-arrow" },
+            { text: "useClientPoint", link: "/api/use-client-point" },
           ],
         },
         {
@@ -68,7 +81,6 @@ export default defineConfig({
             { text: "useHover", link: "/api/use-hover" },
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useFocusTrap", link: "/api/use-focus-trap" },
-            { text: "useClientPoint", link: "/api/use-client-point" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
             { text: "useListNavigation", link: "/api/use-list-navigation" },
           ],

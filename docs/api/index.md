@@ -1,6 +1,12 @@
 # API Reference
 
-These pages document the public composables and middleware exported by VFloat. Use them for signatures, options, and return values; use the guide pages for workflows and combinations.
+These pages define the public surface of VFloat. Use the guide pages for the mental model and workflows; use the API pages when you need exact signatures, options, defaults, and return values.
+
+## Start With The Guide
+
+- [Philosophy](/guide/philosophy)
+- [Reading Order](/guide/reading-order)
+- [Start Here](/guide/)
 
 ## Positioning
 

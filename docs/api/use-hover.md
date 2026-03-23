@@ -1,67 +1,73 @@
 # useHover
 
-`useHover` opens and closes a floating element when the pointer enters or leaves the anchor or floating element.
+`useHover` opens and closes a floating context when the pointer enters or leaves the anchor or floating element.
 
-* Type
+## Type
 
-    ```ts
-    function useHover(
-      context: FloatingContext,
-      options?: UseHoverOptions
-    ): void
+```ts
+function useHover(
+  context: FloatingContext,
+  options?: UseHoverOptions
+): void
 
-    interface UseHoverOptions {
-      enabled?: MaybeRef<boolean>
-      delay?: MaybeRef<number | { open?: number; close?: number }>
-      restMs?: MaybeRef<number>
-      mouseOnly?: MaybeRef<boolean>
-      safePolygon?: MaybeRef<boolean | SafePolygonOptions>
-    }
+interface UseHoverOptions {
+  enabled?: MaybeRef<boolean>
+  delay?: MaybeRef<number | { open?: number; close?: number }>
+  restMs?: MaybeRef<number>
+  mouseOnly?: MaybeRef<boolean>
+  safePolygon?: MaybeRef<boolean | SafePolygonOptions>
+}
 
-    interface SafePolygonOptions {
-      buffer?: number
-      requireIntent?: boolean
-      onPolygonChange?: (polygon: Polygon) => void
-    }
-    ```
+interface SafePolygonOptions {
+  buffer?: number
+  requireIntent?: boolean
+  onPolygonChange?: (polygon: Polygon) => void
+}
+```
 
-* Details
+## Details
 
-    `delay` can be a single number or separate open and close values. `restMs` only applies when the open delay is `0`, so it is used to open after the pointer settles instead of after a timer-based delay.
+`useHover` is the right fit for tooltips, previews, and other surfaces that should follow pointer intent. It uses the shared `FloatingContext`, so hover can coexist with click or focus on the same surface.
 
-    `safePolygon` keeps the floating element open while the pointer moves between the anchor and floating surfaces. Use `mouseOnly` when you want to ignore pen, touch, or other non-mouse pointers.
+- `delay` can be a single number or separate open and close values.
+- `restMs` only matters when the open delay is `0`.
+- `mouseOnly` limits hover behavior to mouse-like pointers.
+- `safePolygon` keeps the surface open while the pointer moves between trigger and panel.
 
-* Example
+`useHover` opens and closes with the `hover` reason.
 
-    ```vue
-    <script setup lang="ts">
-    import { ref } from "vue"
-    import { useFloating, useHover } from "v-float"
+## Example
 
-    const anchorEl = ref<HTMLElement | null>(null)
-    const floatingEl = ref<HTMLElement | null>(null)
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
 
-    const context = useFloating(anchorEl, floatingEl, {
-      placement: "top",
-    })
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
 
-    useHover(context, {
-      delay: { open: 100, close: 150 },
-      safePolygon: true,
-    })
-    </script>
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "top",
+})
 
-    <template>
-      <button ref="anchorEl">Hover me</button>
+useHover(context, {
+  delay: { open: 100, close: 150 },
+  safePolygon: true,
+})
+</script>
 
-      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-        Tooltip content
-      </div>
-    </template>
-    ```
+<template>
+  <button ref="anchorEl">Hover me</button>
 
-* See also
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Tooltip content
+  </div>
+</template>
+```
 
-    - [useFocus](/api/use-focus) - Focus-based activation
-    - [useClick](/api/use-click) - Click-based activation
-    - [useFloating](/api/use-floating) - Core positioning composable
+## See Also
+
+- [`useClick`](/api/use-click)
+- [`useFocus`](/api/use-focus)
+- [`useFloating`](/api/use-floating)
+- [Interactions](/guide/interactions)

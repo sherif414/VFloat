@@ -1,92 +1,71 @@
 # Core Concepts
 
-Understand the building blocks of VFloat to effectively position and control your floating elements.
+VFloat keeps the mental model small on purpose. Most components only need three pieces: an anchor element, a floating element, and the context object returned by `useFloating`.
 
-## The Basics
+## Anchor And Floating Elements
 
-VFloat relies on two main concepts: the **Anchor Element** and the **Floating Element**. 
-
-The anchor element is the trigger (like a button or an input) that you want to attach your floating element to. The floating element is the overlay content (like a tooltip or dropdown).
+The anchor is the element the user interacts with, such as a button, input, or list item. The floating element is the surface that appears beside it, such as a tooltip, popover, menu, or dialog.
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating } from 'v-float'
+import { ref } from "vue"
+import { useFloating } from "v-float"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
-// The floating context manages positioning and state
 const context = useFloating(anchorEl, floatingEl, {
-  placement: 'right-start'
+  placement: "right-start",
 })
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
+
   <div ref="floatingEl" :style="context.floatingStyles.value">
-    Floating Element
+    Floating element
   </div>
 </template>
 ```
 
 ::: tip
-VFloat calculates the coordinates for you and exposes them as `floatingStyles.value`, which you can directly bind to your floating element's `:style` attribute.
+`context.floatingStyles.value` already contains the computed position and strategy. Bind it directly to the floating element instead of rebuilding styles yourself.
 :::
 
-## Deep Dive
+## Floating Context
 
-VFloat separates positioning from interactions, giving you fine-grained control over how elements behave.
+`useFloating` returns a `FloatingContext`. That context is the shared object that interactions and positioning layers read from and write to.
 
-### State Management
+- `context.open.value` tells you whether the floating surface is currently open.
+- `context.setOpen(...)` changes that state.
+- `context.refs.anchorEl` and `context.refs.floatingEl` point at the active DOM nodes.
+- `context.middlewareData.value` exposes middleware output when you need extra positioning data.
 
-VFloat uses the `FloatingContext` to manage the `open` state. You can read the current state via `context.open.value` and update it using `context.setOpen()`. The `setOpen` method accepts a `reason` and an `event` parameter, helping you track exactly what triggered the state change.
+If you need to coordinate visibility from your own code, keep that logic in the interaction layer or event handler and check the API page for the exact call shape.
 
-```ts
-// Open the floating element and log that it was triggered programmatically
-context.setOpen(true, 'programmatic-trigger')
+## Positioning And Middleware
 
-// Close the floating element
-context.setOpen(false, 'close-button-click')
-```
-
-### Positioning and Middlewares
-
-The core positioning engine computes the optimal coordinates based on your desired `placement`. To modify this behavior—such as adding distance between elements or preventing overflow—you pass an array of `middlewares`.
+The context gives you the starting coordinates, then middlewares refine them. Use `middlewares` when you need spacing, flipping, shifting, sizing, or visibility checks.
 
 ```ts
-import { useFloating, offset, flip, shift } from 'v-float'
+import { useFloating, flip, offset, shift } from "v-float"
 
 const context = useFloating(anchorEl, floatingEl, {
-  placement: 'top',
-  middlewares: [
-    offset(8), // Add an 8px gap
-    flip(),    // Flip to bottom if there's no space on top
-    shift({ padding: 5 }) // Keep it on screen
-  ]
+  placement: "top",
+  middlewares: [offset(8), flip(), shift({ padding: 8 })],
 })
 ```
 
 ::: warning
-The order of `middlewares` matters! For example, `offset` should generally be placed before `flip` and `shift` so that the distance is calculated before boundary checks happen.
+`middlewares` is the option name. The docs and the source use the plural form because the value is a pipeline, not a single modifier.
 :::
 
-### Interaction Composables
+## Virtual Anchors
 
-Instead of writing custom event listeners for clicks, hovers, and keyboard navigation, VFloat provides interaction composables that hook directly into the `FloatingContext`.
-
-```ts
-import { useClick, useEscapeKey } from 'v-float'
-
-// Composing behaviors onto the existing context
-useClick(context, { closeOnOutsideClick: true })
-useEscapeKey(context, {
-  onEscape: () => context.setOpen(false, 'escape-key')
-})
-```
+Not every floating surface needs a real DOM anchor. Virtual elements let you position against pointer coordinates, selections, or other computed rectangles. The [Virtual Elements](/guide/virtual-elements) page covers the workflows that use them.
 
 ## Further Reading
 
-- [Middlewares](/guide/middleware)
+- [Philosophy](/guide/philosophy)
 - [Interactions](/guide/interactions)
-- [Getting Started](/guide/index)
+- [Middleware](/guide/middleware)

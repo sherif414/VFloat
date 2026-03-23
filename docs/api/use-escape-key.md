@@ -1,57 +1,57 @@
 # useEscapeKey
 
-`useEscapeKey` closes a floating element when the Escape key is pressed.
+`useEscapeKey` closes a floating context when Escape is pressed.
 
-* Type
+## Type
 
-    ```ts
-    function useEscapeKey(
-      context: UseEscapeKeyContext,
-      options?: UseEscapeKeyOptions
-    ): void
+```ts
+function useEscapeKey(
+  context: UseEscapeKeyContext,
+  options?: UseEscapeKeyOptions
+): void
 
-    interface UseEscapeKeyContext extends Pick<FloatingContext, "open" | "setOpen"> {}
+interface UseEscapeKeyContext extends Pick<FloatingContext, "open" | "setOpen"> {}
 
-    interface UseEscapeKeyOptions {
-      enabled?: MaybeRefOrGetter<boolean>
-      capture?: boolean
-      onEscape?: (event: KeyboardEvent) => void
-    }
-    ```
+interface UseEscapeKeyOptions {
+  enabled?: MaybeRefOrGetter<boolean>
+  capture?: boolean
+  onEscape?: (event: KeyboardEvent) => void
+}
+```
 
-* Details
+## Details
 
-    `useEscapeKey` listens on `document` and ignores Escape while IME composition is active. If you provide `onEscape`, that callback replaces the default close behavior.
+`useEscapeKey` listens on `document` and ignores Escape while IME composition is active. By default it closes the context with the `escape-key` reason.
 
-    `enabled` and `capture` are both reactive-friendly, so you can toggle the listener without recreating the composable.
+- `enabled` lets you turn the listener on and off.
+- `capture` defaults to `false`.
+- `onEscape` replaces the default close behavior when you need custom handling.
 
-* Example
+## Example
 
-    ```vue
-    <script setup lang="ts">
-    import { ref } from "vue"
-    import { useEscapeKey, useFloating } from "v-float"
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useEscapeKey, useFloating } from "v-float"
 
-    const anchorEl = ref<HTMLElement | null>(null)
-    const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
 
-    const context = useFloating(anchorEl, floatingEl)
-    useEscapeKey(context)
-    </script>
+const context = useFloating(anchorEl, floatingEl)
+useEscapeKey(context)
+</script>
 
-    <template>
-      <button ref="anchorEl" @click="context.setOpen(!context.open.value)">
-        Toggle
-      </button>
+<template>
+  <button ref="anchorEl">Toggle</button>
 
-      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-        Press Escape to close
-      </div>
-    </template>
-    ```
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Press Escape to close
+  </div>
+</template>
+```
 
-* See also
+## See Also
 
-    - [useClick](/api/use-click) - Click-driven activation
-    - [useFocus](/api/use-focus) - Focus-driven activation
-    - [useFocusTrap](/api/use-focus-trap) - Keeps keyboard focus inside the floating content
+- [`useClick`](/api/use-click)
+- [`useFocus`](/api/use-focus)
+- [`useFocusTrap`](/api/use-focus-trap)

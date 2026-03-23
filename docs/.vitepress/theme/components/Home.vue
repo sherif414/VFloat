@@ -4,17 +4,17 @@
     <div class="hero-section">
       <div class="hero-content">
         <h1 class="hero-title">
-          VFloat: Build
-          <span class="highlight">Seamless Floating Elements</span>
+          VFloat: Position
+          <span class="highlight">Floating Surfaces with Vue 3</span>
         </h1>
         <p class="hero-description">
-          A robust toolkit for pixel-perfect positioning of tooltips, dropdowns and any custom
-          floating elements, built specifically for Vue 3. Features advanced cursor tracking,
-          middleware composition, and comprehensive interaction handling.
+          A Vue 3 positioning library for tooltips, dropdowns, menus, and custom floating
+          surfaces. Start with the guide for the mental model, then use the API pages for exact
+          signatures and defaults.
         </p>
 
         <div class="hero-actions">
-          <a href="/guide/" class="action-button primary"> Get Started </a>
+          <a href="/guide/" class="action-button primary"> Start Here </a>
           <a href="/api/" class="action-button secondary"> API Reference </a>
         </div>
       </div>

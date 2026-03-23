@@ -1,100 +1,78 @@
 # Interactions
 
-Interactions in VFloat are declarative composables that manage the visibility state (`open`) of your floating elements based on user input, such as clicks, hovers, and keyboard events.
+Interactions decide when `open` changes. They sit on top of `useFloating`: the context gives you position and shared state, while interaction composables decide how users open and close the surface.
 
-## The Basics
+## Click Based Workflows
 
-Every interaction composable requires a `FloatingContext` (returned by `useFloating`) as its first argument. The context provides the shared `open` state and the `setOpen` method, allowing multiple interactions to coordinate seamlessly.
+Use `useClick` when the trigger should toggle the floating element and optionally dismiss it when the user clicks outside.
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useClick, useEscapeKey } from 'v-float'
+import { ref } from "vue"
+import { useClick, useEscapeKey, useFloating } from "v-float"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
 const context = useFloating(anchorEl, floatingEl)
 
-// Open/close on click, and close when clicking outside
 useClick(context, { closeOnOutsideClick: true })
-
-// Close when the Escape key is pressed
-useEscapeKey(context, {
-  onEscape: () => context.setOpen(false, 'escape-key')
-})
+useEscapeKey(context)
 </script>
 
 <template>
-  <button ref="anchorEl">Toggle Dropdown</button>
+  <button ref="anchorEl">Toggle dropdown</button>
+
   <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
-    Dropdown Content
+    Dropdown content
   </div>
 </template>
 ```
 
 ::: tip
-Interaction composables automatically handle attaching and cleaning up event listeners on the `anchorEl` and `floatingEl`.
+`useClick` handles pointer and keyboard activation on the trigger for you. If you need to close the surface from your own code, use the context setter and check the API reference for the exact visibility API.
 :::
 
-## Deep Dive
+## Hover And Focus Together
 
-You can stack multiple interactions to create accessible, robust components like tooltips or complex menus. Because they all share the same `FloatingContext`, they won't conflict.
-
-### Combining Hover and Focus
-
-A common pattern for tooltips is to show them on both mouse hover and keyboard focus.
+Tooltips usually need pointer hover and keyboard focus to behave the same way. Compose `useHover` and `useFocus` on the same context and let the shared `open` state keep them in sync.
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useFloating, useHover, useFocus } from 'v-float'
+import { ref } from "vue"
+import { useFocus, useFloating, useHover } from "v-float"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
 const context = useFloating(anchorEl, floatingEl, {
-  placement: 'top'
+  placement: "top",
 })
 
-// Add hover with a slight delay
-useHover(context, { 
-  delay: { open: 150, close: 200 } 
+useHover(context, {
+  delay: { open: 150, close: 200 },
+  safePolygon: true,
 })
 
-// Ensure keyboard accessibility
 useFocus(context)
 </script>
 
 <template>
-  <button ref="anchorEl">Hover or Tab to me</button>
+  <button ref="anchorEl">Hover or focus me</button>
+
   <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
-    Tooltip Content
+    Tooltip content
   </div>
 </template>
 ```
 
-### Conditionally Enabling Interactions
-
-Sometimes interactions can clash logically. For example, if you have an element that opens on click, but you *also* want to let users hover to preview it, you might accidentally close a clicked-open element when the mouse leaves. 
-
-You can solve this by using the `enabled` option to conditionally disable an interaction.
-
-```ts
-import { computed } from 'vue'
-
-// Only allow hover to open the popover if it isn't already open
-useHover(context, { 
-  enabled: computed(() => !context.open.value) 
-})
-
-// Click always works and takes precedence
-useClick(context)
-```
-
 ::: warning
-When using `useClick` and `useHover` together, always consider how state transitions happen. If `useHover` isn't conditionally disabled, a `mouseleave` event will fire and call `context.setOpen(false, 'hover')`, even if the user explicitly clicked to keep the menu open.
+When you combine `useClick` with `useHover`, guard the hover path if clicking should keep the surface open. Otherwise a `mouseleave` event can close a surface that the user explicitly opened.
 :::
+
+## Modal Surfaces
+
+Dialogs and popovers that trap focus usually combine `useClick`, `useEscapeKey`, and `useFocusTrap`. The interaction layer stays responsible for visibility, while `useFocusTrap` keeps keyboard focus where it belongs.
 
 ## Further Reading
 
@@ -102,3 +80,4 @@ When using `useClick` and `useHover` together, always consider how state transit
 - [`useHover` API](/api/use-hover)
 - [`useFocus` API](/api/use-focus)
 - [`useEscapeKey` API](/api/use-escape-key)
+- [`useFocusTrap` API](/api/use-focus-trap)

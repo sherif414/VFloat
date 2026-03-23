@@ -5,7 +5,7 @@ description: Write, edit, and review VFloat documentation in docs/api and docs/g
 
 # VFloat Documentation Writer
 
-Use this skill to produce clear, consistent VFloat documentation that follows the rules below instead of relying on a vague style label.
+Use this skill to produce clear, consistent, and friendly VFloat documentation that follows the rules below instead of relying on a vague style label.
 
 ## Use This Skill
 
@@ -14,18 +14,27 @@ Use this skill to produce clear, consistent VFloat documentation that follows th
 - Reviewing docs for tone, structure, links, and examples
 - Aligning docs with source changes in `src/`
 
+## Tone and Voice
+
+VFloat documentation uses a **Conversational and Empathic** tone. Write as if you are a friendly mentor pair-programming with the reader.
+
+- **Use "We" and "Let's":** Never use harsh imperatives ("Install this", "Use `useClick`"). Instead, invite the reader ("Let's install this", "We can use `useClick`"). 
+- **Be Empathetic:** Acknowledge that building floating UI and handling DOM positioning is notoriously tricky. Validate the user's pain points before offering the VFloat solution.
+- **Narrate the Code:** Don't just drop code blocks on the page. Introduce them conversationally (e.g., "Now that we have our anchor, let's wire up the floating element:").
+- **Soften Directives:** Turn commands into helpful suggestions. Instead of "You must manually assign itemsRef", use "We'll want to make sure we manually assign itemsRef, otherwise..."
+
 ## Workflow
 
 1. Identify the doc type.
-   - API references should stay concise and technical.
-   - Guides should teach a workflow and explain tradeoffs.
+   - API references should stay concise but friendly.
+   - Guides should teach a workflow, explain tradeoffs, and hold the reader's hand through the process.
 2. Read the relevant source code before writing.
    - Check the composable or utility implementation.
    - Confirm signatures, defaults, edge cases, and naming.
 3. Follow the VFloat documentation rules.
-   - Keep the tone clear, direct, and practical.
-   - Prefer examples over long explanations.
-   - Introduce complexity gradually.
+   - Apply the conversational tone rules.
+   - Prefer examples over long, dry explanations.
+   - Introduce complexity gradually so we don't overwhelm the reader.
 4. Cross-link instead of duplicating.
    - Link API docs to related guides.
    - Link guides to the relevant API reference.
@@ -52,14 +61,14 @@ Rules:
 
 ## API Docs
 
-Use API docs for reference material.
+Use API docs for reference material. They should be technical but maintain a welcoming tone.
 
 Required structure:
 
 ````markdown
 # functionName
 
-Brief 1-2 sentence description.
+Brief 1-2 sentence friendly description of what this helps us do.
 
 ## Type
 
@@ -69,7 +78,7 @@ function functionName(param: Type): ReturnType
 
 ## Details
 
-Explain behavior, edge cases, and important notes.
+Explain behavior, edge cases, and important notes conversationally.
 
 ## Example
 
@@ -95,29 +104,29 @@ Rules:
 
 ## Guide Docs
 
-Use guide docs for tutorials and conceptual explanations.
+Use guide docs for tutorials and conceptual explanations. They should be highly narrative and empathic.
 
 Recommended structure:
 
 ````markdown
 # Topic Title
 
-Short introduction explaining what the reader will learn.
+Short, welcoming introduction explaining the problem we are solving and what we'll learn together.
 
 ## The Basics
 
-Start with the simplest working example.
+Start with the simplest working example. Emphasize how easy it is to get started.
 
 ::: tip
-Helpful context or a small practical note.
+A helpful, friendly note or a small practical tip to make their life easier.
 :::
 
 ## Deep Dive
 
-Explain the concept progressively and add edge cases.
+Explain the concept progressively. Add edge cases organically.
 
-::: warning
-Call out common mistakes, caveats, or accessibility concerns.
+::: warning Watch out for this gotcha!
+A gentle heads-up about common mistakes, caveats, or accessibility concerns.
 :::
 
 ## Further Reading
@@ -128,7 +137,7 @@ Call out common mistakes, caveats, or accessibility concerns.
 
 Guidelines:
 
-- Use VitePress containers such as `::: tip`, `::: warning`, and `::: details`.
+- Use VitePress containers such as `::: tip`, `::: warning`, and `::: details`. Give them conversational custom titles when appropriate.
 - Prefer `<script setup>` examples.
 - Keep examples runnable and minimal.
 - Use code highlights only when they clarify the point.
@@ -141,10 +150,7 @@ Guidelines:
 ## VFloat Conventions
 
 - Always use `middlewares` in examples, not `middleware`.
-- Use `setOpen(open: boolean, reason?: string, event?: Event)` and mention `reason` when relevant.
-- Use `ref<T | null>(null)` for template refs.
 - Import examples from `v-float`.
-- Keep docs aligned with the rewrite identity of VFloat. Do not describe it as a Floating UI fork.
 
 ## Final Checks
 
@@ -152,3 +158,4 @@ Guidelines:
 - Confirm code examples use the right language tags.
 - Confirm internal links point to valid VFloat docs paths.
 - Confirm the text does not repeat information already covered elsewhere.
+- Confirm the tone checks out: Are we using "we/let's"? Is it friendly?

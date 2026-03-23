@@ -1,82 +1,71 @@
 # useClick
 
-`useClick` handles click-driven activation for a floating element.
+`useClick` toggles a floating context from pointer and keyboard activation. Enable outside-click closing when you want popover or menu behavior instead of a pure trigger toggle.
 
-* Type
+## Type
 
-    ```ts
-    function useClick(
-      context: UseClickContext,
-      options?: UseClickOptions
-    ): void
+```ts
+function useClick(
+  context: UseClickContext,
+  options?: UseClickOptions
+): void
 
-    interface UseClickContext extends Pick<FloatingContext, "refs" | "open" | "setOpen"> {}
+interface UseClickContext extends Pick<FloatingContext, "refs" | "open" | "setOpen"> {}
 
-    interface UseClickOptions {
-      enabled?: MaybeRefOrGetter<boolean>
-      event?: MaybeRefOrGetter<"click" | "mousedown">
-      toggle?: MaybeRefOrGetter<boolean>
-      ignoreMouse?: MaybeRefOrGetter<boolean>
-      ignoreKeyboard?: MaybeRefOrGetter<boolean>
-      ignoreTouch?: MaybeRefOrGetter<boolean>
-      closeOnOutsideClick?: MaybeRefOrGetter<boolean>
-      outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
-      outsideCapture?: MaybeRefOrGetter<boolean>
-      onOutsideClick?: (event: MouseEvent) => void
-      ignoreScrollbar?: MaybeRefOrGetter<boolean>
-      ignoreDrag?: MaybeRefOrGetter<boolean>
-    }
-    ```
+interface UseClickOptions {
+  enabled?: MaybeRefOrGetter<boolean>
+  event?: MaybeRefOrGetter<"click" | "mousedown">
+  toggle?: MaybeRefOrGetter<boolean>
+  ignoreMouse?: MaybeRefOrGetter<boolean>
+  ignoreKeyboard?: MaybeRefOrGetter<boolean>
+  ignoreTouch?: MaybeRefOrGetter<boolean>
+  closeOnOutsideClick?: MaybeRefOrGetter<boolean>
+  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+  outsideCapture?: MaybeRefOrGetter<boolean>
+  onOutsideClick?: (event: MouseEvent) => void
+  ignoreScrollbar?: MaybeRefOrGetter<boolean>
+  ignoreDrag?: MaybeRefOrGetter<boolean>
+}
+```
 
-* Details
+## Details
 
-    `useClick` is a composable designed to handle click-based activation for floating elements, such as dropdowns, menus, or tooltips. It simplifies the logic for toggling the open state, managing keyboard accessibility, and handling clicks outside the floating element.
+`useClick` attaches trigger handlers to `refs.anchorEl` and optional outside-click handlers to `document`. It supports mouse, touch, and keyboard activation, including Enter and Space on non-button triggers.
 
-    ### Key Features
+- `event` controls which mouse event toggles the trigger. It defaults to `"click"`.
+- `toggle` defaults to `true`.
+- `closeOnOutsideClick` defaults to `false`, so enable it explicitly when you want dismiss-on-outside-click behavior.
+- `outsideClickEvent` defaults to `"pointerdown"`.
+- `onOutsideClick` replaces the default outside-close behavior when you need custom logic.
 
-    * **Toggle Behavior**: By default, clicking the anchor element will toggle the floating element's visibility. This can be controlled via the `toggle` option.
-    * **Keyboard Support**: Automatically supports accessibility by allowing the `Enter` and `Space` keys to toggle the floating element when the anchor is focused. This behavior can be disabled using `ignoreKeyboard`.
-    * **Outside Click Handling**: When `closeOnOutsideClick` is enabled (default), the floating element will close if the user clicks anywhere outside both the anchor and the floating element itself.
-    * **Flexible Events**: Customize which mouse event triggers the activation using the `event` option (e.g., `click` or `mousedown`).
-    * **Interaction Guards**: Provides options like `ignoreMouse`, `ignoreTouch`, and `ignoreScrollbar` to fine-tune which interactions should be ignored.
+## Example
 
-    ### Configuration Options
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useClick, useEscapeKey, useFloating } from "v-float"
 
-    | Option | Description | Default |
-    | :--- | :--- | :--- |
-    | `enabled` | Whether the click interaction is active. | `true` |
-    | `event` | The mouse event that triggers the toggle (`'click'` or `'mousedown'`). | `'click'` |
-    | `toggle` | Whether clicking the anchor when the floating element is already open should close it. | `true` |
-    | `closeOnOutsideClick` | Whether clicking outside the elements should close the floating element. | `true` |
-    | `onOutsideClick` | A callback function executed when an outside click is detected. | `undefined` |
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
 
-* Example
+const context = useFloating(anchorEl, floatingEl)
+useClick(context, { closeOnOutsideClick: true })
+useEscapeKey(context)
+</script>
 
-    ```vue
-    <script setup lang="ts">
-    import { useTemplateRef } from "vue"
-    import { useClick, useFloating } from "v-float"
+<template>
+  <button ref="anchorEl">Toggle</button>
 
-    const anchorEl = useTemplateRef("anchorEl")
-    const floatingEl = useTemplateRef("floatingEl")
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Floating content
+  </div>
+</template>
+```
 
-    const context = useFloating(anchorEl, floatingEl)
-    useClick(context)
-    </script>
+## See Also
 
-    <template>
-      <button ref="anchorEl">Toggle</button>
-
-      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-        Floating content
-      </div>
-    </template>
-    ```
-
-* See also
-
-    - [useFloating](/api/use-floating) - Core positioning composable
-    - [useHover](/api/use-hover) - Hover-based interactions
-    - [useFocus](/api/use-focus) - Focus-based interactions
-    - [useEscapeKey](/api/use-escape-key) - Keyboard dismissal
-    - [Interactions Guide](/guide/interactions) - Composing multiple interactions
+- [`useFloating`](/api/use-floating)
+- [`useHover`](/api/use-hover)
+- [`useFocus`](/api/use-focus)
+- [`useEscapeKey`](/api/use-escape-key)
+- [Interactions](/guide/interactions)

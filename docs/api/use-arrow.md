@@ -2,61 +2,63 @@
 
 `useArrow` connects an arrow element to a floating context and returns ready-to-use arrow coordinates and styles.
 
-* Type
+## Type
 
-    ```ts
-    function useArrow(
-      arrowEl: Ref<HTMLElement | null>,
-      context: FloatingContext,
-      options?: UseArrowOptions
-    ): UseArrowReturn
+```ts
+function useArrow(
+  arrowEl: Ref<HTMLElement | null>,
+  context: FloatingContext,
+  options?: UseArrowOptions
+): UseArrowReturn
 
-    interface UseArrowOptions {
-      offset?: string
-    }
+interface UseArrowOptions {
+  offset?: string
+}
 
-    interface UseArrowReturn {
-      arrowX: ComputedRef<number>
-      arrowY: ComputedRef<number>
-      arrowStyles: ComputedRef<Record<string, string>>
-    }
-    ```
+interface UseArrowReturn {
+  arrowX: ComputedRef<number>
+  arrowY: ComputedRef<number>
+  arrowStyles: ComputedRef<Record<string, string>>
+}
+```
 
-* Details
+## Details
 
-    `useArrow` keeps `context.refs.arrowEl` in sync with your arrow ref. That lets `useFloating()` add the arrow middleware automatically, so the arrow position stays aligned with the computed placement.
+`useArrow` keeps `context.refs.arrowEl` in sync with your arrow ref so `useFloating()` can register the arrow middleware automatically. It returns logical positioning styles through `arrowStyles`.
 
-    The composable reads `middlewareData.arrow` and returns logical positioning styles through `arrowStyles`. `offset` defaults to `"-4px"`.
+- `offset` defaults to `"-4px"`.
+- Use `context.middlewareData.value.arrow` if you need the raw middleware output.
 
-* Example
+## Example
 
-    ```vue
-    <script setup lang="ts">
-    import { ref } from "vue"
-    import { offset, useArrow, useFloating } from "v-float"
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { offset, useArrow, useFloating } from "v-float"
 
-    const anchorEl = ref<HTMLElement | null>(null)
-    const floatingEl = ref<HTMLElement | null>(null)
-    const arrowEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+const arrowEl = ref<HTMLElement | null>(null)
 
-    const context = useFloating(anchorEl, floatingEl, {
-      middlewares: [offset(8)],
-    })
+const context = useFloating(anchorEl, floatingEl, {
+  middlewares: [offset(8)],
+})
 
-    const { arrowStyles } = useArrow(arrowEl, context)
-    </script>
+const { arrowStyles } = useArrow(arrowEl, context)
+</script>
 
-    <template>
-      <button ref="anchorEl">Anchor</button>
+<template>
+  <button ref="anchorEl">Anchor</button>
 
-      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-        Floating content
-        <div ref="arrowEl" :style="arrowStyles">^</div>
-      </div>
-    </template>
-    ```
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Floating content
+    <div ref="arrowEl" :style="arrowStyles">^</div>
+  </div>
+</template>
+```
 
-* See also
+## See Also
 
-    - [arrow](/api/arrow) - The underlying middleware
-    - [useFloating](/api/use-floating) - Core positioning composable
+- [`arrow`](/api/arrow)
+- [`useFloating`](/api/use-floating)
+- [Middleware](/guide/middleware)

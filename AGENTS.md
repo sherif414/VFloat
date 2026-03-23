@@ -1,8 +1,8 @@
 # META INFORMANTION ABOUT THE PROJECT
 
 - This project is named VFloat
-- It's not a fork of Floating UI, it's a complete rewrite
-- It's not a floating UI library, it's a positioning library
+- It's heavily inspired by Floating UI, however it's not a fork of it.
+- Some of the api is similar to Floating UI, however it's not a direct copy. many parts of the api are different, so keep that in mind.
 
 ## Commit Messages
 

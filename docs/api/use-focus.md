@@ -1,58 +1,61 @@
 # useFocus
 
-`useFocus` opens and closes a floating element when the anchor receives or loses focus.
+`useFocus` opens and closes a floating context when the anchor gains or loses focus.
 
-* Type
+## Type
 
-    ```ts
-    function useFocus(
-      context: UseFocusContext,
-      options?: UseFocusOptions
-    ): UseFocusReturn
+```ts
+function useFocus(
+  context: UseFocusContext,
+  options?: UseFocusOptions
+): UseFocusReturn
 
-    interface UseFocusContext extends Pick<FloatingContext, "open" | "setOpen" | "refs"> {}
+interface UseFocusContext extends Pick<FloatingContext, "open" | "setOpen" | "refs"> {}
 
-    interface UseFocusOptions {
-      enabled?: MaybeRefOrGetter<boolean>
-      requireFocusVisible?: MaybeRefOrGetter<boolean>
-    }
+interface UseFocusOptions {
+  enabled?: MaybeRefOrGetter<boolean>
+  requireFocusVisible?: MaybeRefOrGetter<boolean>
+}
 
-    interface UseFocusReturn {
-      cleanup: () => void
-    }
-    ```
+interface UseFocusReturn {
+  cleanup: () => void
+}
+```
 
-* Details
+## Details
 
-    `requireFocusVisible` defaults to `true`, so focus only opens the floating element when the focus is visible rather than caused by a pointer click on a non-typeable element.
+`useFocus` is a keyboard-first interaction layer. It opens with the `focus` reason and closes with the `blur` reason, which keeps focus-driven surfaces easy to trace alongside hover and click interactions.
 
-    The composable also handles Safari focus-visible quirks, window blur/focus transitions, and delayed blur checks. Call `cleanup()` if you need to remove the listeners manually.
+- `requireFocusVisible` defaults to `true`.
+- Safari and window blur edge cases are handled internally.
+- Call `cleanup()` if you need to remove the listeners manually.
 
-* Example
+## Example
 
-    ```vue
-    <script setup lang="ts">
-    import { ref } from "vue"
-    import { useFocus, useFloating } from "v-float"
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useFloating, useFocus } from "v-float"
 
-    const anchorEl = ref<HTMLElement | null>(null)
-    const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
 
-    const context = useFloating(anchorEl, floatingEl)
-    useFocus(context)
-    </script>
+const context = useFloating(anchorEl, floatingEl)
+useFocus(context)
+</script>
 
-    <template>
-      <button ref="anchorEl">Focus me</button>
+<template>
+  <button ref="anchorEl">Focus me</button>
 
-      <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
-        Floating content
-      </div>
-    </template>
-    ```
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    Floating content
+  </div>
+</template>
+```
 
-* See also
+## See Also
 
-    - [useHover](/api/use-hover) - Hover-based activation
-    - [useClick](/api/use-click) - Click-based activation
-    - [useEscapeKey](/api/use-escape-key) - Keyboard dismissal
+- [`useHover`](/api/use-hover)
+- [`useClick`](/api/use-click)
+- [`useEscapeKey`](/api/use-escape-key)
+- [Interactions](/guide/interactions)
