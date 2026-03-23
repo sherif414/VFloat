@@ -20,7 +20,7 @@ The core identity is **The Friendly Mentor**. The docs should feel like we are s
 
 ### The 4 Golden Rules of Tone
 
-- **Use "We" and "Let's":** Prefer inclusive language over direct commands. Write `Let's install this` and `We can use` instead of `Install this` or `You must`.
+- **Use natural inclusive language:** Prefer `we` and `let's` when they sound natural, but do not force them into every sentence.
 - **Show empathy:** Validate the reader's struggle before the solution. If a pattern is hard, say so plainly before introducing the fix.
 - **Narrate the code:** Never drop a naked code block. Always introduce the snippet with a sentence that explains what we are about to build.
 - **Soften directives:** Turn strict warnings into helpful guidance. Use language like `Watch out for this gotcha!` and explain what might happen if we take the wrong path.
@@ -31,6 +31,9 @@ The core identity is **The Friendly Mentor**. The docs should feel like we are s
 - **Prefer concise prose:** Use short paragraphs and short sections. If a sentence can be shorter without losing meaning, shorten it.
 - **Stay literal with terminology:** Use the project's actual words, such as `positioning library`, `useFloating`, `middlewares`, `open`, and `context`.
 - **Avoid filler and hype:** Do not add motivational language, disclaimers, or repeated reassurance.
+- **Sound human, not templated:** Use plain words, contractions, and varied sentence openings when they make the text easier to read.
+- **Keep the rhythm natural:** Avoid repeating the same sentence pattern across multiple bullets or paragraphs.
+- **Explain like a teammate:** Favor direct, conversational phrasing over formal, handbook-style wording.
 - **Separate explanation from reference:** Keep exact signatures, defaults, and return values in API pages. In guides, point to the API page instead of restating contracts.
 - **Use examples to teach:** Show the smallest runnable example that supports the point, then explain the tradeoff or next step.
 
@@ -172,4 +175,4 @@ Guidelines:
 - Confirm code examples use the right language tags.
 - Confirm internal links point to valid VFloat docs paths.
 - Confirm the text does not repeat information already covered elsewhere.
-- Confirm the tone checks out: Does it sound like a friendly mentor using we/let's language?
+- Confirm the tone checks out: Does it sound like a friendly mentor speaking naturally, not a generated checklist?
