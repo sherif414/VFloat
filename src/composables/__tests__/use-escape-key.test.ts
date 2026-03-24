@@ -86,6 +86,31 @@ describe("useEscapeKey", () => {
       expect(context.setOpen).not.toHaveBeenCalled()
     })
 
+    it("should respect defaultPrevented from another handler", async () => {
+      const context = createMockFloatingContext()
+      context.setOpen(true)
+      ;(context.setOpen as any).mockClear()
+
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          event.preventDefault()
+        }
+      }
+
+      document.addEventListener("keydown", onKeyDown, { capture: true })
+
+      scope = effectScope()
+      scope.run(() => {
+        useEscapeKey(context)
+      })
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }))
+
+      document.removeEventListener("keydown", onKeyDown, { capture: true })
+
+      expect(context.setOpen).not.toHaveBeenCalled()
+    })
+
     it("should use custom onEscape handler when provided", async () => {
       const context = createMockFloatingContext()
       context.setOpen(true)

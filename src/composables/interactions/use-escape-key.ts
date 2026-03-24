@@ -74,7 +74,13 @@ export function useEscapeKey(
   const { isComposing } = useComposition()
 
   const handleEscape = (event: KeyboardEvent) => {
-    if (event.key !== "Escape" || !toValue(enabled) || !context.open.value || isComposing.value) {
+    if (
+      event.key !== "Escape" ||
+      event.defaultPrevented ||
+      !toValue(enabled) ||
+      !context.open.value ||
+      isComposing.value
+    ) {
       return
     }
 
