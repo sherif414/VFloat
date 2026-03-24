@@ -1,6 +1,7 @@
 import { useEventListener } from "@vueuse/core"
-import { type MaybeRefOrGetter, ref, toValue } from "vue"
+import { type MaybeRefOrGetter, toValue } from "vue"
 import type { FloatingContext } from "../positioning"
+import { useComposition } from "../utils/use-composition"
 
 // =======================================================================================
 // 📌 Types
@@ -20,6 +21,12 @@ export interface UseEscapeKeyOptions {
    * @default false
    */
   capture?: boolean
+
+  /**
+   * Whether to call preventDefault on the escape key event before handling it.
+   * @default false
+   */
+  preventDefault?: boolean
 
   /**
    * Custom callback function to be executed when the escape key is pressed.
@@ -63,12 +70,16 @@ export function useEscapeKey(
   context: UseEscapeKeyContext,
   options: UseEscapeKeyOptions = {}
 ): void {
-  const { enabled = true, capture = false, onEscape } = options
+  const { enabled = true, capture = false, preventDefault = false, onEscape } = options
   const { isComposing } = useComposition()
 
   const handleEscape = (event: KeyboardEvent) => {
-    if (event.key !== "Escape" || !toValue(enabled) || isComposing()) {
+    if (event.key !== "Escape" || !toValue(enabled) || !context.open.value || isComposing.value) {
       return
+    }
+
+    if (preventDefault) {
+      event.preventDefault()
     }
 
     // Use custom handler if provided
@@ -83,24 +94,4 @@ export function useEscapeKey(
 
   // Event listener setup
   useEventListener(document, "keydown", handleEscape, capture)
-}
-
-// =======================================================================================
-// 📌 Helper Functions
-// =======================================================================================
-
-function useComposition() {
-  const isComposing = ref(false)
-
-  useEventListener(document, "compositionstart", () => {
-    isComposing.value = true
-  })
-
-  useEventListener(document, "compositionend", () => {
-    isComposing.value = false
-  })
-
-  return {
-    isComposing: () => isComposing.value,
-  }
 }
