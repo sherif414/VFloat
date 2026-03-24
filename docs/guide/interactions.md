@@ -1,10 +1,76 @@
 # Interactions
 
-Interactions decide when `open` changes. They sit on top of `useFloating`: the context gives you position and shared state, while interaction composables decide how users open and close the surface.
+Interactions are the composables that control when a floating surface opens and closes. They sit on top of `useFloating()`: the context holds the state, and each interaction composable decides how users change that state.
 
-## Click Based Workflows
+The key insight is this: pick the interaction that matches the surface type, then layer on extras for completeness. We will build up from simple to layered.
 
-Use `useClick` when the trigger should toggle the floating element and optionally dismiss it when the user clicks outside.
+## Step 1: Click to Open and Close
+
+Click-driven surfaces — dropdowns, menus, popovers — are the most common pattern. `useClick` toggles `context.open.value` when the anchor is clicked.
+
+Let's start with the base setup:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useClick, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl)
+
+useClick(context)
+</script>
+
+<template>
+  <button ref="anchorEl">Open menu</button>
+
+  <div
+    v-if="context.open.value"
+    ref="floatingEl"
+    :style="context.floatingStyles.value"
+  >
+    Menu content
+  </div>
+</template>
+```
+
+Click the button and the menu opens. Click again and it closes.
+
+::: tip
+`useClick` toggles by default. Pass `toggle: false` if you want clicks to only open and never close (useful when dismissal is handled another way).
+:::
+
+## Step 2: Close on Outside Click
+
+Right now the menu stays open no matter where you click. Most dropdowns close when you click outside. Add `closeOnOutsideClick`:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useClick, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl)
+
+useClick(context, {
+  closeOnOutsideClick: true,
+})
+</script>
+```
+
+Now clicking anywhere outside the floating element closes it.
+
+::: warning
+Be careful when combining `useClick` with `useHover` on the same context. A `mouseleave` on the floating element can close a surface that was intentionally opened by click. If you need both, consider using `useHover` only and adding a separate click handler for opening.
+:::
+
+## Step 3: Close on Escape
+
+Keyboard users expect Escape to dismiss floating surfaces. `useEscapeKey` hooks into the keyboard:
 
 ```vue
 <script setup lang="ts">
@@ -19,23 +85,53 @@ const context = useFloating(anchorEl, floatingEl)
 useClick(context, { closeOnOutsideClick: true })
 useEscapeKey(context)
 </script>
+```
+
+Now the menu closes on Escape, on outside click, and on clicking the trigger again.
+
+## Step 4: Build a Tooltip with Hover
+
+Tooltips behave differently from menus. They appear on hover, not on click, and they should not close the moment the cursor leaves the anchor on its way to the tooltip itself.
+
+`useHover` handles the pointer path:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "top",
+})
+
+useHover(context)
+</script>
 
 <template>
-  <button ref="anchorEl">Toggle dropdown</button>
+  <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
-    Dropdown content
+  <div
+    v-if="context.open.value"
+    ref="floatingEl"
+    :style="context.floatingStyles.value"
+  >
+    Tooltip content
   </div>
 </template>
 ```
 
+The tooltip opens when the pointer enters the anchor and closes when it leaves.
+
 ::: tip
-`useClick` handles pointer and keyboard activation on the trigger for you. If you need to close the surface from your own code, use the context setter and check the API reference for the exact visibility API.
+If the tooltip has a gap between the anchor and itself, add `safePolygon: true` so the tooltip does not close while the cursor is crossing that gap. See the [Safe Polygon](/guide/safe-polygon) guide for details.
 :::
 
-## Hover And Focus Together
+## Step 5: Combine Hover and Focus
 
-Tooltips usually need pointer hover and keyboard focus to behave the same way. Compose `useHover` and `useFocus` on the same context and let the shared `open` state keep them in sync.
+Tooltips should be accessible to keyboard users too. `useFocus` opens the tooltip when the anchor receives focus (via Tab), and `useHover` handles the pointer:
 
 ```vue
 <script setup lang="ts">
@@ -49,33 +145,77 @@ const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
 })
 
-useHover(context, {
-  delay: { open: 150, close: 200 },
-  safePolygon: true,
-})
-
+useHover(context)
 useFocus(context)
+</script>
+```
+
+Now both hovering and focusing the anchor opens the tooltip.
+
+## Step 6: Build a Modal with Focus Trap
+
+Dialogs and modal surfaces need different behavior. The focus should stay trapped inside the floating element, and the outside should not be interactive while the modal is open.
+
+Add `useFocusTrap`:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useClick, useEscapeKey, useFloating, useFocusTrap } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl)
+
+useClick(context, { closeOnOutsideClick: true })
+useEscapeKey(context)
+useFocusTrap(context, { modal: true })
 </script>
 
 <template>
-  <button ref="anchorEl">Hover or focus me</button>
+  <button ref="anchorEl">Open dialog</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
-    Tooltip content
-  </div>
+  <Teleport to="body">
+    <div v-if="context.open.value" class="backdrop">
+      <div
+        ref="floatingEl"
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
+        :style="context.floatingStyles.value"
+      >
+        Dialog content
+      </div>
+    </div>
+  </Teleport>
 </template>
 ```
 
-::: warning
-When you combine `useClick` with `useHover`, guard the hover path if clicking should keep the surface open. Otherwise a `mouseleave` event can close a surface that the user explicitly opened.
-:::
+`useFocusTrap` with `modal: true` keeps focus inside the dialog and prevents the rest of the page from receiving input.
 
-## Modal Surfaces
+## Choosing the Right Pattern
 
-Dialogs and popovers that trap focus usually combine `useClick`, `useEscapeKey`, and `useFocusTrap`. The interaction layer stays responsible for visibility, while `useFocusTrap` keeps keyboard focus where it belongs.
+Use this decision guide:
+
+- **Click only** — Toggle a popover or menu. Add `closeOnOutsideClick` and `useEscapeKey`.
+- **Hover only** — Show a tooltip. Consider adding `useFocus` for keyboard accessibility.
+- **Click + outside click** — Start with `useClick` for the trigger behavior.
+- **Modal** — Add `useFocusTrap` to trap focus and `useEscapeKey` for dismissal.
+
+## Mixing Interactions Safely
+
+When you need multiple interactions on the same surface, keep these rules:
+
+1. **Share the context** — All composables must use the same context.
+2. **Avoid contradictory triggers** — `useClick` and `useHover` on the same surface can conflict if they manage open state differently.
+3. **Layer dismissal last** — Add `useEscapeKey` and outside-click handling after the opening behavior is working.
 
 ## Further Reading
 
+- [Safe Polygon](/guide/safe-polygon) — Keep hover surfaces open between anchor and floating element
+- [Virtual Elements](/guide/virtual-elements) — Position at cursor coordinates for context menus
+- [Keyboard List Navigation](/guide/list-navigation) — Arrow key navigation for menus and listboxes
 - [`useClick` API](/api/use-click)
 - [`useHover` API](/api/use-hover)
 - [`useFocus` API](/api/use-focus)

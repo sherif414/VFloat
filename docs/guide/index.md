@@ -1,79 +1,148 @@
 # Start Here
 
-This is the narrative entry point for VFloat. If you are new to the library, read this page first, then follow the reading order for the deeper workflow pages.
+VFloat helps you position floating surfaces — tooltips, popovers, menus, dialogs — relative to an anchor element. It also gives you composables that handle the interaction layer: when things open, close, and respond to user input.
 
-## What To Read Next
+The quickest way to understand what this library does is to build something. Let's start with the smallest possible floating element, then backfill the concepts.
 
-- [Philosophy](/guide/philosophy) for the mental model and product boundaries.
-- [Reading Order](/guide/reading-order) for the shortest path through the docs.
-- [Core Concepts](/guide/concepts) when you want to understand the context object.
+## The Mental Model
 
-## Your First Floating Element
+Before we write code, let's clarify what VFloat is and is not.
 
-Install VFloat with the package manager you already use:
+VFloat provides:
 
-::: code-group
+- **Positioning** — It calculates where a floating element should appear relative to an anchor.
+- **Interactions** — Composables that handle click, hover, focus, keyboard dismissal, and focus trapping.
+- **Middleware** — A pipeline that refines the base position (handling collisions, adding offset, resizing).
 
-```bash [pnpm]
-pnpm add v-float
-```
+VFloat is not:
 
-```bash [npm]
-npm install v-float
-```
+- A component library with prebuilt widgets
+- A styling system
+- A fork of Floating UI
 
-```bash [yarn]
-yarn add v-float
-```
+The goal is to give you the minimum set of primitives so you can build any floating surface that fits your app's design.
 
-:::
+## Build Your First Floating Element
 
-Then wire a floating context, attach click behavior, and let VFloat handle the positioning:
+Let's put a tooltip next to a button. This will show the three pieces working together: the anchor, the floating element, and the context that connects them.
+
+First, we need two template refs:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { offset, useClick, useEscapeKey, useFloating } from "v-float"
+import { useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+</script>
+```
+
+Next, we call `useFloating` and bind the refs. The context it returns gives us the computed styles:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useFloating } from "v-float"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
 const context = useFloating(anchorEl, floatingEl, {
-  placement: "bottom-start",
-  middlewares: [offset(8)],
+  placement: "bottom",
 })
-
-useClick(context, { closeOnOutsideClick: true })
-useEscapeKey(context)
 </script>
 
 <template>
-  <button ref="anchorEl">Toggle tooltip</button>
+  <button ref="anchorEl">Hover me</button>
 
   <div
     v-if="context.open.value"
     ref="floatingEl"
     :style="context.floatingStyles.value"
   >
-    This is a positioned tooltip.
+    Tooltip content
   </div>
 </template>
 ```
 
+This renders the floating element, but it does not open yet. We have not told VFloat when `context.open.value` should change. That is the job of the interaction composables.
+
+## Add Interaction With `useHover`
+
+Let's make the tooltip appear on hover:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { useFloating, useHover } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom",
+})
+
+useHover(context)
+</script>
+
+<template>
+  <button ref="anchorEl">Hover me</button>
+
+  <div
+    v-if="context.open.value"
+    ref="floatingEl"
+    :style="context.floatingStyles.value"
+  >
+    Tooltip content
+  </div>
+</template>
+```
+
+Now `useHover()` manages `context.open.value` for us. When the pointer enters the anchor, the floating element appears. When it leaves, it hides.
+
 ::: tip
-When you open or close the context manually, keep the state transition descriptive and use the API reference when you need the exact visibility API.
+`useHover` works well for tooltips. For menus and popovers, you would typically reach for `useClick` instead, which we will cover in the [Interactions](/guide/interactions) guide.
 :::
 
-## How The Guide Is Organized
+## Add Spacing With Middleware
 
-- [Core Concepts](/guide/concepts) explains the anchor, floating element, and context model.
-- [Interactions](/guide/interactions) shows how to combine click, hover, focus, and dismissal.
-- [Middleware](/guide/middleware) explains how to tune placement after the core position is computed.
-- [Virtual Elements](/guide/virtual-elements), [Keyboard List Navigation](/guide/list-navigation), and [Safe Polygon](/guide/safe-polygon) cover advanced recipes.
+Right now the tooltip sits directly against the anchor. Most UIs need a little gap. We add that with the `offset` middleware:
 
-## When You Need The Exact Contract
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { offset, useFloating, useHover } from "v-float"
 
-- [`useFloating`](/api/use-floating)
-- [`useClick`](/api/use-click)
-- [`useHover`](/api/use-hover)
-- [`useEscapeKey`](/api/use-escape-key)
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom",
+  middlewares: [offset(8)],
+})
+
+useHover(context)
+</script>
+```
+
+The middleware array is a pipeline. `offset(8)` adds 8 pixels of space between the anchor and floating element. Middleware runs after the base position is computed, so you can stack multiple refinements.
+
+## Where To Go Next
+
+You have seen the three layers working together:
+
+1. **Positioning** via `useFloating()` and middleware
+2. **Interaction** via composables like `useHover()`
+3. **State** via the shared `context`
+
+From here, the natural next steps are:
+
+- **[How It Works](/guide/how-it-works)** — Learn the three pieces (anchor, floating, context) in detail, including how to control open state from a parent component.
+- **[Interactions](/guide/interactions)** — Build click-driven surfaces, modals, and combine multiple interaction patterns.
+- **[Middleware](/guide/middleware)** — Handle viewport collisions, add arrows, and resize elements intelligently.
+
+If you want the full learning path, read through the guides in order: Start Here, then How It Works, then Interactions, then Middleware.
+
+For exact signatures and options, jump to the [API Reference](/api/).

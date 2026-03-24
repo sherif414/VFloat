@@ -1,10 +1,78 @@
 # Middleware
 
-Middleware is the positioning pipeline. `useFloating` computes the base position first, then each middleware refines that result before the final coordinates are applied.
+Middleware refines the floating element's position after the base placement is computed. Think of it as a pipeline: `useFloating()` calculates where the element should go, then each middleware function gets a chance to adjust that position.
 
-## The Usual Order
+The way to approach middleware is to ask: "What problem is the base placement still leaving unsolved?" Start simple, then layer in the pieces you need.
 
-Most components start with spacing, then collision handling, then layout correction:
+## Step 1: Add Space with `offset`
+
+The most common first middleware is `offset`. It adds a gap between the anchor and the floating element.
+
+Without any middleware, the floating element sits directly against the anchor. Most UIs need breathing room:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { offset, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom",
+  middlewares: [offset(8)],
+})
+</script>
+
+<template>
+  <button ref="anchorEl">Open</button>
+
+  <div
+    v-if="context.open.value"
+    ref="floatingEl"
+    :style="context.floatingStyles.value"
+  >
+    Floating content
+  </div>
+</template>
+```
+
+`offset(8)` adds 8 pixels of space. You can also pass a two-element array for asymmetric offset: `offset([8, 16])` adds 8 pixels along the placement axis and 16 pixels perpendicular to it.
+
+::: tip
+Always start with `offset` when you need spacing. It is the easiest adjustment and the one you usually need first.
+:::
+
+## Step 2: Handle Crowded Screens with `flip`
+
+`flip` changes the placement side when the preferred side does not have enough room. If you ask for `"bottom"` but the viewport bottom is too close, `flip` tries `"top"`.
+
+Let's add it to the pipeline:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { flip, offset, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom",
+  middlewares: [offset(8), flip()],
+})
+</script>
+```
+
+`flip` checks whether the floating element would overflow the viewport (or any clipping ancestor). If it would, it flips to the opposite side.
+
+::: tip
+`flip` only changes sides. It does not move the element back into view if it already overflows. For that, you need `shift`.
+:::
+
+## Step 3: Keep It In View with `shift`
+
+`shift` nudges the floating element back into the viewport (or a clipping boundary) when it overflows. It is the safety net after `flip` has done its job.
 
 ```vue
 <script setup lang="ts">
@@ -15,40 +83,159 @@ const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 
 const context = useFloating(anchorEl, floatingEl, {
-  placement: "top",
-  middlewares: [offset(10), flip(), shift({ padding: 8 })],
+  placement: "bottom",
+  middlewares: [offset(8), flip(), shift({ padding: 8 })],
 })
+</script>
+```
+
+The `padding` option keeps a buffer between the floating element and the edge. Without it, the element would sit flush against the boundary, which often looks cramped.
+
+## Step 4: Match Width with `size`
+
+Sometimes the floating element should be the same width as its anchor — a dropdown that mirrors the trigger width, for example. `size` measures available space and can apply min/max width or height constraints.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { flip, offset, shift, size, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom",
+  middlewares: [
+    offset(8),
+    flip(),
+    shift({ padding: 8 }),
+    size({
+      apply({ rects, availableHeight }) {
+        Object.assign(floatingEl.value.style, {
+          minWidth: `${rects.reference.width}px`,
+          maxHeight: `${availableHeight - 16}px`,
+        })
+      },
+    }),
+  ],
+})
+</script>
+```
+
+The `apply` function runs after the position is computed but before styles are finalized. It receives the measured rectangles and available space, letting you adjust sizing directly.
+
+::: warning
+`size` is powerful but it modifies the floating element directly in `apply`. Keep these mutations minimal and predictable. If you find yourself doing complex layout in `apply`, consider whether CSS or a different approach would be cleaner.
+:::
+
+## Step 5: Add an Arrow with `useArrow`
+
+An arrow keeps the user's eye connected to the anchor. `useArrow` calculates where the arrow should sit so it stays attached to the anchor as the floating element moves.
+
+First, add the `arrow` middleware:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { arrow, offset, useArrow, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+const arrowEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  middlewares: [offset(8), arrow({ element: arrowEl })],
+})
+
+const { arrowStyles } = useArrow(arrowEl, context)
 </script>
 
 <template>
-  <button ref="anchorEl">Toggle</button>
+  <button ref="anchorEl">Open</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div
+    v-if="context.open.value"
+    ref="floatingEl"
+    :style="context.floatingStyles.value"
+  >
     Floating content
+    <div ref="arrowEl" :style="arrowStyles">Arrow</div>
   </div>
 </template>
 ```
 
-::: tip
-`offset` usually comes first. `flip` and `shift` should run after spacing so collision checks see the final intended gap.
-:::
+`useArrow` reads the middleware data from `context.middlewareData` and computes the correct styles. The arrow automatically flips and shifts based on the current placement.
 
-## Picking The Right Middleware
+## Step 6: Let the Library Choose with `autoPlacement`
 
-- `offset` adds distance between the anchor and the floating element.
-- `flip` changes placement when the preferred side does not have enough room.
-- `shift` keeps the floating element in view.
-- `size` measures the available space so you can resize the floating element.
-- `autoPlacement` chooses the placement with the most room.
-- `hide` exposes visibility state when the anchor is clipped or hidden.
-- `arrow` calculates arrow coordinates and pairs naturally with [`useArrow`](/api/use-arrow).
+When the exact side does not matter and you just want "the best side", `autoPlacement` picks the placement with the most available space. This is useful when the content is flexible and the best side depends on the layout around it.
 
-## Arrow Workflows
+```vue
+<script setup lang="ts">
+import { autoPlacement, offset, useFloating } from "v-float"
 
-If your floating surface needs a pointing arrow, use [`useArrow`](/api/use-arrow) to keep the arrow element in sync with the context, or read the coordinates from `context.middlewareData.value.arrow` if you are wiring styles manually.
+const context = useFloating(anchorEl, floatingEl, {
+  middlewares: [
+    offset(8),
+    autoPlacement({
+      mainAxis: true,
+      crossAxis: true,
+    }),
+  ],
+})
+```
+
+By default `autoPlacement` tries all four sides and their start/end variants, then picks the one with the most space. You can restrict which placements to consider with the `fallbackPlacements` option.
+
+## The Full Pipeline
+
+Putting it all together, a common middleware stack looks like this:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { autoPlacement, flip, offset, shift, useFloating } from "v-float"
+
+const anchorEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null)
+
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom",
+  middlewares: [
+    offset(8),
+    flip(),
+    shift({ padding: 8 }),
+    autoPlacement(),
+  ],
+})
+</script>
+```
+
+The order matters:
+
+1. `offset` sets the intended gap
+2. `flip` changes the side if the preferred side is crowded
+3. `shift` keeps the element in view if it overflows
+4. `autoPlacement` chooses the best side when placement is flexible
+
+## Middleware Reference
+
+| Middleware | Purpose |
+|------------|---------|
+| `offset` | Adds space between anchor and floating element |
+| `flip` | Switches placement when preferred side is crowded |
+| `shift` | Nudges element back into viewport when it overflows |
+| `size` | Measures available space and applies size constraints |
+| `autoPlacement` | Picks the side with the most room |
+| `hide` | Detects when the anchor is clipped or hidden |
+| `arrow` | Calculates arrow coordinates |
 
 ## Further Reading
 
-- [Core Concepts](/guide/concepts)
-- [`useFloating` API](/api/use-floating)
+- [Safe Polygon](/guide/safe-polygon) — Handle hover paths between anchor and floating element
 - [`useArrow` API](/api/use-arrow)
+- [offset API](/api/offset)
+- [flip API](/api/flip)
+- [shift API](/api/shift)
+- [size API](/api/size)
+- [autoPlacement API](/api/autoplacement)

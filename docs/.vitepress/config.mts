@@ -33,29 +33,22 @@ export default defineConfig({
     sidebar: {
       "/guide/": [
         {
-          text: "Orientation",
-          items: [
-            { text: "Start Here", link: "/guide/" },
-            { text: "Philosophy", link: "/guide/philosophy" },
-            { text: "Reading Order", link: "/guide/reading-order" },
-          ],
+          text: "Start Here",
+          items: [{ text: "Start Here", link: "/guide/" }],
         },
         {
-          text: "Mental Model",
-          items: [{ text: "Core Concepts", link: "/guide/concepts" }],
+          text: "How It Works",
+          items: [{ text: "How It Works", link: "/guide/how-it-works" }],
         },
         {
           text: "Recipes",
           items: [
             { text: "Interactions", link: "/guide/interactions" },
+            { text: "Middleware", link: "/guide/middleware" },
             { text: "Keyboard List Navigation", link: "/guide/list-navigation" },
             { text: "Virtual Elements", link: "/guide/virtual-elements" },
             { text: "Safe Polygon", link: "/guide/safe-polygon" },
           ],
-        },
-        {
-          text: "Positioning",
-          items: [{ text: "Middleware", link: "/guide/middleware" }],
         },
       ],
       "/api/": [

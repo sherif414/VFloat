@@ -4,9 +4,10 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 ## Start With The Guide
 
-- [Philosophy](/guide/philosophy)
-- [Reading Order](/guide/reading-order)
-- [Start Here](/guide/)
+- [Start Here](/guide/) - Build your first floating element step by step
+- [How It Works](/guide/how-it-works) - Understand anchor, floating element, and context
+- [Interactions](/guide/interactions) - Add click, hover, focus, and keyboard behavior
+- [Middleware](/guide/middleware) - Refine positioning with offset, flip, shift, and more
 
 ## Positioning
 
