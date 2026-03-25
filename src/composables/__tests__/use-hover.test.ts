@@ -530,14 +530,4 @@ describe("useHover", () => {
 
     })
   })
-
-  // ── Tree-aware Hover ─────────────────────────────────────────────────────
-
-  describe("tree-aware hover", () => {
-    it.skip("does not close parent when pointer leaves to an open descendant", async () => {
-      // TODO: This test needs investigation - tree-aware hover may need implementation fixes
-      // Based on original skipped test
-      expect(true).toBe(true)
-    })
-  })
 })
