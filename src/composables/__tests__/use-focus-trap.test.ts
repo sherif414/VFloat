@@ -14,8 +14,14 @@ function trackElement(el: HTMLElement): HTMLElement {
 
 // Helper to properly flush timers and Vue reactivity
 async function flushTimersAndTick(): Promise<void> {
-  vi.runAllTimers()
   await nextTick()
+  await vi.runAllTimersAsync()
+  await nextTick()
+}
+
+function isAccessibilityHidden(el: HTMLElement): boolean {
+  const htmlEl = el as HTMLElement & { inert?: boolean }
+  return el.getAttribute("aria-hidden") === "true" || htmlEl.inert === true
 }
 
 function createContext() {
@@ -140,36 +146,50 @@ describe("useFocusTrap", () => {
     expect(document.activeElement).toBe(floating)
   })
 
-  it("modal hides outside content via aria-hidden and restores on cleanup", async () => {
-    const outside = document.createElement("div")
-    document.body.appendChild(outside)
+  it("modal hides outside content inside a nested host and restores on cleanup", async () => {
+    const host = trackElement(document.createElement("div"))
+    const outside = trackElement(document.createElement("div"))
+    host.append(outside, floating)
+    document.body.appendChild(host)
 
     scope.run(() => {
       useFocusTrap(ctx, { modal: true })
-      ctx.setOpen(true)
     })
+    ctx.setOpen(true)
     await flushTimersAndTick()
-    expect(outside.getAttribute("aria-hidden")).toBe("true")
+    expect(isAccessibilityHidden(outside)).toBe(true)
     scope.stop()
-    await nextTick()
-    expect(outside.getAttribute("aria-hidden") === null || outside.getAttribute("aria-hidden") === "true").toBeTruthy()
+    await flushTimersAndTick()
+    expect(isAccessibilityHidden(outside)).toBe(false)
   })
 
-  it("non-modal closes on focus out when closeOnFocusOut=true", async () => {
-    const { setOpen } = createContext()
-    vi.spyOn(ctx, "setOpen").mockImplementation(setOpen)
-
+  it("non-modal closes on outside click when closeOnFocusOut=true", async () => {
     scope.run(() => {
       useFocusTrap(ctx, { modal: false, closeOnFocusOut: true })
     })
     ctx.setOpen(true)
     await flushTimersAndTick()
 
-    const outside = document.createElement("input")
+    const outside = document.createElement("button")
     document.body.appendChild(outside)
-    outside.focus()
-    await nextTick()
-    expect(vi.mocked(ctx.setOpen)).toHaveBeenCalled()
+    await userEvent.click(outside)
+    await flushTimersAndTick()
+    expect(ctx.open.value).toBe(false)
+  })
+
+  it("manual deactivate closes the floating surface", async () => {
+    let result: ReturnType<typeof useFocusTrap> | undefined
+
+    scope.run(() => {
+      result = useFocusTrap(ctx, { closeOnFocusOut: true })
+    })
+    ctx.setOpen(true)
+    await flushTimersAndTick()
+
+    result?.deactivate()
+    await flushTimersAndTick()
+
+    expect(ctx.open.value).toBe(false)
   })
 
   it("returnFocus restores to previous on close unless skipped", async () => {
@@ -183,7 +203,7 @@ describe("useFocusTrap", () => {
     ctx.setOpen(true)
     await flushTimersAndTick()
     ctx.setOpen(false)
-    await nextTick()
+    await flushTimersAndTick()
     expect(document.activeElement).toBe(other)
   })
 
@@ -243,6 +263,18 @@ describe("useFocusTrap", () => {
     await flushTimersAndTick()
 
     // Verify cleanup
+  })
+
+  it("activate is a no-op while closed", () => {
+    let result: ReturnType<typeof useFocusTrap> | undefined
+
+    scope.run(() => {
+      result = useFocusTrap(ctx)
+    })
+
+    result?.activate()
+
+    expect(result?.isActive.value).toBe(false)
   })
 
   it("works with dynamically added elements", async () => {
@@ -346,8 +378,8 @@ describe("useFocusTrap", () => {
     expect(outside.getAttribute("aria-hidden")).toBe("true")
 
     scope.stop()
-    await nextTick()
+    await flushTimersAndTick()
 
-    expect(outside.getAttribute("aria-hidden")).toBe("false")
+    expect(outside.getAttribute("aria-hidden")).toBe(null)
   })
 })

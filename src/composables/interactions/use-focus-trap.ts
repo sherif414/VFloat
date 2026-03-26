@@ -89,12 +89,20 @@ export interface UseFocusTrapReturn {
 // 📌 Constants & State Management
 //=======================================================================================
 
-// WeakMap for storing element state
-const ariaHiddenStateMap = new WeakMap<HTMLElement, string | null>()
-const inertStateMap = new WeakMap<HTMLElement, boolean | null>()
-
 // Check for inert support
 const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype
+
+type TrapIsolationMode = false | "inert" | "aria-hidden"
+
+function resolveInitialFocus(initialFocus: UseFocusTrapOptions["initialFocus"]) {
+  return () => (typeof initialFocus === "function" ? initialFocus() : initialFocus)
+}
+
+function resolveIsolationMode(modal: boolean, outsideElementsInert: boolean): TrapIsolationMode {
+  if (!modal) return false
+  if (outsideElementsInert && supportsInert) return "inert"
+  return "aria-hidden"
+}
 
 //=======================================================================================
 // 📌 Main Composable
@@ -112,12 +120,11 @@ export function useFocusTrap(
   context: UseFocusTrapContext,
   options: UseFocusTrapOptions = {}
 ): UseFocusTrapReturn {
-  const floatingContext = context
   const {
     refs: { floatingEl },
     open,
     setOpen,
-  } = floatingContext
+  } = context
 
   // Normalize options with defaults
   const {
@@ -141,74 +148,26 @@ export function useFocusTrap(
   const trapRef = shallowRef<FocusTrap | null>(null)
   const isActive = computed(() => trapRef.value !== null)
 
-  // State restoration callback
-  let restoreOutsideState: (() => void) | null = null
+  // Tracks whether the current deactivation should close the floating surface.
+  let shouldCloseOnDeactivate = false
 
   // Guard to prevent double-deactivation
   let isDeactivating = false
 
   /**
-   * Applies modal state to outside elements (inert or aria-hidden).
-   * Returns a cleanup function to restore original state.
-   */
-  function applyOutsideState(container: HTMLElement): () => void {
-    if (!isModal.value) return () => {}
-
-    const body = (container.ownerDocument ?? document).body
-
-    // Cache body children to avoid repeated queries
-    const allChildren = Array.from(body.children) as HTMLElement[]
-
-    // Filter outside elements efficiently
-    const outsideElements = allChildren.filter((el) => {
-      // Check if element is the container or contains/is contained by the container
-      if (el === container) return false
-      if (container.contains(el) || el.contains(container)) return false
-      return true
-    })
-
-    // Apply state based on inert support
-    const useInert = shouldInertOutside.value && supportsInert
-
-    for (const el of outsideElements) {
-      if (useInert) {
-        inertStateMap.set(el, el.inert ?? null)
-        el.inert = true
-      } else {
-        ariaHiddenStateMap.set(el, el.getAttribute("aria-hidden"))
-        el.setAttribute("aria-hidden", "true")
-      }
-    }
-
-    // Return cleanup function
-    return () => {
-      for (const el of outsideElements) {
-        if (useInert) {
-          const originalInert = inertStateMap.get(el)
-          el.inert = originalInert ?? false
-          inertStateMap.delete(el)
-        } else {
-          const originalAriaHidden = ariaHiddenStateMap.get(el)
-          if (originalAriaHidden == null) {
-            el.removeAttribute("aria-hidden")
-          } else {
-            el.setAttribute("aria-hidden", originalAriaHidden)
-          }
-          ariaHiddenStateMap.delete(el)
-        }
-      }
-    }
-  }
-
-  /**
    * Deactivates the focus trap and cleans up state.
    */
-  const deactivateTrap = () => {
+  const deactivateTrap = (options: { returnFocus?: boolean; closeFloating?: boolean } = {}) => {
     if (isDeactivating || !trapRef.value) return
 
     isDeactivating = true
+    if (options.closeFloating) {
+      shouldCloseOnDeactivate = true
+    }
     try {
-      trapRef.value.deactivate()
+      trapRef.value.deactivate({
+        returnFocus: options.returnFocus ?? toValue(returnFocus),
+      })
       trapRef.value = null
     } finally {
       isDeactivating = false
@@ -219,8 +178,10 @@ export function useFocusTrap(
    * Creates and activates the focus trap.
    */
   const createTrap = () => {
-    // Deactivate existing trap first
-    deactivateTrap()
+    if (!isEnabled.value || !open.value) return
+
+    // Deactivate existing trap first without side effects from a real close.
+    deactivateTrap({ returnFocus: false })
 
     const container = floatingEl.value
     if (!container) {
@@ -233,27 +194,27 @@ export function useFocusTrap(
     // Create the focus trap instance
     trapRef.value = createFocusTrap(container, {
       onActivate: () => {
-        restoreOutsideState = applyOutsideState(container)
+        shouldCloseOnDeactivate = false
       },
       onDeactivate: () => {
-        // Restore outside element state
-        if (restoreOutsideState) {
-          restoreOutsideState()
-          restoreOutsideState = null
-        }
-
-        // Close on focus out (only in non-modal mode)
-        if (shouldCloseOnFocusOut.value) {
+        trapRef.value = null
+        if (shouldCloseOnDeactivate) {
+          shouldCloseOnDeactivate = false
           setOpen(false)
         }
       },
-      initialFocus: () => (typeof initialFocus === "function" ? initialFocus() : initialFocus),
+      initialFocus: resolveInitialFocus(initialFocus),
       fallbackFocus: () => container,
       returnFocusOnDeactivate: toValue(returnFocus),
-      clickOutsideDeactivates: shouldCloseOnFocusOut.value,
+      clickOutsideDeactivates: () => {
+        if (!shouldCloseOnFocusOut.value) return false
+        shouldCloseOnDeactivate = true
+        return true
+      },
       allowOutsideClick: !isModal.value,
       escapeDeactivates: false,
       preventScroll: toValue(preventScroll),
+      isolateSubtrees: resolveIsolationMode(isModal.value, shouldInertOutside.value),
       tabbableOptions: { displayCheck: "none" },
     })
 
@@ -262,10 +223,7 @@ export function useFocusTrap(
       trapRef.value.activate()
     } catch (error) {
       // Ensure state is cleaned up even on error
-      if (restoreOutsideState) {
-        restoreOutsideState()
-        restoreOutsideState = null
-      }
+      shouldCloseOnDeactivate = false
       trapRef.value = null
 
       // Call custom error handler if provided
@@ -294,6 +252,6 @@ export function useFocusTrap(
   return {
     isActive,
     activate: createTrap,
-    deactivate: deactivateTrap,
+    deactivate: () => deactivateTrap({ closeFloating: true }),
   }
 }
