@@ -1,7 +1,7 @@
 interface:
-  display_name: "Documentation Writer"
-  short_description: "Write documentation with concrete API and guide rules"
-  default_prompt: "Use $doc-writer to update documentation in docs/api or docs/guide."
+  display_name: "VFloat Documentation Writer"
+  short_description: "Write and review VFloat API and guide docs"
+  default_prompt: "Use $documentation-writer to create, update, or review VFloat docs in docs/api and docs/guide."
 
 policy:
   allow_implicit_invocation: true

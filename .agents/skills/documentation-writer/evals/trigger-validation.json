@@ -1,0 +1,26 @@
+[
+  {
+    "query": "Create a guide page for virtual anchors and cursor-following patterns in VFloat, then link the relevant API references.",
+    "should_trigger": true
+  },
+  {
+    "query": "The `useClick` source changed. Please update the docs, especially the example and default behavior notes, even if that means touching both the API page and a guide.",
+    "should_trigger": true
+  },
+  {
+    "query": "Review `docs/guide/interactions.md` and `docs/api/use-click.md` for duplicated contract details and rewrite them so the guide teaches workflow while the API page stays canonical.",
+    "should_trigger": true
+  },
+  {
+    "query": "How does `autoPlacement` decide where to put the floating element? Just explain it here.",
+    "should_trigger": false
+  },
+  {
+    "query": "Fix the broken `use-click` test snapshots.",
+    "should_trigger": false
+  },
+  {
+    "query": "Add a new homepage hero section to `docs/.vitepress/theme/components/Home.vue`.",
+    "should_trigger": false
+  }
+]

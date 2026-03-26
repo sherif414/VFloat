@@ -1,0 +1,26 @@
+[
+  {
+    "query": "Please update `docs/api/use-hover.md` after the changes in `src/composables/interactions/use-hover.ts` and make sure the defaults still match the implementation.",
+    "should_trigger": true
+  },
+  {
+    "query": "I changed `useFocusTrap` behavior and tests. Sync the docs and examples so the API page and guide references are accurate.",
+    "should_trigger": true
+  },
+  {
+    "query": "Review the VFloat docs for `offset` and middleware and fix any broken links, stale examples, or VitePress issues you find.",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain the difference between `useHover` and `useFocus` for tooltips right here. Do not edit any docs.",
+    "should_trigger": false
+  },
+  {
+    "query": "Fix the `useFocusTrap` implementation and add tests for returning focus on close.",
+    "should_trigger": false
+  },
+  {
+    "query": "Update the README install section for npm, pnpm, and bun.",
+    "should_trigger": false
+  }
+]

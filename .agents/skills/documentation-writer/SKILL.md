@@ -1,178 +1,71 @@
 ---
 name: documentation-writer
-description: Write, edit, and review VFloat documentation in docs/api and docs/guide with concrete rules for API references, guides, VitePress syntax, and VFloat-specific examples. Use when creating new API references, guides, tutorials, doc updates, or docs reviews for VFloat.
+description: Use this skill when creating, updating, reviewing, or syncing VFloat documentation in docs/api or docs/guide, especially after source changes in src/composables/ or when the user asks for VFloat API pages, guides, tutorials, doc fixes, or docs review feedback even if they do not name the docs folders directly.
 ---
 
-# VFloat Documentation Writer
+# Documentation Writer
 
-Use this skill to produce clear, consistent, and friendly VFloat documentation that follows the rules below instead of relying on a vague style label.
+Use this skill to write accurate VFloat docs quickly. Default to concise, task-first prose with a light teammate-like tone.
 
-## Use This Skill
+## Default Behavior
 
-- Creating or updating files in `docs/api/`
-- Creating or updating files in `docs/guide/`
-- Reviewing docs for tone, structure, links, and examples
-- Aligning docs with source changes in `src/`
+- Work from source and nearby VFloat docs first.
+- Treat `docs/api/` as the canonical contract layer.
+- Treat `docs/guide/` as the workflow and decision-making layer.
+- Preserve the nearby page family when making a targeted edit unless the task clearly asks for broader standardization.
 
-## Writing Style
+## Core Workflow
 
-The core identity is **The Friendly Mentor**. The docs should feel like we are sitting next to the developer, pair-programming with them. Floating UI is inherently tricky, so we should acknowledge that friction and show how VFloat makes the work easier.
+1. Classify the task.
+   - API page in `docs/api/`
+   - Guide or tutorial in `docs/guide/`
+   - Docs review or docs-sync task after code changes
+2. Inspect the source of truth.
+   - Read the relevant files in `src/composables/` first.
+   - Read the matching or neighboring docs pages to preserve local conventions.
+   - Confirm exported names, option names, defaults, examples, and edge cases from code or tests before writing.
+3. Choose the page family.
+   - Read [references/page-patterns.md](references/page-patterns.md).
+   - Use the matching family: composable API page, middleware API page, step-by-step guide, or concept guide.
+4. Draft the page.
+   - Start from the reader's task.
+   - Introduce every code block with one sentence.
+   - Prefer `<script setup lang="ts">` examples.
+   - Use the smallest runnable example that proves the point.
+5. Cross-link instead of duplicating.
+   - API pages own signatures, defaults, options, and return values.
+   - Guides should teach workflows and tradeoffs, then link the API page for exact contracts.
+6. Validate before finishing.
+   - Read [references/review-checklist.md](references/review-checklist.md).
+   - Compare the draft against the source and adjacent docs.
+   - Run `npm run docs:build`, fix failures, and rerun until it passes.
 
-### The 4 Golden Rules of Tone
+## Repo Gotchas
 
-- **Use natural inclusive language:** Prefer `we` and `let's` when they sound natural, but do not force them into every sentence.
-- **Show empathy:** Validate the reader's struggle before the solution. If a pattern is hard, say so plainly before introducing the fix.
-- **Narrate the code:** Never drop a naked code block. Always introduce the snippet with a sentence that explains what we are about to build.
-- **Soften directives:** Turn strict warnings into helpful guidance. Use language like `Watch out for this gotcha!` and explain what might happen if we take the wrong path.
+- VFloat is inspired by Floating UI but not a fork. Verify behavior in this repo before reusing wording, defaults, or examples.
+- Use project terminology literally: `useFloating`, `middlewares`, `open`, `context`, and `FloatingContext`.
+- Examples should import from `v-float`.
+- Use `middlewares`, never `middleware`.
+- Prefer `<script setup lang="ts">` for Vue examples.
+- Bind `context.floatingStyles.value` in examples unless the surrounding page family is being preserved deliberately during a focused edit.
+- Do not restate full option interfaces inside guides when the API page already owns that contract.
+- Middleware API pages currently use an older family style in this repo. Preserve that family for focused edits unless the task is to standardize the whole family together.
+- If you add or rename a docs page, update `docs/.vitepress/config.mts` and the relevant overview page such as `docs/api/index.md` or `docs/guide/index.md`.
 
-### Style Habits
+## Tone
 
-- **Lead with the job to be done:** Start from the reader's task, then explain the smallest useful path.
-- **Prefer concise prose:** Use short paragraphs and short sections. If a sentence can be shorter without losing meaning, shorten it.
-- **Stay literal with terminology:** Use the project's actual words, such as `positioning library`, `useFloating`, `middlewares`, `open`, and `context`.
-- **Avoid filler and hype:** Do not add motivational language, disclaimers, or repeated reassurance.
-- **Sound human, not templated:** Use plain words, contractions, and varied sentence openings when they make the text easier to read.
-- **Keep the rhythm natural:** Avoid repeating the same sentence pattern across multiple bullets or paragraphs.
-- **Explain like a teammate:** Favor direct, conversational phrasing over formal, handbook-style wording.
-- **Separate explanation from reference:** Keep exact signatures, defaults, and return values in API pages. In guides, point to the API page instead of restating contracts.
-- **Use examples to teach:** Show the smallest runnable example that supports the point, then explain the tradeoff or next step.
+- Keep the voice light, direct, and teammate-like.
+- Prefer short paragraphs and concrete wording.
+- Do not add hype, filler, or generic advice that is not specific to VFloat.
 
-## Workflow
+## Load-On-Demand References
 
-1. Identify the doc type.
-   - API references should stay concise and technical.
-   - Guides should teach a workflow, explain tradeoffs, and stay narrative-first.
-2. Read the relevant source code before writing.
-   - Check the composable or utility implementation.
-   - Confirm signatures, defaults, edge cases, and naming.
-3. Follow the VFloat documentation rules.
-   - Follow the writing style rules.
-   - Prefer examples over long, dry explanations.
-   - Introduce complexity gradually so we don't overwhelm the reader.
-4. Cross-link instead of duplicating.
-   - Link API docs to related guides.
-   - Link guides to the relevant API reference.
-5. Check formatting before finishing.
-   - Use valid VitePress markdown.
-   - Keep code blocks language-tagged.
-   - Make links and headings consistent with nearby docs.
+- Read [references/page-patterns.md](references/page-patterns.md) when choosing structure or matching a nearby page family.
+- Read [references/review-checklist.md](references/review-checklist.md) before finalizing edits or when the request is a docs review.
 
-## Documentation Architecture
+## Validation Loop
 
-Use a two-layer structure for VFloat docs:
-
-- `docs/api/` is the canonical reference layer.
-- `docs/guide/` is the learning and decision-making layer.
-
-Rules:
-
-- Keep API and guide responsibilities separate. Do not merge them into one page type.
-- Give every public export a single canonical API page.
-- Add a guide page only when the topic teaches a workflow, pattern, or tradeoff that is not obvious from the API reference alone.
-- For composables such as `useClick`, keep the API page as the reference source of truth and cover usage inside a broader guide such as `Interactions` unless the composable deserves a dedicated teaching page.
-- Avoid creating near-duplicate guide and API pages for the same symbol.
-- If a guide needs exact option or signature details, link to the API page instead of repeating them.
-
-## API Docs
-
-Use API docs for reference material. They should be brief, scannable, friendly in tone, and canonical.
-
-Required structure:
-
-````markdown
-# functionName
-
-Brief 1-2 sentence description of what this does.
-
-## Type
-
-```ts
-function functionName(param: Type): ReturnType
-```
-
-## Details
-
-Explain behavior, edge cases, and important notes directly.
-
-## Example
-
-```ts
-const result = functionName(value)
-```
-
-## See Also
-
-- [Related Guide](/guide/related)
-- [`relatedApi`](/api/related-api)
-````
-
-Rules:
-
-- Use TypeScript signatures instead of parameter tables.
-- Keep the focus on what the API does.
-- Avoid long background sections or marketing language.
-- Keep explanations brief unless edge cases need extra detail.
-- Link to a guide when usage context matters more than the raw signature.
-- Keep composable API pages short enough to scan quickly, with one canonical example and links to the most relevant guide(s).
-- Include workflow notes only when they clarify edge cases, defaults, or interoperability with other composables.
-
-## Guide Docs
-
-Use guide docs for tutorials and conceptual explanations. They should be narrative-first, task-oriented, and guide the reader through the journey.
-
-Recommended structure:
-
-````markdown
-# Topic Title
-
-Short introduction explaining the problem being solved and what the reader will learn.
-
-## The Basics
-
-Start with the simplest working example. Keep it minimal and immediately usable.
-
-Before every code block, add a sentence that explains what we are about to do in the snippet.
-
-::: tip
-A helpful, practical note that removes friction or clarifies the next step.
-:::
-
-## Deep Dive
-
-Explain the concept progressively. Add edge cases organically.
-
-::: warning Watch out for this gotcha!
-A direct heads-up about common mistakes, caveats, or accessibility concerns.
-:::
-
-## Further Reading
-
-- [API Reference](/api/function-name)
-- [Related Guide](/guide/related)
-````
-
-Guidelines:
-
-- Use VitePress containers such as `::: tip`, `::: warning`, and `::: details`. Give them descriptive custom titles when appropriate.
-- Introduce every code block with a sentence that explains what we are about to do.
-- Prefer `<script setup>` examples.
-- Keep examples runnable and minimal.
-- Use code highlights only when they clarify the point.
-- Explain the why and how, not just the API surface.
-- Move detailed reference material to API docs instead of repeating it.
-- Prefer task-oriented pages over symbol-oriented pages.
-- Use guides to teach combinations of composables, accessibility patterns, debugging, and real-world workflows.
-- If a composable already has API coverage, a guide should add context, sequencing, or tradeoffs rather than restating the signature.
-
-## VFloat Conventions
-
-- Always use `middlewares` in examples, not `middleware`.
-- Import examples from `v-float`.
-
-## Final Checks
-
-- Confirm the doc matches the correct folder and audience.
-- Confirm code examples use the right language tags.
-- Confirm internal links point to valid VFloat docs paths.
-- Confirm the text does not repeat information already covered elsewhere.
-- Confirm the tone checks out: Does it sound like a friendly mentor speaking naturally, not a generated checklist?
+1. Re-read the relevant source and the edited doc side by side.
+2. Check links, headings, VitePress containers, and code block language tags.
+3. Run `npm run docs:build`.
+4. If build or review fails, fix the doc and repeat the loop.

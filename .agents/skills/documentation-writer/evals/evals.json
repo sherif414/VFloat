@@ -1,0 +1,56 @@
+{
+  "skill_name": "documentation-writer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Sync `docs/api/use-click.md` with the current implementation in `src/composables/interactions/use-click.ts`. Keep the page concise, verify defaults from source, and keep exact contract details in the API page.",
+      "expected_output": "An updated `docs/api/use-click.md` that matches the source, keeps the composable API structure, includes a Vue example imported from `v-float`, and cross-links to the Interactions guide and related APIs.",
+      "files": [
+        "src/composables/interactions/use-click.ts",
+        "docs/api/use-click.md",
+        "docs/guide/interactions.md"
+      ],
+      "assertions": [
+        "The page retains `## Type`, `## Details`, `## Example`, and `## See Also` sections.",
+        "The Type block documents `UseClickContext` and `UseClickOptions` from source.",
+        "The Details section states that `closeOnOutsideClick` defaults to `false` and `outsideClickEvent` defaults to `\"pointerdown\"`.",
+        "The example imports from `v-float` and binds `:style=\"context.floatingStyles.value\"`.",
+        "The See Also section links to `/guide/interactions`."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Rewrite `docs/guide/interactions.md` so modal surfaces are taught as a workflow that combines `useClick`, `useEscapeKey`, and `useFocusTrap`, without duplicating full API contracts from the reference pages.",
+      "expected_output": "An updated workflow-first guide that keeps a clear step progression, teaches the modal interaction stack on one shared context, and links to the canonical API pages for exact contracts.",
+      "files": [
+        "docs/guide/interactions.md",
+        "docs/api/use-click.md",
+        "docs/api/use-escape-key.md",
+        "docs/api/use-focus-trap.md"
+      ],
+      "assertions": [
+        "The guide remains step-by-step and keeps a clear progression through the interaction layers.",
+        "The modal workflow includes `useClick`, `useEscapeKey`, and `useFocusTrap` on the same shared context.",
+        "The guide explains why the pattern is used instead of only listing the raw calls.",
+        "The guide links to relevant API pages instead of restating full option interfaces.",
+        "The guide uses a VitePress container only where it removes friction or calls out a real gotcha."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review `docs/api/offset.md` and `docs/guide/middleware.md` against current VFloat conventions. Fix outdated examples, naming, links, and VitePress issues while preserving the repo's existing middleware API family unless a full family cleanup is necessary.",
+      "expected_output": "Corrected docs pages that fix concrete issues, preserve the current middleware API family for targeted edits, and keep examples and links aligned with current VFloat conventions.",
+      "files": [
+        "docs/api/offset.md",
+        "docs/guide/middleware.md"
+      ],
+      "assertions": [
+        "`docs/api/offset.md` keeps the current middleware API family style unless the entire middleware family is standardized together.",
+        "Examples use `middlewares` and import from `v-float`.",
+        "Any stale `context.floatingStyles` binding is corrected to the right reactive form for the page family being edited.",
+        "The guide links to relevant API reference pages.",
+        "The review fixes concrete issues instead of only describing them."
+      ]
+    }
+  ]
+}
