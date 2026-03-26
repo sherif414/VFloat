@@ -1,0 +1,7 @@
+interface:
+  display_name: "Documentation Writer"
+  short_description: "Write documentation with concrete API and guide rules"
+  default_prompt: "Use $doc-writer to update documentation in docs/api or docs/guide."
+
+policy:
+  allow_implicit_invocation: true
