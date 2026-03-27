@@ -69,8 +69,8 @@
     "vue-tsc": "^3.2.6"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.14",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.14"
   },
   "packageManager": "pnpm@10.33.0"
 }
