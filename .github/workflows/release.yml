@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  # Manual release trigger
   workflow_dispatch:
     inputs:
       release_type:
@@ -23,12 +22,14 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Release Package
     runs-on: ubuntu-latest
-
-    # Only run if commit message doesn't contain skip flags
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' &&
@@ -38,76 +39,95 @@ jobs:
 
     permissions:
       contents: write
-      packages: write
-      pull-requests: write
-      issues: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install dependencies
-        run: npm ci
+          cache: true
 
       - name: Run type checking
-        run: npm run type-check
+        run: vp exec vue-tsc --build tsconfig.build.json
+
+      - name: Run tests
+        run: vp test
 
       - name: Build package
-        run: npm run build
+        run: vp pack
 
       - name: Configure Git
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Detect release type
+        id: detect-release
+        if: github.event_name == 'push' || github.event.inputs.release_type == 'auto'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          range_args=()
+          last_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [[ -n "$last_tag" ]]; then
+            range_args+=("${last_tag}..HEAD")
+          fi
+
+          if git log --format=%B "${range_args[@]}" | grep -q "BREAKING CHANGE"; then
+            release_type="major"
+          elif git log --format=%s "${range_args[@]}" | grep -Eq "^[a-z]+(\(.+\))?!: "; then
+            release_type="major"
+          elif git log --format=%s "${range_args[@]}" | grep -Eq "^feat(\(.+\))?: "; then
+            release_type="minor"
+          elif git log --format=%s "${range_args[@]}" | grep -Eq "^(fix|perf)(\(.+\))?: "; then
+            release_type="patch"
+          else
+            echo "has_release=false" >> "$GITHUB_OUTPUT"
+            echo "No releasable changes found."
+            exit 0
+          fi
+
+          echo "has_release=true" >> "$GITHUB_OUTPUT"
+          echo "release_type=${release_type}" >> "$GITHUB_OUTPUT"
+          echo "Detected release type: ${release_type}"
+
       - name: Release
+        if: github.event_name == 'workflow_dispatch' || steps.detect-release.outputs.has_release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
         run: |
-          # Manual dispatch
+          set -euo pipefail
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
-              if [[ "${{ github.event.inputs.release_type }}" == "auto" ]]; then
-                npm run release:dry
-              else
-                npm run release:${{ github.event.inputs.release_type }} -- --dry-run
-              fi
-            else
-              if [[ "${{ github.event.inputs.release_type }}" == "auto" ]]; then
-                npm run release -- --ci
-              else
-                npm run release:${{ github.event.inputs.release_type }} -- --ci
-              fi
-            fi
-          # Automatic push to main
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "Checking commits since last tag for release type..."
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            if [[ -n "$LAST_TAG" ]]; then RANGE="$LAST_TAG..HEAD"; else RANGE=""; fi
+            release_type="${{ github.event.inputs.release_type }}"
+            dry_run="${{ github.event.inputs.dry_run }}"
 
-            if git log --format=%B $RANGE | grep -E "BREAKING CHANGE|!:" > /dev/null; then
-              RELEASE_TYPE=major
-            elif git log --format=%s $RANGE | grep -E "^feat(\(.+\))?: " > /dev/null; then
-              RELEASE_TYPE=minor
-            elif git log --format=%s $RANGE | grep -E "^(fix|perf)(\(.+\))?: " > /dev/null; then
-              RELEASE_TYPE=patch
-            else
-              echo "No releasable changes found, skipping release."
-              exit 0
+            if [[ "$release_type" == "auto" ]]; then
+              release_type="${{ steps.detect-release.outputs.release_type }}"
             fi
-
-            echo "Detected release type: $RELEASE_TYPE"
-            npm run release:$RELEASE_TYPE -- --ci
+          else
+            release_type="${{ steps.detect-release.outputs.release_type }}"
+            dry_run="false"
           fi
+
+          if [[ -z "$release_type" ]]; then
+            echo "No releasable changes found, skipping release."
+            exit 0
+          fi
+
+          release_args=("$release_type" "--ci")
+          if [[ "$dry_run" == "true" ]]; then
+            release_args+=("--dry-run")
+          fi
+
+          vp exec release-it "${release_args[@]}"
 
       - name: Upload build artifacts
         if: always()
@@ -119,7 +139,6 @@ jobs:
             CHANGELOG.md
           retention-days: 30
 
-  # Notify on failure
   notify-failure:
     name: Notify Release Failure
     runs-on: ubuntu-latest
@@ -144,7 +163,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['bug', 'ci/cd']
+              title,
+              body,
+              labels: ['bug', 'ci/cd'],
             });

@@ -7,9 +7,12 @@
     "dist"
   ],
   "type": "module",
-  "types": "./dist/src/index.d.ts",
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./dist/index.mjs",
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -25,13 +28,13 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "release": "release-it",
-    "release:patch": "release-it patch",
-    "release:minor": "release-it minor",
-    "release:major": "release-it major",
-    "release:dry": "release-it --dry-run",
-    "changelog": "changelogen",
-    "changelog:preview": "changelogen --no-output",
+    "release": "vp exec release-it",
+    "release:patch": "vp exec release-it patch",
+    "release:minor": "vp exec release-it minor",
+    "release:major": "vp exec release-it major",
+    "release:dry": "vp exec release-it --dry-run",
+    "changelog": "vp exec changelogen",
+    "changelog:preview": "vp exec changelogen --no-output",
     "prepare": "vp config"
   },
   "dependencies": {

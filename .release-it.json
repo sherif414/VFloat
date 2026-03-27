@@ -10,10 +10,10 @@
     "publishPath": "."
   },
   "hooks": {
-    "before:init": ["git pull"],
-    "after:bump": ["vp pack", "changelogen", "git add CHANGELOG.md"],
+    "before:init": ["node ./scripts/release/before-init.mjs"],
+    "after:bump": ["vp pack", "vp exec changelogen", "git add CHANGELOG.md"],
     "after:release": [
-      "changelogen gh release",
+      "vp exec changelogen gh release",
       "echo Successfully released ${name} v${version} to ${repo.repository}."
     ]
   },
