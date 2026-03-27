@@ -5,379 +5,151 @@ import type {
   Placement,
   Strategy,
 } from "@floating-ui/dom"
-import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom"
 import type { MaybeRefOrGetter, Ref } from "vue"
-import { computed, onScopeDispose, onWatcherCleanup, ref, shallowRef, toValue, watch } from "vue"
+import { ref } from "vue"
+import { createRefSetter } from "@/core/elements"
+import { setFloatingInternals } from "@/core/floating-internals"
 import type { OpenChangeReason, VirtualElement } from "@/types"
-import { arrow } from "../middlewares"
+import { createOpenStateController } from "./internal/open-state"
+import { createPositionController } from "./internal/position-controller"
 
-//=======================================================================================
-// 📌 Types & Interfaces
-//=======================================================================================
-
-/**
- * Type for anchor element in floating UI
- */
 export type AnchorElement = HTMLElement | VirtualElement | null
-
-/**
- * Type for floating element in floating UI
- */
 export type FloatingElement = HTMLElement | null
 
-/**
- * CSS styles for positioning floating elements
- */
 export type FloatingStyles = {
-  /**
-   * CSS position property
-   */
   position: Strategy
-
-  /**
-   * CSS top property
-   */
   top: string
-
-  /**
-   * CSS left property
-   */
   left: string
-
-  /**
-   * CSS transform property
-   */
   transform?: string
-
-  /**
-   * CSS will-change property
-   */
   "will-change"?: string
 } & {
-  // This index signature makes the type compatible with Vue's `StyleValue`
-  // biome-ignore lint/suspicious/noExplicitAny: <workaround>
+  // biome-ignore lint/suspicious/noExplicitAny: CSS custom property passthrough
   [key: `--${string}`]: any
 }
 
-/**
- * Options for configuring floating element behavior
- */
 export interface UseFloatingOptions {
-  /**
-   * Where to place the floating element relative to its anchor element.
-   * @default 'bottom'
-   */
   placement?: MaybeRefOrGetter<Placement | undefined>
-
-  /**
-   * The type of CSS positioning to use.
-   * @default 'absolute'
-   */
   strategy?: MaybeRefOrGetter<Strategy | undefined>
-
-  /**
-   * Whether to use CSS transform instead of top/left positioning.
-   * @default true
-   */
   transform?: MaybeRefOrGetter<boolean | undefined>
-
-  /**
-   * Middlewares modify the positioning coordinates in some fashion, or provide useful data for the consumer to use.
-   */
   middlewares?: MaybeRefOrGetter<Middleware[]>
-
-  /**
-   * Whether to automatically update the position of the floating element.
-   * @default true
-   */
   autoUpdate?: boolean | AutoUpdateOptions
-
-  /**
-   * Whether the floating element is open.
-   * @default false
-   */
   open?: Ref<boolean>
-
-  /**
-   * Callback invoked whenever the open state changes via setOpen.
-   * Provides the new state, the reason, and the triggering DOM event (if any).
-   */
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void
 }
 
-/**
- * Context object returned by useFloating containing all necessary data and methods
- */
-export interface FloatingContext {
-  /**
-   * The x-coordinate of the floating element
-   */
-  x: Readonly<Ref<number>>
+export interface FloatingRefs {
+  anchorEl: Ref<AnchorElement>
+  floatingEl: Ref<FloatingElement>
+  arrowEl: Ref<HTMLElement | null>
+  setAnchor: (value: AnchorElement) => void
+  setFloating: (value: FloatingElement) => void
+  setArrow: (value: HTMLElement | null) => void
+}
 
-  /**
-   * The y-coordinate of the floating element
-   */
-  y: Readonly<Ref<number>>
-
-  /**
-   * The strategy used for positioning
-   */
-  strategy: Readonly<Ref<Strategy>>
-
-  /**
-   * The placement of the floating element
-   */
-  placement: Readonly<Ref<Placement>>
-
-  /**
-   * Data from middleware for additional customization
-   */
-  middlewareData: Readonly<Ref<MiddlewareData>>
-
-  /**
-   * Whether the floating element has been positioned
-   */
-  isPositioned: Readonly<Ref<boolean>>
-
-  /**
-   * Reactive styles to apply to the floating element
-   */
-  floatingStyles: Readonly<Ref<FloatingStyles>>
-
-  /**
-   * Function to manually update the position
-   */
-  update: () => void
-
-  /**
-   * The refs object containing references to anchor and floating elements
-   */
-  refs: {
-    anchorEl: Ref<AnchorElement>
-    floatingEl: Ref<FloatingElement>
-    arrowEl: Ref<HTMLElement | null>
-  }
-
-  /**
-   * Whether the floating element is open
-   */
+export interface FloatingState {
   open: Readonly<Ref<boolean>>
-
-  /**
-   * Function to explicitly set the open state of the floating element.
-   */
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void
 }
 
-//=======================================================================================
-// 📌 Main Logic / Primary Export(s)
-//=======================================================================================
+export interface FloatingPosition {
+  x: Readonly<Ref<number>>
+  y: Readonly<Ref<number>>
+  strategy: Readonly<Ref<Strategy>>
+  placement: Readonly<Ref<Placement>>
+  middlewareData: Readonly<Ref<MiddlewareData>>
+  isPositioned: Readonly<Ref<boolean>>
+  styles: Readonly<Ref<FloatingStyles>>
+  update: () => void
+}
 
-/**
- * Composable function that provides positioning for a floating element relative to an anchor element
- *
- * This composable handles the positioning logic for floating elements (like tooltips, popovers, etc.)
- * relative to their anchor elements. It uses Floating UI under the hood and provides reactive
- * positioning data and styles.
- *
- * @param anchorEl - The anchor element or a reactive reference to it
- * @param floatingEl - The floating element or a reactive reference to it
- * @param options - Additional options for the floating behavior
- * @returns A FloatingContext object containing positioning data and methods
- *
- * @example
- * ```ts
- * const { floatingStyles, refs } = useFloating(anchorEl, floatingEl, {
- *   placement: 'bottom',
- *   strategy: 'absolute'
- * })
- * ```
- */
+export interface FloatingRoot {
+  refs: FloatingRefs
+  state: FloatingState
+  position: FloatingPosition
+}
+
+export interface FloatingContext extends FloatingRoot {
+  /**
+   * Deprecated flat aliases kept during the grouped-return transition.
+   */
+  open: FloatingState["open"]
+  setOpen: FloatingState["setOpen"]
+  x: FloatingPosition["x"]
+  y: FloatingPosition["y"]
+  strategy: FloatingPosition["strategy"]
+  placement: FloatingPosition["placement"]
+  middlewareData: FloatingPosition["middlewareData"]
+  isPositioned: FloatingPosition["isPositioned"]
+  floatingStyles: FloatingPosition["styles"]
+  update: FloatingPosition["update"]
+}
+
 export function useFloating(
   anchorEl: Ref<AnchorElement>,
   floatingEl: Ref<FloatingElement>,
   options: UseFloatingOptions = {}
 ): FloatingContext {
-  const {
-    transform = true,
-    middlewares,
-    autoUpdate: autoUpdateOptions = true,
-    open = ref(false),
-    onOpenChange,
-  } = options
-
-  const setOpen = (value: boolean, reason?: OpenChangeReason, event?: Event) => {
-    if (open.value === value) return
-    open.value = value
-    const resolvedReason: OpenChangeReason = reason ?? "programmatic"
-    onOpenChange?.(value, resolvedReason, event)
-  }
-
-  const initialPlacement = computed(() => toValue(options.placement) ?? "bottom")
-  const initialStrategy = computed(() => toValue(options.strategy) ?? "absolute")
-
-  // Position state
-  const x = ref(0)
-  const y = ref(0)
-  const placement = ref(initialPlacement.value)
-  const strategy = ref(initialStrategy.value)
-
-  const middlewareData = shallowRef<MiddlewareData>({})
-  const isPositioned = ref(false)
-
-  // Arrow element ref for useArrow composable
+  const stateController = createOpenStateController({
+    open: options.open,
+    onOpenChange: options.onOpenChange,
+  })
   const arrowEl = ref<HTMLElement | null>(null)
 
-  // Reactive middleware array that includes arrow middleware when arrowEl is set
-  const reactiveMiddlewares = computed(() => {
-    const baseMiddlewares = toValue(middlewares) || []
-    if (arrowEl.value) {
-      // Check if arrow middleware already exists
-      const hasArrow = baseMiddlewares.some((m) => m.name === "arrow")
-      if (!hasArrow) {
-        return [...baseMiddlewares, arrow({ element: arrowEl })]
-      }
-    }
-    return baseMiddlewares
-  })
-
-  const update = async () => {
-    if (!anchorEl.value || !floatingEl.value) return
-
-    try {
-      const result = await computePosition(anchorEl.value, floatingEl.value, {
-        placement: initialPlacement.value,
-        strategy: initialStrategy.value,
-        middleware: reactiveMiddlewares.value,
-      })
-
-      x.value = result.x
-      y.value = result.y
-      placement.value = result.placement
-      strategy.value = result.strategy
-      middlewareData.value = result.middlewareData
-      isPositioned.value = open.value
-    } catch (err) {
-      if (import.meta.env?.DEV) {
-        console.error("[useFloating] Failed to compute position:", err)
-      }
-    }
+  const refs: FloatingRefs = {
+    anchorEl,
+    floatingEl,
+    arrowEl,
+    setAnchor: createRefSetter(anchorEl),
+    setFloating: createRefSetter(floatingEl),
+    setArrow: createRefSetter(arrowEl),
   }
 
-  watch([initialPlacement, initialStrategy, reactiveMiddlewares], () => {
-    if (open.value) {
-      update()
-    }
+  const positionController = createPositionController({
+    anchorEl,
+    floatingEl,
+    open: stateController.open,
+    placement: options.placement,
+    strategy: options.strategy,
+    transform: options.transform,
+    middlewares: options.middlewares,
+    autoUpdate: options.autoUpdate,
   })
 
-  let cleanup: (() => void) | undefined
-
-  watch(
-    [anchorEl, floatingEl, open],
-    ([anchorEl, floatingEl, open]) => {
-      if (!open || !anchorEl || !floatingEl) return
-
-      if (autoUpdateOptions) {
-        cleanup = floatingUIAutoUpdate(
-          anchorEl,
-          floatingEl,
-          update,
-          typeof autoUpdateOptions === "object" ? autoUpdateOptions : undefined
-        )
-      }
-
-      onWatcherCleanup(() => {
-        cleanup?.()
-        cleanup = undefined
-      })
-    },
-    { immediate: true }
-  )
-
-  onScopeDispose(() => cleanup?.())
-
-  watch(open, (isOpen) => {
-    if (!isOpen) {
-      isPositioned.value = false
-    }
-  })
-
-  const floatingStyles: Ref<FloatingStyles> = ref({
-    position: initialStrategy.value,
-    left: "0",
-    top: "0",
-  })
-
-  watch(
-    [x, y, () => toValue(transform)],
-    ([xVal, yVal, useTransformVal]) => {
-      const floatingElVal = floatingEl.value
-      if (!floatingElVal) return
-
-      const initialStyles = {
-        position: strategy.value,
-        left: "0",
-        top: "0",
-      }
-
-      const roundedX = roundByDPR(floatingElVal, xVal)
-      const roundedY = roundByDPR(floatingElVal, yVal)
-
-      if (useTransformVal) {
-        floatingStyles.value = {
-          ...initialStyles,
-          transform: `translate(${roundedX}px, ${roundedY}px)`,
-          ...(getDPR(floatingElVal) >= 1.5 && {
-            "will-change": "transform",
-          }),
-        }
-      } else {
-        floatingStyles.value = {
-          ...initialStyles,
-          left: `${roundedX}px`,
-          top: `${roundedY}px`,
-        }
-      }
-    },
-    { immediate: true }
-  )
-
-  return {
-    x,
-    y,
-    strategy,
-    placement,
-    middlewareData,
-    isPositioned,
-    floatingStyles,
-    update,
-    refs: {
-      anchorEl: anchorEl,
-      floatingEl: floatingEl,
-      arrowEl: arrowEl,
-    },
-    open,
-    setOpen,
+  const state: FloatingState = {
+    open: stateController.open,
+    setOpen: stateController.setOpen,
   }
-}
 
-//=======================================================================================
-// 📌 Utility Functions
-//=======================================================================================
+  const position: FloatingPosition = {
+    x: positionController.position.x,
+    y: positionController.position.y,
+    strategy: positionController.position.strategy,
+    placement: positionController.position.placement,
+    middlewareData: positionController.position.middlewareData,
+    isPositioned: positionController.position.isPositioned,
+    styles: positionController.position.styles,
+    update: positionController.position.update,
+  }
 
-/**
- * Rounds a value based on the device pixel ratio
- */
-function roundByDPR(el: HTMLElement, value: number) {
-  const dpr = getDPR(el)
-  return Math.round(value * dpr) / dpr
-}
+  const context = {
+    refs,
+    state,
+    position,
+    open: state.open,
+    setOpen: state.setOpen,
+    x: position.x,
+    y: position.y,
+    strategy: position.strategy,
+    placement: position.placement,
+    middlewareData: position.middlewareData,
+    isPositioned: position.isPositioned,
+    floatingStyles: position.styles,
+    update: position.update,
+  } satisfies FloatingContext
 
-/**
- * Gets the device pixel ratio for an element
- */
-function getDPR(el: HTMLElement) {
-  if (typeof window === "undefined") return 1
-  const win = el.ownerDocument.defaultView || window
-  return win.devicePixelRatio || 1
+  setFloatingInternals(context, {
+    middlewareRegistry: positionController.middlewareRegistry,
+  })
+
+  return context
 }

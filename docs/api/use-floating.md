@@ -1,6 +1,6 @@
 # useFloating
 
-`useFloating` positions a floating element relative to an anchor element and returns the reactive state needed to render and control it.
+`useFloating` is the composition root for VFloat. It keeps the stable `useFloating(anchorEl, floatingEl, options)` call signature while returning grouped `refs`, `state`, and `position` sections.
 
 * Type
 
@@ -30,56 +30,49 @@
     }
 
     interface FloatingContext {
-      x: Readonly<Ref<number>>
-      y: Readonly<Ref<number>>
-      strategy: Readonly<Ref<Strategy>>
-      placement: Readonly<Ref<Placement>>
-      middlewareData: Readonly<Ref<MiddlewareData>>
-      isPositioned: Readonly<Ref<boolean>>
-      floatingStyles: Readonly<Ref<FloatingStyles>>
-      update: () => void
       refs: {
         anchorEl: Ref<AnchorElement>
         floatingEl: Ref<FloatingElement>
         arrowEl: Ref<HTMLElement | null>
+        setAnchor: (value: AnchorElement) => void
+        setFloating: (value: FloatingElement) => void
+        setArrow: (value: HTMLElement | null) => void
       }
-      open: Readonly<Ref<boolean>>
-      setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void
-    }
-
-    type OpenChangeReason =
-      | "anchor-click"
-      | "keyboard-activate"
-      | "outside-pointer"
-      | "focus"
-      | "blur"
-      | "hover"
-      | "escape-key"
-      | "programmatic"
-
-    interface FloatingStyles {
-      position: Strategy
-      top: string
-      left: string
-      transform?: string
-      "will-change"?: string
+      state: {
+        open: Readonly<Ref<boolean>>
+        setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void
+      }
+      position: {
+        x: Readonly<Ref<number>>
+        y: Readonly<Ref<number>>
+        strategy: Readonly<Ref<Strategy>>
+        placement: Readonly<Ref<Placement>>
+        middlewareData: Readonly<Ref<MiddlewareData>>
+        isPositioned: Readonly<Ref<boolean>>
+        styles: Readonly<Ref<FloatingStyles>>
+        update: () => void
+      }
     }
     ```
 
 * Details
 
-    `useFloating` is the core positioning composable for tooltips, menus, popovers, dialogs, and other anchored surfaces. It computes coordinates from the anchor and floating refs, keeps them in sync with `autoUpdate` by default, and exposes the shared open state that interaction composables reuse.
+    `useFloating` owns the shared context for positioning and interactions. Interaction composables read and write `context.state.open`, while positioning-focused code uses `context.position`.
 
-    * `placement` controls the preferred side and alignment. It defaults to `"bottom"`.
-    * `strategy` controls whether the floating element uses `"absolute"` or `"fixed"` positioning. It defaults to `"absolute"`.
-    * `transform` is enabled by default and writes the position as a CSS transform.
-    * `middlewares` let you refine the computed position with helpers such as `offset()`, `flip()`, `shift()`, or `arrow()`.
-    * `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object to forward options to Floating UI.
-    * `open` defaults to `ref(false)`. If you pass your own ref, `useFloating` uses it as shared state.
-    * `setOpen(open, reason?, event?)` updates the open state and calls `onOpenChange`. If you omit `reason`, it falls back to `"programmatic"`.
-    * `refs.arrowEl` is filled by `useArrow()` so the arrow middleware can read the same context.
+    * The call shape stays `useFloating(anchorEl, floatingEl, options)`.
+    * `placement` defaults to `"bottom"`.
+    * `strategy` defaults to `"absolute"`.
+    * `transform` is enabled by default and writes coordinates as a CSS transform.
+    * `middlewares` still accepts the Floating UI-style middleware pipeline.
+    * `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object to forward advanced options.
+    * `open` defaults to `ref(false)`. If you pass your own ref, `useFloating` reuses it as the shared state source.
+    * `state.setOpen(open, reason?, event?)` updates the shared open state and calls `onOpenChange`. Missing reasons fall back to `"programmatic"`.
+    * `position.styles` is the style ref you bind to the floating element in templates.
+    * Flat aliases like `context.open` and `context.floatingStyles` still exist during the transition, but the grouped sections are the canonical API.
 
 * Example
+
+    This example shows the preserved call signature with the grouped return shape.
 
     ```vue
     <script setup lang="ts">
@@ -96,14 +89,14 @@
     </script>
 
     <template>
-      <button ref="anchorEl" @click="context.setOpen(!context.open.value)">
+      <button ref="anchorEl" @click="context.state.setOpen(!context.state.open.value)">
         Toggle
       </button>
 
       <div
-        v-if="context.open.value"
+        v-if="context.state.open.value"
         ref="floatingEl"
-        :style="context.floatingStyles"
+        :style="context.position.styles.value"
       >
         Floating content
       </div>
@@ -114,9 +107,7 @@
 
     - [useClick](/api/use-click) - Click-based activation
     - [useHover](/api/use-hover) - Hover-based activation
-    - [useFocus](/api/use-focus) - Focus-based activation
-    - [useArrow](/api/use-arrow) - Arrow positioning styles
-    - [offset](/api/offset) - Add spacing
-    - [flip](/api/flip) - Flip to the opposite side when needed
-    - [shift](/api/shift) - Keep the floating element in view
-    - [Interactions Guide](/guide/interactions) - Combine positioning with interactions
+    - [useArrow](/api/use-arrow) - Explicit arrow registration
+    - [useClientPoint](/api/use-client-point) - Swap the anchor for a virtual pointer-based anchor
+    - [How It Works](/guide/how-it-works) - Context mental model
+    - [Migration: Grouped Context](/guide/migration-grouped-context) - Update existing code

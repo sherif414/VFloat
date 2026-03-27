@@ -1,7 +1,8 @@
-import type { PointerType } from "@vueuse/core"
-import { useEventListener } from "@vueuse/core"
-import { computed, type MaybeRefOrGetter, onScopeDispose, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
+import { useEventListener } from "@/composables/utils/use-event-listener"
+import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors"
+import { tryOnScopeDispose } from "@/core/lifecycle"
 import type { OpenChangeReason } from "@/types"
 import {
   isButtonTarget,
@@ -11,6 +12,8 @@ import {
   isMouseLikePointerType,
   isSpaceIgnored,
 } from "@/utils"
+
+type PointerType = "mouse" | "touch" | "pen"
 
 //=======================================================================================
 // 📌 Main
@@ -49,7 +52,8 @@ import {
  * ```
  */
 export function useClick(context: UseClickContext, options: UseClickOptions = {}): void {
-  const { open, setOpen, refs } = context
+  const { open, setOpen } = getFloatingState(context)
+  const refs = getFloatingRefs(context)
   const {
     enabled = true,
     event: eventOption = "click",
@@ -283,7 +287,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   }
 
   // Ensure the drag suppression timer can't update state after unmount.
-  onScopeDispose(() => {
+  tryOnScopeDispose(() => {
     clearDragResetTimeout()
   })
 
@@ -349,7 +353,12 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 // 📌 Types
 //=======================================================================================
 
-export interface UseClickContext extends Pick<FloatingContext, "refs" | "open" | "setOpen"> {}
+export interface UseClickContext {
+  refs: FloatingContext["refs"]
+  state?: FloatingContext["state"]
+  open?: FloatingContext["open"]
+  setOpen?: FloatingContext["setOpen"]
+}
 
 /**
  * Options for configuring the useClick behavior.

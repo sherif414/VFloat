@@ -38,7 +38,7 @@ const floatingEl = ref<HTMLElement | null>(null)
 </script>
 ```
 
-Next, we call `useFloating` and bind the refs. The context it returns gives us the computed styles:
+Next, we call `useFloating` and bind the refs. The grouped context it returns gives us the open state and computed styles:
 
 ```vue
 <script setup lang="ts">
@@ -57,16 +57,16 @@ const context = useFloating(anchorEl, floatingEl, {
   <button ref="anchorEl">Hover me</button>
 
   <div
-    v-if="context.open.value"
+    v-if="context.state.open.value"
     ref="floatingEl"
-    :style="context.floatingStyles.value"
+    :style="context.position.styles.value"
   >
     Tooltip content
   </div>
 </template>
 ```
 
-This renders the floating element, but it does not open yet. We have not told VFloat when `context.open.value` should change. That is the job of the interaction composables.
+This renders the floating element, but it does not open yet. We have not told VFloat when `context.state.open.value` should change. That is the job of the interaction composables.
 
 ## Add Interaction With `useHover`
 
@@ -100,7 +100,7 @@ useHover(context)
 </template>
 ```
 
-Now `useHover()` manages `context.open.value` for us. When the pointer enters the anchor, the floating element appears. When it leaves, it hides.
+Now `useHover()` manages `context.state.open.value` for us. When the pointer enters the anchor, the floating element appears. When it leaves, it hides.
 
 ::: tip
 `useHover` works well for tooltips. For menus and popovers, you would typically reach for `useClick` instead, which we will cover in the [Interactions](/guide/interactions) guide.
@@ -136,6 +136,8 @@ You have seen the three layers working together:
 1. **Positioning** via `useFloating()` and middleware
 2. **Interaction** via composables like `useHover()`
 3. **State** via the shared `context`
+
+If you are upgrading from the older flat return shape, read [Migration: Grouped Context](/guide/migration-grouped-context) before updating the rest of your codebase.
 
 From here, the natural next steps are:
 

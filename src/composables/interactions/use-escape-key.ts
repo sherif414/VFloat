@@ -1,5 +1,6 @@
-import { useEventListener } from "@vueuse/core"
 import { type MaybeRefOrGetter, toValue } from "vue"
+import { useEventListener } from "@/composables/utils/use-event-listener"
+import { getFloatingState } from "@/core/floating-accessors"
 import type { FloatingContext } from "../positioning"
 import { useComposition } from "../utils/use-composition"
 
@@ -7,7 +8,11 @@ import { useComposition } from "../utils/use-composition"
 // 📌 Types
 // =======================================================================================
 
-export interface UseEscapeKeyContext extends Pick<FloatingContext, "open" | "setOpen"> {}
+export interface UseEscapeKeyContext {
+  state?: FloatingContext["state"]
+  open?: FloatingContext["open"]
+  setOpen?: FloatingContext["setOpen"]
+}
 
 export interface UseEscapeKeyOptions {
   /**
@@ -72,13 +77,14 @@ export function useEscapeKey(
 ): void {
   const { enabled = true, capture = false, preventDefault = false, onEscape } = options
   const { isComposing } = useComposition()
+  const { open, setOpen } = getFloatingState(context)
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
       event.key !== "Escape" ||
       event.defaultPrevented ||
       !toValue(enabled) ||
-      !context.open.value ||
+      !open.value ||
       isComposing.value
     ) {
       return
@@ -95,7 +101,7 @@ export function useEscapeKey(
     }
 
     // Default behavior: close current context
-    context.setOpen(false, "escape-key", event)
+    setOpen(false, "escape-key", event)
   }
 
   // Event listener setup

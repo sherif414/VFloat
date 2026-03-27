@@ -1,12 +1,7 @@
 import type { Coords } from "@floating-ui/dom"
-import {
-  computed,
-  type MaybeRef,
-  onScopeDispose,
-  onWatcherCleanup,
-  toValue,
-  watchPostEffect,
-} from "vue"
+import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue"
+import { getFloatingPosition, getFloatingRefs, getFloatingState } from "@/core/floating-accessors"
+import { tryOnScopeDispose } from "@/core/lifecycle"
 import type { FloatingContext } from "../positioning/use-floating"
 import { type SafePolygonOptions, safePolygon } from "./polygon"
 
@@ -92,7 +87,7 @@ function useDelayedOpen(
     clearTimeout(hideTimeoutID)
   }
 
-  onScopeDispose(clearTimeouts)
+  tryOnScopeDispose(clearTimeouts)
 
   return {
     show: (overrideDelay?: number, event?: Event) => {
@@ -139,11 +134,9 @@ function useDelayedOpen(
  * ```
  */
 export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
-  const {
-    open,
-    setOpen,
-    refs: { anchorEl, floatingEl },
-  } = context
+  const { open, setOpen } = getFloatingState(context)
+  const { placement } = getFloatingPosition(context)
+  const { anchorEl, floatingEl } = getFloatingRefs(context)
   const {
     enabled: enabledOption = true,
     delay = 0,
@@ -222,7 +215,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     })
   })
 
-  onScopeDispose(() => {
+  tryOnScopeDispose(() => {
     clearTimeout(restTimeoutId)
   })
 
@@ -292,7 +285,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
         polygonMouseMoveHandler = safePolygon(safePolygonOptions.value)({
           x: clientX,
           y: clientY,
-          placement: context.placement.value,
+          placement: placement.value,
           elements: {
             domReference: refEl,
             floating: floatEl,
@@ -344,7 +337,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     })
   })
 
-  onScopeDispose(() => {
+  tryOnScopeDispose(() => {
     cleanupPolygon()
   })
 }

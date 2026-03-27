@@ -1,5 +1,5 @@
-import { useEventListener } from "@vueuse/core"
 import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue"
+import { useEventListener } from "@/composables/utils/use-event-listener"
 
 interface CompositionState {
   scope: ReturnType<typeof effectScope>

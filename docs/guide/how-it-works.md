@@ -16,12 +16,12 @@ The floating element is the surface that appears — a tooltip, popover, menu, d
 
 The `FloatingContext` is the glue. It holds:
 
-- `context.open.value` — whether the floating element is visible
-- `context.setOpen(value)` — change the open state
+- `context.state.open.value` — whether the floating element is visible
+- `context.state.setOpen(value)` — change the open state
 - `context.refs.anchorEl` and `context.refs.floatingEl` — the current DOM nodes
-- `context.floatingStyles.value` — the computed CSS styles for positioning
-- `context.middlewareData.value` — data from the middleware pipeline
-- `context.isPositioned.value` — whether position has been computed
+- `context.position.styles.value` — the computed CSS styles for positioning
+- `context.position.middlewareData.value` — data from the middleware pipeline
+- `context.position.isPositioned.value` — whether position has been computed
 
 ## Build It From Scratch
 
@@ -56,24 +56,24 @@ const context = useFloating(anchorEl, floatingEl)
   <button ref="anchorEl">Open</button>
 
   <div
-    v-if="context.open.value"
+    v-if="context.state.open.value"
     ref="floatingEl"
-    :style="context.floatingStyles.value"
+    :style="context.position.styles.value"
   >
     Floating content
   </div>
 </template>
 ```
 
-The floating element renders at `0,0` until `context.open.value` becomes `true`. We have not added any interaction logic yet, so it stays hidden.
+The floating element renders at `0,0` until `context.state.open.value` becomes `true`. We have not added any interaction logic yet, so it stays hidden.
 
 ::: tip
-Bind `context.floatingStyles.value` directly to the floating element's `:style`. VFloat computes the exact coordinates, and applying styles by hand usually introduces subtle positioning errors.
+Bind `context.position.styles.value` directly to the floating element's `:style`. VFloat computes the exact coordinates, and applying styles by hand usually introduces subtle positioning errors.
 :::
 
 ## Open State Lives On The Context
 
-The context owns the open state by default. When you use an interaction composable like `useHover` or `useClick`, they write to `context.open.value` automatically.
+The context owns the open state by default. When you use an interaction composable like `useHover` or `useClick`, they write to `context.state.open.value` automatically.
 
 But sometimes a parent component needs to own the open state. For example, a form component might control a dropdown from the outside. In that case, pass `open` and `onOpenChange` explicitly:
 
@@ -186,12 +186,13 @@ The positioning pipeline is:
 
 - `useFloating()` computes the base position
 - Middleware refines the result
-- `context.floatingStyles.value` applies the final styles
+- `context.position.styles.value` applies the final styles
 
-When you need behavior (open, close, keyboard handling), interaction composables write to `context.open.value`. When the parent needs control, pass `open` and `onOpenChange` explicitly.
+When you need behavior (open, close, keyboard handling), interaction composables write to `context.state.open.value`. When the parent needs control, pass `open` and `onOpenChange` explicitly.
 
 ## Further Reading
 
 - [Interactions](/guide/interactions) — Add click, hover, focus, and dismissal
 - [Middleware](/guide/middleware) — Refine positioning with offset, flip, shift, and more
 - [`useFloating` API](/api/use-floating) — Exact options and return values
+- [Migration: Grouped Context](/guide/migration-grouped-context) — Update code from the flat return shape

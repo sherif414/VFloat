@@ -1,12 +1,12 @@
 # Interactions
 
-Interactions are the composables that control when a floating surface opens and closes. They sit on top of `useFloating()`: the context holds the state, and each interaction composable decides how users change that state.
+Interactions are the composables that control when a floating surface opens and closes. They sit on top of `useFloating()`: the context holds the grouped state, and each interaction composable decides how users change that state.
 
 The key insight is this: pick the interaction that matches the surface type, then layer on extras for completeness. We will build up from simple to layered.
 
 ## Step 1: Click to Open and Close
 
-Click-driven surfaces — dropdowns, menus, popovers — are the most common pattern. `useClick` toggles `context.open.value` when the anchor is clicked.
+Click-driven surfaces — dropdowns, menus, popovers — are the most common pattern. `useClick` toggles `context.state.open.value` when the anchor is clicked.
 
 Let's start with the base setup:
 
@@ -27,9 +27,9 @@ useClick(context)
   <button ref="anchorEl">Open menu</button>
 
   <div
-    v-if="context.open.value"
+    v-if="context.state.open.value"
     ref="floatingEl"
-    :style="context.floatingStyles.value"
+    :style="context.position.styles.value"
   >
     Menu content
   </div>
@@ -111,12 +111,12 @@ useHover(context)
 </script>
 
 <template>
-  <button ref="anchorEl">Hover me</button>
+      <button ref="anchorEl">Hover me</button>
 
   <div
-    v-if="context.open.value"
+    v-if="context.state.open.value"
     ref="floatingEl"
-    :style="context.floatingStyles.value"
+    :style="context.position.styles.value"
   >
     Tooltip content
   </div>
@@ -183,7 +183,7 @@ useFocusTrap(context, { modal: true })
         role="dialog"
         aria-modal="true"
         tabindex="-1"
-        :style="context.floatingStyles.value"
+        :style="context.position.styles.value"
       >
         Dialog content
       </div>
@@ -210,6 +210,7 @@ When you need multiple interactions on the same surface, keep these rules:
 1. **Share the context** — All composables must use the same context.
 2. **Avoid contradictory triggers** — `useClick` and `useHover` on the same surface can conflict if they manage open state differently.
 3. **Layer dismissal last** — Add `useEscapeKey` and outside-click handling after the opening behavior is working.
+4. **Prefer grouped reads in new code** — Reach for `context.state.open` and `context.position.styles` instead of the older flat aliases.
 
 ## Further Reading
 
@@ -221,3 +222,4 @@ When you need multiple interactions on the same surface, keep these rules:
 - [`useFocus` API](/api/use-focus)
 - [`useEscapeKey` API](/api/use-escape-key)
 - [`useFocusTrap` API](/api/use-focus-trap)
+- [Migration: Grouped Context](/guide/migration-grouped-context)

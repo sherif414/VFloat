@@ -1,14 +1,9 @@
-import { useEventListener } from "@vueuse/core"
-import {
-  computed,
-  type MaybeRefOrGetter,
-  onScopeDispose,
-  onWatcherCleanup,
-  toValue,
-  watchPostEffect,
-} from "vue"
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
 import { isUsingKeyboard } from "@/composables/utils/is-using-keyboard"
+import { useEventListener } from "@/composables/utils/use-event-listener"
+import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors"
+import { tryOnScopeDispose } from "@/core/lifecycle"
 import {
   isEventTargetWithin,
   isMac,
@@ -48,11 +43,8 @@ const BLUR_CHECK_DELAY = 0
  */
 
 export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
-  const {
-    open,
-    setOpen,
-    refs: { floatingEl, anchorEl: _anchorEl },
-  } = context
+  const { open, setOpen } = getFloatingState(context)
+  const { floatingEl, anchorEl: _anchorEl } = getFloatingRefs(context)
 
   const { enabled = true, requireFocusVisible = true } = options
 
@@ -185,7 +177,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
   })
 
   // Ensure the timeout is cleared if the component unmounts.
-  onScopeDispose(() => {
+  tryOnScopeDispose(() => {
     clearTimeout(timeoutId)
   })
 
@@ -205,7 +197,12 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 // 📌 Types
 //=======================================================================================
 
-export interface UseFocusContext extends Pick<FloatingContext, "open" | "setOpen" | "refs"> {}
+export interface UseFocusContext {
+  refs: FloatingContext["refs"]
+  state?: FloatingContext["state"]
+  open?: FloatingContext["open"]
+  setOpen?: FloatingContext["setOpen"]
+}
 
 export interface UseFocusOptions {
   /**

@@ -3,19 +3,23 @@ import {
   type ComputedRef,
   computed,
   type MaybeRefOrGetter,
-  onScopeDispose,
   shallowRef,
   toValue,
   watchPostEffect,
 } from "vue"
 import type { FloatingContext } from "@/composables/positioning/use-floating"
+import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors"
+import { tryOnScopeDispose } from "@/core/lifecycle"
 
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
 
-export interface UseFocusTrapContext extends Pick<FloatingContext, "open" | "setOpen"> {
-  refs: Pick<FloatingContext["refs"], "floatingEl">
+export interface UseFocusTrapContext {
+  refs: FloatingContext["refs"]
+  state?: FloatingContext["state"]
+  open?: FloatingContext["open"]
+  setOpen?: FloatingContext["setOpen"]
 }
 
 export interface UseFocusTrapOptions {
@@ -120,11 +124,8 @@ export function useFocusTrap(
   context: UseFocusTrapContext,
   options: UseFocusTrapOptions = {}
 ): UseFocusTrapReturn {
-  const {
-    refs: { floatingEl },
-    open,
-    setOpen,
-  } = context
+  const { floatingEl } = getFloatingRefs(context)
+  const { open, setOpen } = getFloatingState(context)
 
   // Normalize options with defaults
   const {
@@ -245,7 +246,7 @@ export function useFocusTrap(
   })
 
   // Cleanup on scope disposal
-  onScopeDispose(() => {
+  tryOnScopeDispose(() => {
     deactivateTrap()
   })
 

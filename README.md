@@ -1,6 +1,6 @@
 # V-Float
 
-[![status: WIP](https://img.shields.io/badge/status-WIP-orange.svg)](#project-status)
+[status: WIP](#project-status)
 
 > Work in progress: This library is under active development. APIs may change without notice and breaking changes can land without deprecation windows or warnings. Not recommended for production use yet.
 
@@ -53,7 +53,11 @@ useHover(context)
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    :style="context.position.styles.value"
+  >
     This is a tooltip
   </div>
 </template>
@@ -75,7 +79,7 @@ const context = useFloating(triggerEl, menuEl, {
 })
 
 useClick(context)
-useEscapeKey({
+useEscapeKey(context, {
   onEscape: () => context.setOpen(false),
 })
 </script>
@@ -83,7 +87,11 @@ useEscapeKey({
 <template>
   <button ref="triggerEl">Open Menu</button>
 
-  <div v-if="context.open.value" ref="menuEl" :style="context.floatingStyles.value">
+  <div
+    v-if="context.state.open.value"
+    ref="menuEl"
+    :style="context.position.styles.value"
+  >
     <div>Menu Item 1</div>
     <div>Menu Item 2</div>
     <div>Menu Item 3</div>
@@ -109,8 +117,8 @@ const context = useFloating(anchorEl, tooltipEl, {
 
 useHover(context)
 
-// Arrow middleware is automatically registered
-const { arrowStyles } = useArrow(arrowEl, context, {
+const { arrowStyles } = useArrow(context, {
+  element: arrowEl,
   offset: "-4px",
 })
 </script>
@@ -119,9 +127,9 @@ const { arrowStyles } = useArrow(arrowEl, context, {
   <button ref="anchorEl">Hover me</button>
 
   <div
-    v-if="context.open.value"
+    v-if="context.state.open.value"
     ref="tooltipEl"
-    :style="context.floatingStyles.value"
+    :style="context.position.styles.value"
     class="tooltip"
   >
     This is a tooltip with an arrow
@@ -154,29 +162,29 @@ const { arrowStyles } = useArrow(arrowEl, context, {
 
 ### Positioning
 
-- **`useFloating`**: Core positioning logic with middleware support
-- **`useArrow`**: Position arrow elements pointing to the anchor
+- `**useFloating**`: Core positioning logic with middleware support
+- `**useArrow**`: Position arrow elements pointing to the anchor
 
 ### Interactions
 
-- **`useHover`**: Hover interactions with configurable delays
-- **`useFocus`**: Focus/blur event handling for keyboard navigation
-- **`useClick`**: Click event handling with toggle and dismiss options
-- **`useEscapeKey`**: Close on ESC key press with composition handling
-- **`useClientPoint`**: Position floating elements at cursor/touch coordinates
+- `**useHover**`: Hover interactions with configurable delays
+- `**useFocus**`: Focus/blur event handling for keyboard navigation
+- `**useClick**`: Click event handling with toggle and dismiss options
+- `**useEscapeKey**`: Close on ESC key press with composition handling
+- `**useClientPoint**`: Position floating elements at cursor/touch coordinates
 
 ### Middleware
 
 All [Floating UI middleware](https://floating-ui.com/docs/middleware) are supported:
 
-- **`offset`**: Add distance between anchor and floating element
-- **`flip`**: Flip placement when there's insufficient space
-- **`shift`**: Shift floating element to stay in view
-- **`hide`**: Hide floating element when anchor is not visible
-- **`autoPlacement`**: Automatically choose the best placement
-- **`size`**: Resize floating element to fit within viewport
+- `**offset**`: Add distance between anchor and floating element
+- `**flip**`: Flip placement when there's insufficient space
+- `**shift**`: Shift floating element to stay in view
+- `**hide**`: Hide floating element when anchor is not visible
+- `**autoPlacement**`: Automatically choose the best placement
+- `**size**`: Resize floating element to fit within viewport
 
-**Arrow positioning** is handled by the [`useArrow`](/api/use-arrow) composable, which automatically registers the necessary middleware.
+**Arrow positioning** is handled by the `[useArrow](/api/use-arrow)` composable, which owns arrow registration for the floating context.
 
 ## Project Status
 
@@ -191,7 +199,7 @@ V-Float is built with TypeScript and provides comprehensive type definitions:
 ## Browser Support
 
 - **Modern browsers**: Chrome, Firefox, Safari, Edge
-- **Mobile browsers**: iOS Safari, Chrome Mobile, Samsung Internet
+- **Mobile browsers**: iOS Safari, Chrome Mobile
 - **Node.js**: SSR compatible (with proper hydration)
 
 ## Documentation

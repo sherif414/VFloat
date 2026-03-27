@@ -1,19 +1,17 @@
 # useArrow
 
-`useArrow` connects an arrow element to a floating context and returns ready-to-use arrow coordinates and styles.
+`useArrow` owns arrow registration for a floating context and returns the computed arrow coordinates and styles.
 
 ## Type
 
 ```ts
 function useArrow(
-  arrowEl: Ref<HTMLElement | null>,
   context: FloatingContext,
-  options?: UseArrowOptions
+  options: {
+    element: Ref<HTMLElement | null>
+    offset?: string
+  }
 ): UseArrowReturn
-
-interface UseArrowOptions {
-  offset?: string
-}
 
 interface UseArrowReturn {
   arrowX: ComputedRef<number>
@@ -24,33 +22,47 @@ interface UseArrowReturn {
 
 ## Details
 
-`useArrow` keeps `context.refs.arrowEl` in sync with your arrow ref so `useFloating()` can register the arrow middleware automatically. It returns logical positioning styles through `arrowStyles`.
+`useArrow` connects an arrow element to the floating context and registers the arrow middleware for that context. This replaces the older implicit behavior where `useFloating()` watched `refs.arrowEl` directly.
 
+- `options.element` is required in the root-first API.
 - `offset` defaults to `"-4px"`.
-- Use `context.middlewareData.value.arrow` if you need the raw middleware output.
+- `context.position.middlewareData.value.arrow` exposes the raw middleware output if you need it.
+- The legacy `useArrow(arrowEl, context, options)` call still works during the transition, but the root-first form is the canonical API.
 
 ## Example
+
+This example shows the root-first `useArrow()` form.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { offset, useArrow, useFloating } from "v-float"
+import { offset, useArrow, useFloating, useHover } from "v-float"
 
 const anchorEl = ref<HTMLElement | null>(null)
 const floatingEl = ref<HTMLElement | null>(null)
 const arrowEl = ref<HTMLElement | null>(null)
 
 const context = useFloating(anchorEl, floatingEl, {
+  placement: "top",
   middlewares: [offset(8)],
 })
 
-const { arrowStyles } = useArrow(arrowEl, context)
+useHover(context)
+
+const { arrowStyles } = useArrow(context, {
+  element: arrowEl,
+  offset: "-4px",
+})
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    :style="context.position.styles.value"
+  >
     Floating content
     <div ref="arrowEl" :style="arrowStyles">^</div>
   </div>
@@ -62,3 +74,4 @@ const { arrowStyles } = useArrow(arrowEl, context)
 - [`arrow`](/api/arrow)
 - [`useFloating`](/api/use-floating)
 - [Middleware](/guide/middleware)
+- [Migration: Grouped Context](/guide/migration-grouped-context)

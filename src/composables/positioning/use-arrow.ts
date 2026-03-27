@@ -1,81 +1,58 @@
-import type { ComputedRef, Ref } from "vue"
-import { computed, toValue, watch } from "vue"
+import { type ComputedRef, computed, type Ref, toValue, watch } from "vue"
+import { getFloatingPosition, getFloatingRefs } from "@/core/floating-accessors"
+import { getFloatingInternals } from "@/core/floating-internals"
+import { arrow } from "../middlewares"
 import type { FloatingContext } from "./use-floating"
 
-//=======================================================================================
-// 📌 Types & Interfaces
-//=======================================================================================
-
-/**
- * Return value of the useArrow composable
- */
 export interface UseArrowReturn {
-  /**
-   * The computed X position of the arrow
-   */
   arrowX: ComputedRef<number>
-
-  /**
-   * The computed Y position of the arrow
-   */
   arrowY: ComputedRef<number>
-
-  /**
-   * The computed CSS styles for positioning the arrow
-   */
   arrowStyles: ComputedRef<Record<string, string>>
 }
 
-/**
- * Options for the useArrow composable
- */
 export interface UseArrowOptions {
-  /**
-   * Controls the offset of the arrow from the edge of the floating element.
-   *
-   * A positive value moves the arrow further into the floating element,
-   * while a negative value creates a gap between the arrow and the element.
-   * This is useful for preventing the arrow from overlapping borders or shadows.
-   *
-   * The value must be a valid CSS length (e.g., '5px', '-0.5rem').
-   *
-   * @default '-4px'
-   */
+  element?: Ref<HTMLElement | null>
   offset?: string
 }
 
-//=======================================================================================
-// 📌 Main Logic / Primary Export(s)
-//=======================================================================================
-
-/**
- * Composable for computing arrow position styles for floating elements
- *
- * This composable calculates the position and styles for an arrow element
- * based on the placement and middleware data from a floating element.
- *
- * @param arrowEl - A ref to the arrow HTML element
- * @param context - The floating context containing middleware data and placement information
- * @param options - Optional configuration for the arrow, e.g., offset
- * @returns Computed arrow positions and CSS styles
- *
- * @example
- * ```ts
- * const arrowRef = ref<HTMLElement | null>(null)
- * const { arrowStyles } = useArrow(arrowRef, floatingContext, { offset: "-10px" })
- * ```
- */
+export function useArrow(
+  context: FloatingContext,
+  options: UseArrowOptions & { element: Ref<HTMLElement | null> }
+): UseArrowReturn
 export function useArrow(
   arrowEl: Ref<HTMLElement | null>,
   context: FloatingContext,
-  options: UseArrowOptions = {}
+  options?: Omit<UseArrowOptions, "element">
+): UseArrowReturn
+export function useArrow(
+  contextOrArrow: FloatingContext | Ref<HTMLElement | null>,
+  contextOrOptions?: FloatingContext | UseArrowOptions,
+  maybeOptions: Omit<UseArrowOptions, "element"> = {}
 ): UseArrowReturn {
+  const normalized = normalizeArrowArgs(contextOrArrow, contextOrOptions, maybeOptions)
+  const { context, arrowEl, options } = normalized
+  const { refs } = context
+  const { middlewareData, placement } = getFloatingPosition(context)
   const { offset = "-4px" } = options
-  const { middlewareData, placement, refs } = context
 
-  watch(arrowEl, (el) => {
-    refs.arrowEl.value = el
-  })
+  watch(
+    arrowEl,
+    (element) => {
+      refs.setArrow(element)
+    },
+    { immediate: true }
+  )
+
+  const internals = getFloatingInternals(context)
+  internals?.middlewareRegistry.register(
+    computed(() => {
+      if (!arrowEl.value) {
+        return null
+      }
+
+      return arrow({ element: arrowEl })
+    })
+  )
 
   const arrowX = computed(() => middlewareData.value.arrow?.x ?? 0)
   const arrowY = computed(() => middlewareData.value.arrow?.y ?? 0)
@@ -83,47 +60,80 @@ export function useArrow(
   const arrowStyles = computed(() => {
     const arrowElement = arrowEl.value || refs.arrowEl.value
 
-    // Only compute styles if element exists and middleware data is available
     if (!arrowElement || !middlewareData.value.arrow) {
       return {}
     }
 
     const side = toValue(placement).split("-")[0] as "top" | "bottom" | "left" | "right"
 
-    const x = arrowX.value
-    const y = arrowY.value
-
     if (side === "bottom") {
       return {
-        "inset-inline-start": `${x}px`,
+        "inset-inline-start": `${arrowX.value}px`,
         "inset-block-start": offset,
       }
     }
+
     if (side === "top") {
       return {
-        "inset-inline-start": `${x}px`,
+        "inset-inline-start": `${arrowX.value}px`,
         "inset-block-end": offset,
       }
     }
+
     if (side === "right") {
       return {
-        "inset-block-start": `${y}px`,
+        "inset-block-start": `${arrowY.value}px`,
         "inset-inline-start": offset,
       }
     }
-    if (side === "left") {
-      return {
-        "inset-block-start": `${y}px`,
-        "inset-inline-end": offset,
-      }
-    }
 
-    return {}
-  }) as unknown as ComputedRef<Record<string, string>>
+    return {
+      "inset-block-start": `${arrowY.value}px`,
+      "inset-inline-end": offset,
+    }
+  }) as ComputedRef<Record<string, string>>
 
   return {
     arrowX,
     arrowY,
     arrowStyles,
   }
+}
+
+function normalizeArrowArgs(
+  contextOrArrow: FloatingContext | Ref<HTMLElement | null>,
+  contextOrOptions?: FloatingContext | UseArrowOptions,
+  maybeOptions: Omit<UseArrowOptions, "element"> = {}
+) {
+  if (isFloatingContext(contextOrArrow)) {
+    const context = contextOrArrow
+    const options = (contextOrOptions ?? {}) as UseArrowOptions
+
+    if (!options.element) {
+      throw new Error(
+        "[useArrow] `options.element` is required when calling useArrow(context, options)."
+      )
+    }
+
+    getFloatingRefs(context)
+
+    return {
+      context,
+      arrowEl: options.element,
+      options,
+    }
+  }
+
+  const arrowEl = contextOrArrow
+  const context = contextOrOptions as FloatingContext
+
+  return {
+    context,
+    arrowEl,
+    options: maybeOptions,
+  }
+}
+
+function isFloatingContext(value: unknown): value is FloatingContext {
+  return typeof value === "object" && value !== null && "refs" in value
 }
