@@ -19,7 +19,7 @@ async function waitFor(callback: () => boolean | void, options = { timeout: 1000
     try {
       const result = callback();
       if (result !== false) return;
-    } catch (e) {
+    } catch {
       // Continue waiting
     }
     await new Promise((resolve) => setTimeout(resolve, options.interval));
@@ -107,12 +107,12 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef);
 
-      expect(context.x.value).toBe(0);
-      expect(context.y.value).toBe(0);
-      expect(context.strategy.value).toBe("absolute");
-      expect(context.placement.value).toBe("bottom");
-      expect(context.isPositioned.value).toBe(false);
-      expect(context.open.value).toBe(false);
+      expect(context.position.x.value).toBe(0);
+      expect(context.position.y.value).toBe(0);
+      expect(context.position.strategy.value).toBe("absolute");
+      expect(context.position.placement.value).toBe("bottom");
+      expect(context.position.isPositioned.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("should return reactive references to anchor and floating elements", () => {
@@ -135,7 +135,7 @@ describe("useFloating", () => {
 
       expect(context.refs.anchorEl.value).toBe(null);
       expect(context.refs.floatingEl.value).toBe(null);
-      expect(context.isPositioned.value).toBe(false);
+      expect(context.position.isPositioned.value).toBe(false);
     });
   });
 
@@ -150,7 +150,7 @@ describe("useFloating", () => {
       const context = useFloating(anchorRef, floatingRef, options);
 
       // Initial placement should be set (final placement may differ after computation)
-      expect(["top-start", "top", "bottom"]).toContain(context.placement.value);
+      expect(["top-start", "top", "bottom"]).toContain(context.position.placement.value);
     });
 
     it("should accept and apply strategy option", () => {
@@ -162,7 +162,7 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef, options);
 
-      expect(context.strategy.value).toBe("fixed");
+      expect(context.position.strategy.value).toBe("fixed");
     });
 
     it("should accept reactive placement option", async () => {
@@ -180,7 +180,7 @@ describe("useFloating", () => {
       await nextTick();
 
       // Should trigger position update
-      expect(context.update).toBeDefined();
+      expect(context.position.update).toBeDefined();
     });
 
     it("should accept open state option", () => {
@@ -193,8 +193,8 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef, options);
 
-      expect(context.open.value).toBe(true);
-      expect(context.open).toBe(open); // Should be the same ref
+      expect(context.state.open.value).toBe(true);
+      expect(context.state.open).toBe(open); // Should be the same ref
     });
   });
 
@@ -207,7 +207,7 @@ describe("useFloating", () => {
         strategy: "absolute",
       });
 
-      const styles = context.floatingStyles.value;
+      const styles = context.position.styles.value;
 
       expect(styles.position).toBe("absolute");
       expect(styles.top).toBeDefined();
@@ -224,7 +224,7 @@ describe("useFloating", () => {
         strategy: "fixed",
       });
 
-      const styles = context.floatingStyles.value;
+      const styles = context.position.styles.value;
 
       expect(styles.position).toBe("fixed");
     });
@@ -241,8 +241,8 @@ describe("useFloating", () => {
       await nextTick();
 
       await vi.waitFor(() => {
-        expect(context.isPositioned.value).toBeTruthy();
-        expect(context.floatingStyles.value.transform).toBeDefined();
+        expect(context.position.isPositioned.value).toBeTruthy();
+        expect(context.position.styles.value.transform).toBeDefined();
       });
     });
 
@@ -254,7 +254,7 @@ describe("useFloating", () => {
         transform: false,
       });
 
-      const styles = context.floatingStyles.value;
+      const styles = context.position.styles.value;
 
       expect(styles.transform).toBeUndefined();
       expect(styles["will-change"]).toBeUndefined();
@@ -272,10 +272,10 @@ describe("useFloating", () => {
       });
 
       // Trigger positioning
-      context.update();
+      context.position.update();
       await nextTick();
 
-      expect(context.middlewareData.value).toBeDefined();
+      expect(context.position.middlewareData.value).toBeDefined();
     });
 
     it("should handle multiple middleware functions", async () => {
@@ -288,10 +288,10 @@ describe("useFloating", () => {
         middlewares: [offsetMiddleware, flipMiddleware],
       });
 
-      context.update();
+      context.position.update();
       await nextTick();
 
-      expect(context.middlewareData.value).toBeDefined();
+      expect(context.position.middlewareData.value).toBeDefined();
     });
 
     it("should handle middleware errors gracefully", async () => {
@@ -306,7 +306,7 @@ describe("useFloating", () => {
         const context = useFloating(anchorRef, floatingRef, {
           middlewares: [faultyMiddleware],
         });
-        context.update();
+        context.position.update();
       }).not.toThrow();
     });
   });
@@ -399,7 +399,7 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef);
 
-      expect(context.isPositioned.value).toBe(false);
+      expect(context.position.isPositioned.value).toBe(false);
 
       // Set anchor element
       anchorRef.value = anchorEl;
@@ -414,7 +414,7 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef);
 
-      expect(context.isPositioned.value).toBe(false);
+      expect(context.position.isPositioned.value).toBe(false);
 
       // Set floating element
       floatingRef.value = floatingEl;
@@ -430,13 +430,13 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef, { open });
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       // Change open state
       open.value = true;
       await nextTick();
 
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -447,8 +447,8 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef);
 
-      expect(context.update).toBeDefined();
-      expect(typeof context.update).toBe("function");
+      expect(context.position.update).toBeDefined();
+      expect(typeof context.position.update).toBe("function");
     });
 
     it("should update position when update is called", async () => {
@@ -469,12 +469,12 @@ describe("useFloating", () => {
         bottom: 100,
       });
 
-      context.update();
+      context.position.update();
       await nextTick();
 
       // Position should be recalculated
       await waitFor(() => {
-        expect(context.isPositioned.value).toBe(true);
+        expect(context.position.isPositioned.value).toBe(true);
       });
     });
   });
@@ -486,13 +486,13 @@ describe("useFloating", () => {
 
       const context = useFloating(anchorRef, floatingRef);
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
-      context.setOpen(true);
-      expect(context.open.value).toBe(true);
+      context.state.setOpen(true);
+      expect(context.state.open.value).toBe(true);
 
-      context.setOpen(false);
-      expect(context.open.value).toBe(false);
+      context.state.setOpen(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("should maintain open state consistency", async () => {
@@ -505,29 +505,36 @@ describe("useFloating", () => {
       // Change via ref
       open.value = true;
       await nextTick();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       // Change via setOpen
-      context.setOpen(false);
+      context.state.setOpen(false);
       await nextTick();
       expect(open.value).toBe(false);
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
   });
 
   describe("Edge Cases", () => {
     it("should handle virtual elements", () => {
-      const virtualElement = {
-        getBoundingClientRect: () => ({
-          x: 0,
-          y: 0,
-          width: 10,
-          height: 10,
-          top: 0,
-          left: 0,
-          right: 10,
-          bottom: 10,
-        }),
+      const virtualElement: AnchorElement = {
+        getBoundingClientRect: () =>
+          ({
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+            top: 0,
+            left: 0,
+            right: 10,
+            bottom: 10,
+            toJSON: () => ({
+              x: 0,
+              y: 0,
+              width: 10,
+              height: 10,
+            }),
+          }) as DOMRect,
       };
       const anchorRef = ref<AnchorElement>(virtualElement);
       const floatingRef = ref<FloatingElement>(floatingEl);
@@ -566,7 +573,7 @@ describe("useFloating", () => {
         open: ref(true), // autoUpdate is true by default
       });
 
-      const updateSpy = vi.spyOn(context, "update");
+      vi.spyOn(context.position, "update");
 
       // Simulate window resize
       const resizeEvent = new Event("resize");
@@ -574,7 +581,7 @@ describe("useFloating", () => {
 
       await flushPromises();
 
-      // Due to the nature of autoUpdate, it might not call `context.update` directly
+      // Due to the nature of autoUpdate, it might not call `context.position.update` directly
       // but rather its internal update. Awaiting for potential updates.
       await waitFor(() => {
         // We can't directly assert that floatingUIAutoUpdate's internal update ran.
@@ -582,10 +589,9 @@ describe("useFloating", () => {
         // This part of the test might need refinement based on how autoUpdate
         // is expected to interact with the exposed `update` method.
         // For now, let's check if the initial positioning happened.
-        expect(context.isPositioned.value).toBe(true);
+        expect(context.position.isPositioned.value).toBe(true);
       });
-      // updateSpy.mock.calls.length will depend on the exact behavior of autoUpdate
-      // and might be > 0 if it delegates to the exposed update.
+      // The exposed update method may or may not be invoked directly by autoUpdate.
     });
   });
 });

@@ -56,7 +56,9 @@ describe("VirtualElementFactory", () => {
   it("creates a virtual element using provided coordinates", () => {
     const reference = document.createElement("div");
     const referenceRect = createRect({ x: 10, y: 20, width: 120, height: 40 });
-    vi.spyOn(reference, "getBoundingClientRect").mockReturnValue(referenceRect);
+    const getBoundingClientRectSpy = vi
+      .spyOn(reference, "getBoundingClientRect")
+      .mockReturnValue(referenceRect);
 
     const factory = new VirtualElementFactory();
     const virtualElement = factory.create({
@@ -70,7 +72,7 @@ describe("VirtualElementFactory", () => {
     expect(rect.y).toBe(260);
     expect(rect.width).toBe(0);
     expect(rect.height).toBe(0);
-    expect(reference.getBoundingClientRect).toHaveBeenCalled();
+    expect(getBoundingClientRectSpy).toHaveBeenCalled();
   });
 
   it("falls back to baseline coordinates and reference sizing for constrained axes", () => {
@@ -143,13 +145,22 @@ describe("StaticTracker", () => {
 describe("useClientPoint", () => {
   let mockFloatingContext: any;
   let mockPointerTarget: any;
+  const callUseClientPoint = (options = {}) =>
+    useClientPoint(mockFloatingContext, {
+      pointerTarget: mockPointerTarget,
+      ...options,
+    });
 
   beforeEach(() => {
     mockPointerTarget = ref(trackElement(document.createElement("div")));
     mockFloatingContext = {
-      open: ref(false),
-      setOpen: vi.fn(),
-      update: vi.fn(),
+      state: {
+        open: ref(false),
+        setOpen: vi.fn(),
+      },
+      position: {
+        update: vi.fn(),
+      },
       refs: {
         anchorEl: ref(null),
       },
@@ -172,20 +183,16 @@ describe("useClientPoint", () => {
 
   describe("basic functionality", () => {
     it("should initialize with default options", () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext);
+      const { coordinates } = callUseClientPoint();
 
       expect(coordinates.value).toEqual({ x: null, y: null });
     });
 
     it("should handle invalid coordinates gracefully", async () => {
-      const { coordinates, updatePosition } = useClientPoint(
-        mockPointerTarget,
-        mockFloatingContext,
-        {
-          x: Number.NaN,
-          y: undefined,
-        },
-      );
+      const { coordinates, updatePosition } = callUseClientPoint({
+        x: Number.NaN,
+        y: undefined,
+      });
 
       await nextTick();
       expect(coordinates.value).toEqual({ x: null, y: null });
@@ -197,7 +204,7 @@ describe("useClientPoint", () => {
     });
 
     it("should use external coordinates when provided", async () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      const { coordinates } = callUseClientPoint({
         x: 100,
         y: 200,
       });
@@ -207,7 +214,7 @@ describe("useClientPoint", () => {
     });
 
     it("should be disabled when enabled is false", () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      const { coordinates } = callUseClientPoint({
         enabled: false,
       });
 
@@ -226,11 +233,11 @@ describe("useClientPoint", () => {
   describe("tracking modes", () => {
     describe("follow mode (default)", () => {
       it("should continuously track cursor movement", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        const { coordinates } = callUseClientPoint({
           trackingMode: "follow",
         });
 
-        mockFloatingContext.open.value = true;
+        mockFloatingContext.state.open.value = true;
         await nextTick();
 
         // First movement
@@ -257,7 +264,7 @@ describe("useClientPoint", () => {
 
     describe("static mode", () => {
       it("should reset coordinates when floating element closes and allow new positioning", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        const { coordinates } = callUseClientPoint({
           trackingMode: "static",
         });
 
@@ -270,13 +277,13 @@ describe("useClientPoint", () => {
         mockPointerTarget.value.dispatchEvent(event1);
 
         // Open floating element to capture position
-        mockFloatingContext.open.value = true;
+        mockFloatingContext.state.open.value = true;
         await nextTick();
 
         expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
         // Close floating element
-        mockFloatingContext.open.value = false;
+        mockFloatingContext.state.open.value = false;
         await nextTick();
 
         // Coordinates should be reset
@@ -291,14 +298,14 @@ describe("useClientPoint", () => {
         mockPointerTarget.value.dispatchEvent(event2);
 
         // Open again to capture new position
-        mockFloatingContext.open.value = true;
+        mockFloatingContext.state.open.value = true;
         await nextTick();
 
         expect(coordinates.value).toEqual({ x: 150, y: 250 });
       });
 
       it("should prioritize trigger coordinates from pointerdown for context menu scenarios", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        const { coordinates } = callUseClientPoint({
           trackingMode: "static",
         });
 
@@ -319,7 +326,7 @@ describe("useClientPoint", () => {
         mockPointerTarget.value.dispatchEvent(clickEvent);
 
         // External handler opens the floating element (context menu)
-        mockFloatingContext.open.value = true;
+        mockFloatingContext.state.open.value = true;
         await nextTick();
 
         // Should use the click coordinates, not the hover coordinates
@@ -327,7 +334,7 @@ describe("useClientPoint", () => {
       });
 
       it("should retain trigger coordinates even if the pointer moves before opening", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        const { coordinates } = callUseClientPoint({
           trackingMode: "static",
         });
 
@@ -348,7 +355,7 @@ describe("useClientPoint", () => {
         mockPointerTarget.value.dispatchEvent(moveEvent);
 
         // Floating element opens after the move
-        mockFloatingContext.open.value = true;
+        mockFloatingContext.state.open.value = true;
         await nextTick();
 
         // Should still use the trigger coordinates captured on click
@@ -358,7 +365,7 @@ describe("useClientPoint", () => {
 
     describe("external coordinates", () => {
       it("should use external coordinates and disable mouse tracking", async () => {
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        const { coordinates } = callUseClientPoint({
           x: 100,
           y: 200,
         });
@@ -389,7 +396,7 @@ describe("useClientPoint", () => {
         const externalX = ref(100);
         const externalY = ref(200);
 
-        const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+        const { coordinates } = callUseClientPoint({
           x: externalX,
           y: externalY,
         });
@@ -409,7 +416,7 @@ describe("useClientPoint", () => {
 
   describe("axis constraints", () => {
     it("should respect x-axis constraint", () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      const { coordinates } = callUseClientPoint({
         axis: "x",
       });
 
@@ -425,7 +432,7 @@ describe("useClientPoint", () => {
     });
 
     it("should respect y-axis constraint", () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      const { coordinates } = callUseClientPoint({
         axis: "y",
       });
 
@@ -443,11 +450,11 @@ describe("useClientPoint", () => {
 
   describe("virtual element creation", () => {
     it("should update anchor element when coordinates change and floating is open", async () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      callUseClientPoint({
         trackingMode: "follow",
       });
 
-      mockFloatingContext.open.value = true;
+      mockFloatingContext.state.open.value = true;
       await nextTick();
 
       const event = new PointerEvent("pointermove", {
@@ -462,11 +469,11 @@ describe("useClientPoint", () => {
     });
 
     it("should not update anchor element when floating is closed", async () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      callUseClientPoint({
         trackingMode: "follow",
       });
 
-      mockFloatingContext.open.value = false;
+      mockFloatingContext.state.open.value = false;
       await nextTick();
 
       const initialAnchor = mockFloatingContext.refs.anchorEl.value;
@@ -484,10 +491,7 @@ describe("useClientPoint", () => {
 
   describe("updatePosition function", () => {
     it("should allow manual position updates", () => {
-      const { coordinates, updatePosition } = useClientPoint(
-        mockPointerTarget,
-        mockFloatingContext,
-      );
+      const { coordinates, updatePosition } = callUseClientPoint();
 
       updatePosition(150, 300);
 
@@ -501,11 +505,11 @@ describe("useClientPoint", () => {
       const newTarget = trackElement(document.createElement("span"));
       document.body.appendChild(newTarget);
 
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      callUseClientPoint({
         trackingMode: "follow",
       });
 
-      mockFloatingContext.open.value = true;
+      mockFloatingContext.state.open.value = true;
       await nextTick();
 
       // Set initial coordinates
@@ -534,12 +538,12 @@ describe("useClientPoint", () => {
     it("should update virtual element when axis configuration changes", async () => {
       const axis = ref<"x" | "y" | "both">("both");
 
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      callUseClientPoint({
         axis: axis,
         trackingMode: "follow",
       });
 
-      mockFloatingContext.open.value = true;
+      mockFloatingContext.state.open.value = true;
       await nextTick();
 
       // Set coordinates
@@ -565,14 +569,14 @@ describe("useClientPoint", () => {
     });
 
     it("should not trigger position update when floating is closed", async () => {
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      callUseClientPoint({
         trackingMode: "follow",
       });
 
-      mockFloatingContext.open.value = false;
+      mockFloatingContext.state.open.value = false;
       await nextTick();
 
-      const updateSpy = mockFloatingContext.update;
+      const updateSpy = mockFloatingContext.position.update;
       updateSpy.mockClear();
 
       // Trigger coordinate update while closed
@@ -591,15 +595,11 @@ describe("useClientPoint", () => {
     it("should handle null pointerTarget gracefully", async () => {
       mockPointerTarget.value = null;
 
-      const { coordinates, updatePosition } = useClientPoint(
-        mockPointerTarget,
-        mockFloatingContext,
-        {
-          trackingMode: "follow",
-        },
-      );
+      const { coordinates, updatePosition } = callUseClientPoint({
+        trackingMode: "follow",
+      });
 
-      mockFloatingContext.open.value = true;
+      mockFloatingContext.state.open.value = true;
       await nextTick();
 
       // Set coordinates manually to trigger virtual element creation
@@ -617,11 +617,11 @@ describe("useClientPoint", () => {
       const newTarget = trackElement(document.createElement("div"));
       document.body.appendChild(newTarget);
 
-      const { coordinates } = useClientPoint(mockPointerTarget, mockFloatingContext, {
+      const { coordinates } = callUseClientPoint({
         trackingMode: "follow",
       });
 
-      mockFloatingContext.open.value = true;
+      mockFloatingContext.state.open.value = true;
       await nextTick();
 
       // Set initial coordinates

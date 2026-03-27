@@ -61,7 +61,7 @@ describe("utils and core helpers", () => {
     expect(isHTMLElement(null)).toBe(false);
     expect(isMac()).toBe(true);
     expect(isSafari()).toBe(true);
-    expect(matchesFocusVisible({ matches: () => true } as Element)).toBe(true);
+    expect(matchesFocusVisible({ matches: () => true } as unknown as Element)).toBe(true);
     expect(isMouseLikePointerType("mouse")).toBe(true);
     expect(isMouseLikePointerType("pen")).toBe(true);
     expect(isMouseLikePointerType("pen", true)).toBe(false);
@@ -106,7 +106,7 @@ describe("utils and core helpers", () => {
 
     const fallbackEvent = {
       target: child,
-    } as Event;
+    } as unknown as Event;
 
     const virtualElement: VirtualElement = {
       contextElement: container,
@@ -177,7 +177,7 @@ describe("utils and core helpers", () => {
     const placement = ref("bottom" as const);
     const middlewareData = ref({});
     const isPositioned = ref(false);
-    const floatingStyles = ref({
+    const styles = ref({
       position: "absolute" as const,
       top: "0px",
       left: "0px",
@@ -185,23 +185,15 @@ describe("utils and core helpers", () => {
     const setOpen = vi.fn();
     const update = vi.fn();
 
-    const legacyContext = {
+    const context = {
       refs: { anchorEl, floatingEl, arrowEl },
-      open,
-      setOpen,
-      x,
-      y,
-      strategy,
-      placement,
-      middlewareData,
-      isPositioned,
-      floatingStyles,
-      update,
+      state: { open, setOpen },
+      position: { x, y, strategy, placement, middlewareData, isPositioned, styles, update },
     };
 
-    expect(getFloatingRefs(legacyContext)).toBe(legacyContext.refs);
-    expect(getFloatingState(legacyContext).open).toBe(open);
-    expect(getFloatingPosition(legacyContext).update).toBe(update);
+    expect(getFloatingRefs(context)).toBe(context.refs);
+    expect(getFloatingState(context).open).toBe(open);
+    expect(getFloatingPosition(context).update).toBe(update);
 
     const setterTarget = ref<HTMLElement | null>(null);
     createRefSetter(setterTarget)(anchorEl.value);

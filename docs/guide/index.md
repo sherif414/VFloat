@@ -86,7 +86,7 @@ useHover(context);
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Tooltip content
   </div>
 </template>
@@ -128,8 +128,6 @@ You have seen the three layers working together:
 1. **Positioning** via `useFloating()` and middleware
 2. **Interaction** via composables like `useHover()`
 3. **State** via the shared `context`
-
-If you are upgrading from the older flat return shape, read [Migration: Grouped Context](/guide/migration-grouped-context) before updating the rest of your codebase.
 
 From here, the natural next steps are:
 

@@ -8,7 +8,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const floating = useFloating(anchorEl, floatingEl);
 
 useClick(floating);
-useEscapeKey(floating, { onEscape: () => floating.setOpen(false) });
+useEscapeKey(floating, { onEscape: () => floating.state.setOpen(false) });
 useFocus(floating);
 </script>
 
@@ -17,9 +17,9 @@ useFocus(floating);
     <button ref="anchorEl" class="demo-anchor">Click, Focus, or press Escape to close!</button>
 
     <div
-      v-if="floating.open.value"
+      v-if="floating.state.open.value"
       ref="floatingEl"
-      :style="floating.floatingStyles.value"
+      :style="floating.position.styles.value"
       class="demo-floating"
     >
       This tooltip opens on click/focus and closes with escape or outside click.

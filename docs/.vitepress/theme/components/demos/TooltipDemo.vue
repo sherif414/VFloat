@@ -4,11 +4,11 @@
       <button ref="tooltipTrigger" class="demo-button">Hover me</button>
       <Teleport to="body">
         <div
-          v-if="tooltipContext.open.value"
+          v-if="tooltipContext.state.open.value"
           ref="tooltipFloating"
-          :style="tooltipContext.floatingStyles.value"
+          :style="tooltipContext.position.styles.value"
         >
-          <div v-show="tooltipContext.isPositioned.value" class="tooltip floating-element">
+          <div v-show="tooltipContext.position.isPositioned.value" class="tooltip floating-element">
             This tooltip is perfectly positioned!
           </div>
         </div>
@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, watch } from "vue";
+import { useTemplateRef } from "vue";
 import { useFloating, useHover, useFocus, offset } from "v-float";
 
 const tooltipTrigger = useTemplateRef("tooltipTrigger");

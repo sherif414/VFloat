@@ -29,12 +29,11 @@ interface UseClientPointReturn {
 
 ## Details
 
-`useClientPoint` is now centered on the floating root. Pass the floating context first, then the tracking target in `options.pointerTarget`.
+`useClientPoint` is centered on the floating root. Pass the floating context first, then the tracking target in `options.pointerTarget`.
 
 - `trackingMode: "follow"` keeps the floating element in sync with pointer movement.
 - `trackingMode: "static"` captures the initial point and keeps the surface anchored there.
 - If both `x` and `y` are provided, the composable behaves like a controlled source of coordinates.
-- The legacy `useClientPoint(pointerTarget, context, options)` call still works during the transition, but the root-first form is the canonical API.
 
 ## Example
 
@@ -76,4 +75,3 @@ useHover(context);
 - [`useFloating`](/api/use-floating)
 - [`useHover`](/api/use-hover)
 - [Virtual Elements](/guide/virtual-elements)
-- [Migration: Grouped Context](/guide/migration-grouped-context)

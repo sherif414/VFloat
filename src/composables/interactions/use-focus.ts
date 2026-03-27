@@ -201,9 +201,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 
 export interface UseFocusContext {
   refs: FloatingContext["refs"];
-  state?: FloatingContext["state"];
-  open?: FloatingContext["open"];
-  setOpen?: FloatingContext["setOpen"];
+  state: FloatingContext["state"];
 }
 
 export interface UseFocusOptions {

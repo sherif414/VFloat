@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { offset } from "@floating-ui/dom";
-import { useFloating, useHover } from "v-float";
+import { offset, useFloating, useHover } from "v-float";
 import { computed, ref, watch } from "vue";
 
 const anchorEl = ref<HTMLElement | null>(null);
@@ -24,7 +23,7 @@ const svgPoints = computed(() => {
   return polygonPoints.value.map((point) => point.join(",")).join(" ");
 });
 
-watch(context.open, (isOpen) => {
+watch(context.state.open, (isOpen) => {
   if (!isOpen) {
     polygonPoints.value = [];
   }
@@ -40,16 +39,16 @@ watch(context.open, (isOpen) => {
     <div class="container">
       <button ref="anchorEl" class="reference">Hover me</button>
       <div
-        v-if="context.open.value"
+        v-if="context.state.open.value"
         ref="floatingEl"
         class="floating"
-        :style="context.floatingStyles.value"
+        :style="context.position.styles.value"
       >
         Floating Element
       </div>
     </div>
 
-    <svg v-if="context.open.value && svgPoints" class="polygon-svg">
+    <svg v-if="context.state.open.value && svgPoints" class="polygon-svg">
       <polygon :points="svgPoints" />
     </svg>
   </div>

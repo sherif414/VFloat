@@ -21,7 +21,10 @@ const context = useFloating(anchorEl, floatingEl, {
   middlewares,
 });
 
-const { arrowStyles } = useArrow(arrowEl, context, { padding: 4 });
+const { arrowStyles } = useArrow(context, {
+  element: arrowEl,
+  offset: "-4px",
+});
 </script>
 
 <template>
@@ -40,15 +43,11 @@ const { arrowStyles } = useArrow(arrowEl, context, { padding: 4 });
 
     <div
       ref="floatingEl"
-      :style="{ ...context.floatingStyles.value }"
+      :style="context.position.styles.value"
       class="bg-gray-800 text-white px-4 py-3 rounded-md text-sm max-w-xs shadow-lg"
     >
       Tooltip
-      <div
-        ref="arrowEl"
-        :style="{ ...arrowStyles }"
-        class="absolute w-2 h-2 bg-red-800 rotate-45"
-      />
+      <div ref="arrowEl" :style="arrowStyles" class="absolute w-2 h-2 bg-red-800 rotate-45" />
     </div>
   </div>
 </template>

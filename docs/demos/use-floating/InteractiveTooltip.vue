@@ -9,9 +9,6 @@ const isOpen = ref(false);
 const floating = useFloating(anchorEl, floatingEl, {
   placement: "top",
   open: isOpen,
-  setOpen: (open: boolean) => {
-    isOpen.value = open;
-  },
   middlewares: [offset(8), flip(), shift()],
 });
 
@@ -31,9 +28,9 @@ useFocus(floating);
     <button ref="anchorEl" class="demo-button">Hover or focus me</button>
 
     <div
-      v-if="isOpen"
+      v-if="floating.state.open.value"
       ref="floatingEl"
-      :style="{ ...floating.floatingStyles.value }"
+      :style="floating.position.styles.value"
       class="demo-tooltip"
     >
       Interactive tooltip with hover and focus

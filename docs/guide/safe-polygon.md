@@ -32,7 +32,7 @@ useHover(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Move the pointer here
   </div>
 </template>

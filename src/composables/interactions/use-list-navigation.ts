@@ -10,6 +10,7 @@ import {
 } from "vue";
 import type { FloatingContext } from "@/composables/positioning/use-floating";
 import { useEventListener } from "@/composables/utils/use-event-listener";
+import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
 import { isTypeableElement } from "@/utils";
 import { isUsingKeyboard } from "../utils/is-using-keyboard";
 import { useActiveDescendant } from "../utils/use-active-descendant";
@@ -153,7 +154,8 @@ export function useListNavigation(
   context: FloatingContext,
   options: UseListNavigationOptions,
 ): UseListNavigationReturn {
-  const { refs, open, setOpen } = context;
+  const refs = getFloatingRefs(context);
+  const { open, setOpen } = getFloatingState(context);
 
   const {
     listRef,

@@ -7,7 +7,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const isOpen = ref(false);
 const firstFocusableEl = ref<HTMLElement | null>(null);
 
-const { floatingStyles } = useFloating(anchorEl, floatingEl, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
   strategy: "fixed",
   open: isOpen,
@@ -16,11 +16,11 @@ const { floatingStyles } = useFloating(anchorEl, floatingEl, {
 });
 
 const openModal = () => {
-  isOpen.value = true;
+  context.state.setOpen(true);
 };
 
 const closeModal = () => {
-  isOpen.value = false;
+  context.state.setOpen(false);
 };
 
 const handleBackdropClick = (event: MouseEvent) => {
@@ -36,7 +36,7 @@ const handleEscape = (event: KeyboardEvent) => {
 };
 
 // Focus management
-watch(isOpen, async (open) => {
+watch(context.state.open, async (open) => {
   if (open) {
     await nextTick();
     firstFocusableEl.value?.focus();
@@ -54,9 +54,10 @@ watch(isOpen, async (open) => {
 
     <!-- Modal backdrop -->
     <Teleport to="body">
-      <div v-if="isOpen" class="modal-backdrop" @click="handleBackdropClick">
+      <div v-if="context.state.open.value" class="modal-backdrop" @click="handleBackdropClick">
         <div
           ref="floatingEl"
+          :style="context.position.styles.value"
           class="modal-content"
           role="dialog"
           aria-modal="true"

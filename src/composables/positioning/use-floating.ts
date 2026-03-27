@@ -68,21 +68,7 @@ export interface FloatingRoot {
   position: FloatingPosition;
 }
 
-export interface FloatingContext extends FloatingRoot {
-  /**
-   * Deprecated flat aliases kept during the grouped-return transition.
-   */
-  open: FloatingState["open"];
-  setOpen: FloatingState["setOpen"];
-  x: FloatingPosition["x"];
-  y: FloatingPosition["y"];
-  strategy: FloatingPosition["strategy"];
-  placement: FloatingPosition["placement"];
-  middlewareData: FloatingPosition["middlewareData"];
-  isPositioned: FloatingPosition["isPositioned"];
-  floatingStyles: FloatingPosition["styles"];
-  update: FloatingPosition["update"];
-}
+export interface FloatingContext extends FloatingRoot {}
 
 export function useFloating(
   anchorEl: Ref<AnchorElement>,
@@ -135,16 +121,6 @@ export function useFloating(
     refs,
     state,
     position,
-    open: state.open,
-    setOpen: state.setOpen,
-    x: position.x,
-    y: position.y,
-    strategy: position.strategy,
-    placement: position.placement,
-    middlewareData: position.middlewareData,
-    isPositioned: position.isPositioned,
-    floatingStyles: position.styles,
-    update: position.update,
   } satisfies FloatingContext;
 
   setFloatingInternals(context, {

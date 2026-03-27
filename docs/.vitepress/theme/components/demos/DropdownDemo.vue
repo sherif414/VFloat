@@ -7,14 +7,14 @@
 
       <Teleport to="body">
         <div
-          v-show="context.isPositioned.value"
+          v-if="context.state.open.value"
           ref="dropdownFloating"
           class="dropdown floating-element"
-          :style="context.floatingStyles.value"
+          :style="context.position.styles.value"
         >
-          <div @click="context.setOpen(false)" class="dropdown-item">Edit profile</div>
-          <div @click="context.setOpen(false)" class="dropdown-item">Settings</div>
-          <div @click="context.setOpen(false)" class="dropdown-item">Sign out</div>
+          <div @click="context.state.setOpen(false)" class="dropdown-item">Edit profile</div>
+          <div @click="context.state.setOpen(false)" class="dropdown-item">Settings</div>
+          <div @click="context.state.setOpen(false)" class="dropdown-item">Sign out</div>
         </div>
       </Teleport>
     </div>
@@ -33,8 +33,10 @@ const context = useFloating(anchorEl, floatingEl, {
   middlewares: [offset(4)],
 });
 
-useClick(context, { outsideClick: true });
-useEscapeKey({ onEscape: () => context.setOpen(false) });
+useClick(context, { closeOnOutsideClick: true });
+useEscapeKey(context, {
+  onEscape: () => context.state.setOpen(false),
+});
 </script>
 
 <style scoped>

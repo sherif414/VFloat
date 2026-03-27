@@ -6,19 +6,19 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const isOpen = ref(false);
 
-const floating = useFloating(anchorEl, floatingEl, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
   open: isOpen,
-  setOpen: (open: boolean) => {
-    isOpen.value = open;
-  },
   middlewares: [offset(8), flip(), shift()],
 });
 
-useClientPoint(floating);
+useClientPoint(context, {
+  pointerTarget: anchorEl,
+  trackingMode: "follow",
+});
 
 function toggleOpen() {
-  isOpen.value = !isOpen.value;
+  context.state.setOpen(!context.state.open.value);
 }
 </script>
 
@@ -27,9 +27,9 @@ function toggleOpen() {
     <button ref="anchorEl" class="demo-button" @click="toggleOpen">Move your mouse!</button>
 
     <div
-      v-if="isOpen"
+      v-if="context.state.open.value"
       ref="floatingEl"
-      :style="{ ...floating.floatingStyles.value }"
+      :style="context.position.styles.value"
       class="demo-tooltip"
     >
       This tooltip follows your mouse cursor!

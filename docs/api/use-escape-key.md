@@ -7,7 +7,7 @@
 ```ts
 function useEscapeKey(context: UseEscapeKeyContext, options?: UseEscapeKeyOptions): void;
 
-interface UseEscapeKeyContext extends Pick<FloatingContext, "open" | "setOpen"> {}
+interface UseEscapeKeyContext extends Pick<FloatingContext, "state"> {}
 
 interface UseEscapeKeyOptions {
   enabled?: MaybeRefOrGetter<boolean>;
@@ -41,7 +41,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl">Toggle</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Press Escape to close
   </div>
 </template>

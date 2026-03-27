@@ -51,10 +51,6 @@ export default defineConfig({
             { text: "Safe Polygon", link: "/guide/safe-polygon" },
           ],
         },
-        {
-          text: "Migration",
-          items: [{ text: "Grouped Context", link: "/guide/migration-grouped-context" }],
-        },
       ],
       "/api/": [
         {

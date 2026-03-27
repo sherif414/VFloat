@@ -17,9 +17,7 @@ import { tryOnScopeDispose } from "@/core/lifecycle";
 
 export interface UseFocusTrapContext {
   refs: FloatingContext["refs"];
-  state?: FloatingContext["state"];
-  open?: FloatingContext["open"];
-  setOpen?: FloatingContext["setOpen"];
+  state: FloatingContext["state"];
 }
 
 export interface UseFocusTrapOptions {
@@ -95,6 +93,12 @@ export interface UseFocusTrapReturn {
 
 // Check for inert support
 const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype;
+const isDev =
+  (
+    globalThis as typeof globalThis & {
+      process?: { env?: { NODE_ENV?: string } };
+    }
+  ).process?.env?.NODE_ENV !== "production";
 
 type TrapIsolationMode = false | "inert" | "aria-hidden";
 
@@ -186,7 +190,7 @@ export function useFocusTrap(
 
     const container = floatingEl.value;
     if (!container) {
-      if (import.meta.env.DEV) {
+      if (isDev) {
         console.warn("[useFocusTrap] No floating element available for focus trap");
       }
       return;
@@ -230,7 +234,7 @@ export function useFocusTrap(
       // Call custom error handler if provided
       if (onError) {
         onError(error);
-      } else if (import.meta.env.DEV) {
+      } else if (isDev) {
         console.error("[useFocusTrap] Failed to activate focus trap:", error);
       }
     }

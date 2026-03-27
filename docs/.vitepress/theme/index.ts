@@ -4,7 +4,7 @@ import type { Theme } from "vitepress";
 import DemoPreview from "./components/demos/DemoPreview.vue";
 import * as Demos from "../../demos";
 import Layout from "./components/Layout.vue";
-import "../../../../tailwind.css";
+import "../../../tailwind.css";
 import "./code.css";
 
 export default {

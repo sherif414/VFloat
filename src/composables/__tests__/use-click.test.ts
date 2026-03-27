@@ -2,6 +2,7 @@ import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
 import { type UseClickOptions, type UseClickContext, useClick } from "@/composables/interactions";
+import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];
@@ -57,14 +58,28 @@ describe("useClick", () => {
     setOpenMock = vi.fn((open: boolean) => {
       openRef.value = open;
     });
+    const anchorRef = ref<AnchorElement>(anchorEl);
+    const floatingRef = ref<FloatingElement>(floatingEl);
+    const arrowRef = ref<HTMLElement | null>(null);
     context = {
       refs: {
-        anchorEl: ref(anchorEl),
-        floatingEl: ref(floatingEl),
-        arrowEl: ref(null),
+        anchorEl: anchorRef,
+        floatingEl: floatingRef,
+        arrowEl: arrowRef,
+        setAnchor: (value) => {
+          anchorRef.value = value;
+        },
+        setFloating: (value) => {
+          floatingRef.value = value;
+        },
+        setArrow: (value) => {
+          arrowRef.value = value;
+        },
       },
-      open: openRef,
-      setOpen: setOpenMock as () => void,
+      state: {
+        open: openRef,
+        setOpen: setOpenMock as () => void,
+      },
     };
   };
 
@@ -89,44 +104,44 @@ describe("useClick", () => {
     it("toggles open state on click", async () => {
       initClick({ toggle: true });
       await nextTick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(2);
       expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("opens but does not toggle when toggle is false", async () => {
       initClick({ toggle: false });
       await nextTick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       // First click should open
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       // Second click should NOT close (toggle behavior disabled)
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1); // Still only called once
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       // Third click should also NOT close
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1); // Still only called once
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -136,10 +151,10 @@ describe("useClick", () => {
 
       initClick({ toggle: false, closeOnOutsideClick: true, outsideClickEvent: "click" });
       await nextTick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
       setOpenMock.mockClear();
@@ -149,7 +164,7 @@ describe("useClick", () => {
 
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("does not close when clicking the anchor while outside dismissal is enabled", async () => {
@@ -157,13 +172,13 @@ describe("useClick", () => {
       await nextTick();
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       await userEvent.click(anchorEl);
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
 
     it("does not close when clicking the floating element while outside dismissal is enabled", async () => {
@@ -171,30 +186,30 @@ describe("useClick", () => {
       await nextTick();
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       await userEvent.click(floatingEl);
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
   describe("pointer behavior", () => {
     it("does not toggle on mouse click if ignoreMouse is true", async () => {
       initClick({ ignoreMouse: true });
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("respects event option 'mousedown' (toggles on mousedown, not on click)", async () => {
       initClick({ event: "mousedown", toggle: true });
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       await nextTick();
       anchorEl.dispatchEvent(
@@ -204,7 +219,7 @@ describe("useClick", () => {
 
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       anchorEl.dispatchEvent(
@@ -213,7 +228,7 @@ describe("useClick", () => {
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
   });
 
@@ -222,7 +237,7 @@ describe("useClick", () => {
       initClick({ closeOnOutsideClick: true, outsideClickEvent: "click", ignoreDrag: true });
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       floatingEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
@@ -232,7 +247,7 @@ describe("useClick", () => {
       await nextTick();
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -245,12 +260,12 @@ describe("useClick", () => {
       await nextTick();
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("toggles on Enter key press", async () => {
       initClick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       anchorEl.focus();
       expect(document.activeElement).toBe(anchorEl);
@@ -258,17 +273,17 @@ describe("useClick", () => {
       await userEvent.keyboard("{Enter}");
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       await userEvent.keyboard("{Enter}");
       expect(setOpenMock).toHaveBeenCalledTimes(2);
       expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("toggles on Space key press", async () => {
       initClick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       anchorEl.focus();
       expect(document.activeElement).toBe(anchorEl);
@@ -276,12 +291,12 @@ describe("useClick", () => {
       await userEvent.keyboard(" ");
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
       expect(setOpenMock).toHaveBeenCalledTimes(2);
       expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
 
     it("does not trigger on Space key press if ignoreKeyboard is true", async () => {
@@ -295,19 +310,19 @@ describe("useClick", () => {
       context.refs.anchorEl.value = nonFocusableEl;
 
       initClick({ ignoreKeyboard: true });
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       nonFocusableEl.focus();
       await userEvent.keyboard(" ");
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
       // nonFocusableEl is tracked and will be cleaned up in afterEach
     });
 
     it("does not trigger on Enter key press if ignoreKeyboard is true", async () => {
       initClick({ ignoreKeyboard: true });
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       anchorEl.focus();
       await userEvent.keyboard("{Enter}");
@@ -321,12 +336,12 @@ describe("useClick", () => {
       const enabled = ref(false);
       initClick({ enabled });
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
 
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       enabled.value = true;
       await nextTick();
@@ -334,7 +349,7 @@ describe("useClick", () => {
       await userEvent.click(anchorEl);
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
 
     it("stops responding if disabled after initialization", async () => {
@@ -343,7 +358,7 @@ describe("useClick", () => {
 
       await userEvent.click(anchorEl);
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       enabled.value = false;
@@ -351,7 +366,7 @@ describe("useClick", () => {
 
       await userEvent.click(anchorEl);
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -360,20 +375,20 @@ describe("useClick", () => {
       const outsideElement = createOutsideElement();
 
       initClick({ closeOnOutsideClick: true, toggle: true });
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
       setOpenMock.mockClear();
 
       await userEvent.click(outsideElement);
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
       setOpenMock.mockClear();
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
     });
   });
@@ -385,20 +400,20 @@ describe("useClick", () => {
       initClick({ closeOnOutsideClick: true, toggle: true });
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
       setOpenMock.mockClear();
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       await userEvent.click(outsideElement);
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
     });
   });
@@ -420,7 +435,7 @@ describe("useClick", () => {
       await nextTick();
 
       await userEvent.click(anchorEl);
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
       enabled.value = false;
@@ -428,7 +443,7 @@ describe("useClick", () => {
 
       await userEvent.click(outsideElement);
       expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 });

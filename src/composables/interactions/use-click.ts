@@ -45,7 +45,7 @@ type PointerType = "mouse" | "touch" | "pen";
  *   closeOnOutsideClick: true,
  *   onOutsideClick: (event) => {
  *     if (confirm("Close dialog?")) {
- *       context.setOpen(false)
+ *       context.state.setOpen(false)
  *     }
  *   },
  * })
@@ -112,7 +112,9 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     try {
       if (open.value) {
         // When `toggle` is enabled, anchor clicks toggle open/closed.
-        toValue(toggle) && setOpen(false, reason, event);
+        if (toValue(toggle)) {
+          setOpen(false, reason, event);
+        }
       } else {
         setOpen(true, reason, event);
       }
@@ -355,9 +357,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
 export interface UseClickContext {
   refs: FloatingContext["refs"];
-  state?: FloatingContext["state"];
-  open?: FloatingContext["open"];
-  setOpen?: FloatingContext["setOpen"];
+  state: FloatingContext["state"];
 }
 
 /**

@@ -55,7 +55,7 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
   document.body.appendChild(floatingEl);
 
   const open = ref(false);
-  const setOpen = vi.fn((val: boolean, eventType?: string, event?: Event) => {
+  const setOpen = vi.fn((val: boolean) => {
     open.value = val;
   });
 
@@ -64,17 +64,22 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
     refs: {
       anchorEl: ref(referenceEl),
       floatingEl: ref(floatingEl),
+      arrowEl: ref(null),
     },
-    placement: ref("bottom"),
-    strategy: ref("absolute" as Strategy),
-    middlewareData: ref({}),
-    x: ref(0),
-    y: ref(0),
-    isPositioned: ref(true),
-    open,
-    setOpen,
-    update: vi.fn(),
-    floatingStyles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
+    state: {
+      open,
+      setOpen,
+    },
+    position: {
+      placement: ref("bottom"),
+      strategy: ref("absolute" as Strategy),
+      middlewareData: ref({}),
+      x: ref(0),
+      y: ref(0),
+      isPositioned: ref(true),
+      update: vi.fn(),
+      styles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
+    },
   } as unknown as FloatingContext;
 
   const scope = effectScope();
@@ -126,7 +131,7 @@ describe("useHover", () => {
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
       expect(ctx.setOpen).toHaveBeenCalledWith(true, "hover", expect.any(Event));
     });
 
@@ -142,7 +147,7 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
       expect(ctx.setOpen).toHaveBeenCalledWith(false, "hover", expect.any(Event));
     });
 
@@ -153,7 +158,7 @@ describe("useHover", () => {
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Leave ref towards floating
       ctx.referenceEl.dispatchEvent(
@@ -163,7 +168,7 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Leave floating to body
       ctx.floatingEl.dispatchEvent(
@@ -172,7 +177,7 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
 
     it("attaches/reattaches listeners when element refs change", async () => {
@@ -185,7 +190,7 @@ describe("useHover", () => {
 
       oldRef.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       // Attach new
       const newRef = document.createElement("div");
@@ -195,7 +200,7 @@ describe("useHover", () => {
 
       newRef.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       newRef.remove();
     });
@@ -207,17 +212,17 @@ describe("useHover", () => {
       // verify initial
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // toggle off
       enabled.value = false;
       await nextTick();
 
-      ctx.context.setOpen(false); // reset
+      ctx.context.state.setOpen(false); // reset
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 
@@ -230,11 +235,11 @@ describe("useHover", () => {
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
       vi.advanceTimersByTime(99);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
     });
 
     it("respects delay.close (object notation)", async () => {
@@ -242,18 +247,18 @@ describe("useHover", () => {
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       ctx.referenceEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       vi.advanceTimersByTime(99);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
 
     it("respects delay (number notation) for both open and close", async () => {
@@ -262,18 +267,18 @@ describe("useHover", () => {
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
       vi.advanceTimersByTime(150);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       ctx.referenceEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
       vi.advanceTimersByTime(150);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 
@@ -285,12 +290,12 @@ describe("useHover", () => {
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       vi.advanceTimersByTime(49);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
     });
 
     it("resets rest timer if pointer moves significantly before restMs expires", async () => {
@@ -298,22 +303,22 @@ describe("useHover", () => {
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       vi.advanceTimersByTime(25);
 
       // move significantly > threshold (10px)
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 30, clientY: 10 }));
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       // previous timer finishes but should be cancelled
       vi.advanceTimersByTime(30);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       // full 50ms from move
       vi.advanceTimersByTime(20);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
     });
 
     it("cancels rest period timer if pointer leaves before restMs expires", async () => {
@@ -329,7 +334,7 @@ describe("useHover", () => {
       await nextTick();
 
       vi.advanceTimersByTime(100);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
 
     it("ignores restMs if delay.open is greater than 0", async () => {
@@ -339,10 +344,10 @@ describe("useHover", () => {
       await nextTick();
 
       vi.advanceTimersByTime(1);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       vi.advanceTimersByTime(99);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
     });
   });
 
@@ -356,18 +361,18 @@ describe("useHover", () => {
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "touch" }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       // Pen enter
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "pen" }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       // Mouse enter (valid)
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "mouse" }));
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Touch leave (ignored)
       ctx.referenceEl.dispatchEvent(
@@ -375,14 +380,14 @@ describe("useHover", () => {
       );
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Mouse leave (valid)
       ctx.referenceEl.dispatchEvent(
         makePointerEvent("pointerleave", { pointerType: "mouse", relatedTarget: document.body }),
       );
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 
@@ -402,7 +407,7 @@ describe("useHover", () => {
       await nextTick();
       vi.runAllTimers();
 
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
 
     it("cancels pending close delay if pointer re-enters reference", async () => {
@@ -421,7 +426,7 @@ describe("useHover", () => {
       await nextTick();
       vi.advanceTimersByTime(100);
 
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
     });
 
     it("closes (respecting delay) if pointer leaves floating element", async () => {
@@ -436,7 +441,7 @@ describe("useHover", () => {
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(150);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
@@ -444,34 +449,34 @@ describe("useHover", () => {
       await nextTick();
 
       vi.advanceTimersByTime(99);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
 
     it("reacts to external state changes", async () => {
       const ctx = await createHoverContext();
 
-      ctx.context.setOpen(true);
+      ctx.context.state.setOpen(true);
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // hover while open
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // external close
-      ctx.context.setOpen(false);
+      ctx.context.state.setOpen(false);
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
       // leave while closed
       ctx.referenceEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 
@@ -496,16 +501,16 @@ describe("useHover", () => {
       vi.advanceTimersByTime(0);
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Move inside polygon towards floating
       document.dispatchEvent(makePointerEvent("pointermove", { clientX: 25, clientY: 105 }));
       vi.advanceTimersByTime(20);
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Enter floating
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Leave floating and move completely outside
       ctx.floatingEl.dispatchEvent(
@@ -525,7 +530,7 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 
@@ -537,27 +542,27 @@ describe("useHover", () => {
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
       // Stop effect scope
       ctx.scope.stop();
       await nextTick();
 
-      ctx.context.setOpen(false);
+      ctx.context.state.setOpen(false);
 
       // Listener shouldn't trigger anymore
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
-      ctx.context.setOpen(true);
+      ctx.context.state.setOpen(true);
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.open.value).toBe(true); // stayed true because leave didn't fire hide
+      expect(ctx.context.state.open.value).toBe(true); // stayed true because leave didn't fire hide
     });
   });
 });

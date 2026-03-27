@@ -14,8 +14,6 @@ const context = useFloating(anchorEl, floatingEl, {
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
 });
 
-const { floatingStyles, update } = context;
-
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
@@ -26,14 +24,14 @@ useListNavigation(context, {
 useFocusTrap(context);
 
 const toggleDropdown = () => {
-  isOpen.value = !isOpen.value;
-  if (isOpen.value) {
-    update();
+  context.state.setOpen(!context.state.open.value);
+  if (context.state.open.value) {
+    context.position.update();
   }
 };
 
 const closeDropdown = () => {
-  isOpen.value = false;
+  context.state.setOpen(false);
   activeIndex.value = null;
 };
 
@@ -82,14 +80,14 @@ const handleItemClick = (item: (typeof menuItems)[0]) => {
     <button
       ref="anchorEl"
       @click="toggleDropdown"
-      :aria-expanded="isOpen"
+      :aria-expanded="context.state.open.value"
       aria-haspopup="true"
       class="dropdown-trigger"
     >
       Menu
       <svg
         class="dropdown-icon"
-        :class="{ 'rotate-180': isOpen }"
+        :class="{ 'rotate-180': context.state.open.value }"
         width="16"
         height="16"
         viewBox="0 0 16 16"
@@ -98,7 +96,13 @@ const handleItemClick = (item: (typeof menuItems)[0]) => {
       </svg>
     </button>
 
-    <div v-if="isOpen" ref="floatingEl" :style="floatingStyles" class="dropdown-menu" role="menu">
+    <div
+      v-if="context.state.open.value"
+      ref="floatingEl"
+      :style="context.position.styles.value"
+      class="dropdown-menu"
+      role="menu"
+    >
       <button
         v-for="(item, index) in menuItems"
         :key="item.label"

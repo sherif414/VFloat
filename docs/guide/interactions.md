@@ -169,7 +169,7 @@ useFocusTrap(context, { modal: true });
   <button ref="anchorEl">Open dialog</button>
 
   <Teleport to="body">
-    <div v-if="context.open.value" class="backdrop">
+    <div v-if="context.state.open.value" class="backdrop">
       <div
         ref="floatingEl"
         role="dialog"
@@ -202,7 +202,7 @@ When you need multiple interactions on the same surface, keep these rules:
 1. **Share the context** — All composables must use the same context.
 2. **Avoid contradictory triggers** — `useClick` and `useHover` on the same surface can conflict if they manage open state differently.
 3. **Layer dismissal last** — Add `useEscapeKey` and outside-click handling after the opening behavior is working.
-4. **Prefer grouped reads in new code** — Reach for `context.state.open` and `context.position.styles` instead of the older flat aliases.
+4. **Read from the grouped context** — Keep visibility and positioning reads on `context.state` and `context.position`.
 
 ## Further Reading
 
@@ -214,4 +214,3 @@ When you need multiple interactions on the same surface, keep these rules:
 - [`useFocus` API](/api/use-focus)
 - [`useEscapeKey` API](/api/use-escape-key)
 - [`useFocusTrap` API](/api/use-focus-trap)
-- [Migration: Grouped Context](/guide/migration-grouped-context)

@@ -39,7 +39,7 @@ const context = useFloating(anchorEl, floatingEl);
 </script>
 
 <template>
-  <div ref="floatingEl" :style="context.floatingStyles.value">Floating at fixed coordinates</div>
+  <div ref="floatingEl" :style="context.position.styles.value">Floating at fixed coordinates</div>
 </template>
 ```
 
@@ -66,7 +66,8 @@ const context = useFloating(anchorEl, floatingEl, {
   placement: "right-start",
 });
 
-useClientPoint(trackingArea, context, {
+useClientPoint(context, {
+  pointerTarget: trackingArea,
   trackingMode: "follow",
 });
 
@@ -77,7 +78,7 @@ useHover(context);
   <div ref="trackingArea">
     Move the pointer over me
 
-    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
       I follow the cursor
     </div>
   </div>
@@ -103,12 +104,13 @@ const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
 });
 
-useClientPoint(area, context, {
+useClientPoint(context, {
+  pointerTarget: area,
   trackingMode: "static",
 });
 
 function openMenu() {
-  context.setOpen(true);
+  context.state.setOpen(true);
 }
 </script>
 
@@ -116,14 +118,14 @@ function openMenu() {
   <div ref="area" @contextmenu.prevent="openMenu">
     Right-click here
 
-    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
       Context menu
     </div>
   </div>
 </template>
 ```
 
-`useClientPoint()` controls position, not visibility. Pair it with `useHover()`, `useClick()`, or your own `setOpen()` calls to decide when the surface appears.
+`useClientPoint()` controls position, not visibility. Pair it with `useHover()`, `useClick()`, or your own `context.state.setOpen()` calls to decide when the surface appears.
 
 ::: warning
 If the floating content is tied to a selection, cursor, or click location, make sure the coordinates stay stable for as long as the surface remains open. A moving anchor can make the UI feel jumpy even when the math is correct.

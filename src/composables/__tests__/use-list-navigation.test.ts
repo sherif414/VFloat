@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { nextTick, ref } from "vue";
+import { nextTick, ref, type Ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 import { useFloating } from "@/composables/positioning";
 import { useListNavigation } from "@/composables/interactions";
@@ -14,9 +14,9 @@ describe("useListNavigation", () => {
   let anchorEl: HTMLElement;
   let floatingEl: HTMLElement;
   let items: HTMLElement[];
-  let listRef: ReturnType<typeof ref<Array<HTMLElement | null>>>;
-  let open: ReturnType<typeof ref<boolean>>;
-  let activeIndex: ReturnType<typeof ref<number | null>>;
+  let listRef: Ref<Array<HTMLElement | null>>;
+  let open: Ref<boolean>;
+  let activeIndex: Ref<number | null>;
 
   beforeEach(() => {
     anchorEl = createMockElement("button");
@@ -25,9 +25,9 @@ describe("useListNavigation", () => {
     document.body.appendChild(floatingEl);
     items = Array.from({ length: 8 }, () => createMockElement("button"));
     items.forEach((el) => floatingEl.appendChild(el));
-    listRef = ref(items);
-    open = ref(false);
-    activeIndex = ref(null);
+    listRef = ref<Array<HTMLElement | null>>(items);
+    open = ref<boolean>(false);
+    activeIndex = ref<number | null>(null);
   });
 
   afterEach(() => {
@@ -54,7 +54,7 @@ describe("useListNavigation", () => {
     const e = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true });
     anchorEl.dispatchEvent(e);
     await nextTick();
-    expect(ctx.open.value).toBe(true);
+    expect(ctx.state.open.value).toBe(true);
     expect(onNavigate).toHaveBeenCalled();
     expect(activeIndex.value).toBe(0);
   });
@@ -72,7 +72,7 @@ describe("useListNavigation", () => {
     const e = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true });
     anchorEl.dispatchEvent(e);
     await nextTick();
-    expect(ctx.open.value).toBe(true);
+    expect(ctx.state.open.value).toBe(true);
     expect(activeIndex.value).toBe(items.length - 1);
   });
 

@@ -22,12 +22,11 @@ interface UseArrowReturn {
 
 ## Details
 
-`useArrow` connects an arrow element to the floating context and registers the arrow middleware for that context. This replaces the older implicit behavior where `useFloating()` watched `refs.arrowEl` directly.
+`useArrow` connects an arrow element to the floating context and registers the arrow middleware for that context.
 
 - `options.element` is required in the root-first API.
 - `offset` defaults to `"-4px"`.
 - `context.position.middlewareData.value.arrow` exposes the raw middleware output if you need it.
-- The legacy `useArrow(arrowEl, context, options)` call still works during the transition, but the root-first form is the canonical API.
 
 ## Example
 
@@ -70,4 +69,3 @@ const { arrowStyles } = useArrow(context, {
 - [`arrow`](/api/arrow)
 - [`useFloating`](/api/use-floating)
 - [Middleware](/guide/middleware)
-- [Migration: Grouped Context](/guide/migration-grouped-context)

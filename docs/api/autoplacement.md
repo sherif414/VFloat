@@ -48,7 +48,7 @@
   <template>
     <button ref="anchorEl">Anchor</button>
 
-    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
       Floating content
     </div>
   </template>

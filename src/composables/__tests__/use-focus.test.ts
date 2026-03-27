@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { effectScope, nextTick, type Ref, ref, shallowRef } from "vue";
+import { effectScope, nextTick, ref } from "vue";
 import { type UseFocusOptions, type UseFocusContext, useFocus } from "@/composables/interactions";
+import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 
 // Mock the utils module to allow spying on matchesFocusVisible
 vi.mock("@/utils", async (importOriginal) => {
@@ -45,29 +46,30 @@ describe("useFocus", () => {
     const setOpenMock = vi.fn((v: boolean) => {
       openRef.value = v;
     });
+    const anchorRef = ref<AnchorElement>(referenceEl);
+    const floatingRef = ref<FloatingElement>(floatingEl);
+    const arrowRef = ref<HTMLElement | null>(null);
 
     context = {
-      id: "ctx-standalone",
-      x: ref(0),
-      y: ref(0),
-      strategy: ref("absolute"),
-      placement: ref("bottom"),
-      middlewareData: shallowRef({}),
-      isPositioned: ref(false),
-      floatingStyles: ref({
-        position: "absolute",
-        top: "0px",
-        left: "0px",
-      }),
-      update: vi.fn(),
       refs: {
-        anchorEl: ref(referenceEl),
-        floatingEl: ref(floatingEl),
-        arrowEl: ref(null),
+        anchorEl: anchorRef,
+        floatingEl: floatingRef,
+        arrowEl: arrowRef,
+        setAnchor: (value) => {
+          anchorRef.value = value;
+        },
+        setFloating: (value) => {
+          floatingRef.value = value;
+        },
+        setArrow: (value) => {
+          arrowRef.value = value;
+        },
       },
-      open: openRef,
-      setOpen: setOpenMock,
-    } as any;
+      state: {
+        open: openRef,
+        setOpen: setOpenMock,
+      },
+    };
 
     await nextTick();
   });
@@ -89,11 +91,11 @@ describe("useFocus", () => {
       initFocus({ requireFocusVisible: false });
       await nextTick(); // Wait for watchPostEffect to attach listeners
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       referenceEl.focus();
       await nextTick();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
 
     it("closes on blur (requireFocusVisible = false)", async () => {
@@ -103,7 +105,7 @@ describe("useFocus", () => {
       // Open first
       referenceEl.focus();
       await nextTick();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
       // no-op: we no longer track calls; we assert on state only
 
       // Blur should schedule a close on next tick (timeout 0)
@@ -111,7 +113,7 @@ describe("useFocus", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
   });
 
@@ -127,7 +129,7 @@ describe("useFocus", () => {
       // Focus not considered focus-visible -> should not open
       referenceEl.focus();
       await nextTick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       // Now simulate focus-visible
       vi.mocked(matchesFocusVisible).mockReturnValue(true);
@@ -140,7 +142,7 @@ describe("useFocus", () => {
       referenceEl.focus();
       await nextTick();
 
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -154,7 +156,7 @@ describe("useFocus", () => {
       referenceEl.focus();
       await nextTick();
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
     });
   });
 
@@ -167,7 +169,7 @@ describe("useFocus", () => {
       // Open via focus on reference
       referenceEl.focus();
       await nextTick();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       // Move focus to floating (should remain open according to strategy)
       floatingEl.focus();
@@ -175,7 +177,7 @@ describe("useFocus", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -188,12 +190,12 @@ describe("useFocus", () => {
       // Open first
       referenceEl.focus();
       await nextTick();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       // Programmatically close while the anchor stays focused
-      context.setOpen(false);
+      context.state.setOpen(false);
       await nextTick();
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       // Window loses focus while the anchor is focused and popover is closed
       window.dispatchEvent(new Event("blur"));
@@ -204,7 +206,7 @@ describe("useFocus", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(context.open.value).toBe(false);
+      expect(context.state.open.value).toBe(false);
 
       // Regaining window focus resets the block; focusing again should open
       window.dispatchEvent(new Event("focus"));
@@ -213,7 +215,7 @@ describe("useFocus", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -232,7 +234,7 @@ describe("useFocus", () => {
       // Sanity: focusing opens
       referenceEl.focus();
       await nextTick();
-      expect(context.open.value).toBe(true);
+      expect(context.state.open.value).toBe(true);
 
       // Call cleanup and verify no further reactions
       cleanup?.();
@@ -244,7 +246,7 @@ describe("useFocus", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(context.open.value).toBe(true); // unchanged since last open
+      expect(context.state.open.value).toBe(true); // unchanged since last open
     });
   });
 });

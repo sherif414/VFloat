@@ -63,7 +63,6 @@
   - `open` defaults to `ref(false)`. If you pass your own ref, `useFloating` reuses it as the shared state source.
   - `state.setOpen(open, reason?, event?)` updates the shared open state and calls `onOpenChange`. Missing reasons fall back to `"programmatic"`.
   - `position.styles` is the style ref you bind to the floating element in templates.
-  - Flat aliases like `context.open` and `context.floatingStyles` still exist during the transition, but the grouped sections are the canonical API.
 
 - Example
 
@@ -98,4 +97,3 @@
   - [useArrow](/api/use-arrow) - Explicit arrow registration
   - [useClientPoint](/api/use-client-point) - Swap the anchor for a virtual pointer-based anchor
   - [How It Works](/guide/how-it-works) - Context mental model
-  - [Migration: Grouped Context](/guide/migration-grouped-context) - Update existing code

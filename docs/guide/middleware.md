@@ -27,13 +27,13 @@ const context = useFloating(anchorEl, floatingEl, {
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
   </div>
 </template>
 ```
 
-`offset(8)` adds 8 pixels of space. You can also pass a two-element array for asymmetric offset: `offset([8, 16])` adds 8 pixels along the placement axis and 16 pixels perpendicular to it.
+`offset(8)` adds 8 pixels of space. When you need more control, pass an object such as `offset({ mainAxis: 8, crossAxis: 16 })`.
 
 ::: tip
 Always start with `offset` when you need spacing. It is the easiest adjustment and the one you usually need first.
@@ -143,20 +143,22 @@ const context = useFloating(anchorEl, floatingEl, {
   middlewares: [offset(8), arrow({ element: arrowEl })],
 });
 
-const { arrowStyles } = useArrow(arrowEl, context);
+const { arrowStyles } = useArrow(context, {
+  element: arrowEl,
+});
 </script>
 
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
     <div ref="arrowEl" :style="arrowStyles">Arrow</div>
   </div>
 </template>
 ```
 
-`useArrow` reads the middleware data from `context.middlewareData` and computes the correct styles. The arrow automatically flips and shifts based on the current placement.
+`useArrow` reads `context.position.middlewareData.value.arrow` and computes the correct styles. The arrow automatically flips and shifts based on the current placement.
 
 ## Step 6: Let the Library Choose with `autoPlacement`
 
@@ -164,20 +166,21 @@ When the exact side does not matter and you just want "the best side", `autoPlac
 
 ```vue
 <script setup lang="ts">
-import { autoPlacement, offset, useFloating } from "v-float"
+import { autoPlacement, offset, useFloating } from "v-float";
 
 const context = useFloating(anchorEl, floatingEl, {
   middlewares: [
     offset(8),
     autoPlacement({
-      mainAxis: true,
+      allowedPlacements: ["top", "right", "bottom", "left"],
       crossAxis: true,
     }),
   ],
-})
+});
+</script>
 ```
 
-By default `autoPlacement` tries all four sides and their start/end variants, then picks the one with the most space. You can restrict which placements to consider with the `fallbackPlacements` option.
+By default `autoPlacement` tries the available placements and picks the one with the most space. You can restrict which placements to consider with the `allowedPlacements` option.
 
 ## The Full Pipeline
 

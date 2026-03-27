@@ -9,9 +9,7 @@ import { useComposition } from "../utils/use-composition";
 // =======================================================================================
 
 export interface UseEscapeKeyContext {
-  state?: FloatingContext["state"];
-  open?: FloatingContext["open"];
-  setOpen?: FloatingContext["setOpen"];
+  state: FloatingContext["state"];
 }
 
 export interface UseEscapeKeyOptions {
@@ -65,7 +63,7 @@ export interface UseEscapeKeyOptions {
  *     if (hasUnsavedChanges.value) {
  *       showConfirmDialog.value = true
  *     } else {
- *       context.setOpen(false)
+ *       context.state.setOpen(false)
  *     }
  *   }
  * })

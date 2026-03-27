@@ -73,9 +73,11 @@ useListNavigation(context, {
 </script>
 
 <template>
-  <button ref="anchorEl" @click="context.setOpen(!context.open.value)">Open menu</button>
+  <button ref="anchorEl" @click="context.state.setOpen(!context.state.open.value)">
+    Open menu
+  </button>
 
-  <ul v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <ul v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     <li
       v-for="item in 3"
       :key="item"

@@ -1,6 +1,6 @@
 # arrow
 
-`arrow` positions an arrow element so it points toward the reference element and exposes the resulting coordinates through `middlewareData.arrow`.
+`arrow` positions an arrow element so it points toward the reference element and exposes the resulting coordinates through the floating context middleware data.
 
 - Type
 
@@ -23,7 +23,7 @@
 
   `arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element.
 
-  The middleware writes its result to `middlewareData.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually.
+  The middleware writes its result to `context.position.middlewareData.value.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually.
 
 - Example
 
@@ -42,7 +42,7 @@
   });
 
   const arrowStyles = computed(() => {
-    const data = context.middlewareData.value.arrow;
+    const data = context.position.middlewareData.value.arrow;
     const styles: Record<string, string> = {};
 
     if (!data) return styles;
@@ -56,7 +56,7 @@
   <template>
     <button ref="anchorEl">Anchor</button>
 
-    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
       <div ref="arrowEl" :style="arrowStyles">^</div>
       Floating content
     </div>
@@ -64,6 +64,6 @@
   ```
 
 - See also
-  - [useArrow](/api/use-arrow) - Wires the arrow ref into `useFloating`
+  - [useArrow](/api/use-arrow) - Registers and styles the arrow element from the floating context
   - [useFloating](/api/use-floating) - Core positioning composable
   - [offset](/api/offset) - Adds spacing between the anchor and floating element

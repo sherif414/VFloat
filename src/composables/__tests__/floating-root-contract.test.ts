@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe("floating root contract", () => {
-  it("returns grouped state and position sections while preserving flat aliases", () => {
+  it("returns grouped state and position sections only", () => {
     const anchorEl = createElement("button");
     const floatingEl = createElement("div");
     anchorEl.getBoundingClientRect = () => createRect(10, 20, 80, 30);
@@ -45,15 +45,16 @@ describe("floating root contract", () => {
 
     const context = useFloating(ref(anchorEl), ref(floatingEl));
 
-    expect(context.state.open).toBe(context.open);
-    expect(context.state.setOpen).toBe(context.setOpen);
-    expect(context.position.x).toBe(context.x);
-    expect(context.position.placement).toBe(context.placement);
-    expect(context.position.styles).toBe(context.floatingStyles);
-    expect(context.position.update).toBe(context.update);
+    expect(context.state.open.value).toBe(false);
+    expect(typeof context.state.setOpen).toBe("function");
+    expect(context.position.placement.value).toBe("bottom");
+    expect(context.position.styles.value.position).toBe("absolute");
     expect(context.refs.setAnchor).toBeTypeOf("function");
     expect(context.refs.setFloating).toBeTypeOf("function");
     expect(context.refs.setArrow).toBeTypeOf("function");
+    expect("open" in context).toBe(false);
+    expect("floatingStyles" in context).toBe(false);
+    expect("update" in context).toBe(false);
   });
 
   it("registers arrow middleware when useArrow owns the arrow element", () => {
@@ -72,7 +73,7 @@ describe("floating root contract", () => {
     ).toBe(true);
   });
 
-  it("supports the root-first useClientPoint overload", async () => {
+  it("supports the canonical useClientPoint signature", async () => {
     const triggerEl = createElement("div");
     const anchorEl = createElement("button");
     const floatingEl = createElement("div");

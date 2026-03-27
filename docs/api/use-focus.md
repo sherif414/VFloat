@@ -7,7 +7,7 @@
 ```ts
 function useFocus(context: UseFocusContext, options?: UseFocusOptions): UseFocusReturn;
 
-interface UseFocusContext extends Pick<FloatingContext, "open" | "setOpen" | "refs"> {}
+interface UseFocusContext extends Pick<FloatingContext, "refs" | "state"> {}
 
 interface UseFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;
@@ -44,7 +44,7 @@ useFocus(context);
 <template>
   <button ref="anchorEl">Focus me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
   </div>
 </template>

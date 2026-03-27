@@ -9,12 +9,15 @@
 
         <Teleport to="body">
           <div
-            v-if="cursorContext.open.value"
+            v-if="cursorContext.state.open.value"
             ref="cursorTooltip"
-            :style="[cursorContext.floatingStyles.value, { transition: 'transform 0.1s ease-out' }]"
+            :style="[
+              cursorContext.position.styles.value,
+              { transition: 'transform 0.1s ease-out' },
+            ]"
             class="cursor-tooltip floating-element"
           >
-            <div v-show="cursorContext.isPositioned.value" class="tooltip-content">
+            <div v-show="cursorContext.position.isPositioned.value" class="tooltip-content">
               <div class="coordinate-display">
                 <span class="coord-label">Position:</span>
                 <span class="coord-value">
@@ -39,8 +42,8 @@
           <h4>Implementation</h4>
           <div class="code-sample">
             <pre><code>const { coordinates } = useClientPoint(
-  trackingArea,
-  context
+  context,
+  { pointerTarget: trackingArea }
 )</code></pre>
           </div>
         </div>
@@ -50,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue";
+import { ref, useTemplateRef } from "vue";
 import { useFloating, useClientPoint, useHover, flip, shift } from "v-float";
 
 const trackingArea = useTemplateRef("trackingArea");
@@ -63,7 +66,9 @@ const cursorContext = useFloating(ref(null), cursorTooltip, {
 
 useHover(cursorContext);
 
-const { coordinates } = useClientPoint(trackingArea, cursorContext);
+const { coordinates } = useClientPoint(cursorContext, {
+  pointerTarget: trackingArea,
+});
 </script>
 
 <style scoped>

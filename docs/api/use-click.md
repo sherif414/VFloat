@@ -7,7 +7,7 @@
 ```ts
 function useClick(context: UseClickContext, options?: UseClickOptions): void;
 
-interface UseClickContext extends Pick<FloatingContext, "refs" | "open" | "setOpen"> {}
+interface UseClickContext extends Pick<FloatingContext, "refs" | "state"> {}
 
 interface UseClickOptions {
   enabled?: MaybeRefOrGetter<boolean>;
@@ -53,7 +53,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl">Toggle</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
   </div>
 </template>

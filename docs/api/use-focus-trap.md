@@ -10,7 +10,8 @@ function useFocusTrap(
   options?: UseFocusTrapOptions,
 ): UseFocusTrapReturn;
 
-interface UseFocusTrapContext extends Pick<FloatingContext, "open" | "setOpen"> {
+interface UseFocusTrapContext {
+  state: FloatingContext["state"];
   refs: Pick<FloatingContext["refs"], "floatingEl">;
 }
 
@@ -64,20 +65,22 @@ useFocusTrap(context, { modal: true });
 </script>
 
 <template>
-  <button ref="anchorEl" @click="open = !open">Open dialog</button>
+  <button ref="anchorEl" @click="context.state.setOpen(!context.state.open.value)">
+    Open dialog
+  </button>
 
   <Teleport to="body">
-    <div v-if="open" class="backdrop">
+    <div v-if="context.state.open.value" class="backdrop">
       <div
         ref="floatingEl"
-        :style="context.floatingStyles.value"
+        :style="context.position.styles.value"
         role="dialog"
         aria-modal="true"
         tabindex="-1"
       >
         <h2>Dialog</h2>
         <input placeholder="Focus stays inside" />
-        <button @click="open = false">Close</button>
+        <button @click="context.state.setOpen(false)">Close</button>
       </div>
     </div>
   </Teleport>

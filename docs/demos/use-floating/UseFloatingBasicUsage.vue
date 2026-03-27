@@ -22,7 +22,7 @@ useHover(context);
       Hover me
     </button>
 
-    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
       <!-- Content -->
       <div
         class="relative z-50 bg-gray-900 dark:bg-gray-700 text-white text-sm px-4 py-3 rounded-lg max-w-xs border border-gray-800 dark:border-gray-600"

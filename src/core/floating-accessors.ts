@@ -31,20 +31,10 @@ export interface FloatingPositionShape {
 
 type FloatingStateLike = {
   state?: FloatingStateShape;
-  open?: FloatingStateShape["open"];
-  setOpen?: FloatingStateShape["setOpen"];
 };
 
 type FloatingPositionLike = {
   position?: FloatingPositionShape;
-  x?: FloatingPositionShape["x"];
-  y?: FloatingPositionShape["y"];
-  strategy?: FloatingPositionShape["strategy"];
-  placement?: FloatingPositionShape["placement"];
-  middlewareData?: FloatingPositionShape["middlewareData"];
-  isPositioned?: FloatingPositionShape["isPositioned"];
-  floatingStyles?: FloatingPositionShape["styles"];
-  update?: FloatingPositionShape["update"];
 };
 
 export function getFloatingRefs<R>(context: { refs?: R }): R {
@@ -60,41 +50,12 @@ export function getFloatingState(context: FloatingStateLike): FloatingStateShape
     return context.state;
   }
 
-  if (context.open && context.setOpen) {
-    return {
-      open: context.open,
-      setOpen: context.setOpen,
-    };
-  }
-
   throw new Error("[VFloat] Floating state is missing from the provided context.");
 }
 
 export function getFloatingPosition(context: FloatingPositionLike): FloatingPositionShape {
   if (context.position) {
     return context.position;
-  }
-
-  if (
-    context.x &&
-    context.y &&
-    context.strategy &&
-    context.placement &&
-    context.middlewareData &&
-    context.isPositioned &&
-    context.floatingStyles &&
-    context.update
-  ) {
-    return {
-      x: context.x,
-      y: context.y,
-      strategy: context.strategy,
-      placement: context.placement,
-      middlewareData: context.middlewareData,
-      isPositioned: context.isPositioned,
-      styles: context.floatingStyles,
-      update: context.update,
-    };
   }
 
   throw new Error("[VFloat] Floating position data is missing from the provided context.");

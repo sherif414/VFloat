@@ -27,7 +27,7 @@ export type { AxisConstraint, Coordinates, TrackingMode } from "./client-point/t
 export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
 
 export interface UseClientPointOptions {
-  pointerTarget?: Ref<HTMLElement | null>;
+  pointerTarget: Ref<HTMLElement | null>;
   enabled?: MaybeRefOrGetter<boolean>;
   axis?: MaybeRefOrGetter<AxisConstraint>;
   x?: MaybeRefOrGetter<number | null>;
@@ -44,37 +44,18 @@ export interface UseClientPointContext {
   refs: {
     anchorEl: Ref<AnchorElement>;
   };
-  state?: FloatingContext["state"];
-  open?: FloatingContext["open"];
-  setOpen?: FloatingContext["setOpen"];
+  state: FloatingContext["state"];
   position?: Pick<FloatingContext["position"], "update">;
-  update?: () => void;
 }
 
 export function useClientPoint(
   context: UseClientPointContext,
-  options?: UseClientPointOptions,
-): UseClientPointReturn;
-export function useClientPoint(
-  pointerTarget: Ref<HTMLElement | null>,
-  context: UseClientPointContext,
-  options?: Omit<UseClientPointOptions, "pointerTarget">,
-): UseClientPointReturn;
-export function useClientPoint(
-  contextOrPointerTarget: UseClientPointContext | Ref<HTMLElement | null>,
-  contextOrOptions: UseClientPointContext | UseClientPointOptions = {},
-  maybeOptions: Omit<UseClientPointOptions, "pointerTarget"> = {},
+  options: UseClientPointOptions,
 ): UseClientPointReturn {
-  const normalized = normalizeClientPointArgs(
-    contextOrPointerTarget,
-    contextOrOptions,
-    maybeOptions,
-  );
-  const { pointerTarget, context, options } = normalized;
+  const { pointerTarget } = options;
   const { open } = getFloatingState(context);
   const refs = context.refs;
-  const update =
-    "position" in context && context.position ? context.position.update : context.update;
+  const update = context.position?.update;
 
   const virtualElementFactory = new VirtualElementFactory();
   const internalCoordinates = ref<Coordinates>({ x: null, y: null });
@@ -225,39 +206,4 @@ export function useClientPoint(
 
 function createTrackingStrategy(trackingMode: TrackingMode): TrackingStrategy {
   return trackingMode === "follow" ? new FollowTracker() : new StaticTracker();
-}
-
-function normalizeClientPointArgs(
-  contextOrPointerTarget: UseClientPointContext | Ref<HTMLElement | null>,
-  contextOrOptions: UseClientPointContext | UseClientPointOptions,
-  maybeOptions: Omit<UseClientPointOptions, "pointerTarget">,
-) {
-  if (isClientPointContext(contextOrPointerTarget)) {
-    const context = contextOrPointerTarget;
-    const options = contextOrOptions as UseClientPointOptions;
-
-    if (!options.pointerTarget) {
-      throw new Error(
-        "[useClientPoint] `options.pointerTarget` is required when calling useClientPoint(context, options).",
-      );
-    }
-
-    return {
-      context,
-      pointerTarget: options.pointerTarget,
-      options,
-    };
-  }
-
-  return {
-    pointerTarget: contextOrPointerTarget,
-    context: contextOrOptions as UseClientPointContext,
-    options: maybeOptions as UseClientPointOptions,
-  };
-}
-
-function isClientPointContext(
-  value: UseClientPointContext | Ref<HTMLElement | null>,
-): value is UseClientPointContext {
-  return typeof value === "object" && value !== null && "refs" in value;
 }

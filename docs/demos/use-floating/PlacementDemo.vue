@@ -36,7 +36,7 @@ const placements: Placement[] = [
   "left-end",
 ];
 
-const { floatingStyles, update } = useFloating(anchorEl, floatingEl, {
+const context = useFloating(anchorEl, floatingEl, {
   placement: currentPlacement,
   open: isOpen,
   middlewares: [offset(10)],
@@ -44,7 +44,7 @@ const { floatingStyles, update } = useFloating(anchorEl, floatingEl, {
 
 function selectPlacement(placement: Placement) {
   currentPlacement.value = placement;
-  update();
+  context.position.update();
 }
 </script>
 
@@ -68,7 +68,12 @@ function selectPlacement(placement: Placement) {
       <div class="anchor-container">
         <div ref="anchorEl" class="anchor">Anchor Element</div>
 
-        <div v-if="isOpen" ref="floatingEl" :style="floatingStyles" class="floating">
+        <div
+          v-if="context.state.open.value"
+          ref="floatingEl"
+          :style="context.position.styles.value"
+          class="floating"
+        >
           {{ currentPlacement }}
         </div>
       </div>

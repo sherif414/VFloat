@@ -36,12 +36,12 @@
 
         <Teleport to="body">
           <div
-            v-if="context.open.value"
+            v-if="context.state.open.value"
             ref="floatingRef"
-            :style="context.floatingStyles.value"
+            :style="context.position.styles.value"
             class="tooltip floating-element"
           >
-            <div v-show="context.isPositioned.value" class="tooltip-content">
+            <div v-show="context.position.isPositioned.value" class="tooltip-content">
               <div class="tooltip-body">
                 <p>Middleware Demo: Observe positioning and arrow adjustments.</p>
               </div>
@@ -127,9 +127,11 @@ const context = useFloating(triggerRef, floatingRef, {
   middlewares: middlewaresList,
 });
 
-useClick(context, { toggle: true, outsideClick: false });
+useClick(context, { toggle: true, closeOnOutsideClick: false });
 
-const { arrowStyles } = useArrow(arrowRef, context);
+const { arrowStyles } = useArrow(context, {
+  element: arrowRef,
+});
 </script>
 
 <style scoped>

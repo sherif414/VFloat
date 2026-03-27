@@ -10,7 +10,7 @@ The anchor is the element the user interacts with. It could be a button, an inpu
 
 ### The Floating Element
 
-The floating element is the surface that appears — a tooltip, popover, menu, dialog, or anything else that needs to position itself next to something else. It receives its position via `context.floatingStyles.value`.
+The floating element is the surface that appears — a tooltip, popover, menu, dialog, or anything else that needs to position itself next to something else. It receives its position via `context.position.styles.value`.
 
 ### The Context
 
@@ -151,13 +151,15 @@ const context = useFloating(anchorEl, floatingEl, {
   middlewares: [offset(8)],
 });
 
-const { arrowStyles } = useArrow(arrowEl, context);
+const { arrowStyles } = useArrow(context, {
+  element: arrowEl,
+});
 </script>
 
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
     <div ref="arrowEl" :style="arrowStyles">Arrow</div>
   </div>
@@ -187,4 +189,3 @@ When you need behavior (open, close, keyboard handling), interaction composables
 - [Interactions](/guide/interactions) — Add click, hover, focus, and dismissal
 - [Middleware](/guide/middleware) — Refine positioning with offset, flip, shift, and more
 - [`useFloating` API](/api/use-floating) — Exact options and return values
-- [Migration: Grouped Context](/guide/migration-grouped-context) — Update code from the flat return shape

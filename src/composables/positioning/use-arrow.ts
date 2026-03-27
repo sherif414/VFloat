@@ -1,5 +1,5 @@
 import { type ComputedRef, computed, type Ref, toValue, watch } from "vue";
-import { getFloatingPosition, getFloatingRefs } from "@/core/floating-accessors";
+import { getFloatingPosition } from "@/core/floating-accessors";
 import { getFloatingInternals } from "@/core/floating-internals";
 import { arrow } from "../middlewares";
 import type { FloatingContext } from "./use-floating";
@@ -11,29 +11,14 @@ export interface UseArrowReturn {
 }
 
 export interface UseArrowOptions {
-  element?: Ref<HTMLElement | null>;
+  element: Ref<HTMLElement | null>;
   offset?: string;
 }
 
-export function useArrow(
-  context: FloatingContext,
-  options: UseArrowOptions & { element: Ref<HTMLElement | null> },
-): UseArrowReturn;
-export function useArrow(
-  arrowEl: Ref<HTMLElement | null>,
-  context: FloatingContext,
-  options?: Omit<UseArrowOptions, "element">,
-): UseArrowReturn;
-export function useArrow(
-  contextOrArrow: FloatingContext | Ref<HTMLElement | null>,
-  contextOrOptions?: FloatingContext | UseArrowOptions,
-  maybeOptions: Omit<UseArrowOptions, "element"> = {},
-): UseArrowReturn {
-  const normalized = normalizeArrowArgs(contextOrArrow, contextOrOptions, maybeOptions);
-  const { context, arrowEl, options } = normalized;
+export function useArrow(context: FloatingContext, options: UseArrowOptions): UseArrowReturn {
+  const { element: arrowEl, offset = "-4px" } = options;
   const { refs } = context;
   const { middlewareData, placement } = getFloatingPosition(context);
-  const { offset = "-4px" } = options;
 
   watch(
     arrowEl,
@@ -98,42 +83,4 @@ export function useArrow(
     arrowY,
     arrowStyles,
   };
-}
-
-function normalizeArrowArgs(
-  contextOrArrow: FloatingContext | Ref<HTMLElement | null>,
-  contextOrOptions?: FloatingContext | UseArrowOptions,
-  maybeOptions: Omit<UseArrowOptions, "element"> = {},
-) {
-  if (isFloatingContext(contextOrArrow)) {
-    const context = contextOrArrow;
-    const options = (contextOrOptions ?? {}) as UseArrowOptions;
-
-    if (!options.element) {
-      throw new Error(
-        "[useArrow] `options.element` is required when calling useArrow(context, options).",
-      );
-    }
-
-    getFloatingRefs(context);
-
-    return {
-      context,
-      arrowEl: options.element,
-      options,
-    };
-  }
-
-  const arrowEl = contextOrArrow;
-  const context = contextOrOptions as FloatingContext;
-
-  return {
-    context,
-    arrowEl,
-    options: maybeOptions,
-  };
-}
-
-function isFloatingContext(value: unknown): value is FloatingContext {
-  return typeof value === "object" && value !== null && "refs" in value;
 }

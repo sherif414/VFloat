@@ -1,8 +1,8 @@
 import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { effectScope, nextTick, ref, shallowRef } from "vue";
-import type { FloatingContext } from "@/composables/positioning/use-floating";
-import { useFocusTrap } from "@/composables/interactions/use-focus-trap";
+import { effectScope, nextTick, ref } from "vue";
+import { type UseFocusTrapContext, useFocusTrap } from "@/composables/interactions/use-focus-trap";
+import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];
@@ -37,39 +37,42 @@ function createContext() {
   const setOpen = vi.fn((v: boolean) => {
     openRef.value = v;
   });
+  const anchorRef = ref<AnchorElement>(anchor);
+  const floatingRef = ref<FloatingElement>(floating);
+  const arrowRef = ref<HTMLElement | null>(null);
 
-  const ctx: FloatingContext = {
-    id: "ctx",
-    x: ref(0),
-    y: ref(0),
-    strategy: ref("absolute"),
-    placement: ref("bottom" as any),
-    middlewareData: shallowRef({}),
-    isPositioned: ref(false),
-    floatingStyles: ref({ position: "absolute", left: "0", top: "0" }),
-    update: vi.fn(),
+  const ctx: UseFocusTrapContext = {
     refs: {
-      anchorEl: ref(anchor),
-      floatingEl: ref(floating),
-      arrowEl: ref(null),
+      anchorEl: anchorRef,
+      floatingEl: floatingRef,
+      arrowEl: arrowRef,
+      setAnchor: (value) => {
+        anchorRef.value = value;
+      },
+      setFloating: (value) => {
+        floatingRef.value = value;
+      },
+      setArrow: (value) => {
+        arrowRef.value = value;
+      },
     },
-    open: openRef,
-    setOpen,
+    state: {
+      open: openRef,
+      setOpen,
+    },
   };
   return { ctx, anchor, floating, openRef, setOpen };
 }
 
 describe("useFocusTrap", () => {
   let scope: ReturnType<typeof effectScope>;
-  let anchor: HTMLElement;
   let floating: HTMLElement;
-  let ctx: FloatingContext;
+  let ctx: UseFocusTrapContext;
 
   beforeEach(() => {
     vi.useFakeTimers();
     const created = createContext();
     ctx = created.ctx;
-    anchor = created.anchor;
     floating = created.floating;
     scope = effectScope();
   });
@@ -97,7 +100,7 @@ describe("useFocusTrap", () => {
       useFocusTrap(ctx);
     });
 
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     // focus-trap adds guards outside or in a way that might not be direct children
@@ -127,7 +130,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { initialFocus: () => b1 });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await nextTick();
     await nextTick();
     expect(document.activeElement).toBe(b1);
@@ -140,7 +143,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { initialFocus: "first" });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await nextTick();
     await nextTick();
     expect(document.activeElement).toBe(floating);
@@ -155,7 +158,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { modal: true });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
     expect(isAccessibilityHidden(outside)).toBe(true);
     scope.stop();
@@ -167,14 +170,14 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { modal: false, closeOnFocusOut: true });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     const outside = document.createElement("button");
     document.body.appendChild(outside);
     await userEvent.click(outside);
     await flushTimersAndTick();
-    expect(ctx.open.value).toBe(false);
+    expect(ctx.state.open.value).toBe(false);
   });
 
   it("manual deactivate closes the floating surface", async () => {
@@ -183,13 +186,13 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       result = useFocusTrap(ctx, { closeOnFocusOut: true });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     result?.deactivate();
     await flushTimersAndTick();
 
-    expect(ctx.open.value).toBe(false);
+    expect(ctx.state.open.value).toBe(false);
   });
 
   it("returnFocus restores to previous on close unless skipped", async () => {
@@ -200,9 +203,9 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { returnFocus: true });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
-    ctx.setOpen(false);
+    ctx.state.setOpen(false);
     await flushTimersAndTick();
     expect(document.activeElement).toBe(other);
   });
@@ -218,7 +221,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { preventScroll: false });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await nextTick();
     await nextTick();
 
@@ -233,7 +236,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { enabled });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     // Verify enabled state by checking if focus is trapped or initial focus set
@@ -256,7 +259,7 @@ describe("useFocusTrap", () => {
       const result = useFocusTrap(ctx);
       deactivate = result.deactivate;
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     deactivate?.();
@@ -284,7 +287,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx);
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     const b2 = document.createElement("button");
@@ -305,9 +308,9 @@ describe("useFocusTrap", () => {
     });
 
     for (let i = 0; i < 5; i++) {
-      ctx.setOpen(true);
+      ctx.state.setOpen(true);
       await flushTimersAndTick();
-      ctx.setOpen(false);
+      ctx.state.setOpen(false);
       await flushTimersAndTick();
     }
 
@@ -322,12 +325,12 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { returnFocus: true });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     other.remove();
 
-    ctx.setOpen(false);
+    ctx.state.setOpen(false);
     await flushTimersAndTick();
 
     expect(document.activeElement).not.toBe(other);
@@ -341,7 +344,7 @@ describe("useFocusTrap", () => {
     });
 
     expect(() => {
-      ctx.setOpen(true);
+      ctx.state.setOpen(true);
     }).not.toThrow();
     await nextTick();
   });
@@ -359,7 +362,7 @@ describe("useFocusTrap", () => {
     });
 
     expect(() => {
-      ctx.setOpen(true);
+      ctx.state.setOpen(true);
     }).not.toThrow();
     await nextTick();
   });
@@ -372,7 +375,7 @@ describe("useFocusTrap", () => {
     scope.run(() => {
       useFocusTrap(ctx, { modal: true });
     });
-    ctx.setOpen(true);
+    ctx.state.setOpen(true);
     await flushTimersAndTick();
 
     expect(outside.getAttribute("aria-hidden")).toBe("true");

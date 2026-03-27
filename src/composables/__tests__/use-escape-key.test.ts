@@ -1,33 +1,20 @@
 import { effectScope, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { useEscapeKey } from "@/composables/interactions/use-escape-key";
-import type { FloatingContext } from "../positioning/use-floating";
+import { type UseEscapeKeyContext, useEscapeKey } from "@/composables/interactions/use-escape-key";
 
 // Test utilities
-function createMockFloatingContext(): FloatingContext {
+function createMockFloatingContext(): UseEscapeKeyContext {
   const open = ref(false);
-  const setOpen = vi.fn((value: boolean, reason?: string, event?: KeyboardEvent) => {
+  const setOpen = vi.fn((value: boolean) => {
     open.value = value;
   });
 
   return {
-    id: `mock-${Math.random().toString(36).substr(2, 9)}`,
-    x: ref(0),
-    y: ref(0),
-    strategy: ref("absolute"),
-    placement: ref("bottom"),
-    middlewareData: ref({}),
-    isPositioned: ref(false),
-    floatingStyles: ref({ position: "absolute", top: "0px", left: "0px" }),
-    update: vi.fn(),
-    open,
-    setOpen,
-    refs: {
-      anchorEl: ref(null),
-      floatingEl: ref(null),
-      arrowEl: ref(null),
+    state: {
+      open,
+      setOpen,
     },
-  } as any;
+  };
 }
 
 describe("useEscapeKey", () => {
@@ -43,8 +30,8 @@ describe("useEscapeKey", () => {
   describe("FloatingContext behavior", () => {
     it("should close floating element on escape key press", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -53,13 +40,17 @@ describe("useEscapeKey", () => {
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(context.state.setOpen).toHaveBeenCalledWith(
+        false,
+        "escape-key",
+        expect.any(KeyboardEvent),
+      );
     });
 
     it("should not trigger when floating element is already closed", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(false);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(false);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -68,13 +59,13 @@ describe("useEscapeKey", () => {
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
     it("should respect enabled option", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -83,13 +74,13 @@ describe("useEscapeKey", () => {
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
     it("should respect defaultPrevented from another handler", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       const onKeyDown = (event: KeyboardEvent) => {
         if (event.key === "Escape") {
@@ -108,13 +99,13 @@ describe("useEscapeKey", () => {
 
       document.removeEventListener("keydown", onKeyDown, { capture: true });
 
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
     it("should use custom onEscape handler when provided", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
       const customHandler = vi.fn();
 
       scope = effectScope();
@@ -127,13 +118,13 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
       expect(customHandler).toHaveBeenCalled();
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
     it("should ignore non-escape keys", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -145,15 +136,15 @@ describe("useEscapeKey", () => {
         new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32 } as any),
       );
 
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
     });
   });
 
   describe("Composition event handling", () => {
     it("should ignore escape during composition", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -164,7 +155,7 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(new CompositionEvent("compositionstart"));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
 
       // End composition
       document.dispatchEvent(new CompositionEvent("compositionend"));
@@ -172,7 +163,11 @@ describe("useEscapeKey", () => {
       // Now escape should work
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(context.state.setOpen).toHaveBeenCalledWith(
+        false,
+        "escape-key",
+        expect.any(KeyboardEvent),
+      );
     });
   });
 
@@ -180,8 +175,8 @@ describe("useEscapeKey", () => {
     it("should respect reactive enabled option", async () => {
       const context = createMockFloatingContext();
       const enabled = ref(true);
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -190,20 +185,24 @@ describe("useEscapeKey", () => {
 
       // Initially enabled
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(context.state.setOpen).toHaveBeenCalledWith(
+        false,
+        "escape-key",
+        expect.any(KeyboardEvent),
+      );
 
       vi.clearAllMocks();
       enabled.value = false;
 
       // Now disabled
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(context.setOpen).not.toHaveBeenCalled();
+      expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
     it("should handle capture option", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -212,13 +211,17 @@ describe("useEscapeKey", () => {
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(context.state.setOpen).toHaveBeenCalledWith(
+        false,
+        "escape-key",
+        expect.any(KeyboardEvent),
+      );
     });
 
     it("should prevent default when preventDefault is enabled", async () => {
       const context = createMockFloatingContext();
-      context.setOpen(true);
-      (context.setOpen as any).mockClear();
+      context.state.setOpen(true);
+      (context.state.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
@@ -234,16 +237,20 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(true);
-      expect(context.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(context.state.setOpen).toHaveBeenCalledWith(
+        false,
+        "escape-key",
+        expect.any(KeyboardEvent),
+      );
     });
 
     it("should share a single composition listener across multiple consumers", async () => {
       const contextA = createMockFloatingContext();
       const contextB = createMockFloatingContext();
-      contextA.setOpen(true);
-      contextB.setOpen(true);
-      (contextA.setOpen as any).mockClear();
-      (contextB.setOpen as any).mockClear();
+      contextA.state.setOpen(true);
+      contextB.state.setOpen(true);
+      (contextA.state.setOpen as any).mockClear();
+      (contextB.state.setOpen as any).mockClear();
 
       const addEventListenerSpy = vi.spyOn(document, "addEventListener");
 

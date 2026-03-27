@@ -35,7 +35,7 @@ useListNavigation(context, {
 <template>
   <button ref="anchorEl">Open menu</button>
 
-  <ul v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
+  <ul v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     <li
       v-for="(item, i) in 5"
       :key="item"
@@ -87,11 +87,16 @@ useListNavigation(context, {
   <input
     ref="anchorEl"
     role="combobox"
-    :aria-expanded="context.open.value"
+    :aria-expanded="context.state.open.value"
     :aria-activedescendant="virtualItemRef?.id"
   />
 
-  <ul v-if="context.open.value" ref="floatingEl" role="listbox">
+  <ul
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    :style="context.position.styles.value"
+    role="listbox"
+  >
     <li
       v-for="(item, i) in 5"
       :key="item"
