@@ -1,11 +1,15 @@
 import { fileURLToPath, URL } from "node:url"
 import vue from "@vitejs/plugin-vue"
 import unocss from "unocss/vite"
-import { defineConfig } from "vite"
+import { defineConfig } from "vite-plus"
 import dts from "vite-plugin-dts"
 import vueDevtools from "vite-plugin-vue-devtools"
 
 export default defineConfig({
+  staged: {
+    "*": "vp check --fix"
+  },
+  lint: {"options":{"typeAware":true,"typeCheck":true}},
   plugins: [
     vue(),
     unocss(),

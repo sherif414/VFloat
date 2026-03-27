@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import { effectScope, nextTick, ref } from "vue"
 import { useEventListener } from "@/composables/utils/use-event-listener"
 

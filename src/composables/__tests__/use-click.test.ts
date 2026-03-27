@@ -1,5 +1,5 @@
-import { userEvent } from "vitest/browser"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { userEvent } from "vite-plus/test/browser"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { effectScope, nextTick, ref } from "vue"
 import { type UseClickOptions,type UseClickContext, useClick } from "@/composables/interactions"
 

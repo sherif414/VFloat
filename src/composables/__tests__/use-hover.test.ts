@@ -1,5 +1,5 @@
 import type { Strategy } from "@floating-ui/dom"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { computed, effectScope, nextTick, ref } from "vue"
 import { type UseHoverOptions, useHover } from "@/composables/interactions"
 import type { FloatingContext } from "../positioning/use-floating"

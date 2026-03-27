@@ -1,5 +1,5 @@
 import { effectScope, ref } from "vue"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vite-plus/test"
 import { useEscapeKey } from "@/composables/interactions/use-escape-key"
 import type { FloatingContext } from "../positioning/use-floating"
 
