@@ -1,2 +1,2 @@
-export * from "./polygon/bridge"
-export * from "./polygon/geometry"
+export * from "./polygon/bridge";
+export * from "./polygon/geometry";

@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import { offset } from "@floating-ui/dom"
-import { useFloating, useHover } from "v-float"
-import { computed, ref, watch } from "vue"
+import { offset } from "@floating-ui/dom";
+import { useFloating, useHover } from "v-float";
+import { computed, ref, watch } from "vue";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const polygonPoints = ref<Array<[number, number]>>([])
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const polygonPoints = ref<Array<[number, number]>>([]);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right",
   middlewares: [offset(10)],
-})
+});
 
 useHover(context, {
   safePolygon: {
     onPolygonChange: (points) => {
-      polygonPoints.value = points
+      polygonPoints.value = points;
     },
   },
-})
+});
 
 const svgPoints = computed(() => {
-  return polygonPoints.value.map((point) => point.join(",")).join(" ")
-})
+  return polygonPoints.value.map((point) => point.join(",")).join(" ");
+});
 
 watch(context.open, (isOpen) => {
   if (!isOpen) {
-    polygonPoints.value = []
+    polygonPoints.value = [];
   }
-})
+});
 </script>
 
 <template>

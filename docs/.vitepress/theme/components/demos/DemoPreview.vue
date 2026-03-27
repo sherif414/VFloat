@@ -1,73 +1,73 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, watch, nextTick, reactive } from "vue"
+import { ref, computed, onMounted, watch, nextTick, reactive } from "vue";
 
 // --- PROPS ---
 const props = defineProps<{
-  typescript?: string
+  typescript?: string;
   // if using ts, javascript will transform the to js
-  javascript?: string
-  title?: string
-  metadata?: object
-}>()
+  javascript?: string;
+  title?: string;
+  metadata?: object;
+}>();
 
 // --- STATE ---
-const tabs = ["Preview", "Code"]
-const selectedTab = ref("Preview")
-const tabButtons = ref<HTMLButtonElement[]>([])
-const copied = ref(false)
-const sourceCode = computed(() => decodeURIComponent(props.typescript || props.javascript || ""))
+const tabs = ["Preview", "Code"];
+const selectedTab = ref("Preview");
+const tabButtons = ref<HTMLButtonElement[]>([]);
+const copied = ref(false);
+const sourceCode = computed(() => decodeURIComponent(props.typescript || props.javascript || ""));
 
 const underlineStyle = reactive({
   left: "0px",
   width: "0px",
-})
+});
 
-let timeoutId: ReturnType<typeof setTimeout> | null = null
+let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 // --- METHODS ---
 async function copyToClipboard(text: string) {
   try {
-    await navigator.clipboard.writeText(text)
-    copied.value = true
-    timeoutId != null && clearTimeout(timeoutId)
+    await navigator.clipboard.writeText(text);
+    copied.value = true;
+    timeoutId != null && clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {
-      copied.value = false
-    }, 2000)
+      copied.value = false;
+    }, 2000);
   } catch {
-    const element = document.createElement("textarea")
-    const previouslyFocusedElement = document.activeElement
+    const element = document.createElement("textarea");
+    const previouslyFocusedElement = document.activeElement;
 
-    element.value = text
+    element.value = text;
 
     // Prevent keyboard from showing on mobile
-    element.setAttribute("readonly", "")
+    element.setAttribute("readonly", "");
 
-    element.style.contain = "strict"
-    element.style.position = "absolute"
-    element.style.left = "-9999px"
-    element.style.fontSize = "12pt" // Prevent zooming on iOS
+    element.style.contain = "strict";
+    element.style.position = "absolute";
+    element.style.left = "-9999px";
+    element.style.fontSize = "12pt"; // Prevent zooming on iOS
 
-    const selection = document.getSelection()
-    const originalRange = selection ? selection.rangeCount > 0 && selection.getRangeAt(0) : null
+    const selection = document.getSelection();
+    const originalRange = selection ? selection.rangeCount > 0 && selection.getRangeAt(0) : null;
 
-    document.body.appendChild(element)
-    element.select()
+    document.body.appendChild(element);
+    element.select();
 
     // Explicit selection workaround for iOS
-    element.selectionStart = 0
-    element.selectionEnd = text.length
+    element.selectionStart = 0;
+    element.selectionEnd = text.length;
 
-    document.execCommand("copy")
-    document.body.removeChild(element)
+    document.execCommand("copy");
+    document.body.removeChild(element);
 
     if (originalRange) {
-      selection!.removeAllRanges() // originalRange can't be truthy when selection is falsy
-      selection!.addRange(originalRange)
+      selection!.removeAllRanges(); // originalRange can't be truthy when selection is falsy
+      selection!.addRange(originalRange);
     }
 
     // Get the focus back on the previously focused element, if any
     if (previouslyFocusedElement) {
-      ;(previouslyFocusedElement as HTMLElement).focus()
+      (previouslyFocusedElement as HTMLElement).focus();
     }
   }
 }
@@ -75,18 +75,18 @@ async function copyToClipboard(text: string) {
 const updateUnderline = () => {
   nextTick(() => {
     const selectedButton = tabButtons.value.find(
-      (button) => button.textContent?.trim() === selectedTab.value
-    )
+      (button) => button.textContent?.trim() === selectedTab.value,
+    );
     if (selectedButton) {
-      underlineStyle.left = `${selectedButton.offsetLeft}px`
-      underlineStyle.width = `${selectedButton.offsetWidth}px`
+      underlineStyle.left = `${selectedButton.offsetLeft}px`;
+      underlineStyle.width = `${selectedButton.offsetWidth}px`;
     }
-  })
-}
+  });
+};
 
 // --- LIFECYCLE HOOKS ---
-onMounted(updateUnderline)
-watch(selectedTab, updateUnderline)
+onMounted(updateUnderline);
+watch(selectedTab, updateUnderline);
 </script>
 
 <template>
@@ -99,7 +99,7 @@ watch(selectedTab, updateUnderline)
           :key="tab"
           :ref="
             (el) => {
-              if (el) tabButtons.push(el as HTMLButtonElement)
+              if (el) tabButtons.push(el as HTMLButtonElement);
             }
           "
           @click="selectedTab = tab"

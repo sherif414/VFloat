@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { flip, offset, shift, useFloating, useFocus, useHover } from "v-float"
-import { ref } from "vue"
+import { flip, offset, shift, useFloating, useFocus, useHover } from "v-float";
+import { ref } from "vue";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const isOpen = ref(false);
 
 const floating = useFloating(anchorEl, floatingEl, {
   placement: "top",
   open: isOpen,
   setOpen: (open: boolean) => {
-    isOpen.value = open
+    isOpen.value = open;
   },
   middlewares: [offset(8), flip(), shift()],
-})
+});
 
 // Interaction behaviors
 useHover(floating, {
@@ -21,9 +21,9 @@ useHover(floating, {
     open: 100,
     close: 200,
   },
-})
+});
 
-useFocus(floating)
+useFocus(floating);
 </script>
 
 <template>

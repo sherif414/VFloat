@@ -40,10 +40,7 @@
       "id": 3,
       "prompt": "Review `docs/api/offset.md` and `docs/guide/middleware.md` against current VFloat conventions. Fix outdated examples, naming, links, and VitePress issues while preserving the repo's existing middleware API family unless a full family cleanup is necessary.",
       "expected_output": "Corrected docs pages that fix concrete issues, preserve the current middleware API family for targeted edits, and keep examples and links aligned with current VFloat conventions.",
-      "files": [
-        "docs/api/offset.md",
-        "docs/guide/middleware.md"
-      ],
+      "files": ["docs/api/offset.md", "docs/guide/middleware.md"],
       "assertions": [
         "`docs/api/offset.md` keeps the current middleware API family style unless the entire middleware family is standardized together.",
         "Examples use `middlewares` and import from `v-float`.",

@@ -1,62 +1,62 @@
-import type { Middleware } from "@floating-ui/dom"
-import { computed, type MaybeRefOrGetter, ref, toValue } from "vue"
-import type { FloatingMiddlewareRegistry } from "@/core/floating-internals"
-import { tryOnScopeDispose } from "@/core/lifecycle"
+import type { Middleware } from "@floating-ui/dom";
+import { computed, type MaybeRefOrGetter, ref, toValue } from "vue";
+import type { FloatingMiddlewareRegistry } from "@/core/floating-internals";
+import { tryOnScopeDispose } from "@/core/lifecycle";
 
 type MiddlewareRegistration = {
-  id: number
-  middleware: MaybeRefOrGetter<Middleware | null | undefined>
-}
+  id: number;
+  middleware: MaybeRefOrGetter<Middleware | null | undefined>;
+};
 
 export function createMiddlewareRegistry(
-  baseMiddlewares: MaybeRefOrGetter<Middleware[] | undefined>
+  baseMiddlewares: MaybeRefOrGetter<Middleware[] | undefined>,
 ): FloatingMiddlewareRegistry {
-  const registrations = ref<MiddlewareRegistration[]>([])
-  let nextRegistrationId = 0
+  const registrations = ref<MiddlewareRegistration[]>([]);
+  let nextRegistrationId = 0;
 
   const middlewares = computed(() => {
-    const merged = [...(toValue(baseMiddlewares) ?? [])]
+    const merged = [...(toValue(baseMiddlewares) ?? [])];
 
     for (const registration of registrations.value) {
-      const middleware = toValue(registration.middleware)
+      const middleware = toValue(registration.middleware);
 
       if (!middleware) {
-        continue
+        continue;
       }
 
-      const existingIndex = merged.findIndex((candidate) => candidate.name === middleware.name)
+      const existingIndex = merged.findIndex((candidate) => candidate.name === middleware.name);
 
       if (existingIndex === -1) {
-        merged.push(middleware)
+        merged.push(middleware);
       } else {
-        merged[existingIndex] = middleware
+        merged[existingIndex] = middleware;
       }
     }
 
-    return merged
-  })
+    return merged;
+  });
 
   const register = (middleware: MaybeRefOrGetter<Middleware | null | undefined>) => {
     const registration = {
       id: nextRegistrationId++,
       middleware,
-    }
+    };
 
-    registrations.value = [...registrations.value, registration]
+    registrations.value = [...registrations.value, registration];
 
     const unregister = () => {
       registrations.value = registrations.value.filter(
-        (candidate) => candidate.id !== registration.id
-      )
-    }
+        (candidate) => candidate.id !== registration.id,
+      );
+    };
 
-    tryOnScopeDispose(unregister)
+    tryOnScopeDispose(unregister);
 
-    return unregister
-  }
+    return unregister;
+  };
 
   return {
     middlewares,
     register,
-  }
+  };
 }

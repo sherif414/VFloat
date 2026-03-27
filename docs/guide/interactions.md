@@ -12,25 +12,21 @@ Let's start with the base setup:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClick, useFloating } from "v-float"
+import { ref } from "vue";
+import { useClick, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 
-useClick(context)
+useClick(context);
 </script>
 
 <template>
   <button ref="anchorEl">Open menu</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Menu content
   </div>
 </template>
@@ -48,17 +44,17 @@ Right now the menu stays open no matter where you click. Most dropdowns close wh
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClick, useFloating } from "v-float"
+import { ref } from "vue";
+import { useClick, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 
 useClick(context, {
   closeOnOutsideClick: true,
-})
+});
 </script>
 ```
 
@@ -74,16 +70,16 @@ Keyboard users expect Escape to dismiss floating surfaces. `useEscapeKey` hooks 
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClick, useEscapeKey, useFloating } from "v-float"
+import { ref } from "vue";
+import { useClick, useEscapeKey, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 
-useClick(context, { closeOnOutsideClick: true })
-useEscapeKey(context)
+useClick(context, { closeOnOutsideClick: true });
+useEscapeKey(context);
 </script>
 ```
 
@@ -97,27 +93,23 @@ Tooltips behave differently from menus. They appear on hover, not on click, and 
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 
 <template>
-      <button ref="anchorEl">Hover me</button>
+  <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Tooltip content
   </div>
 </template>
@@ -135,18 +127,18 @@ Tooltips should be accessible to keyboard users too. `useFocus` opens the toolti
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFocus, useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useFocus, useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
-})
+});
 
-useHover(context)
-useFocus(context)
+useHover(context);
+useFocus(context);
 </script>
 ```
 
@@ -160,17 +152,17 @@ Add `useFocusTrap`:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClick, useEscapeKey, useFloating, useFocusTrap } from "v-float"
+import { ref } from "vue";
+import { useClick, useEscapeKey, useFloating, useFocusTrap } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 
-useClick(context, { closeOnOutsideClick: true })
-useEscapeKey(context)
-useFocusTrap(context, { modal: true })
+useClick(context, { closeOnOutsideClick: true });
+useEscapeKey(context);
+useFocusTrap(context, { modal: true });
 </script>
 
 <template>

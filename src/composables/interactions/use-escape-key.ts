@@ -1,17 +1,17 @@
-import { type MaybeRefOrGetter, toValue } from "vue"
-import { useEventListener } from "@/composables/utils/use-event-listener"
-import { getFloatingState } from "@/core/floating-accessors"
-import type { FloatingContext } from "../positioning"
-import { useComposition } from "../utils/use-composition"
+import { type MaybeRefOrGetter, toValue } from "vue";
+import { useEventListener } from "@/composables/utils/use-event-listener";
+import { getFloatingState } from "@/core/floating-accessors";
+import type { FloatingContext } from "../positioning";
+import { useComposition } from "../utils/use-composition";
 
 // =======================================================================================
 // 📌 Types
 // =======================================================================================
 
 export interface UseEscapeKeyContext {
-  state?: FloatingContext["state"]
-  open?: FloatingContext["open"]
-  setOpen?: FloatingContext["setOpen"]
+  state?: FloatingContext["state"];
+  open?: FloatingContext["open"];
+  setOpen?: FloatingContext["setOpen"];
 }
 
 export interface UseEscapeKeyOptions {
@@ -19,25 +19,25 @@ export interface UseEscapeKeyOptions {
    * Condition to enable the escape key listener.
    * @default true
    */
-  enabled?: MaybeRefOrGetter<boolean>
+  enabled?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to use capture phase for document event listeners.
    * @default false
    */
-  capture?: boolean
+  capture?: boolean;
 
   /**
    * Whether to call preventDefault on the escape key event before handling it.
    * @default false
    */
-  preventDefault?: boolean
+  preventDefault?: boolean;
 
   /**
    * Custom callback function to be executed when the escape key is pressed.
    * When provided, overrides default behavior.
    */
-  onEscape?: (event: KeyboardEvent) => void
+  onEscape?: (event: KeyboardEvent) => void;
 }
 
 // =======================================================================================
@@ -73,11 +73,11 @@ export interface UseEscapeKeyOptions {
  */
 export function useEscapeKey(
   context: UseEscapeKeyContext,
-  options: UseEscapeKeyOptions = {}
+  options: UseEscapeKeyOptions = {},
 ): void {
-  const { enabled = true, capture = false, preventDefault = false, onEscape } = options
-  const { isComposing } = useComposition()
-  const { open, setOpen } = getFloatingState(context)
+  const { enabled = true, capture = false, preventDefault = false, onEscape } = options;
+  const { isComposing } = useComposition();
+  const { open, setOpen } = getFloatingState(context);
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
@@ -87,23 +87,23 @@ export function useEscapeKey(
       !open.value ||
       isComposing.value
     ) {
-      return
+      return;
     }
 
     if (preventDefault) {
-      event.preventDefault()
+      event.preventDefault();
     }
 
     // Use custom handler if provided
     if (onEscape) {
-      onEscape(event)
-      return
+      onEscape(event);
+      return;
     }
 
     // Default behavior: close current context
-    setOpen(false, "escape-key", event)
-  }
+    setOpen(false, "escape-key", event);
+  };
 
   // Event listener setup
-  useEventListener(document, "keydown", handleEscape, capture)
+  useEventListener(document, "keydown", handleEscape, capture);
 }

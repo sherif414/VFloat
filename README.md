@@ -36,28 +36,24 @@ yarn add v-float
 
 ```vue
 <script setup lang="ts">
-import { useTemplateRef } from "vue"
-import { useFloating, useHover, offset } from "v-float"
+import { useTemplateRef } from "vue";
+import { useFloating, useHover, offset } from "v-float";
 
-const anchorEl = useTemplateRef("anchorEl")
-const floatingEl = useTemplateRef("floatingEl")
+const anchorEl = useTemplateRef("anchorEl");
+const floatingEl = useTemplateRef("floatingEl");
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
   middlewares: [offset(8)],
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     This is a tooltip
   </div>
 </template>
@@ -67,31 +63,27 @@ useHover(context)
 
 ```vue
 <script setup lang="ts">
-import { useTemplateRef } from "vue"
-import { useFloating, useClick, useEscapeKey, offset, flip, shift } from "v-float"
+import { useTemplateRef } from "vue";
+import { useFloating, useClick, useEscapeKey, offset, flip, shift } from "v-float";
 
-const triggerEl = useTemplateRef("triggerEl")
-const menuEl = useTemplateRef("menuEl")
+const triggerEl = useTemplateRef("triggerEl");
+const menuEl = useTemplateRef("menuEl");
 
 const context = useFloating(triggerEl, menuEl, {
   placement: "bottom-start",
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
-})
+});
 
-useClick(context)
+useClick(context);
 useEscapeKey(context, {
   onEscape: () => context.setOpen(false),
-})
+});
 </script>
 
 <template>
   <button ref="triggerEl">Open Menu</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="menuEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="menuEl" :style="context.position.styles.value">
     <div>Menu Item 1</div>
     <div>Menu Item 2</div>
     <div>Menu Item 3</div>
@@ -103,24 +95,24 @@ useEscapeKey(context, {
 
 ```vue
 <script setup lang="ts">
-import { useTemplateRef } from "vue"
-import { useFloating, useHover, useArrow, offset, flip } from "v-float"
+import { useTemplateRef } from "vue";
+import { useFloating, useHover, useArrow, offset, flip } from "v-float";
 
-const anchorEl = useTemplateRef("anchorEl")
-const tooltipEl = useTemplateRef("tooltipEl")
-const arrowEl = useTemplateRef("arrowEl")
+const anchorEl = useTemplateRef("anchorEl");
+const tooltipEl = useTemplateRef("tooltipEl");
+const arrowEl = useTemplateRef("arrowEl");
 
 const context = useFloating(anchorEl, tooltipEl, {
   placement: "top",
   middlewares: [offset(8), flip()],
-})
+});
 
-useHover(context)
+useHover(context);
 
 const { arrowStyles } = useArrow(context, {
   element: arrowEl,
   offset: "-4px",
-})
+});
 </script>
 
 <template>

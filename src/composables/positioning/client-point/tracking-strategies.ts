@@ -1,90 +1,90 @@
-import { isMouseLikePointerType } from "@/utils"
-import type { Coordinates, PointerEventData, TrackingContext, TrackingMode } from "./types"
+import { isMouseLikePointerType } from "@/utils";
+import type { Coordinates, PointerEventData, TrackingContext, TrackingMode } from "./types";
 
 export abstract class TrackingStrategy {
-  abstract readonly name: TrackingMode
+  abstract readonly name: TrackingMode;
 
-  protected lastKnownCoordinates: Coordinates | null = null
+  protected lastKnownCoordinates: Coordinates | null = null;
 
-  abstract process(event: PointerEventData, context: TrackingContext): Coordinates | null
-  abstract getRequiredEvents(): PointerEventData["type"][]
+  abstract process(event: PointerEventData, context: TrackingContext): Coordinates | null;
+  abstract getRequiredEvents(): PointerEventData["type"][];
 
   getCoordinatesForOpening(): Coordinates | null {
-    return this.lastKnownCoordinates
+    return this.lastKnownCoordinates;
   }
 
   onClose(): void {
-    this.lastKnownCoordinates = null
+    this.lastKnownCoordinates = null;
   }
 
   reset(): void {
-    this.lastKnownCoordinates = null
+    this.lastKnownCoordinates = null;
   }
 }
 
 export class FollowTracker extends TrackingStrategy {
-  readonly name = "follow" as const
+  readonly name = "follow" as const;
 
   getRequiredEvents(): PointerEventData["type"][] {
-    return ["pointerdown", "pointermove", "pointerenter"]
+    return ["pointerdown", "pointermove", "pointerenter"];
   }
 
   process(event: PointerEventData, context: TrackingContext): Coordinates | null {
-    const coordinates = event.coordinates
-    this.lastKnownCoordinates = coordinates
+    const coordinates = event.coordinates;
+    this.lastKnownCoordinates = coordinates;
 
     switch (event.type) {
       case "pointerdown":
-        return coordinates
+        return coordinates;
       case "pointermove":
         if (context.isOpen && isMouseLikePointerType(event.originalEvent.pointerType, true)) {
-          return coordinates
+          return coordinates;
         }
 
-        return null
+        return null;
       case "pointerenter":
-        return coordinates
+        return coordinates;
       default:
-        return null
+        return null;
     }
   }
 }
 
 export class StaticTracker extends TrackingStrategy {
-  readonly name = "static" as const
+  readonly name = "static" as const;
 
-  private triggerCoordinates: Coordinates | null = null
+  private triggerCoordinates: Coordinates | null = null;
 
   getRequiredEvents(): PointerEventData["type"][] {
-    return ["pointerdown", "pointermove"]
+    return ["pointerdown", "pointermove"];
   }
 
   process(event: PointerEventData, context: TrackingContext): Coordinates | null {
-    const coordinates = event.coordinates
-    this.lastKnownCoordinates = coordinates
+    const coordinates = event.coordinates;
+    this.lastKnownCoordinates = coordinates;
 
     if (event.type === "pointerdown") {
-      this.triggerCoordinates = coordinates
-      return context.isOpen ? coordinates : null
+      this.triggerCoordinates = coordinates;
+      return context.isOpen ? coordinates : null;
     }
 
-    return null
+    return null;
   }
 
   getCoordinatesForOpening(): Coordinates | null {
     if (this.triggerCoordinates) {
-      return this.triggerCoordinates
+      return this.triggerCoordinates;
     }
 
-    return this.lastKnownCoordinates
+    return this.lastKnownCoordinates;
   }
 
   reset(): void {
-    super.reset()
-    this.triggerCoordinates = null
+    super.reset();
+    this.triggerCoordinates = null;
   }
 
   onClose(): void {
-    this.triggerCoordinates = null
+    this.triggerCoordinates = null;
   }
 }

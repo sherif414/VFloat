@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { offset, useFloating } from "v-float"
-import { nextTick, ref, watch } from "vue"
+import { offset, useFloating } from "v-float";
+import { nextTick, ref, watch } from "vue";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
-const firstFocusableEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const isOpen = ref(false);
+const firstFocusableEl = ref<HTMLElement | null>(null);
 
 const { floatingStyles } = useFloating(anchorEl, floatingEl, {
   placement: "top",
@@ -13,39 +13,39 @@ const { floatingStyles } = useFloating(anchorEl, floatingEl, {
   open: isOpen,
   middlewares: [offset(0)],
   transform: false,
-})
+});
 
 const openModal = () => {
-  isOpen.value = true
-}
+  isOpen.value = true;
+};
 
 const closeModal = () => {
-  isOpen.value = false
-}
+  isOpen.value = false;
+};
 
 const handleBackdropClick = (event: MouseEvent) => {
   if (event.target === event.currentTarget) {
-    closeModal()
+    closeModal();
   }
-}
+};
 
 const handleEscape = (event: KeyboardEvent) => {
   if (event.key === "Escape") {
-    closeModal()
+    closeModal();
   }
-}
+};
 
 // Focus management
 watch(isOpen, async (open) => {
   if (open) {
-    await nextTick()
-    firstFocusableEl.value?.focus()
-    document.addEventListener("keydown", handleEscape)
+    await nextTick();
+    firstFocusableEl.value?.focus();
+    document.addEventListener("keydown", handleEscape);
   } else {
-    document.removeEventListener("keydown", handleEscape)
-    anchorEl.value?.focus()
+    document.removeEventListener("keydown", handleEscape);
+    anchorEl.value?.focus();
   }
-})
+});
 </script>
 
 <template>

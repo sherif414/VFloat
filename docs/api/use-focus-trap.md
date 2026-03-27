@@ -7,28 +7,28 @@
 ```ts
 function useFocusTrap(
   context: UseFocusTrapContext,
-  options?: UseFocusTrapOptions
-): UseFocusTrapReturn
+  options?: UseFocusTrapOptions,
+): UseFocusTrapReturn;
 
 interface UseFocusTrapContext extends Pick<FloatingContext, "open" | "setOpen"> {
-  refs: Pick<FloatingContext["refs"], "floatingEl">
+  refs: Pick<FloatingContext["refs"], "floatingEl">;
 }
 
 interface UseFocusTrapOptions {
-  enabled?: MaybeRefOrGetter<boolean>
-  modal?: MaybeRefOrGetter<boolean>
-  initialFocus?: HTMLElement | (() => HTMLElement | false) | string | false
-  returnFocus?: MaybeRefOrGetter<boolean>
-  closeOnFocusOut?: MaybeRefOrGetter<boolean>
-  preventScroll?: MaybeRefOrGetter<boolean>
-  outsideElementsInert?: MaybeRefOrGetter<boolean>
-  onError?: (error: unknown) => void
+  enabled?: MaybeRefOrGetter<boolean>;
+  modal?: MaybeRefOrGetter<boolean>;
+  initialFocus?: HTMLElement | (() => HTMLElement | false) | string | false;
+  returnFocus?: MaybeRefOrGetter<boolean>;
+  closeOnFocusOut?: MaybeRefOrGetter<boolean>;
+  preventScroll?: MaybeRefOrGetter<boolean>;
+  outsideElementsInert?: MaybeRefOrGetter<boolean>;
+  onError?: (error: unknown) => void;
 }
 
 interface UseFocusTrapReturn {
-  isActive: ComputedRef<boolean>
-  activate: () => void
-  deactivate: () => void
+  isActive: ComputedRef<boolean>;
+  activate: () => void;
+  deactivate: () => void;
 }
 ```
 
@@ -46,27 +46,25 @@ interface UseFocusTrapReturn {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFocusTrap, useFloating } from "v-float"
+import { ref } from "vue";
+import { useFocusTrap, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const open = ref(false)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(false);
 
 const context = useFloating(anchorEl, floatingEl, {
   open,
   onOpenChange: (value) => {
-    open.value = value
+    open.value = value;
   },
-})
+});
 
-useFocusTrap(context, { modal: true })
+useFocusTrap(context, { modal: true });
 </script>
 
 <template>
-  <button ref="anchorEl" @click="open = !open">
-    Open dialog
-  </button>
+  <button ref="anchorEl" @click="open = !open">Open dialog</button>
 
   <Teleport to="body">
     <div v-if="open" class="backdrop">

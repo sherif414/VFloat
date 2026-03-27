@@ -1,4 +1,4 @@
-import type { ChangelogConfig } from "changelogen"
+import type { ChangelogConfig } from "changelogen";
 
 // Changelogen configuration for VFloat
 export default <Partial<ChangelogConfig>>{

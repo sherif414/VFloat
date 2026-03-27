@@ -11,11 +11,7 @@
   },
   "hooks": {
     "before:init": ["git pull"],
-    "after:bump": [
-      "npm run build",
-      "changelogen",
-      "git add CHANGELOG.md"
-    ],
+    "after:bump": ["npm run build", "changelogen", "git add CHANGELOG.md"],
     "after:release": [
       "changelogen gh release",
       "echo Successfully released ${name} v${version} to ${repo.repository}."

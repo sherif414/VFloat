@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vite-plus/test"
+import { describe, expect, it } from "vite-plus/test";
 import {
   buildRectangularTrough,
   buildSafePolygon,
   getCursorSpeed,
   isPointInPolygon,
-} from "@/composables/interactions/polygon"
+} from "@/composables/interactions/polygon";
 
 function createRect(x: number, y: number, width: number, height: number): DOMRect {
   return {
@@ -17,7 +17,7 @@ function createRect(x: number, y: number, width: number, height: number): DOMRec
     right: x + width,
     bottom: y + height,
     toJSON: () => ({ x, y, width, height }),
-  } as DOMRect
+  } as DOMRect;
 }
 
 describe("polygon geometry", () => {
@@ -25,12 +25,12 @@ describe("polygon geometry", () => {
     const trough = buildRectangularTrough(
       "bottom",
       createRect(75, 110, 150, 80),
-      createRect(50, 0, 100, 100)
-    )
+      createRect(50, 0, 100, 100),
+    );
 
-    expect(trough).toHaveLength(4)
-    expect(isPointInPolygon([100, 105], trough)).toBe(true)
-  })
+    expect(trough).toHaveLength(4);
+    expect(isPointInPolygon([100, 105], trough)).toBe(true);
+  });
 
   it("builds a safe polygon for the active side", () => {
     const polygon = buildSafePolygon(
@@ -39,20 +39,20 @@ describe("polygon geometry", () => {
       99,
       createRect(75, 110, 150, 80),
       createRect(50, 0, 100, 100),
-      4
-    )
+      4,
+    );
 
-    expect(polygon).toHaveLength(4)
-    expect(polygon[0]?.[1]).toBe(95)
-    expect(polygon[1]?.[1]).toBe(95)
-    expect(polygon.some(([x]) => x === 75 || x === 225)).toBe(true)
-  })
+    expect(polygon).toHaveLength(4);
+    expect(polygon[0]?.[1]).toBe(95);
+    expect(polygon[1]?.[1]).toBe(95);
+    expect(polygon.some(([x]) => x === 75 || x === 225)).toBe(true);
+  });
 
   it("computes cursor speed from successive points", () => {
-    const speed = getCursorSpeed(20, 10, 10, 10, 1000, 1020)
+    const speed = getCursorSpeed(20, 10, 10, 10, 1000, 1020);
 
-    expect(speed.speed).toBe(0.5)
-    expect(speed.lastX).toBe(20)
-    expect(speed.lastCursorTime).toBe(1020)
-  })
-})
+    expect(speed.speed).toBe(0.5);
+    expect(speed.lastX).toBe(20);
+    expect(speed.lastCursorTime).toBe(1020);
+  });
+});

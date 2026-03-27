@@ -1,6 +1,6 @@
-import type { Middleware, Padding } from "@floating-ui/dom"
-import { arrow as FloatingUIArrow } from "@floating-ui/dom"
-import { type Ref, toValue } from "vue"
+import type { Middleware, Padding } from "@floating-ui/dom";
+import { arrow as FloatingUIArrow } from "@floating-ui/dom";
+import { type Ref, toValue } from "vue";
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -13,12 +13,12 @@ export interface ArrowMiddlewareOptions {
   /**
    * Padding to apply around the arrow element
    */
-  padding?: Padding
+  padding?: Padding;
 
   /**
    * Reference to the arrow element
    */
-  element: Ref<HTMLElement | null>
+  element: Ref<HTMLElement | null>;
 }
 
 //=======================================================================================
@@ -38,13 +38,13 @@ export function arrow(options: ArrowMiddlewareOptions): Middleware {
     name: "arrow",
     options,
     fn(args) {
-      const element = toValue(options.element)
+      const element = toValue(options.element);
 
       if (element == null) {
-        return {}
+        return {};
       }
 
-      return FloatingUIArrow({ element, padding: options.padding }).fn(args)
+      return FloatingUIArrow({ element, padding: options.padding }).fn(args);
     },
-  }
+  };
 }

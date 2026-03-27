@@ -8,22 +8,22 @@
 function useClientPoint(
   context: UseClientPointContext,
   options: UseClientPointOptions & {
-    pointerTarget: Ref<HTMLElement | null>
-  }
-): UseClientPointReturn
+    pointerTarget: Ref<HTMLElement | null>;
+  },
+): UseClientPointReturn;
 
 interface UseClientPointOptions {
-  pointerTarget?: Ref<HTMLElement | null>
-  enabled?: MaybeRefOrGetter<boolean>
-  axis?: MaybeRefOrGetter<"x" | "y" | "both">
-  x?: MaybeRefOrGetter<number | null>
-  y?: MaybeRefOrGetter<number | null>
-  trackingMode?: "follow" | "static"
+  pointerTarget?: Ref<HTMLElement | null>;
+  enabled?: MaybeRefOrGetter<boolean>;
+  axis?: MaybeRefOrGetter<"x" | "y" | "both">;
+  x?: MaybeRefOrGetter<number | null>;
+  y?: MaybeRefOrGetter<number | null>;
+  trackingMode?: "follow" | "static";
 }
 
 interface UseClientPointReturn {
-  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>
-  updatePosition: (x: number, y: number) => void
+  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
+  updatePosition: (x: number, y: number) => void;
 }
 ```
 
@@ -42,33 +42,29 @@ This example shows the root-first overload.
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClientPoint, useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useClientPoint, useFloating, useHover } from "v-float";
 
-const trackingArea = ref<HTMLElement | null>(null)
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const trackingArea = ref<HTMLElement | null>(null);
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right-start",
-})
+});
 
 useClientPoint(context, {
   pointerTarget: trackingArea,
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 
 <template>
   <div ref="trackingArea">
     Move the pointer here
 
-    <div
-      v-if="context.state.open.value"
-      ref="floatingEl"
-      :style="context.position.styles.value"
-    >
+    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
       Tooltip follows the pointer
     </div>
   </div>

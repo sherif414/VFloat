@@ -8,9 +8,9 @@
           <span class="highlight">Floating Surfaces with Vue 3</span>
         </h1>
         <p class="hero-description">
-          A Vue 3 positioning library for tooltips, dropdowns, menus, and custom floating
-          surfaces. Start with the guide for the mental model, then use the API pages for exact
-          signatures and defaults.
+          A Vue 3 positioning library for tooltips, dropdowns, menus, and custom floating surfaces.
+          Start with the guide for the mental model, then use the API pages for exact signatures and
+          defaults.
         </p>
 
         <div class="hero-actions">
@@ -66,12 +66,12 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue"
-import TooltipDemo from "./demos/TooltipDemo.vue"
-import DropdownDemo from "./demos/DropdownDemo.vue"
-import ContextMenuDemo from "./demos/ContextMenuDemo.vue"
-import MiddlewareDemo from "./demos/MiddlewareDemo.vue"
-import CursorFollowDemo from "./demos/CursorFollowDemo.vue"
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import TooltipDemo from "./demos/TooltipDemo.vue";
+import DropdownDemo from "./demos/DropdownDemo.vue";
+import ContextMenuDemo from "./demos/ContextMenuDemo.vue";
+import MiddlewareDemo from "./demos/MiddlewareDemo.vue";
+import CursorFollowDemo from "./demos/CursorFollowDemo.vue";
 
 const demos = [
   { id: "tooltip", name: "Tooltip" },
@@ -79,44 +79,44 @@ const demos = [
   { id: "context-menu", name: "Context Menu" },
   { id: "cursor-follow", name: "Cursor Follow" },
   { id: "middleware", name: "Middleware" },
-]
+];
 
-const activeDemo = ref(demos[0].id)
-const isDesktop = ref(false)
+const activeDemo = ref(demos[0].id);
+const isDesktop = ref(false);
 
-let cleanupMediaListener: (() => void) | undefined
+let cleanupMediaListener: (() => void) | undefined;
 
-const desktopQuery = "(min-width: 768px)"
+const desktopQuery = "(min-width: 768px)";
 
 onMounted(() => {
   if (typeof window === "undefined") {
-    return
+    return;
   }
 
-  const mediaQueryList = window.matchMedia(desktopQuery)
+  const mediaQueryList = window.matchMedia(desktopQuery);
 
   const setMatchState = (matches: boolean) => {
-    isDesktop.value = matches
-  }
+    isDesktop.value = matches;
+  };
 
   const handleChange = (event: MediaQueryListEvent) => {
-    setMatchState(event.matches)
-  }
+    setMatchState(event.matches);
+  };
 
-  setMatchState(mediaQueryList.matches)
+  setMatchState(mediaQueryList.matches);
 
   if (typeof mediaQueryList.addEventListener === "function") {
-    mediaQueryList.addEventListener("change", handleChange)
-    cleanupMediaListener = () => mediaQueryList.removeEventListener("change", handleChange)
+    mediaQueryList.addEventListener("change", handleChange);
+    cleanupMediaListener = () => mediaQueryList.removeEventListener("change", handleChange);
   } else {
-    mediaQueryList.addListener(handleChange)
-    cleanupMediaListener = () => mediaQueryList.removeListener(handleChange)
+    mediaQueryList.addListener(handleChange);
+    cleanupMediaListener = () => mediaQueryList.removeListener(handleChange);
   }
-})
+});
 
 onBeforeUnmount(() => {
-  cleanupMediaListener?.()
-})
+  cleanupMediaListener?.();
+});
 </script>
 
 <style scoped>

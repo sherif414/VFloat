@@ -1,32 +1,30 @@
 <script setup lang="ts">
-import { flip, offset, shift, useClientPoint, useFloating } from "v-float"
-import { ref } from "vue"
+import { flip, offset, shift, useClientPoint, useFloating } from "v-float";
+import { ref } from "vue";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const isOpen = ref(false);
 
 const floating = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
   open: isOpen,
   setOpen: (open: boolean) => {
-    isOpen.value = open
+    isOpen.value = open;
   },
   middlewares: [offset(8), flip(), shift()],
-})
+});
 
-useClientPoint(floating)
+useClientPoint(floating);
 
 function toggleOpen() {
-  isOpen.value = !isOpen.value
+  isOpen.value = !isOpen.value;
 }
 </script>
 
 <template>
   <div class="demo-container">
-    <button ref="anchorEl" class="demo-button" @click="toggleOpen">
-      Move your mouse!
-    </button>
+    <button ref="anchorEl" class="demo-button" @click="toggleOpen">Move your mouse!</button>
 
     <div
       v-if="isOpen"
@@ -74,4 +72,4 @@ function toggleOpen() {
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
-</style> 
+</style>

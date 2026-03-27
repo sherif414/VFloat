@@ -56,31 +56,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, useTemplateRef } from "vue"
-import { useFloating, useClientPoint, flip, shift, useClick } from "v-float"
+import { ref, useTemplateRef } from "vue";
+import { useFloating, useClientPoint, flip, shift, useClick } from "v-float";
 
-const contextAreaEl = useTemplateRef("contextArea")
-const anchorEl = ref(null)
-const floatingEl = useTemplateRef("contextFloating")
+const contextAreaEl = useTemplateRef("contextArea");
+const anchorEl = ref(null);
+const floatingEl = useTemplateRef("contextFloating");
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
   middlewares: [flip(), shift({ padding: 8 })],
-})
+});
 
-useClientPoint(contextAreaEl, context, { trackingMode: "static" })
+useClientPoint(contextAreaEl, context, { trackingMode: "static" });
 useClick(context, {
   outsideClick: true,
   toggle: false, // Don't toggle on inside clicks
   ignoreMouse: true,
-})
+});
 
 function showContextMenu(event) {
-  context.setOpen(true)
+  context.setOpen(true);
 }
 
 function hideContextMenu() {
-  context.setOpen(false)
+  context.setOpen(false);
 }
 </script>
 

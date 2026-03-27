@@ -14,29 +14,25 @@ The usual way to use it is to pass `safePolygon: true` into `useHover()`.
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right",
-})
+});
 
 useHover(context, {
   safePolygon: true,
-})
+});
 </script>
 
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="context.open.value"
-    ref="floatingEl"
-    :style="context.floatingStyles.value"
-  >
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     Move the pointer here
   </div>
 </template>
@@ -58,7 +54,7 @@ useHover(context, {
     buffer: 8,
     requireIntent: true,
   },
-})
+});
 ```
 
 The options work like this:
@@ -82,10 +78,10 @@ useHover(context, {
   safePolygon: {
     buffer: 4,
     onPolygonChange(polygon) {
-      console.log(polygon)
+      console.log(polygon);
     },
   },
-})
+});
 ```
 
 That callback is handy when you want to verify why the cursor is staying open or why it is closing earlier than expected.

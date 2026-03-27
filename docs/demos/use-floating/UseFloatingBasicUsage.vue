@@ -1,23 +1,23 @@
 <script lang="ts" setup>
-import { offset, useFloating, useHover } from "v-float"
-import { useTemplateRef } from "vue"
+import { offset, useFloating, useHover } from "v-float";
+import { useTemplateRef } from "vue";
 
-const anchorEl = useTemplateRef("anchorEl")
-const floatingEl = useTemplateRef("floatingEl")
+const anchorEl = useTemplateRef("anchorEl");
+const floatingEl = useTemplateRef("floatingEl");
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
   middlewares: [offset(8)],
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 
 <template>
   <div>
     <button
       ref="anchorEl"
-      class="px-6 py-3 bg-white dark:bg-gray-800 border-solid border-1 border-gray-300 text-gray-900 dark:text-gray-100 rounded-lg font-medium border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      class="rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
     >
       Hover me
     </button>

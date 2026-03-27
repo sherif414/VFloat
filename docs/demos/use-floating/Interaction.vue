@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { useClick, useEscapeKey, useFloating, useFocus } from "v-float"
-import { ref } from "vue"
+import { useClick, useEscapeKey, useFloating, useFocus } from "v-float";
+import { ref } from "vue";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const floating = useFloating(anchorEl, floatingEl)
+const floating = useFloating(anchorEl, floatingEl);
 
-useClick(floating)
-useEscapeKey(floating, { onEscape: () => floating.setOpen(false) })
-useFocus(floating)
+useClick(floating);
+useEscapeKey(floating, { onEscape: () => floating.setOpen(false) });
+useFocus(floating);
 </script>
 
 <template>
   <div class="demo-container">
-    <button ref="anchorEl" class="demo-anchor">
-      Click, Focus, or press Escape to close!
-    </button>
+    <button ref="anchorEl" class="demo-anchor">Click, Focus, or press Escape to close!</button>
 
     <div
       v-if="floating.open.value"
@@ -44,7 +42,6 @@ useFocus(floating)
   border-radius: 4px;
   font-size: 1rem;
 }
-
 
 .demo-floating {
   background: #1f2937;

@@ -10,10 +10,10 @@ A virtual anchor only needs a `getBoundingClientRect()` method. VFloat treats it
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating } from "v-float"
+import { ref } from "vue";
+import { useFloating } from "v-float";
 
-const floatingEl = ref<HTMLElement | null>(null)
+const floatingEl = ref<HTMLElement | null>(null);
 
 const virtualAnchor = {
   getBoundingClientRect() {
@@ -27,21 +27,19 @@ const virtualAnchor = {
       width: 0,
       height: 0,
       toJSON() {
-        return this
+        return this;
       },
-    }
+    };
   },
-}
+};
 
-const anchorEl = ref(virtualAnchor)
+const anchorEl = ref(virtualAnchor);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 </script>
 
 <template>
-  <div ref="floatingEl" :style="context.floatingStyles.value">
-    Floating at fixed coordinates
-  </div>
+  <div ref="floatingEl" :style="context.floatingStyles.value">Floating at fixed coordinates</div>
 </template>
 ```
 
@@ -57,33 +55,29 @@ If you already have a real element, keep using it. Virtual anchors are for the c
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClientPoint, useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useClientPoint, useFloating, useHover } from "v-float";
 
-const trackingArea = ref<HTMLElement | null>(null)
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const trackingArea = ref<HTMLElement | null>(null);
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right-start",
-})
+});
 
 useClientPoint(trackingArea, context, {
   trackingMode: "follow",
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 
 <template>
   <div ref="trackingArea">
     Move the pointer over me
 
-    <div
-      v-if="context.open.value"
-      ref="floatingEl"
-      :style="context.floatingStyles.value"
-    >
+    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
       I follow the cursor
     </div>
   </div>
@@ -98,23 +92,23 @@ If the surface should open at the point of the right-click and stay there, use s
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClientPoint, useFloating } from "v-float"
+import { ref } from "vue";
+import { useClientPoint, useFloating } from "v-float";
 
-const area = ref<HTMLElement | null>(null)
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const area = ref<HTMLElement | null>(null);
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
-})
+});
 
 useClientPoint(area, context, {
   trackingMode: "static",
-})
+});
 
 function openMenu() {
-  context.setOpen(true)
+  context.setOpen(true);
 }
 </script>
 
@@ -122,11 +116,7 @@ function openMenu() {
   <div ref="area" @contextmenu.prevent="openMenu">
     Right-click here
 
-    <div
-      v-if="context.open.value"
-      ref="floatingEl"
-      :style="context.floatingStyles.value"
-    >
+    <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
       Context menu
     </div>
   </div>

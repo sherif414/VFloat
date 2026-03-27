@@ -32,9 +32,7 @@
       </div>
 
       <div class="demo-area">
-        <button ref="triggerRef" class="demo-trigger">
-          Tooltip
-        </button>
+        <button ref="triggerRef" class="demo-trigger">Tooltip</button>
 
         <Teleport to="body">
           <div
@@ -80,18 +78,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue"
-import { useFloating, useArrow, offset, flip, shift, useClick } from "v-float"
-import type { Placement, Middleware } from "@floating-ui/dom"
+import { computed, ref, useTemplateRef } from "vue";
+import { useFloating, useArrow, offset, flip, shift, useClick } from "v-float";
+import type { Placement, Middleware } from "@floating-ui/dom";
 
-const triggerRef = useTemplateRef("triggerRef")
-const floatingRef = useTemplateRef("floatingRef")
-const arrowRef = useTemplateRef("arrowRef")
+const triggerRef = useTemplateRef("triggerRef");
+const floatingRef = useTemplateRef("floatingRef");
+const arrowRef = useTemplateRef("arrowRef");
 
-const isOpen = ref(false)
-const placement = ref<Placement>("bottom")
-const offsetValue = ref(8)
-const shiftPadding = ref(8)
+const isOpen = ref(false);
+const placement = ref<Placement>("bottom");
+const offsetValue = ref(8);
+const shiftPadding = ref(8);
 
 const placements: Placement[] = [
   "top",
@@ -106,32 +104,32 @@ const placements: Placement[] = [
   "left",
   "left-start",
   "left-end",
-]
+];
 
 const enabledMiddleware = ref({
   offset: true,
   flip: true,
   shift: true,
   arrow: true,
-})
+});
 
 const middlewaresList = computed(() => {
-  const mw: Middleware[] = []
-  if (enabledMiddleware.value.offset) mw.push(offset(offsetValue.value))
-  if (enabledMiddleware.value.flip) mw.push(flip())
-  if (enabledMiddleware.value.shift) mw.push(shift({ padding: shiftPadding.value }))
-  return mw
-})
+  const mw: Middleware[] = [];
+  if (enabledMiddleware.value.offset) mw.push(offset(offsetValue.value));
+  if (enabledMiddleware.value.flip) mw.push(flip());
+  if (enabledMiddleware.value.shift) mw.push(shift({ padding: shiftPadding.value }));
+  return mw;
+});
 
 const context = useFloating(triggerRef, floatingRef, {
   open: isOpen,
   placement,
   middlewares: middlewaresList,
-})
+});
 
-useClick(context, { toggle: true, outsideClick: false })
+useClick(context, { toggle: true, outsideClick: false });
 
-const { arrowStyles } = useArrow(arrowRef, context)
+const { arrowStyles } = useArrow(arrowRef, context);
 </script>
 
 <style scoped>
@@ -217,7 +215,6 @@ const { arrowStyles } = useArrow(arrowRef, context)
   transition: all 0.2s ease;
 }
 
-
 .floating-element {
   z-index: 1000;
 }
@@ -233,7 +230,6 @@ const { arrowStyles } = useArrow(arrowRef, context)
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: visible;
 }
-
 
 .tooltip-body {
   padding: 1rem;

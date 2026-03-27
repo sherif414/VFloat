@@ -1,80 +1,80 @@
 <script setup lang="ts">
-import { flip, offset, shift, useFloating, useListNavigation, useFocusTrap } from "v-float"
-import { onMounted, onUnmounted, ref } from "vue"
+import { flip, offset, shift, useFloating, useListNavigation, useFocusTrap } from "v-float";
+import { onMounted, onUnmounted, ref } from "vue";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const isOpen = ref(false)
-const itemsRef = ref<Array<HTMLElement | null>>([])
-const activeIndex = ref<number | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const isOpen = ref(false);
+const itemsRef = ref<Array<HTMLElement | null>>([]);
+const activeIndex = ref<number | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
   open: isOpen,
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
-})
+});
 
-const { floatingStyles, update } = context
+const { floatingStyles, update } = context;
 
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
   onNavigate: (index) => (activeIndex.value = index),
   loop: true,
-})
+});
 
-useFocusTrap(context)
+useFocusTrap(context);
 
 const toggleDropdown = () => {
-  isOpen.value = !isOpen.value
+  isOpen.value = !isOpen.value;
   if (isOpen.value) {
-    update()
+    update();
   }
-}
+};
 
 const closeDropdown = () => {
-  isOpen.value = false
-  activeIndex.value = null
-}
+  isOpen.value = false;
+  activeIndex.value = null;
+};
 
 const handleClickOutside = (event: MouseEvent) => {
   if (
     !anchorEl.value?.contains(event.target as Node) &&
     !floatingEl.value?.contains(event.target as Node)
   ) {
-    closeDropdown()
+    closeDropdown();
   }
-}
+};
 
 const handleEscape = (event: KeyboardEvent) => {
   if (event.key === "Escape") {
-    closeDropdown()
+    closeDropdown();
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener("click", handleClickOutside)
-  document.addEventListener("keydown", handleEscape)
-})
+  document.addEventListener("click", handleClickOutside);
+  document.addEventListener("keydown", handleEscape);
+});
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside)
-  document.removeEventListener("keydown", handleEscape)
-})
+  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("keydown", handleEscape);
+});
 
-const noop = () => {}
+const noop = () => {};
 
 const menuItems = [
   { label: "Profile", action: noop },
   { label: "Settings", action: noop },
   { label: "Help", action: noop },
   { label: "Sign out", action: noop },
-]
+];
 
 const handleItemClick = (item: (typeof menuItems)[0]) => {
-  item.action()
-  closeDropdown()
-}
+  item.action();
+  closeDropdown();
+};
 </script>
 
 <template>

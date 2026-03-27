@@ -1,25 +1,25 @@
-import { readonly, ref } from "vue"
+import { readonly, ref } from "vue";
 
-const mutableRef = ref(false)
+const mutableRef = ref(false);
 
 if (typeof window !== "undefined") {
-  const options = { capture: true }
+  const options = { capture: true };
 
   function switchToKeyboard() {
-    mutableRef.value = true
+    mutableRef.value = true;
 
-    window.removeEventListener("keydown", switchToKeyboard, options)
-    window.addEventListener("pointerdown", switchToPointer, options)
+    window.removeEventListener("keydown", switchToKeyboard, options);
+    window.addEventListener("pointerdown", switchToPointer, options);
   }
 
   function switchToPointer() {
-    mutableRef.value = false
+    mutableRef.value = false;
 
-    window.removeEventListener("pointerdown", switchToPointer, options)
-    window.addEventListener("keydown", switchToKeyboard, options)
+    window.removeEventListener("pointerdown", switchToPointer, options);
+    window.addEventListener("keydown", switchToKeyboard, options);
   }
 
-  switchToPointer()
+  switchToPointer();
 }
 
-export const isUsingKeyboard = readonly(mutableRef)
+export const isUsingKeyboard = readonly(mutableRef);

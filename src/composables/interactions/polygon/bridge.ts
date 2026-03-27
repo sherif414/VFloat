@@ -1,10 +1,10 @@
-import { computed } from "vue"
+import { computed } from "vue";
 import type {
   AnchorElement,
   FloatingContext,
   FloatingElement,
-} from "@/composables/positioning/use-floating"
-import { clearTimeoutIfSet, contains, getCurrentTime, getTarget, isHTMLElement } from "@/utils"
+} from "@/composables/positioning/use-floating";
+import { clearTimeoutIfSet, contains, getCurrentTime, getTarget, isHTMLElement } from "@/utils";
 import {
   buildRectangularTrough,
   buildSafePolygon,
@@ -15,60 +15,60 @@ import {
   type Point,
   type Polygon,
   type Side,
-} from "./geometry"
+} from "./geometry";
 
 export interface SafePolygonOptions {
-  buffer?: number
-  requireIntent?: boolean
-  onPolygonChange?: (polygon: Polygon) => void
+  buffer?: number;
+  requireIntent?: boolean;
+  onPolygonChange?: (polygon: Polygon) => void;
 }
 
-export type SafePolygon = (context: CreateSafePolygonHandlerContext) => SafePolygonHandler
-export type SafePolygonHandler = (event: MouseEvent) => void
+export type SafePolygon = (context: CreateSafePolygonHandlerContext) => SafePolygonHandler;
+export type SafePolygonHandler = (event: MouseEvent) => void;
 
 export interface CreateSafePolygonHandlerContext {
-  x: number
-  y: number
-  placement: FloatingContext["placement"]["value"]
+  x: number;
+  y: number;
+  placement: FloatingContext["placement"]["value"];
   elements: {
-    domReference: AnchorElement | null
-    floating: FloatingElement | null
-  }
-  buffer: number
-  onClose: () => void
+    domReference: AnchorElement | null;
+    floating: FloatingElement | null;
+  };
+  buffer: number;
+  onClose: () => void;
 }
 
 export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
-  const { requireIntent = true } = options
+  const { requireIntent = true } = options;
 
-  let timeoutId = -1
-  let hasLanded = false
+  let timeoutId = -1;
+  let hasLanded = false;
 
   return function createSafePolygonHandler(context: CreateSafePolygonHandlerContext) {
-    const { x, y, placement, elements, buffer: contextBuffer, onClose } = context
+    const { x, y, placement, elements, buffer: contextBuffer, onClose } = context;
     const referenceEl = computed(() => {
-      const domReference = elements.domReference
+      const domReference = elements.domReference;
 
       if (isHTMLElement(domReference)) {
-        return domReference
+        return domReference;
       }
 
-      return (domReference?.contextElement as HTMLElement) ?? null
-    })
+      return (domReference?.contextElement as HTMLElement) ?? null;
+    });
 
-    let lastX: number | null = null
-    let lastY: number | null = null
-    let lastCursorTime = getCurrentTime()
+    let lastX: number | null = null;
+    let lastY: number | null = null;
+    let lastCursorTime = getCurrentTime();
 
     const close = () => {
-      clearTimeoutIfSet(timeoutId)
-      timeoutId = -1
-      onClose()
-    }
+      clearTimeoutIfSet(timeoutId);
+      timeoutId = -1;
+      onClose();
+    };
 
     return function onMouseMove(event: MouseEvent) {
-      clearTimeoutIfSet(timeoutId)
-      timeoutId = -1
+      clearTimeoutIfSet(timeoutId);
+      timeoutId = -1;
 
       if (
         !elements.domReference ||
@@ -77,35 +77,35 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
         x == null ||
         y == null
       ) {
-        return
+        return;
       }
 
-      const { clientX, clientY } = event
-      const clientPoint: Point = [clientX, clientY]
-      const target = getTarget(event) as Element | null
-      const isLeave = event.type === "mouseleave"
-      const isOverFloatingEl = elements.floating && contains(elements.floating, target)
-      const isOverReferenceEl = referenceEl.value && contains(referenceEl.value, target)
-      const refRect = referenceEl.value?.getBoundingClientRect()
-      const rect = elements.floating?.getBoundingClientRect()
-      const side = placement.split("-")[0] as Side
-      const isOverReferenceRect = refRect ? isInside(clientPoint, refRect) : false
+      const { clientX, clientY } = event;
+      const clientPoint: Point = [clientX, clientY];
+      const target = getTarget(event) as Element | null;
+      const isLeave = event.type === "mouseleave";
+      const isOverFloatingEl = elements.floating && contains(elements.floating, target);
+      const isOverReferenceEl = referenceEl.value && contains(referenceEl.value, target);
+      const refRect = referenceEl.value?.getBoundingClientRect();
+      const rect = elements.floating?.getBoundingClientRect();
+      const side = placement.split("-")[0] as Side;
+      const isOverReferenceRect = refRect ? isInside(clientPoint, refRect) : false;
 
       if (isOverFloatingEl) {
-        hasLanded = true
+        hasLanded = true;
 
         if (!isLeave) {
-          return
+          return;
         }
       }
 
       if (isOverReferenceEl) {
-        hasLanded = false
+        hasLanded = false;
       }
 
       if (isOverReferenceEl && !isLeave) {
-        hasLanded = true
-        return
+        hasLanded = true;
+        return;
       }
 
       if (
@@ -114,20 +114,20 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
         elements.floating &&
         contains(elements.floating, event.relatedTarget)
       ) {
-        return
+        return;
       }
 
       if (isPointerLeavingOppositeSide(side, x, y, refRect)) {
-        close()
-        return
+        close();
+        return;
       }
 
-      const rectPoly = buildRectangularTrough(side, rect, refRect)
-      const polygon = buildSafePolygon(side, x, y, rect, refRect, contextBuffer)
-      options.onPolygonChange?.(polygon)
+      const rectPoly = buildRectangularTrough(side, rect, refRect);
+      const polygon = buildSafePolygon(side, x, y, rect, refRect, contextBuffer);
+      options.onPolygonChange?.(polygon);
 
       if (isPointInPolygon(clientPoint, rectPoly)) {
-        return
+        return;
       }
 
       if (isPointInPolygon(clientPoint, polygon)) {
@@ -138,27 +138,27 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
             lastX,
             lastY,
             lastCursorTime,
-            getCurrentTime()
-          )
+            getCurrentTime(),
+          );
 
-          lastX = speedResult.lastX
-          lastY = speedResult.lastY
-          lastCursorTime = speedResult.lastCursorTime
+          lastX = speedResult.lastX;
+          lastY = speedResult.lastY;
+          lastCursorTime = speedResult.lastCursorTime;
 
           if (speedResult.speed !== null && speedResult.speed < 0.1) {
-            timeoutId = window.setTimeout(close, 40)
+            timeoutId = window.setTimeout(close, 40);
           }
         }
 
-        return
+        return;
       }
 
       if (hasLanded && !isOverReferenceRect) {
-        close()
-        return
+        close();
+        return;
       }
 
-      close()
-    }
-  }
+      close();
+    };
+  };
 }

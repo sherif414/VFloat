@@ -1,9 +1,11 @@
-import { defineConfig } from "vitepress"
-import { demoMdPlugin } from "vitepress-plugin-demo"
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vitepress";
+import { demoMdPlugin } from "vitepress-plugin-demo";
 
 export default defineConfig({
   head: [],
   vite: {
+    plugins: tailwindcss() as never,
     build: {
       sourcemap: true,
       minify: false,
@@ -14,9 +16,8 @@ export default defineConfig({
   },
   markdown: {
     config(md) {
-      md.use(demoMdPlugin)
+      md.use(demoMdPlugin);
     },
-    languages: ["js", "ts"],
   },
   title: "V-Float",
   description: "A library for positioning floating elements",
@@ -111,4 +112,4 @@ export default defineConfig({
   },
   ignoreDeadLinks: true,
   base: "/",
-})
+});

@@ -30,11 +30,11 @@ First, we need two template refs:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating } from "v-float"
+import { ref } from "vue";
+import { useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 </script>
 ```
 
@@ -42,25 +42,21 @@ Next, we call `useFloating` and bind the refs. The grouped context it returns gi
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating } from "v-float"
+import { ref } from "vue";
+import { useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
-})
+});
 </script>
 
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Tooltip content
   </div>
 </template>
@@ -74,27 +70,23 @@ Let's make the tooltip appear on hover:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="context.open.value"
-    ref="floatingEl"
-    :style="context.floatingStyles.value"
-  >
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     Tooltip content
   </div>
 </template>
@@ -112,18 +104,18 @@ Right now the tooltip sits directly against the anchor. Most UIs need a little g
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { offset, useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { offset, useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
   middlewares: [offset(8)],
-})
+});
 
-useHover(context)
+useHover(context);
 </script>
 ```
 

@@ -12,26 +12,22 @@ Without any middleware, the floating element sits directly against the anchor. M
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { offset, useFloating } from "v-float"
+import { ref } from "vue";
+import { offset, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
   middlewares: [offset(8)],
-})
+});
 </script>
 
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div
-    v-if="context.open.value"
-    ref="floatingEl"
-    :style="context.floatingStyles.value"
-  >
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     Floating content
   </div>
 </template>
@@ -51,16 +47,16 @@ Let's add it to the pipeline:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { flip, offset, useFloating } from "v-float"
+import { ref } from "vue";
+import { flip, offset, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
   middlewares: [offset(8), flip()],
-})
+});
 </script>
 ```
 
@@ -76,16 +72,16 @@ const context = useFloating(anchorEl, floatingEl, {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { flip, offset, shift, useFloating } from "v-float"
+import { ref } from "vue";
+import { flip, offset, shift, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
   middlewares: [offset(8), flip(), shift({ padding: 8 })],
-})
+});
 </script>
 ```
 
@@ -97,11 +93,11 @@ Sometimes the floating element should be the same width as its anchor — a drop
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { flip, offset, shift, size, useFloating } from "v-float"
+import { ref } from "vue";
+import { flip, offset, shift, size, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
@@ -114,11 +110,11 @@ const context = useFloating(anchorEl, floatingEl, {
         Object.assign(floatingEl.value.style, {
           minWidth: `${rects.reference.width}px`,
           maxHeight: `${availableHeight - 16}px`,
-        })
+        });
       },
     }),
   ],
-})
+});
 </script>
 ```
 
@@ -136,28 +132,24 @@ First, add the `arrow` middleware:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { arrow, offset, useArrow, useFloating } from "v-float"
+import { ref } from "vue";
+import { arrow, offset, useArrow, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const arrowEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const arrowEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   middlewares: [offset(8), arrow({ element: arrowEl })],
-})
+});
 
-const { arrowStyles } = useArrow(arrowEl, context)
+const { arrowStyles } = useArrow(arrowEl, context);
 </script>
 
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div
-    v-if="context.open.value"
-    ref="floatingEl"
-    :style="context.floatingStyles.value"
-  >
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     Floating content
     <div ref="arrowEl" :style="arrowStyles">Arrow</div>
   </div>
@@ -193,21 +185,16 @@ Putting it all together, a common middleware stack looks like this:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { autoPlacement, flip, offset, shift, useFloating } from "v-float"
+import { ref } from "vue";
+import { autoPlacement, flip, offset, shift, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom",
-  middlewares: [
-    offset(8),
-    flip(),
-    shift({ padding: 8 }),
-    autoPlacement(),
-  ],
-})
+  middlewares: [offset(8), flip(), shift({ padding: 8 }), autoPlacement()],
+});
 </script>
 ```
 
@@ -220,15 +207,15 @@ The order matters:
 
 ## Middleware Reference
 
-| Middleware | Purpose |
-|------------|---------|
-| `offset` | Adds space between anchor and floating element |
-| `flip` | Switches placement when preferred side is crowded |
-| `shift` | Nudges element back into viewport when it overflows |
-| `size` | Measures available space and applies size constraints |
-| `autoPlacement` | Picks the side with the most room |
-| `hide` | Detects when the anchor is clipped or hidden |
-| `arrow` | Calculates arrow coordinates |
+| Middleware      | Purpose                                               |
+| --------------- | ----------------------------------------------------- |
+| `offset`        | Adds space between anchor and floating element        |
+| `flip`          | Switches placement when preferred side is crowded     |
+| `shift`         | Nudges element back into viewport when it overflows   |
+| `size`          | Measures available space and applies size constraints |
+| `autoPlacement` | Picks the side with the most room                     |
+| `hide`          | Detects when the anchor is clipped or hidden          |
+| `arrow`         | Calculates arrow coordinates                          |
 
 ## Further Reading
 

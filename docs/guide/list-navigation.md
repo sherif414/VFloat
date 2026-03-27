@@ -10,26 +10,26 @@ Use real DOM focus when each item should receive focus directly. That is the sta
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useListNavigation } from "v-float"
+import { ref } from "vue";
+import { useFloating, useListNavigation } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const itemsRef = ref<Array<HTMLElement | null>>([])
-const activeIndex = ref<number | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const itemsRef = ref<Array<HTMLElement | null>>([]);
+const activeIndex = ref<number | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
   onNavigate(index) {
-    activeIndex.value = index
+    activeIndex.value = index;
   },
   loop: true,
   openOnArrowKeyDown: true,
   focusItemOnHover: true,
-})
+});
 </script>
 
 <template>
@@ -60,27 +60,27 @@ When the user needs to keep typing in an input while the panel highlights items,
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useListNavigation } from "v-float"
+import { ref } from "vue";
+import { useFloating, useListNavigation } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const itemsRef = ref<Array<HTMLElement | null>>([])
-const activeIndex = ref<number | null>(null)
-const virtualItemRef = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const itemsRef = ref<Array<HTMLElement | null>>([]);
+const activeIndex = ref<number | null>(null);
+const virtualItemRef = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
   onNavigate(index) {
-    activeIndex.value = index
+    activeIndex.value = index;
   },
   virtual: true,
   virtualItemRef,
   focusItemOnOpen: "auto",
-})
+});
 </script>
 
 <template>

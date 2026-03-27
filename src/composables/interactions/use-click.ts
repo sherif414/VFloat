@@ -1,9 +1,9 @@
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue"
-import type { FloatingContext } from "@/composables/positioning/use-floating"
-import { useEventListener } from "@/composables/utils/use-event-listener"
-import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors"
-import { tryOnScopeDispose } from "@/core/lifecycle"
-import type { OpenChangeReason } from "@/types"
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+import type { FloatingContext } from "@/composables/positioning/use-floating";
+import { useEventListener } from "@/composables/utils/use-event-listener";
+import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
+import { tryOnScopeDispose } from "@/core/lifecycle";
+import type { OpenChangeReason } from "@/types";
 import {
   isButtonTarget,
   isClickOnScrollbar,
@@ -11,9 +11,9 @@ import {
   isHTMLElement,
   isMouseLikePointerType,
   isSpaceIgnored,
-} from "@/utils"
+} from "@/utils";
 
-type PointerType = "mouse" | "touch" | "pen"
+type PointerType = "mouse" | "touch" | "pen";
 
 //=======================================================================================
 // 📌 Main
@@ -52,8 +52,8 @@ type PointerType = "mouse" | "touch" | "pen"
  * ```
  */
 export function useClick(context: UseClickContext, options: UseClickOptions = {}): void {
-  const { open, setOpen } = getFloatingState(context)
-  const refs = getFloatingRefs(context)
+  const { open, setOpen } = getFloatingState(context);
+  const refs = getFloatingRefs(context);
   const {
     enabled = true,
     event: eventOption = "click",
@@ -68,7 +68,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     onOutsideClick,
     ignoreScrollbar = true,
     ignoreDrag = true,
-  } = options
+  } = options;
 
   //=====================================================================================
   // Interaction State
@@ -80,130 +80,130 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     didKeyDown: false,
     dragStartedInside: false,
     interactionInProgress: false,
-  }
+  };
 
   // Timeout used to clear `dragStartedInside` after a `mouseup`.
   // Stored so we can cancel/avoid late updates on unmount/anchor change.
-  let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined
+  let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  const isEnabled = computed(() => toValue(enabled))
-  const isOutsideClickEnabled = computed(() => toValue(closeOnOutsideClick))
+  const isEnabled = computed(() => toValue(enabled));
+  const isOutsideClickEnabled = computed(() => toValue(closeOnOutsideClick));
 
   const anchorEl = computed(() => {
-    const el = refs.anchorEl.value
-    if (el instanceof HTMLElement) return el
-    return null
-  })
+    const el = refs.anchorEl.value;
+    if (el instanceof HTMLElement) return el;
+    return null;
+  });
 
-  const floatingEl = computed(() => refs.floatingEl.value)
+  const floatingEl = computed(() => refs.floatingEl.value);
 
   //=====================================================================================
   // Event Handlers (Anchor & Outside)
   //=====================================================================================
 
   function clearDragResetTimeout() {
-    if (dragResetTimeoutId == null) return
-    clearTimeout(dragResetTimeoutId)
-    dragResetTimeoutId = undefined
+    if (dragResetTimeoutId == null) return;
+    clearTimeout(dragResetTimeoutId);
+    dragResetTimeoutId = undefined;
   }
 
   function handleOpenChange(reason: OpenChangeReason, event: Event) {
-    interactionState.interactionInProgress = true
+    interactionState.interactionInProgress = true;
     try {
       if (open.value) {
         // When `toggle` is enabled, anchor clicks toggle open/closed.
-        toValue(toggle) && setOpen(false, reason, event)
+        toValue(toggle) && setOpen(false, reason, event);
       } else {
-        setOpen(true, reason, event)
+        setOpen(true, reason, event);
       }
     } finally {
       // Reset after a micro-task so the same native event can finish bubbling
       // before the document-level outside listener potentially closes the element.
       queueMicrotask(() => {
-        interactionState.interactionInProgress = false
-      })
+        interactionState.interactionInProgress = false;
+      });
     }
   }
 
   function resetInteractionState() {
-    interactionState.pointerType = undefined
-    interactionState.didKeyDown = false
-    interactionState.dragStartedInside = false
-    clearDragResetTimeout()
+    interactionState.pointerType = undefined;
+    interactionState.didKeyDown = false;
+    interactionState.dragStartedInside = false;
+    clearDragResetTimeout();
   }
 
   function onPointerDown(e: PointerEvent) {
-    interactionState.pointerType = e.pointerType as PointerType
+    interactionState.pointerType = e.pointerType as PointerType;
   }
 
   function isSyntheticKeyboardClick(e: MouseEvent): boolean {
     // When keyboard interactions are disabled, browsers may still dispatch a
     // click after Enter/Space activation on some elements.
-    return toValue(ignoreKeyboard) && e.detail === 0
+    return toValue(ignoreKeyboard) && e.detail === 0;
   }
 
   function onMouseDown(e: MouseEvent) {
     // Ignore non-primary buttons
-    if (e.button !== 0) return
-    if (toValue(eventOption) === "click") return
-    if (shouldIgnorePointerType(interactionState.pointerType)) return
+    if (e.button !== 0) return;
+    if (toValue(eventOption) === "click") return;
+    if (shouldIgnorePointerType(interactionState.pointerType)) return;
 
-    handleOpenChange("anchor-click", e)
+    handleOpenChange("anchor-click", e);
   }
 
   function onClick(e: MouseEvent): void {
     if (isSyntheticKeyboardClick(e)) {
-      resetInteractionState()
-      return
+      resetInteractionState();
+      return;
     }
 
     if (toValue(eventOption) === "mousedown" && interactionState.pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
-      resetInteractionState()
-      return
+      resetInteractionState();
+      return;
     }
 
     if (shouldIgnorePointerType(interactionState.pointerType)) {
-      resetInteractionState()
-      return
+      resetInteractionState();
+      return;
     }
 
-    handleOpenChange("anchor-click", e)
-    resetInteractionState()
+    handleOpenChange("anchor-click", e);
+    resetInteractionState();
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    interactionState.pointerType = undefined
+    interactionState.pointerType = undefined;
 
     if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e)) {
-      return
+      return;
     }
 
-    const el = anchorEl.value
-    if (!el) return
+    const el = anchorEl.value;
+    if (!el) return;
 
     if (e.key === " " && !isSpaceIgnored(el)) {
       // Prevent scrolling
-      e.preventDefault()
-      interactionState.didKeyDown = true
+      e.preventDefault();
+      interactionState.didKeyDown = true;
     }
 
     if (e.key === "Enter") {
-      handleOpenChange("keyboard-activate", e)
+      handleOpenChange("keyboard-activate", e);
     }
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    const el = anchorEl.value // Get current element inside handler
-    if (!el) return
+    const el = anchorEl.value; // Get current element inside handler
+    if (!el) return;
 
     if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e) || isSpaceIgnored(el)) {
-      return
+      return;
     }
 
     if (e.key === " " && interactionState.didKeyDown) {
-      interactionState.didKeyDown = false
-      handleOpenChange("keyboard-activate", e)
+      interactionState.didKeyDown = false;
+      handleOpenChange("keyboard-activate", e);
     }
   }
 
@@ -211,20 +211,20 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   function onOutsideClickHandler(event: MouseEvent) {
     if (!isEnabled.value || !isOutsideClickEnabled.value || !open.value) {
-      return
+      return;
     }
 
     // Suppress outside-close for click sequences caused by a drag that started
     // inside the floating content.
-    if (suppressOutsideClickForDragSequence()) return
+    if (suppressOutsideClickForDragSequence()) return;
 
     // Don't process outside clicks during ongoing interactions
     if (interactionState.interactionInProgress) {
-      return
+      return;
     }
 
-    const target = event.target as Node | null
-    if (!target) return
+    const target = event.target as Node | null;
+    if (!target) return;
 
     // Clicked on a scrollbar
     if (
@@ -233,43 +233,43 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       floatingEl.value &&
       isClickOnScrollbar(event, target)
     ) {
-      return
+      return;
     }
 
     if (
       isEventTargetWithin(event, anchorEl.value) ||
       isEventTargetWithin(event, floatingEl.value)
     ) {
-      return
+      return;
     }
 
     // Use custom handler if provided, otherwise use default behavior
     if (onOutsideClick) {
-      onOutsideClick(event)
+      onOutsideClick(event);
     } else {
-      setOpen(false, "outside-pointer", event)
+      setOpen(false, "outside-pointer", event);
     }
   }
 
   function suppressOutsideClickForDragSequence(): boolean {
-    if (toValue(outsideClickEvent) !== "click") return false
-    if (!toValue(ignoreDrag)) return false
-    if (!interactionState.dragStartedInside) return false
+    if (toValue(outsideClickEvent) !== "click") return false;
+    if (!toValue(ignoreDrag)) return false;
+    if (!interactionState.dragStartedInside) return false;
 
-    interactionState.dragStartedInside = false
-    return true
+    interactionState.dragStartedInside = false;
+    return true;
   }
 
   function onFloatingMouseDown() {
-    interactionState.dragStartedInside = true
+    interactionState.dragStartedInside = true;
   }
 
   function onFloatingMouseUp() {
     // Reset drag state after a brief delay to allow click events to process
-    clearDragResetTimeout()
+    clearDragResetTimeout();
     dragResetTimeoutId = setTimeout(() => {
-      interactionState.dragStartedInside = false
-    }, 0)
+      interactionState.dragStartedInside = false;
+    }, 0);
   }
 
   //=====================================================================================
@@ -278,42 +278,42 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   function shouldIgnorePointerType(type: PointerType | undefined): boolean {
     if (isMouseLikePointerType(type, true) && toValue(ignoreMouse)) {
-      return true
+      return true;
     }
     if (type === "touch" && toValue(ignoreTouch)) {
-      return true
+      return true;
     }
-    return false
+    return false;
   }
 
   // Ensure the drag suppression timer can't update state after unmount.
   tryOnScopeDispose(() => {
-    clearDragResetTimeout()
-  })
+    clearDragResetTimeout();
+  });
 
   //=====================================================================================
   // Wiring: attach handlers to the current anchor element
   //=====================================================================================
 
   watchPostEffect(() => {
-    const el = anchorEl.value
-    if (!isEnabled.value || !el) return
+    const el = anchorEl.value;
+    if (!isEnabled.value || !el) return;
 
-    el.addEventListener("pointerdown", onPointerDown)
-    el.addEventListener("mousedown", onMouseDown)
-    el.addEventListener("click", onClick)
-    el.addEventListener("keydown", onKeyDown)
-    el.addEventListener("keyup", onKeyUp)
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("click", onClick);
+    el.addEventListener("keydown", onKeyDown);
+    el.addEventListener("keyup", onKeyUp);
 
     onWatcherCleanup(() => {
-      el.removeEventListener("pointerdown", onPointerDown)
-      el.removeEventListener("mousedown", onMouseDown)
-      el.removeEventListener("click", onClick)
-      el.removeEventListener("keydown", onKeyDown)
-      el.removeEventListener("keyup", onKeyUp)
-      resetInteractionState()
-    })
-  })
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("mousedown", onMouseDown);
+      el.removeEventListener("click", onClick);
+      el.removeEventListener("keydown", onKeyDown);
+      el.removeEventListener("keyup", onKeyUp);
+      resetInteractionState();
+    });
+  });
 
   //=====================================================================================
   // Wiring: document outside-click listener + drag suppression on floating
@@ -324,8 +324,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
     outsideClickEvent,
     onOutsideClickHandler,
-    { capture: toValue(outsideCapture) }
-  )
+    { capture: toValue(outsideCapture) },
+  );
 
   // Floating element listeners for drag detection
   useEventListener(
@@ -335,8 +335,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
         : null,
     "mousedown",
     onFloatingMouseDown,
-    { capture: true }
-  )
+    { capture: true },
+  );
 
   useEventListener(
     () =>
@@ -345,8 +345,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
         : null,
     "mouseup",
     onFloatingMouseUp,
-    { capture: true }
-  )
+    { capture: true },
+  );
 }
 
 //=======================================================================================
@@ -354,10 +354,10 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 //=======================================================================================
 
 export interface UseClickContext {
-  refs: FloatingContext["refs"]
-  state?: FloatingContext["state"]
-  open?: FloatingContext["open"]
-  setOpen?: FloatingContext["setOpen"]
+  refs: FloatingContext["refs"];
+  state?: FloatingContext["state"];
+  open?: FloatingContext["open"];
+  setOpen?: FloatingContext["setOpen"];
 }
 
 /**
@@ -368,38 +368,38 @@ export interface UseClickOptions {
    * Whether the composable is enabled.
    * @default true
    */
-  enabled?: MaybeRefOrGetter<boolean>
+  enabled?: MaybeRefOrGetter<boolean>;
 
   /**
    * The type of event to use to determine a "click" with mouse input.
    * This option does not effect keyboard interactions.
    * @default 'click'
    */
-  event?: MaybeRefOrGetter<"click" | "mousedown">
+  event?: MaybeRefOrGetter<"click" | "mousedown">;
 
   /**
    * Whether to toggle the open state with repeated clicks.
    * @default true
    */
-  toggle?: MaybeRefOrGetter<boolean>
+  toggle?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to ignore the logic for mouse input.
    * @default false
    */
-  ignoreMouse?: MaybeRefOrGetter<boolean>
+  ignoreMouse?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to ignore keyboard handlers (Enter and Space key functionality).
    * @default false
    */
-  ignoreKeyboard?: MaybeRefOrGetter<boolean>
+  ignoreKeyboard?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to ignore touch events.
    * @default false
    */
-  ignoreTouch?: MaybeRefOrGetter<boolean>
+  ignoreTouch?: MaybeRefOrGetter<boolean>;
 
   // --- Outside Click Options ---
 
@@ -407,37 +407,37 @@ export interface UseClickOptions {
    * Whether to close the floating element when clicking outside.
    * @default false
    */
-  closeOnOutsideClick?: MaybeRefOrGetter<boolean>
+  closeOnOutsideClick?: MaybeRefOrGetter<boolean>;
 
   /**
    * The event to use for outside click detection.
    * @default 'pointerdown'
    */
-  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
+  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
 
   /**
    * Whether to use capture phase for document outside click listener.
    * @default true
    */
-  outsideCapture?: MaybeRefOrGetter<boolean>
+  outsideCapture?: MaybeRefOrGetter<boolean>;
 
   /**
    * Custom function to handle outside clicks.
    * If provided, this function will be called instead of the default behavior.
    * @param event - The mouse event that triggered the outside click
    */
-  onOutsideClick?: (event: MouseEvent) => void
+  onOutsideClick?: (event: MouseEvent) => void;
 
   /**
    * Whether to ignore clicks on scrollbars (prevent them from closing the floating element).
    * @default true
    */
-  ignoreScrollbar?: MaybeRefOrGetter<boolean>
+  ignoreScrollbar?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to ignore outside clicks that are part of a drag sequence
    * (where the drag started inside the floating element and ended outside).
    * @default true
    */
-  ignoreDrag?: MaybeRefOrGetter<boolean>
+  ignoreDrag?: MaybeRefOrGetter<boolean>;
 }

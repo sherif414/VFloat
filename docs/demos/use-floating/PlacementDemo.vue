@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { offset, useFloating } from "v-float"
-import { ref } from "vue"
+import { offset, useFloating } from "v-float";
+import { ref } from "vue";
 
 type Placement =
   | "top"
@@ -14,12 +14,12 @@ type Placement =
   | "bottom-end"
   | "left"
   | "left-start"
-  | "left-end"
+  | "left-end";
 
-const anchorEl = ref<HTMLElement>()
-const floatingEl = ref<HTMLElement>()
-const isOpen = ref(true)
-const currentPlacement = ref<Placement>("top")
+const anchorEl = ref<HTMLElement>();
+const floatingEl = ref<HTMLElement>();
+const isOpen = ref(true);
+const currentPlacement = ref<Placement>("top");
 
 const placements: Placement[] = [
   "top",
@@ -34,17 +34,17 @@ const placements: Placement[] = [
   "left",
   "left-start",
   "left-end",
-]
+];
 
 const { floatingStyles, update } = useFloating(anchorEl, floatingEl, {
   placement: currentPlacement,
   open: isOpen,
   middlewares: [offset(10)],
-})
+});
 
 function selectPlacement(placement: Placement) {
-  currentPlacement.value = placement
-  update()
+  currentPlacement.value = placement;
+  update();
 }
 </script>
 

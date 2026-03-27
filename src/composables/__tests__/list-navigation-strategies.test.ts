@@ -1,13 +1,16 @@
-import { describe, expect, it } from "vite-plus/test"
+import { describe, expect, it } from "vite-plus/test";
 import {
   GridNavigationStrategy,
   HorizontalNavigationStrategy,
   VerticalNavigationStrategy,
-} from "@/composables/interactions/list-navigation/strategies"
+} from "@/composables/interactions/list-navigation/strategies";
 
-const createItems = (count: number) => Array.from({ length: count }, () => document.createElement("div"))
+const createItems = (count: number) =>
+  Array.from({ length: count }, () => document.createElement("div"));
 
-function createContext(overrides: Partial<Parameters<VerticalNavigationStrategy["handleKey"]>[1]> = {}) {
+function createContext(
+  overrides: Partial<Parameters<VerticalNavigationStrategy["handleKey"]>[1]> = {},
+) {
   return {
     current: 0,
     items: createItems(6),
@@ -19,48 +22,48 @@ function createContext(overrides: Partial<Parameters<VerticalNavigationStrategy[
     nested: false,
     isDisabled: () => false,
     findNextEnabled: (start: number, dir: 1 | -1, wrap: boolean) => {
-      const items = createItems(6)
-      let index = start
+      const items = createItems(6);
+      let index = start;
 
       for (let step = 0; step < items.length; step++) {
         if (index < 0 || index >= items.length) {
           if (!wrap) {
-            return null
+            return null;
           }
 
-          index = (index + items.length) % items.length
+          index = (index + items.length) % items.length;
         }
 
-        return index
+        return index;
       }
 
-      return null
+      return null;
     },
     getFirstEnabledIndex: () => 0,
     getLastEnabledIndex: () => 5,
     ...overrides,
-  }
+  };
 }
 
 describe("list navigation strategies", () => {
   it("moves vertically with the vertical strategy", () => {
-    const strategy = new VerticalNavigationStrategy()
-    const result = strategy.handleKey("ArrowDown", createContext({ current: 1 }))
+    const strategy = new VerticalNavigationStrategy();
+    const result = strategy.handleKey("ArrowDown", createContext({ current: 1 }));
 
-    expect(result).toEqual({ type: "navigate", index: 2 })
-  })
+    expect(result).toEqual({ type: "navigate", index: 2 });
+  });
 
   it("moves horizontally with RTL awareness", () => {
-    const strategy = new HorizontalNavigationStrategy()
-    const result = strategy.handleKey("ArrowRight", createContext({ current: 2, isRtl: true }))
+    const strategy = new HorizontalNavigationStrategy();
+    const result = strategy.handleKey("ArrowRight", createContext({ current: 2, isRtl: true }));
 
-    expect(result).toEqual({ type: "navigate", index: 1 })
-  })
+    expect(result).toEqual({ type: "navigate", index: 1 });
+  });
 
   it("wraps inside a grid when configured for row loops", () => {
-    const strategy = new GridNavigationStrategy(false, "row")
-    const result = strategy.handleKey("ArrowRight", createContext({ current: 2 }))
+    const strategy = new GridNavigationStrategy(false, "row");
+    const result = strategy.handleKey("ArrowRight", createContext({ current: 2 }));
 
-    expect(result).toEqual({ type: "navigate", index: 0 })
-  })
-})
+    expect(result).toEqual({ type: "navigate", index: 0 });
+  });
+});

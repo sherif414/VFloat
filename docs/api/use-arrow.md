@@ -8,15 +8,15 @@
 function useArrow(
   context: FloatingContext,
   options: {
-    element: Ref<HTMLElement | null>
-    offset?: string
-  }
-): UseArrowReturn
+    element: Ref<HTMLElement | null>;
+    offset?: string;
+  },
+): UseArrowReturn;
 
 interface UseArrowReturn {
-  arrowX: ComputedRef<number>
-  arrowY: ComputedRef<number>
-  arrowStyles: ComputedRef<Record<string, string>>
+  arrowX: ComputedRef<number>;
+  arrowY: ComputedRef<number>;
+  arrowStyles: ComputedRef<Record<string, string>>;
 }
 ```
 
@@ -35,34 +35,30 @@ This example shows the root-first `useArrow()` form.
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { offset, useArrow, useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { offset, useArrow, useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const arrowEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const arrowEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
   middlewares: [offset(8)],
-})
+});
 
-useHover(context)
+useHover(context);
 
 const { arrowStyles } = useArrow(context, {
   element: arrowEl,
   offset: "-4px",
-})
+});
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
     <div ref="arrowEl" :style="arrowStyles">^</div>
   </div>

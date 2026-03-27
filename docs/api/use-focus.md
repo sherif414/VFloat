@@ -5,20 +5,17 @@
 ## Type
 
 ```ts
-function useFocus(
-  context: UseFocusContext,
-  options?: UseFocusOptions
-): UseFocusReturn
+function useFocus(context: UseFocusContext, options?: UseFocusOptions): UseFocusReturn;
 
 interface UseFocusContext extends Pick<FloatingContext, "open" | "setOpen" | "refs"> {}
 
 interface UseFocusOptions {
-  enabled?: MaybeRefOrGetter<boolean>
-  requireFocusVisible?: MaybeRefOrGetter<boolean>
+  enabled?: MaybeRefOrGetter<boolean>;
+  requireFocusVisible?: MaybeRefOrGetter<boolean>;
 }
 
 interface UseFocusReturn {
-  cleanup: () => void
+  cleanup: () => void;
 }
 ```
 
@@ -34,14 +31,14 @@ interface UseFocusReturn {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useFocus } from "v-float"
+import { ref } from "vue";
+import { useFloating, useFocus } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
-useFocus(context)
+const context = useFloating(anchorEl, floatingEl);
+useFocus(context);
 </script>
 
 <template>

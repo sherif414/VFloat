@@ -5,26 +5,23 @@
 ## Type
 
 ```ts
-function useClick(
-  context: UseClickContext,
-  options?: UseClickOptions
-): void
+function useClick(context: UseClickContext, options?: UseClickOptions): void;
 
 interface UseClickContext extends Pick<FloatingContext, "refs" | "open" | "setOpen"> {}
 
 interface UseClickOptions {
-  enabled?: MaybeRefOrGetter<boolean>
-  event?: MaybeRefOrGetter<"click" | "mousedown">
-  toggle?: MaybeRefOrGetter<boolean>
-  ignoreMouse?: MaybeRefOrGetter<boolean>
-  ignoreKeyboard?: MaybeRefOrGetter<boolean>
-  ignoreTouch?: MaybeRefOrGetter<boolean>
-  closeOnOutsideClick?: MaybeRefOrGetter<boolean>
-  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">
-  outsideCapture?: MaybeRefOrGetter<boolean>
-  onOutsideClick?: (event: MouseEvent) => void
-  ignoreScrollbar?: MaybeRefOrGetter<boolean>
-  ignoreDrag?: MaybeRefOrGetter<boolean>
+  enabled?: MaybeRefOrGetter<boolean>;
+  event?: MaybeRefOrGetter<"click" | "mousedown">;
+  toggle?: MaybeRefOrGetter<boolean>;
+  ignoreMouse?: MaybeRefOrGetter<boolean>;
+  ignoreKeyboard?: MaybeRefOrGetter<boolean>;
+  ignoreTouch?: MaybeRefOrGetter<boolean>;
+  closeOnOutsideClick?: MaybeRefOrGetter<boolean>;
+  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
+  outsideCapture?: MaybeRefOrGetter<boolean>;
+  onOutsideClick?: (event: MouseEvent) => void;
+  ignoreScrollbar?: MaybeRefOrGetter<boolean>;
+  ignoreDrag?: MaybeRefOrGetter<boolean>;
 }
 ```
 
@@ -42,15 +39,15 @@ interface UseClickOptions {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClick, useEscapeKey, useFloating } from "v-float"
+import { ref } from "vue";
+import { useClick, useEscapeKey, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
-useClick(context, { closeOnOutsideClick: true })
-useEscapeKey(context)
+const context = useFloating(anchorEl, floatingEl);
+useClick(context, { closeOnOutsideClick: true });
+useEscapeKey(context);
 </script>
 
 <template>

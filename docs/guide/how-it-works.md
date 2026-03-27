@@ -31,11 +31,11 @@ First, declare the refs:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating } from "v-float"
+import { ref } from "vue";
+import { useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 </script>
 ```
 
@@ -43,23 +43,19 @@ Next, call `useFloating` and pass the refs:
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating } from "v-float"
+import { ref } from "vue";
+import { useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
+const context = useFloating(anchorEl, floatingEl);
 </script>
 
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
   </div>
 </template>
@@ -79,21 +75,21 @@ But sometimes a parent component needs to own the open state. For example, a for
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useClick, useFloating } from "v-float"
+import { ref } from "vue";
+import { useClick, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const open = ref(false)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(false);
 
 const context = useFloating(anchorEl, floatingEl, {
   open,
   onOpenChange(value) {
-    open.value = value
+    open.value = value;
   },
-})
+});
 
-useClick(context)
+useClick(context);
 </script>
 ```
 
@@ -110,7 +106,7 @@ If multiple interaction composables need to affect visibility, they must share t
 ```ts
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
-})
+});
 ```
 
 The first word is the side. The optional suffix (`-start` or `-end`) controls alignment along that side.
@@ -124,12 +120,12 @@ Middleware functions sit between the base position and the final styles. Each on
 You can think of it like an assembly line:
 
 ```ts
-import { flip, offset, shift, useFloating } from "v-float"
+import { flip, offset, shift, useFloating } from "v-float";
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
   middlewares: [offset(8), flip(), shift({ padding: 8 })],
-})
+});
 ```
 
 The order matters:
@@ -146,26 +142,22 @@ Middleware can expose data that other parts of your UI need. For example, the `a
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { offset, useArrow, useFloating } from "v-float"
+import { ref } from "vue";
+import { offset, useArrow, useFloating } from "v-float";
 
-const arrowEl = ref<HTMLElement | null>(null)
+const arrowEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   middlewares: [offset(8)],
-})
+});
 
-const { arrowStyles } = useArrow(arrowEl, context)
+const { arrowStyles } = useArrow(arrowEl, context);
 </script>
 
 <template>
   <button ref="anchorEl">Open</button>
 
-  <div
-    v-if="context.open.value"
-    ref="floatingEl"
-    :style="context.floatingStyles.value"
-  >
+  <div v-if="context.open.value" ref="floatingEl" :style="context.floatingStyles.value">
     Floating content
     <div ref="arrowEl" :style="arrowStyles">Arrow</div>
   </div>

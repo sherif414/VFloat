@@ -1,7 +1,6 @@
 <template>
   <div class="demo-preview">
     <div class="cursor-demo">
-
       <div ref="trackingArea" class="tracking-area">
         <div class="tracking-content">
           <h3>Cursor Tracking Area</h3>
@@ -12,10 +11,7 @@
           <div
             v-if="cursorContext.open.value"
             ref="cursorTooltip"
-            :style="[
-              cursorContext.floatingStyles.value,
-              { transition: 'transform 0.1s ease-out' },
-            ]"
+            :style="[cursorContext.floatingStyles.value, { transition: 'transform 0.1s ease-out' }]"
             class="cursor-tooltip floating-element"
           >
             <div v-show="cursorContext.isPositioned.value" class="tooltip-content">
@@ -54,22 +50,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue"
-import { useFloating, useClientPoint, useHover, flip, shift } from "v-float"
+import { computed, ref, useTemplateRef } from "vue";
+import { useFloating, useClientPoint, useHover, flip, shift } from "v-float";
 
-const trackingArea = useTemplateRef("trackingArea")
-const cursorTooltip = useTemplateRef("cursorTooltip")
-
+const trackingArea = useTemplateRef("trackingArea");
+const cursorTooltip = useTemplateRef("cursorTooltip");
 
 const cursorContext = useFloating(ref(null), cursorTooltip, {
   placement: "top-end",
   middlewares: [flip(), shift({ padding: 8 })],
-})
+});
 
-useHover(cursorContext)
+useHover(cursorContext);
 
-
-const { coordinates } = useClientPoint(trackingArea, cursorContext)
+const { coordinates } = useClientPoint(trackingArea, cursorContext);
 </script>
 
 <style scoped>
@@ -82,7 +76,6 @@ const { coordinates } = useClientPoint(trackingArea, cursorContext)
   flex-direction: column;
   gap: 1.5rem;
 }
-
 
 .tracking-area {
   background: var(--vp-c-bg-elv);
@@ -117,7 +110,6 @@ const { coordinates } = useClientPoint(trackingArea, cursorContext)
   margin-left: auto;
   margin-right: auto;
 }
-
 
 .floating-element {
   z-index: 1000;
@@ -212,7 +204,7 @@ const { coordinates } = useClientPoint(trackingArea, cursorContext)
     padding: 2rem;
     min-height: 300px;
   }
-  
+
   .demo-info {
     grid-template-columns: 1fr;
   }

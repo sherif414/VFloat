@@ -10,6 +10,7 @@ This Skill helps you create well-structured Agent Skills for AI Agents that foll
 ## When to use this Skill
 
 Use this Skill when:
+
 - Creating a new Agent Skill
 - Writing or updating SKILL.md files
 - Designing skill structure and frontmatter
@@ -37,11 +38,13 @@ First, understand what the Skill should do:
 Determine where to create the Skill:
 
 **Personal Skills**:
+
 - Individual workflows and preferences
 - Experimental Skills
 - Personal productivity tools
 
 **Project Skills**:
+
 - Team workflows and conventions
 - Project-specific expertise
 - Shared utilities (committed to git)
@@ -70,6 +73,7 @@ mkdir -p .<agent>/skills/skill-name
 ```
 
 For multi-file Skills:
+
 ```
 skill-name/
 ├── SKILL.md (required)
@@ -127,22 +131,26 @@ The description is critical for AI agents to discover your Skill.
 **Examples**:
 
 ✅ **Good**:
+
 ```yaml
 description: Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction.
 ```
 
 ✅ **Good**:
+
 ```yaml
 description: Analyze Excel spreadsheets, create pivot tables, and generate charts. Use when working with Excel files, spreadsheets, or analyzing tabular data in .xlsx format.
 ```
 
 ❌ **Too vague**:
+
 ```yaml
 description: Helps with documents
 description: For data analysis
 ```
 
 **Tips**:
+
 - Include specific file extensions (.pdf, .xlsx, .json)
 - Mention common user phrases ("analyze", "extract", "generate")
 - List concrete operations (not generic verbs)
@@ -152,7 +160,7 @@ description: For data analysis
 
 Use clear Markdown sections:
 
-```markdown
+````markdown
 # Skill Name
 
 Brief overview of what this Skill does.
@@ -164,6 +172,7 @@ Provide a simple example to get started immediately.
 ## Instructions
 
 Step-by-step guidance for the AI agent:
+
 1. First step with clear action
 2. Second step with expected outcome
 3. Handle edge cases
@@ -181,14 +190,17 @@ Show concrete usage examples with code or commands.
 ## Requirements
 
 List any dependencies or prerequisites:
+
 ```bash
 pip install package-name
 ```
+````
 
 ## Advanced usage
 
 For complex scenarios, see [reference.md](reference.md).
-```
+
+````
 
 ### Step 7: Add supporting files (optional)
 
@@ -207,17 +219,19 @@ Run the helper script:
 \`\`\`bash
 python scripts/helper.py input.txt
 \`\`\`
-```
+````
 
 ### Step 8: Validate the Skill
 
 Check these requirements:
 
 ✅ **File structure**:
+
 - [ ] SKILL.md exists in correct location
 - [ ] Directory name matches frontmatter `name`
 
 ✅ **YAML frontmatter**:
+
 - [ ] Opening `---` on line 1
 - [ ] Closing `---` before content
 - [ ] Valid YAML (no tabs, correct indentation)
@@ -225,12 +239,14 @@ Check these requirements:
 - [ ] `description` is specific and < 1024 chars
 
 ✅ **Content quality**:
+
 - [ ] Clear instructions for the AI agent
 - [ ] Concrete examples provided
 - [ ] Edge cases handled
 - [ ] Dependencies listed (if any)
 
 ✅ **Testing**:
+
 - [ ] Description matches user questions
 - [ ] Skill activates on relevant queries
 - [ ] Instructions are clear and actionable
@@ -240,6 +256,7 @@ Check these requirements:
 1. **Restart the AI agent** (if running) to load the Skill
 
 2. **Ask relevant questions** that match the description:
+
    ```
    Can you help me extract text from this PDF?
    ```
@@ -258,24 +275,27 @@ If the AI agent doesn't use the Skill:
    - Mention common user phrases
 
 2. **Check file location**:
+
    ```bash
    # For Claude
    ls ~/.claude/skills/skill-name/SKILL.md
    ls .claude/skills/skill-name/SKILL.md
-   
+
    # For other agents, check their documentation for the correct path
    ```
 
 3. **Validate YAML**:
+
    ```bash
    cat SKILL.md | head -n 10
    ```
 
 4. **Run debug mode** (agent-specific):
+
    ```bash
    # Claude
    claude --debug
-   
+
    # Other agents - check documentation for debug options
    ```
 
@@ -365,16 +385,19 @@ Before finalizing a Skill, verify:
 ## Troubleshooting
 
 **Skill doesn't activate**:
+
 - Make description more specific with trigger words
 - Include file types and operations in description
 - Add "Use when..." clause with user phrases
 
 **Multiple Skills conflict**:
+
 - Make descriptions more distinct
 - Use different trigger words
 - Narrow the scope of each Skill
 
 **Skill has errors**:
+
 - Check YAML syntax (no tabs, proper indentation)
 - Verify file paths (use forward slashes)
 - Ensure scripts have execute permissions
@@ -383,6 +406,7 @@ Before finalizing a Skill, verify:
 ## Examples
 
 See the documentation for complete examples:
+
 - Simple single-file Skill (commit-helper)
 - Skill with tool permissions (code-reviewer)
 - Multi-file Skill (pdf-processing)

@@ -7,7 +7,7 @@ This guide covers the API shift from the old flat `FloatingContext` shape to the
 The `useFloating()` call signature stays the same:
 
 ```ts
-const context = useFloating(anchorEl, floatingEl, options)
+const context = useFloating(anchorEl, floatingEl, options);
 ```
 
 Your anchor ref, floating ref, and `middlewares` option still work the same way.
@@ -17,9 +17,9 @@ Your anchor ref, floating ref, and `middlewares` option still work the same way.
 The returned context is now grouped:
 
 ```ts
-context.refs
-context.state
-context.position
+context.refs;
+context.state;
+context.position;
 ```
 
 The main field moves are:
@@ -41,11 +41,7 @@ This template update is the most common migration step.
 
 ```vue
 <template>
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
   </div>
 </template>
@@ -58,7 +54,7 @@ This template update is the most common migration step.
 ```ts
 const { arrowStyles } = useArrow(context, {
   element: arrowEl,
-})
+});
 ```
 
 If you were relying on `useFloating()` to infer arrow middleware through `refs.arrowEl`, move that setup into `useArrow()`.
@@ -70,7 +66,7 @@ If you were relying on `useFloating()` to infer arrow middleware through `refs.a
 ```ts
 useClientPoint(context, {
   pointerTarget: trackingArea,
-})
+});
 ```
 
 ## Compatibility Window

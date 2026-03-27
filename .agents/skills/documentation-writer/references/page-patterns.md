@@ -53,10 +53,10 @@ Current family shape in this repo:
 
 Short summary.
 
-* Type
-* Details
-* Example
-* See also
+- Type
+- Details
+- Example
+- See also
 ```
 
 Rules:

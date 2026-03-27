@@ -5,23 +5,20 @@
 ## Type
 
 ```ts
-function useHover(
-  context: FloatingContext,
-  options?: UseHoverOptions
-): void
+function useHover(context: FloatingContext, options?: UseHoverOptions): void;
 
 interface UseHoverOptions {
-  enabled?: MaybeRef<boolean>
-  delay?: MaybeRef<number | { open?: number; close?: number }>
-  restMs?: MaybeRef<number>
-  mouseOnly?: MaybeRef<boolean>
-  safePolygon?: MaybeRef<boolean | SafePolygonOptions>
+  enabled?: MaybeRef<boolean>;
+  delay?: MaybeRef<number | { open?: number; close?: number }>;
+  restMs?: MaybeRef<number>;
+  mouseOnly?: MaybeRef<boolean>;
+  safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
 }
 
 interface SafePolygonOptions {
-  buffer?: number
-  requireIntent?: boolean
-  onPolygonChange?: (polygon: Polygon) => void
+  buffer?: number;
+  requireIntent?: boolean;
+  onPolygonChange?: (polygon: Polygon) => void;
 }
 ```
 
@@ -40,20 +37,20 @@ interface SafePolygonOptions {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useFloating, useHover } from "v-float"
+import { ref } from "vue";
+import { useFloating, useHover } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "top",
-})
+});
 
 useHover(context, {
   delay: { open: 100, close: 150 },
   safePolygon: true,
-})
+});
 </script>
 
 <template>

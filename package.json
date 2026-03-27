@@ -1,21 +1,16 @@
 {
   "name": "v-float",
   "version": "0.10.0",
-  "description": "Vue 3 port of Floating UI - a library for positioning floating elements",
   "private": false,
-  "type": "module",
+  "description": "Vue 3 port of Floating UI - a library for positioning floating elements",
   "files": [
     "dist"
   ],
+  "type": "module",
   "types": "./dist/src/index.d.ts",
-  "main": "./dist/v-float.umd.js",
-  "module": "./dist/v-float.es.js",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/v-float.es.js",
-      "require": "./dist/v-float.umd.js"
-    }
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
   },
   "scripts": {
     "dev": "vp dev",
@@ -41,41 +36,41 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
-    "focus-trap": "^8.0.0",
+    "@typescript/native-preview": "7.0.0-dev.20260327.2",
+    "focus-trap": "^8.0.1",
     "tabbable": "^6.4.0",
-    "unocss": "^66.6.7",
-    "vue": "^3.5.30"
+    "vue": "^3.5.31"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.2",
+    "@tailwindcss/vite": "^4.2.2",
     "@tsconfig/node22": "^22.0.5",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^25.5.0",
-    "@unocss/reset": "66.1.0-beta.7",
     "@vitejs/plugin-vue": "^6.0.5",
-    "@vitest/coverage-v8": "^4.1.0",
-    "@vue/tsconfig": "^0.9.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "@vue/tsconfig": "^0.9.1",
     "changelogen": "^0.6.2",
     "jsdom": "^29.0.1",
     "lucide-vue-next": "^0.577.0",
     "npm-run-all2": "^8.0.4",
     "playwright": "^1.58.2",
-    "prettier": "^3.8.1",
     "release-it": "^19.2.4",
+    "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
-    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.14",
     "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-vue-devtools": "^8.1.0",
+    "vite-plugin-vue-devtools": "^8.1.1",
+    "vite-plus": "latest",
     "vitepress": "^1.6.4",
     "vitepress-plugin-demo": "^0.8.1",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@latest",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.14",
     "vitest-browser-vue": "^2.1.0",
-    "vue-tsc": "^3.2.6",
-    "vite-plus": "latest"
+    "vue-tsc": "^3.2.6"
   },
-  "packageManager": "npm@11.12.0",
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@latest",
     "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }

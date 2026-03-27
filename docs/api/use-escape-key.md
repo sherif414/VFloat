@@ -5,17 +5,14 @@
 ## Type
 
 ```ts
-function useEscapeKey(
-  context: UseEscapeKeyContext,
-  options?: UseEscapeKeyOptions
-): void
+function useEscapeKey(context: UseEscapeKeyContext, options?: UseEscapeKeyOptions): void;
 
 interface UseEscapeKeyContext extends Pick<FloatingContext, "open" | "setOpen"> {}
 
 interface UseEscapeKeyOptions {
-  enabled?: MaybeRefOrGetter<boolean>
-  capture?: boolean
-  onEscape?: (event: KeyboardEvent) => void
+  enabled?: MaybeRefOrGetter<boolean>;
+  capture?: boolean;
+  onEscape?: (event: KeyboardEvent) => void;
 }
 ```
 
@@ -31,14 +28,14 @@ interface UseEscapeKeyOptions {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import { useEscapeKey, useFloating } from "v-float"
+import { ref } from "vue";
+import { useEscapeKey, useFloating } from "v-float";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl)
-useEscapeKey(context)
+const context = useFloating(anchorEl, floatingEl);
+useEscapeKey(context);
 </script>
 
 <template>

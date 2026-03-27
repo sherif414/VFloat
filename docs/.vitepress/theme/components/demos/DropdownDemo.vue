@@ -22,19 +22,19 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef } from "vue"
-import { useFloating, useClick, offset, useEscapeKey } from "v-float"
+import { useTemplateRef } from "vue";
+import { useFloating, useClick, offset, useEscapeKey } from "v-float";
 
-const anchorEl = useTemplateRef("dropdownTrigger")
-const floatingEl = useTemplateRef("dropdownFloating")
+const anchorEl = useTemplateRef("dropdownTrigger");
+const floatingEl = useTemplateRef("dropdownFloating");
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "bottom-start",
   middlewares: [offset(4)],
-})
+});
 
-useClick(context, { outsideClick: true })
-useEscapeKey({ onEscape: () => context.setOpen(false) })
+useClick(context, { outsideClick: true });
+useEscapeKey({ onEscape: () => context.setOpen(false) });
 </script>
 
 <style scoped>
