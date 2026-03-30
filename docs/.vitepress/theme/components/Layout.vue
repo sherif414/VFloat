@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useData } from "vitepress";
 import DefaultTheme from "vitepress/theme";
-import { nextTick, provide } from "vue";
+import { computed, nextTick, provide } from "vue";
 import Home from "./Home.vue";
 
-const { isDark } = useData();
+const { isDark, page } = useData();
+
+const isLandingPage = computed(() => page.value.relativePath === "index.md");
 
 const enableTransitions = () =>
   typeof window !== "undefined" &&
@@ -42,11 +44,8 @@ provide("toggle-appearance", async ({ clientX: x, clientY: y }: MouseEvent) => {
 </script>
 
 <template>
-  <DefaultTheme.Layout id="vf-layout">
-    <template #home-hero-before>
-      <Home />
-    </template>
-  </DefaultTheme.Layout>
+  <Home v-if="isLandingPage" />
+  <DefaultTheme.Layout v-else id="vf-layout" />
 </template>
 
 <style>
