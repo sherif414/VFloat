@@ -6,6 +6,7 @@ interface NavItem {
   label: string;
   href?: string;
   active?: boolean;
+  target?: string;
 }
 
 interface FooterItem {
@@ -37,42 +38,44 @@ type HeroPlacement =
   | "bottom-end";
 
 const navItems: NavItem[] = [
-  { label: "Docs", href: "/guide/", active: true },
-  { label: "Examples" },
+  { label: "Home", href: "/", active: true },
+  { label: "Guide", href: "/guide/" },
   { label: "API", href: "/api/" },
-  { label: "Community" },
+  { label: "GitHub", href: "https://github.com/sherif414/VFloat", target: "_blank" },
 ];
 
 const footerItems: FooterItem[] = [
-  { label: "Privacy" },
-  { label: "Security" },
-  { label: "Terms" },
-  { label: "Status" },
+  { label: "Guide" },
+  { label: "API" },
+  { label: "GitHub" },
+  { label: "License" },
 ];
 
 const behaviorCards: BehaviorCard[] = [
   {
     title: "Shift",
     description:
-      "Keeps elements within view by sliding along the axis when the boundary is reached.",
+      "Keeps the floating element in view by nudging it along the main axis when space runs out.",
     icon: "trending_flat",
     variant: "shift",
   },
   {
     title: "Flip",
-    description: "Automatically mirrors placement to the opposite side if space is insufficient.",
+    description: "Switches to the opposite side when the preferred placement no longer fits.",
     icon: "swap_vert",
     variant: "flip",
   },
   {
     title: "Offset",
-    description: "Fine-tune positioning with pixel-perfect distance controls on any axis.",
+    description:
+      "Adds a predictable gap so the floating element does not sit flush against the anchor.",
     icon: "straighten",
     variant: "offset",
   },
   {
     title: "Boundary",
-    description: "Full awareness of viewports, containers, and custom obstacle detection.",
+    description:
+      "Respects viewport and container boundaries so content stays visible when space gets tight.",
     icon: "",
     variant: "boundary",
   },
@@ -81,27 +84,27 @@ const behaviorCards: BehaviorCard[] = [
 const metricCards: MetricCard[] = [
   {
     id: "METRIC_01",
-    value: "4.2kb",
-    label: "Minified + Gzipped",
-    description: "Lightweight core that doesn't compromise on feature density.",
+    value: "0.11.0",
+    label: "Current release",
+    description: "The version published in package.json and shown in the docs header.",
   },
   {
     id: "METRIC_02",
-    value: "120+",
-    label: "Geometric Tests",
-    description: "Exhaustive testing across edge-cases and nested scroll containers.",
+    value: "16",
+    label: "Documented APIs",
+    description: "Positioning, interaction, and middleware pages in the public reference.",
   },
   {
     id: "METRIC_03",
-    value: "0.1ms",
-    label: "Average Recalc",
-    description: "Engineered for 60fps interaction even during heavy layout shifts.",
+    value: "3",
+    label: "Core layers",
+    description: "The docs are organized around the guide, API, and middleware concepts.",
   },
   {
     id: "METRIC_04",
-    value: "99.9%",
-    label: "Browser Support",
-    description: "Cross-browser consistency from legacy engines to modern standards.",
+    value: "15.9 kB",
+    label: "Gzipped ESM bundle",
+    description: "Measured from the current built dist/index.mjs artifact after gzip.",
   },
 ];
 
@@ -189,6 +192,8 @@ const toggleHeroPanel = () => {
               class="vf-home__nav-link"
               :class="{ 'is-active': item.active, 'is-placeholder': !item.href }"
               :href="item.href"
+              :target="item.target"
+              :rel="item.target ? 'noreferrer' : undefined"
             >
               {{ item.label }}
             </component>
@@ -209,26 +214,15 @@ const toggleHeroPanel = () => {
       <section class="vf-home__hero vf-home__spatial-grid">
         <div class="vf-home__hero-layout">
           <div class="vf-home__hero-copy">
-            <p class="vf-home__eyebrow">SYSTEM_CORE_INIT</p>
-            <h1 class="vf-home__title">
-              Floating UI,
-              <br />
-              placed with
-              <br />
-              <span>precision.</span>
-            </h1>
+            <p class="vf-home__eyebrow">VUE 3 POSITIONING</p>
+            <h1 class="vf-home__title">VFloat</h1>
             <p class="vf-home__description">
-              An architecturally sound spatial engine for the modern web. Built for technical
-              excellence, designed for digital space.
+              Composable positioning for floating elements in Vue 3. Use it for tooltips, popovers,
+              menus, and dialogs.
             </p>
             <div class="vf-home__actions">
-              <a class="vf-home__button vf-home__button--primary" href="/guide/">Get Started</a>
-              <a
-                class="vf-home__button vf-home__button--secondary"
-                href="https://github.com/sherif414/VFloat"
-              >
-                View Source
-              </a>
+              <a class="vf-home__button vf-home__button--primary" href="/guide/">Read the guide</a>
+              <a class="vf-home__button vf-home__button--secondary" href="/api/"> API reference </a>
             </div>
           </div>
 
@@ -240,9 +234,9 @@ const toggleHeroPanel = () => {
             <div class="vf-home__metrics-float">
               <div class="vf-home__metrics-row">
                 <span class="vf-home__live-dot"></span>
-                <span>RECALC: {{ heroRecalc }}</span>
+                <span>POSITION: {{ heroRecalc }}</span>
               </div>
-              <div class="vf-home__metrics-subrow">LATENCY: {{ heroLatency }}</div>
+              <div class="vf-home__metrics-subrow">RESOLVE: {{ heroLatency }}</div>
             </div>
 
             <button
@@ -272,7 +266,7 @@ const toggleHeroPanel = () => {
               <div class="vf-home__popover">
                 <div class="vf-home__popover-header">
                   <div class="vf-home__popover-titles">
-                    <span>POPOVER_01</span>
+                    <span>POPOVER</span>
                     <span>PLACEMENT: {{ heroPlacementLabel }}</span>
                   </div>
                   <button
@@ -285,8 +279,8 @@ const toggleHeroPanel = () => {
                   </button>
                 </div>
                 <p class="vf-home__popover-copy">
-                  Spatial logic: {{ heroContext.position.placement.value }} alignment with auto-flip
-                  and shift enabled.
+                  This demo uses offset, flip, and shift to keep the popover attached when space
+                  gets tight.
                 </p>
                 <span
                   ref="heroArrowEl"
@@ -324,7 +318,7 @@ const toggleHeroPanel = () => {
                   @click="setHeroPlacement(control.placement)"
                 ></button>
               </div>
-              <span class="vf-home__matrix-label">Spatial_Matrix_Ctrl</span>
+              <span class="vf-home__matrix-label">Placement matrix</span>
             </div>
 
             <div class="vf-home__data-overlay">
@@ -334,7 +328,7 @@ const toggleHeroPanel = () => {
               </div>
               <div class="vf-home__data-row">
                 <span class="vf-home__data-dot"></span>
-                <span>MODE: RELATIVE_ANCHOR</span>
+                <span>MODE: ANCHOR_RELATIVE</span>
               </div>
               <div class="vf-home__data-row is-active">
                 <span class="vf-home__data-dot"></span>
@@ -351,7 +345,7 @@ const toggleHeroPanel = () => {
       <section class="vf-home__behaviors">
         <div class="vf-home__section-inner">
           <div class="vf-home__section-header">
-            <h2>Core Behaviors</h2>
+            <h2>Core behaviors</h2>
             <div class="vf-home__section-rule"></div>
           </div>
 
@@ -391,23 +385,24 @@ const toggleHeroPanel = () => {
       <section class="vf-home__metrics">
         <div class="vf-home__metrics-layout">
           <div class="vf-home__metrics-copy">
-            <h2>Built for Complexity</h2>
+            <h2>Built for real interfaces</h2>
             <p>
-              VFloat isn't just a positioning tool. It's a mathematical framework for
-              high-performance interfaces that demand absolute reliability.
+              VFloat gives you the pieces floating surfaces actually need: a stable anchor/floating
+              pair, interaction composables, and middleware for spacing, collision handling, arrows,
+              and sizing.
             </p>
             <div class="vf-home__checks">
               <div class="vf-home__check">
                 <span class="material-symbols-outlined">check_circle</span>
-                <span>ZERO_DEPENDENCY_CORE</span>
+                <span>Stable useFloating entrypoint</span>
               </div>
               <div class="vf-home__check">
                 <span class="material-symbols-outlined">check_circle</span>
-                <span>TREESHAKABLE_ARCHITECTURE</span>
+                <span>Interaction composables for hover, click, focus, and Escape</span>
               </div>
               <div class="vf-home__check">
                 <span class="material-symbols-outlined">check_circle</span>
-                <span>SUB_MILLISECOND_COMPUTATION</span>
+                <span>Middleware for offset, flip, shift, size, hide, and arrow</span>
               </div>
             </div>
           </div>
@@ -428,16 +423,16 @@ const toggleHeroPanel = () => {
         <div class="vf-home__cta-crosshair vf-home__cta-crosshair--bottom" aria-hidden="true"></div>
 
         <div class="vf-home__cta-inner">
-          <h2>Ready to deploy?</h2>
+          <h2>Start with the guide</h2>
           <p>
-            Join thousands of developers building technical interfaces with the most precise
-            floating engine available.
+            Start with the stable useFloating entrypoint, then layer in hover, click, focus, and
+            middleware as your interface grows.
           </p>
 
           <div class="vf-home__cta-actions">
-            <a class="vf-home__cta-button" href="/guide/">Read the Docs</a>
+            <a class="vf-home__cta-button" href="/guide/">Read the guide</a>
             <div class="vf-home__install">
-              <code>npm install v-float</code>
+              <code>pnpm add v-float</code>
               <button class="vf-home__install-copy" type="button" aria-label="Copy install command">
                 <span class="material-symbols-outlined">content_copy</span>
               </button>
@@ -450,7 +445,7 @@ const toggleHeroPanel = () => {
     <footer class="vf-home__footer">
       <div class="vf-home__footer-inner">
         <div class="vf-home__footer-copy">
-          © 2024 VFloat Spatial Systems. Built for technical excellence.
+          © 2025-present Shareef Hassan. VFloat 0.11.0 for Vue 3 positioning primitives.
         </div>
         <div class="vf-home__footer-links">
           <span v-for="item in footerItems" :key="item.label" class="vf-home__footer-link">
