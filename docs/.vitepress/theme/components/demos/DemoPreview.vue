@@ -29,7 +29,9 @@ async function copyToClipboard(text: string) {
   try {
     await navigator.clipboard.writeText(text);
     copied.value = true;
-    timeoutId != null && clearTimeout(timeoutId);
+    if (timeoutId != null) {
+      clearTimeout(timeoutId);
+    }
     timeoutId = setTimeout(() => {
       copied.value = false;
     }, 2000);

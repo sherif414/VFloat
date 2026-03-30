@@ -29,7 +29,7 @@ export type SafePolygonHandler = (event: MouseEvent) => void;
 export interface CreateSafePolygonHandlerContext {
   x: number;
   y: number;
-  placement: FloatingContext["placement"]["value"];
+  placement: FloatingContext["position"]["placement"]["value"];
   elements: {
     domReference: AnchorElement | null;
     floating: FloatingElement | null;

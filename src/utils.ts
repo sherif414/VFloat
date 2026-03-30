@@ -27,7 +27,7 @@ export function isFunction(value: unknown): value is AnyFn {
 /**
  * Type guard for HTMLElement
  */
-export function isHTMLElement(value: unknown | null): value is HTMLElement {
+export function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof Element && value instanceof HTMLElement;
 }
 

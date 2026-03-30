@@ -155,10 +155,14 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
   const { hide, show, showDelay, clearTimeouts } = useDelayedOpen(
     (event?: Event) => {
-      open.value || setOpen(true, "hover", event);
+      if (!open.value) {
+        setOpen(true, "hover", event);
+      }
     },
     (event?: Event) => {
-      open.value && setOpen(false, "hover", event);
+      if (open.value) {
+        setOpen(false, "hover", event);
+      }
     },
     { delay },
   );
