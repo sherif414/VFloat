@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue";
 import { flip, offset, shift, useArrow, useFloating } from "v-float";
+import { computed, ref, useTemplateRef } from "vue";
 
 interface NavItem {
   label: string;
@@ -41,8 +41,9 @@ const navItems: NavItem[] = [
   { label: "Home", href: "/", active: true },
   { label: "Guide", href: "/guide/" },
   { label: "API", href: "/api/" },
-  { label: "GitHub", href: "https://github.com/sherif414/VFloat", target: "_blank" },
 ];
+
+const repoUrl = "https://github.com/sherif414/VFloat";
 
 const footerItems: FooterItem[] = [
   { label: "Guide" },
@@ -119,7 +120,7 @@ const heroPlacement = ref<HeroPlacement>("top");
 const heroContext = useFloating(heroAnchorEl, heroFloatingEl, {
   placement: heroPlacement,
   open: heroOpen,
-  middlewares: [offset(28), flip(), shift({ padding: 24 })],
+  middlewares: [offset(16), flip(), shift({ padding: 24 })],
 });
 
 const { arrowStyles } = useArrow(heroContext, {
@@ -201,10 +202,25 @@ const toggleHeroPanel = () => {
         </div>
 
         <div class="vf-home__nav-meta">
-          <div class="vf-home__nav-icons" aria-hidden="true">
-            <span class="material-symbols-outlined">terminal</span>
-            <span class="material-symbols-outlined">code</span>
-          </div>
+          <a
+            class="vf-home__nav-action"
+            :href="repoUrl"
+            aria-label="View VFloat on GitHub"
+            rel="noreferrer"
+            target="_blank"
+          >
+            <svg
+              class="vf-home__nav-icon"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <path
+                fill="currentColor"
+                d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"
+              />
+            </svg>
+          </a>
           <span class="vf-home__version">v{{ packageVersion }}</span>
         </div>
       </div>
@@ -570,19 +586,44 @@ const toggleHeroPanel = () => {
   cursor: default;
 }
 
-.vf-home__nav-icons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: rgb(235 237 240 / 60%);
-}
-
-.vf-home__nav-icons .material-symbols-outlined {
-  font-size: 1.125rem;
-}
-
 .vf-home__nav-meta {
-  gap: 1rem;
+  gap: 0.75rem;
+}
+
+.vf-home__nav-action {
+  display: inline-flex;
+  width: 2.375rem;
+  height: 2.375rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(59 73 76 / 30%);
+  background: var(--vf-surface);
+  color: var(--vf-primary-strong);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.vf-home__nav-action:hover {
+  border-color: rgb(0 229 255 / 40%);
+  background: var(--vf-surface-high);
+  box-shadow: 0 0 12px rgb(0 229 255 / 12%);
+  transform: translateY(-1px);
+}
+
+.vf-home__nav-action:focus-visible {
+  outline: 2px solid var(--vf-primary-strong);
+  outline-offset: 2px;
+}
+
+.vf-home__nav-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .vf-home__version {
@@ -945,8 +986,6 @@ const toggleHeroPanel = () => {
 
 .vf-home__popover-arrow {
   position: absolute;
-  left: 50%;
-  bottom: -0.375rem;
   width: 0.75rem;
   height: 0.75rem;
   background: var(--vf-primary-strong);
