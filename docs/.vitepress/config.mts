@@ -3,7 +3,10 @@ import { defineConfig } from "vitepress";
 import { demoMdPlugin } from "vitepress-plugin-demo";
 
 export default defineConfig({
-  head: [],
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/vfloat-mark.svg" }],
+    ["link", { rel: "icon", type: "image/png", sizes: "1024x1024", href: "/vfloat-mark.png" }],
+  ],
   vite: {
     plugins: tailwindcss() as never,
     build: {
@@ -22,6 +25,7 @@ export default defineConfig({
   title: "V-Float",
   description: "A library for positioning floating elements",
   themeConfig: {
+    logo: "/vfloat-mark.svg",
     search: {
       provider: "local",
     },
