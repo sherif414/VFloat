@@ -1,0 +1,675 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap");
+
+.vf-docs-shell {
+  --vf-background: #111317;
+  --vf-surface-lowest: #0c0e11;
+  --vf-surface-low: #1a1c1f;
+  --vf-surface: #1e2023;
+  --vf-surface-high: #282a2d;
+  --vf-surface-highest: #333538;
+  --vf-text: #e2e2e6;
+  --vf-text-soft: #bac9cc;
+  --vf-text-strong: #ebedf0;
+  --vf-primary: #c3f5ff;
+  --vf-primary-strong: #00e5ff;
+  --vf-primary-fixed: #9cf0ff;
+  --vf-outline: rgb(132 147 150 / 16%);
+  --vf-outline-strong: rgb(0 229 255 / 22%);
+  --vf-grid: rgb(0 229 255 / 6%);
+  --vf-font-display: "Space Grotesk", sans-serif;
+  --vf-font-body: "Inter", sans-serif;
+  --vp-layout-max-width: 100%;
+  --vp-sidebar-width: 280px;
+  --vp-aside-width: 256px;
+  --vp-nav-height: 72px;
+  --vp-nav-bg-color: rgb(17 19 23 / 78%);
+  --vp-sidebar-bg-color: rgb(12 14 17 / 92%);
+  --vp-c-bg: var(--vf-background);
+  --vp-c-bg-alt: var(--vf-surface-lowest);
+  --vp-c-bg-elv: var(--vf-surface);
+  --vp-c-bg-soft: var(--vf-surface-low);
+  --vp-c-border: var(--vf-outline);
+  --vp-c-divider: rgb(59 73 76 / 22%);
+  --vp-c-divider-light: rgb(59 73 76 / 12%);
+  --vp-c-gutter: rgb(59 73 76 / 20%);
+  --vp-c-text-1: var(--vf-text-strong);
+  --vp-c-text-2: var(--vf-text);
+  --vp-c-text-3: var(--vf-text-soft);
+  --vp-c-text-inverse-1: #001f24;
+  --vp-c-brand-1: var(--vf-primary-strong);
+  --vp-c-brand-2: var(--vf-primary-fixed);
+  --vp-c-brand-3: var(--vf-primary);
+  --vp-c-brand-soft: rgb(0 229 255 / 10%);
+  --vp-c-default-1: var(--vf-surface-highest);
+  --vp-c-default-2: var(--vf-surface-high);
+  --vp-c-default-3: var(--vf-outline);
+  --vp-c-default-soft: rgb(51 53 56 / 30%);
+  --vp-c-tip-1: var(--vf-primary-fixed);
+  --vp-c-tip-2: var(--vf-primary-strong);
+  --vp-c-tip-3: rgb(0 218 243 / 36%);
+  --vp-c-tip-soft: rgb(0 229 255 / 8%);
+  --vp-c-warning-1: #ffd37c;
+  --vp-c-warning-2: #ffb84a;
+  --vp-c-warning-3: rgb(255 184 74 / 34%);
+  --vp-c-warning-soft: rgb(255 184 74 / 8%);
+  --vp-font-family-base: var(--vf-font-body);
+  --vp-font-family-mono: ui-monospace, "SFMono-Regular", monospace;
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at top, rgb(0 229 255 / 5%), transparent 32%),
+    radial-gradient(circle, rgb(59 73 76 / 0.55) 1px, transparent 1px), var(--vf-background);
+  background-size:
+    auto,
+    36px 36px,
+    auto;
+  color: var(--vf-text);
+  font-family: var(--vf-font-body);
+}
+
+.vf-docs-shell,
+.vf-docs-shell * {
+  box-sizing: border-box;
+}
+
+.vf-docs-shell .Layout {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.vf-docs-shell .VPNav {
+  backdrop-filter: blur(16px);
+}
+
+.vf-docs-shell .VPNavBar {
+  border-bottom: 1px solid rgb(59 73 76 / 16%);
+  background: rgb(17 19 23 / 82%);
+}
+
+.vf-docs-shell .VPNavBar.has-sidebar .content {
+  background: transparent;
+}
+
+.vf-docs-shell .VPNavBar .container,
+.vf-docs-shell .VPContent .container,
+.vf-docs-shell .VPFooter .container {
+  max-width: 1600px;
+}
+
+.vf-docs-shell .VPNavBarTitle .title,
+.vf-docs-shell .VPNavBarMenuLink,
+.vf-docs-shell .VPLocalNav .menu-text,
+.vf-docs-shell .VPDocOutlineDropdown button {
+  font-family: var(--vf-font-display);
+}
+
+.vf-docs-shell .VPNavBarTitle .title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.vf-docs-shell .VPNavBarMenuLink,
+.vf-docs-shell .VPNavBarMenuGroup button {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.vf-docs-shell .VPNavBarMenuLink.active {
+  color: var(--vf-primary-strong);
+}
+
+.vf-docs-shell .VPNavBarSearch .DocSearch-Button,
+.vf-docs-shell .VPNavBarAppearance .VPSwitch,
+.vf-docs-shell .VPNavBarExtra .VPSocialLink {
+  border: 1px solid rgb(59 73 76 / 24%);
+  border-radius: 0;
+  background: rgb(30 32 35 / 88%);
+}
+
+.vf-docs-shell .VPNavBarSearch .DocSearch-Button {
+  margin-inline-end: 0.75rem;
+}
+
+.vf-docs-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  border-bottom: 1px solid rgb(59 73 76 / 14%);
+  background: rgb(12 14 17 / 88%);
+  backdrop-filter: blur(18px);
+}
+
+.vf-docs-topbar__inner {
+  display: flex;
+  width: min(100%, 1600px);
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.55rem 1.5rem;
+  color: rgb(195 245 255 / 68%);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.vf-docs-topbar__path,
+.vf-docs-topbar__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.vf-docs-topbar__path span:first-child,
+.vf-docs-topbar__meta span:first-child {
+  color: var(--vf-primary-strong);
+}
+
+.vf-docs-shell .VPContent {
+  padding-top: 1.15rem;
+}
+
+.vf-docs-shell .VPContent.has-sidebar {
+  background: linear-gradient(
+    90deg,
+    rgb(12 14 17 / 88%) 0,
+    rgb(12 14 17 / 88%) 280px,
+    transparent 280px
+  );
+}
+
+.vf-docs-shell .VPSidebar {
+  border-right: 1px solid rgb(59 73 76 / 10%);
+  background:
+    linear-gradient(180deg, rgb(0 229 255 / 4%) 0, transparent 120px), rgb(12 14 17 / 88%);
+}
+
+.vf-docs-shell .VPSidebar.open {
+  backdrop-filter: blur(18px);
+}
+
+.vf-docs-shell .VPSidebar .curtain {
+  background: rgb(12 14 17 / 92%);
+}
+
+.vf-docs-shell .VPSidebarItem.level-0 > .item > .link > .text,
+.vf-docs-shell .VPSidebarItem.level-1 > .item > .link > .text,
+.vf-docs-shell .VPSidebarItem.level-2 > .item > .link > .text,
+.vf-docs-shell .VPSidebarItem.level-3 > .item > .link > .text,
+.vf-docs-shell .VPSidebar .group-label {
+  font-family: var(--vf-font-display);
+}
+
+.vf-docs-shell .VPSidebar .group-label {
+  color: rgb(195 245 255 / 54%);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.vf-docs-shell .VPSidebarItem .link {
+  margin: 0.1rem 0;
+  border-inline-start: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.vf-docs-shell .VPSidebarItem .link:hover {
+  background: rgb(30 32 35 / 52%);
+}
+
+.vf-docs-shell .VPSidebarItem.is-active > .item .link,
+.vf-docs-shell .VPSidebarItem .link.active {
+  border-inline-start-color: var(--vf-primary-strong);
+  background: rgb(0 229 255 / 6%);
+}
+
+.vf-docs-shell .VPSidebarItem .text {
+  color: var(--vf-text);
+  font-size: 0.9rem;
+}
+
+.vf-docs-shell .VPSidebarItem.is-active > .item .text,
+.vf-docs-shell .VPSidebarItem .link.active .text {
+  color: var(--vf-primary-fixed);
+}
+
+.vf-docs-rail-card,
+.vf-docs-aside-card,
+.vf-docs-shell .vp-doc,
+.vf-docs-shell div[class*="language-"],
+.vf-docs-shell .custom-block,
+.vf-docs-shell .prev-next,
+.vf-docs-shell .VPLocalNav,
+.vf-docs-shell .outline,
+.vf-docs-shell .VPDocFooter {
+  border: 1px solid var(--vf-outline);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgb(51 53 56 / 32%), rgb(30 32 35 / 96%));
+}
+
+.vf-docs-rail-card,
+.vf-docs-aside-card {
+  margin-bottom: 1.25rem;
+  padding: 0.95rem;
+  border-color: rgb(59 73 76 / 12%);
+  background: linear-gradient(180deg, rgb(30 32 35 / 88%), rgb(17 19 23 / 92%));
+}
+
+.vf-docs-rail-card__eyebrow,
+.vf-docs-aside-card__eyebrow,
+.vf-docs-page-head__eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--vf-primary-strong);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.vf-docs-rail-card h2,
+.vf-docs-aside-card__value,
+.vf-docs-page-head h1 {
+  margin: 0;
+  color: var(--vf-text-strong);
+  font-family: var(--vf-font-display);
+}
+
+.vf-docs-rail-card h2 {
+  font-size: 1.4rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.vf-docs-rail-card p:last-child,
+.vf-docs-aside-card__copy {
+  margin: 0.75rem 0 0;
+  color: var(--vf-text-soft);
+  font-size: 0.8rem;
+  line-height: 1.65;
+}
+
+.vf-docs-aside-card__value {
+  color: var(--vf-primary-fixed);
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vf-docs-page-head {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+  padding: 1.35rem 1.5rem 1.1rem;
+  border: 1px solid rgb(59 73 76 / 12%);
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgb(0 229 255 / 4%) 0, transparent 150px),
+    linear-gradient(135deg, rgb(30 32 35 / 88%), rgb(17 19 23 / 22%));
+}
+
+.vf-docs-page-head::before,
+.vf-docs-shell .vp-doc::before,
+.vf-docs-shell .outline::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--vf-primary-strong), transparent 70%);
+}
+
+.vf-docs-page-head__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.vf-docs-page-head h1 {
+  font-size: clamp(2.3rem, 5.5vw, 4.1rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+}
+
+.vf-docs-page-head__description {
+  max-width: 38rem;
+  margin: 0.9rem 0 0;
+  color: var(--vf-text-soft);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.vf-docs-page-head__meta {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.vf-docs-page-head__stat,
+.vf-docs-page-head__actions {
+  display: grid;
+  gap: 0.35rem;
+  border-inline-start: 1px solid rgb(0 229 255 / 26%);
+  padding-inline-start: 0.85rem;
+}
+
+.vf-docs-page-head__stat span:first-child {
+  color: rgb(195 245 255 / 54%);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.vf-docs-page-head__stat span:last-child {
+  color: var(--vf-text-strong);
+  font-size: 0.9rem;
+}
+
+.vf-docs-page-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.vf-docs-page-head__actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(0 229 255 / 22%);
+  padding: 0.68rem 0.95rem;
+  color: var(--vf-primary-fixed);
+  font-family: var(--vf-font-display);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.vf-docs-page-head__actions a:hover {
+  background: rgb(0 229 255 / 8%);
+  color: var(--vf-text-strong);
+}
+
+.vf-docs-shell .VPDoc {
+  padding-top: 0;
+}
+
+.vf-docs-shell .VPDoc .container {
+  max-width: 1600px;
+}
+
+.vf-docs-shell .VPDoc .content-container,
+.vf-docs-shell .VPDoc .aside-container {
+  padding-top: 0;
+}
+
+.vf-docs-shell .VPDoc .content-container {
+  max-width: 920px;
+}
+
+.vf-docs-shell .content-body {
+  padding-top: 0;
+}
+
+.vf-docs-shell .vp-doc {
+  position: relative;
+  overflow: hidden;
+  padding: 1.75rem 1.9rem 2rem;
+  border-color: rgb(59 73 76 / 12%);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 1%), transparent 110px),
+    linear-gradient(180deg, rgb(30 32 35 / 94%), rgb(26 28 31 / 96%));
+}
+
+.vf-docs-shell .vp-doc > h1:first-child {
+  display: none;
+}
+
+.vf-docs-shell .vp-doc h2,
+.vf-docs-shell .vp-doc h3,
+.vf-docs-shell .vp-doc h4 {
+  color: var(--vf-text-strong);
+  font-family: var(--vf-font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.vf-docs-shell .vp-doc h2 {
+  margin-top: 2.8rem;
+  margin-bottom: 1rem;
+  padding-top: 0.2rem;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.vf-docs-shell .vp-doc h3 {
+  margin-top: 2rem;
+  font-size: 1.28rem;
+}
+
+.vf-docs-shell .vp-doc p,
+.vf-docs-shell .vp-doc li,
+.vf-docs-shell .vp-doc blockquote {
+  color: var(--vf-text);
+  line-height: 1.85;
+}
+
+.vf-docs-shell .vp-doc a {
+  color: var(--vf-primary-fixed);
+  text-decoration-color: rgb(0 229 255 / 28%);
+  text-underline-offset: 0.16em;
+}
+
+.vf-docs-shell .vp-doc a:hover {
+  color: var(--vf-text-strong);
+  text-decoration-color: var(--vf-primary-strong);
+}
+
+.vf-docs-shell .vp-doc :not(pre) > code {
+  border: 1px solid rgb(0 229 255 / 20%);
+  border-radius: 0;
+  background: rgb(12 14 17 / 90%);
+  padding: 0.18rem 0.42rem;
+  color: var(--vf-primary-fixed);
+  font-size: 0.9em;
+}
+
+.vf-docs-shell div[class*="language-"] {
+  overflow: hidden;
+  margin: 1.5rem 0;
+  box-shadow: 0 24px 48px rgb(0 0 0 / 16%);
+}
+
+.vf-docs-shell div[class*="language-"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(0 229 255 / 18%), transparent);
+}
+
+.vf-docs-shell div[class*="language-"] pre,
+.vf-docs-shell div[class*="language-"] code {
+  font-family: var(--vp-font-family-mono);
+}
+
+.vf-docs-shell .vp-doc blockquote {
+  border-inline-start: 2px solid rgb(0 229 255 / 34%);
+  background: rgb(12 14 17 / 54%);
+  margin: 1.5rem 0;
+  padding: 1rem 1.2rem;
+}
+
+.vf-docs-shell .custom-block {
+  position: relative;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  padding: 1rem 1.1rem 1rem 1.25rem;
+}
+
+.vf-docs-shell .custom-block .custom-block-title {
+  font-family: var(--vf-font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.vf-docs-shell .custom-block.tip {
+  background: linear-gradient(180deg, rgb(0 229 255 / 12%), rgb(30 32 35 / 96%));
+}
+
+.vf-docs-shell .custom-block.warning {
+  background: linear-gradient(180deg, rgb(255 184 74 / 10%), rgb(30 32 35 / 96%));
+}
+
+.vf-docs-shell .vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  border: 1px solid var(--vf-outline);
+  background: rgb(30 32 35 / 92%);
+}
+
+.vf-docs-shell .vp-doc th,
+.vf-docs-shell .vp-doc td {
+  border: 1px solid rgb(59 73 76 / 18%);
+  padding: 0.85rem 1rem;
+}
+
+.vf-docs-shell .vp-doc th {
+  color: var(--vf-primary-fixed);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.vf-docs-shell .outline {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  border-color: rgb(59 73 76 / 12%);
+  background: linear-gradient(180deg, rgb(30 32 35 / 88%), rgb(17 19 23 / 94%));
+}
+
+.vf-docs-shell .outline-title {
+  color: rgb(195 245 255 / 58%);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.vf-docs-shell .outline-link {
+  border-inline-start: 2px solid transparent;
+  padding-inline-start: 0.8rem;
+  color: var(--vf-text-soft);
+  transition:
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.vf-docs-shell .outline-link:hover,
+.vf-docs-shell .outline-link.active {
+  border-inline-start-color: var(--vf-primary-strong);
+  color: var(--vf-primary-fixed);
+}
+
+.vf-docs-shell .VPLocalNav {
+  margin-bottom: 1rem;
+  backdrop-filter: blur(18px);
+}
+
+.vf-docs-shell .VPLocalNav .menu {
+  border-inline-start: 1px solid rgb(0 229 255 / 22%);
+}
+
+.vf-docs-shell .VPDocFooter {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+}
+
+.vf-docs-shell .prev-next {
+  padding: 0.4rem;
+}
+
+.vf-docs-shell .pager-link {
+  border-radius: 0;
+  background: rgb(12 14 17 / 74%);
+}
+
+.vf-docs-shell .pager-link:hover {
+  border-color: rgb(0 229 255 / 28%);
+  background: rgb(0 229 255 / 8%);
+}
+
+.vf-docs-shell .VPFooter {
+  border-top: 1px solid rgb(59 73 76 / 16%);
+  background: rgb(12 14 17 / 76%);
+}
+
+.vf-docs-shell .VPFooter a,
+.vf-docs-shell .VPFooter p {
+  color: rgb(235 237 240 / 42%);
+}
+
+.vf-docs-shell .VPDoc .aside-container {
+  padding-left: 1rem;
+}
+
+@media (min-width: 960px) {
+  .vf-docs-page-head {
+    padding: 1.6rem 1.8rem 1.35rem;
+  }
+
+  .vf-docs-page-head__grid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(14rem, 0.82fr);
+    align-items: end;
+  }
+
+  .vf-docs-shell .vp-doc {
+    padding: 1.95rem 2.15rem 2.2rem;
+  }
+}
+
+@media (max-width: 959px) {
+  .vf-docs-topbar {
+    display: none;
+  }
+
+  .vf-docs-shell .VPContent.has-sidebar {
+    background: transparent;
+  }
+
+  .vf-docs-shell .VPDoc .aside-container {
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .vf-docs-page-head,
+  .vf-docs-shell .vp-doc {
+    padding: 1.15rem;
+  }
+
+  .vf-docs-page-head h1 {
+    font-size: 2.2rem;
+  }
+
+  .vf-docs-page-head__actions {
+    flex-direction: column;
+  }
+}

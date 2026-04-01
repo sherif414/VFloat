@@ -3,6 +3,7 @@ import { useData } from "vitepress";
 import DefaultTheme from "vitepress/theme";
 import { computed, nextTick, provide } from "vue";
 import Home from "./Home.vue";
+import InnerDocChrome from "./InnerDocChrome.vue";
 
 const { isDark, page } = useData();
 
@@ -45,7 +46,25 @@ provide("toggle-appearance", async ({ clientX: x, clientY: y }: MouseEvent) => {
 
 <template>
   <Home v-if="isLandingPage" />
-  <DefaultTheme.Layout v-else id="vf-layout" />
+  <div v-else class="vf-docs-shell">
+    <DefaultTheme.Layout id="vf-layout">
+      <template #layout-top>
+        <InnerDocChrome variant="topbar" />
+      </template>
+
+      <template #sidebar-nav-before>
+        <InnerDocChrome variant="sidebar" />
+      </template>
+
+      <template #doc-before>
+        <InnerDocChrome variant="page" />
+      </template>
+
+      <template #aside-top>
+        <InnerDocChrome variant="aside" />
+      </template>
+    </DefaultTheme.Layout>
+  </div>
 </template>
 
 <style>
