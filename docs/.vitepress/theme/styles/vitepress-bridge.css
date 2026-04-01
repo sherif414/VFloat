@@ -1,23 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap");
-
 .vf-docs-shell {
-  --vf-background: #111317;
-  --vf-surface-lowest: #0c0e11;
-  --vf-surface-low: #1a1c1f;
-  --vf-surface: #1e2023;
-  --vf-surface-high: #282a2d;
-  --vf-surface-highest: #333538;
-  --vf-text: #e2e2e6;
-  --vf-text-soft: #bac9cc;
-  --vf-text-strong: #ebedf0;
-  --vf-primary: #c3f5ff;
-  --vf-primary-strong: #00e5ff;
-  --vf-primary-fixed: #9cf0ff;
-  --vf-outline: rgb(132 147 150 / 16%);
-  --vf-outline-strong: rgb(0 229 255 / 22%);
-  --vf-grid: rgb(0 229 255 / 6%);
-  --vf-font-display: "Space Grotesk", sans-serif;
-  --vf-font-body: "Inter", sans-serif;
   --vp-layout-max-width: 100%;
   --vp-sidebar-width: 280px;
   --vp-aside-width: 256px;
@@ -64,11 +45,6 @@
     auto;
   color: var(--vf-text);
   font-family: var(--vf-font-body);
-}
-
-.vf-docs-shell,
-.vf-docs-shell * {
-  box-sizing: border-box;
 }
 
 .vf-docs-shell .Layout {

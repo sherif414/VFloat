@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { useData } from "vitepress";
-import DefaultTheme from "vitepress/theme";
 import { computed, nextTick, provide } from "vue";
-import Home from "./Home.vue";
-import InnerDocChrome from "./InnerDocChrome.vue";
+import { useDocsPage } from "../composables/use-docs-page";
+import DocsPageLayout from "./DocsPageLayout.vue";
+import LandingPageLayout from "./LandingPageLayout.vue";
 
-const { isDark, page } = useData();
+const { isDark } = useData();
+const { pageShell } = useDocsPage();
 
-const isLandingPage = computed(() => page.value.relativePath === "index.md");
+const isLandingPage = computed(() => pageShell.value.template === "landing");
 
 const enableTransitions = () =>
   typeof window !== "undefined" &&
@@ -45,26 +46,8 @@ provide("toggle-appearance", async ({ clientX: x, clientY: y }: MouseEvent) => {
 </script>
 
 <template>
-  <Home v-if="isLandingPage" />
-  <div v-else class="vf-docs-shell">
-    <DefaultTheme.Layout id="vf-layout">
-      <template #layout-top>
-        <InnerDocChrome variant="topbar" />
-      </template>
-
-      <template #sidebar-nav-before>
-        <InnerDocChrome variant="sidebar" />
-      </template>
-
-      <template #doc-before>
-        <InnerDocChrome variant="page" />
-      </template>
-
-      <template #aside-top>
-        <InnerDocChrome variant="aside" />
-      </template>
-    </DefaultTheme.Layout>
-  </div>
+  <LandingPageLayout v-if="isLandingPage" />
+  <DocsPageLayout v-else />
 </template>
 
 <style>
