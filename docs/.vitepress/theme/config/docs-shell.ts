@@ -1,6 +1,6 @@
 export type DocsSectionKey = "api" | "guide";
 
-export interface DocsChromeVisibility {
+export interface DocsFrameVisibility {
   topbar: boolean;
   sidebarCard: boolean;
   pageHeader: boolean;
@@ -15,13 +15,13 @@ export interface DocsSectionMeta {
 
 export interface DocsShellConfig {
   repoUrl: string;
-  defaultChrome: DocsChromeVisibility;
+  defaultFrame: DocsFrameVisibility;
   sections: Record<DocsSectionKey, DocsSectionMeta>;
 }
 
 export const docsShellConfig = {
   repoUrl: "https://github.com/sherif414/VFloat",
-  defaultChrome: {
+  defaultFrame: {
     topbar: true,
     sidebarCard: true,
     pageHeader: true,

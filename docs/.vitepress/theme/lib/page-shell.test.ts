@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   LANDING_PAGE_PATH,
-  normalizeDocsChrome,
+  normalizeDocsFrame,
   resolveDocsPageShell,
   resolveDocsSectionKey,
   resolveDocsTemplate,
@@ -12,7 +12,7 @@ describe("docs page shell", () => {
     expect(resolveDocsTemplate(LANDING_PAGE_PATH, undefined)).toBe("landing");
     expect(resolveDocsPageShell(LANDING_PAGE_PATH, undefined)).toEqual({
       template: "landing",
-      chrome: {
+      frame: {
         topbar: false,
         sidebarCard: false,
         pageHeader: false,
@@ -23,7 +23,7 @@ describe("docs page shell", () => {
 
   it("defaults guide and api pages to the docs template", () => {
     expect(resolveDocsTemplate("guide/index.md", undefined)).toBe("docs");
-    expect(resolveDocsPageShell("api/use-floating.md", undefined).chrome).toEqual({
+    expect(resolveDocsPageShell("api/use-floating.md", undefined).frame).toEqual({
       topbar: true,
       sidebarCard: true,
       pageHeader: true,
@@ -31,18 +31,18 @@ describe("docs page shell", () => {
     });
   });
 
-  it("respects explicit template and chrome overrides", () => {
+  it("respects explicit template and frame overrides", () => {
     expect(
       resolveDocsPageShell("guide/index.md", {
         docsTemplate: "landing",
-        docsChrome: {
+        docsFrame: {
           topbar: true,
           pageHeader: true,
         },
       }),
     ).toEqual({
       template: "landing",
-      chrome: {
+      frame: {
         topbar: true,
         sidebarCard: false,
         pageHeader: true,
@@ -51,9 +51,9 @@ describe("docs page shell", () => {
     });
   });
 
-  it("ignores invalid chrome overrides", () => {
+  it("ignores invalid frame overrides", () => {
     expect(
-      normalizeDocsChrome("docs", {
+      normalizeDocsFrame("docs", {
         topbar: "yes",
         pageHeader: false,
       }),

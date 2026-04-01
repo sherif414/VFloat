@@ -1,6 +1,6 @@
 import {
   docsShellConfig,
-  type DocsChromeVisibility,
+  type DocsFrameVisibility,
   type DocsSectionKey,
 } from "../config/docs-shell";
 
@@ -8,14 +8,14 @@ export type DocsTemplate = "docs" | "landing";
 
 export interface DocsPageFrontmatter {
   docsTemplate?: DocsTemplate;
-  docsChrome?: Partial<Record<keyof DocsChromeVisibility, unknown>>;
+  docsFrame?: Partial<Record<keyof DocsFrameVisibility, unknown>>;
   docsEyebrow?: string;
   description?: string;
 }
 
 export interface ResolvedDocsPageShell {
   template: DocsTemplate;
-  chrome: DocsChromeVisibility;
+  frame: DocsFrameVisibility;
 }
 
 export const LANDING_PAGE_PATH = "index.md";
@@ -37,10 +37,10 @@ export const resolveDocsTemplate = (
   return relativePath === LANDING_PAGE_PATH ? "landing" : "docs";
 };
 
-export const normalizeDocsChrome = (
+export const normalizeDocsFrame = (
   template: DocsTemplate,
-  docsChrome: DocsPageFrontmatter["docsChrome"],
-): DocsChromeVisibility => {
+  docsFrame: DocsPageFrontmatter["docsFrame"],
+): DocsFrameVisibility => {
   const defaults =
     template === "landing"
       ? {
@@ -49,23 +49,23 @@ export const normalizeDocsChrome = (
           pageHeader: false,
           asideCard: false,
         }
-      : docsShellConfig.defaultChrome;
+      : docsShellConfig.defaultFrame;
 
-  if (!isRecord(docsChrome)) {
+  if (!isRecord(docsFrame)) {
     return { ...defaults };
   }
 
-  const chrome = { ...defaults };
+  const frame = { ...defaults };
 
-  for (const key of Object.keys(defaults) as Array<keyof DocsChromeVisibility>) {
-    const override = docsChrome[key];
+  for (const key of Object.keys(defaults) as Array<keyof DocsFrameVisibility>) {
+    const override = docsFrame[key];
 
     if (typeof override === "boolean") {
-      chrome[key] = override;
+      frame[key] = override;
     }
   }
 
-  return chrome;
+  return frame;
 };
 
 export const resolveDocsPageShell = (
@@ -76,6 +76,6 @@ export const resolveDocsPageShell = (
 
   return {
     template,
-    chrome: normalizeDocsChrome(template, frontmatter?.docsChrome),
+    frame: normalizeDocsFrame(template, frontmatter?.docsFrame),
   };
 };
