@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { useDocsPage } from "../../composables/use-docs-page";
 
-const { headingCount, pagePathLabel, section } = useDocsPage();
+const { pagePathLabel, section } = useDocsPage();
 </script>
 
 <template>
-  <div class="vf-docs-topbar">
-    <div class="vf-docs-topbar__inner">
-      <div class="vf-docs-topbar__path">
-        <span>{{ section.label }}</span>
-        <span>{{ pagePathLabel }}</span>
-      </div>
-      <div class="vf-docs-topbar__meta">
-        <span>{{ section.title.toUpperCase() }}</span>
-        <span>{{ headingCount.toString().padStart(2, "0") }} HEADINGS</span>
-      </div>
+  <div aria-hidden="true" class="vf-docs-ornaments">
+    <div class="vf-docs-ornament vf-docs-ornament--top">
+      <span class="vf-docs-ornament__corner" />
+      <span class="vf-docs-ornament__label">{{ pagePathLabel }}</span>
+    </div>
+    <div class="vf-docs-ornament vf-docs-ornament--bottom">
+      <span class="vf-docs-ornament__label">{{ section.label }}</span>
+      <span class="vf-docs-ornament__corner" />
     </div>
   </div>
 </template>

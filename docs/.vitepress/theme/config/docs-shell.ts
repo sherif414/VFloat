@@ -15,12 +15,14 @@ export interface DocsSectionMeta {
 
 export interface DocsShellConfig {
   repoUrl: string;
+  version: string;
   defaultFrame: DocsFrameVisibility;
   sections: Record<DocsSectionKey, DocsSectionMeta>;
 }
 
 export const docsShellConfig = {
   repoUrl: "https://github.com/sherif414/VFloat",
+  version: "v0.11.0",
   defaultFrame: {
     topbar: true,
     sidebarCard: true,

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@100..700,0..1,0,24&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@100..700,0..1,0,24&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
 
 :root {
   --vf-background: #111317;
@@ -18,6 +18,7 @@
   --vf-grid: rgb(0 229 255 / 6%);
   --vf-font-display: "Space Grotesk", sans-serif;
   --vf-font-body: "Inter", sans-serif;
+  --vf-font-mono: "JetBrains Mono", monospace;
 }
 
 .vf-home,

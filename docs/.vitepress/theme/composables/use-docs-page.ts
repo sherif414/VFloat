@@ -1,10 +1,10 @@
-import { useData } from "vitepress";
-import { computed } from "vue";
+import { useData, useRoute } from "vitepress";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { docsShellConfig } from "../config/docs-shell";
 import {
+  type DocsPageFrontmatter,
   resolveDocsPageShell,
   resolveDocsSectionKey,
-  type DocsPageFrontmatter,
 } from "../lib/page-shell";
 
 const normalizeString = (value: unknown) =>
@@ -12,6 +12,47 @@ const normalizeString = (value: unknown) =>
 
 export const useDocsPage = () => {
   const { frontmatter, page } = useData();
+  const route = useRoute();
+  const contentLead = ref("");
+  const renderedHeadingCount = ref(0);
+
+  const syncRenderedContentMetrics = () => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const firstParagraph = document.querySelector<HTMLElement>(".vp-doc > div > p, .vp-doc > p");
+    const headings = document.querySelectorAll(".vp-doc h2, .vp-doc h3, .vp-doc h4");
+
+    contentLead.value = firstParagraph?.innerText.trim() ?? "";
+    renderedHeadingCount.value = headings.length;
+  };
+
+  const scheduleRenderedContentSync = async () => {
+    await nextTick();
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      syncRenderedContentMetrics();
+    });
+  };
+
+  onMounted(() => {
+    syncRenderedContentMetrics();
+  });
+
+  watch(
+    () => route.path,
+    async () => {
+      await scheduleRenderedContentSync();
+    },
+    {
+      immediate: true,
+    },
+  );
 
   const pageFrontmatter = computed(() => frontmatter.value as DocsPageFrontmatter | undefined);
   const pageShell = computed(() =>
@@ -24,8 +65,11 @@ export const useDocsPage = () => {
     const frontmatterDescription = normalizeString(pageFrontmatter.value?.description);
     const currentPage = page.value as { description?: string };
     const pageMetaDescription = normalizeString(currentPage.description);
+    const renderedLead = normalizeString(contentLead.value);
 
-    return frontmatterDescription ?? pageMetaDescription ?? section.value.description;
+    return (
+      frontmatterDescription ?? pageMetaDescription ?? renderedLead ?? section.value.description
+    );
   });
 
   const pageEyebrow = computed(
@@ -40,7 +84,11 @@ export const useDocsPage = () => {
       .join(" / "),
   );
 
-  const headingCount = computed(() => page.value.headers?.length ?? 0);
+  const headingCount = computed(() => {
+    const staticHeadingCount = page.value.headers?.length ?? 0;
+
+    return staticHeadingCount > 0 ? staticHeadingCount : renderedHeadingCount.value;
+  });
 
   const sourceHref = computed(
     () => `${docsShellConfig.repoUrl}/blob/main/docs/${page.value.relativePath}`,
