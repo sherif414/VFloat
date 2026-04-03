@@ -6,6 +6,9 @@ import { playwright } from "vite-plus/test/browser-playwright";
 import vueDevtools from "vite-plugin-vue-devtools";
 
 export default defineConfig({
+  fmt: {
+    ignorePatterns: [],
+  },
   staged: {
     "*": "vp check --fix",
   },
