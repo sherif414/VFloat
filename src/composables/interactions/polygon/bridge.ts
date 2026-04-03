@@ -18,8 +18,20 @@ import {
 } from "./geometry";
 
 export interface SafePolygonOptions {
+  /**
+   * Expands the polygon around the cursor leave point.
+   */
   buffer?: number;
+
+  /**
+   * Requires the cursor to keep moving toward the floating element before the
+   * polygon protection fully applies.
+   */
   requireIntent?: boolean;
+
+  /**
+   * Optional hook for visualizing the currently active polygon.
+   */
   onPolygonChange?: (polygon: Polygon) => void;
 }
 
@@ -38,6 +50,10 @@ export interface CreateSafePolygonHandlerContext {
   onClose: () => void;
 }
 
+/**
+ * Builds a pointer-move handler that keeps hover interactions open while the
+ * cursor travels through the "safe" area between the anchor and floating panel.
+ */
 export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
   const { requireIntent = true } = options;
 
@@ -126,12 +142,16 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       const polygon = buildSafePolygon(side, x, y, rect, refRect, contextBuffer);
       options.onPolygonChange?.(polygon);
 
+      // Keep the interaction alive while the cursor is still traveling through
+      // the corridor between anchor and floating content.
       if (isPointInPolygon(clientPoint, rectPoly)) {
         return;
       }
 
       if (isPointInPolygon(clientPoint, polygon)) {
         if (!hasLanded && requireIntent) {
+          // Slow cursor movement usually means the user changed direction,
+          // so close shortly instead of keeping the surface open indefinitely.
           const speedResult = getCursorSpeed(
             event.clientX,
             event.clientY,
@@ -158,6 +178,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
         return;
       }
 
+      // Outside both safe areas: close immediately.
       close();
     };
   };

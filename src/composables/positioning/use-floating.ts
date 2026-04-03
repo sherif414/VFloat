@@ -28,12 +28,43 @@ export type FloatingStyles = {
 };
 
 export interface UseFloatingOptions {
+  /**
+   * Preferred side/alignment for the floating element.
+   * Falls back to `"bottom"` when omitted.
+   */
   placement?: MaybeRefOrGetter<Placement | undefined>;
+
+  /**
+   * CSS positioning strategy used for the floating element.
+   * Falls back to `"absolute"` when omitted.
+   */
   strategy?: MaybeRefOrGetter<Strategy | undefined>;
+
+  /**
+   * Whether computed coordinates should be applied with `transform`
+   * instead of `top` and `left`.
+   */
   transform?: MaybeRefOrGetter<boolean | undefined>;
+
+  /**
+   * Base middleware list passed to the positioning engine.
+   */
   middlewares?: MaybeRefOrGetter<Middleware[]>;
+
+  /**
+   * Enables automatic re-positioning while the floating element is open.
+   * Pass an options object to customize Floating UI's `autoUpdate`.
+   */
   autoUpdate?: boolean | AutoUpdateOptions;
+
+  /**
+   * Optional controlled open state.
+   */
   open?: Ref<boolean>;
+
+  /**
+   * Called whenever the open state changes through VFloat helpers.
+   */
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 }
 
@@ -70,6 +101,12 @@ export interface FloatingRoot {
 
 export interface FloatingContext extends FloatingRoot {}
 
+/**
+ * Creates the shared floating context used by positioning and interaction composables.
+ *
+ * The returned object intentionally groups data into `refs`, `state`, and `position`
+ * so companion composables can depend on a stable root shape.
+ */
 export function useFloating(
   anchorEl: Ref<AnchorElement>,
   floatingEl: Ref<FloatingElement>,
@@ -123,6 +160,8 @@ export function useFloating(
     position,
   } satisfies FloatingContext;
 
+  // Internal helpers like `useArrow()` register extra middleware through this bridge
+  // so the public context shape can stay small and stable.
   setFloatingInternals(context, {
     middlewareRegistry: positionController.middlewareRegistry,
   });

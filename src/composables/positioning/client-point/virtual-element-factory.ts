@@ -6,6 +6,9 @@ import type {
   VirtualElementFactoryOptions,
 } from "./types";
 
+/**
+ * Creates Floating UI compatible virtual elements from pointer coordinates.
+ */
 export class VirtualElementFactory implements VirtualElementFactoryContract {
   private static readonly DEFAULT_DIMENSIONS = { width: 100, height: 30 };
 
@@ -42,6 +45,7 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
     const position = this.resolvePosition(config, referenceRect);
     const size = this.calculateSize(config.axis, referenceRect);
 
+    // Floating UI expects a full DOMRect-like object even for virtual anchors.
     return this.buildDOMRect({
       x: position.x,
       y: position.y,
@@ -109,6 +113,8 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
       return baseline;
     }
 
+    // Fall back to the reference element so partially constrained axes still
+    // produce a stable rect.
     return fallback;
   }
 

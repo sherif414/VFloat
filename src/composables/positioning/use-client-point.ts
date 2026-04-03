@@ -27,11 +27,34 @@ export type { AxisConstraint, Coordinates, TrackingMode } from "./client-point/t
 export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
 
 export interface UseClientPointOptions {
+  /**
+   * Element that should receive the pointer listeners used to drive the virtual anchor.
+   */
   pointerTarget: Ref<HTMLElement | null>;
+
+  /**
+   * Enables or disables client-point behavior without removing the composable.
+   */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Restricts tracking to the x axis, y axis, or both.
+   */
   axis?: MaybeRefOrGetter<AxisConstraint>;
+
+  /**
+   * Optional externally controlled x coordinate.
+   */
   x?: MaybeRefOrGetter<number | null>;
+
+  /**
+   * Optional externally controlled y coordinate.
+   */
   y?: MaybeRefOrGetter<number | null>;
+
+  /**
+   * Chooses how the pointer position behaves after the floating element opens.
+   */
   trackingMode?: TrackingMode;
 }
 
@@ -48,6 +71,13 @@ export interface UseClientPointContext {
   position?: Pick<FloatingContext["position"], "update">;
 }
 
+/**
+ * Replaces the anchor element with a virtual element that follows pointer coordinates.
+ *
+ * This is useful for context menus, cursor-following tooltips, and similar patterns
+ * where the floating element should be positioned from pointer input instead of a
+ * concrete DOM anchor.
+ */
 export function useClientPoint(
   context: UseClientPointContext,
   options: UseClientPointOptions,
@@ -131,6 +161,8 @@ export function useClientPoint(
   watch(
     [constrainedCoordinates, lockedCoordinates, axis, pointerTarget],
     () => {
+      // Rebuild the virtual anchor whenever its geometry inputs change so
+      // `useFloating()` always positions against the latest pointer state.
       refs.anchorEl.value = virtualElementFactory.create({
         coordinates: constrainedCoordinates.value,
         referenceElement: pointerTarget.value,
@@ -151,6 +183,8 @@ export function useClientPoint(
     }
 
     if (isOpen) {
+      // Some tracking modes want the opening position to "lock in" so the
+      // floating element does not jump as later pointer events arrive.
       const openingCoordinates = trackingStrategy.getCoordinatesForOpening();
 
       if (openingCoordinates) {

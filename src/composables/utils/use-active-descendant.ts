@@ -1,7 +1,14 @@
 import { type ComputedRef, type MaybeRefOrGetter, type Ref, ref, toValue, watch } from "vue";
 
 export interface UseActiveDescendantOptions {
+  /**
+   * Enables virtual focus mode.
+   */
   virtual: MaybeRefOrGetter<boolean>;
+
+  /**
+   * The owning floating open state. The attribute is only applied while open.
+   */
   open: Ref<boolean>;
 }
 
@@ -52,13 +59,13 @@ export function useActiveDescendant(
 
       const el = listRef.value[idx];
 
-      // Fix: Clear active item when element is not found (cleanup already removed attribute)
+      // Items can be temporarily null while the list rerenders.
       if (!el) {
         activeItem.value = null;
         return;
       }
 
-      // Fix: Require IDs to be set in the template - don't mutate DOM directly
+      // Require app-provided IDs so SSR/hydration stay deterministic.
       if (!el.id) {
         if (import.meta.env.DEV) {
           console.warn(
@@ -76,8 +83,7 @@ export function useActiveDescendant(
       activeItem.value = el;
     },
     {
-      // Ensure watcher runs after DOM updates to avoid race conditions
-      // when activeIndex and list data change simultaneously
+      // Wait for DOM updates so we read the latest element/id after list changes.
       flush: "post",
     },
   );

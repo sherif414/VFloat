@@ -92,7 +92,7 @@ export function useEscapeKey(
       event.preventDefault();
     }
 
-    // Use custom handler if provided
+    // Skip the default close behavior when the caller needs custom escape handling.
     if (onEscape) {
       onEscape(event);
       return;

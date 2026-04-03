@@ -1,6 +1,12 @@
 import { isMouseLikePointerType } from "@/utils";
 import type { Coordinates, PointerEventData, TrackingContext, TrackingMode } from "./types";
 
+/**
+ * Base contract for client-point tracking behaviors.
+ *
+ * Each strategy decides which pointer events it needs and whether incoming
+ * coordinates should update the virtual anchor.
+ */
 export abstract class TrackingStrategy {
   abstract readonly name: TrackingMode;
 
@@ -37,6 +43,8 @@ export class FollowTracker extends TrackingStrategy {
       case "pointerdown":
         return coordinates;
       case "pointermove":
+        // Keep following while open, but only for mouse-like pointers. Touch input
+        // should not drag the floating element around after the initial trigger.
         if (context.isOpen && isMouseLikePointerType(event.originalEvent.pointerType, true)) {
           return coordinates;
         }
@@ -64,6 +72,8 @@ export class StaticTracker extends TrackingStrategy {
     this.lastKnownCoordinates = coordinates;
 
     if (event.type === "pointerdown") {
+      // Remember the trigger point so opening can anchor to the original click
+      // even if the pointer moves before the floating element becomes visible.
       this.triggerCoordinates = coordinates;
       return context.isOpen ? coordinates : null;
     }

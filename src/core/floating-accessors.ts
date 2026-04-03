@@ -37,6 +37,9 @@ type FloatingPositionLike = {
   position?: FloatingPositionShape;
 };
 
+/**
+ * Reads `refs` from any floating-like object and throws a helpful error when missing.
+ */
 export function getFloatingRefs<R>(context: { refs?: R }): R {
   if (context.refs) {
     return context.refs;
@@ -45,6 +48,9 @@ export function getFloatingRefs<R>(context: { refs?: R }): R {
   throw new Error("[VFloat] Floating refs are missing from the provided context.");
 }
 
+/**
+ * Reads `state` from any floating-like object and throws a helpful error when missing.
+ */
 export function getFloatingState(context: FloatingStateLike): FloatingStateShape {
   if (context.state) {
     return context.state;
@@ -53,6 +59,9 @@ export function getFloatingState(context: FloatingStateLike): FloatingStateShape
   throw new Error("[VFloat] Floating state is missing from the provided context.");
 }
 
+/**
+ * Reads `position` from any floating-like object and throws a helpful error when missing.
+ */
 export function getFloatingPosition(context: FloatingPositionLike): FloatingPositionShape {
   if (context.position) {
     return context.position;

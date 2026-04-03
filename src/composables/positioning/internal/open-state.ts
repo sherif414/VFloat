@@ -6,6 +6,9 @@ export interface OpenStateControllerOptions {
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 }
 
+/**
+ * Normalizes controlled and uncontrolled open state into one small interface.
+ */
 export function createOpenStateController(options: OpenStateControllerOptions = {}) {
   const open = options.open ?? ref(false);
 

@@ -8,6 +8,10 @@ type MiddlewareRegistration = {
   middleware: MaybeRefOrGetter<Middleware | null | undefined>;
 };
 
+/**
+ * Merges base middleware passed to `useFloating()` with middleware registered
+ * later by companion composables such as `useArrow()`.
+ */
 export function createMiddlewareRegistry(
   baseMiddlewares: MaybeRefOrGetter<Middleware[] | undefined>,
 ): FloatingMiddlewareRegistry {
@@ -29,6 +33,8 @@ export function createMiddlewareRegistry(
       if (existingIndex === -1) {
         merged.push(middleware);
       } else {
+        // Later registrations win so composables can refresh their middleware
+        // without leaving behind stale copies with the same name.
         merged[existingIndex] = middleware;
       }
     }

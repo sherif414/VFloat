@@ -1,5 +1,8 @@
 import { getCurrentScope, onScopeDispose } from "vue";
 
+/**
+ * Registers a cleanup only when called inside an active Vue effect scope.
+ */
 export function tryOnScopeDispose(cleanup: () => void): boolean {
   if (!getCurrentScope()) {
     return false;
@@ -9,6 +12,9 @@ export function tryOnScopeDispose(cleanup: () => void): boolean {
   return true;
 }
 
+/**
+ * Collects multiple cleanup callbacks and flushes them in reverse order.
+ */
 export function createCleanupRegistry() {
   const cleanups = new Set<() => void>();
 

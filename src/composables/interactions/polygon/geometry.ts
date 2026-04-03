@@ -10,6 +10,9 @@ export type Rect = {
 
 export type Side = "top" | "right" | "bottom" | "left";
 
+/**
+ * Checks whether a point falls within a rectangle.
+ */
 export function isInside(point: Point, rect: Rect): boolean {
   return (
     point[0] >= rect.x &&
@@ -19,6 +22,9 @@ export function isInside(point: Point, rect: Rect): boolean {
   );
 }
 
+/**
+ * Ray-casting point-in-polygon test used by the safe-polygon bridge.
+ */
 export function isPointInPolygon(point: Point, polygon: Polygon) {
   const [x, y] = point;
   let isInsidePolygon = false;
@@ -37,6 +43,9 @@ export function isPointInPolygon(point: Point, polygon: Polygon) {
   return isInsidePolygon;
 }
 
+/**
+ * Computes pointer speed between two samples.
+ */
 export function getCursorSpeed(
   x: number,
   y: number,
@@ -68,6 +77,12 @@ export function getCursorSpeed(
   };
 }
 
+/**
+ * Detects when the pointer exits from the side opposite the floating content.
+ *
+ * In that case the user is moving away from the floating element, so the safe
+ * polygon should not keep the interaction open.
+ */
 export function isPointerLeavingOppositeSide(
   side: Side,
   leaveX: number,
@@ -82,6 +97,9 @@ export function isPointerLeavingOppositeSide(
   );
 }
 
+/**
+ * Builds the rectangular corridor between the anchor and floating element.
+ */
 export function buildRectangularTrough(
   side: Side,
   rect: DOMRect | undefined,
@@ -126,6 +144,10 @@ export function buildRectangularTrough(
   }
 }
 
+/**
+ * Builds the intent polygon that extends from the leave point toward the
+ * floating element.
+ */
 export function buildSafePolygon(
   side: Side,
   leaveX: number,

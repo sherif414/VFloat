@@ -19,7 +19,14 @@ if (typeof window !== "undefined") {
     window.addEventListener("keydown", switchToKeyboard, options);
   }
 
+  // Start in "pointer mode" so the first keyboard interaction flips the flag.
   switchToPointer();
 }
 
+/**
+ * Shared signal describing the user's latest input modality.
+ *
+ * Focus-based interactions use this to avoid treating pointer focus the same
+ * way as keyboard focus-visible navigation.
+ */
 export const isUsingKeyboard = readonly(mutableRef);

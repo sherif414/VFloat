@@ -12,10 +12,16 @@ export interface FloatingInternals {
 
 const floatingInternals = new WeakMap<object, FloatingInternals>();
 
+/**
+ * Attaches non-public helpers to a floating context without widening the public API.
+ */
 export function setFloatingInternals(target: object, internals: FloatingInternals) {
   floatingInternals.set(target, internals);
 }
 
+/**
+ * Reads internal helpers previously attached with `setFloatingInternals()`.
+ */
 export function getFloatingInternals(target: object) {
   return floatingInternals.get(target);
 }

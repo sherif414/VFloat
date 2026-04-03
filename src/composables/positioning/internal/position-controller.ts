@@ -22,6 +22,9 @@ export interface PositionControllerOptions {
   autoUpdate?: boolean | AutoUpdateOptions;
 }
 
+/**
+ * Owns the reactive bridge between VFloat state and Floating UI's position engine.
+ */
 export function createPositionController(options: PositionControllerOptions) {
   const {
     anchorEl,
@@ -87,6 +90,8 @@ export function createPositionController(options: PositionControllerOptions) {
         return;
       }
 
+      // While open, subscribe to layout/scroll/resize changes so positioning
+      // stays fresh without every composable re-implementing this wiring.
       const cleanup = floatingUIAutoUpdate(
         currentAnchor,
         currentFloating,
@@ -131,6 +136,7 @@ export function createPositionController(options: PositionControllerOptions) {
 
     return {
       ...baseStyles,
+      // Transform-based positioning is usually smoother and avoids layout shifts.
       transform: `translate(${roundedX}px, ${roundedY}px)`,
       ...(getDPR(floatingElement) >= 1.5 ? { "will-change": "transform" } : {}),
     };

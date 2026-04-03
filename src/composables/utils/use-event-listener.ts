@@ -1,6 +1,10 @@
 import { type MaybeRefOrGetter, toValue, watch } from "vue";
 import type { Fn } from "@/types";
 
+/**
+ * Attaches an event listener to a reactive target and keeps it in sync as the
+ * target or event name changes.
+ */
 export function useEventListener<TEvent extends Event = Event>(
   target: MaybeRefOrGetter<EventTarget | null | undefined>,
   event: MaybeRefOrGetter<string>,
@@ -21,6 +25,8 @@ export function useEventListener<TEvent extends Event = Event>(
 
       if (!currentTarget || !currentEvent) return;
 
+      // Clone option objects so add/remove use the same effective values even if
+      // callers mutate their original object later.
       const listenerOptions =
         typeof options === "object" && options !== null ? { ...options } : options;
 

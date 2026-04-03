@@ -19,6 +19,9 @@ export interface NavigationStrategy {
   handleKey(key: string, context: StrategyContext): NavigationAction | null;
 }
 
+/**
+ * Shared linear movement helper used by multiple navigation strategies.
+ */
 function resolveLinearMove(
   current: number | null,
   dir: 1 | -1,
@@ -52,6 +55,9 @@ function resolveLinearMove(
   return null;
 }
 
+/**
+ * Arrow-key strategy for one-dimensional vertical lists.
+ */
 export class VerticalNavigationStrategy implements NavigationStrategy {
   handleKey(key: string, context: StrategyContext): NavigationAction | null {
     const { isRtl, nested } = context;
@@ -68,6 +74,9 @@ export class VerticalNavigationStrategy implements NavigationStrategy {
   }
 }
 
+/**
+ * Arrow-key strategy for one-dimensional horizontal lists.
+ */
 export class HorizontalNavigationStrategy implements NavigationStrategy {
   handleKey(key: string, context: StrategyContext): NavigationAction | null {
     const { isRtl, nested } = context;
@@ -83,6 +92,9 @@ export class HorizontalNavigationStrategy implements NavigationStrategy {
   }
 }
 
+/**
+ * Arrow-key strategy for two-dimensional grids.
+ */
 export class GridNavigationStrategy implements NavigationStrategy {
   constructor(
     private fallbackToLinear: boolean = false,
@@ -145,6 +157,7 @@ export class GridNavigationStrategy implements NavigationStrategy {
         }
 
         if (this.loopDirection === "next") {
+          // Continue moving in reading order until an enabled cell is found.
           let candidate = wrapCandidate;
 
           for (let i = 0; i < items.length; i++) {
@@ -161,6 +174,7 @@ export class GridNavigationStrategy implements NavigationStrategy {
           const rowStart = currentRow * cols;
           const rowEnd = Math.min((currentRow + 1) * cols - 1, items.length - 1);
 
+          // Stay within the current row when row-based looping is requested.
           while (wrapCandidate >= rowStart && wrapCandidate <= rowEnd) {
             if (!isDisabled(wrapCandidate)) {
               return { type: "navigate", index: wrapCandidate };
@@ -253,12 +267,18 @@ function doSwitch(
   }
 }
 
+/**
+ * Returns whether a key belongs to the active navigation axis.
+ */
 export function isMainOrientationKey(key: string, orientation: "vertical" | "horizontal" | "both") {
   const vertical = key === "ArrowUp" || key === "ArrowDown";
   const horizontal = key === "ArrowLeft" || key === "ArrowRight";
   return doSwitch(orientation, vertical, horizontal);
 }
 
+/**
+ * Returns whether a key should be treated as movement toward the "end" side.
+ */
 export function isMainOrientationToEndKey(
   key: string,
   orientation: "vertical" | "horizontal" | "both",
@@ -271,6 +291,9 @@ export function isMainOrientationToEndKey(
   );
 }
 
+/**
+ * Creates the navigation strategy that matches the list orientation/grid shape.
+ */
 export function createNavigationStrategy(
   orientation: "vertical" | "horizontal" | "both",
   cols: number,

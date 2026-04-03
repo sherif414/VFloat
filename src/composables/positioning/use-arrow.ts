@@ -11,10 +11,22 @@ export interface UseArrowReturn {
 }
 
 export interface UseArrowOptions {
+  /**
+   * Arrow element that should be measured and positioned by middleware.
+   */
   element: Ref<HTMLElement | null>;
+
+  /**
+   * Offset applied to the static side of the arrow.
+   * Useful when the arrow visually overlaps the floating panel border.
+   */
   offset?: string;
 }
 
+/**
+ * Connects an arrow element to the current floating context and exposes
+ * the computed coordinates/styles needed to place it.
+ */
 export function useArrow(context: FloatingContext, options: UseArrowOptions): UseArrowReturn {
   const { element: arrowEl, offset = "-4px" } = options;
   const { refs } = context;
@@ -49,6 +61,7 @@ export function useArrow(context: FloatingContext, options: UseArrowOptions): Us
       return {};
     }
 
+    // The arrow is positioned on the opposite side of the resolved placement.
     const side = toValue(placement).split("-")[0] as "top" | "bottom" | "left" | "right";
 
     if (side === "bottom") {

@@ -102,10 +102,16 @@ const isDev =
 
 type TrapIsolationMode = false | "inert" | "aria-hidden";
 
+/**
+ * Normalizes focus-trap's flexible `initialFocus` option into a callback.
+ */
 function resolveInitialFocus(initialFocus: UseFocusTrapOptions["initialFocus"]) {
   return () => (typeof initialFocus === "function" ? initialFocus() : initialFocus);
 }
 
+/**
+ * Picks the strongest outside-world isolation mode the environment can support.
+ */
 function resolveIsolationMode(modal: boolean, outsideElementsInert: boolean): TrapIsolationMode {
   if (!modal) return false;
   if (outsideElementsInert && supportsInert) return "inert";
@@ -153,7 +159,8 @@ export function useFocusTrap(
   const trapRef = shallowRef<FocusTrap | null>(null);
   const isActive = computed(() => trapRef.value !== null);
 
-  // Tracks whether the current deactivation should close the floating surface.
+  // Tracks whether the current deactivation should close the floating surface,
+  // which lets us distinguish explicit closes from internal trap refreshes.
   let shouldCloseOnDeactivate = false;
 
   // Guard to prevent double-deactivation
@@ -213,6 +220,7 @@ export function useFocusTrap(
       returnFocusOnDeactivate: toValue(returnFocus),
       clickOutsideDeactivates: () => {
         if (!shouldCloseOnFocusOut.value) return false;
+        // Mark this as a real "dismiss" so `onDeactivate` can close the surface.
         shouldCloseOnDeactivate = true;
         return true;
       },
