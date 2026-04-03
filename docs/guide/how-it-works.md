@@ -145,9 +145,13 @@ Middleware can expose data that other parts of your UI need. For example, the `a
 import { ref } from "vue";
 import { offset, useArrow, useFloating } from "v-float";
 
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   middlewares: [offset(8)],
 });
 
@@ -161,7 +165,7 @@ const { arrowStyles } = useArrow(context, {
 
   <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
-    <div ref="arrowEl" :style="arrowStyles">Arrow</div>
+    <div ref="arrowEl" style="position: absolute" :style="arrowStyles">Arrow</div>
   </div>
 </template>
 ```

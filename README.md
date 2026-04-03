@@ -1,4 +1,4 @@
-# V-Float
+# VFloat
 
 [status: WIP](#project-status)
 
@@ -76,7 +76,7 @@ const context = useFloating(triggerEl, menuEl, {
 
 useClick(context);
 useEscapeKey(context, {
-  onEscape: () => context.setOpen(false),
+  onEscape: () => context.state.setOpen(false),
 });
 </script>
 
@@ -167,7 +167,7 @@ const { arrowStyles } = useArrow(context, {
 
 ### Middleware
 
-All [Floating UI middleware](https://floating-ui.com/docs/middleware) are supported:
+VFloat ships these positioning middleware helpers:
 
 - `**offset**`: Add distance between anchor and floating element
 - `**flip**`: Flip placement when there's insufficient space
@@ -175,6 +175,7 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 - `**hide**`: Hide floating element when anchor is not visible
 - `**autoPlacement**`: Automatically choose the best placement
 - `**size**`: Resize floating element to fit within viewport
+- `**arrow**`: Position arrow elements within the floating surface
 
 **Arrow positioning** is handled by the `[useArrow](/api/use-arrow)` composable, which owns arrow registration for the floating context.
 
@@ -186,7 +187,7 @@ All [Floating UI middleware](https://floating-ui.com/docs/middleware) are suppor
 
 ## TypeScript Support
 
-V-Float is built with TypeScript and provides comprehensive type definitions:
+VFloat is built with TypeScript and provides comprehensive type definitions:
 
 ## Browser Support
 
@@ -196,7 +197,7 @@ V-Float is built with TypeScript and provides comprehensive type definitions:
 
 ## Documentation
 
-For complete documentation with interactive examples, visit the [V-Float Documentation](https://vfloat.pages.dev/).
+For complete documentation with interactive examples, visit the [VFloat Documentation](https://vfloat.pages.dev/).
 
 ## Contributing
 
@@ -205,7 +206,7 @@ our [GitHub repository](https://github.com/sherif414/VFloat).
 
 ## Credits
 
-V-Float is built on top of the excellent work of:
+VFloat is built on top of the excellent work of:
 
 - [Floating UI](https://floating-ui.com/) - For the core positioning and collision detection algorithms
 - [VueUse](https://vueuse.org/) - For Vue composition utilities and best practices

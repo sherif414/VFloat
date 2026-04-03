@@ -12,7 +12,7 @@ function useFocusTrap(
 
 interface UseFocusTrapContext {
   state: FloatingContext["state"];
-  refs: Pick<FloatingContext["refs"], "floatingEl">;
+  refs: FloatingContext["refs"];
 }
 
 interface UseFocusTrapOptions {
@@ -35,9 +35,10 @@ interface UseFocusTrapReturn {
 
 ## Details
 
-`useFocusTrap` is the right interaction layer for dialogs and other modal surfaces. It can make the floating content modal, move initial focus, return focus on close, and close when focus leaves if you do not want a modal trap.
+`useFocusTrap` is the right interaction layer for dialogs and other modal surfaces. It can make the floating content modal, move initial focus, return focus on close, and optionally deactivate on outside click when you do not want a modal trap.
 
 - `modal` controls whether the trap behaves like a modal dialog.
+- Despite the option name, `closeOnFocusOut` currently deactivates the trap on outside click when `modal` is `false`.
 - `initialFocus` can be an element, selector, function, or `false`.
 - `returnFocus` defaults to `true`.
 - `preventScroll` defaults to `true`.

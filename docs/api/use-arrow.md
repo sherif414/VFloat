@@ -27,6 +27,7 @@ interface UseArrowReturn {
 - `options.element` is required in the root-first API.
 - `offset` defaults to `"-4px"`.
 - `context.position.middlewareData.value.arrow` exposes the raw middleware output if you need it.
+- The arrow element still needs its own absolute positioning, since `arrowStyles` only supplies inset offsets.
 
 ## Example
 
@@ -59,7 +60,7 @@ const { arrowStyles } = useArrow(context, {
 
   <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
-    <div ref="arrowEl" :style="arrowStyles">^</div>
+    <div ref="arrowEl" style="position: absolute" :style="arrowStyles">^</div>
   </div>
 </template>
 ```

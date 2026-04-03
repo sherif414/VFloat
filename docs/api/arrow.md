@@ -35,8 +35,10 @@
   const anchorEl = ref<HTMLElement | null>(null);
   const floatingEl = ref<HTMLElement | null>(null);
   const arrowEl = ref<HTMLElement | null>(null);
+  const open = ref(true);
 
   const context = useFloating(anchorEl, floatingEl, {
+    open,
     placement: "top",
     middlewares: [offset(8), arrow({ element: arrowEl, padding: 8 })],
   });
@@ -57,7 +59,7 @@
     <button ref="anchorEl">Anchor</button>
 
     <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-      <div ref="arrowEl" :style="arrowStyles">^</div>
+      <div ref="arrowEl" style="position: absolute" :style="arrowStyles">^</div>
       Floating content
     </div>
   </template>

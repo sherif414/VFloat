@@ -31,27 +31,29 @@
 
 - Example
 
-  ```vue
-  <script setup lang="ts">
-  import { ref } from "vue";
-  import { offset, useFloating } from "v-float";
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { offset, useFloating } from "v-float";
 
-  const anchorEl = ref<HTMLElement | null>(null);
-  const floatingEl = ref<HTMLElement | null>(null);
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
-  const context = useFloating(anchorEl, floatingEl, {
-    middlewares: [offset(10)],
-  });
-  </script>
+const context = useFloating(anchorEl, floatingEl, {
+  open,
+  middlewares: [offset(10)],
+});
+</script>
 
-  <template>
-    <button ref="anchorEl">Anchor</button>
+<template>
+  <button ref="anchorEl">Anchor</button>
 
-    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-      Floating content
-    </div>
-  </template>
-  ```
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+    Floating content
+  </div>
+</template>
+```
 
 - See also
   - [arrow](/api/arrow) - Keeps the arrow away from the edge

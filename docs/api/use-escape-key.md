@@ -12,6 +12,7 @@ interface UseEscapeKeyContext extends Pick<FloatingContext, "state"> {}
 interface UseEscapeKeyOptions {
   enabled?: MaybeRefOrGetter<boolean>;
   capture?: boolean;
+  preventDefault?: boolean;
   onEscape?: (event: KeyboardEvent) => void;
 }
 ```
@@ -22,6 +23,7 @@ interface UseEscapeKeyOptions {
 
 - `enabled` lets you turn the listener on and off.
 - `capture` defaults to `false`.
+- `preventDefault` defaults to `false`.
 - `onEscape` replaces the default close behavior when you need custom handling.
 
 ## Example
@@ -29,12 +31,13 @@ interface UseEscapeKeyOptions {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useEscapeKey, useFloating } from "v-float";
+import { useClick, useEscapeKey, useFloating } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
+useClick(context);
 useEscapeKey(context);
 </script>
 

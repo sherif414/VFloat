@@ -7,13 +7,11 @@
 ```ts
 function useClientPoint(
   context: UseClientPointContext,
-  options: UseClientPointOptions & {
-    pointerTarget: Ref<HTMLElement | null>;
-  },
+  options: UseClientPointOptions,
 ): UseClientPointReturn;
 
 interface UseClientPointOptions {
-  pointerTarget?: Ref<HTMLElement | null>;
+  pointerTarget: Ref<HTMLElement | null>;
   enabled?: MaybeRefOrGetter<boolean>;
   axis?: MaybeRefOrGetter<"x" | "y" | "both">;
   x?: MaybeRefOrGetter<number | null>;

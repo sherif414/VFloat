@@ -14,6 +14,7 @@ import { ref } from "vue";
 import { useFloating } from "v-float";
 
 const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const virtualAnchor = {
   getBoundingClientRect() {
@@ -35,11 +36,15 @@ const virtualAnchor = {
 
 const anchorEl = ref(virtualAnchor);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloating(anchorEl, floatingEl, {
+  open,
+});
 </script>
 
 <template>
-  <div ref="floatingEl" :style="context.position.styles.value">Floating at fixed coordinates</div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+    Floating at fixed coordinates
+  </div>
 </template>
 ```
 

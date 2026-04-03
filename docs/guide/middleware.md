@@ -17,8 +17,10 @@ import { offset, useFloating } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   placement: "bottom",
   middlewares: [offset(8)],
 });
@@ -52,8 +54,10 @@ import { flip, offset, useFloating } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   placement: "bottom",
   middlewares: [offset(8), flip()],
 });
@@ -77,8 +81,10 @@ import { flip, offset, shift, useFloating } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   placement: "bottom",
   middlewares: [offset(8), flip(), shift({ padding: 8 })],
 });
@@ -98,8 +104,10 @@ import { flip, offset, shift, size, useFloating } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   placement: "bottom",
   middlewares: [
     offset(8),
@@ -138,8 +146,10 @@ import { arrow, offset, useArrow, useFloating } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   middlewares: [offset(8), arrow({ element: arrowEl })],
 });
 
@@ -153,7 +163,7 @@ const { arrowStyles } = useArrow(context, {
 
   <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     Floating content
-    <div ref="arrowEl" :style="arrowStyles">Arrow</div>
+    <div ref="arrowEl" style="position: absolute" :style="arrowStyles">Arrow</div>
   </div>
 </template>
 ```
@@ -166,9 +176,15 @@ When the exact side does not matter and you just want "the best side", `autoPlac
 
 ```vue
 <script setup lang="ts">
+import { ref } from "vue";
 import { autoPlacement, offset, useFloating } from "v-float";
 
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
+
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   middlewares: [
     offset(8),
     autoPlacement({
@@ -189,14 +205,16 @@ Putting it all together, a common middleware stack looks like this:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { autoPlacement, flip, offset, shift, useFloating } from "v-float";
+import { flip, offset, shift, useFloating } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
+const open = ref(true);
 
 const context = useFloating(anchorEl, floatingEl, {
+  open,
   placement: "bottom",
-  middlewares: [offset(8), flip(), shift({ padding: 8 }), autoPlacement()],
+  middlewares: [offset(8), flip(), shift({ padding: 8 })],
 });
 </script>
 ```
@@ -206,7 +224,6 @@ The order matters:
 1. `offset` sets the intended gap
 2. `flip` changes the side if the preferred side is crowded
 3. `shift` keeps the element in view if it overflows
-4. `autoPlacement` chooses the best side when placement is flexible
 
 ## Middleware Reference
 
