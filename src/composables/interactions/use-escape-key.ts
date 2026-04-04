@@ -1,8 +1,7 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
-import { useEventListener } from "@/composables/utils/use-event-listener";
-import { getFloatingState } from "@/core/floating-accessors";
-import type { FloatingContext } from "../positioning";
-import { useComposition } from "../utils/use-composition";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { useComposition } from "@/composables/interactions/internal/composition-state";
+import { useEventListener } from "@/shared/use-event-listener";
 
 // =======================================================================================
 // 📌 Types
@@ -75,7 +74,7 @@ export function useEscapeKey(
 ): void {
   const { enabled = true, capture = false, preventDefault = false, onEscape } = options;
   const { isComposing } = useComposition();
-  const { open, setOpen } = getFloatingState(context);
+  const { open, setOpen } = context.state;
 
   const handleEscape = (event: KeyboardEvent) => {
     if (

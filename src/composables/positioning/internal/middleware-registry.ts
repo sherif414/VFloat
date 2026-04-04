@@ -1,7 +1,7 @@
 import type { Middleware } from "@floating-ui/dom";
 import { computed, type MaybeRefOrGetter, ref, toValue } from "vue";
-import type { FloatingMiddlewareRegistry } from "@/core/floating-internals";
-import { tryOnScopeDispose } from "@/core/lifecycle";
+import type { FloatingMiddlewareRegistry } from "../floating-context";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 type MiddlewareRegistration = {
   id: number;

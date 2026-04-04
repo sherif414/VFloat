@@ -122,7 +122,6 @@ With virtual focus, the anchor element remains responsible for announcing the ac
 
 - Use `orientation: "both"` and `cols` when the items are arranged in a grid.
 - Use `rtl: true` if horizontal navigation needs to respect right-to-left layouts.
-- Use `nested: true` and `parentOrientation` when a submenu needs to close or move back to its parent.
 - Use `allowEscape: true` when a virtual focus model should be able to return to the input or trigger instead of trapping the active item forever.
 
 If the surface is visually complex, keep the mental model simple: decide whether arrows move linearly, move in a grid, or move back to a parent list. Once that is clear, the rest of the options are mostly fine-tuning.

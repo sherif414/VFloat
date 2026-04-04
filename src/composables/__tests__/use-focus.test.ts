@@ -3,16 +3,16 @@ import { effectScope, nextTick, ref } from "vue";
 import { type UseFocusOptions, type UseFocusContext, useFocus } from "@/composables/interactions";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 
-// Mock the utils module to allow spying on matchesFocusVisible
-vi.mock("@/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/utils")>();
+// Mock the shared platform module to allow spying on matchesFocusVisible
+vi.mock("@/shared/platform", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/platform")>();
   return {
     ...actual,
     matchesFocusVisible: vi.fn(actual.matchesFocusVisible),
   };
 });
 
-import { matchesFocusVisible } from "@/utils";
+import { matchesFocusVisible } from "@/shared/platform";
 
 describe("useFocus", () => {
   let context: UseFocusContext;

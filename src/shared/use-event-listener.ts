@@ -25,8 +25,6 @@ export function useEventListener<TEvent extends Event = Event>(
 
       if (!currentTarget || !currentEvent) return;
 
-      // Clone option objects so add/remove use the same effective values even if
-      // callers mutate their original object later.
       const listenerOptions =
         typeof options === "object" && options !== null ? { ...options } : options;
 

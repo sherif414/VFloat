@@ -3,8 +3,14 @@ import type {
   AnchorElement,
   FloatingContext,
   FloatingElement,
-} from "@/composables/positioning/use-floating";
-import { clearTimeoutIfSet, contains, getCurrentTime, getTarget, isHTMLElement } from "@/utils";
+} from "@/composables/positioning/floating-context";
+import {
+  clearTimeoutIfSet,
+  contains,
+  getCurrentTime,
+  getTarget,
+  isHTMLElement,
+} from "@/shared/dom";
 import {
   buildRectangularTrough,
   buildSafePolygon,

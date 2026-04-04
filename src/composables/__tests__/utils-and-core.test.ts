@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { ref } from "vue";
-import { createRefSetter, resolveAnchorElement } from "@/core/elements";
-import { getFloatingPosition, getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
-import { createCleanupRegistry, tryOnScopeDispose } from "@/core/lifecycle";
+import { createRefSetter, resolveAnchorElement } from "@/shared/elements";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
+import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import type { VirtualElement } from "@/types";
 import {
   clearTimeoutIfSet,
@@ -13,14 +13,11 @@ import {
   isEventTargetWithin,
   isFunction,
   isHTMLElement,
-  isMac,
   isMouseLikePointerType,
-  isSafari,
   isSpaceIgnored,
   isTypeableElement,
   isVirtualElement,
-  matchesFocusVisible,
-} from "@/utils";
+} from "@/shared/dom";
 
 const originalPlatform = navigator.platform;
 const originalUserAgent = navigator.userAgent;
@@ -159,7 +156,7 @@ describe("utils and core helpers", () => {
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("covers lifecycle helpers and floating accessors", () => {
+  it("covers lifecycle helpers and floating context shape", () => {
     const cleanupRegistry = createCleanupRegistry();
     const cleanup = vi.fn();
     cleanupRegistry.add(cleanup);
@@ -191,9 +188,9 @@ describe("utils and core helpers", () => {
       position: { x, y, strategy, placement, middlewareData, isPositioned, styles, update },
     };
 
-    expect(getFloatingRefs(context)).toBe(context.refs);
-    expect(getFloatingState(context).open).toBe(open);
-    expect(getFloatingPosition(context).update).toBe(update);
+    expect(context.refs).toBe(context.refs);
+    expect(context.state.open).toBe(open);
+    expect(context.position.update).toBe(update);
 
     const setterTarget = ref<HTMLElement | null>(null);
     createRefSetter(setterTarget)(anchorEl.value);

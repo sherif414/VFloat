@@ -7,8 +7,8 @@ import type {
 } from "@floating-ui/dom";
 import { computePosition, autoUpdate as floatingUIAutoUpdate } from "@floating-ui/dom";
 import { computed, type MaybeRefOrGetter, type Ref, ref, shallowRef, toValue, watch } from "vue";
-import { tryOnScopeDispose } from "@/core/lifecycle";
-import type { AnchorElement, FloatingElement, FloatingStyles } from "../use-floating";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
+import type { AnchorElement, FloatingElement, FloatingStyles } from "../floating-context";
 import { createMiddlewareRegistry } from "./middleware-registry";
 
 export interface PositionControllerOptions {

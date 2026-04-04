@@ -7,9 +7,8 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/positioning/use-floating";
-import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
-import { tryOnScopeDispose } from "@/core/lifecycle";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
 // 📌 Types
@@ -134,8 +133,8 @@ export function useFocusTrap(
   context: UseFocusTrapContext,
   options: UseFocusTrapOptions = {},
 ): UseFocusTrapReturn {
-  const { floatingEl } = getFloatingRefs(context);
-  const { open, setOpen } = getFloatingState(context);
+  const { floatingEl } = context.refs;
+  const { open, setOpen } = context.state;
 
   // Normalize options with defaults
   const {

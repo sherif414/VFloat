@@ -1,67 +1,18 @@
-import { useId as vueUseId } from "vue";
-import type { AnyFn, VirtualElement } from "@/types";
-
-let idCounter = 0;
+import type { VirtualElement } from "@/types";
 
 /**
- * Wrapper around Vue's useId that provides a fallback counter-based ID generator.
- * This ensures unique IDs even when useId() returns empty strings (e.g., in test environments).
+ * Checks if a value is a function.
  */
-export function useId(): string {
-  const id = vueUseId();
-  // If Vue's useId returns an empty string, use a counter-based fallback
-  return id || `id-${++idCounter}`;
-}
-
-//=======================================================================================
-// 📌 General Utilities
-//=======================================================================================
-
-/**
- * Checks if a value is a function
- */
-export function isFunction(value: unknown): value is AnyFn {
+export function isFunction(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }
 
 /**
- * Type guard for HTMLElement
+ * Checks if a value is an HTMLElement.
  */
 export function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof Element && value instanceof HTMLElement;
 }
-
-//=======================================================================================
-// 📌 Browser Environment Detection
-//=======================================================================================
-
-/**
- * Checks if the user agent is on a Mac.
- */
-export function isMac(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-}
-
-/**
- * Checks if the browser is Safari.
- */
-export function isSafari(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-}
-
-/**
- * A simple utility to check if an element matches `:focus-visible`.
- */
-export function matchesFocusVisible(element: Element): boolean {
-  if (typeof (element as Element)?.matches !== "function") return false;
-  return element.matches(":focus-visible");
-}
-
-//=======================================================================================
-// 📌 Element & Input Detection
-//=======================================================================================
 
 /**
  * Checks if the pointer type is mouse-like (mouse or pen).
@@ -133,11 +84,9 @@ export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): bool
   const scrollbarWidth = target.offsetWidth - target.clientWidth;
   const scrollbarHeight = target.offsetHeight - target.clientHeight;
 
-  // Convert event coordinates to element-relative coordinates
   const elementX = event.clientX - rect.left;
   const elementY = event.clientY - rect.top;
 
-  // Check vertical scrollbar (typically on the right)
   if (scrollbarWidth > 0) {
     const scrollbarStart = target.clientWidth;
     if (elementX >= scrollbarStart && elementX <= target.offsetWidth) {
@@ -145,7 +94,6 @@ export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): bool
     }
   }
 
-  // Check horizontal scrollbar (typically on the bottom)
   if (scrollbarHeight > 0) {
     const scrollbarStart = target.clientHeight;
     if (elementY >= scrollbarStart && elementY <= target.offsetHeight) {
@@ -155,10 +103,6 @@ export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): bool
 
   return false;
 }
-
-//=======================================================================================
-// 📌 Event Handling & Timing
-//=======================================================================================
 
 /**
  * Simple element containment wrapper.
@@ -197,9 +141,11 @@ export function isElementInEventPath(element: unknown, path: EventTarget[]): boo
   if (element instanceof Element) {
     return path.includes(element);
   }
+
   if (isVirtualElement(element) && element.contextElement instanceof Element) {
     return path.includes(element.contextElement);
   }
+
   return false;
 }
 
@@ -209,6 +155,7 @@ export function isElementInEventPath(element: unknown, path: EventTarget[]): boo
 export function getDomPath(node: Node | null): EventTarget[] {
   const path: EventTarget[] = [];
   let current: Node | null = node;
+
   while (current) {
     path.push(current);
     if (current instanceof ShadowRoot) {
@@ -217,5 +164,6 @@ export function getDomPath(node: Node | null): EventTarget[] {
       current = current.parentNode;
     }
   }
+
   return path;
 }

@@ -1,8 +1,7 @@
 import { type ComputedRef, computed, type Ref, toValue, watch } from "vue";
-import { getFloatingPosition } from "@/core/floating-accessors";
-import { getFloatingInternals } from "@/core/floating-internals";
+import { getFloatingInternals } from "./floating-context";
 import { arrow } from "../middlewares";
-import type { FloatingContext } from "./use-floating";
+import type { FloatingContext } from "./floating-context";
 
 export interface UseArrowReturn {
   arrowX: ComputedRef<number>;
@@ -30,7 +29,7 @@ export interface UseArrowOptions {
 export function useArrow(context: FloatingContext, options: UseArrowOptions): UseArrowReturn {
   const { element: arrowEl, offset = "-4px" } = options;
   const { refs } = context;
-  const { middlewareData, placement } = getFloatingPosition(context);
+  const { middlewareData, placement } = context.position;
 
   watch(
     arrowEl,

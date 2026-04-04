@@ -8,12 +8,12 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/positioning/use-floating";
-import { useEventListener } from "@/composables/utils/use-event-listener";
-import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
-import { isTypeableElement } from "@/utils";
-import { isUsingKeyboard } from "../utils/is-using-keyboard";
-import { useActiveDescendant } from "../utils/use-active-descendant";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { isTypeableElement } from "@/shared/dom";
+import { createCleanupRegistry } from "@/shared/lifecycle";
+import { useEventListener } from "@/shared/use-event-listener";
+import { isUsingKeyboard } from "@/composables/interactions/internal/input-modality";
+import { useActiveDescendant } from "./list-navigation/active-descendant";
 import {
   createNavigationStrategy,
   isMainOrientationKey,
@@ -108,11 +108,6 @@ export interface UseListNavigationOptions {
   nested?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Parent list orientation when nested, for cross-navigation behavior.
-   */
-  parentOrientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
-
-  /**
    * Right-to-left layout flag affecting horizontal arrow semantics.
    */
   rtl?: MaybeRefOrGetter<boolean>;
@@ -154,8 +149,8 @@ export function useListNavigation(
   context: FloatingContext,
   options: UseListNavigationOptions,
 ): UseListNavigationReturn {
-  const refs = getFloatingRefs(context);
-  const { open, setOpen } = getFloatingState(context);
+  const refs = context.refs;
+  const { open, setOpen } = context.state;
 
   const {
     listRef,
@@ -200,16 +195,9 @@ export function useListNavigation(
   // Cleanup Registry
   // --------------------------------------------------------------------------
 
-  const cleanupFns: Array<() => void> = [];
-  const registerCleanup = (fn: () => void) => {
-    cleanupFns.push(fn);
-    return fn;
-  };
-  const runCleanups = () => {
-    while (cleanupFns.length) {
-      cleanupFns.pop()?.();
-    }
-  };
+  const cleanupRegistry = createCleanupRegistry();
+  const registerCleanup = cleanupRegistry.add;
+  const runCleanups = cleanupRegistry.flush;
 
   // --------------------------------------------------------------------------
   // Index Helpers

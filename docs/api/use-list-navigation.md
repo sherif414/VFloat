@@ -24,7 +24,6 @@ interface UseListNavigationOptions {
   selectedIndex?: MaybeRefOrGetter<number | null>;
   focusItemOnOpen?: MaybeRefOrGetter<boolean | "auto">;
   nested?: MaybeRefOrGetter<boolean>;
-  parentOrientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
   rtl?: MaybeRefOrGetter<boolean>;
   virtual?: MaybeRefOrGetter<boolean>;
   virtualItemRef?: Ref<HTMLElement | null>;

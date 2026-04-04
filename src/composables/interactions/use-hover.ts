@@ -1,8 +1,7 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import { getFloatingPosition, getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
-import { tryOnScopeDispose } from "@/core/lifecycle";
-import type { FloatingContext } from "../positioning/use-floating";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
 //=======================================================================================
@@ -134,9 +133,9 @@ function useDelayedOpen(
  * ```
  */
 export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
-  const { open, setOpen } = getFloatingState(context);
-  const { placement } = getFloatingPosition(context);
-  const { anchorEl, floatingEl } = getFloatingRefs(context);
+  const { open, setOpen } = context.state;
+  const { placement } = context.position;
+  const { anchorEl, floatingEl } = context.refs;
   const {
     enabled: enabledOption = true,
     delay = 0,

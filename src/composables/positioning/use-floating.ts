@@ -1,31 +1,17 @@
-import type {
-  AutoUpdateOptions,
-  Middleware,
-  MiddlewareData,
-  Placement,
-  Strategy,
-} from "@floating-ui/dom";
+import type { AutoUpdateOptions, Middleware, Placement, Strategy } from "@floating-ui/dom";
 import type { MaybeRefOrGetter, Ref } from "vue";
 import { ref } from "vue";
-import { createRefSetter } from "@/core/elements";
-import { setFloatingInternals } from "@/core/floating-internals";
-import type { OpenChangeReason, VirtualElement } from "@/types";
+import { createRefSetter } from "@/shared/elements";
+import type { OpenChangeReason } from "@/types";
+import {
+  type AnchorElement,
+  type FloatingContext,
+  type FloatingElement,
+  type FloatingRefs,
+  setFloatingInternals,
+} from "./floating-context";
 import { createOpenStateController } from "./internal/open-state";
 import { createPositionController } from "./internal/position-controller";
-
-export type AnchorElement = HTMLElement | VirtualElement | null;
-export type FloatingElement = HTMLElement | null;
-
-export type FloatingStyles = {
-  position: Strategy;
-  top: string;
-  left: string;
-  transform?: string;
-  "will-change"?: string;
-} & {
-  // biome-ignore lint/suspicious/noExplicitAny: CSS custom property passthrough
-  [key: `--${string}`]: any;
-};
 
 export interface UseFloatingOptions {
   /**
@@ -68,38 +54,15 @@ export interface UseFloatingOptions {
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 }
 
-export interface FloatingRefs {
-  anchorEl: Ref<AnchorElement>;
-  floatingEl: Ref<FloatingElement>;
-  arrowEl: Ref<HTMLElement | null>;
-  setAnchor: (value: AnchorElement) => void;
-  setFloating: (value: FloatingElement) => void;
-  setArrow: (value: HTMLElement | null) => void;
-}
-
-export interface FloatingState {
-  open: Readonly<Ref<boolean>>;
-  setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
-}
-
-export interface FloatingPosition {
-  x: Readonly<Ref<number>>;
-  y: Readonly<Ref<number>>;
-  strategy: Readonly<Ref<Strategy>>;
-  placement: Readonly<Ref<Placement>>;
-  middlewareData: Readonly<Ref<MiddlewareData>>;
-  isPositioned: Readonly<Ref<boolean>>;
-  styles: Readonly<Ref<FloatingStyles>>;
-  update: () => void;
-}
-
-export interface FloatingRoot {
-  refs: FloatingRefs;
-  state: FloatingState;
-  position: FloatingPosition;
-}
-
-export interface FloatingContext extends FloatingRoot {}
+export type {
+  AnchorElement,
+  FloatingContext,
+  FloatingElement,
+  FloatingPosition,
+  FloatingRefs,
+  FloatingRoot,
+  FloatingStyles,
+} from "./floating-context";
 
 /**
  * Creates the shared floating context used by positioning and interaction composables.
@@ -138,12 +101,12 @@ export function useFloating(
     autoUpdate: options.autoUpdate,
   });
 
-  const state: FloatingState = {
+  const state = {
     open: stateController.open,
     setOpen: stateController.setOpen,
   };
 
-  const position: FloatingPosition = {
+  const position = {
     x: positionController.position.x,
     y: positionController.position.y,
     strategy: positionController.position.strategy,

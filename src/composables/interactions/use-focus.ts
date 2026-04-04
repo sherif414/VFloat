@@ -1,16 +1,10 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/positioning/use-floating";
-import { isUsingKeyboard } from "@/composables/utils/is-using-keyboard";
-import { useEventListener } from "@/composables/utils/use-event-listener";
-import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
-import { tryOnScopeDispose } from "@/core/lifecycle";
-import {
-  isEventTargetWithin,
-  isMac,
-  isSafari,
-  isTypeableElement,
-  matchesFocusVisible,
-} from "@/utils";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { isUsingKeyboard } from "@/composables/interactions/internal/input-modality";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
+import { useEventListener } from "@/shared/use-event-listener";
+import { isEventTargetWithin, isTypeableElement } from "@/shared/dom";
+import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 
 //=======================================================================================
 // 📌 Constants
@@ -43,8 +37,8 @@ const BLUR_CHECK_DELAY = 0;
  */
 
 export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
-  const { open, setOpen } = getFloatingState(context);
-  const { floatingEl, anchorEl: _anchorEl } = getFloatingRefs(context);
+  const { open, setOpen } = context.state;
+  const { floatingEl, anchorEl: _anchorEl } = context.refs;
 
   const { enabled = true, requireFocusVisible = true } = options;
 

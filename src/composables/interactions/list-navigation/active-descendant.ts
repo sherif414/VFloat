@@ -1,36 +1,17 @@
-import { type ComputedRef, type MaybeRefOrGetter, type Ref, ref, toValue, watch } from "vue";
+import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
+import { ref, toValue, watch } from "vue";
 
 export interface UseActiveDescendantOptions {
-  /**
-   * Enables virtual focus mode.
-   */
   virtual: MaybeRefOrGetter<boolean>;
-
-  /**
-   * The owning floating open state. The attribute is only applied while open.
-   */
   open: Ref<boolean>;
 }
 
 export interface UseActiveDescendantReturn {
-  /**
-   * Reference to the currently active element in the list.
-   * Updated whenever the active index changes.
-   */
   activeItem: Ref<HTMLElement | null>;
 }
 
 /**
  * Manages "Virtual Focus" (via aria-activedescendant) for a list of items.
- *
- * **Important:** All items in `listRef` MUST have an `id` attribute set in the template.
- * The composable will not auto-generate IDs to avoid hydration mismatches and re-render issues.
- *
- * @param anchorEl - The element that will receive the aria-activedescendant attribute
- * @param listRef - Array of list item elements (each must have an id attribute)
- * @param activeIndex - The currently active index in the list
- * @param options - Configuration options
- * @returns Object containing the activeItem ref
  */
 export function useActiveDescendant(
   anchorEl: ComputedRef<HTMLElement | null>,
@@ -45,13 +26,10 @@ export function useActiveDescendant(
     ([isVirtual, isOpen, idx], _oldValues, onCleanup) => {
       const anchor = anchorEl.value;
 
-      // Cleanup function to remove attribute when component unmounts or watcher re-runs
-      // Note: Only cleanup DOM state, not activeItem to prevent state flickering
       onCleanup(() => {
         anchor?.removeAttribute("aria-activedescendant");
       });
 
-      // Early return if conditions not met - cleanup already handled attribute removal
       if (!anchor || !isVirtual || !isOpen || idx == null) {
         activeItem.value = null;
         return;
@@ -59,13 +37,11 @@ export function useActiveDescendant(
 
       const el = listRef.value[idx];
 
-      // Items can be temporarily null while the list rerenders.
       if (!el) {
         activeItem.value = null;
         return;
       }
 
-      // Require app-provided IDs so SSR/hydration stay deterministic.
       if (!el.id) {
         if (import.meta.env.DEV) {
           console.warn(
@@ -78,12 +54,10 @@ export function useActiveDescendant(
         return;
       }
 
-      // Set the aria-activedescendant attribute and update the active item
       anchor.setAttribute("aria-activedescendant", el.id);
       activeItem.value = el;
     },
     {
-      // Wait for DOM updates so we read the latest element/id after list changes.
       flush: "post",
     },
   );

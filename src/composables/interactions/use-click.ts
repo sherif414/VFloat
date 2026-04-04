@@ -1,9 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/positioning/use-floating";
-import { useEventListener } from "@/composables/utils/use-event-listener";
-import { getFloatingRefs, getFloatingState } from "@/core/floating-accessors";
-import { tryOnScopeDispose } from "@/core/lifecycle";
-import type { OpenChangeReason } from "@/types";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import {
   isButtonTarget,
   isClickOnScrollbar,
@@ -11,7 +8,9 @@ import {
   isHTMLElement,
   isMouseLikePointerType,
   isSpaceIgnored,
-} from "@/utils";
+} from "@/shared/dom";
+import { useEventListener } from "@/shared/use-event-listener";
+import type { OpenChangeReason } from "@/types";
 
 type PointerType = "mouse" | "touch" | "pen";
 
@@ -52,8 +51,8 @@ type PointerType = "mouse" | "touch" | "pen";
  * ```
  */
 export function useClick(context: UseClickContext, options: UseClickOptions = {}): void {
-  const { open, setOpen } = getFloatingState(context);
-  const refs = getFloatingRefs(context);
+  const { open, setOpen } = context.state;
+  const refs = context.refs;
   const {
     enabled = true,
     event: eventOption = "click",

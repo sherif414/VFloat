@@ -8,7 +8,6 @@ import {
   watch,
   watchEffect,
 } from "vue";
-import { getFloatingState } from "@/core/floating-accessors";
 import { FollowTracker, StaticTracker, TrackingStrategy } from "./client-point/tracking-strategies";
 import type {
   AxisConstraint,
@@ -17,7 +16,7 @@ import type {
   TrackingMode,
 } from "./client-point/types";
 import { VirtualElementFactory } from "./client-point/virtual-element-factory";
-import type { AnchorElement, FloatingContext } from "./use-floating";
+import type { AnchorElement, FloatingContext } from "./floating-context";
 
 const sanitizeCoordinate = (value: number | null | undefined): number | null => {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -83,7 +82,7 @@ export function useClientPoint(
   options: UseClientPointOptions,
 ): UseClientPointReturn {
   const { pointerTarget } = options;
-  const { open } = getFloatingState(context);
+  const { open } = context.state;
   const refs = context.refs;
   const update = context.position?.update;
 

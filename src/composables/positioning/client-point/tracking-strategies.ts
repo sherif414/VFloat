@@ -1,4 +1,4 @@
-import { isMouseLikePointerType } from "@/utils";
+import { isMouseLikePointerType } from "@/shared/dom";
 import type { Coordinates, PointerEventData, TrackingContext, TrackingMode } from "./types";
 
 /**

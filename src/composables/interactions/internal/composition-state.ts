@@ -1,5 +1,5 @@
 import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue";
-import { useEventListener } from "@/composables/utils/use-event-listener";
+import { useEventListener } from "@/shared/use-event-listener";
 
 interface CompositionState {
   scope: ReturnType<typeof effectScope>;
@@ -9,12 +9,6 @@ interface CompositionState {
 
 let sharedCompositionState: CompositionState | undefined;
 
-/**
- * Creates the shared IME composition tracker used by keyboard-driven interactions.
- *
- * The listeners live in their own effect scope so multiple composables can share
- * one global source of truth and still clean it up when the last consumer leaves.
- */
 function getSharedCompositionState(): CompositionState {
   if (sharedCompositionState) {
     return sharedCompositionState;
@@ -55,7 +49,6 @@ export function useComposition() {
       state.consumers -= 1;
 
       if (state.consumers <= 0) {
-        // Tear down the shared listeners once nothing depends on them anymore.
         state.scope.stop();
         sharedCompositionState = undefined;
       }
