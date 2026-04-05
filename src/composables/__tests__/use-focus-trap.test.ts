@@ -1,47 +1,89 @@
 import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseFocusTrapContext, useFocusTrap } from "@/composables/interactions/use-focus-trap";
+import {
+  type UseFocusTrapContext,
+  type UseFocusTrapOptions,
+  type UseFocusTrapReturn,
+  useFocusTrap,
+} from "@/composables/interactions/use-focus-trap";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 
-// Track elements created during tests for cleanup
-const elementsToCleanUp: HTMLElement[] = [];
+type FocusTrapTestContext = {
+  anchorEl: HTMLButtonElement;
+  floatingEl: HTMLDivElement;
+  context: UseFocusTrapContext;
+  openRef: ReturnType<typeof ref<boolean>>;
+  result: UseFocusTrapReturn;
+  scope: ReturnType<typeof effectScope>;
+  setOpenMock: ReturnType<typeof vi.fn>;
+};
 
-function trackElement(el: HTMLElement): HTMLElement {
-  elementsToCleanUp.push(el);
+const trackedElements: HTMLElement[] = [];
+const activeScopes: ReturnType<typeof effectScope>[] = [];
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
   return el;
 }
 
-// Helper to properly flush timers and Vue reactivity
-async function flushTimersAndTick(): Promise<void> {
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+
+  trackedElements.length = 0;
+}
+
+function appendButton(container: HTMLElement, id: string, text = id): HTMLButtonElement {
+  const button = trackElement(document.createElement("button"));
+  button.id = id;
+  button.textContent = text;
+  container.appendChild(button);
+  return button;
+}
+
+function createOutsideElement(id = "outside"): HTMLButtonElement {
+  const outsideEl = trackElement(document.createElement("button"));
+  outsideEl.id = id;
+  outsideEl.textContent = id;
+  document.body.appendChild(outsideEl);
+  return outsideEl;
+}
+
+async function flushFocusTrap() {
+  await nextTick();
+  await vi.runAllTimersAsync();
   await nextTick();
   await vi.runAllTimersAsync();
   await nextTick();
 }
 
-function isAccessibilityHidden(el: HTMLElement): boolean {
-  const htmlEl = el as HTMLElement & { inert?: boolean };
-  return el.getAttribute("aria-hidden") === "true" || htmlEl.inert === true;
-}
+function setupFocusTrap(
+  options: UseFocusTrapOptions = {},
+  initialOpen = false,
+): FocusTrapTestContext {
+  const anchorEl = trackElement(document.createElement("button"));
+  anchorEl.id = "anchor";
+  anchorEl.textContent = "Anchor";
+  document.body.appendChild(anchorEl);
 
-function createContext() {
-  const anchor = trackElement(document.createElement("button"));
-  anchor.id = "anchor";
-  const floating = trackElement(document.createElement("div"));
-  floating.id = "floating";
-  floating.tabIndex = -1;
-  document.body.appendChild(anchor);
-  document.body.appendChild(floating);
+  const floatingEl = trackElement(document.createElement("div"));
+  floatingEl.id = "floating";
+  floatingEl.tabIndex = -1;
+  document.body.appendChild(floatingEl);
 
-  const openRef = ref(false);
-  const setOpen = vi.fn((v: boolean) => {
-    openRef.value = v;
+  const openRef = ref(initialOpen);
+  const setOpenMock = vi.fn((value: boolean) => {
+    openRef.value = value;
   });
-  const anchorRef = ref<AnchorElement>(anchor);
-  const floatingRef = ref<FloatingElement>(floating);
+  const anchorRef = ref<AnchorElement>(anchorEl);
+  const floatingRef = ref<FloatingElement>(floatingEl);
   const arrowRef = ref<HTMLElement | null>(null);
 
-  const ctx: UseFocusTrapContext = {
+  const context: UseFocusTrapContext = {
     refs: {
       anchorEl: anchorRef,
       floatingEl: floatingRef,
@@ -58,331 +100,274 @@ function createContext() {
     },
     state: {
       open: openRef,
-      setOpen,
+      setOpen: setOpenMock,
     },
   };
-  return { ctx, anchor, floating, openRef, setOpen };
+
+  const scope = effectScope();
+  activeScopes.push(scope);
+
+  let result!: UseFocusTrapReturn;
+  scope.run(() => {
+    result = useFocusTrap(context, options);
+  });
+
+  return {
+    anchorEl,
+    floatingEl,
+    context,
+    openRef,
+    result,
+    scope,
+    setOpenMock,
+  };
+}
+
+async function openTrap(ctx: FocusTrapTestContext) {
+  ctx.context.state.setOpen(true);
+  await flushFocusTrap();
+  ctx.setOpenMock.mockClear();
 }
 
 describe("useFocusTrap", () => {
-  let scope: ReturnType<typeof effectScope>;
-  let floating: HTMLElement;
-  let ctx: UseFocusTrapContext;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    const created = createContext();
-    ctx = created.ctx;
-    floating = created.floating;
-    scope = effectScope();
   });
 
   afterEach(() => {
-    scope?.stop();
-    // Clean up all tracked elements
-    for (const el of elementsToCleanUp) {
-      if (el.isConnected) {
-        el.remove();
-      }
+    for (const scope of [...activeScopes].reverse()) {
+      scope.stop();
     }
-    elementsToCleanUp.length = 0;
+
+    activeScopes.length = 0;
+    clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  it("inserts guards and traps Tab navigation", async () => {
-    const b1 = document.createElement("button");
-    const b2 = document.createElement("button");
-    const b3 = document.createElement("button");
-    floating.append(b1, b2, b3);
+  describe("focus management", () => {
+    it("focuses the first visible tabbable element", async () => {
+      const ctx = setupFocusTrap();
+      const hiddenButton = appendButton(ctx.floatingEl, "hidden");
+      hiddenButton.style.display = "none";
+      const visibleButton = appendButton(ctx.floatingEl, "visible");
 
-    scope.run(() => {
-      useFocusTrap(ctx);
+      await openTrap(ctx);
+
+      expect(document.activeElement).toBe(visibleButton);
+      expect(ctx.result.isActive.value).toBe(true);
     });
 
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
+    it("supports selector-based initial focus", async () => {
+      const ctx = setupFocusTrap({ initialFocus: "#close-btn" });
+      appendButton(ctx.floatingEl, "first");
+      const closeButton = appendButton(ctx.floatingEl, "close-btn");
 
-    // focus-trap adds guards outside or in a way that might not be direct children
-    // We verify trapping behavior instead
+      await openTrap(ctx);
 
-    b1.focus();
-    await nextTick();
-    const keyEvt = new KeyboardEvent("keydown", { key: "Tab", bubbles: true });
-    floating.dispatchEvent(keyEvt);
-    await nextTick();
-    expect(document.activeElement === b1 || document.activeElement === floating).toBeTruthy();
+      expect(document.activeElement).toBe(closeButton);
+    });
+
+    it("falls back to the floating container when no tabbables exist", async () => {
+      const ctx = setupFocusTrap();
+      ctx.floatingEl.textContent = "No tabbable content";
+
+      await openTrap(ctx);
+
+      expect(document.activeElement).toBe(ctx.floatingEl);
+    });
+
+    it("does not move focus on open when initialFocus is false", async () => {
+      const ctx = setupFocusTrap({ initialFocus: false });
+      appendButton(ctx.floatingEl, "first");
+      ctx.anchorEl.focus();
+
+      await openTrap(ctx);
+
+      expect(document.activeElement).toBe(ctx.anchorEl);
+    });
+
+    it("returns focus to the previously focused element on close", async () => {
+      const previousFocus = createOutsideElement("previous-focus");
+      previousFocus.focus();
+
+      const ctx = setupFocusTrap({ returnFocus: true });
+      appendButton(ctx.floatingEl, "first");
+
+      await openTrap(ctx);
+      ctx.context.state.setOpen(false);
+      await flushFocusTrap();
+
+      expect(document.activeElement).toBe(previousFocus);
+    });
+
+    it("reacts to returnFocus changes while open", async () => {
+      const previousFocus = createOutsideElement("previous-focus");
+      previousFocus.focus();
+
+      const returnFocus = ref(true);
+      const ctx = setupFocusTrap({ returnFocus });
+      appendButton(ctx.floatingEl, "first");
+
+      await openTrap(ctx);
+
+      returnFocus.value = false;
+      await flushFocusTrap();
+
+      ctx.context.state.setOpen(false);
+      await flushFocusTrap();
+
+      expect(document.activeElement).not.toBe(previousFocus);
+    });
   });
 
-  // NOTE: These tests were previously passing due to arbitrary timeouts (setTimeout 10ms).
-  // They are inherently flaky and timing-dependent. The useFocusTrap composable's
-  // initialFocus behavior needs architectural fixes to properly await async operations.
-  // These tests are skipped until the composable is fixed.
-  it.skip("initialFocus variants select targets correctly", async () => {
-    // Focus-related tests need real timers to work with browser focus
-    vi.useRealTimers();
+  describe("dismissal behavior", () => {
+    it("reports outside-pointer when outside click deactivates the trap", async () => {
+      const outsideEl = createOutsideElement();
+      const ctx = setupFocusTrap({ modal: false, closeOnFocusOut: true });
+      appendButton(ctx.floatingEl, "first");
 
-    const b1 = document.createElement("button");
-    const b2 = document.createElement("button");
-    const b3 = document.createElement("button");
-    floating.append(b1, b2, b3);
+      await openTrap(ctx);
+      await userEvent.click(outsideEl);
+      await flushFocusTrap();
 
-    scope.run(() => {
-      useFocusTrap(ctx, { initialFocus: () => b1 });
+      expect(ctx.setOpenMock).toHaveBeenCalledWith(false, "outside-pointer", expect.any(Event));
+      expect(ctx.context.state.open.value).toBe(false);
     });
-    ctx.state.setOpen(true);
-    await nextTick();
-    await nextTick();
-    expect(document.activeElement).toBe(b1);
+
+    it("reports programmatic when deactivate() closes the floating surface", async () => {
+      const ctx = setupFocusTrap();
+      appendButton(ctx.floatingEl, "first");
+
+      await openTrap(ctx);
+      ctx.result.deactivate();
+      await flushFocusTrap();
+
+      expect(ctx.setOpenMock).toHaveBeenCalledWith(false, "programmatic", undefined);
+      expect(ctx.context.state.open.value).toBe(false);
+    });
+
+    it("can close programmatically even when no trap is active", async () => {
+      const enabled = ref(false);
+      const ctx = setupFocusTrap({ enabled }, true);
+
+      await flushFocusTrap();
+      ctx.setOpenMock.mockClear();
+
+      ctx.result.deactivate();
+      await flushFocusTrap();
+
+      expect(ctx.setOpenMock).toHaveBeenCalledWith(false, "programmatic", undefined);
+      expect(ctx.context.state.open.value).toBe(false);
+    });
   });
 
-  it.skip("fallbacks to container focus when no tabbables", async () => {
-    // Focus-related tests need real timers to work with browser focus
-    vi.useRealTimers();
+  describe("modal behavior", () => {
+    it("isolates outside content with aria-hidden and restores it on close", async () => {
+      const outsideEl = createOutsideElement();
+      const ctx = setupFocusTrap({ modal: true });
+      appendButton(ctx.floatingEl, "first");
 
-    scope.run(() => {
-      useFocusTrap(ctx, { initialFocus: "first" });
+      await openTrap(ctx);
+
+      expect(outsideEl.getAttribute("aria-hidden")).toBe("true");
+
+      ctx.context.state.setOpen(false);
+      await flushFocusTrap();
+
+      expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
     });
-    ctx.state.setOpen(true);
-    await nextTick();
-    await nextTick();
-    expect(document.activeElement).toBe(floating);
+
+    it("updates outside isolation when modal options change while open", async () => {
+      const outsideEl = createOutsideElement();
+      const modal = ref(false);
+      const outsideElementsInert = ref(false);
+      const ctx = setupFocusTrap({ modal, outsideElementsInert });
+      appendButton(ctx.floatingEl, "first");
+
+      await openTrap(ctx);
+      expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+
+      modal.value = true;
+      await flushFocusTrap();
+      expect(outsideEl.getAttribute("aria-hidden")).toBe("true");
+
+      outsideElementsInert.value = true;
+      await flushFocusTrap();
+
+      if ("inert" in HTMLElement.prototype) {
+        expect(outsideEl.hasAttribute("inert")).toBe(true);
+        expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
+      } else {
+        expect(outsideEl.getAttribute("aria-hidden")).toBe("true");
+      }
+
+      modal.value = false;
+      await flushFocusTrap();
+
+      expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+    });
   });
 
-  it("modal hides outside content inside a nested host and restores on cleanup", async () => {
-    const host = trackElement(document.createElement("div"));
-    const outside = trackElement(document.createElement("div"));
-    host.append(outside, floating);
-    document.body.appendChild(host);
+  describe("lifecycle and coordination", () => {
+    it("reacts to enabled changes while the floating surface stays open", async () => {
+      const enabled = ref(true);
+      const ctx = setupFocusTrap({ enabled });
+      appendButton(ctx.floatingEl, "first");
 
-    scope.run(() => {
-      useFocusTrap(ctx, { modal: true });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-    expect(isAccessibilityHidden(outside)).toBe(true);
-    scope.stop();
-    await flushTimersAndTick();
-    expect(isAccessibilityHidden(outside)).toBe(false);
-  });
+      await openTrap(ctx);
+      expect(ctx.result.isActive.value).toBe(true);
 
-  it("non-modal closes on outside click when closeOnFocusOut=true", async () => {
-    scope.run(() => {
-      useFocusTrap(ctx, { modal: false, closeOnFocusOut: true });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
+      enabled.value = false;
+      await flushFocusTrap();
+      expect(ctx.result.isActive.value).toBe(false);
 
-    const outside = document.createElement("button");
-    document.body.appendChild(outside);
-    await userEvent.click(outside);
-    await flushTimersAndTick();
-    expect(ctx.state.open.value).toBe(false);
-  });
-
-  it("manual deactivate closes the floating surface", async () => {
-    let result: ReturnType<typeof useFocusTrap> | undefined;
-
-    scope.run(() => {
-      result = useFocusTrap(ctx, { closeOnFocusOut: true });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-
-    result?.deactivate();
-    await flushTimersAndTick();
-
-    expect(ctx.state.open.value).toBe(false);
-  });
-
-  it("returnFocus restores to previous on close unless skipped", async () => {
-    const other = document.createElement("button");
-    document.body.appendChild(other);
-    other.focus();
-
-    scope.run(() => {
-      useFocusTrap(ctx, { returnFocus: true });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-    ctx.state.setOpen(false);
-    await flushTimersAndTick();
-    expect(document.activeElement).toBe(other);
-  });
-
-  it.skip("uses preventScroll option correctly", async () => {
-    // Focus-related tests need real timers to work with browser focus
-    vi.useRealTimers();
-
-    const b1 = document.createElement("button");
-    floating.append(b1);
-    const focusSpy = vi.spyOn(b1, "focus");
-
-    scope.run(() => {
-      useFocusTrap(ctx, { preventScroll: false });
-    });
-    ctx.state.setOpen(true);
-    await nextTick();
-    await nextTick();
-
-    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: false });
-  });
-
-  it("reacts to changes in enabled option", async () => {
-    const b1 = document.createElement("button");
-    floating.append(b1);
-    const enabled = ref(true);
-
-    scope.run(() => {
-      useFocusTrap(ctx, { enabled });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-
-    // Verify enabled state by checking if focus is trapped or initial focus set
-    // (Assuming initial focus works)
-    expect(document.activeElement).not.toBe(document.body);
-
-    enabled.value = false;
-    await flushTimersAndTick();
-
-    // Verify disabled (trap deactivated)
-    // Hard to test exact deactivation without side effects, but we can assume no errors
-  });
-
-  it("cleanup method works correctly", async () => {
-    const b1 = document.createElement("button");
-    floating.append(b1);
-    let deactivate: (() => void) | undefined;
-
-    scope.run(() => {
-      const result = useFocusTrap(ctx);
-      deactivate = result.deactivate;
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-
-    deactivate?.();
-    await flushTimersAndTick();
-
-    // Verify cleanup
-  });
-
-  it("activate is a no-op while closed", () => {
-    let result: ReturnType<typeof useFocusTrap> | undefined;
-
-    scope.run(() => {
-      result = useFocusTrap(ctx);
+      enabled.value = true;
+      await flushFocusTrap();
+      expect(ctx.result.isActive.value).toBe(true);
     });
 
-    result?.activate();
+    it("coordinates multiple traps so only the top trap stays active", async () => {
+      const parent = setupFocusTrap();
+      const child = setupFocusTrap();
+      appendButton(parent.floatingEl, "parent-button");
+      appendButton(child.floatingEl, "child-button");
 
-    expect(result?.isActive.value).toBe(false);
-  });
+      await openTrap(parent);
+      expect(parent.result.isActive.value).toBe(true);
 
-  it("works with dynamically added elements", async () => {
-    const b1 = document.createElement("button");
-    floating.append(b1);
+      await openTrap(child);
+      expect(parent.result.isActive.value).toBe(false);
+      expect(child.result.isActive.value).toBe(true);
 
-    scope.run(() => {
-      useFocusTrap(ctx);
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
+      child.context.state.setOpen(false);
+      await flushFocusTrap();
 
-    const b2 = document.createElement("button");
-    floating.append(b2);
-    await flushTimersAndTick();
-
-    b2.focus();
-    await flushTimersAndTick();
-    expect(document.activeElement).toBe(b2);
-  });
-
-  it("handles rapid open/close cycles", async () => {
-    const b1 = document.createElement("button");
-    floating.append(b1);
-
-    scope.run(() => {
-      useFocusTrap(ctx);
+      expect(parent.result.isActive.value).toBe(true);
+      expect(child.result.isActive.value).toBe(false);
     });
 
-    for (let i = 0; i < 5; i++) {
-      ctx.state.setOpen(true);
-      await flushTimersAndTick();
-      ctx.state.setOpen(false);
-      await flushTimersAndTick();
-    }
+    it("does nothing when activate() is called while closed", () => {
+      const ctx = setupFocusTrap();
 
-    expect(true).toBe(true);
-  });
+      ctx.result.activate();
 
-  it("does not return focus to disconnected elements", async () => {
-    const other = document.createElement("button");
-    document.body.appendChild(other);
-    other.focus();
-
-    scope.run(() => {
-      useFocusTrap(ctx, { returnFocus: true });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-
-    other.remove();
-
-    ctx.state.setOpen(false);
-    await flushTimersAndTick();
-
-    expect(document.activeElement).not.toBe(other);
-  });
-
-  it("handles null floating element gracefully", async () => {
-    ctx.refs.floatingEl.value = null;
-
-    scope.run(() => {
-      useFocusTrap(ctx);
+      expect(ctx.result.isActive.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
 
-    expect(() => {
-      ctx.state.setOpen(true);
-    }).not.toThrow();
-    await nextTick();
-  });
+    it("handles a missing floating element without throwing", async () => {
+      const ctx = setupFocusTrap();
+      ctx.context.refs.floatingEl.value = null;
 
-  it("handles focus errors gracefully", async () => {
-    const b1 = document.createElement("button");
-    floating.append(b1);
+      expect(() => {
+        ctx.context.state.setOpen(true);
+      }).not.toThrow();
 
-    vi.spyOn(b1, "focus").mockImplementation(() => {
-      throw new Error("Focus error");
+      await flushFocusTrap();
+      expect(ctx.result.isActive.value).toBe(false);
     });
-
-    scope.run(() => {
-      useFocusTrap(ctx);
-    });
-
-    expect(() => {
-      ctx.state.setOpen(true);
-    }).not.toThrow();
-    await nextTick();
-  });
-
-  it("restores previous aria-hidden state on cleanup", async () => {
-    const outside = document.createElement("div");
-    outside.setAttribute("aria-hidden", "false");
-    document.body.appendChild(outside);
-
-    scope.run(() => {
-      useFocusTrap(ctx, { modal: true });
-    });
-    ctx.state.setOpen(true);
-    await flushTimersAndTick();
-
-    expect(outside.getAttribute("aria-hidden")).toBe("true");
-
-    scope.stop();
-    await flushTimersAndTick();
-
-    expect(outside.getAttribute("aria-hidden")).toBe(null);
   });
 });

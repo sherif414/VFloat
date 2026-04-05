@@ -3,12 +3,14 @@ import {
   type ComputedRef,
   computed,
   type MaybeRefOrGetter,
+  nextTick,
   shallowRef,
   toValue,
   watchPostEffect,
 } from "vue";
 import type { FloatingContext } from "@/composables/positioning/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
+import type { OpenChangeReason } from "@/types";
 
 //=======================================================================================
 // 📌 Types
@@ -92,14 +94,14 @@ export interface UseFocusTrapReturn {
 
 // Check for inert support
 const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype;
-const isDev =
-  (
-    globalThis as typeof globalThis & {
-      process?: { env?: { NODE_ENV?: string } };
-    }
-  ).process?.env?.NODE_ENV !== "production";
+const isDev = import.meta.env.DEV;
+const sharedTrapStack: FocusTrap[] = [];
 
 type TrapIsolationMode = false | "inert" | "aria-hidden";
+type CloseRequest = {
+  reason: OpenChangeReason;
+  event?: Event;
+};
 
 /**
  * Normalizes focus-trap's flexible `initialFocus` option into a callback.
@@ -153,33 +155,48 @@ export function useFocusTrap(
   const isModal = computed(() => !!toValue(modal));
   const shouldCloseOnFocusOut = computed(() => !isModal.value && !!toValue(closeOnFocusOut));
   const shouldInertOutside = computed(() => !!toValue(outsideElementsInert));
+  const shouldReturnFocus = computed(() => !!toValue(returnFocus));
+  const shouldPreventScroll = computed(() => !!toValue(preventScroll));
+  const isolationMode = computed(() =>
+    resolveIsolationMode(isModal.value, shouldInertOutside.value),
+  );
 
   // Use shallowRef for trap instance (don't need deep reactivity)
   const trapRef = shallowRef<FocusTrap | null>(null);
-  const isActive = computed(() => trapRef.value !== null);
-
-  // Tracks whether the current deactivation should close the floating surface,
-  // which lets us distinguish explicit closes from internal trap refreshes.
-  let shouldCloseOnDeactivate = false;
+  const trapIsActive = shallowRef(false);
+  const isActive = computed(() => trapIsActive.value);
 
   // Guard to prevent double-deactivation
   let isDeactivating = false;
+  let pendingCloseRequest: CloseRequest | null = null;
 
   /**
    * Deactivates the focus trap and cleans up state.
    */
-  const deactivateTrap = (options: { returnFocus?: boolean; closeFloating?: boolean } = {}) => {
-    if (isDeactivating || !trapRef.value) return;
+  const deactivateTrap = (options: { returnFocus?: boolean; closeRequest?: CloseRequest } = {}) => {
+    if (isDeactivating) return;
+
+    pendingCloseRequest = options.closeRequest ?? null;
+
+    if (!trapRef.value) {
+      trapIsActive.value = false;
+
+      if (options.closeRequest && open.value) {
+        const { reason, event } = options.closeRequest;
+        pendingCloseRequest = null;
+        setOpen(false, reason, event);
+      }
+
+      return;
+    }
 
     isDeactivating = true;
-    if (options.closeFloating) {
-      shouldCloseOnDeactivate = true;
-    }
     try {
       trapRef.value.deactivate({
-        returnFocus: options.returnFocus ?? toValue(returnFocus),
+        returnFocus: options.returnFocus ?? shouldReturnFocus.value,
       });
       trapRef.value = null;
+      trapIsActive.value = false;
     } finally {
       isDeactivating = false;
     }
@@ -205,29 +222,43 @@ export function useFocusTrap(
     // Create the focus trap instance
     trapRef.value = createFocusTrap(container, {
       onActivate: () => {
-        shouldCloseOnDeactivate = false;
+        trapIsActive.value = true;
+      },
+      onPause: () => {
+        trapIsActive.value = false;
+      },
+      onUnpause: () => {
+        trapIsActive.value = true;
       },
       onDeactivate: () => {
         trapRef.value = null;
-        if (shouldCloseOnDeactivate) {
-          shouldCloseOnDeactivate = false;
-          setOpen(false);
+        trapIsActive.value = false;
+
+        const closeRequest = pendingCloseRequest;
+        pendingCloseRequest = null;
+
+        if (closeRequest) {
+          setOpen(false, closeRequest.reason, closeRequest.event);
         }
       },
       initialFocus: resolveInitialFocus(initialFocus),
       fallbackFocus: () => container,
-      returnFocusOnDeactivate: toValue(returnFocus),
-      clickOutsideDeactivates: () => {
+      returnFocusOnDeactivate: shouldReturnFocus.value,
+      clickOutsideDeactivates: (event) => {
         if (!shouldCloseOnFocusOut.value) return false;
-        // Mark this as a real "dismiss" so `onDeactivate` can close the surface.
-        shouldCloseOnDeactivate = true;
+        pendingCloseRequest = {
+          reason: "outside-pointer",
+          event,
+        };
         return true;
       },
       allowOutsideClick: !isModal.value,
       escapeDeactivates: false,
-      preventScroll: toValue(preventScroll),
-      isolateSubtrees: resolveIsolationMode(isModal.value, shouldInertOutside.value),
-      tabbableOptions: { displayCheck: "none" },
+      preventScroll: shouldPreventScroll.value,
+      isolateSubtrees: isolationMode.value,
+      checkCanFocusTrap: () => nextTick(),
+      checkCanReturnFocus: shouldReturnFocus.value ? () => nextTick() : undefined,
+      trapStack: sharedTrapStack,
     });
 
     // Activate with proper error handling
@@ -235,8 +266,9 @@ export function useFocusTrap(
       trapRef.value.activate();
     } catch (error) {
       // Ensure state is cleaned up even on error
-      shouldCloseOnDeactivate = false;
+      pendingCloseRequest = null;
       trapRef.value = null;
+      trapIsActive.value = false;
 
       // Call custom error handler if provided
       if (onError) {
@@ -249,6 +281,11 @@ export function useFocusTrap(
 
   // Single watcher to manage trap lifecycle
   watchPostEffect(() => {
+    void shouldCloseOnFocusOut.value;
+    void shouldReturnFocus.value;
+    void shouldPreventScroll.value;
+    void isolationMode.value;
+
     if (isEnabled.value && open.value && floatingEl.value) {
       createTrap();
     } else {
@@ -264,6 +301,11 @@ export function useFocusTrap(
   return {
     isActive,
     activate: createTrap,
-    deactivate: () => deactivateTrap({ closeFloating: true }),
+    deactivate: () =>
+      deactivateTrap({
+        closeRequest: {
+          reason: "programmatic",
+        },
+      }),
   };
 }
