@@ -44,7 +44,11 @@ interface UseListNavigationReturn {
 - `orientation` controls whether navigation is vertical, horizontal, or grid-based.
 - `virtual: true` keeps DOM focus on the anchor and uses `aria-activedescendant`.
 - `openOnArrowKeyDown` lets a closed list open from the keyboard.
-- `cleanup()` removes the registered listeners and watchers.
+- Keyboard and hover navigation both skip disabled items.
+- `selectedIndex` only wins on open when that item exists and is not disabled.
+- `focusItemOnOpen: "auto"` only moves focus for the current arrow-key open path.
+- Grid navigation respects `rtl: true` for left/right movement too, including wrapped row movement.
+- `cleanup()` removes the registered listeners and watchers, clears `aria-activedescendant`, and resets `virtualItemRef`.
 
 ## Example
 
@@ -68,6 +72,7 @@ useListNavigation(context, {
   },
   orientation: "vertical",
   loop: true,
+  focusItemOnOpen: "auto",
 });
 </script>
 
@@ -95,4 +100,5 @@ useListNavigation(context, {
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
 - [`useEscapeKey`](/api/use-escape-key)
+- [Keyboard List Navigation](/guide/list-navigation)
 - [Interactions](/guide/interactions)

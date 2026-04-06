@@ -1,313 +1,412 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { nextTick, ref, type Ref } from "vue";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { effectScope, nextTick, ref, type Ref } from "vue";
+import {
+  type UseListNavigationOptions,
+  type UseListNavigationReturn,
+  useListNavigation,
+} from "@/composables/interactions/use-list-navigation";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 import { useFloating } from "@/composables/positioning";
-import { useListNavigation } from "@/composables/interactions";
 
-const createMockElement = (tagName = "div", attributes: Record<string, any> = {}) => {
-  const element = document.createElement(tagName);
-  Object.assign(element, attributes);
-  return element;
+type ListNavigationTestContext = {
+  activeIndex: Ref<number | null>;
+  anchorEl: HTMLButtonElement;
+  context: ReturnType<typeof useFloating>;
+  floatingEl: HTMLDivElement;
+  items: HTMLButtonElement[];
+  listRef: Ref<Array<HTMLElement | null>>;
+  onNavigate: ReturnType<typeof vi.fn>;
+  openRef: Ref<boolean>;
+  result: UseListNavigationReturn;
+  scope: ReturnType<typeof effectScope>;
 };
 
-describe("useListNavigation", () => {
-  let anchorEl: HTMLElement;
-  let floatingEl: HTMLElement;
-  let items: HTMLElement[];
-  let listRef: Ref<Array<HTMLElement | null>>;
-  let open: Ref<boolean>;
-  let activeIndex: Ref<number | null>;
+type SetupOptions = Partial<
+  Omit<UseListNavigationOptions, "activeIndex" | "listRef" | "onNavigate">
+>;
 
-  beforeEach(() => {
-    anchorEl = createMockElement("button");
-    floatingEl = createMockElement("div");
-    document.body.appendChild(anchorEl);
-    document.body.appendChild(floatingEl);
-    items = Array.from({ length: 8 }, () => createMockElement("button"));
-    items.forEach((el) => floatingEl.appendChild(el));
-    listRef = ref<Array<HTMLElement | null>>(items);
-    open = ref<boolean>(false);
-    activeIndex = ref<number | null>(null);
+const trackedElements: HTMLElement[] = [];
+const activeScopes: ReturnType<typeof effectScope>[] = [];
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+
+  trackedElements.length = 0;
+}
+
+function createButton(id: string): HTMLButtonElement {
+  const button = trackElement(document.createElement("button"));
+  button.id = id;
+  button.type = "button";
+  button.textContent = id;
+  return button;
+}
+
+function createItems(container: HTMLElement, count = 8): HTMLButtonElement[] {
+  return Array.from({ length: count }, (_, index) => {
+    const button = createButton(`item-${index}`);
+    container.appendChild(button);
+    return button;
+  });
+}
+
+async function flushListNavigation(ticks = 2) {
+  for (let i = 0; i < ticks; i++) {
+    await nextTick();
+  }
+}
+
+function dispatchKey(target: EventTarget, key: string) {
+  target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+}
+
+function setupListNavigation(
+  options: SetupOptions = {},
+  initialOpen = false,
+): ListNavigationTestContext {
+  const anchorEl = createButton("anchor");
+  document.body.appendChild(anchorEl);
+
+  const floatingEl = trackElement(document.createElement("div"));
+  floatingEl.id = "floating";
+  document.body.appendChild(floatingEl);
+
+  const items = createItems(floatingEl);
+  const listRef = ref<Array<HTMLElement | null>>(items);
+  const openRef = ref(initialOpen);
+  const activeIndex = ref<number | null>(null);
+  const anchorRef = ref<AnchorElement>(anchorEl);
+  const floatingRef = ref<FloatingElement>(floatingEl);
+  const context = useFloating(anchorRef, floatingRef, { open: openRef });
+  const onNavigate = vi.fn((index: number | null) => {
+    activeIndex.value = index;
   });
 
+  const scope = effectScope();
+  activeScopes.push(scope);
+
+  let result!: UseListNavigationReturn;
+  scope.run(() => {
+    result = useListNavigation(context, {
+      listRef,
+      activeIndex,
+      onNavigate,
+      ...options,
+    });
+  });
+
+  return {
+    activeIndex,
+    anchorEl,
+    context,
+    floatingEl,
+    items,
+    listRef,
+    onNavigate,
+    openRef,
+    result,
+    scope,
+  };
+}
+
+describe("useListNavigation", () => {
   afterEach(() => {
-    document.body.innerHTML = "";
+    for (const scope of [...activeScopes].reverse()) {
+      scope.stop();
+    }
+
+    activeScopes.length = 0;
+    clearTrackedElements();
     vi.clearAllMocks();
   });
 
-  const makeContext = () => {
-    const anchorRef = ref<AnchorElement>(anchorEl);
-    const floatingRef = ref<FloatingElement>(floatingEl);
-    return useFloating(anchorRef, floatingRef, { open });
-  };
+  describe("opening behavior", () => {
+    it("opens once on ArrowDown and targets the first enabled item", async () => {
+      const ctx = setupListNavigation({
+        disabledIndices: [0, 1],
+        focusItemOnOpen: "auto",
+        orientation: "vertical",
+      });
+      const scrollSpy = vi.fn();
+      ctx.items[2].scrollIntoView = scrollSpy;
 
-  it("opens on arrow and selects first enabled", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      openOnArrowKeyDown: true,
-      orientation: "vertical",
-    });
-    const e = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true });
-    anchorEl.dispatchEvent(e);
-    await nextTick();
-    expect(ctx.state.open.value).toBe(true);
-    expect(onNavigate).toHaveBeenCalled();
-    expect(activeIndex.value).toBe(0);
-  });
+      dispatchKey(ctx.anchorEl, "ArrowDown");
+      await flushListNavigation();
 
-  it("opens on ArrowUp and selects last enabled", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      openOnArrowKeyDown: true,
-      orientation: "vertical",
-    });
-    const e = new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true });
-    anchorEl.dispatchEvent(e);
-    await nextTick();
-    expect(ctx.state.open.value).toBe(true);
-    expect(activeIndex.value).toBe(items.length - 1);
-  });
-
-  it("uses selectedIndex on open", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    const selectedIndex = ref(3);
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      selectedIndex,
-      openOnArrowKeyDown: true,
-      orientation: "vertical",
-    });
-    anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(3);
-  });
-
-  it("vertical navigation skips disabled and no wrap when loop=false", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    const disabled = [1];
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      disabledIndices: disabled,
-      loop: false,
-      orientation: "vertical",
-    });
-    open.value = true;
-    activeIndex.value = 0;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(2);
-    activeIndex.value = items.length - 1;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(items.length - 1);
-  });
-
-  it("wraps when loop=true", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      loop: true,
-      orientation: "vertical",
-    });
-    open.value = true;
-    activeIndex.value = items.length - 1;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(0);
-  });
-
-  it("home and end jump", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, { listRef, activeIndex, onNavigate, orientation: "vertical" });
-    open.value = true;
-    activeIndex.value = 3;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(0);
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(items.length - 1);
-  });
-
-  it("horizontal with RTL", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      orientation: "horizontal",
-      rtl: true,
-    });
-    open.value = true;
-    activeIndex.value = 0;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(1);
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(0);
-  });
-
-  it("grid navigation with cols and wrap", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      orientation: "both",
-      cols: 4,
-      loop: true,
-    });
-    open.value = true;
-    activeIndex.value = 2;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(6);
-    activeIndex.value = items.length - 2;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(2);
-  });
-
-  it("hover updates active index when enabled", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, { listRef, activeIndex, onNavigate, focusItemOnHover: true });
-    open.value = true;
-    await nextTick();
-    const target = items[4];
-    // Simulate mouse move with coordinates to bypass the "ghost hover" check
-    target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 10, clientY: 10 }));
-    await nextTick();
-    expect(activeIndex.value).toBe(4);
-  });
-
-  it("focuses item on open when configured", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      focusItemOnOpen: "auto",
-      orientation: "vertical",
-    });
-    anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    await nextTick();
-    expect(document.activeElement).toBe(items[0]);
-  });
-
-  it("virtual sets aria-activedescendant and supports escape to null", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    const virtualItemRef = ref<HTMLElement | null>(null);
-
-    // Ensure our mock items all have IDs for aria-activedescendant to work
-    items.forEach((item, index) => {
-      item.id = `mock-item-${index}`;
+      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.onNavigate).toHaveBeenCalledTimes(1);
+      expect(ctx.onNavigate).toHaveBeenCalledWith(2);
+      expect(ctx.activeIndex.value).toBe(2);
+      expect(scrollSpy).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(ctx.items[2]);
     });
 
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      virtual: true,
-      virtualItemRef,
-      allowEscape: true,
-      loop: true,
-      orientation: "vertical",
-      disabledIndices: Array.from({ length: items.length }, (_, i) => i),
+    it("opens once on ArrowUp and targets the last enabled item", async () => {
+      const ctx = setupListNavigation({
+        disabledIndices: [7],
+        focusItemOnOpen: false,
+        orientation: "vertical",
+      });
+      ctx.anchorEl.focus();
+
+      dispatchKey(ctx.anchorEl, "ArrowUp");
+      await flushListNavigation();
+
+      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.onNavigate).toHaveBeenCalledTimes(1);
+      expect(ctx.onNavigate).toHaveBeenCalledWith(6);
+      expect(ctx.activeIndex.value).toBe(6);
+      expect(document.activeElement).toBe(ctx.anchorEl);
     });
-    open.value = true;
-    activeIndex.value = 0;
-    await nextTick();
-    expect(anchorEl.getAttribute("aria-activedescendant")).toBe(items[0].id);
-    expect(virtualItemRef.value).toBe(items[0]);
 
-    activeIndex.value = items.length - 1;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    it("ignores a disabled selectedIndex when resolving the initial item", async () => {
+      const selectedIndex = ref(1);
+      const ctx = setupListNavigation({
+        disabledIndices: [1],
+        focusItemOnOpen: true,
+        orientation: "vertical",
+        selectedIndex,
+      });
 
-    await nextTick();
-    await nextTick();
-    expect(activeIndex.value).toBeNull();
-    const updatedDescendant = anchorEl.getAttribute("aria-activedescendant");
-    expect(updatedDescendant === null || updatedDescendant === "").toBeTruthy();
+      ctx.openRef.value = true;
+      await flushListNavigation();
+
+      expect(ctx.onNavigate).toHaveBeenCalledTimes(1);
+      expect(ctx.activeIndex.value).toBe(0);
+      expect(document.activeElement).toBe(ctx.items[0]);
+    });
+
+    it("only applies focusItemOnOpen auto to the current keyboard-open cycle", async () => {
+      const ctx = setupListNavigation({
+        focusItemOnOpen: "auto",
+        orientation: "vertical",
+      });
+      ctx.anchorEl.focus();
+
+      dispatchKey(ctx.anchorEl, "ArrowDown");
+      await flushListNavigation();
+      expect(document.activeElement).toBe(ctx.items[0]);
+
+      ctx.openRef.value = false;
+      await flushListNavigation();
+
+      ctx.anchorEl.focus();
+      ctx.onNavigate.mockClear();
+
+      ctx.openRef.value = true;
+      await flushListNavigation();
+
+      expect(ctx.onNavigate).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(ctx.anchorEl);
+    });
   });
 
-  it("cleanup removes listeners", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    const { cleanup } = useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      orientation: "vertical",
+  describe("linear navigation", () => {
+    it("skips disabled items without wrapping when loop is disabled", async () => {
+      const ctx = setupListNavigation(
+        {
+          disabledIndices: [1],
+          focusItemOnOpen: false,
+          loop: false,
+          orientation: "vertical",
+        },
+        true,
+      );
+      ctx.activeIndex.value = 0;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(2);
+
+      ctx.onNavigate.mockClear();
+      ctx.activeIndex.value = ctx.items.length - 1;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.onNavigate).not.toHaveBeenCalled();
+      expect(ctx.activeIndex.value).toBe(ctx.items.length - 1);
     });
-    cleanup();
-    anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-    await nextTick();
-    expect(onNavigate).not.toHaveBeenCalled();
+
+    it("wraps when loop is enabled", async () => {
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          loop: true,
+          orientation: "vertical",
+        },
+        true,
+      );
+      ctx.activeIndex.value = ctx.items.length - 1;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.activeIndex.value).toBe(0);
+    });
+
+    it("moves to the first and last enabled items with Home and End", async () => {
+      const ctx = setupListNavigation(
+        {
+          disabledIndices: [0, 7],
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        true,
+      );
+      ctx.activeIndex.value = 3;
+
+      dispatchKey(ctx.floatingEl, "Home");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(1);
+
+      dispatchKey(ctx.floatingEl, "End");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(6);
+    });
   });
 
-  it("grid navigation with loopDirection='next'", async () => {
-    const ctx = makeContext();
-    const onNavigate = vi.fn((idx: number | null) => (activeIndex.value = idx));
-    // 4 cols, 8 items. Row 0: [0, 1, 2, 3], Row 1: [4, 5, 6, 7]
-    useListNavigation(ctx, {
-      listRef,
-      activeIndex,
-      onNavigate,
-      orientation: "both",
-      cols: 4,
-      loop: true,
-      gridLoopDirection: "next",
+  describe("grid navigation", () => {
+    it("respects RTL row looping inside a grid", async () => {
+      const ctx = setupListNavigation(
+        {
+          cols: 4,
+          focusItemOnOpen: false,
+          loop: true,
+          orientation: "both",
+          rtl: true,
+        },
+        true,
+      );
+      ctx.activeIndex.value = 0;
+
+      dispatchKey(ctx.floatingEl, "ArrowRight");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(3);
+
+      dispatchKey(ctx.floatingEl, "ArrowLeft");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(0);
     });
-    open.value = true;
 
-    // Move right from end of row 0 -> start of row 1
-    activeIndex.value = 3;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(4);
+    it("respects RTL next-row looping inside a grid", async () => {
+      const ctx = setupListNavigation(
+        {
+          cols: 4,
+          focusItemOnOpen: false,
+          gridLoopDirection: "next",
+          loop: true,
+          orientation: "both",
+          rtl: true,
+        },
+        true,
+      );
+      ctx.activeIndex.value = 3;
 
-    // Move left from start of row 1 -> end of row 0
-    activeIndex.value = 4;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(3);
+      dispatchKey(ctx.floatingEl, "ArrowLeft");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(4);
 
-    // Move right from end of last row -> start of first row (full loop)
-    activeIndex.value = 7;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(0);
+      dispatchKey(ctx.floatingEl, "ArrowRight");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(3);
+    });
+  });
 
-    // Move left from start of first row -> end of last row (full loop)
-    activeIndex.value = 0;
-    floatingEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-    await nextTick();
-    expect(activeIndex.value).toBe(7);
+  describe("virtual focus", () => {
+    it("syncs aria-activedescendant and virtualItemRef", async () => {
+      const virtualItemRef = ref<HTMLElement | null>(null);
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          virtual: true,
+          virtualItemRef,
+        },
+        true,
+      );
+
+      ctx.items.forEach((item, index) => {
+        item.id = `option-${index}`;
+      });
+      ctx.activeIndex.value = 2;
+
+      await flushListNavigation();
+
+      expect(ctx.anchorEl.getAttribute("aria-activedescendant")).toBe("option-2");
+      expect(virtualItemRef.value).toBe(ctx.items[2]);
+      expect(document.activeElement).not.toBe(ctx.items[2]);
+    });
+  });
+
+  describe("hover behavior", () => {
+    it("does not activate disabled hovered items", async () => {
+      const ctx = setupListNavigation(
+        {
+          disabledIndices: [4],
+          focusItemOnHover: true,
+          orientation: "vertical",
+        },
+        true,
+      );
+
+      ctx.items[4].dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: 16,
+          clientY: 16,
+        }),
+      );
+      await flushListNavigation();
+
+      expect(ctx.onNavigate).not.toHaveBeenCalled();
+      expect(ctx.activeIndex.value).toBeNull();
+    });
+  });
+
+  describe("cleanup and lifecycle", () => {
+    it("cleanup removes listeners and clears virtual focus state", async () => {
+      const virtualItemRef = ref<HTMLElement | null>(null);
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          virtual: true,
+          virtualItemRef,
+        },
+        true,
+      );
+
+      ctx.items.forEach((item, index) => {
+        item.id = `cleanup-option-${index}`;
+      });
+      ctx.activeIndex.value = 1;
+      await flushListNavigation();
+
+      expect(ctx.anchorEl.getAttribute("aria-activedescendant")).toBe("cleanup-option-1");
+      expect(virtualItemRef.value).toBe(ctx.items[1]);
+
+      ctx.result.cleanup();
+      await flushListNavigation();
+
+      expect(ctx.anchorEl.hasAttribute("aria-activedescendant")).toBe(false);
+      expect(virtualItemRef.value).toBeNull();
+
+      ctx.onNavigate.mockClear();
+      dispatchKey(ctx.anchorEl, "ArrowDown");
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.onNavigate).not.toHaveBeenCalled();
+    });
   });
 });

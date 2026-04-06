@@ -105,6 +105,7 @@ export class GridNavigationStrategy implements NavigationStrategy {
     const {
       current,
       items,
+      isRtl,
       isDisabled,
       loop,
       allowEscape,
@@ -115,7 +116,7 @@ export class GridNavigationStrategy implements NavigationStrategy {
     } = context;
 
     if (key === "ArrowRight" || key === "ArrowLeft") {
-      const dir = key === "ArrowRight" ? 1 : -1;
+      const dir = key === "ArrowRight" ? (isRtl ? -1 : 1) : isRtl ? 1 : -1;
 
       if (current === null) {
         return resolveLinearMove(current, dir, context);

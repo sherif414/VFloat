@@ -149,6 +149,15 @@ export function useListNavigation(
   context: FloatingContext,
   options: UseListNavigationOptions,
 ): UseListNavigationReturn {
+  type OpenIntent = {
+    key: string;
+  };
+  type PendingOpenNavigation = {
+    previousIndex: number | null;
+    requestedIndex: number;
+    shouldFocus: boolean;
+  };
+
   const refs = context.refs;
   const { open, setOpen } = context.state;
 
@@ -204,10 +213,21 @@ export function useListNavigation(
   // --------------------------------------------------------------------------
 
   const getActiveIndex = () => (activeIndex !== undefined ? toValue(activeIndex) : null);
+  const currentActiveIndex = computed(() => getActiveIndex());
 
   const isDisabled = (idx: number): boolean => {
     if (!disabledIndices) return false;
     return Array.isArray(disabledIndices) ? disabledIndices.includes(idx) : !!disabledIndices(idx);
+  };
+
+  const isNavigableIndex = (idx: number | null): idx is number => {
+    return (
+      idx != null &&
+      idx >= 0 &&
+      idx < listRef.value.length &&
+      !!listRef.value[idx] &&
+      !isDisabled(idx)
+    );
   };
 
   const getFirstEnabledIndex = (): number | null => {
@@ -224,6 +244,22 @@ export function useListNavigation(
       if (items[i] && !isDisabled(i)) return i;
     }
     return null;
+  };
+
+  const getSelectedEnabledIndex = (): number | null => {
+    const idx = selectedIndex !== undefined ? toValue(selectedIndex) : null;
+    return isNavigableIndex(idx) ? idx : null;
+  };
+
+  const resolveInitialOpenIndex = (key: string | null): number | null => {
+    const selectedIdx = getSelectedEnabledIndex();
+    if (selectedIdx != null) return selectedIdx;
+
+    if (key && !isMainOrientationToEndKey(key, toValue(orientation), isRtl.value)) {
+      return getLastEnabledIndex();
+    }
+
+    return getFirstEnabledIndex();
   };
 
   const findNextEnabled = (start: number, dir: 1 | -1, wrap: boolean): number | null => {
@@ -267,7 +303,13 @@ export function useListNavigation(
   // Event Handlers
   // --------------------------------------------------------------------------
 
-  let lastKey: string | null = null;
+  let openIntent: OpenIntent | null = null;
+  let pendingOpenNavigation: PendingOpenNavigation | null = null;
+
+  const clearOpenCycleState = () => {
+    openIntent = null;
+    pendingOpenNavigation = null;
+  };
 
   const handleAnchorKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented) return;
@@ -278,7 +320,6 @@ export function useListNavigation(
 
     const key = e.key;
     const ori = toValue(orientation);
-    lastKey = key;
 
     // In virtual mode, delegate to floating handler
     if (open.value && isVirtual.value) {
@@ -290,15 +331,8 @@ export function useListNavigation(
     if (open.value || !toValue(openOnArrowKeyDown)) return;
 
     e.preventDefault();
+    openIntent = { key };
     setOpen(true, "keyboard-activate", e);
-
-    const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null;
-    const initial =
-      sel ??
-      (isMainOrientationToEndKey(key, ori, isRtl.value)
-        ? getFirstEnabledIndex()
-        : getLastEnabledIndex());
-    if (initial != null) onNavigate?.(initial);
   };
 
   const handleFloatingKeyDown = (e: KeyboardEvent): void => {
@@ -367,10 +401,32 @@ export function useListNavigation(
   // Focus active item when it changes
   registerCleanup(
     watch(
-      [open, computed(() => getActiveIndex())],
-      ([isOpen, idx]) => {
+      [open, currentActiveIndex],
+      ([isOpen, idx], [wasOpen, previousIndex]) => {
         if (!isEnabled.value || !isOpen || idx == null) return;
-        focusItem(idx);
+
+        if (pendingOpenNavigation) {
+          const isRequestedIndex = idx === pendingOpenNavigation.requestedIndex;
+          const isStaleCarriedIndex =
+            idx === pendingOpenNavigation.previousIndex && !isRequestedIndex;
+
+          if (isStaleCarriedIndex) {
+            return;
+          }
+
+          const shouldFocus = pendingOpenNavigation.shouldFocus;
+          pendingOpenNavigation = null;
+
+          if (shouldFocus) {
+            focusItem(idx, true);
+          }
+
+          return;
+        }
+
+        if (wasOpen && idx !== previousIndex) {
+          focusItem(idx);
+        }
       },
       { flush: "post" },
     ),
@@ -416,7 +472,7 @@ export function useListNavigation(
         if (!target) return;
 
         const idx = findItemIndexFromTarget(target);
-        if (idx >= 0) onNavigate?.(idx);
+        if (idx >= 0 && !isDisabled(idx)) onNavigate?.(idx);
       };
 
       container.addEventListener("mousemove", onMove);
@@ -429,26 +485,50 @@ export function useListNavigation(
   registerCleanup(
     watch(
       () => open.value,
-      (isOpen) => {
-        if (!isEnabled.value) return;
-
-        if (isOpen && !prevOpen.value) {
-          const f = toValue(focusItemOnOpen);
-          if (f === true || (f === "auto" && lastKey != null)) {
-            const sel = selectedIndex !== undefined ? toValue(selectedIndex) : null;
-            const idx =
-              sel ??
-              (lastKey && isMainOrientationToEndKey(lastKey, toValue(orientation), isRtl.value)
-                ? getFirstEnabledIndex()
-                : getLastEnabledIndex());
-            if (idx != null) {
-              onNavigate?.(idx);
-              focusItem(idx, true);
-            }
-          }
+      (isOpen, wasOpen) => {
+        if (!isEnabled.value) {
+          clearOpenCycleState();
+          return;
         }
 
-        prevOpen.value = isOpen;
+        if (!isOpen) {
+          clearOpenCycleState();
+          prevOpen.value = false;
+          return;
+        }
+
+        if (wasOpen || prevOpen.value) {
+          prevOpen.value = true;
+          return;
+        }
+
+        const currentOpenIntent = openIntent;
+        openIntent = null;
+
+        const focusMode = toValue(focusItemOnOpen);
+        const shouldNavigate = currentOpenIntent != null || focusMode === true;
+        const shouldFocus =
+          focusMode === true || (focusMode === "auto" && currentOpenIntent != null);
+
+        if (!shouldNavigate) {
+          pendingOpenNavigation = null;
+          prevOpen.value = true;
+          return;
+        }
+
+        const idx = resolveInitialOpenIndex(currentOpenIntent?.key ?? null);
+        if (idx != null) {
+          pendingOpenNavigation = {
+            previousIndex: getActiveIndex(),
+            requestedIndex: idx,
+            shouldFocus,
+          };
+          onNavigate?.(idx);
+        } else {
+          pendingOpenNavigation = null;
+        }
+
+        prevOpen.value = true;
       },
       { flush: "post", immediate: true },
     ),
@@ -467,12 +547,13 @@ export function useListNavigation(
   // Active Descendant (Virtual Focus)
   // --------------------------------------------------------------------------
 
-  const { activeItem } = useActiveDescendant(
+  const { activeItem, cleanup: cleanupActiveDescendant } = useActiveDescendant(
     anchorEl,
     listRef,
-    computed(() => getActiveIndex()),
+    currentActiveIndex,
     { virtual, open },
   );
+  registerCleanup(cleanupActiveDescendant);
 
   // Sync activeItem with user-provided virtualItemRef
   if (virtualItemRef) {
@@ -485,6 +566,9 @@ export function useListNavigation(
         { flush: "post" },
       ),
     );
+    registerCleanup(() => {
+      virtualItemRef.value = null;
+    });
   }
 
   return { cleanup: runCleanups };

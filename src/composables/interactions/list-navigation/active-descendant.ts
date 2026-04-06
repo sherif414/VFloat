@@ -8,6 +8,7 @@ export interface UseActiveDescendantOptions {
 
 export interface UseActiveDescendantReturn {
   activeItem: Ref<HTMLElement | null>;
+  cleanup: () => void;
 }
 
 /**
@@ -20,25 +21,29 @@ export function useActiveDescendant(
   options: UseActiveDescendantOptions,
 ): UseActiveDescendantReturn {
   const activeItem = ref<HTMLElement | null>(null);
+  let currentAnchor: HTMLElement | null = null;
 
-  watch(
+  const clearActiveDescendant = () => {
+    currentAnchor?.removeAttribute("aria-activedescendant");
+    currentAnchor = null;
+    activeItem.value = null;
+  };
+
+  const stopWatch = watch(
     [() => toValue(options.virtual), options.open, () => toValue(activeIndex), anchorEl, listRef],
     ([isVirtual, isOpen, idx], _oldValues, onCleanup) => {
-      const anchor = anchorEl.value;
+      clearActiveDescendant();
 
-      onCleanup(() => {
-        anchor?.removeAttribute("aria-activedescendant");
-      });
+      const anchor = anchorEl.value;
+      onCleanup(clearActiveDescendant);
 
       if (!anchor || !isVirtual || !isOpen || idx == null) {
-        activeItem.value = null;
         return;
       }
 
       const el = listRef.value[idx];
 
       if (!el) {
-        activeItem.value = null;
         return;
       }
 
@@ -50,17 +55,24 @@ export function useActiveDescendant(
             "is missing an 'id' attribute. All list items must have stable IDs for proper accessibility.",
           );
         }
-        activeItem.value = null;
         return;
       }
 
       anchor.setAttribute("aria-activedescendant", el.id);
+      currentAnchor = anchor;
       activeItem.value = el;
     },
     {
       flush: "post",
+      immediate: true,
     },
   );
 
-  return { activeItem };
+  return {
+    activeItem,
+    cleanup: () => {
+      stopWatch();
+      clearActiveDescendant();
+    },
+  };
 }
