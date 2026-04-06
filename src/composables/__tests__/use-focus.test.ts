@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseFocusOptions, type UseFocusContext, useFocus } from "@/composables/interactions";
+import { type UseFocusContext, type UseFocusOptions, useFocus } from "@/composables/interactions";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 
-// Mock the shared platform module to allow spying on matchesFocusVisible
 vi.mock("@/shared/platform", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/platform")>();
   return {
@@ -14,239 +13,310 @@ vi.mock("@/shared/platform", async (importOriginal) => {
 
 import { matchesFocusVisible } from "@/shared/platform";
 
-describe("useFocus", () => {
-  let context: UseFocusContext;
-  let referenceEl: HTMLElement;
-  let floatingEl: HTMLElement;
-  let scope: ReturnType<typeof effectScope>;
+type FocusTestContext = {
+  anchorEl: HTMLElement;
+  context: UseFocusContext;
+  floatingEl: HTMLElement;
+  openRef: ReturnType<typeof ref<boolean>>;
+  result: ReturnType<typeof useFocus>;
+  scope: ReturnType<typeof effectScope>;
+  setOpenMock: ReturnType<typeof vi.fn>;
+};
 
-  const initFocus = (options?: UseFocusOptions) => {
-    scope = effectScope();
-    scope.run(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: testing setup
-      useFocus(context as any, options);
-    });
+const trackedElements: HTMLElement[] = [];
+const activeScopes: ReturnType<typeof effectScope>[] = [];
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+
+  trackedElements.length = 0;
+}
+
+function createButton(id: string, text = id) {
+  const button = trackElement(document.createElement("button"));
+  button.id = id;
+  button.type = "button";
+  button.textContent = text;
+  return button;
+}
+
+function createFloatingElement(id = "floating") {
+  const floatingEl = trackElement(document.createElement("div"));
+  floatingEl.id = id;
+  floatingEl.tabIndex = -1;
+  floatingEl.textContent = "Floating content";
+  return floatingEl;
+}
+
+function createOutsideButton(id = "outside") {
+  const button = createButton(id, id);
+  document.body.appendChild(button);
+  return button;
+}
+
+async function flushFocus() {
+  await nextTick();
+  vi.runAllTimers();
+  await nextTick();
+}
+
+function setupFocus(
+  options: UseFocusOptions = {},
+  initialOpen = false,
+  elements?: {
+    anchorEl?: HTMLElement;
+    floatingEl?: HTMLElement;
+  },
+): FocusTestContext {
+  const anchorEl = elements?.anchorEl ?? createButton("anchor", "Anchor");
+  const floatingEl = elements?.floatingEl ?? createFloatingElement();
+
+  if (!anchorEl.isConnected) {
+    document.body.appendChild(anchorEl);
+  }
+
+  if (!floatingEl.isConnected) {
+    document.body.appendChild(floatingEl);
+  }
+
+  const openRef = ref(initialOpen);
+  const setOpenMock = vi.fn((value: boolean) => {
+    openRef.value = value;
+  });
+  const anchorRef = ref<AnchorElement>(anchorEl);
+  const floatingRef = ref<FloatingElement>(floatingEl);
+  const arrowRef = ref<HTMLElement | null>(null);
+
+  const context: UseFocusContext = {
+    refs: {
+      anchorEl: anchorRef,
+      floatingEl: floatingRef,
+      arrowEl: arrowRef,
+      setAnchor: (value) => {
+        anchorRef.value = value;
+      },
+      setFloating: (value) => {
+        floatingRef.value = value;
+      },
+      setArrow: (value) => {
+        arrowRef.value = value;
+      },
+    },
+    state: {
+      open: openRef,
+      setOpen: setOpenMock,
+    },
   };
 
-  beforeEach(async () => {
+  const scope = effectScope();
+  activeScopes.push(scope);
+
+  let result!: ReturnType<typeof useFocus>;
+  scope.run(() => {
+    result = useFocus(context, options);
+  });
+
+  return {
+    anchorEl,
+    context,
+    floatingEl,
+    openRef,
+    result,
+    scope,
+    setOpenMock,
+  };
+}
+
+async function setupFocusReady(
+  options: UseFocusOptions = {},
+  initialOpen = false,
+  elements?: {
+    anchorEl?: HTMLElement;
+    floatingEl?: HTMLElement;
+  },
+) {
+  const ctx = setupFocus(options, initialOpen, elements);
+  await nextTick();
+  return ctx;
+}
+
+describe("useFocus", () => {
+  beforeEach(() => {
     vi.useFakeTimers();
-
-    referenceEl = document.createElement("button");
-    referenceEl.id = "reference";
-    referenceEl.textContent = "Trigger";
-    document.body.appendChild(referenceEl);
-
-    floatingEl = document.createElement("div");
-    floatingEl.id = "floating";
-    floatingEl.tabIndex = -1; // make focusable
-    floatingEl.textContent = "Content";
-    document.body.appendChild(floatingEl);
-
-    const openRef = ref(false);
-    const setOpenMock = vi.fn((v: boolean) => {
-      openRef.value = v;
-    });
-    const anchorRef = ref<AnchorElement>(referenceEl);
-    const floatingRef = ref<FloatingElement>(floatingEl);
-    const arrowRef = ref<HTMLElement | null>(null);
-
-    context = {
-      refs: {
-        anchorEl: anchorRef,
-        floatingEl: floatingRef,
-        arrowEl: arrowRef,
-        setAnchor: (value) => {
-          anchorRef.value = value;
-        },
-        setFloating: (value) => {
-          floatingRef.value = value;
-        },
-        setArrow: (value) => {
-          arrowRef.value = value;
-        },
-      },
-      state: {
-        open: openRef,
-        setOpen: setOpenMock,
-      },
-    };
-
-    await nextTick();
   });
 
   afterEach(() => {
-    if (scope) scope.stop();
+    for (const scope of [...activeScopes].reverse()) {
+      scope.stop();
+    }
 
-    if (referenceEl.isConnected) document.body.removeChild(referenceEl);
-    if (floatingEl.isConnected) document.body.removeChild(floatingEl);
-
+    activeScopes.length = 0;
+    clearTrackedElements();
     vi.clearAllMocks();
-    vi.mocked(matchesFocusVisible).mockRestore();
+    vi.mocked(matchesFocusVisible).mockReset();
     vi.useRealTimers();
   });
 
-  // --- Basic Functionality ---
-  describe("basic functionality", () => {
-    it("opens on focus (requireFocusVisible = false)", async () => {
-      initFocus({ requireFocusVisible: false });
-      await nextTick(); // Wait for watchPostEffect to attach listeners
+  describe("opening behavior", () => {
+    it("opens on focus when focus-visible is not required", async () => {
+      const ctx = await setupFocusReady({ requireFocusVisible: false });
 
-      expect(context.state.open.value).toBe(false);
+      ctx.anchorEl.focus();
+      await flushFocus();
 
-      referenceEl.focus();
-      await nextTick();
-      expect(context.state.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.setOpenMock).toHaveBeenCalledWith(true, "focus", expect.any(FocusEvent));
     });
 
-    it("closes on blur (requireFocusVisible = false)", async () => {
-      initFocus({ requireFocusVisible: false });
-      await nextTick();
-
-      // Open first
-      referenceEl.focus();
-      await nextTick();
-      expect(context.state.open.value).toBe(true);
-      // no-op: we no longer track calls; we assert on state only
-
-      // Blur should schedule a close on next tick (timeout 0)
-      referenceEl.blur();
-      vi.runAllTimers();
-      await nextTick();
-
-      expect(context.state.open.value).toBe(false);
-    });
-  });
-
-  // --- requireFocusVisible option ---
-  describe("requireFocusVisible option", () => {
-    it("only opens when element matches :focus-visible", async () => {
-      // Control the utility used by the composable to detect focus-visible
+    it("only opens when the focused element matches focus-visible", async () => {
       vi.mocked(matchesFocusVisible).mockReturnValue(false);
+      const ctx = await setupFocusReady({ requireFocusVisible: true });
 
-      initFocus({ requireFocusVisible: true });
-      await nextTick();
+      ctx.anchorEl.focus();
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(false);
 
-      // Focus not considered focus-visible -> should not open
-      referenceEl.focus();
-      await nextTick();
-      expect(context.state.open.value).toBe(false);
-
-      // Now simulate focus-visible
       vi.mocked(matchesFocusVisible).mockReturnValue(true);
 
-      // Re-focus to trigger the handler again
-      referenceEl.blur();
-      vi.runAllTimers();
-      await nextTick();
+      ctx.anchorEl.blur();
+      await flushFocus();
+      ctx.anchorEl.focus();
+      await flushFocus();
 
-      referenceEl.focus();
-      await nextTick();
-
-      expect(context.state.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
     });
-  });
 
-  // --- Disabled State ---
-  describe("disabled state", () => {
-    it("does not respond to focus when disabled", async () => {
-      const enabled = ref(false);
-      initFocus({ enabled, requireFocusVisible: false });
-      await nextTick();
+    it("blocks one refocus after the window blurs while the closed anchor stays focused", async () => {
+      const ctx = await setupFocusReady({ requireFocusVisible: false });
 
-      referenceEl.focus();
-      await nextTick();
+      ctx.anchorEl.focus();
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(true);
 
-      expect(context.state.open.value).toBe(false);
-    });
-  });
+      ctx.context.state.setOpen(false);
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(false);
 
-  // --- Focus strategy behavior ---
-  describe("focus strategy", () => {
-    it("remains open when focus moves into the floating element", async () => {
-      initFocus({ requireFocusVisible: false });
-      await nextTick();
-
-      // Open via focus on reference
-      referenceEl.focus();
-      await nextTick();
-      expect(context.state.open.value).toBe(true);
-
-      // Move focus to floating (should remain open according to strategy)
-      floatingEl.focus();
-      // The blur handler uses a timeout, flush it
-      vi.runAllTimers();
-      await nextTick();
-
-      expect(context.state.open.value).toBe(true);
-    });
-  });
-
-  // --- Window blur/focus blocking behavior ---
-  describe("window focus/blur blocking", () => {
-    it("prevents auto-open when window was blurred while anchor remained focused and closed", async () => {
-      initFocus({ requireFocusVisible: false });
-      await nextTick();
-
-      // Open first
-      referenceEl.focus();
-      await nextTick();
-      expect(context.state.open.value).toBe(true);
-
-      // Programmatically close while the anchor stays focused
-      context.state.setOpen(false);
-      await nextTick();
-      expect(context.state.open.value).toBe(false);
-
-      // Window loses focus while the anchor is focused and popover is closed
       window.dispatchEvent(new Event("blur"));
 
-      // Refocus sequence should be blocked once due to isFocusBlocked flag
-      referenceEl.blur();
-      referenceEl.focus();
-      vi.runAllTimers();
-      await nextTick();
+      ctx.anchorEl.blur();
+      ctx.anchorEl.focus();
+      await flushFocus();
 
-      expect(context.state.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
 
-      // Regaining window focus resets the block; focusing again should open
       window.dispatchEvent(new Event("focus"));
-      referenceEl.blur();
-      referenceEl.focus();
-      vi.runAllTimers();
-      await nextTick();
 
-      expect(context.state.open.value).toBe(true);
+      ctx.anchorEl.blur();
+      ctx.anchorEl.focus();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(true);
     });
   });
 
-  // --- Cleanup handling ---
-  describe("cleanup return", () => {
-    it("removes listeners so further focus/blur do not change state", async () => {
-      // Initialize and capture cleanup explicitly
-      let cleanup: (() => void) | undefined;
-      scope = effectScope();
-      scope.run(() => {
-        const ret = useFocus(context as any, { requireFocusVisible: false });
-        cleanup = ret.cleanup;
+  describe("closing behavior", () => {
+    it("closes when focus leaves both the anchor and floating element", async () => {
+      const outsideEl = createOutsideButton();
+      const ctx = await setupFocusReady({ requireFocusVisible: false });
+
+      ctx.anchorEl.focus();
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(true);
+
+      outsideEl.focus();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.setOpenMock).toHaveBeenLastCalledWith(false, "blur", expect.any(FocusEvent));
+    });
+
+    it("stays open when focus moves into the floating element", async () => {
+      const ctx = await setupFocusReady({ requireFocusVisible: false });
+
+      ctx.anchorEl.focus();
+      await flushFocus();
+
+      ctx.floatingEl.focus();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(true);
+    });
+
+    it("stays open when focus moves within the anchor subtree", async () => {
+      const anchorEl = trackElement(document.createElement("div"));
+      anchorEl.id = "anchor";
+      anchorEl.tabIndex = 0;
+      const childInput = trackElement(document.createElement("input"));
+      childInput.id = "anchor-child";
+      anchorEl.appendChild(childInput);
+
+      const ctx = await setupFocusReady({ requireFocusVisible: false }, false, {
+        anchorEl,
+        floatingEl: createFloatingElement(),
       });
-      await nextTick();
 
-      // Sanity: focusing opens
-      referenceEl.focus();
-      await nextTick();
-      expect(context.state.open.value).toBe(true);
+      anchorEl.focus();
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(true);
 
-      // Call cleanup and verify no further reactions
-      cleanup?.();
+      childInput.focus();
+      await flushFocus();
 
-      referenceEl.blur();
-      vi.runAllTimers();
-      await nextTick();
-      referenceEl.focus();
-      vi.runAllTimers();
-      await nextTick();
+      expect(ctx.context.state.open.value).toBe(true);
+    });
+  });
 
-      expect(context.state.open.value).toBe(true); // unchanged since last open
+  describe("lifecycle and cleanup", () => {
+    it("does not respond when disabled", async () => {
+      const enabled = ref(false);
+      const ctx = await setupFocusReady({
+        enabled,
+        requireFocusVisible: false,
+      });
+
+      ctx.anchorEl.focus();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.setOpenMock).not.toHaveBeenCalled();
+    });
+
+    it("cleanup clears pending blur work and removes every listener", async () => {
+      const outsideEl = createOutsideButton();
+      const ctx = await setupFocusReady({ requireFocusVisible: false });
+
+      ctx.anchorEl.focus();
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(true);
+
+      ctx.anchorEl.blur();
+      ctx.result.cleanup();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(true);
+
+      outsideEl.focus();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(true);
+
+      ctx.context.state.setOpen(false);
+      await flushFocus();
+
+      ctx.anchorEl.focus();
+      await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 });

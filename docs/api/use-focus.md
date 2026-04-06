@@ -24,8 +24,10 @@ interface UseFocusReturn {
 `useFocus` is a keyboard-first interaction layer. It opens with the `focus` reason and closes with the `blur` reason, which keeps focus-driven surfaces easy to trace alongside hover and click interactions.
 
 - `requireFocusVisible` defaults to `true`.
-- Safari and window blur edge cases are handled internally.
-- Call `cleanup()` if you need to remove the listeners manually.
+- With the default `requireFocusVisible: true`, keyboard focus opens the surface while pointer-only focus usually does not.
+- Focus can move into the floating element, or stay within the anchor subtree, without immediately closing the surface.
+- Safari, window blur, and cross-document focus edge cases are handled internally.
+- Call `cleanup()` if you need to remove the anchor, document, and window listeners manually and clear any pending blur timeout.
 
 ## Example
 

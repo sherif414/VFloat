@@ -144,6 +144,8 @@ useFocus(context);
 
 Now both hovering and focusing the anchor opens the tooltip.
 
+`useFocus` is keyboard-first by default because it respects `:focus-visible`. That usually means Tab focus opens the surface, while pointer-only focus does not. If focus moves into the floating element itself, or stays within the anchor subtree, `useFocus` will keep the surface open instead of treating that as an immediate blur close.
+
 ## Step 6: Build a Modal with Focus Trap
 
 Dialogs and modal surfaces need different behavior. The focus should stay trapped inside the floating element, and the outside should not be interactive while the modal is open.

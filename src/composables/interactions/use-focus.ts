@@ -1,7 +1,7 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingContext } from "@/composables/positioning/floating-context";
 import { isUsingKeyboard } from "@/composables/interactions/internal/input-modality";
-import { tryOnScopeDispose } from "@/shared/lifecycle";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import { isEventTargetWithin, isTypeableElement } from "@/shared/dom";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
@@ -41,6 +41,8 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
   const { floatingEl, anchorEl: _anchorEl } = context.refs;
 
   const { enabled = true, requireFocusVisible = true } = options;
+  const globalDocument = typeof document !== "undefined" ? document : null;
+  const globalWindow = typeof window !== "undefined" ? window : null;
 
   /**
    * Computed anchor element that handles both HTMLElement and virtual element references.
@@ -49,32 +51,74 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
    */
   const anchorEl = computed(() => {
     if (!_anchorEl.value) return null;
-    return _anchorEl.value instanceof HTMLElement
-      ? _anchorEl.value
-      : _anchorEl.value.contextElement;
+    if (_anchorEl.value instanceof HTMLElement) {
+      return _anchorEl.value;
+    }
+
+    const contextElement = _anchorEl.value.contextElement;
+    return contextElement instanceof HTMLElement ? contextElement : null;
   });
+  const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? globalDocument);
+  const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
+  const isEnabled = computed(() => toValue(enabled));
 
   let isFocusBlocked = false;
   const isSafariOnMac = isMac() && isSafari();
-  let timeoutId: number;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const cleanupRegistry = createCleanupRegistry();
+  const registerCleanup = cleanupRegistry.add;
+  const runCleanups = cleanupRegistry.flush;
+
+  function clearBlurTimeout() {
+    clearTimeout(timeoutId);
+    timeoutId = undefined;
+  }
 
   // --- Window Event Listeners for Edge Cases ---
 
   // 1. Blocks the floating element from opening when a user switches back to a
   //    tab where the reference element was focused but the popover was closed.
-  useEventListener(window, "blur", () => {
-    if (!open.value && anchorEl.value && anchorEl.value === document.activeElement) {
-      isFocusBlocked = true;
-    }
-  });
+  registerCleanup(
+    useEventListener(
+      () => (isEnabled.value ? ownerWindow.value : null),
+      "blur",
+      () => {
+        if (
+          !open.value &&
+          anchorEl.value &&
+          ownerDocument.value?.activeElement === anchorEl.value
+        ) {
+          isFocusBlocked = true;
+        }
+      },
+    ),
+  );
 
   // 2. Resets the block when the window regains focus.
-  useEventListener(window, "focus", () => {
-    isFocusBlocked = false;
-  });
+  registerCleanup(
+    useEventListener(
+      () => (isEnabled.value ? ownerWindow.value : null),
+      "focus",
+      () => {
+        isFocusBlocked = false;
+      },
+    ),
+  );
+
+  // When disabled, clear any pending state so re-enabling starts cleanly.
+  registerCleanup(
+    watchPostEffect(() => {
+      if (isEnabled.value) return;
+
+      isFocusBlocked = false;
+      clearBlurTimeout();
+    }),
+  );
 
   // --- Element Event Handlers ---
   function onFocus(event: FocusEvent): void {
+    if (!isEnabled.value) return;
+
     if (isFocusBlocked) {
       isFocusBlocked = false;
       return;
@@ -93,28 +137,39 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
       }
     }
 
-    try {
-      setOpen(true, "focus", event);
-    } catch (error) {
-      console.error("[useFocus] Error in onFocus handler:", error);
-    }
+    setOpen(true, "focus", event);
   }
 
   function onBlur(event: FocusEvent): void {
+    if (!isEnabled.value || !open.value) {
+      clearBlurTimeout();
+      return;
+    }
+
     // Clear any existing timeout from a previous blur event.
-    clearTimeout(timeoutId);
+    clearBlurTimeout();
+
+    const currentWindow = ownerWindow.value;
+    if (!currentWindow) return;
 
     // Use a timeout to check the activeElement in the next event loop tick.
     // This is more reliable than `event.relatedTarget` for complex cases
     // like Shadow DOM or when focus is programmatically moved.
-    timeoutId = window.setTimeout(() => {
-      const ownerDocument = anchorEl.value?.ownerDocument ?? document;
-      const activeEl = ownerDocument.activeElement;
+    timeoutId = currentWindow.setTimeout(() => {
+      if (!open.value) return;
+
+      const currentDocument = ownerDocument.value;
+      const activeEl = currentDocument?.activeElement ?? null;
 
       // Case 1: Focus has left the window entirely, but the browser is tricky
       // and hasn't blurred the window yet. If `relatedTarget` is null but focus
       // is still on the anchor, we assume focus is about to leave, so don't close.
       if (!event.relatedTarget && activeEl === anchorEl.value) {
+        return;
+      }
+
+      // Keep the surface open while focus stays on the anchor or moves within it.
+      if (activeEl instanceof Element && anchorEl.value?.contains(activeEl)) {
         return;
       }
 
@@ -124,57 +179,60 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
       }
 
       // If neither of the above conditions are met, focus has moved elsewhere.
-      try {
-        setOpen(false, "blur", event);
-      } catch (error) {
-        console.error("[useFocus] Error in onBlur handler:", error);
-      }
+      setOpen(false, "blur", event);
     }, BLUR_CHECK_DELAY);
   }
 
   // In addition to element-level blur, observe focus changes at the document level
   // to handle cases where focus moves between descendants and outside elements
   // without triggering another blur on the original anchor.
-  useEventListener(
-    document,
-    "focusin",
-    (evt: FocusEvent) => {
-      if (!toValue(enabled)) return;
-      const target = evt.target;
-      if (!(target instanceof Element)) return;
+  registerCleanup(
+    useEventListener(
+      () => (isEnabled.value ? ownerDocument.value : null),
+      "focusin",
+      (evt: FocusEvent) => {
+        if (!open.value) return;
 
-      // Ignore focus entering the anchor itself
-      if (isEventTargetWithin(evt, anchorEl.value)) return;
+        const target = evt.target;
+        if (!(target instanceof Element)) return;
 
-      if (isEventTargetWithin(evt, floatingEl.value)) return;
+        // Ignore focus entering the anchor itself
+        if (isEventTargetWithin(evt, anchorEl.value)) return;
 
-      try {
+        if (isEventTargetWithin(evt, floatingEl.value)) return;
+
         setOpen(false, "blur", evt);
-      } catch (error) {
-        console.error("[useFocus] Error in document focusin handler:", error);
-      }
-    },
-    { capture: true },
+      },
+      { capture: true },
+    ),
   );
 
   // --- Attach Listeners to the Anchor Element ---
-  const removeWatcher = watchPostEffect(() => {
-    if (!toValue(enabled)) return;
-    const el = anchorEl.value;
-    if (!el || !(el instanceof HTMLElement)) return;
+  registerCleanup(
+    watchPostEffect(() => {
+      if (!isEnabled.value) return;
+      const el = anchorEl.value;
+      if (!el || !(el instanceof HTMLElement)) return;
 
-    el.addEventListener("focus", onFocus);
-    el.addEventListener("blur", onBlur);
+      el.addEventListener("focus", onFocus);
+      el.addEventListener("blur", onBlur);
 
-    onWatcherCleanup(() => {
-      el.removeEventListener("focus", onFocus);
-      el.removeEventListener("blur", onBlur);
-    });
+      onWatcherCleanup(() => {
+        el.removeEventListener("focus", onFocus);
+        el.removeEventListener("blur", onBlur);
+        clearBlurTimeout();
+      });
+    }),
+  );
+
+  registerCleanup(() => {
+    isFocusBlocked = false;
+    clearBlurTimeout();
   });
 
-  // Ensure the timeout is cleared if the component unmounts.
+  // Ensure the cleanup runs if the component unmounts.
   tryOnScopeDispose(() => {
-    clearTimeout(timeoutId);
+    runCleanups();
   });
 
   return {
@@ -182,10 +240,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
      * Cleanup function that removes all event listeners and clears pending timeouts.
      * Useful for manual cleanup in testing scenarios.
      */
-    cleanup: () => {
-      clearTimeout(timeoutId);
-      removeWatcher();
-    },
+    cleanup: runCleanups,
   };
 }
 
