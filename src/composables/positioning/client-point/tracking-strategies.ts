@@ -64,7 +64,7 @@ export class StaticTracker extends TrackingStrategy {
   private triggerCoordinates: Coordinates | null = null;
 
   getRequiredEvents(): PointerEventData["type"][] {
-    return ["pointerdown", "pointermove"];
+    return ["pointerdown", "pointerenter", "pointermove"];
   }
 
   process(event: PointerEventData, context: TrackingContext): Coordinates | null {
@@ -95,6 +95,7 @@ export class StaticTracker extends TrackingStrategy {
   }
 
   onClose(): void {
+    super.onClose();
     this.triggerCoordinates = null;
   }
 }

@@ -89,6 +89,8 @@ export function useClientPoint(
   const virtualElementFactory = new VirtualElementFactory();
   const internalCoordinates = ref<Coordinates>({ x: null, y: null });
   const lockedCoordinates = ref<Coordinates | null>(null);
+  const managedAnchorEl = ref<AnchorElement>(null);
+  const preservedAnchorEl = ref<AnchorElement>(refs.anchorEl.value);
 
   const axis = computed(() => toValue(options.axis ?? "both"));
   const enabled = computed(() => toValue(options.enabled ?? true));
@@ -158,16 +160,39 @@ export function useClientPoint(
   };
 
   watch(
-    [constrainedCoordinates, lockedCoordinates, axis, pointerTarget],
+    () => refs.anchorEl.value,
+    (anchorEl) => {
+      if (anchorEl !== managedAnchorEl.value) {
+        preservedAnchorEl.value = anchorEl;
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    [enabled, constrainedCoordinates, lockedCoordinates, axis, pointerTarget, preservedAnchorEl],
     () => {
+      if (!enabled.value) {
+        managedAnchorEl.value = null;
+        refs.anchorEl.value = preservedAnchorEl.value;
+
+        if (open.value) {
+          update?.();
+        }
+
+        return;
+      }
+
       // Rebuild the virtual anchor whenever its geometry inputs change so
       // `useFloating()` always positions against the latest pointer state.
-      refs.anchorEl.value = virtualElementFactory.create({
+      const virtualAnchorEl = virtualElementFactory.create({
         coordinates: constrainedCoordinates.value,
         referenceElement: pointerTarget.value,
         baselineCoordinates: lockedCoordinates.value,
         axis: axis.value,
       });
+      managedAnchorEl.value = virtualAnchorEl;
+      refs.anchorEl.value = virtualAnchorEl;
 
       if (open.value) {
         update?.();
@@ -177,7 +202,17 @@ export function useClientPoint(
   );
 
   watch(open, (isOpen) => {
-    if (!enabled.value || isExternallyControlled.value) {
+    if (isExternallyControlled.value) {
+      return;
+    }
+
+    if (!enabled.value) {
+      if (!isOpen) {
+        trackingStrategy.onClose();
+        resetCoordinates();
+        lockedCoordinates.value = null;
+      }
+
       return;
     }
 
