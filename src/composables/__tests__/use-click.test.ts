@@ -1,8 +1,14 @@
 import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseClickOptions, type UseClickContext, useClick } from "@/composables/interactions";
-import type { AnchorElement, FloatingElement } from "@/composables/positioning";
+import {
+  type UseClickOptions,
+  type UseClickContext,
+  useClick,
+  useFloatingTree,
+  useFloatingTreeNode,
+} from "@/composables/interactions";
+import { type AnchorElement, type FloatingElement, useFloating } from "@/composables/positioning";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];
@@ -444,6 +450,73 @@ describe("useClick", () => {
       await userEvent.click(outsideElement);
       expect(setOpenMock).not.toHaveBeenCalled();
       expect(context.state.open.value).toBe(true);
+    });
+  });
+
+  describe("floating tree integration", () => {
+    it("treats a child submenu as inside the parent branch for outside dismissal", async () => {
+      scope = effectScope();
+
+      const rootAnchorEl = trackElement(document.createElement("button"));
+      const rootFloatingEl = trackElement(document.createElement("div"));
+      const childAnchorEl = trackElement(document.createElement("button"));
+      const childFloatingEl = trackElement(document.createElement("div"));
+      const outsideEl = createOutsideElement();
+
+      rootAnchorEl.textContent = "Root anchor";
+      childAnchorEl.textContent = "Child anchor";
+      rootFloatingEl.textContent = "Root floating";
+      childFloatingEl.textContent = "Child floating";
+      Object.assign(rootFloatingEl.style, { width: "120px", height: "80px" });
+      Object.assign(childFloatingEl.style, { width: "120px", height: "80px" });
+
+      document.body.appendChild(rootAnchorEl);
+      document.body.appendChild(rootFloatingEl);
+      document.body.appendChild(childAnchorEl);
+      document.body.appendChild(childFloatingEl);
+
+      let rootContext!: ReturnType<typeof useFloating>;
+      let childContext!: ReturnType<typeof useFloating>;
+
+      scope.run(() => {
+        rootContext = useFloating(ref(rootAnchorEl), ref(rootFloatingEl), {
+          open: ref(true),
+        });
+        childContext = useFloating(ref(childAnchorEl), ref(childFloatingEl), {
+          open: ref(true),
+        });
+
+        const tree = useFloatingTree();
+        const rootNode = useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+
+        useFloatingTreeNode(childContext, {
+          parent: rootNode,
+          id: "child",
+        });
+
+        useClick(rootContext, {
+          closeOnOutsideClick: true,
+          outsideClickEvent: "click",
+          toggle: false,
+        });
+      });
+
+      await nextTick();
+
+      await userEvent.click(childFloatingEl);
+      await nextTick();
+
+      expect(rootContext.state.open.value).toBe(true);
+      expect(childContext.state.open.value).toBe(true);
+
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      expect(rootContext.state.open.value).toBe(false);
+      expect(childContext.state.open.value).toBe(false);
     });
   });
 });

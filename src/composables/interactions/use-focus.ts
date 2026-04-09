@@ -5,6 +5,7 @@ import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import { isEventTargetWithin, isTypeableElement } from "@/shared/dom";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
+import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
 // 📌 Constants
@@ -39,6 +40,7 @@ const BLUR_CHECK_DELAY = 0;
 export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
   const { open, setOpen } = context.state;
   const { floatingEl, anchorEl: _anchorEl } = context.refs;
+  const tree = resolveTreeInteraction(context);
 
   const { enabled = true, requireFocusVisible = true } = options;
   const globalDocument = typeof document !== "undefined" ? document : null;
@@ -168,6 +170,10 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         return;
       }
 
+      if (activeEl instanceof Element && tree.isTree && tree.isTargetWithinBranch(activeEl)) {
+        return;
+      }
+
       // Keep the surface open while focus stays on the anchor or moves within it.
       if (activeEl instanceof Element && anchorEl.value?.contains(activeEl)) {
         return;
@@ -179,7 +185,11 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
       }
 
       // If neither of the above conditions are met, focus has moved elsewhere.
-      setOpen(false, "blur", event);
+      if (tree.isTree) {
+        tree.closeCurrent("blur", event);
+      } else {
+        setOpen(false, "blur", event);
+      }
     }, BLUR_CHECK_DELAY);
   }
 
@@ -196,12 +206,20 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         const target = evt.target;
         if (!(target instanceof Element)) return;
 
-        // Ignore focus entering the anchor itself
-        if (isEventTargetWithin(evt, anchorEl.value)) return;
+        if (tree.isTree) {
+          if (tree.isTargetWithinBranch(target)) return;
+        } else {
+          // Ignore focus entering the anchor itself
+          if (isEventTargetWithin(evt, anchorEl.value)) return;
 
-        if (isEventTargetWithin(evt, floatingEl.value)) return;
+          if (isEventTargetWithin(evt, floatingEl.value)) return;
+        }
 
-        setOpen(false, "blur", evt);
+        if (tree.isTree) {
+          tree.closeCurrent("blur", evt);
+        } else {
+          setOpen(false, "blur", evt);
+        }
       },
       { capture: true },
     ),

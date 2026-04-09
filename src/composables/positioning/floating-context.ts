@@ -65,8 +65,52 @@ export interface FloatingMiddlewareRegistry {
   register: (middleware: MaybeRefOrGetter<FloatingMiddleware | null | undefined>) => () => void;
 }
 
+export interface FloatingListNavigationBridge {
+  onNavigate?: (index: number | null) => void;
+  returnIndex: Ref<number | null>;
+  openedByTree: Ref<boolean>;
+}
+
+export interface FloatingTreeBridge {
+  activeId: Readonly<Ref<string | null>>;
+  actions: {
+    getNode: (id: string) => FloatingTreeNodeBridge | null;
+    closeBranch: (id: string, event?: Event) => void;
+    closeChildren: (id: string, event?: Event) => void;
+    closeSiblings: (id: string, event?: Event) => void;
+    closeAll: (event?: Event) => void;
+    isTargetWithinTree: (target: EventTarget | null) => boolean;
+    isTargetWithinBranch: (id: string, target: EventTarget | null) => boolean;
+  };
+}
+
+export interface FloatingTreeNodeBridge {
+  id: Readonly<Ref<string>>;
+  parentId: Readonly<Ref<string | null>>;
+  childIds: Readonly<Ref<string[]>>;
+  context: Pick<FloatingContext, "refs" | "state">;
+  tree: FloatingTreeBridge;
+  state: {
+    isRoot: Readonly<Ref<boolean>>;
+    isLeaf: Readonly<Ref<boolean>>;
+    isActive: Readonly<Ref<boolean>>;
+  };
+  listNavigation?: FloatingListNavigationBridge;
+  actions: {
+    close: (event?: Event) => void;
+    closeBranch: (event?: Event) => void;
+    closeChildren: (event?: Event) => void;
+    closeSiblings: (event?: Event) => void;
+    closeWithReason: (reason: OpenChangeReason, event?: Event) => void;
+    restoreParentNavigation: (event?: Event) => void;
+    isTargetWithinNode: (target: EventTarget | null) => boolean;
+    isTargetWithinBranch: (target: EventTarget | null) => boolean;
+  };
+}
+
 export interface FloatingInternals {
   middlewareRegistry: FloatingMiddlewareRegistry;
+  treeNode?: FloatingTreeNodeBridge;
 }
 
 const floatingInternals = new WeakMap<object, FloatingInternals>();
@@ -77,4 +121,17 @@ export function setFloatingInternals(target: object, internals: FloatingInternal
 
 export function getFloatingInternals(target: object) {
   return floatingInternals.get(target);
+}
+
+export function patchFloatingInternals(target: object, patch: Partial<FloatingInternals>) {
+  const current = floatingInternals.get(target);
+
+  if (!current) {
+    return;
+  }
+
+  floatingInternals.set(target, {
+    ...current,
+    ...patch,
+  });
 }

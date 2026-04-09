@@ -11,6 +11,7 @@ import {
 import type { FloatingContext } from "@/composables/positioning/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
+import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
 // 📌 Types
@@ -137,6 +138,7 @@ export function useFocusTrap(
 ): UseFocusTrapReturn {
   const { floatingEl } = context.refs;
   const { open, setOpen } = context.state;
+  const tree = resolveTreeInteraction(context);
 
   // Normalize options with defaults
   const {
@@ -184,7 +186,11 @@ export function useFocusTrap(
       if (options.closeRequest && open.value) {
         const { reason, event } = options.closeRequest;
         pendingCloseRequest = null;
-        setOpen(false, reason, event);
+        if (tree.isTree) {
+          tree.closeCurrent(reason, event);
+        } else {
+          setOpen(false, reason, event);
+        }
       }
 
       return;
@@ -238,13 +244,21 @@ export function useFocusTrap(
         pendingCloseRequest = null;
 
         if (closeRequest) {
-          setOpen(false, closeRequest.reason, closeRequest.event);
+          if (tree.isTree) {
+            tree.closeCurrent(closeRequest.reason, closeRequest.event);
+          } else {
+            setOpen(false, closeRequest.reason, closeRequest.event);
+          }
         }
       },
       initialFocus: resolveInitialFocus(initialFocus),
       fallbackFocus: () => container,
       returnFocusOnDeactivate: shouldReturnFocus.value,
       clickOutsideDeactivates: (event) => {
+        if (tree.isTargetWithinBranch(event?.target ?? null)) {
+          return false;
+        }
+
         if (!shouldCloseOnFocusOut.value) return false;
         pendingCloseRequest = {
           reason: "outside-pointer",
@@ -252,7 +266,13 @@ export function useFocusTrap(
         };
         return true;
       },
-      allowOutsideClick: !isModal.value,
+      allowOutsideClick: (event) => {
+        if (tree.isTargetWithinBranch(event?.target ?? null)) {
+          return true;
+        }
+
+        return !isModal.value;
+      },
       escapeDeactivates: false,
       preventScroll: shouldPreventScroll.value,
       isolateSubtrees: isolationMode.value,

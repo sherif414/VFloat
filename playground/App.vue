@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import UseClickPlayground from "./demo/UseClickPlayground.vue";
+import FloatingTreePlayground from "./demo/FloatingTreePlayground.vue";
 </script>
 
 <template>
-  <UseClickPlayground />
+  <FloatingTreePlayground />
 </template>

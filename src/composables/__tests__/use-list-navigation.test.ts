@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref, type Ref } from "vue";
 import {
+  type UseFloatingTreeNodeOptions,
+  type FloatingTreeNode,
+  useFloatingTree,
+  useFloatingTreeNode,
+} from "@/composables/interactions";
+import {
   type UseListNavigationOptions,
   type UseListNavigationReturn,
   useListNavigation,
@@ -19,6 +25,7 @@ type ListNavigationTestContext = {
   openRef: Ref<boolean>;
   result: UseListNavigationReturn;
   scope: ReturnType<typeof effectScope>;
+  treeNode?: FloatingTreeNode;
 };
 
 type SetupOptions = Partial<
@@ -63,6 +70,8 @@ async function flushListNavigation(ticks = 2) {
   for (let i = 0; i < ticks; i++) {
     await nextTick();
   }
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 function dispatchKey(target: EventTarget, key: string) {
@@ -72,6 +81,7 @@ function dispatchKey(target: EventTarget, key: string) {
 function setupListNavigation(
   options: SetupOptions = {},
   initialOpen = false,
+  treeNodeOptions?: UseFloatingTreeNodeOptions,
 ): ListNavigationTestContext {
   const anchorEl = createButton("anchor");
   document.body.appendChild(anchorEl);
@@ -94,8 +104,13 @@ function setupListNavigation(
   const scope = effectScope();
   activeScopes.push(scope);
 
+  let treeNode: FloatingTreeNode | undefined;
   let result!: UseListNavigationReturn;
   scope.run(() => {
+    if (treeNodeOptions) {
+      treeNode = useFloatingTreeNode(context, treeNodeOptions);
+    }
+
     result = useListNavigation(context, {
       listRef,
       activeIndex,
@@ -115,6 +130,55 @@ function setupListNavigation(
     openRef,
     result,
     scope,
+    treeNode,
+  };
+}
+
+function setupTreeListNavigation(
+  options: {
+    rootOptions?: SetupOptions;
+    rootInitialOpen?: boolean;
+    rootNodeOptions?: UseFloatingTreeNodeOptions;
+    childOptions?: SetupOptions;
+    childInitialOpen?: boolean;
+    childNodeOptions?: UseFloatingTreeNodeOptions;
+    childIndex?: number;
+  } = {},
+) {
+  const {
+    rootOptions = {},
+    rootInitialOpen = true,
+    rootNodeOptions = {},
+    childOptions = {},
+    childInitialOpen = false,
+    childNodeOptions = {},
+    childIndex = 1,
+  } = options;
+
+  const tree = useFloatingTree({ id: "list-tree" });
+  let child: ListNavigationTestContext | undefined;
+
+  const root = setupListNavigation(
+    {
+      ...rootOptions,
+      getChildNode: (index) => (index === childIndex ? (child?.treeNode ?? null) : null),
+    },
+    rootInitialOpen,
+    {
+      ...rootNodeOptions,
+      tree,
+    },
+  );
+
+  child = setupListNavigation(childOptions, childInitialOpen, {
+    ...childNodeOptions,
+    parent: root.treeNode ?? null,
+  });
+
+  return {
+    child,
+    root,
+    tree,
   };
 }
 
@@ -370,6 +434,219 @@ describe("useListNavigation", () => {
 
       expect(ctx.onNavigate).not.toHaveBeenCalled();
       expect(ctx.activeIndex.value).toBeNull();
+    });
+  });
+
+  describe("floating tree integration", () => {
+    it("does not open a child submenu from non-forward arrow keys on the shared trigger", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-anchor",
+        },
+        childOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-anchor",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      child.context.refs.setAnchor(root.items[1]);
+      root.activeIndex.value = 1;
+      root.items[1].focus();
+      await flushListNavigation();
+
+      dispatchKey(root.items[1], "ArrowDown");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(false);
+      expect(root.onNavigate).toHaveBeenLastCalledWith(2);
+      expect(root.activeIndex.value).toBe(2);
+
+      root.activeIndex.value = 1;
+      root.items[1].focus();
+      await flushListNavigation();
+
+      dispatchKey(root.items[1], "ArrowRight");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(document.activeElement).toBe(child.items[0]);
+    });
+
+    it("restores DOM focus to the submenu trigger on backward close in non-virtual mode", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-focus",
+        },
+        childOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-focus",
+        },
+        rootOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+      });
+
+      child.context.refs.setAnchor(root.items[1]);
+      root.activeIndex.value = 1;
+      root.items[1].focus();
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "ArrowRight");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(document.activeElement).toBe(child.items[0]);
+
+      dispatchKey(child.floatingEl, "ArrowLeft");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(false);
+      expect(document.activeElement).toBe(root.items[1]);
+    });
+
+    it("opens a child node from the forward key and restores the parent in virtual focus mode", async () => {
+      const virtualItemRef = ref<HTMLElement | null>(null);
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child",
+        },
+        childOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          virtual: true,
+          virtualItemRef,
+        },
+      });
+
+      root.items.forEach((item, index) => {
+        item.id = `root-option-${index}`;
+      });
+
+      root.activeIndex.value = 1;
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "ArrowRight");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+
+      dispatchKey(child.floatingEl, "ArrowLeft");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(false);
+      expect(root.onNavigate).toHaveBeenLastCalledWith(1);
+      expect(root.activeIndex.value).toBe(1);
+      expect(root.anchorEl.getAttribute("aria-activedescendant")).toBe("root-option-1");
+      expect(virtualItemRef.value).toBe(root.items[1]);
+    });
+
+    it("keeps ordinary navigation unchanged when no child node exists", async () => {
+      const tree = useFloatingTree({ id: "list-tree-no-child" });
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        true,
+        {
+          id: "root",
+          tree,
+        },
+      );
+
+      ctx.activeIndex.value = 0;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.onNavigate).toHaveBeenCalledWith(1);
+      expect(ctx.activeIndex.value).toBe(1);
+      expect(ctx.context.state.open.value).toBe(true);
+    });
+
+    it("keeps child surfaces closed by default and opens them when openChildOnFocus is enabled", async () => {
+      const defaultHarness = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-default",
+        },
+        childOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-default",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      defaultHarness.root.activeIndex.value = 0;
+      await flushListNavigation();
+
+      dispatchKey(defaultHarness.root.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(defaultHarness.root.onNavigate).toHaveBeenCalledWith(1);
+      expect(defaultHarness.root.activeIndex.value).toBe(1);
+      expect(defaultHarness.child.context.state.open.value).toBe(false);
+
+      const enabledHarness = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-enabled",
+        },
+        childOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-enabled",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          openChildOnFocus: true,
+          orientation: "vertical",
+        },
+      });
+
+      enabledHarness.root.activeIndex.value = 0;
+      await flushListNavigation();
+
+      dispatchKey(enabledHarness.root.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(enabledHarness.root.onNavigate).toHaveBeenCalledWith(1);
+      expect(enabledHarness.root.activeIndex.value).toBe(1);
+      expect(enabledHarness.child.context.state.open.value).toBe(true);
     });
   });
 

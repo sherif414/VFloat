@@ -1,6 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/positioning/floating-context";
-import { tryOnScopeDispose } from "@/shared/lifecycle";
+import { type FloatingContext } from "@/composables/positioning/floating-context";
 import {
   isButtonTarget,
   isClickOnScrollbar,
@@ -9,8 +8,10 @@ import {
   isMouseLikePointerType,
   isSpaceIgnored,
 } from "@/shared/dom";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import type { OpenChangeReason } from "@/types";
+import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 type PointerType = "mouse" | "touch" | "pen";
 
@@ -95,6 +96,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   });
 
   const floatingEl = computed(() => refs.floatingEl.value);
+  const tree = resolveTreeInteraction(context);
 
   //=====================================================================================
   // Event Handlers (Anchor & Outside)
@@ -237,9 +239,13 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return;
     }
 
+    if (tree.isTargetWithinBranch(target)) {
+      return;
+    }
+
     if (
-      isEventTargetWithin(event, anchorEl.value) ||
-      isEventTargetWithin(event, floatingEl.value)
+      !tree.isTree &&
+      (isEventTargetWithin(event, anchorEl.value) || isEventTargetWithin(event, floatingEl.value))
     ) {
       return;
     }
@@ -248,7 +254,11 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     if (onOutsideClick) {
       onOutsideClick(event);
     } else {
-      setOpen(false, "outside-pointer", event);
+      if (tree.isTree) {
+        tree.closeCurrent("outside-pointer", event);
+      } else {
+        setOpen(false, "outside-pointer", event);
+      }
     }
   }
 

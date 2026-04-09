@@ -293,6 +293,25 @@ export function isMainOrientationToEndKey(
 }
 
 /**
+ * Returns whether a key should open a child branch from the current list item.
+ */
+export function isTreeChildOpenKey(
+  key: string,
+  orientation: "vertical" | "horizontal" | "both",
+  isRtl: boolean,
+) {
+  if (orientation === "vertical") {
+    return isRtl ? key === "ArrowLeft" : key === "ArrowRight";
+  }
+
+  if (orientation === "horizontal") {
+    return key === "ArrowDown";
+  }
+
+  return false;
+}
+
+/**
  * Creates the navigation strategy that matches the list orientation/grid shape.
  */
 export function createNavigationStrategy(

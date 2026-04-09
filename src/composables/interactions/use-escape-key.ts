@@ -1,7 +1,14 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
-import type { FloatingContext } from "@/composables/positioning/floating-context";
 import { useComposition } from "@/composables/interactions/internal/composition-state";
+import { type FloatingContext } from "@/composables/positioning/floating-context";
 import { useEventListener } from "@/shared/use-event-listener";
+import { resolveTreeInteraction } from "./internal/tree-interaction";
+
+const TREE_ESCAPE_HANDLED = Symbol("vfloat-tree-escape-handled");
+
+type TreeEscapeEvent = KeyboardEvent & {
+  [TREE_ESCAPE_HANDLED]?: boolean;
+};
 
 // =======================================================================================
 // 📌 Types
@@ -75,6 +82,7 @@ export function useEscapeKey(
   const { enabled = true, capture = false, preventDefault = false, onEscape } = options;
   const { isComposing } = useComposition();
   const { open, setOpen } = context.state;
+  const tree = resolveTreeInteraction(context);
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
@@ -89,6 +97,36 @@ export function useEscapeKey(
 
     if (preventDefault) {
       event.preventDefault();
+    }
+
+    if (tree.isTree) {
+      const treeEvent = event as TreeEscapeEvent;
+      if (treeEvent[TREE_ESCAPE_HANDLED]) {
+        return;
+      }
+
+      const currentNodeId = tree.treeNode?.id.value ?? null;
+      const activeNode = tree.activeNode ?? tree.treeNode;
+
+      if (!activeNode?.context.state.open.value) {
+        return;
+      }
+
+      if (activeNode.id.value !== currentNodeId) {
+        tree.closeActive("escape-key", event);
+        treeEvent[TREE_ESCAPE_HANDLED] = true;
+        return;
+      }
+
+      if (onEscape) {
+        onEscape(event);
+        treeEvent[TREE_ESCAPE_HANDLED] = true;
+        return;
+      }
+
+      tree.closeCurrent("escape-key", event);
+      treeEvent[TREE_ESCAPE_HANDLED] = true;
+      return;
     }
 
     // Skip the default close behavior when the caller needs custom escape handling.

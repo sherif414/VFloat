@@ -3,6 +3,7 @@ import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } f
 import type { FloatingContext } from "@/composables/positioning/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
+import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
 // 📌 Types & Interfaces
@@ -136,6 +137,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   const { open, setOpen } = context.state;
   const { placement } = context.position;
   const { anchorEl, floatingEl } = context.refs;
+  const tree = resolveTreeInteraction(context);
   const {
     enabled: enabledOption = true,
     delay = 0,
@@ -160,7 +162,11 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     },
     (event?: Event) => {
       if (open.value) {
-        setOpen(false, "hover", event);
+        if (tree.isTree) {
+          tree.closeCurrent("hover", event);
+        } else {
+          setOpen(false, "hover", event);
+        }
       }
     },
     { delay },
@@ -273,6 +279,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
     const { clientX, clientY } = e;
     const relatedTarget = e.relatedTarget as Node | null;
+
+    if (tree.isTargetWithinBranch(relatedTarget)) {
+      return;
+    }
 
     if (safePolygonEnabled.value) {
       setTimeout(() => {

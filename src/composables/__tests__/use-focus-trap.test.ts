@@ -7,7 +7,9 @@ import {
   type UseFocusTrapReturn,
   useFocusTrap,
 } from "@/composables/interactions/use-focus-trap";
+import { useFloatingTree, useFloatingTreeNode } from "@/composables/interactions";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
+import { useFloating } from "@/composables/positioning";
 
 type FocusTrapTestContext = {
   anchorEl: HTMLButtonElement;
@@ -308,6 +310,90 @@ describe("useFocusTrap", () => {
 
       expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
       expect(outsideEl.hasAttribute("inert")).toBe(false);
+    });
+  });
+
+  describe("floating tree integration", () => {
+    it("keeps a parent trap open when interacting with a child submenu branch", async () => {
+      const rootAnchorEl = trackElement(document.createElement("button"));
+      rootAnchorEl.id = "root-anchor";
+      rootAnchorEl.textContent = "Root anchor";
+      document.body.appendChild(rootAnchorEl);
+
+      const rootFloatingEl = trackElement(document.createElement("div"));
+      rootFloatingEl.id = "root-floating";
+      document.body.appendChild(rootFloatingEl);
+
+      const childAnchorEl = trackElement(document.createElement("button"));
+      childAnchorEl.id = "child-anchor";
+      childAnchorEl.textContent = "Child anchor";
+      document.body.appendChild(childAnchorEl);
+
+      const childFloatingEl = trackElement(document.createElement("div"));
+      childFloatingEl.id = "child-floating";
+      document.body.appendChild(childFloatingEl);
+
+      const outsideEl = createOutsideElement("tree-outside");
+      const firstButton = appendButton(rootFloatingEl, "first");
+      const scope = effectScope();
+      activeScopes.push(scope);
+
+      let rootContext!: ReturnType<typeof useFloating>;
+      let childContext!: ReturnType<typeof useFloating>;
+      let trapResult!: UseFocusTrapReturn;
+
+      scope.run(() => {
+        const tree = useFloatingTree({ id: "trap-tree" });
+        rootContext = useFloating(
+          ref<AnchorElement>(rootAnchorEl),
+          ref<FloatingElement>(rootFloatingEl),
+          {
+            open: ref(false),
+          },
+        );
+        const rootNode = useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+        trapResult = useFocusTrap(rootContext, {
+          closeOnFocusOut: true,
+          modal: false,
+        });
+
+        childContext = useFloating(
+          ref<AnchorElement>(childAnchorEl),
+          ref<FloatingElement>(childFloatingEl),
+          {
+            open: ref(false),
+          },
+        );
+        useFloatingTreeNode(childContext, {
+          parent: rootNode,
+          id: "child",
+        });
+      });
+
+      rootContext.state.setOpen(true);
+      await flushFocusTrap();
+      expect(document.activeElement).toBe(firstButton);
+      expect(trapResult.isActive.value).toBe(true);
+
+      childFloatingEl.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+      );
+      childFloatingEl.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+      childFloatingEl.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      await flushFocusTrap();
+
+      expect(rootContext.state.open.value).toBe(true);
+      expect(trapResult.isActive.value).toBe(true);
+      expect(childContext.state.open.value).toBe(false);
+
+      await userEvent.click(outsideEl);
+      await flushFocusTrap();
+
+      expect(rootContext.state.open.value).toBe(false);
+      expect(trapResult.isActive.value).toBe(false);
     });
   });
 

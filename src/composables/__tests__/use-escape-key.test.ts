@@ -1,6 +1,21 @@
 import { effectScope, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { type UseEscapeKeyContext, useEscapeKey } from "@/composables/interactions/use-escape-key";
+import {
+  useEscapeKey,
+  useFloatingTree,
+  useFloatingTreeNode,
+  type UseEscapeKeyContext,
+} from "@/composables/interactions";
+import { useFloating } from "@/composables/positioning";
+
+const createdElements: HTMLElement[] = [];
+
+function createElement<K extends keyof HTMLElementTagNameMap>(tag: K) {
+  const element = document.createElement(tag);
+  createdElements.push(element);
+  document.body.appendChild(element);
+  return element;
+}
 
 // Test utilities
 function createMockFloatingContext(): UseEscapeKeyContext {
@@ -17,12 +32,22 @@ function createMockFloatingContext(): UseEscapeKeyContext {
   };
 }
 
+async function flushEscapeHandling() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 describe("useEscapeKey", () => {
   let scope: ReturnType<typeof effectScope> | undefined;
 
   afterEach(() => {
     scope?.stop();
     scope = undefined;
+
+    for (const element of createdElements) {
+      element.remove();
+    }
+    createdElements.length = 0;
+
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
@@ -274,6 +299,163 @@ describe("useEscapeKey", () => {
       scopeA.stop();
       scopeB.stop();
       addEventListenerSpy.mockRestore();
+    });
+  });
+
+  describe("floating tree integration", () => {
+    it("restores focus to the closed child anchor when Escape closes the active child", async () => {
+      scope = effectScope();
+      let childAnchorEl!: HTMLButtonElement;
+      let childContext!: ReturnType<typeof useFloating>;
+      let rootContext!: ReturnType<typeof useFloating>;
+
+      scope.run(() => {
+        const rootAnchorEl = createElement("button");
+        const rootFloatingEl = createElement("div");
+        childAnchorEl = createElement("button");
+        const childFloatingEl = createElement("div");
+        childFloatingEl.tabIndex = -1;
+
+        rootContext = useFloating(ref(rootAnchorEl), ref(rootFloatingEl), {
+          open: ref(true),
+        });
+
+        childContext = useFloating(ref(childAnchorEl), ref(childFloatingEl), {
+          open: ref(true),
+        });
+
+        const tree = useFloatingTree();
+        const rootNode = useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+
+        useFloatingTreeNode(childContext, {
+          parent: rootNode,
+          id: "child",
+        });
+
+        useEscapeKey(rootContext);
+      });
+
+      childContext.refs.floatingEl.value?.focus();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await flushEscapeHandling();
+
+      expect(childContext.state.open.value).toBe(false);
+      expect(rootContext.state.open.value).toBe(true);
+      expect(document.activeElement).toBe(childAnchorEl);
+    });
+
+    it("restores focus to the root anchor when Escape closes the root node", async () => {
+      scope = effectScope();
+      let rootAnchorEl!: HTMLButtonElement;
+      let rootContext!: ReturnType<typeof useFloating>;
+
+      scope.run(() => {
+        rootAnchorEl = createElement("button");
+        const rootFloatingEl = createElement("div");
+        rootFloatingEl.tabIndex = -1;
+
+        rootContext = useFloating(ref(rootAnchorEl), ref(rootFloatingEl), {
+          open: ref(true),
+        });
+
+        const tree = useFloatingTree();
+        useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+
+        useEscapeKey(rootContext);
+      });
+
+      rootContext.refs.floatingEl.value?.focus();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await flushEscapeHandling();
+
+      expect(rootContext.state.open.value).toBe(false);
+      expect(document.activeElement).toBe(rootAnchorEl);
+    });
+
+    it("closes only the active tree node on each Escape key press", () => {
+      scope = effectScope();
+      let rootContext!: ReturnType<typeof useFloating>;
+      let childContext!: ReturnType<typeof useFloating>;
+
+      scope.run(() => {
+        const rootAnchorEl = createElement("button");
+        const rootFloatingEl = createElement("div");
+        const childAnchorEl = createElement("button");
+        const childFloatingEl = createElement("div");
+
+        rootContext = useFloating(ref(rootAnchorEl), ref(rootFloatingEl), {
+          open: ref(true),
+        });
+
+        childContext = useFloating(ref(childAnchorEl), ref(childFloatingEl), {
+          open: ref(true),
+        });
+
+        const tree = useFloatingTree();
+        const rootNode = useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+
+        useFloatingTreeNode(childContext, {
+          parent: rootNode,
+          id: "child",
+        });
+
+        useEscapeKey(rootContext);
+        useEscapeKey(childContext);
+      });
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      expect(childContext.state.open.value).toBe(false);
+      expect(rootContext.state.open.value).toBe(true);
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      expect(rootContext.state.open.value).toBe(false);
+    });
+
+    it("lets a parent listener close the active child node first", () => {
+      scope = effectScope();
+      let rootContext!: ReturnType<typeof useFloating>;
+      let childContext!: ReturnType<typeof useFloating>;
+
+      scope.run(() => {
+        const rootAnchorEl = createElement("button");
+        const rootFloatingEl = createElement("div");
+        const childAnchorEl = createElement("button");
+        const childFloatingEl = createElement("div");
+
+        rootContext = useFloating(ref(rootAnchorEl), ref(rootFloatingEl), {
+          open: ref(true),
+        });
+
+        childContext = useFloating(ref(childAnchorEl), ref(childFloatingEl), {
+          open: ref(true),
+        });
+
+        const tree = useFloatingTree();
+        const rootNode = useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+
+        useFloatingTreeNode(childContext, {
+          parent: rootNode,
+          id: "child",
+        });
+
+        useEscapeKey(rootContext);
+      });
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      expect(childContext.state.open.value).toBe(false);
+      expect(rootContext.state.open.value).toBe(true);
     });
   });
 });

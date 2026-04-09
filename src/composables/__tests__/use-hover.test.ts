@@ -1,8 +1,14 @@
 import type { Strategy } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { computed, effectScope, nextTick, ref } from "vue";
-import { type UseHoverOptions, useHover } from "@/composables/interactions";
+import {
+  type UseHoverOptions,
+  useFloatingTree,
+  useFloatingTreeNode,
+  useHover,
+} from "@/composables/interactions";
 import type { FloatingContext } from "@/composables/positioning/floating-context";
+import { useFloating } from "@/composables/positioning";
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
 
@@ -279,6 +285,77 @@ describe("useHover", () => {
       expect(ctx.context.state.open.value).toBe(true);
       vi.advanceTimersByTime(150);
       expect(ctx.context.state.open.value).toBe(false);
+    });
+  });
+
+  describe("floating tree integration", () => {
+    it("keeps the parent open when the pointer leaves into a child submenu", async () => {
+      const referenceEl = document.createElement("div");
+      const floatingEl = document.createElement("div");
+      const childAnchorEl = document.createElement("button");
+      const childFloatingEl = document.createElement("div");
+
+      referenceEl.getBoundingClientRect = () => makeDOMRect(0, 0, 100, 100);
+      floatingEl.getBoundingClientRect = () => makeDOMRect(0, 110, 50, 50);
+
+      document.body.appendChild(referenceEl);
+      document.body.appendChild(floatingEl);
+      document.body.appendChild(childAnchorEl);
+      document.body.appendChild(childFloatingEl);
+
+      const open = ref(false);
+
+      const scope = effectScope();
+      let rootContext!: FloatingContext;
+      scope.run(() => {
+        const tree = useFloatingTree({ id: "hover-tree" });
+        rootContext = useFloating(ref(referenceEl), ref(floatingEl), { open });
+        const rootNode = useFloatingTreeNode(rootContext, {
+          tree,
+          id: "root",
+        });
+
+        useFloatingTreeNode(
+          useFloating(ref(childAnchorEl), ref(childFloatingEl), {
+            open: ref(false),
+          }),
+          {
+            parent: rootNode,
+            id: "child",
+          },
+        );
+
+        useHover(rootContext, {
+          safePolygon: true,
+        });
+      });
+
+      try {
+        await nextTick();
+        await nextTick();
+
+        referenceEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+        await nextTick();
+
+        expect(rootContext.state.open.value).toBe(true);
+
+        referenceEl.dispatchEvent(
+          makePointerEvent("pointerleave", {
+            relatedTarget: childFloatingEl,
+            clientX: 15,
+            clientY: 15,
+          }),
+        );
+        await nextTick();
+
+        expect(rootContext.state.open.value).toBe(true);
+      } finally {
+        scope.stop();
+        referenceEl.remove();
+        floatingEl.remove();
+        childAnchorEl.remove();
+        childFloatingEl.remove();
+      }
     });
   });
 
