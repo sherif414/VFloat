@@ -13,7 +13,7 @@ export function tryOnScopeDispose(cleanup: () => void): boolean {
 }
 
 /**
- * Collects multiple cleanup callbacks and flushes them in reverse order.
+ * Collects multiple cleanup callbacks and flushes them in reverse order so later setup is torn down first.
  */
 export function createCleanupRegistry() {
   const cleanups = new Set<() => void>();

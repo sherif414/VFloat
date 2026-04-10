@@ -3,8 +3,7 @@ import { useId as vueUseId } from "vue";
 let idCounter = 0;
 
 /**
- * Wrapper around Vue's useId that provides a fallback counter-based ID generator.
- * This ensures unique IDs even when useId() returns empty strings (e.g., in test environments).
+ * Wraps Vue's `useId()` and falls back to a counter when SSR or tests return an empty string.
  */
 export function useId(): string {
   const id = vueUseId();
@@ -12,7 +11,7 @@ export function useId(): string {
 }
 
 /**
- * Checks if the user agent is on a Mac.
+ * Returns true when the current platform reports macOS.
  */
 export function isMac(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -20,7 +19,7 @@ export function isMac(): boolean {
 }
 
 /**
- * Checks if the browser is Safari.
+ * Returns true for Safari user agents and false for Chromium-based browsers.
  */
 export function isSafari(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -28,7 +27,7 @@ export function isSafari(): boolean {
 }
 
 /**
- * A simple utility to check if an element matches `:focus-visible`.
+ * Probes `:focus-visible` support through `matches()` so focus styling can stay native.
  */
 export function matchesFocusVisible(element: Element): boolean {
   if (typeof (element as Element)?.matches !== "function") return false;

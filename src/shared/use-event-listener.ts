@@ -2,8 +2,7 @@ import { type MaybeRefOrGetter, toValue, watch } from "vue";
 import type { Fn } from "@/types";
 
 /**
- * Attaches an event listener to a reactive target and keeps it in sync as the
- * target or event name changes.
+ * Attaches an event listener to a reactive target and keeps it in sync as the target or event name changes.
  */
 export function useEventListener<TEvent extends Event = Event>(
   target: MaybeRefOrGetter<EventTarget | null | undefined>,

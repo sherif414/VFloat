@@ -11,6 +11,9 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { AnchorElement, FloatingElement, FloatingStyles } from "../floating-context";
 import { createMiddlewareRegistry } from "./middleware-registry";
 
+/**
+ * Options for wiring the reactive position controller.
+ */
 export interface PositionControllerOptions {
   anchorEl: Ref<AnchorElement>;
   floatingEl: Ref<FloatingElement>;

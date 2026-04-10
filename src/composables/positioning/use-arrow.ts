@@ -3,12 +3,18 @@ import { getFloatingInternals } from "./floating-context";
 import { arrow } from "../middlewares";
 import type { FloatingContext } from "./floating-context";
 
+/**
+ * Computed arrow coordinates and styles returned by `useArrow()`.
+ */
 export interface UseArrowReturn {
   arrowX: ComputedRef<number>;
   arrowY: ComputedRef<number>;
   arrowStyles: ComputedRef<Record<string, string>>;
 }
 
+/**
+ * Options for connecting an arrow element to the floating context.
+ */
 export interface UseArrowOptions {
   /**
    * Arrow element that should be measured and positioned by middleware.
@@ -23,8 +29,7 @@ export interface UseArrowOptions {
 }
 
 /**
- * Connects an arrow element to the current floating context and exposes
- * the computed coordinates/styles needed to place it.
+ * Connects an arrow element to the current floating context and exposes the computed coordinates and styles needed to place it.
  */
 export function useArrow(context: FloatingContext, options: UseArrowOptions): UseArrowReturn {
   const { element: arrowEl, offset = "-4px" } = options;

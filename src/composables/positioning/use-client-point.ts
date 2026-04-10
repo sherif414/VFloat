@@ -25,6 +25,9 @@ const sanitizeCoordinate = (value: number | null | undefined): number | null => 
 export type { AxisConstraint, Coordinates, TrackingMode } from "./client-point/types";
 export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
 
+/**
+ * Options for pointer-driven virtual anchor tracking.
+ */
 export interface UseClientPointOptions {
   /**
    * Element that should receive the pointer listeners used to drive the virtual anchor.
@@ -57,11 +60,17 @@ export interface UseClientPointOptions {
   trackingMode?: TrackingMode;
 }
 
+/**
+ * Coordinates and updater returned by `useClientPoint()`.
+ */
 export interface UseClientPointReturn {
   coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
   updatePosition: (x: number, y: number) => void;
 }
 
+/**
+ * Minimal floating context shape required by `useClientPoint()`.
+ */
 export interface UseClientPointContext {
   refs: {
     anchorEl: Ref<AnchorElement>;
@@ -72,10 +81,6 @@ export interface UseClientPointContext {
 
 /**
  * Replaces the anchor element with a virtual element that follows pointer coordinates.
- *
- * This is useful for context menus, cursor-following tooltips, and similar patterns
- * where the floating element should be positioned from pointer input instead of a
- * concrete DOM anchor.
  */
 export function useClientPoint(
   context: UseClientPointContext,

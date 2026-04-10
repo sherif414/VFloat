@@ -1,6 +1,9 @@
 import { type Ref, ref } from "vue";
 import type { OpenChangeReason } from "@/types";
 
+/**
+ * Options for creating the open-state controller.
+ */
 export interface OpenStateControllerOptions {
   open?: Ref<boolean>;
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;

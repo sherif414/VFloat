@@ -1,21 +1,21 @@
 import type { VirtualElement } from "@/types";
 
 /**
- * Checks if a value is a function.
+ * Type guard for callable values.
  */
 export function isFunction(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }
 
 /**
- * Checks if a value is an HTMLElement.
+ * Returns true for real HTML elements and false for SVG or non-element nodes.
  */
 export function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof Element && value instanceof HTMLElement;
 }
 
 /**
- * Checks if the pointer type is mouse-like (mouse or pen).
+ * Treats mouse and pen input as mouse-like unless strict mode narrows it to mouse only.
  */
 export function isMouseLikePointerType(pointerType: string | undefined, strict?: boolean): boolean {
   if (pointerType === undefined) return false;
@@ -24,7 +24,7 @@ export function isMouseLikePointerType(pointerType: string | undefined, strict?:
 }
 
 /**
- * Checks if the element is an input, textarea, or contenteditable element.
+ * Returns true when text input handling should be left to the browser.
  */
 export function isTypeableElement(element: Element | null): boolean {
   if (!element || !(element instanceof HTMLElement)) return false;
@@ -36,7 +36,7 @@ export function isTypeableElement(element: Element | null): boolean {
 }
 
 /**
- * Checks if the event target is a button-like element.
+ * Recognizes button-like keyboard targets so Space/Enter handling stays consistent.
  */
 export function isButtonTarget(event: KeyboardEvent): boolean {
   const target = event.target;
@@ -49,21 +49,21 @@ export function isButtonTarget(event: KeyboardEvent): boolean {
 }
 
 /**
- * Checks if the Space key press should be ignored for the given element.
+ * Skips custom Space handling when the focused element already behaves like a text field.
  */
 export function isSpaceIgnored(element: Element | null): boolean {
   return isTypeableElement(element);
 }
 
 /**
- * Checks if the value is a VirtualElement.
+ * Returns true for VFloat's virtual anchor shape.
  */
 export function isVirtualElement(el: unknown): el is VirtualElement {
   return typeof el === "object" && el !== null && "contextElement" in el;
 }
 
 /**
- * Checks if the event target is within the given element.
+ * Uses `composedPath()` when available so Shadow DOM interactions stay reliable.
  */
 export function isEventTargetWithin(event: Event, element: Element | null | undefined): boolean {
   if (!element) return false;
@@ -77,7 +77,7 @@ export function isEventTargetWithin(event: Event, element: Element | null | unde
 }
 
 /**
- * Checks if a click event occurred on a scrollbar.
+ * Detects clicks on the scrollbar gutter so pointer logic can ignore drag-like gestures.
  */
 export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
   const rect = target.getBoundingClientRect();
@@ -105,28 +105,28 @@ export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): bool
 }
 
 /**
- * Simple element containment wrapper.
+ * Mirrors `contains()` while keeping nullable targets in the helper signature.
  */
 export function contains(el: HTMLElement, target: Element | null): boolean {
   return el.contains(target);
 }
 
 /**
- * Event target extraction utility.
+ * Normalizes mouse and touch events to their target element.
  */
 export function getTarget(event: MouseEvent | TouchEvent): Element | null {
   return event.target as Element | null;
 }
 
 /**
- * Safe performance timing that handles environments without performance API.
+ * Uses a monotonic clock when available and falls back to `Date.now()` in non-browser contexts.
  */
 export function getCurrentTime(): number {
   return typeof performance !== "undefined" ? performance.now() : Date.now();
 }
 
 /**
- * Centralized timeout management to prevent memory leaks.
+ * Treats `-1` as the sentinel for "no timeout scheduled" and clears only real timer ids.
  */
 export function clearTimeoutIfSet(timeoutId: number): void {
   if (timeoutId !== -1) {
@@ -135,7 +135,7 @@ export function clearTimeoutIfSet(timeoutId: number): void {
 }
 
 /**
- * Checks if an element (or virtual element's context) is present in the event path.
+ * Matches either a real element or a virtual anchor's context element against a composed path.
  */
 export function isElementInEventPath(element: unknown, path: EventTarget[]): boolean {
   if (element instanceof Element) {
@@ -150,7 +150,7 @@ export function isElementInEventPath(element: unknown, path: EventTarget[]): boo
 }
 
 /**
- * Returns the composed path of a node, handling Shadow DOM.
+ * Builds a composed path that walks through Shadow DOM hosts as well as regular parents.
  */
 export function getDomPath(node: Node | null): EventTarget[] {
   const path: EventTarget[] = [];

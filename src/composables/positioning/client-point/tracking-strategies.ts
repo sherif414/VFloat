@@ -28,6 +28,9 @@ export abstract class TrackingStrategy {
   }
 }
 
+/**
+ * Keeps following the pointer while the floating element is open.
+ */
 export class FollowTracker extends TrackingStrategy {
   readonly name = "follow" as const;
 
@@ -58,6 +61,9 @@ export class FollowTracker extends TrackingStrategy {
   }
 }
 
+/**
+ * Captures the initial pointer position and holds it steady after open.
+ */
 export class StaticTracker extends TrackingStrategy {
   readonly name = "static" as const;
 

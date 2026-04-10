@@ -2,36 +2,23 @@ import type { Middleware, Padding } from "@floating-ui/dom";
 import { arrow as FloatingUIArrow } from "@floating-ui/dom";
 import { type Ref, toValue } from "vue";
 
-//=======================================================================================
-// 📌 Types & Interfaces
-//=======================================================================================
-
 /**
- * Options for configuring arrow positioning within floating elements
+ * Configures the arrow middleware used to position an inner element against the anchor.
  */
 export interface ArrowMiddlewareOptions {
   /**
-   * Padding to apply around the arrow element
+   * Padding to keep around the arrow when Floating UI measures the reference edge.
    */
   padding?: Padding;
 
   /**
-   * Reference to the arrow element
+   * Arrow element to measure and position.
    */
   element: Ref<HTMLElement | null>;
 }
 
-//=======================================================================================
-// 📌 Main Logic / Primary Export(s)
-//=======================================================================================
-
 /**
- * Positions an inner element of the floating element such that it is centered to the anchor element.
- *
- * This middleware is used to position arrow elements within floating elements.
- *
- * @param options - The arrow options including padding and element reference
- * @returns A middleware function for arrow positioning
+ * Returns the Floating UI arrow middleware for the provided arrow element.
  */
 export function arrow(options: ArrowMiddlewareOptions): Middleware {
   return {

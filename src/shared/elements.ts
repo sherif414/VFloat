@@ -1,7 +1,14 @@
 import type { Ref } from "vue";
 import type { VirtualElement } from "@/types";
 
+/**
+ * Accepts either a real anchor element or a virtual anchor produced by pointer tracking.
+ */
 export type AnchorDomElement = HTMLElement | VirtualElement | null;
+
+/**
+ * Floating elements are always real DOM elements when mounted.
+ */
 export type FloatingDomElement = HTMLElement | null;
 
 /**
@@ -20,7 +27,7 @@ export function resolveAnchorElement(anchor: AnchorDomElement): HTMLElement | nu
 }
 
 /**
- * Creates a stable setter function for a Vue ref.
+ * Creates a stable setter function for a Vue ref so refs can be wired through callbacks.
  */
 export function createRefSetter<T>(target: Ref<T>) {
   return (value: T) => {
