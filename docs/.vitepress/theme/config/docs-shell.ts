@@ -20,6 +20,7 @@ export interface DocsShellConfig {
   sections: Record<DocsSectionKey, DocsSectionMeta>;
 }
 
+/** Shared docs shell metadata for frame visibility and repo links. */
 export const docsShellConfig = {
   repoUrl: "https://github.com/sherif414/VFloat",
   version: "v0.11.0",

@@ -2,6 +2,7 @@ import { flip, offset, shift, useArrow, useFloating } from "../../../../src/inde
 import { computed, ref, useTemplateRef } from "vue";
 import type { HomeHeroPlacement } from "../config/home-content";
 
+/** Drive the interactive hero demo on the docs landing page. */
 export const useHomeHeroDemo = () => {
   const heroAnchorEl = useTemplateRef<HTMLElement>("heroAnchorEl");
   const heroFloatingEl = useTemplateRef<HTMLElement>("heroFloatingEl");
@@ -43,6 +44,7 @@ export const useHomeHeroDemo = () => {
     heroContext.state.open.value ? "Close spatial panel" : "Open spatial panel",
   );
 
+  /** Apply a placement choice and reopen the demo panel. */
   const setHeroPlacement = (placement?: HomeHeroPlacement) => {
     if (!placement) {
       return;
@@ -52,10 +54,12 @@ export const useHomeHeroDemo = () => {
     heroContext.state.setOpen(true);
   };
 
+  /** Close the demo panel. */
   const closeHeroPanel = () => {
     heroContext.state.setOpen(false);
   };
 
+  /** Toggle the demo panel open state. */
   const toggleHeroPanel = () => {
     heroContext.state.setOpen(!heroContext.state.open.value);
   };

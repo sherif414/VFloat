@@ -78,6 +78,7 @@ export interface HomeContent {
   };
 }
 
+/** Static content model that drives the docs home page and hero demo. */
 export const homeContent = {
   repoUrl: docsShellConfig.repoUrl,
   packageVersion: "0.11.0",

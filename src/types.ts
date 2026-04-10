@@ -1,4 +1,7 @@
+/** Generic callable alias for helpers that forward arbitrary arguments. */
 export type AnyFn<T extends unknown[] = unknown[], U = unknown> = (...args: T) => U;
+
+/** Void callback alias for simple event handlers and cleanup hooks. */
 export type Fn = () => void;
 
 /**

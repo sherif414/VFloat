@@ -18,14 +18,18 @@ export interface ResolvedDocsPageShell {
   frame: DocsFrameVisibility;
 }
 
+/** Relative path used to detect the landing page shell. */
 export const LANDING_PAGE_PATH = "index.md";
 
+/** Narrow unknown values to plain records. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+/** Resolve the docs section from the current page path. */
 export const resolveDocsSectionKey = (relativePath: string): DocsSectionKey =>
   relativePath.startsWith("api/") ? "api" : "guide";
 
+/** Resolve the page template from frontmatter and path defaults. */
 export const resolveDocsTemplate = (
   relativePath: string,
   frontmatter: DocsPageFrontmatter | undefined,
@@ -37,6 +41,7 @@ export const resolveDocsTemplate = (
   return relativePath === LANDING_PAGE_PATH ? "landing" : "docs";
 };
 
+/** Normalize the docs frame visibility for the chosen template. */
 export const normalizeDocsFrame = (
   template: DocsTemplate,
   docsFrame: DocsPageFrontmatter["docsFrame"],
@@ -68,6 +73,7 @@ export const normalizeDocsFrame = (
   return frame;
 };
 
+/** Resolve the page shell template and frame visibility together. */
 export const resolveDocsPageShell = (
   relativePath: string,
   frontmatter: DocsPageFrontmatter | undefined,

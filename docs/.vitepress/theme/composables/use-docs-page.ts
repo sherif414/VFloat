@@ -7,15 +7,18 @@ import {
   resolveDocsSectionKey,
 } from "../lib/page-shell";
 
+/** Trim non-empty strings and collapse empty values to `undefined`. */
 const normalizeString = (value: unknown) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 
+/** Derive docs page metadata from frontmatter, rendered content, and route state. */
 export const useDocsPage = () => {
   const { frontmatter, page } = useData();
   const route = useRoute();
   const contentLead = ref("");
   const renderedHeadingCount = ref(0);
 
+  /** Read the rendered docs content so the page shell can summarize it. */
   const syncRenderedContentMetrics = () => {
     if (typeof document === "undefined") {
       return;
@@ -28,6 +31,7 @@ export const useDocsPage = () => {
     renderedHeadingCount.value = headings.length;
   };
 
+  /** Wait for DOM updates before measuring the rendered docs content. */
   const scheduleRenderedContentSync = async () => {
     await nextTick();
 

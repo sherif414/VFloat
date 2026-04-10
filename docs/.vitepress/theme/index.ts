@@ -9,6 +9,7 @@ import "./styles/shared-components.css";
 import "./styles/home-page.css";
 import "./code.css";
 
+/** VitePress theme entry for the VFloat docs site. */
 export default {
   extends: DefaultTheme,
   enhanceApp() {},

@@ -1,36 +1,36 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
-import { offset } from "@floating-ui/dom"
-import { useFloating, useHover } from "../src/composables"
+import { computed, ref, watch } from "vue";
+import { offset } from "@floating-ui/dom";
+import { useFloating, useHover } from "../src/composables";
 
-const anchorEl = ref<HTMLElement | null>(null)
-const floatingEl = ref<HTMLElement | null>(null)
-const polygonPoints = ref<Array<[number, number]>>([])
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const polygonPoints = ref<Array<[number, number]>>([]);
 
 const context = useFloating(anchorEl, floatingEl, {
   placement: "right",
   middlewares: [offset(10)],
-})
+});
 
 useHover(context, {
   safePolygon: {
     onPolygonChange: (points) => {
-      polygonPoints.value = points
+      polygonPoints.value = points;
     },
   },
-})
+});
 
-const { open, floatingStyles } = context
+const { open, floatingStyles } = context;
 
 const svgPoints = computed(() => {
-  return polygonPoints.value.map((point) => point.join(",")).join(" ")
-})
+  return polygonPoints.value.map((point) => point.join(",")).join(" ");
+});
 
 watch(open, (isOpen) => {
   if (!isOpen) {
-    polygonPoints.value = []
+    polygonPoints.value = [];
   }
-})
+});
 </script>
 
 <template>
@@ -67,7 +67,6 @@ watch(open, (isOpen) => {
   align-items: center;
   margin-top: 2rem;
   position: relative;
-  /* Create a gap to test safePolygon */
   gap: 50px;
   position: relative;
   z-index: 1;
