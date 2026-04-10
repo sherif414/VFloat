@@ -35,6 +35,13 @@
 - Internal structural adapter types can use suffixes like `Shape` and `Like` when they describe partial or compatibility contracts rather than primary public types. Examples: `FloatingRefsShape` and `FloatingPositionLike`.
 - Internal service and protocol types should use explicit role suffixes when applicable, such as `*Controller`, `*Registry`, `*Strategy`, `*Contract`, and `*Registration`.
 
+## Coding Style
+
+- Add JSDoc-style docstrings to source functions and public exports when they define behavior or API shape.
+- Skip docstrings for generated files, trivial accessors, and obvious type-only declarations.
+- Add code comments when they explain why something exists, tradeoffs, non-obvious control flow, edge cases, or coordination between moving parts.
+- Do not add comments that only restate what the code already says.
+
 <!--VITE PLUS START-->
 
 # Using Vite+, the Unified Toolchain for the Web
