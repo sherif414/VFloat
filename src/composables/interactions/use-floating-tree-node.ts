@@ -137,6 +137,7 @@ function shouldRestoreFocus(node: FloatingTreeNode, reason: OpenChangeReason, ev
 }
 
 function restoreNodeFocus(node: FloatingTreeNode, reason: OpenChangeReason, event?: Event) {
+  // Tree-driven closes should hand focus back to the trigger that owns the branch.
   if (!shouldRestoreFocus(node, reason, event)) {
     return;
   }
@@ -200,6 +201,7 @@ export function useFloatingTreeNode(
   const restoreParentNavigation = (event?: Event) => {
     void event;
 
+    // When a child closes, parent list navigation should jump back to the item that opened it.
     const returnIndex = nodeBridge.listNavigation?.returnIndex.value ?? null;
     if (returnIndex == null || parentId.value == null) {
       return;
@@ -222,6 +224,7 @@ export function useFloatingTreeNode(
   };
 
   const applyCloseRules = (event?: Event) => {
+    // Closing a node should collapse any descendants first, then update tree bookkeeping.
     if (closeChildrenOnClose.value) {
       tree.actions.closeChildren(nodeId.value, event);
     }
@@ -237,6 +240,7 @@ export function useFloatingTreeNode(
       return;
     }
 
+    // Let the normal open-state controller drive the state change, then repair tree focus.
     context.state.setOpen(false, reason, event);
     restoreNodeFocus(node, reason, event);
   };
@@ -343,6 +347,7 @@ export function useFloatingTreeNode(
   watch(
     () => context.state.open.value,
     (isOpen, wasOpen) => {
+      // The watcher keeps tree registration in sync with any state change, regardless of source.
       if (wasOpen === undefined) {
         if (isOpen) {
           applyOpenRules();

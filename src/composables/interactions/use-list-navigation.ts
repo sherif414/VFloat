@@ -229,6 +229,8 @@ export function useListNavigation(
     const currentAnchorEl = anchorEl.value;
     const parentNode = tree.parentNode;
 
+    // A submenu trigger should only open itself when the pointer/key event is actually
+    // operating from the parent list branch, not when the child list has already taken over.
     return !!currentAnchorEl && !!parentNode?.actions.isTargetWithinBranch(currentAnchorEl);
   };
 
@@ -320,6 +322,7 @@ export function useListNavigation(
       return null;
     }
 
+    // Keep the internal bridge updated so sibling composables can discover list-navigation state.
     treeNodeReturnIndexBridge = treeNode.listNavigation?.returnIndex ?? treeNodeReturnIndexBridge;
     treeNodeOpenedByTreeBridge =
       treeNode.listNavigation?.openedByTree ?? treeNodeOpenedByTreeBridge;
@@ -342,6 +345,7 @@ export function useListNavigation(
       return null;
     }
 
+    // Child lists inherit the index that opened them so Escape / ArrowLeft can return cleanly.
     const childTreeNode = getFloatingInternals(childNode.context as object)?.treeNode;
     if (!childTreeNode) {
       return null;
@@ -564,6 +568,7 @@ export function useListNavigation(
           if (idx === pendingChildOpen.index) {
             const childNode = pendingChildOpen.childNode;
             pendingChildOpen = null;
+            // The pending child opens after the active index settles so focus lands on the right item.
             ensureChildListNavigationBridge(childNode, idx);
             childNode.context.state.setOpen(true, "keyboard-activate");
           } else {

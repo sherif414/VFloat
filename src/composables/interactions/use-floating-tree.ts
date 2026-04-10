@@ -19,6 +19,10 @@ export interface UseFloatingTreeOptions {
 export interface FloatingTree {
   id: Readonly<Ref<string>>;
   activeId: Readonly<Ref<string | null>>;
+  /**
+   * The current open path, ordered from the root node down to the active node.
+   * This is useful for subtree-aware closing and keyboard handoff.
+   */
   activePath: Readonly<Ref<string[]>>;
   actions: {
     getNode: (id: string) => FloatingTreeNode | null;
@@ -88,6 +92,7 @@ function collectBranchNodeIds(
   branchRootId: string,
   resolveNode: (id: string) => FloatingTreeNode | null,
 ): string[] {
+  // Walk the subtree depth-first so we can close descendants before their parent.
   const visited = new Set<string>();
   const ids: string[] = [];
 
@@ -159,6 +164,7 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
   };
 
   const closeBranchWithReason = (id: string, reason: OpenChangeReason, event?: Event) => {
+    // Closing a branch means closing the root node plus every descendant node.
     const branchNodeIds = collectBranchNodeIds(id, resolveNode);
     for (const branchNodeId of branchNodeIds) {
       closeNodeWithReason(branchNodeId, reason, event);
@@ -263,6 +269,7 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
     actions: {
       getNode: resolveNode,
       closeAll: (event?: Event) => {
+        // Prefer root nodes so multiple top-level branches collapse in a stable order.
         const rootIds = [...nodeRegistrations.values()]
           .filter((registration) => registration.node.parentId.value == null)
           .map((registration) => registration.node.id.value);
@@ -281,6 +288,7 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
           return;
         }
 
+        // Close each child subtree independently so sibling branches stay isolated.
         for (const childId of node.childIds.value) {
           closeBranchWithReason(childId, "programmatic", event);
         }

@@ -38,6 +38,7 @@ export function resolveTreeNodeBridge(context: FloatingContextLike): FloatingTre
 }
 
 export function resolveTreeInteraction(context: FloatingContextLike): FloatingTreeInteraction {
+  // This adapter keeps tree-aware logic in one place so interaction composables stay small.
   const resolveTreeNode = () => resolveTreeNodeBridge(context);
   const resolveTree = () => resolveTreeNode()?.tree ?? null;
 
@@ -68,6 +69,7 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
     reason: OpenChangeReason,
     event?: Event,
   ) => {
+    // Fall back to the local context when no tree node bridge is available.
     if (!node) {
       context.state.setOpen(false, reason, event);
     } else {
@@ -121,6 +123,7 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
   const restoreParentNavigation = (event?: Event) => {
     void event;
 
+    // When the active node closes, hand keyboard state back to the parent list item.
     const treeNode = resolveTreeNode();
     const parentNode = resolveParentNode();
     const returnIndex = treeNode?.listNavigation?.returnIndex.value ?? null;
