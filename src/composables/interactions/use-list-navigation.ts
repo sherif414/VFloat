@@ -161,9 +161,15 @@ export interface UseListNavigationOptions {
 }
 
 export interface UseListNavigationReturn {
+  /**
+   * Stops all listeners and watchers created by the composable.
+   */
   cleanup: () => void;
 }
 
+/**
+ * Coordinates keyboard and hover navigation for floating lists, grids, and nested branches.
+ */
 export function useListNavigation(
   context: FloatingContext,
   options: UseListNavigationOptions,

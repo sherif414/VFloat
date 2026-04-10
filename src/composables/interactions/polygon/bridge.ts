@@ -23,6 +23,9 @@ import {
   type Side,
 } from "./geometry";
 
+/**
+ * Options for tuning the safe-polygon hover corridor.
+ */
 export interface SafePolygonOptions {
   /**
    * Expands the polygon around the cursor leave point.
@@ -41,9 +44,21 @@ export interface SafePolygonOptions {
   onPolygonChange?: (polygon: Polygon) => void;
 }
 
+/**
+ * Factory that produces a pointer-move handler for safe-polygon hover retention.
+ */
 export type SafePolygon = (context: CreateSafePolygonHandlerContext) => SafePolygonHandler;
+/**
+ * Mouse-move handler produced by `safePolygon`.
+ */
 export type SafePolygonHandler = (event: MouseEvent) => void;
 
+/**
+ * Geometry and callback inputs used to build a safe-polygon handler.
+ */
+/**
+ * Geometry and callback inputs used to build a safe-polygon handler.
+ */
 export interface CreateSafePolygonHandlerContext {
   x: number;
   y: number;

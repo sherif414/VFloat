@@ -61,7 +61,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     ignoreMouse = false,
     ignoreKeyboard = false,
     ignoreTouch = false,
-    // Outside click options
     closeOnOutsideClick = false,
     outsideClickEvent = "pointerdown",
     outsideCapture = true,
@@ -146,7 +145,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   }
 
   function onMouseDown(e: MouseEvent) {
-    // Ignore non-primary buttons
     if (e.button !== 0) return;
     if (toValue(eventOption) === "click") return;
     if (shouldIgnorePointerType(interactionState.pointerType)) return;
@@ -197,7 +195,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    const el = anchorEl.value; // Get current element inside handler
+    const el = anchorEl.value;
     if (!el) return;
 
     if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e) || isSpaceIgnored(el)) {
@@ -209,8 +207,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       handleOpenChange("keyboard-activate", e);
     }
   }
-
-  // --- Outside Click Event Handlers ---
 
   function onOutsideClickHandler(event: MouseEvent) {
     if (!isEnabled.value || !isOutsideClickEnabled.value || !open.value) {
@@ -250,7 +246,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return;
     }
 
-    // Use custom handler if provided, otherwise use default behavior
     if (onOutsideClick) {
       onOutsideClick(event);
     } else {
@@ -282,10 +277,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       interactionState.dragStartedInside = false;
     }, 0);
   }
-
-  //=====================================================================================
-  // Helper Functions
-  //=====================================================================================
 
   function shouldIgnorePointerType(type: PointerType | undefined): boolean {
     if (isMouseLikePointerType(type, true) && toValue(ignoreMouse)) {
@@ -330,7 +321,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   // Wiring: document outside-click listener + drag suppression on floating
   //=====================================================================================
 
-  // Document listener for outside clicks
   useEventListener(
     () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
     outsideClickEvent,
@@ -338,7 +328,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     { capture: toValue(outsideCapture) },
   );
 
-  // Floating element listeners for drag detection
   useEventListener(
     () =>
       isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDrag)
@@ -364,8 +353,17 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 // 📌 Types
 //=======================================================================================
 
+/**
+ * Context required by `useClick`.
+ */
 export interface UseClickContext {
+  /**
+   * The reactive refs exposed by the floating context.
+   */
   refs: FloatingContext["refs"];
+  /**
+   * The reactive state and state mutators for the floating context.
+   */
   state: FloatingContext["state"];
 }
 

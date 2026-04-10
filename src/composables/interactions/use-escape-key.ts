@@ -14,7 +14,13 @@ type TreeEscapeEvent = KeyboardEvent & {
 // 📌 Types
 // =======================================================================================
 
+/**
+ * Context required by `useEscapeKey`.
+ */
 export interface UseEscapeKeyContext {
+  /**
+   * The floating state that should respond to Escape.
+   */
   state: FloatingContext["state"];
 }
 

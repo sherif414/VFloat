@@ -12,9 +12,21 @@ interface FloatingContextLike {
 }
 
 export interface FloatingTreeInteraction {
+  /**
+   * The current tree node bridge for this context, if one exists.
+   */
   readonly treeNode: FloatingTreeNodeBridge | null;
+  /**
+   * The owning floating tree bridge, if the context participates in one.
+   */
   readonly tree: FloatingTreeBridge | null;
+  /**
+   * The immediate parent node bridge.
+   */
   readonly parentNode: FloatingTreeNodeBridge | null;
+  /**
+   * The active node bridge for the current tree branch.
+   */
   readonly activeNode: FloatingTreeNodeBridge | null;
   readonly isTree: boolean;
   readonly isRoot: boolean;
@@ -33,10 +45,16 @@ export interface FloatingTreeInteraction {
   restoreParentNavigation: (event?: Event) => void;
 }
 
+/**
+ * Returns the tree node bridge stored on the current floating context.
+ */
 export function resolveTreeNodeBridge(context: FloatingContextLike): FloatingTreeNodeBridge | null {
   return getFloatingInternals(context as object)?.treeNode ?? null;
 }
 
+/**
+ * Resolves tree-aware helpers for a floating context, or falls back to local state.
+ */
 export function resolveTreeInteraction(context: FloatingContextLike): FloatingTreeInteraction {
   // This adapter keeps tree-aware logic in one place so interaction composables stay small.
   const resolveTreeNode = () => resolveTreeNodeBridge(context);

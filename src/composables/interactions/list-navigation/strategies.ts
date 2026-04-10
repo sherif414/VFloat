@@ -1,5 +1,11 @@
+/**
+ * The result of a navigation key press.
+ */
 export type NavigationAction = { type: "navigate"; index: number | null } | { type: "close" };
 
+/**
+ * Shared navigation state used by the strategy implementations.
+ */
 export interface StrategyContext {
   current: number | null;
   items: Array<HTMLElement | null>;
@@ -15,6 +21,9 @@ export interface StrategyContext {
   getLastEnabledIndex: () => number | null;
 }
 
+/**
+ * Resolves a keyboard command into navigation or close behavior.
+ */
 export interface NavigationStrategy {
   handleKey(key: string, context: StrategyContext): NavigationAction | null;
 }

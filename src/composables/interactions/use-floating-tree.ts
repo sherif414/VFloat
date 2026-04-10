@@ -12,10 +12,19 @@ import {
 import type { OpenChangeReason } from "@/types";
 import type { FloatingTreeNode } from "./use-floating-tree-node";
 
+/**
+ * Options for creating or reusing a floating tree registry.
+ */
 export interface UseFloatingTreeOptions {
+  /**
+   * The tree id to reuse instead of generating one.
+   */
   id?: MaybeRefOrGetter<string | undefined>;
 }
 
+/**
+ * The shared registry and coordination surface for related floating contexts.
+ */
 export interface FloatingTree {
   id: Readonly<Ref<string>>;
   activeId: Readonly<Ref<string | null>>;
@@ -41,9 +50,21 @@ interface FloatingTreeNodeRegistration {
 }
 
 export interface FloatingTreePrivateActions {
+  /**
+   * Registers a node so tree bookkeeping can track it.
+   */
   registerNode: (registration: FloatingTreeNodeRegistration) => () => void;
+  /**
+   * Marks a node as the most recently opened tree entry.
+   */
   markOpened: (id: string) => void;
+  /**
+   * Updates tree bookkeeping after a node closes.
+   */
   markClosed: (id: string) => void;
+  /**
+   * Closes a node while preserving the requested reason.
+   */
   closeNodeWithReason: (id: string, reason: OpenChangeReason, event?: Event) => void;
 }
 

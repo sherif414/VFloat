@@ -14,14 +14,35 @@ import {
   useFloatingTree,
 } from "./use-floating-tree";
 
+/**
+ * Options for attaching a floating context to a tree node.
+ */
 export interface UseFloatingTreeNodeOptions {
+  /**
+   * The tree to register this node with.
+   */
   tree?: FloatingTree | null;
+  /**
+   * The node id to reuse instead of generating one.
+   */
   id?: MaybeRefOrGetter<string | undefined>;
+  /**
+   * The parent node to attach this node beneath.
+   */
   parent?: MaybeRefOrGetter<FloatingTreeNode | null | undefined>;
+  /**
+   * Whether sibling branches should close when this node opens.
+   */
   closeSiblingsOnOpen?: MaybeRefOrGetter<boolean | undefined>;
+  /**
+   * Whether descendants should close when this node closes.
+   */
   closeChildrenOnClose?: MaybeRefOrGetter<boolean | undefined>;
 }
 
+/**
+ * A registered floating node that participates in tree-aware open/close coordination.
+ */
 export interface FloatingTreeNode {
   tree: FloatingTree;
   id: Readonly<Ref<string>>;
@@ -157,7 +178,7 @@ function restoreNodeFocus(node: FloatingTreeNode, reason: OpenChangeReason, even
 }
 
 /**
- * Registers a floating context as a node in a floating tree.
+ * Registers a floating context as a node in a floating tree and wires tree-aware state updates.
  */
 export function useFloatingTreeNode(
   context: FloatingContext,

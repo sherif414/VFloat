@@ -266,11 +266,23 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 // 📌 Types
 //=======================================================================================
 
+/**
+ * Context required by `useFocus`.
+ */
 export interface UseFocusContext {
+  /**
+   * The floating refs used to attach focus listeners.
+   */
   refs: FloatingContext["refs"];
+  /**
+   * The open state and close handler for the floating context.
+   */
   state: FloatingContext["state"];
 }
 
+/**
+ * Options that control focus-based open and close behavior.
+ */
 export interface UseFocusOptions {
   /**
    * Whether focus event listeners are enabled
@@ -287,7 +299,7 @@ export interface UseFocusOptions {
 }
 
 /**
- * Return value of the useFocus composable
+ * Cleanup handle returned by `useFocus`.
  */
 export interface UseFocusReturn {
   /**

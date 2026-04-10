@@ -17,11 +17,23 @@ import { resolveTreeInteraction } from "./internal/tree-interaction";
 // 📌 Types
 //=======================================================================================
 
+/**
+ * Context required by `useFocusTrap`.
+ */
 export interface UseFocusTrapContext {
+  /**
+   * The floating refs that expose the trap container.
+   */
   refs: FloatingContext["refs"];
+  /**
+   * The floating state and open-state mutators.
+   */
   state: FloatingContext["state"];
 }
 
+/**
+ * Options that control how the focus trap behaves while the floating surface is open.
+ */
 export interface UseFocusTrapOptions {
   /**
    * Determines if the focus trap should be enabled.
@@ -80,12 +92,15 @@ export interface UseFocusTrapOptions {
   onError?: (error: unknown) => void;
 }
 
+/**
+ * Control handles exposed by `useFocusTrap`.
+ */
 export interface UseFocusTrapReturn {
-  /** Check if the focus trap is currently active */
+  /** Check if the focus trap is currently active. */
   isActive: ComputedRef<boolean>;
-  /** Manually activate the focus trap (if enabled and open) */
+  /** Manually activate the focus trap when it is eligible. */
   activate: () => void;
-  /** Manually deactivate the focus trap */
+  /** Manually deactivate the focus trap. */
   deactivate: () => void;
 }
 
@@ -140,7 +155,6 @@ export function useFocusTrap(
   const { open, setOpen } = context.state;
   const tree = resolveTreeInteraction(context);
 
-  // Normalize options with defaults
   const {
     enabled = true,
     modal = false,
@@ -152,7 +166,6 @@ export function useFocusTrap(
     onError,
   } = options;
 
-  // Lazy-evaluated computed values (only created once)
   const isEnabled = computed(() => !!toValue(enabled));
   const isModal = computed(() => !!toValue(modal));
   const shouldCloseOnFocusOut = computed(() => !isModal.value && !!toValue(closeOnFocusOut));
@@ -163,12 +176,10 @@ export function useFocusTrap(
     resolveIsolationMode(isModal.value, shouldInertOutside.value),
   );
 
-  // Use shallowRef for trap instance (don't need deep reactivity)
   const trapRef = shallowRef<FocusTrap | null>(null);
   const trapIsActive = shallowRef(false);
   const isActive = computed(() => trapIsActive.value);
 
-  // Guard to prevent double-deactivation
   let isDeactivating = false;
   let pendingCloseRequest: CloseRequest | null = null;
 
@@ -214,7 +225,6 @@ export function useFocusTrap(
   const createTrap = () => {
     if (!isEnabled.value || !open.value) return;
 
-    // Deactivate existing trap first without side effects from a real close.
     deactivateTrap({ returnFocus: false });
 
     const container = floatingEl.value;
@@ -225,7 +235,6 @@ export function useFocusTrap(
       return;
     }
 
-    // Create the focus trap instance
     trapRef.value = createFocusTrap(container, {
       onActivate: () => {
         trapIsActive.value = true;
@@ -281,16 +290,13 @@ export function useFocusTrap(
       trapStack: sharedTrapStack,
     });
 
-    // Activate with proper error handling
     try {
       trapRef.value.activate();
     } catch (error) {
-      // Ensure state is cleaned up even on error
       pendingCloseRequest = null;
       trapRef.value = null;
       trapIsActive.value = false;
 
-      // Call custom error handler if provided
       if (onError) {
         onError(error);
       } else if (isDev) {
@@ -299,7 +305,6 @@ export function useFocusTrap(
     }
   };
 
-  // Single watcher to manage trap lifecycle
   watchPostEffect(() => {
     void shouldCloseOnFocusOut.value;
     void shouldReturnFocus.value;
@@ -313,7 +318,6 @@ export function useFocusTrap(
     }
   });
 
-  // Cleanup on scope disposal
   tryOnScopeDispose(() => {
     deactivateTrap();
   });
