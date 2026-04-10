@@ -96,4 +96,4 @@
   - [useHover](/api/use-hover) - Hover-based activation
   - [useArrow](/api/use-arrow) - Explicit arrow registration
   - [useClientPoint](/api/use-client-point) - Swap the anchor for a virtual pointer-based anchor
-  - [How It Works](/guide/how-it-works) - Context mental model
+- [Floating Context](/guide/floating-context) - Context mental model

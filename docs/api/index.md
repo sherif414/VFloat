@@ -4,10 +4,10 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 ## Start With The Guide
 
-- [Start Here](/guide/) - Build your first floating element step by step
-- [How It Works](/guide/how-it-works) - Understand anchor, floating element, and context
-- [Interactions](/guide/interactions) - Add click, hover, focus, and keyboard behavior
-- [Middleware](/guide/middleware) - Refine positioning with offset, flip, shift, and more
+- [Guide Overview](/guide/) - Learn how the guide section is organized and choose a starting path
+- [First Tooltip](/guide/first-tooltip) - Build your first floating surface step by step
+- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) - Add click, dismissal, and keyboard behavior
+- [Keep Content in View](/guide/keep-content-in-view) - Refine positioning with offset, flip, shift, and more
 
 ## Positioning
 
@@ -23,6 +23,11 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 - [`useFocusTrap`](/api/use-focus-trap) - Keeps keyboard focus inside floating content
 - [`useEscapeKey`](/api/use-escape-key) - Closes floating content when Escape is pressed
 - [`useListNavigation`](/api/use-list-navigation) - Moves between items with the keyboard
+
+## Tree Coordination
+
+- [`useFloatingTree`](/api/use-floating-tree) - Coordinates related floating contexts
+- [`useFloatingTreeNode`](/api/use-floating-tree-node) - Registers a floating context inside a tree
 
 ## Middleware
 

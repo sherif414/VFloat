@@ -1,140 +1,107 @@
-# Start Here
+# Guide Overview
 
-VFloat helps you position floating surfaces — tooltips, popovers, menus, dialogs — relative to an anchor element. It also gives you composables that handle the interaction layer: when things open, close, and respond to user input.
+VFloat helps you build floating surfaces such as tooltips, popovers, menus, dialogs, and cursor-following panels. It gives you the positioning layer, the interaction layer, and the shared state model that lets those pieces work together cleanly.
 
-The quickest way to understand what this library does is to build something. Let's start with the smallest possible floating element, then backfill the concepts.
+This guide section is meant to teach the library, not just list APIs. The goal is that you leave with two things:
 
-## The Mental Model
+- You can build the floating behavior you came here to build.
+- You understand why the pattern works, so you can adapt it later.
 
-Before we write code, let's clarify what VFloat is and is not.
+## What VFloat Is And Is Not
 
-VFloat provides:
+VFloat gives you low-level building blocks for floating UI in Vue:
 
-- **Positioning** — It calculates where a floating element should appear relative to an anchor.
-- **Interactions** — Composables that handle click, hover, focus, keyboard dismissal, and focus trapping.
-- **Middleware** — A pipeline that refines the base position (handling collisions, adding offset, resizing).
+- [`useFloating`](/api/use-floating) computes position and exposes the shared `context`.
+- Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useEscapeKey`](/api/use-escape-key) decide when that surface opens and closes.
+- `middlewares` such as [`offset`](/api/offset), [`flip`](/api/flip), and [`shift`](/api/shift) refine the final placement.
 
 VFloat is not:
 
-- A component library with prebuilt widgets
-- A styling system
-- A fork of Floating UI
+- A component library with ready-made dropdowns and tooltips
+- A design system
+- A direct fork of Floating UI
 
-The goal is to give you the minimum set of primitives so you can build any floating surface that fits your app's design.
+It is closer to a toolkit. You bring your own markup, styles, and product rules. VFloat gives you the positioning and interaction primitives.
 
-## Build Your First Floating Element
+## How To Read These Docs
 
-Let's put a tooltip next to a button. This will show the three pieces working together: the anchor, the floating element, and the context that connects them.
+The guide is organized into five sections.
 
-First, we need two template refs:
+### Getting Started
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useFloating } from "v-float";
+Start here if you are new to VFloat. These pages are meant to be read in order.
 
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
-</script>
-```
+- [First Tooltip](/guide/first-tooltip)
+- [First Popover](/guide/first-popover)
+- [Control Open State](/guide/control-open-state)
 
-Next, we call `useFloating` and bind the refs. The grouped context it returns gives us the open state and computed styles:
+### Guides
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useFloating } from "v-float";
+Use these pages when you have a concrete job to do.
 
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips)
+- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns)
+- [Keep Content in View](/guide/keep-content-in-view)
+- [Use Virtual Anchors](/guide/use-virtual-anchors)
+- [Keyboard Navigation](/guide/keyboard-navigation)
+- [Build Nested Menus](/guide/build-nested-menus)
+- [Build Dialogs and Modals](/guide/build-dialogs-and-modals)
 
-const context = useFloating(anchorEl, floatingEl, {
-  placement: "bottom",
-});
-</script>
+### Concepts
 
-<template>
-  <button ref="anchorEl">Hover me</button>
+These pages explain how to think about VFloat.
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Tooltip content
-  </div>
-</template>
-```
+- [Floating Context](/guide/floating-context)
+- [Placement and Positioning](/guide/placement-and-positioning)
+- [Middleware Pipeline](/guide/middleware-pipeline)
+- [Interaction Model](/guide/interaction-model)
+- [Focus Models](/guide/focus-models)
 
-This renders the floating element, but it does not open yet. We have not told VFloat when `context.state.open.value` should change. That is the job of the interaction composables.
+### Design Notes
 
-## Add Interaction With `useHover`
+These pages explain why the library is shaped the way it is and how to choose between patterns.
 
-Let's make the tooltip appear on hover:
+- [Choosing the Right Pattern](/guide/choosing-the-right-pattern)
+- [Controlled vs Uncontrolled](/guide/controlled-vs-uncontrolled)
+- [VFloat and Floating UI](/guide/vfloat-and-floating-ui)
+- [Tree Coordination Explained](/guide/tree-coordination-explained)
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useHover } from "v-float";
+### Deep Dives
 
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
+These are the pages you read when something feels subtle, sticky, or surprising in a real app.
 
-const context = useFloating(anchorEl, floatingEl, {
-  placement: "bottom",
-});
+- [Safe Polygon Gotchas](/guide/safe-polygon-gotchas)
+- [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas)
+- [Virtual Anchor Gotchas](/guide/virtual-anchor-gotchas)
+- [List Navigation Gotchas](/guide/list-navigation-gotchas)
+- [Tree Debugging](/guide/tree-debugging)
 
-useHover(context);
-</script>
+## A Good Starting Path
 
-<template>
-  <button ref="anchorEl">Hover me</button>
+If you are not sure where to begin, use this path:
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Tooltip content
-  </div>
-</template>
-```
+1. Read [First Tooltip](/guide/first-tooltip).
+2. Read [First Popover](/guide/first-popover).
+3. Read [Floating Context](/guide/floating-context).
+4. Pick the task guide that matches what you need to build.
 
-Now `useHover()` manages `context.state.open.value` for us. When the pointer enters the anchor, the floating element appears. When it leaves, it hides.
+If you already know the kind of surface you need, you can jump straight to the matching guide:
 
-::: tip
-`useHover` works well for tooltips. For menus and popovers, you would typically reach for `useClick` instead, which we will cover in the [Interactions](/guide/interactions) guide.
-:::
+- Tooltip: [Build Accessible Tooltips](/guide/build-accessible-tooltips)
+- Popover or dropdown: [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns)
+- Context menu or cursor-following UI: [Use Virtual Anchors](/guide/use-virtual-anchors)
+- Nested menu: [Build Nested Menus](/guide/build-nested-menus)
+- Dialog: [Build Dialogs and Modals](/guide/build-dialogs-and-modals)
 
-## Add Spacing With Middleware
+## Keep The Contract Boundary In Mind
 
-Right now the tooltip sits directly against the anchor. Most UIs need a little gap. We add that with the `offset` middleware:
+These guide pages are intentionally explanatory and practical, but they are not the contract source.
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { offset, useFloating, useHover } from "v-float";
+- Use the guide when you want workflow, mental models, tradeoffs, and examples.
+- Use the [API Reference](/api/) when you need exact signatures, defaults, and return shapes.
 
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
+That split keeps the guides readable and the API pages precise.
 
-const context = useFloating(anchorEl, floatingEl, {
-  placement: "bottom",
-  middlewares: [offset(8)],
-});
+## Next Step
 
-useHover(context);
-</script>
-```
-
-The middleware array is a pipeline. `offset(8)` adds 8 pixels of space between the anchor and floating element. Middleware runs after the base position is computed, so you can stack multiple refinements.
-
-## Where To Go Next
-
-You have seen the three layers working together:
-
-1. **Positioning** via `useFloating()` and middleware
-2. **Interaction** via composables like `useHover()`
-3. **State** via the shared `context`
-
-From here, the natural next steps are:
-
-- **[How It Works](/guide/how-it-works)** — Learn the three pieces (anchor, floating, context) in detail, including how to control open state from a parent component.
-- **[Interactions](/guide/interactions)** — Build click-driven surfaces, modals, and combine multiple interaction patterns.
-- **[Middleware](/guide/middleware)** — Handle viewport collisions, add arrows, and resize elements intelligently.
-
-If you want the full learning path, read through the guides in order: Start Here, then How It Works, then Interactions, then Middleware.
-
-For exact signatures and options, jump to the [API Reference](/api/).
+Start with [First Tooltip](/guide/first-tooltip). It gives you the fastest path to understanding the core VFloat loop: anchor, floating element, shared `context`, interaction composable, and middleware.

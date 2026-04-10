@@ -1,6 +1,6 @@
 # useListNavigation
 
-`useListNavigation` adds arrow-key navigation for list and grid items inside a floating element.
+`useListNavigation` adds arrow-key navigation for list, grid, and nested tree items inside a floating element.
 
 ## Type
 
@@ -24,6 +24,8 @@ interface UseListNavigationOptions {
   selectedIndex?: MaybeRefOrGetter<number | null>;
   focusItemOnOpen?: MaybeRefOrGetter<boolean | "auto">;
   nested?: MaybeRefOrGetter<boolean>;
+  getChildNode?: (index: number) => FloatingTreeNode | null;
+  openChildOnFocus?: MaybeRefOrGetter<boolean>;
   rtl?: MaybeRefOrGetter<boolean>;
   virtual?: MaybeRefOrGetter<boolean>;
   virtualItemRef?: Ref<HTMLElement | null>;
@@ -48,7 +50,9 @@ interface UseListNavigationReturn {
 - `selectedIndex` only wins on open when that item exists and is not disabled.
 - `focusItemOnOpen: "auto"` only moves focus for the current arrow-key open path.
 - Grid navigation respects `rtl: true` for left/right movement too, including wrapped row movement.
-- `cleanup()` removes the registered listeners and watchers, clears `aria-activedescendant`, and resets `virtualItemRef`.
+- `getChildNode` and `openChildOnFocus` let arrow-key navigation open child branches when a list item owns a submenu node.
+- `nested` can be set explicitly when you want nested key behavior without tree inference.
+- `cleanup()` removes the registered listeners and watchers, clears `aria-activedescendant`, resets `virtualItemRef`, and clears tree-navigation bookkeeping.
 
 ## Example
 
@@ -100,5 +104,7 @@ useListNavigation(context, {
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
 - [`useEscapeKey`](/api/use-escape-key)
-- [Keyboard List Navigation](/guide/list-navigation)
-- [Interactions](/guide/interactions)
+- [`useFloatingTree`](/api/use-floating-tree)
+- [`useFloatingTreeNode`](/api/use-floating-tree-node)
+- [Keyboard Navigation](/guide/keyboard-navigation)
+- [Build Nested Menus](/guide/build-nested-menus)

@@ -67,4 +67,4 @@ useHover(context, {
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
 - [`useFloating`](/api/use-floating)
-- [Interactions](/guide/interactions)
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips)

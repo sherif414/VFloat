@@ -65,4 +65,4 @@ useEscapeKey(context);
 - [`useHover`](/api/use-hover)
 - [`useFocus`](/api/use-focus)
 - [`useEscapeKey`](/api/use-escape-key)
-- [Interactions](/guide/interactions)
+- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns)

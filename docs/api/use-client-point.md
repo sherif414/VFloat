@@ -72,4 +72,4 @@ useHover(context);
 
 - [`useFloating`](/api/use-floating)
 - [`useHover`](/api/use-hover)
-- [Virtual Elements](/guide/virtual-elements)
+- [Use Virtual Anchors](/guide/use-virtual-anchors)

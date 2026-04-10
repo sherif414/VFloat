@@ -57,4 +57,4 @@ useFocus(context);
 - [`useHover`](/api/use-hover)
 - [`useClick`](/api/use-click)
 - [`useEscapeKey`](/api/use-escape-key)
-- [Interactions](/guide/interactions)
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips)

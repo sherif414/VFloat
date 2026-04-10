@@ -69,4 +69,4 @@ const { arrowStyles } = useArrow(context, {
 
 - [`arrow`](/api/arrow)
 - [`useFloating`](/api/use-floating)
-- [Middleware](/guide/middleware)
+- [Keep Content in View](/guide/keep-content-in-view)
