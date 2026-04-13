@@ -6,8 +6,6 @@
   --vf-surface: #f8f9fb;
   --vf-surface-container-lowest: #ffffff;
   --vf-surface-container-low: #f0f4f7;
-  --vf-surface-container: #e8eff3;
-  --vf-surface-container-high: #e1e9ee;
   --vf-surface-container-highest: #d9e4ea;
 
   --vf-on-surface: #2a3439;
@@ -16,17 +14,10 @@
 
   --vf-primary: #6b8e7b;
   --vf-primary-dim: #5d7a6a;
-  --vf-primary-container: #e2ede6;
-  --vf-on-primary: #ffffff;
   --vf-on-primary-container: #4a6354;
-  --vf-secondary: #49636f;
   --vf-tertiary: #535f78;
-  --vf-error: #9e3f4e;
-  --vf-accent: #e2ede6;
 
   --vf-outline: #a9b4b9;
-  --vf-outline-variant: rgb(113 124 130 / 16%);
-  --vf-grid: rgb(107 142 123 / 6%);
 
   --vf-shadow-ambient: 0 8px 24px rgb(42 52 57 / 5%);
 

@@ -108,8 +108,7 @@
   gap: 1.5rem;
 }
 
-.vf-docs-shell .VPNavBarMenuLink,
-.vf-docs-shell .VPNavBarMenuGroup button {
+.vf-docs-shell .VPNavBarMenuLink {
   padding-bottom: 0.3rem;
   color: rgb(86 97 102 / 88%);
   font-family: var(--vf-font-display);
@@ -119,8 +118,7 @@
 }
 
 .vf-docs-shell .VPNavBarMenuLink.active,
-.vf-docs-shell .VPNavBarMenuLink:hover,
-.vf-docs-shell .VPNavBarMenuGroup button:hover {
+.vf-docs-shell .VPNavBarMenuLink:hover {
   color: var(--vf-primary);
 }
 
