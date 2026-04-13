@@ -1,3 +1,7 @@
+---
+description: Registers a floating context inside a floating tree.
+---
+
 # useFloatingTreeNode
 
 `useFloatingTreeNode` registers a floating context as part of a tree. Use it for nested menus, submenus, and any branch where opening one surface should affect its relatives.

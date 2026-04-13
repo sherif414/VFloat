@@ -1,3 +1,7 @@
+---
+description: Compose popovers and dropdowns with click, focus, and dismissal patterns.
+---
+
 # Build Popovers and Dropdowns
 
 Popovers and dropdowns are where many VFloat apps start to feel real. They are still just floating surfaces, but the interaction rules are richer than a tooltip:

@@ -1,3 +1,7 @@
+---
+description: Keeps the floating element within the available viewport space.
+---
+
 # shift
 
 `shift` nudges the floating element back into view after placement has been chosen.

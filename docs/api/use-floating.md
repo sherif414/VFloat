@@ -1,3 +1,7 @@
+---
+description: The composition root for VFloat, returning grouped refs, state, and position data.
+---
+
 # useFloating
 
 `useFloating` is the composition root for VFloat. It keeps the stable `useFloating(anchorEl, floatingEl, options)` call signature while returning grouped `refs`, `state`, and `position` sections.

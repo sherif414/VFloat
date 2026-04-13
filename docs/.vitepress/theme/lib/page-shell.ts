@@ -9,7 +9,6 @@ export type DocsTemplate = "docs" | "landing";
 export interface DocsPageFrontmatter {
   docsTemplate?: DocsTemplate;
   docsFrame?: Partial<Record<keyof DocsFrameVisibility, unknown>>;
-  docsEyebrow?: string;
   description?: string;
 }
 
@@ -17,9 +16,6 @@ export interface ResolvedDocsPageShell {
   template: DocsTemplate;
   frame: DocsFrameVisibility;
 }
-
-/** Relative path used to detect the landing page shell. */
-export const LANDING_PAGE_PATH = "index.md";
 
 /** Narrow unknown values to plain records. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -29,17 +25,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const resolveDocsSectionKey = (relativePath: string): DocsSectionKey =>
   relativePath.startsWith("api/") ? "api" : "guide";
 
-/** Resolve the page template from frontmatter and path defaults. */
-export const resolveDocsTemplate = (
-  relativePath: string,
-  frontmatter: DocsPageFrontmatter | undefined,
-): DocsTemplate => {
-  if (frontmatter?.docsTemplate === "landing" || frontmatter?.docsTemplate === "docs") {
-    return frontmatter.docsTemplate;
-  }
-
-  return relativePath === LANDING_PAGE_PATH ? "landing" : "docs";
-};
+/** Resolve the page template from frontmatter. */
+export const resolveDocsTemplate = (frontmatter: DocsPageFrontmatter | undefined): DocsTemplate =>
+  frontmatter?.docsTemplate === "landing" ? "landing" : "docs";
 
 /** Normalize the docs frame visibility for the chosen template. */
 export const normalizeDocsFrame = (
@@ -52,7 +40,6 @@ export const normalizeDocsFrame = (
           topbar: false,
           sidebarCard: false,
           pageHeader: false,
-          asideCard: false,
         }
       : docsShellConfig.defaultFrame;
 
@@ -75,10 +62,9 @@ export const normalizeDocsFrame = (
 
 /** Resolve the page shell template and frame visibility together. */
 export const resolveDocsPageShell = (
-  relativePath: string,
   frontmatter: DocsPageFrontmatter | undefined,
 ): ResolvedDocsPageShell => {
-  const template = resolveDocsTemplate(relativePath, frontmatter);
+  const template = resolveDocsTemplate(frontmatter);
 
   return {
     template,

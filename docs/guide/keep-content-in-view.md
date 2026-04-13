@@ -1,3 +1,7 @@
+---
+description: Keep floating content within the viewport with middleware and sizing rules.
+---
+
 # Keep Content in View
 
 Base placement is only the start of positioning. Real floating surfaces collide with viewport edges, sit near scroll containers, and sometimes need arrows or size constraints. That is what `middlewares` are for.

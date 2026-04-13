@@ -1,3 +1,7 @@
+---
+description: Opens and closes floating content on click.
+---
+
 # useClick
 
 `useClick` toggles a floating context from pointer and keyboard activation. Enable outside-click closing when you want popover or menu behavior instead of a pure trigger toggle.

@@ -1,3 +1,7 @@
+---
+description: Opens and closes floating content on focus.
+---
+
 # useFocus
 
 `useFocus` opens and closes a floating context when the anchor gains or loses focus.

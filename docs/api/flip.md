@@ -1,3 +1,7 @@
+---
+description: Switches to another placement when the current side is blocked.
+---
+
 # flip
 
 `flip` switches to alternative placements when the preferred placement does not fit.

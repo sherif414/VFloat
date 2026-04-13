@@ -4,7 +4,6 @@ export interface DocsFrameVisibility {
   topbar: boolean;
   sidebarCard: boolean;
   pageHeader: boolean;
-  asideCard: boolean;
 }
 
 export interface DocsSectionMeta {
@@ -25,21 +24,20 @@ export const docsShellConfig = {
   repoUrl: "https://github.com/sherif414/VFloat",
   version: "v0.11.0",
   defaultFrame: {
-    topbar: true,
-    sidebarCard: true,
+    topbar: false,
+    sidebarCard: false,
     pageHeader: true,
-    asideCard: true,
   },
   sections: {
     api: {
-      label: "API_REFERENCE",
+      label: "API Reference",
       title: "API Reference",
       description:
         "Exact signatures, defaults, and return contracts for the public VFloat surface.",
     },
     guide: {
-      label: "GUIDE_SYSTEM",
-      title: "Guide",
+      label: "Guides",
+      title: "Guides",
       description: "Concepts, recipes, and implementation patterns for anchored interfaces in Vue.",
     },
   },

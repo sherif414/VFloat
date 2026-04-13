@@ -7,11 +7,11 @@ const { section } = useDocsPage();
 
 <template>
   <div class="vf-docs-rail-card">
+    <p class="vf-docs-rail-card__eyebrow">Documentation</p>
     <div class="vf-docs-rail-card__system">
-      <p>ARCHITECTURE</p>
-      <span>SYSTEM_VER_01</span>
+      <p>{{ section.label }}</p>
+      <span>{{ docsShellConfig.version }}</span>
     </div>
-    <p class="vf-docs-rail-card__eyebrow">{{ section.label }}</p>
     <h2>{{ section.title }}</h2>
     <p>{{ section.description }}</p>
     <a
@@ -20,7 +20,7 @@ const { section } = useDocsPage();
       target="_blank"
       rel="noreferrer"
     >
-      Repository
+      View repository
     </a>
   </div>
 </template>

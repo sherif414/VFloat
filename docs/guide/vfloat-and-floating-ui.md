@@ -1,3 +1,7 @@
+---
+description: Compare VFloat with Floating UI and understand how the APIs differ.
+---
+
 # VFloat and Floating UI
 
 VFloat is heavily inspired by Floating UI, but it is not a fork and should not be understood as a one-to-one port with renamed exports.

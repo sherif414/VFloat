@@ -1,3 +1,7 @@
+---
+description: Understand how floating trees coordinate nested and related surfaces.
+---
+
 # Tree Coordination Explained
 
 Tree coordination is the part of VFloat that usually makes nested floating systems feel intentional instead of improvised.

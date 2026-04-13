@@ -1,3 +1,7 @@
+---
+description: Avoid common safe polygon edge cases when moving between surfaces.
+---
+
 # Safe Polygon Gotchas
 
 `safePolygon` can make hover-based floating UI feel much better, but it can also make a surface feel oddly sticky if you apply it without thinking about the pointer path.

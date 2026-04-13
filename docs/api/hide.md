@@ -1,3 +1,7 @@
+---
+description: Exposes visibility state for clipped references and escaped floating elements.
+---
+
 # hide
 
 `hide` exposes visibility data so you can hide a floating element when the reference is clipped or the floating element escapes its boundary.

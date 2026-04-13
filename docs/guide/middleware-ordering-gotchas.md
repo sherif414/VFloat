@@ -1,3 +1,7 @@
+---
+description: Learn why middleware order matters and how it changes positioning results.
+---
+
 # Middleware Ordering Gotchas
 
 When middleware behavior feels wrong, the problem is often not that you chose the wrong helpers. It is that the helpers are in the wrong order for the problem you are solving.

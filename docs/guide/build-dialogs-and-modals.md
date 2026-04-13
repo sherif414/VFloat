@@ -1,3 +1,7 @@
+---
+description: Build dialogs and modals with focus trapping and dismissal behavior.
+---
+
 # Build Dialogs and Modals
 
 Dialogs and modals are still floating surfaces, but they carry stronger behavior expectations than tooltips, popovers, or menus. Once a surface behaves like a dialog, users expect focus management to be intentional and for dismissal to be explicit.

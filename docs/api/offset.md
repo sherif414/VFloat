@@ -1,3 +1,7 @@
+---
+description: Adds distance between the anchor and floating element.
+---
+
 # offset
 
 `offset` adds distance between the reference element and the floating element.

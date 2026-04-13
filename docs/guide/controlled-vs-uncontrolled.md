@@ -1,3 +1,7 @@
+---
+description: Choose between controlled and uncontrolled open state patterns.
+---
+
 # Controlled vs Uncontrolled
 
 VFloat supports both controlled and uncontrolled open state. That is a technical fact, but the more useful question is when each one leads to a better component design.

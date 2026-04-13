@@ -1,3 +1,7 @@
+---
+description: Control floating open state from your own Vue state and event handling.
+---
+
 # Control Open State
 
 One of the earliest design choices you make with VFloat is who owns the open state.

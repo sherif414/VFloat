@@ -1,3 +1,7 @@
+---
+description: An overview of the guide section and a suggested path through the VFloat docs.
+---
+
 # Guide Overview
 
 VFloat helps you build floating surfaces such as tooltips, popovers, menus, dialogs, and cursor-following panels. It gives you the positioning layer, the interaction layer, and the shared state model that lets those pieces work together cleanly.

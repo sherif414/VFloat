@@ -1,3 +1,7 @@
+---
+description: Avoid pitfalls when using virtual anchors for cursor-based positioning.
+---
+
 # Virtual Anchor Gotchas
 
 Virtual anchors are powerful because they let you position against geometry instead of a real element. They are also easier to misuse because the anchor is synthetic.

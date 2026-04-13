@@ -1,3 +1,7 @@
+---
+description: Build a click-driven popover and see how VFloat changes behavior without changing the core shape.
+---
+
 # First Popover
 
 A popover looks similar to a tooltip in the DOM, but it behaves differently. A tooltip is usually hover-driven and lightweight. A popover is usually click-driven, stays open while the user interacts with it, and needs clearer dismissal rules.

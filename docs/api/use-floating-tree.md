@@ -1,3 +1,7 @@
+---
+description: Coordinates related floating contexts through a shared tree.
+---
+
 # useFloatingTree
 
 `useFloatingTree` creates a shared registry for related floating contexts. Use it when several surfaces need to coordinate open state, branch closing, or keyboard handoff.

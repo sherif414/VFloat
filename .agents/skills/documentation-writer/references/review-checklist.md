@@ -11,6 +11,10 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 
 ## Structure And Audience
 
+- Tutorial: teaches a complete path from zero to a working result.
+- How-to guide: solves one specific task or workflow.
+- Reference page: keeps the contract exact, compact, and scannable.
+- Explanation page: explains the mental model, tradeoffs, and why the design exists.
 - API page: keep the contract canonical, concise, and scannable.
 - Middleware API page: preserve the existing family style unless the whole middleware family is being standardized together.
 - Guide page: teach a workflow or mental model; do not paste full interfaces that belong on the API page.
@@ -29,8 +33,10 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 ## Links And Navigation
 
 - Check every internal docs link.
+- Link the first meaningful mention of canonical terms in tutorials and guides to the page that owns them.
 - API pages should link to the most relevant guides or sibling APIs.
 - Guides should point to API pages for exact contracts.
+- Tutorials should link outward to the next step or the owning reference page when the reader needs the exact contract.
 - If the page is new, confirm the sidebar and overview pages mention it.
 
 ## Final Validation Loop

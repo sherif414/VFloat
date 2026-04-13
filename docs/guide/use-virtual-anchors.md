@@ -1,3 +1,7 @@
+---
+description: Position floating content from pointer coordinates or other virtual anchors.
+---
+
 # Use Virtual Anchors
 
 Sometimes there is no real DOM element that should act as the anchor. You may want to position a surface at the cursor, at a saved coordinate, or against a synthetic rectangle such as a text selection.

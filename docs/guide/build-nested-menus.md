@@ -1,3 +1,7 @@
+---
+description: Build nested menus with coordinated floating trees and pointer intent.
+---
+
 # Build Nested Menus
 
 Nested menus are where floating UI stops being only about position. Once one menu can open another, you need coordination between related surfaces so branches open and close predictably and keyboard users are not stranded.

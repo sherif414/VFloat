@@ -1,3 +1,7 @@
+---
+description: Opens and closes floating content on hover.
+---
+
 # useHover
 
 `useHover` opens and closes a floating context when the pointer enters or leaves the anchor or floating element.

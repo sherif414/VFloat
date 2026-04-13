@@ -9,6 +9,7 @@ Use this skill to write accurate VFloat docs quickly. Default to concise, task-f
 
 ## Default Behavior
 
+- Classify every doc task with Diátaxis first: Tutorial, How-to, Reference, or Explanation.
 - Work from source and nearby VFloat docs first.
 - Treat `docs/api/` as the canonical contract layer.
 - Treat `docs/guide/` as the workflow and decision-making layer.
@@ -17,8 +18,8 @@ Use this skill to write accurate VFloat docs quickly. Default to concise, task-f
 ## Core Workflow
 
 1. Classify the task.
-   - API page in `docs/api/`
-   - Guide or tutorial in `docs/guide/`
+   - Reference page in `docs/api/`
+   - Tutorial, how-to, or explanation in `docs/guide/`
    - Docs review or docs-sync task after code changes
 2. Inspect the source of truth.
    - Read the relevant files in `src/composables/` first.
@@ -26,7 +27,8 @@ Use this skill to write accurate VFloat docs quickly. Default to concise, task-f
    - Confirm exported names, option names, defaults, examples, and edge cases from code or tests before writing.
 3. Choose the page family.
    - Read [references/page-patterns.md](references/page-patterns.md).
-   - Use the matching family: composable API page, middleware API page, step-by-step guide, or concept guide.
+   - Use the matching family: composable API page, middleware API page, tutorial, how-to guide, or concept guide.
+   - If the page type and the page family disagree, fix the page type first.
 4. Draft the page.
    - Start from the reader's task.
    - Introduce every code block with one sentence.
@@ -35,6 +37,7 @@ Use this skill to write accurate VFloat docs quickly. Default to concise, task-f
 5. Cross-link instead of duplicating.
    - API pages own signatures, defaults, options, and return values.
    - Guides should teach workflows and tradeoffs, then link the API page for exact contracts.
+   - Link the first meaningful mention of a canonical term to its owning page when that helps the reader move forward.
 6. Validate before finishing.
    - Read [references/review-checklist.md](references/review-checklist.md).
    - Compare the draft against the source and adjacent docs.
@@ -47,9 +50,10 @@ Use this skill to write accurate VFloat docs quickly. Default to concise, task-f
 - Examples should import from `v-float`.
 - Use `middlewares`, never `middleware`.
 - Prefer `<script setup lang="ts">` for Vue examples.
-- Bind `context.floatingStyles.value` in examples unless the surrounding page family is being preserved deliberately during a focused edit.
+- Bind `context.position.styles.value` in examples unless the surrounding page family is being preserved deliberately during a focused edit.
 - Do not restate full option interfaces inside guides when the API page already owns that contract.
 - Middleware API pages currently use an older family style in this repo. Preserve that family for focused edits unless the task is to standardize the whole family together.
+- Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloating`, `useClick`, `useHover`, `useListNavigation`, `useClientPoint`, `useFloatingTree`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `arrow`, `safePolygon`, `context`, `middlewares`, `virtual elements`, and `tree coordination`.
 - If you add or rename a docs page, update `docs/.vitepress/config.mts` and the relevant overview page such as `docs/api/index.md` or `docs/guide/index.md`.
 
 ## Tone

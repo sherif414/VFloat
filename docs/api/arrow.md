@@ -1,3 +1,7 @@
+---
+description: Positions the arrow so it stays aligned with the reference element.
+---
+
 # arrow
 
 `arrow` positions an arrow element so it points toward the reference element and exposes the resulting coordinates through the floating context middleware data.

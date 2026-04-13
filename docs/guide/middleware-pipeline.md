@@ -1,3 +1,7 @@
+---
+description: Understand how middleware runs and how each step affects positioning.
+---
+
 # Middleware Pipeline
 
 Middleware is what makes VFloat feel adaptable instead of rigid.

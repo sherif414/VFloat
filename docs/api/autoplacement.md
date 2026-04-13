@@ -1,3 +1,7 @@
+---
+description: Chooses a placement that fits the available space.
+---
+
 # autoPlacement
 
 `autoPlacement` chooses the best placement from the available space so the floating element stays in view.

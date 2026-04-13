@@ -1,3 +1,7 @@
+---
+description: Understand the shared context object that ties VFloat behavior together.
+---
+
 # Floating Context
 
 The `context` is the center of VFloat.

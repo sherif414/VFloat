@@ -1,3 +1,7 @@
+---
+description: Build accessible tooltips with the right interaction and dismissal behavior.
+---
+
 # Build Accessible Tooltips
 
 Tooltips are easy to underestimate. The surface itself is small, but the interaction details matter a lot. A tooltip should feel lightweight, open from the right triggers, and avoid punishing the user for small pointer movements.

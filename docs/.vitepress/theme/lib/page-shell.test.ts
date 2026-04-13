@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
+import { docsShellConfig } from "../config/docs-shell";
 import {
-  LANDING_PAGE_PATH,
   normalizeDocsFrame,
   resolveDocsPageShell,
   resolveDocsSectionKey,
@@ -8,32 +8,19 @@ import {
 } from "./page-shell";
 
 describe("docs page shell", () => {
-  it("defaults the root page to the landing template", () => {
-    expect(resolveDocsTemplate(LANDING_PAGE_PATH, undefined)).toBe("landing");
-    expect(resolveDocsPageShell(LANDING_PAGE_PATH, undefined)).toEqual({
-      template: "landing",
-      frame: {
-        topbar: false,
-        sidebarCard: false,
-        pageHeader: false,
-        asideCard: false,
-      },
+  it("defaults to the docs template unless frontmatter opts into landing", () => {
+    expect(resolveDocsTemplate(undefined)).toBe("docs");
+    expect(resolveDocsTemplate({ docsTemplate: "docs" })).toBe("docs");
+    expect(resolveDocsTemplate({ docsTemplate: "landing" })).toBe("landing");
+    expect(resolveDocsPageShell(undefined)).toEqual({
+      template: "docs",
+      frame: docsShellConfig.defaultFrame,
     });
   });
 
-  it("defaults guide and api pages to the docs template", () => {
-    expect(resolveDocsTemplate("guide/index.md", undefined)).toBe("docs");
-    expect(resolveDocsPageShell("api/use-floating.md", undefined).frame).toEqual({
-      topbar: true,
-      sidebarCard: true,
-      pageHeader: true,
-      asideCard: true,
-    });
-  });
-
-  it("respects explicit template and frame overrides", () => {
+  it("respects explicit landing template and frame overrides", () => {
     expect(
-      resolveDocsPageShell("guide/index.md", {
+      resolveDocsPageShell({
         docsTemplate: "landing",
         docsFrame: {
           topbar: true,
@@ -46,7 +33,6 @@ describe("docs page shell", () => {
         topbar: true,
         sidebarCard: false,
         pageHeader: true,
-        asideCard: false,
       },
     });
   });
@@ -58,10 +44,8 @@ describe("docs page shell", () => {
         pageHeader: false,
       }),
     ).toEqual({
-      topbar: true,
-      sidebarCard: true,
+      ...docsShellConfig.defaultFrame,
       pageHeader: false,
-      asideCard: true,
     });
   });
 

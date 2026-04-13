@@ -1,3 +1,7 @@
+---
+description: Keeps keyboard focus inside floating content.
+---
+
 # useFocusTrap
 
 `useFocusTrap` keeps keyboard focus inside the floating element while it is open.

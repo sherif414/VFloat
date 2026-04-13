@@ -1,3 +1,7 @@
+---
+description: Measures available space so the floating element can size itself.
+---
+
 # size
 
 `size` provides the available width and height around the floating element so you can resize it to fit the current boundary.

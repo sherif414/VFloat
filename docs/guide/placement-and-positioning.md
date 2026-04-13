@@ -1,3 +1,7 @@
+---
+description: Learn how placements, strategies, and middleware shape the final position.
+---
+
 # Placement and Positioning
 
 Positioning is the part of VFloat people usually notice first, but it helps to be precise about what the library is actually doing.

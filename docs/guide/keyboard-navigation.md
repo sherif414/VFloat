@@ -1,3 +1,7 @@
+---
+description: Add keyboard navigation to floating menus and list-like surfaces.
+---
+
 # Keyboard Navigation
 
 When a floating surface contains selectable items, keyboard support becomes part of the feature, not a nice extra. Menus, listboxes, combobox panels, and nested menus all depend on predictable item navigation.

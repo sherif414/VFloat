@@ -1,3 +1,7 @@
+---
+description: Positions a floating element from pointer coordinates.
+---
+
 # useClientPoint
 
 `useClientPoint` positions a floating element relative to pointer coordinates by swapping the floating context anchor for a virtual element.

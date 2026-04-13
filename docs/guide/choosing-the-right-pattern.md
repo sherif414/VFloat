@@ -1,3 +1,7 @@
+---
+description: Pick the floating pattern that best fits your interaction and content.
+---
+
 # Choosing the Right Pattern
 
 Many floating UI problems look similar at first. A panel appears near an anchor, so it can be tempting to think every surface is just a popover with different content.

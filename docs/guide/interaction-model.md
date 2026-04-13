@@ -1,3 +1,7 @@
+---
+description: Learn how VFloat opens, closes, and coordinates floating surfaces.
+---
+
 # Interaction Model
 
 VFloat's interaction composables look separate on the surface, but they are designed to work together through one shared state model.

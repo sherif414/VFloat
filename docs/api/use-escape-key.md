@@ -1,3 +1,7 @@
+---
+description: Closes floating content when Escape is pressed.
+---
+
 # useEscapeKey
 
 `useEscapeKey` closes a floating context when Escape is pressed.

@@ -1,3 +1,7 @@
+---
+description: Handle list navigation edge cases in complex floating menus.
+---
+
 # List Navigation Gotchas
 
 List navigation bugs can feel subtle because the UI may look correct while the keyboard or screen reader behavior is slightly off.

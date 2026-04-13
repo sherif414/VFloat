@@ -1,3 +1,7 @@
+---
+description: Debug floating tree coordination issues in nested or related surfaces.
+---
+
 # Tree Debugging
 
 When nested floating UI behaves strangely, the visual problem is often downstream of a tree registration or branch-coordination problem.

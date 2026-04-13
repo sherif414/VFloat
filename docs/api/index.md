@@ -1,3 +1,7 @@
+---
+description: A reference index for VFloat's public composables and middleware.
+---
+
 # API Reference
 
 These pages define the public surface of VFloat. Use the guide pages for the mental model and workflows; use the API pages when you need exact signatures, options, defaults, and return values.

@@ -1,3 +1,7 @@
+---
+description: Connects an arrow element to a floating context.
+---
+
 # useArrow
 
 `useArrow` owns arrow registration for a floating context and returns the computed arrow coordinates and styles.

@@ -1,3 +1,7 @@
+---
+description: Moves between items with the keyboard.
+---
+
 # useListNavigation
 
 `useListNavigation` adds arrow-key navigation for list, grid, and nested tree items inside a floating element.

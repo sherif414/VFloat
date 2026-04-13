@@ -1,3 +1,7 @@
+---
+description: Choose the right focus behavior for anchored and floating UI.
+---
+
 # Focus Models
 
 Focus behavior is one of the easiest places for floating UI to feel either polished or frustrating. VFloat gives you several focus-related tools, but they make more sense when you think in focus models rather than individual options.

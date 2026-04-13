@@ -1,3 +1,7 @@
+---
+description: Build your first tooltip with refs, positioning, hover behavior, and offset middleware.
+---
+
 # First Tooltip
 
 The fastest way to understand VFloat is to build one small thing that works. A tooltip is a good first success because it exercises the core loop without forcing you to think about every edge case at once.

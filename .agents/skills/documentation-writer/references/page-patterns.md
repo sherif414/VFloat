@@ -2,6 +2,15 @@
 
 Use this file when choosing the structure for a VFloat docs task. Match the family that already exists nearby instead of forcing one universal template.
 
+## Diátaxis Map
+
+- Tutorial: a guided path from zero to a working result.
+- How-to guide: a focused workflow for solving one problem.
+- Reference: the exact API contract, defaults, and return shape.
+- Explanation: the mental model, tradeoffs, and why the design works the way it does.
+
+For VFloat, `docs/api/` is the reference layer, and `docs/guide/` covers tutorials, how-to guides, and explanations.
+
 ## Composable API Page
 
 Use for `useX` pages in `docs/api/`.
