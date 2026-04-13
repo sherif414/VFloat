@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useDocsPage } from "../../composables/use-docs-page";
-import { docsShellConfig } from "../../config/docs-shell";
+import { docsShellConfig, useDocsPage } from "../composables/use-docs-page";
 
 const { section } = useDocsPage();
 </script>

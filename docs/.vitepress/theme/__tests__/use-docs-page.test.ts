@@ -1,13 +1,21 @@
-import { describe, expect, it } from "vite-plus/test";
-import { docsShellConfig } from "../config/docs-shell";
+import { describe, expect, it, vi } from "vite-plus/test";
+
+vi.mock("vitepress", () => ({
+  useData: () => ({
+    frontmatter: { value: undefined },
+    page: { value: { relativePath: "guide/index.md", title: "Guide" } },
+  }),
+}));
+
 import {
+  docsShellConfig,
   normalizeDocsFrame,
   resolveDocsPageShell,
   resolveDocsSectionKey,
   resolveDocsTemplate,
-} from "./page-shell";
+} from "../composables/use-docs-page";
 
-describe("docs page shell", () => {
+describe("use-docs-page", () => {
   it("defaults to the docs template unless frontmatter opts into landing", () => {
     expect(resolveDocsTemplate(undefined)).toBe("docs");
     expect(resolveDocsTemplate({ docsTemplate: "docs" })).toBe("docs");

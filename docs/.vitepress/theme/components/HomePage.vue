@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { docsShellConfig } from "../../config/docs-shell";
+import { docsShellConfig } from "../composables/use-docs-page";
 
 interface HomeLink {
   label: string;

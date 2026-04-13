@@ -1,3 +1,5 @@
+/* Landing page layout, spacing, and visual treatment for the home screen.
+   This stylesheet controls the homepage-only composition, rhythm, and responsive behavior. */
 .vf-home--minimal {
   min-height: 100vh;
   height: 100vh;

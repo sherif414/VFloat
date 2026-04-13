@@ -1,3 +1,5 @@
+/* Shared design tokens, font imports, and base surface styles for the VFloat docs theme.
+   This file sets the visual foundation that the other theme styles build on. */
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@100..700,0..1,0,24&display=swap");
 
 :root {
@@ -50,4 +52,12 @@ body {
 .vf-docs-shell,
 .vf-docs-shell * {
   box-sizing: border-box;
+}
+
+.dark .vp-code span {
+  color: var(--shiki-dark, inherit);
+}
+
+html:not(.dark) .vp-code span {
+  color: var(--shiki-light, inherit);
 }

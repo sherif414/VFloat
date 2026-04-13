@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useData } from "vitepress";
-import { useDocsPage } from "../../composables/use-docs-page";
+import { useDocsPage } from "../composables/use-docs-page";
 
 const { page } = useData();
 const { pageDescription, section } = useDocsPage();

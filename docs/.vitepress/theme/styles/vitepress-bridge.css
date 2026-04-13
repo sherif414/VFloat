@@ -1,3 +1,5 @@
+/* VitePress shell overrides and docs layout skinning for the content pages.
+   It reshapes the default docs chrome so the content area matches the VFloat visual system. */
 .vf-docs-shell {
   --vp-layout-max-width: 100%;
   --vp-sidebar-width: 256px;

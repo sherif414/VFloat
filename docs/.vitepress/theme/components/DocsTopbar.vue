@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useDocsPage } from "../../composables/use-docs-page";
+import { useDocsPage } from "../composables/use-docs-page";
 
 const { pagePathLabel, section } = useDocsPage();
 </script>

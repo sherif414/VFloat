@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import DefaultTheme from "vitepress/theme";
-import DocsNavMeta from "../components/frame/DocsNavMeta.vue";
-import DocsPageHeader from "../components/frame/DocsPageHeader.vue";
-import DocsSidebarCard from "../components/frame/DocsSidebarCard.vue";
-import DocsTopbar from "../components/frame/DocsTopbar.vue";
+import DocsNavMeta from "../components/DocsNavMeta.vue";
+import DocsPageHeader from "../components/DocsPageHeader.vue";
+import DocsSidebarCard from "../components/DocsSidebarCard.vue";
+import DocsTopbar from "../components/DocsTopbar.vue";
 import { useDocsPage } from "../composables/use-docs-page";
 
 const { pageShell } = useDocsPage();
