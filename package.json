@@ -40,6 +40,7 @@
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
     "@typescript/native-preview": "7.0.0-dev.20260327.2",
+    "@vue/theme": "^2.4.0",
     "focus-trap": "^8.0.1",
     "tabbable": "^6.4.0",
     "vue": "^3.5.31"

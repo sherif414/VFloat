@@ -1,15 +1,29 @@
-import "../../../env.js";
-import DefaultTheme from "vitepress/theme";
+import { h, defineComponent } from "vue";
+import { VPTheme } from "@vue/theme";
 import type { Theme } from "vitepress";
-import Layout from "./layouts/RootLayout.vue";
-import "../../../tailwind.css";
-import "./styles/theme.css";
-import "./styles/vitepress-bridge.css";
-import "./styles/home-page.css";
+
+const renderLayout = h as any;
+
+const Layout = defineComponent({
+  name: "VFloatVueDocsLayout",
+  setup(_, { slots }) {
+    return () =>
+      renderLayout(VPTheme.Layout, null, {
+        ...slots,
+        "navbar-title": () => [
+          h("img", {
+            class: "logo",
+            src: "/vfloat-mark.svg",
+            alt: "",
+          }),
+          h("span", { class: "text" }, "VFloat"),
+        ],
+      } as any);
+  },
+});
 
 /** VitePress theme entry for the VFloat docs site. */
 export default {
-  extends: DefaultTheme,
-  enhanceApp() {},
+  ...VPTheme,
   Layout,
 } satisfies Theme;

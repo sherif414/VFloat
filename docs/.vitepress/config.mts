@@ -1,13 +1,18 @@
 import { fileURLToPath, URL } from "node:url";
-import tailwindcss from "@tailwindcss/vite";
-import { defineConfig, type DefaultTheme, type HeadConfig, type MarkdownOptions } from "vitepress";
+import type { Config as VueThemeConfig } from "@vue/theme";
+import vueThemeConfig from "@vue/theme/config";
+import { defineConfigWithTheme, type HeadConfig, type MarkdownOptions } from "vitepress";
 import { demoMdPlugin } from "vitepress-plugin-demo";
 
-export default defineConfig({
+const vueThemeDeps = ["@vue/theme", "@vueuse/core", "body-scroll-lock", "v-float"];
+
+export default defineConfigWithTheme({
+  ...vueThemeConfig,
+
   // ============================================================================
   // SITE METADATA
   // ============================================================================
-  title: "V-Float",
+  title: "VFloat",
   description: "A library for positioning floating elements",
   ignoreDeadLinks: true,
   base: "/",
@@ -24,7 +29,7 @@ export default defineConfig({
   // VITE BEHAVIOR
   // ============================================================================
   vite: {
-    plugins: tailwindcss() as never,
+    ...vueThemeConfig.vite,
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("../../src", import.meta.url)),
@@ -35,7 +40,12 @@ export default defineConfig({
       minify: false,
     },
     ssr: {
-      noExternal: ["v-float"],
+      ...vueThemeConfig.vite?.ssr,
+      noExternal: vueThemeDeps,
+    },
+    optimizeDeps: {
+      ...vueThemeConfig.vite?.optimizeDeps,
+      exclude: vueThemeDeps,
     },
   },
 
@@ -43,6 +53,7 @@ export default defineConfig({
   // MARKDOWN PIPELINE
   // ============================================================================
   markdown: {
+    ...vueThemeConfig.markdown,
     config(md) {
       md.use(demoMdPlugin);
     },
@@ -52,16 +63,10 @@ export default defineConfig({
   // THEME UI
   // ============================================================================
   themeConfig: {
-    logo: "/vfloat-mark.svg",
-    search: {
-      provider: "local",
-    },
-
     // ------------------------------------------------------------------------
     // MAIN NAVIGATION
     // ------------------------------------------------------------------------
     nav: [
-      { text: "Home", link: "/" },
       { text: "Guide", link: "/guide/" },
       { text: "API", link: "/api/" },
     ],
@@ -125,12 +130,10 @@ export default defineConfig({
       "/api/": [
         {
           text: "Reference",
-          collapsed: false,
           items: [{ text: "Overview", link: "/api/" }],
         },
         {
           text: "Positioning",
-          collapsed: false,
           items: [
             { text: "useFloating", link: "/api/use-floating" },
             { text: "useArrow", link: "/api/use-arrow" },
@@ -139,7 +142,6 @@ export default defineConfig({
         },
         {
           text: "Interactions",
-          collapsed: false,
           items: [
             { text: "useClick", link: "/api/use-click" },
             { text: "useHover", link: "/api/use-hover" },
@@ -151,7 +153,6 @@ export default defineConfig({
         },
         {
           text: "Tree Coordination",
-          collapsed: false,
           items: [
             { text: "useFloatingTree", link: "/api/use-floating-tree" },
             { text: "useFloatingTreeNode", link: "/api/use-floating-tree-node" },
@@ -159,7 +160,6 @@ export default defineConfig({
         },
         {
           text: "Middleware",
-          collapsed: false,
           items: [
             { text: "offset", link: "/api/offset" },
             { text: "flip", link: "/api/flip" },
@@ -177,16 +177,5 @@ export default defineConfig({
     // SOCIAL AND FOOTER LINKS
     // ------------------------------------------------------------------------
     socialLinks: [{ icon: "github", link: "https://github.com/sherif414/VFloat" }],
-    footer: {
-      message: "Released under the MIT License.",
-      copyright: "Copyright 2025-present Shareef Hassan",
-    },
-
-    // ------------------------------------------------------------------------
-    // EDIT-PAGE LINK
-    // ------------------------------------------------------------------------
-    editLink: {
-      pattern: "https://github.com/sherif414/VFloat/edit/main/docs/:path",
-    },
-  } satisfies DefaultTheme.Config,
+  } satisfies VueThemeConfig,
 });
