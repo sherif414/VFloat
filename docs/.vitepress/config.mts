@@ -4,14 +4,25 @@ import { defineConfig, type DefaultTheme, type HeadConfig, type MarkdownOptions 
 import { demoMdPlugin } from "vitepress-plugin-demo";
 
 export default defineConfig({
+  // ============================================================================
+  // SITE METADATA
+  // ============================================================================
   title: "V-Float",
   description: "A library for positioning floating elements",
   ignoreDeadLinks: true,
   base: "/",
+
+  // ============================================================================
+  // DOCUMENT HEAD
+  // ============================================================================
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/vfloat-mark.svg" }],
     ["link", { rel: "icon", type: "image/png", sizes: "1024x1024", href: "/vfloat-mark.png" }],
   ] satisfies HeadConfig[],
+
+  // ============================================================================
+  // VITE BEHAVIOR
+  // ============================================================================
   vite: {
     plugins: tailwindcss() as never,
     resolve: {
@@ -27,21 +38,37 @@ export default defineConfig({
       noExternal: ["v-float"],
     },
   },
+
+  // ============================================================================
+  // MARKDOWN PIPELINE
+  // ============================================================================
   markdown: {
     config(md) {
       md.use(demoMdPlugin);
     },
   } satisfies MarkdownOptions,
+
+  // ============================================================================
+  // THEME UI
+  // ============================================================================
   themeConfig: {
     logo: "/vfloat-mark.svg",
     search: {
       provider: "local",
     },
+
+    // ------------------------------------------------------------------------
+    // MAIN NAVIGATION
+    // ------------------------------------------------------------------------
     nav: [
       { text: "Home", link: "/" },
       { text: "Guide", link: "/guide/" },
       { text: "API", link: "/api/" },
     ],
+
+    // ------------------------------------------------------------------------
+    // SIDEBAR GROUPS
+    // ------------------------------------------------------------------------
     sidebar: {
       "/guide/": [
         {
@@ -145,11 +172,19 @@ export default defineConfig({
         },
       ],
     },
+
+    // ------------------------------------------------------------------------
+    // SOCIAL AND FOOTER LINKS
+    // ------------------------------------------------------------------------
     socialLinks: [{ icon: "github", link: "https://github.com/sherif414/VFloat" }],
     footer: {
       message: "Released under the MIT License.",
       copyright: "Copyright 2025-present Shareef Hassan",
     },
+
+    // ------------------------------------------------------------------------
+    // EDIT-PAGE LINK
+    // ------------------------------------------------------------------------
     editLink: {
       pattern: "https://github.com/sherif414/VFloat/edit/main/docs/:path",
     },
