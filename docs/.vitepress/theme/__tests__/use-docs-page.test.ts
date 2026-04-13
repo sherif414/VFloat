@@ -26,20 +26,17 @@ describe("use-docs-page", () => {
     });
   });
 
-  it("respects explicit landing template and frame overrides", () => {
+  it("respects explicit landing template and page header overrides", () => {
     expect(
       resolveDocsPageShell({
         docsTemplate: "landing",
         docsFrame: {
-          topbar: true,
           pageHeader: true,
         },
       }),
     ).toEqual({
       template: "landing",
       frame: {
-        topbar: true,
-        sidebarCard: false,
         pageHeader: true,
       },
     });
@@ -48,12 +45,10 @@ describe("use-docs-page", () => {
   it("ignores invalid frame overrides", () => {
     expect(
       normalizeDocsFrame("docs", {
-        topbar: "yes",
-        pageHeader: false,
+        pageHeader: "yes",
       }),
     ).toEqual({
-      ...docsShellConfig.defaultFrame,
-      pageHeader: false,
+      pageHeader: true,
     });
   });
 

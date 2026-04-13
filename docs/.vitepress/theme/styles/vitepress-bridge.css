@@ -184,10 +184,7 @@
   margin-inline-start: 0;
 }
 
-.vf-docs-shell .VPNavBarAppearance,
-.vf-docs-nav-meta,
-.vf-docs-ornaments,
-.vf-docs-rail-card {
+.vf-docs-shell .VPNavBarAppearance {
   display: none;
 }
 

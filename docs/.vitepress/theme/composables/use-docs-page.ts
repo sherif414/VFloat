@@ -9,8 +9,6 @@ export type DocsSectionKey = "api" | "guide";
 
 /** Visibility flags for the docs page frame. */
 export interface DocsFrameVisibility {
-  topbar: boolean;
-  sidebarCard: boolean;
   pageHeader: boolean;
 }
 
@@ -18,13 +16,11 @@ export interface DocsFrameVisibility {
 export interface DocsSectionMeta {
   label: string;
   title: string;
-  description: string;
 }
 
 /** Shared docs shell metadata for frame visibility and repo links. */
 export interface DocsShellConfig {
   repoUrl: string;
-  version: string;
   defaultFrame: DocsFrameVisibility;
   sections: Record<DocsSectionKey, DocsSectionMeta>;
 }
@@ -45,23 +41,17 @@ export interface ResolvedDocsPageShell {
 /** Shared docs shell metadata for frame visibility and repo links. */
 export const docsShellConfig = {
   repoUrl: "https://github.com/sherif414/VFloat",
-  version: "v0.11.0",
   defaultFrame: {
-    topbar: false,
-    sidebarCard: false,
     pageHeader: true,
   },
   sections: {
     api: {
       label: "API Reference",
       title: "API Reference",
-      description:
-        "Exact signatures, defaults, and return contracts for the public VFloat surface.",
     },
     guide: {
       label: "Guides",
       title: "Guides",
-      description: "Concepts, recipes, and implementation patterns for anchored interfaces in Vue.",
     },
   },
 } satisfies DocsShellConfig;
@@ -90,8 +80,6 @@ export const normalizeDocsFrame = (
   const defaults =
     template === "landing"
       ? {
-          topbar: false,
-          sidebarCard: false,
           pageHeader: false,
         }
       : docsShellConfig.defaultFrame;
@@ -139,18 +127,9 @@ export const useDocsPage = () => {
     normalizeString((frontmatter.value as DocsPageFrontmatter | undefined)?.description),
   );
 
-  const pagePathLabel = computed(() =>
-    page.value.relativePath
-      .replace(/\.md$/, "")
-      .split("/")
-      .map((segment) => segment.replace(/-/g, "_").toUpperCase())
-      .join(" / "),
-  );
-
   return {
     pageShell,
     section,
     pageDescription,
-    pagePathLabel,
   };
 };
