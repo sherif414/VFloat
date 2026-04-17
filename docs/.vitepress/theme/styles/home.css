@@ -1,0 +1,15 @@
+.VPHomeHero .container {
+  justify-content: center;
+}
+
+.VPHomeHero .main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: min(760px, 100%);
+  text-align: center;
+}
+
+.VPHomeHero .actions {
+  justify-content: center;
+}
