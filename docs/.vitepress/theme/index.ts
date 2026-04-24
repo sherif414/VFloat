@@ -7,6 +7,7 @@ import DefaultTheme from "vitepress/theme";
 import { h, defineComponent } from "vue";
 import { VPTheme } from "@vue/theme";
 import type { Theme } from "vitepress";
+import DemoContainer from "./components/demo-container.vue";
 
 const renderLayout = h as any;
 
@@ -31,4 +32,7 @@ const Layout = defineComponent({
 export default {
   ...VPTheme,
   Layout,
+  enhanceApp({ app }) {
+    app.component("demo-container", DemoContainer);
+  },
 } satisfies Theme;

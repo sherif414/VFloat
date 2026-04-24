@@ -4,9 +4,9 @@ description: Learn how VFloat opens, closes, and coordinates floating surfaces.
 
 # Interaction Model
 
-VFloat's interaction composables look separate on the surface, but they are designed to work together through one shared state model.
+VFloat's interaction composables look separate on the surface, but they are meant to work together through one shared state model.
 
-That shared model is the difference between a set of event helpers and a composable floating system.
+That shared model is the difference between a pile of event helpers and a composable floating system.
 
 ## The Core Idea
 
@@ -28,7 +28,7 @@ A floating surface often needs more than one interaction rule at once.
 
 For example, an accessible tooltip may need hover for pointer users and focus for keyboard users. A popover may need click to open, outside click to close, and Escape to close.
 
-Those are not competing systems if they all share one `context`. They are simply different inputs acting on the same open state.
+Those are not competing systems if they all share one `context`. They are just different inputs acting on the same open state.
 
 ## A Typical Combination
 

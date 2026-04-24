@@ -4,9 +4,9 @@ description: Understand the shared context object that ties VFloat behavior toge
 
 # Floating Context
 
-The `context` is the center of VFloat.
+The `context` is the shared root that keeps a floating surface together.
 
-If you understand the floating context, the rest of the library becomes much easier to reason about. Most confusion in VFloat comes from treating the composables as isolated helpers when they are really meant to cooperate through one shared root object.
+If you understand the floating context, the rest of the library gets easier to follow. Most confusion in VFloat comes from treating the composables as separate helpers when they are really meant to cooperate through one shared object.
 
 ## The Three Parts
 
@@ -16,7 +16,7 @@ Every floating surface in VFloat is built from three things:
 - a floating element
 - a shared `context`
 
-The anchor is the thing the surface is positioned against. The floating element is the surface that appears. The `context` is the object that connects them and lets other composables cooperate.
+The anchor is the thing the surface is positioned against. The floating element is the surface that appears. The `context` is the object that connects them and lets other composables work together.
 
 ## Why The Context Exists
 
@@ -26,7 +26,7 @@ VFloat intentionally groups the returned data into:
 - `state`
 - `position`
 
-That grouping is important because the companion composables know where to read and write behavior without forcing the public root shape to grow in random directions.
+That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions.
 
 ## `refs`
 
@@ -65,7 +65,7 @@ It includes things like:
 - `styles`
 - `update`
 
-Most templates only need `context.position.styles.value`, but the rest of the data is there when you need deeper control or need to build helpers such as arrows.
+Most templates only need `context.position.styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
 
 ## The Core Loop
 

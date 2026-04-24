@@ -4,9 +4,11 @@ description: Build accessible tooltips with the right interaction and dismissal 
 
 # Build Accessible Tooltips
 
-Tooltips are easy to underestimate. The surface itself is small, but the interaction details matter a lot. A tooltip should feel lightweight, open from the right triggers, and avoid punishing the user for small pointer movements.
+Let's build a tooltip that feels natural for both pointer and keyboard users.
 
-This guide shows a practical tooltip setup for VFloat:
+Tooltips are small, but the interaction details matter. A good tooltip opens from the right triggers, stays out of the way, and does not disappear the moment the pointer crosses the gap between the trigger and the surface.
+
+This guide uses the same core VFloat shape you saw on the first tooltip page, then adds the pieces that make it accessible:
 
 - Hover opens it for pointer users
 - Focus opens it for keyboard users
@@ -15,16 +17,16 @@ This guide shows a practical tooltip setup for VFloat:
 
 ## The Goal
 
-We want a tooltip that works for two real user paths:
+We want one tooltip that works for two real user paths:
 
 - A mouse user hovers the trigger
 - A keyboard user tabs to the trigger
 
-That means the right combination is usually [`useFloating`](/api/use-floating), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
+That usually means [`useFloating`](/api/use-floating), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
 
 ## Step 1: Build The Shared Context
 
-Start by wiring the anchor, floating element, and basic placement.
+Start by wiring the anchor, floating element, and placement.
 
 ```vue
 <script setup lang="ts">
@@ -93,11 +95,11 @@ Two accessibility details are worth calling out:
 - `role="tooltip"` identifies the surface
 - `aria-describedby` connects the trigger to the tooltip content
 
-## Why `safePolygon` Shows Up So Often
+## Why `safePolygon` Matters
 
-Once you add `offset(8)`, there is now a visible gap between the trigger and the tooltip. If hover behavior closes immediately on `pointerleave`, the tooltip can disappear while the user is moving naturally toward it.
+Once you add `offset(8)`, there is a visible gap between the trigger and the tooltip. If hover closes immediately on `pointerleave`, the tooltip can disappear while the pointer is still moving naturally toward it.
 
-`safePolygon` solves that by creating a protected pointer corridor between the anchor and the floating element.
+`safePolygon` protects that path between the anchor and the floating element.
 
 ## When To Skip `safePolygon`
 

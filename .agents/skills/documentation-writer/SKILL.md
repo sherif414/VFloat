@@ -5,7 +5,7 @@ description: Use this skill when creating, updating, reviewing, or syncing VFloa
 
 # Documentation Writer
 
-Use this skill to write accurate VFloat docs quickly. Default to concise, task-first prose with a light teammate-like tone.
+Use this skill to write accurate VFloat docs quickly. Default to calm, direct, teacherly prose that feels closer to the Vue docs than product marketing.
 
 ## Default Behavior
 
@@ -58,9 +58,14 @@ Use this skill to write accurate VFloat docs quickly. Default to concise, task-f
 
 ## Tone
 
-- Keep the voice light, direct, and teammate-like.
-- Prefer short paragraphs and concrete wording.
-- Do not add hype, filler, or generic advice that is not specific to VFloat.
+- Aim for the voice of a thoughtful solo maintainer or the Vue docs: calm, clear, practical, and human.
+- Prefer short sentences, short paragraphs, and plain language over polished or corporate-sounding copy.
+- Start concrete. Move to the example or the next step quickly instead of warming up with positioning language.
+- Introduce terminology right before the reader needs it. Do not front-load a glossary unless the page genuinely depends on it.
+- In tutorials, prefer narrative flow over inventory-style setup lists when the list feels heavier than the task.
+- Use light reassurance when helpful, such as telling the reader not to worry about a detail yet or that a later page will cover it.
+- Do not add hype, filler, sales language, or generic advice that is not specific to VFloat.
+- Do not sound like product copy, internal marketing, or formal enterprise documentation.
 
 ## Load-On-Demand References
 

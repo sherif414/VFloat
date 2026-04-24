@@ -4,13 +4,13 @@ description: Keep floating content within the viewport with middleware and sizin
 
 # Keep Content in View
 
-Base placement is only the start of positioning. Real floating surfaces collide with viewport edges, sit near scroll containers, and sometimes need arrows or size constraints. That is what `middlewares` are for.
+Base placement gets you close. Real floating surfaces still run into viewport edges, scroll containers, and size limits. That is where `middlewares` help.
 
-This guide shows how to use middleware as a problem-solving tool instead of a grab bag of options.
+This guide treats middleware like a small set of fixes. When you notice a problem, pick the fix that matches it.
 
-## Think In Problems, Not In Middleware Names
+## Start From The Problem
 
-The simplest way to reason about middleware is to ask:
+The easiest way to reason about middleware is to ask:
 
 - Does the surface need space from the anchor?
 - Does it need to change sides when space runs out?

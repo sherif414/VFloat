@@ -4,15 +4,9 @@ description: Compose popovers and dropdowns with click, focus, and dismissal pat
 
 # Build Popovers and Dropdowns
 
-Popovers and dropdowns are where many VFloat apps start to feel real. They are still just floating surfaces, but the interaction rules are richer than a tooltip:
+Let's build the next common surface: a popover or dropdown.
 
-- The user usually clicks to open
-- The panel often contains actions or focusable content
-- Outside clicks and Escape usually dismiss it
-
-This guide shows a practical baseline for click-driven surfaces and explains how to extend it without losing the mental model.
-
-## The Baseline Stack
+Tooltips teach hover. Popovers usually teach click. The shape is still simple, but the rules around opening, closing, and focus are a little richer.
 
 For a straightforward popover or dropdown, start with:
 
@@ -21,9 +15,9 @@ For a straightforward popover or dropdown, start with:
 - [`useEscapeKey`](/api/use-escape-key)
 - [`offset`](/api/offset)
 
-## Step 1: Build The Positioning Context
+## Step 1: Create The Positioning Context
 
-Start with refs and a shared `context`.
+Start with the anchor, the floating element, and a shared `context`.
 
 ```vue
 <script setup lang="ts">
@@ -42,7 +36,7 @@ const context = useFloating(anchorEl, floatingEl, {
 
 ## Step 2: Add Open And Dismissal Behavior
 
-Add the click-driven interaction layer next.
+Now add the behavior that makes the surface feel like a popover.
 
 ```vue
 <script setup lang="ts">
@@ -65,15 +59,15 @@ useEscapeKey(context);
 </script>
 ```
 
-This gives you a strong default:
+That gives you a good default:
 
 - Anchor click toggles the panel
 - Outside pointer interaction closes it
 - Escape closes it
 
-## Step 3: Render A Real Panel
+## Step 3: Render The Panel
 
-Now render the panel content.
+Now render the content the user actually came for.
 
 ```vue
 <template>
@@ -96,9 +90,9 @@ Now render the panel content.
 </template>
 ```
 
-## A Safer Default For Production Panels
+## A Safer Default For Real Panels
 
-This version adds viewport resilience without changing the mental model.
+If the panel can run into the viewport edge, add `flip()` and `shift()`.
 
 ```vue
 <script setup lang="ts">
@@ -121,7 +115,7 @@ useEscapeKey(context);
 </script>
 ```
 
-This stack is common for real dropdown-like UI because it handles spacing, side fallback, and boundary safety in one pass.
+That stack is common for real dropdown-like UI because it handles spacing, fallback sides, and boundary safety in one pass.
 
 ## Where To Go Next
 

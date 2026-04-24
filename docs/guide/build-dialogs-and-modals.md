@@ -4,7 +4,7 @@ description: Build dialogs and modals with focus trapping and dismissal behavior
 
 # Build Dialogs and Modals
 
-Dialogs and modals are still floating surfaces, but they carry stronger behavior expectations than tooltips, popovers, or menus. Once a surface behaves like a dialog, users expect focus management to be intentional and for dismissal to be explicit.
+Dialogs and modals are still floating surfaces, but they carry stronger behavior expectations than tooltips, popovers, or menus. Once a surface behaves like a dialog, users expect focus management to be intentional and dismissal to be explicit.
 
 This guide shows a practical VFloat setup for dialog-like surfaces and explains when a popover should become a dialog.
 

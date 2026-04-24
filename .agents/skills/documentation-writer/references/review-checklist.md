@@ -20,6 +20,15 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 - Guide page: teach a workflow or mental model; do not paste full interfaces that belong on the API page.
 - New or renamed page: update `docs/.vitepress/config.mts` and the relevant overview page.
 
+## Tone And Readability
+
+- Prefer a calm, direct, teacherly voice that feels closer to the Vue docs than product copy.
+- Keep intros short and useful. Get to the example, concept, or next step quickly.
+- Explain terms near first use instead of front-loading a large glossary.
+- In tutorials, prefer a natural narrative flow over heavyweight setup lists unless a list genuinely helps the reader.
+- Use plain language, short paragraphs, and concrete wording.
+- Cut hype, filler, and corporate-sounding phrasing before finalizing.
+
 ## Examples And Markdown
 
 - Import examples from `v-float`.

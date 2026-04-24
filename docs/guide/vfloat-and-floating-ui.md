@@ -4,30 +4,32 @@ description: Compare VFloat with Floating UI and understand how the APIs differ.
 
 # VFloat and Floating UI
 
-VFloat is heavily inspired by Floating UI, but it is not a fork and should not be understood as a one-to-one port with renamed exports.
+VFloat owes a lot to Floating UI. It helped shape how many of us think about floating surfaces, positioning, middleware, and the general problem space.
 
-That distinction matters because it affects how you read the docs, how you reason about behavior, and how much prior knowledge you should assume carries over.
+That said, VFloat is not meant to be read as a one-to-one port with renamed exports. Some ideas carry over cleanly, and some do not.
 
 ## What Carries Over
 
-Some core ideas are familiar if you have used Floating UI before:
+If you have used Floating UI before, several things will feel familiar:
 
 - placement-based positioning
 - middleware-driven refinement
 - virtual elements
 - collision handling concepts
+- API names such as `useFloating`, `offset`, `flip`, and `shift`
 
 ## What Does Not Carry Over Cleanly
 
-VFloat has its own public vocabulary and its own grouping model.
+Familiar names do not always mean identical API shape or identical mental model.
 
-In particular:
+VFloat has its own public vocabulary and its own grouping model:
 
 - the public root is centered around `useFloating(anchorEl, floatingEl, options)`
 - the return value is grouped into `refs`, `state`, and `position`
 - interaction composables are designed around that grouped root
+- some composition patterns are Vue-specific and intentionally tailored to this library
 
-So while some concepts may feel familiar, the library should still be learned on its own terms.
+So the safest way to approach VFloat is this: let prior Floating UI experience help you recognize the broad ideas, but do not assume every detail maps directly.
 
 ## Next Step
 

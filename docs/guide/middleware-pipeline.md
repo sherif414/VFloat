@@ -6,7 +6,7 @@ description: Understand how middleware runs and how each step affects positionin
 
 Middleware is what makes VFloat feel adaptable instead of rigid.
 
-Without middleware, you get a base placement. With middleware, that base placement becomes a workflow that can react to spacing, collisions, size constraints, and arrow alignment.
+Without middleware, you get a base placement. With middleware, that first guess can react to spacing, collisions, size constraints, and arrow alignment.
 
 ## Base Placement Comes First
 

@@ -8,9 +8,9 @@ When a floating surface contains selectable items, keyboard support becomes part
 
 VFloat handles that with [`useListNavigation`](/api/use-list-navigation).
 
-This guide explains the two main focus models and shows how to wire them in practice.
+This guide shows the two focus models you will run into most often.
 
-## The First Decision: DOM Focus Or Virtual Focus
+## First Decide How Focus Should Move
 
 Before you think about the options, decide what kind of focus model you want.
 

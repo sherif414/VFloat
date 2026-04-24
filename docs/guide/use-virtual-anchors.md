@@ -49,7 +49,7 @@ useHover(context);
 
 In follow mode, pointer movement updates the virtual anchor and the floating surface keeps tracking while open.
 
-## Path 2: Capture A Static Opening Point
+## Path 2: Keep The Opening Point Still
 
 Sometimes you want the surface to open at the pointer location and stay there even if the pointer moves later.
 

@@ -4,7 +4,7 @@ description: Choose the right focus behavior for anchored and floating UI.
 
 # Focus Models
 
-Focus behavior is one of the easiest places for floating UI to feel either polished or frustrating. VFloat gives you several focus-related tools, but they make more sense when you think in focus models rather than individual options.
+Focus behavior is one of the easiest places for floating UI to feel either polished or frustrating. VFloat gives you several focus-related tools, but they make more sense when you think in focus models instead of individual options.
 
 There are two focus questions you will run into again and again:
 
@@ -23,13 +23,13 @@ Sometimes the floating content should become the focus destination. This is comm
 
 [`useFocus`](/api/use-focus) is the composable that opens and closes a surface from focus and blur.
 
-One important design detail is that it is keyboard-first by default. It respects focus-visible behavior, which means pointer-triggered focus does not automatically behave the same way as keyboard-triggered focus.
+One important detail is that it is keyboard-first by default. It respects focus-visible behavior, which means pointer-triggered focus does not automatically behave the same way as keyboard-triggered focus.
 
 ## Focus Trap: The Strongest Focus Model
 
 [`useFocusTrap`](/api/use-focus-trap) is for surfaces that must hold focus inside while open.
 
-This is what turns a generic floating panel into something dialog-like. It is especially important for modal flows, where letting focus slip behind the surface creates both usability and accessibility problems.
+This is what turns a generic floating panel into something dialog-like. It matters most for modal flows, where letting focus slip behind the surface creates both usability and accessibility problems.
 
 ## Next Step
 

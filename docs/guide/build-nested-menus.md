@@ -4,7 +4,7 @@ description: Build nested menus with coordinated floating trees and pointer inte
 
 # Build Nested Menus
 
-Nested menus are where floating UI stops being only about position. Once one menu can open another, you need coordination between related surfaces so branches open and close predictably and keyboard users are not stranded.
+Nested menus are where floating UI stops being only about position. Once one menu can open another, the surfaces have to coordinate so branches open and close predictably and keyboard users are not stranded.
 
 VFloat handles that coordination with [`useFloatingTree`](/api/use-floating-tree), [`provideFloatingTree`](/api/use-floating-tree), [`useFloatingTreeNode`](/api/use-floating-tree-node), and [`useListNavigation`](/api/use-list-navigation).
 

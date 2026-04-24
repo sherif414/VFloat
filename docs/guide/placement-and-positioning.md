@@ -4,9 +4,9 @@ description: Learn how placements, strategies, and middleware shape the final po
 
 # Placement and Positioning
 
-Positioning is the part of VFloat people usually notice first, but it helps to be precise about what the library is actually doing.
+Positioning is usually the first part of VFloat people notice, so it helps to be clear about what the library is actually doing.
 
-VFloat is computing a floating surface relative to an anchor according to placement, strategy, transforms, middleware, and current layout constraints.
+VFloat computes where the floating surface should sit relative to an anchor, then refines that result with placement, strategy, transforms, middleware, and the current layout.
 
 ## Placement: The Intended Side And Alignment
 
@@ -24,7 +24,7 @@ The side answers where the floating surface should appear. The optional `-start`
 
 Most of the time the anchor is a real `HTMLElement`. Sometimes it is a virtual element with a `getBoundingClientRect()` method.
 
-That matters because VFloat's positioning model is anchored in geometry, not in the visual appearance of a particular component type.
+That matters because VFloat's positioning model is based on geometry, not on the visual appearance of a particular component type.
 
 ## Positioning Is Computed, Not Hardcoded
 

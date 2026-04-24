@@ -4,13 +4,13 @@ description: Control floating open state from your own Vue state and event handl
 
 # Control Open State
 
-One of the earliest design choices you make with VFloat is who owns the open state.
+Let's talk about open state.
 
-Sometimes the simplest thing is to let VFloat own it internally. Sometimes the parent component needs full control because the floating surface has to stay in sync with routing, form state, or other application rules.
+Most floating surfaces are easiest when VFloat owns the open state for you. But sometimes the parent component needs to stay in charge because the floating surface has to follow routing, forms, or other application rules.
 
-This page explains both approaches and helps you choose the right one.
+This page shows both models and when each one makes sense.
 
-## The Default: Let The Context Own It
+## The Default: Let VFloat Own It
 
 If you call [`useFloating`](/api/use-floating) without an `open` ref, VFloat creates and owns that state for you.
 
@@ -28,7 +28,7 @@ useClick(context);
 </script>
 ```
 
-This is often the best starting point because it keeps the component small. Interaction composables and your template all coordinate through `context.state`.
+This is usually the simplest starting point. The component stays small, and your interaction composables and template all coordinate through `context.state`.
 
 ## The Controlled Version
 
@@ -45,8 +45,8 @@ const open = ref(false);
 
 const context = useFloating(anchorEl, floatingEl, {
   open,
-  onOpenChange(value) {
-    open.value = value;
+  onOpenChange(nextOpen, reason, event) {
+    open.value = nextOpen;
   },
 });
 
@@ -56,7 +56,7 @@ useClick(context, {
 </script>
 ```
 
-Now the parent-owned `open` ref is the state source, and VFloat routes changes through `onOpenChange`.
+Now the parent-owned `open` ref is the source of truth, and VFloat reports changes through `onOpenChange(nextOpen, reason, event)`.
 
 ## When Each Model Makes Sense
 

@@ -4,16 +4,22 @@ description: An overview of the guide section and a suggested path through the V
 
 # Guide Overview
 
-VFloat helps you build floating surfaces such as tooltips, popovers, menus, dialogs, and cursor-following panels. It gives you the positioning layer, the interaction layer, and the shared state model that lets those pieces work together cleanly.
+This guide is here to help you build tooltips, popovers, menus, dialogs, and other floating surfaces in Vue with VFloat.
 
-This guide section is meant to teach the library, not just list APIs. The goal is that you leave with two things:
+You can read it straight through if you are new to the library, or jump to the part that matches what you are building.
+
+The goal is simple:
 
 - You can build the floating behavior you came here to build.
 - You understand why the pattern works, so you can adapt it later.
 
 ## What VFloat Is And Is Not
 
-VFloat gives you low-level building blocks for floating UI in Vue:
+VFloat gives you low-level building blocks for floating UI in Vue.
+
+It is heavily inspired by [Floating UI](https://floating-ui.com/), so some ideas and API names may look familiar. At the same time, VFloat has its own shape, so it is worth learning it as VFloat.
+
+The basic pieces are:
 
 - [`useFloating`](/api/use-floating) computes position and exposes the shared `context`.
 - Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useEscapeKey`](/api/use-escape-key) decide when that surface opens and closes.
@@ -23,73 +29,43 @@ VFloat is not:
 
 - A component library with ready-made dropdowns and tooltips
 - A design system
-- A direct fork of Floating UI
 
-It is closer to a toolkit. You bring your own markup, styles, and product rules. VFloat gives you the positioning and interaction primitives.
+It is closer to a toolkit. You bring the markup, styles, and product decisions. VFloat handles the positioning and interaction primitives.
 
 ## How To Read These Docs
 
-The guide is organized into five sections.
+The guide is split into five sections.
 
 ### Getting Started
 
-Start here if you are new to VFloat. These pages are meant to be read in order.
-
-- [First Tooltip](/guide/first-tooltip)
-- [First Popover](/guide/first-popover)
-- [Control Open State](/guide/control-open-state)
+Start here if you are new to VFloat. These pages walk through the basic shape of the library one step at a time.
 
 ### Guides
 
-Use these pages when you have a concrete job to do.
-
-- [Build Accessible Tooltips](/guide/build-accessible-tooltips)
-- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns)
-- [Keep Content in View](/guide/keep-content-in-view)
-- [Use Virtual Anchors](/guide/use-virtual-anchors)
-- [Keyboard Navigation](/guide/keyboard-navigation)
-- [Build Nested Menus](/guide/build-nested-menus)
-- [Build Dialogs and Modals](/guide/build-dialogs-and-modals)
+Use these when you have a concrete job to do, like building a tooltip, dropdown, dialog, or nested menu.
 
 ### Concepts
 
-These pages explain how to think about VFloat.
-
-- [Floating Context](/guide/floating-context)
-- [Placement and Positioning](/guide/placement-and-positioning)
-- [Middleware Pipeline](/guide/middleware-pipeline)
-- [Interaction Model](/guide/interaction-model)
-- [Focus Models](/guide/focus-models)
+These pages explain the mental model behind VFloat: the shared context, positioning, middleware, and interaction patterns.
 
 ### Design Notes
 
-These pages explain why the library is shaped the way it is and how to choose between patterns.
-
-- [Choosing the Right Pattern](/guide/choosing-the-right-pattern)
-- [Controlled vs Uncontrolled](/guide/controlled-vs-uncontrolled)
-- [VFloat and Floating UI](/guide/vfloat-and-floating-ui)
-- [Tree Coordination Explained](/guide/tree-coordination-explained)
+These pages explain why the library is shaped the way it is, and where some of the design tradeoffs come from.
 
 ### Deep Dives
 
-These are the pages you read when something feels subtle, sticky, or surprising in a real app.
-
-- [Safe Polygon Gotchas](/guide/safe-polygon-gotchas)
-- [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas)
-- [Virtual Anchor Gotchas](/guide/virtual-anchor-gotchas)
-- [List Navigation Gotchas](/guide/list-navigation-gotchas)
-- [Tree Debugging](/guide/tree-debugging)
+These are the pages to read when something feels subtle, surprising, or hard to debug in a real app.
 
 ## A Good Starting Path
 
-If you are not sure where to begin, use this path:
+If you are not sure where to begin, this is a good path:
 
 1. Read [First Tooltip](/guide/first-tooltip).
 2. Read [First Popover](/guide/first-popover).
 3. Read [Floating Context](/guide/floating-context).
 4. Pick the task guide that matches what you need to build.
 
-If you already know the kind of surface you need, you can jump straight to the matching guide:
+If you already know what you want to build, you can jump straight to the matching guide:
 
 - Tooltip: [Build Accessible Tooltips](/guide/build-accessible-tooltips)
 - Popover or dropdown: [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns)
@@ -99,13 +75,13 @@ If you already know the kind of surface you need, you can jump straight to the m
 
 ## Keep The Contract Boundary In Mind
 
-These guide pages are intentionally explanatory and practical, but they are not the contract source.
+These guide pages are meant to teach the workflow and the mental model. They are not the contract source.
 
 - Use the guide when you want workflow, mental models, tradeoffs, and examples.
 - Use the [API Reference](/api/) when you need exact signatures, defaults, and return shapes.
 
-That split keeps the guides readable and the API pages precise.
+That split keeps the guides easier to read and the API pages precise.
 
 ## Next Step
 
-Start with [First Tooltip](/guide/first-tooltip). It gives you the fastest path to understanding the core VFloat loop: anchor, floating element, shared `context`, interaction composable, and middleware.
+Start with [First Tooltip](/guide/first-tooltip). It is the smallest example, and it gives you a good feel for how the main pieces fit together.
