@@ -130,3 +130,17 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 - [ ] Run `vp install` after pulling remote changes and before getting started.
 - [ ] Run `vp check` and `vp test` to validate changes.
 <!--VITE PLUS END-->
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown files under `.scratch/`. See `.agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `.agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` at repo root). See `.agents/domain.md`.
