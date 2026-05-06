@@ -380,6 +380,18 @@ describe("useListNavigation", () => {
       expect(document.activeElement).toBe(ctx.items[2]);
     });
 
+    it("does not open when openOnArrowKeyDown is false", async () => {
+      const ctx = setupListNavigation({
+        openOnArrowKeyDown: false,
+      });
+
+      dispatchKey(ctx.anchorEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.onNavigate).not.toHaveBeenCalled();
+    });
+
     it("opens once on ArrowUp and targets the last enabled item", async () => {
       const ctx = setupListNavigation({
         disabledIndices: [7],
@@ -440,6 +452,61 @@ describe("useListNavigation", () => {
     });
   });
 
+  describe("closing behavior", () => {
+    it("closes on Tab when closeOnTab is true", async () => {
+      const ctx = setupListNavigation({ closeOnTab: true }, true);
+      dispatchKey(ctx.floatingEl, "Tab");
+      await flushListNavigation();
+      expect(ctx.context.state.open.value).toBe(false);
+    });
+
+    it("does not close on Tab when closeOnTab is false", async () => {
+      const ctx = setupListNavigation({ closeOnTab: false }, true);
+      dispatchKey(ctx.floatingEl, "Tab");
+      await flushListNavigation();
+      expect(ctx.context.state.open.value).toBe(true);
+    });
+  });
+
+  describe("scrolling behavior", () => {
+    it("scrolls item into view with nearest block behavior by default", async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+      const ctx = setupListNavigation({ scrollItemIntoView: true }, true);
+      const scrollSpy = vi.fn();
+      ctx.items[0].scrollIntoView = scrollSpy;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(scrollSpy).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+    });
+
+    it("does not scroll if scrollItemIntoView is false", async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+      const ctx = setupListNavigation({ scrollItemIntoView: false }, true);
+      const scrollSpy = vi.fn();
+      ctx.items[0].scrollIntoView = scrollSpy;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
+
+    it("passes custom ScrollIntoViewOptions", async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+      const customOptions: ScrollIntoViewOptions = { block: "center", behavior: "smooth" };
+      const ctx = setupListNavigation({ scrollItemIntoView: customOptions }, true);
+      const scrollSpy = vi.fn();
+      ctx.items[0].scrollIntoView = scrollSpy;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(scrollSpy).toHaveBeenCalledWith(customOptions);
+    });
+  });
+
   describe("linear navigation", () => {
     it("skips disabled items without wrapping when loop is disabled", async () => {
       const ctx = setupListNavigation(
@@ -482,6 +549,24 @@ describe("useListNavigation", () => {
       await flushListNavigation();
 
       expect(ctx.activeIndex.value).toBe(0);
+    });
+
+    it("escapes to null when allowEscape is true and virtual is true", async () => {
+      const ctx = setupListNavigation(
+        {
+          allowEscape: true,
+          virtual: true,
+          loop: true,
+          orientation: "vertical",
+        },
+        true,
+      );
+      ctx.activeIndex.value = ctx.items.length - 1;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.activeIndex.value).toBeNull();
     });
 
     it("moves to the first and last enabled items with Home and End", async () => {
@@ -762,6 +847,28 @@ describe("useListNavigation", () => {
 
       expect(child.context.state.open.value).toBe(true);
       expect(document.activeElement).toBe(child.items[0]);
+    });
+
+    it("automatically opens a child branch when openChildOnFocus is true and the parent item is focused", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: { id: "child-auto" },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          openChildOnFocus: true,
+        },
+      });
+
+      child.context.refs.setAnchor(root.items[1]);
+      root.activeIndex.value = 0;
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(root.activeIndex.value).toBe(1);
+      expect(child.context.state.open.value).toBe(true);
     });
 
     it("opens child branches with Enter and Space from the parent item", async () => {
