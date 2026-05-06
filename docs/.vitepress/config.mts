@@ -33,6 +33,7 @@ export default defineConfigWithTheme({
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("../../src", import.meta.url)),
+        "v-float": fileURLToPath(new URL("../../src/index.ts", import.meta.url)),
       },
     },
     build: {
@@ -149,6 +150,7 @@ export default defineConfigWithTheme({
             { text: "useFocusTrap", link: "/api/use-focus-trap" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
             { text: "useListNavigation", link: "/api/use-list-navigation" },
+            { text: "useRole", link: "/api/use-role" },
           ],
         },
         {

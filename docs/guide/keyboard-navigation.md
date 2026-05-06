@@ -6,7 +6,7 @@ description: Add keyboard navigation to floating menus and list-like surfaces.
 
 When a floating surface contains selectable items, keyboard support becomes part of the feature, not a nice extra. Menus, listboxes, combobox panels, and nested menus all depend on predictable item navigation.
 
-VFloat handles that with [`useListNavigation`](/api/use-list-navigation).
+VFloat handles movement with [`useListNavigation`](/api/use-list-navigation). When the surface uses ARIA menu or listbox semantics, [`useRole`](/api/use-role) keeps the roles and ARIA state synchronized separately.
 
 This guide shows the two focus models you will run into most often.
 
@@ -16,11 +16,11 @@ Before you think about the options, decide what kind of focus model you want.
 
 ### DOM focus
 
-Use real DOM focus when each item should actually receive focus. This is common for menus, action lists, and simple dropdowns.
+Use real DOM focus when each item should actually receive focus. This is common for menus, action lists, and simple dropdowns. In this mode, [`useListNavigation`](/api/use-list-navigation) manages roving `tabindex` so only the active item is tabbable inside the composite.
 
 ### Virtual focus
 
-Use virtual focus when the anchor should keep DOM focus while the active item changes underneath it. This is common for combobox-like panels and inputs that should keep accepting text.
+Use virtual focus when a container should keep DOM focus while the active item changes underneath it. This is common for combobox-like panels and inputs that should keep accepting text, but it can also be used with a focused menu, listbox, grid, or tree container.
 
 ## DOM Focus Example: Menu Navigation
 
@@ -29,7 +29,7 @@ This is the usual menu-style setup.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useListNavigation } from "v-float";
+import { useFloating, useListNavigation, useRole } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -38,6 +38,11 @@ const activeIndex = ref<number | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
 
+useRole(context, {
+  role: "menu",
+  label: "Actions",
+  listRef: itemsRef,
+});
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
@@ -81,7 +86,7 @@ If the anchor is an input that should keep typing focus, use virtual focus inste
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useListNavigation } from "v-float";
+import { useFloating, useListNavigation, useRole } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -91,6 +96,10 @@ const virtualItemRef = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
 
+useRole(context, {
+  role: "listbox",
+  listRef: itemsRef,
+});
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
@@ -106,6 +115,20 @@ useListNavigation(context, {
 
 In virtual mode, the anchor keeps DOM focus. The active item is announced through `aria-activedescendant` instead of by moving real focus into the list.
 
+For combobox-like inputs, leave `activeDescendantEl` unset so the anchor receives `aria-activedescendant`. For container-focus composites, pass the floating element:
+
+```ts
+useListNavigation(context, {
+  listRef: itemsRef,
+  activeIndex,
+  activeDescendantEl: floatingEl,
+  virtual: true,
+  onNavigate(index) {
+    activeIndex.value = index;
+  },
+});
+```
+
 ## Render Virtual-Focus Items With Stable IDs
 
 Virtual focus depends on stable item IDs.
@@ -119,18 +142,12 @@ Virtual focus depends on stable item IDs.
     :aria-activedescendant="virtualItemRef?.id"
   />
 
-  <ul
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="listbox"
-    :style="context.position.styles.value"
-  >
+  <ul v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
     <li
       v-for="(item, index) in ['One', 'Two', 'Three']"
       :key="item"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       :id="`option-${index}`"
-      role="option"
     >
       {{ item }}
     </li>

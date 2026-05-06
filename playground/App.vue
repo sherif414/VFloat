@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import FloatingTreePlayground from "./demo/FloatingTreePlayground.vue";
+import CommandMenuDemo from "./demo/CommandMenuDemo.vue";
 </script>
 
 <template>
-  <FloatingTreePlayground />
+  <CommandMenuDemo />
 </template>

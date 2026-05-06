@@ -25,6 +25,18 @@ A floating tree keeps a shared registry of related nodes and helps track which n
 
 That gives other composables a way to ask relationship-aware questions instead of acting like every surface is isolated.
 
+## Explicit Relationships
+
+Tree coordination is opt-in. Create one [`useFloatingTree`](/api/use-floating-tree) for a related family, pass that tree to the root [`useFloatingTreeNode`](/api/use-floating-tree-node), then pass the root node as `parent` for child branches.
+
+VFloat does not discover this relationship through DOM ancestry or Vue injection. That matters because floating panels are often rendered through `<Teleport>`, where the DOM tree no longer matches the logical menu or dialog tree.
+
+## Policy Boundaries
+
+The tree owns branch policies such as sibling collapse and descendant cascade. Those defaults are configured on [`useFloatingTree`](/api/use-floating-tree), not on individual nodes.
+
+Interaction composables still own the behavior they understand best. For example, [`useListNavigation`](/api/use-list-navigation) owns submenu keyboard handoff and return-index behavior, while tree helpers only route branch-aware close and containment decisions.
+
 ## Next Step
 
 - Read [Build Nested Menus](/guide/build-nested-menus) for the implementation flow.

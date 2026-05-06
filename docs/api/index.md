@@ -27,6 +27,7 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 - [`useFocusTrap`](/api/use-focus-trap) - Keeps keyboard focus inside floating content
 - [`useEscapeKey`](/api/use-escape-key) - Closes floating content when Escape is pressed
 - [`useListNavigation`](/api/use-list-navigation) - Moves between items with the keyboard
+- [`useRole`](/api/use-role) - Synchronizes ARIA roles and states for floating surfaces
 
 ## Tree Coordination
 

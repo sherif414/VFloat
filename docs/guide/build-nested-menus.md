@@ -6,7 +6,7 @@ description: Build nested menus with coordinated floating trees and pointer inte
 
 Nested menus are where floating UI stops being only about position. Once one menu can open another, the surfaces have to coordinate so branches open and close predictably and keyboard users are not stranded.
 
-VFloat handles that coordination with [`useFloatingTree`](/api/use-floating-tree), [`provideFloatingTree`](/api/use-floating-tree), [`useFloatingTreeNode`](/api/use-floating-tree-node), and [`useListNavigation`](/api/use-list-navigation).
+VFloat handles that coordination with [`useFloatingTree`](/api/use-floating-tree), [`useFloatingTreeNode`](/api/use-floating-tree-node), [`useListNavigation`](/api/use-list-navigation), and [`useRole`](/api/use-role).
 
 ## What Tree Coordination Solves
 
@@ -25,9 +25,9 @@ Start by creating one tree for the whole menu family.
 
 ```vue
 <script setup lang="ts">
-import { provideFloatingTree, useFloatingTree } from "v-float";
+import { useFloatingTree } from "v-float";
 
-provideFloatingTree(useFloatingTree({ id: "main-menu-tree" }));
+const tree = useFloatingTree({ id: "main-menu-tree" });
 </script>
 ```
 
@@ -38,8 +38,15 @@ Build a root menu with `useFloating()` and register it as a tree node.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useFloatingTreeNode, useListNavigation } from "v-float";
+import {
+  useFloating,
+  useFloatingTree,
+  useFloatingTreeNode,
+  useListNavigation,
+  useRole,
+} from "v-float";
 
+const tree = useFloatingTree({ id: "main-menu-tree" });
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
@@ -50,9 +57,15 @@ const context = useFloating(anchorEl, floatingEl, {
 });
 
 const rootNode = useFloatingTreeNode(context, {
+  tree,
   id: "root-menu",
 });
 
+useRole(context, {
+  role: "menu",
+  label: "Main menu",
+  listRef: itemsRef,
+});
 useListNavigation(context, {
   listRef: itemsRef,
   activeIndex,
@@ -70,7 +83,7 @@ Create the submenu the same way, but attach it to the parent node.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useFloatingTreeNode, useListNavigation } from "v-float";
+import { useFloating, useFloatingTreeNode, useListNavigation, useRole } from "v-float";
 
 const childAnchorEl = ref<HTMLElement | null>(null);
 const childFloatingEl = ref<HTMLElement | null>(null);
@@ -86,6 +99,11 @@ const childNode = useFloatingTreeNode(childContext, {
   id: "file-submenu",
 });
 
+useRole(childContext, {
+  role: "menu",
+  label: "File submenu",
+  listRef: childItemsRef,
+});
 useListNavigation(childContext, {
   listRef: childItemsRef,
   activeIndex: childActiveIndex,

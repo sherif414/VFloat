@@ -18,8 +18,6 @@ interface UseFloatingTreeNodeOptions {
   tree?: FloatingTree | null;
   id?: MaybeRefOrGetter<string | undefined>;
   parent?: MaybeRefOrGetter<FloatingTreeNode | null | undefined>;
-  closeSiblingsOnOpen?: MaybeRefOrGetter<boolean | undefined>;
-  closeChildrenOnClose?: MaybeRefOrGetter<boolean | undefined>;
 }
 
 interface FloatingTreeNode {
@@ -36,9 +34,9 @@ interface FloatingTreeNode {
   actions: {
     open: (event?: Event) => void;
     close: (event?: Event) => void;
-    closeBranch: (event?: Event) => void;
-    closeChildren: (event?: Event) => void;
-    closeSiblings: (event?: Event) => void;
+    closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
     isTargetWithinNode: (target: EventTarget | null) => boolean;
     isTargetWithinBranch: (target: EventTarget | null) => boolean;
   };
@@ -49,15 +47,15 @@ interface FloatingTreeNode {
 
 `useFloatingTreeNode` links a floating context to a shared tree and keeps the branch state in sync.
 
-- `tree` can be passed directly, inherited from `parent`, or resolved from `useCurrentFloatingTree()`.
-- If no tree can be resolved, VFloat warns in development and creates a new tree so the node can still function.
-- `parent` must belong to the same tree. Cross-tree parents are ignored with a development warning.
-- `closeSiblingsOnOpen` defaults to `true` for nested nodes and `false` for root nodes.
-- `closeChildrenOnClose` defaults to `true`.
+- Root nodes pass `tree` directly.
+- Child nodes can inherit the tree from `parent`, or pass both `tree` and `parent` when that is clearer.
+- If no tree can be resolved, VFloat throws. Tree membership is explicit so unrelated floating families stay isolated.
+- `parent` must belong to the same tree. Cross-tree parent links throw instead of silently creating mixed topology.
+- Sibling-collapse and descendant-cascade policy belongs to [`useFloatingTree`](/api/use-floating-tree), not individual nodes.
 - `state.isRoot`, `state.isLeaf`, and `state.isActive` are derived from the tree structure.
-- `actions.open()` marks the node active and can close sibling branches first.
+- `actions.open()` marks the node active and lets the tree apply its open policies.
 - `actions.close()` restores focus to the node anchor when the close reason allows it.
-- `actions.closeBranch()`, `actions.closeChildren()`, and `actions.closeSiblings()` forward to the tree registry.
+- `actions.closeBranch()`, `actions.closeChildren()`, and `actions.closeSiblings()` forward to the tree registry and preserve an optional `OpenChangeReason`.
 - `actions.isTargetWithinNode()` and `actions.isTargetWithinBranch()` help dismissal logic tell whether an event came from the current branch.
 
 ## Example
