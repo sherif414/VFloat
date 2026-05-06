@@ -47,14 +47,16 @@ function resolveLinearMove(
   } = context;
   const itemCount = items.length;
   const start = current == null ? (dir === 1 ? 0 : itemCount - 1) : current + dir;
-  let next = findNextEnabled(start, dir, loop);
+  let next = findNextEnabled(start, dir, false);
 
-  if (next == null && loop) {
+  if (next == null) {
     if (allowEscape && isVirtual) {
       return { type: "navigate", index: null };
     }
 
-    next = dir === 1 ? getFirstEnabledIndex() : getLastEnabledIndex();
+    if (loop) {
+      next = dir === 1 ? getFirstEnabledIndex() : getLastEnabledIndex();
+    }
   }
 
   if (next != null) {
