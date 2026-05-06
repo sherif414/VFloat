@@ -8,19 +8,13 @@ import {
 } from "@/composables/interactions";
 import { resolveTreeInteraction } from "@/composables/interactions/internal/tree-interaction";
 import { type AnchorElement, type FloatingElement, useFloating } from "@/composables/positioning";
-import {
-  type FloatingContext,
-  type FloatingTreeNodeBridge,
-  getFloatingInternals,
-} from "@/composables/positioning/floating-context";
+import type { FloatingContext } from "@/composables/positioning/floating-context";
 
 type FloatingHarness = {
   anchorEl: HTMLButtonElement;
   context: FloatingContext;
   floatingEl: HTMLDivElement;
 };
-
-type NavigateHandler = (index: number | null) => void;
 
 const activeScopes: ReturnType<typeof effectScope>[] = [];
 const createdElements: HTMLElement[] = [];
@@ -45,38 +39,6 @@ function createFloatingHarness(idPrefix: string, open = false): FloatingHarness 
     anchorEl,
     context,
     floatingEl,
-  };
-}
-
-function requireTreeNodeBridge(context: FloatingContext): FloatingTreeNodeBridge {
-  const treeNode = getFloatingInternals(context as object)?.treeNode;
-  if (!treeNode) {
-    throw new Error("Expected a floating tree node bridge to be attached");
-  }
-
-  return treeNode;
-}
-
-function attachListNavigationBridge(
-  context: FloatingContext,
-  options: {
-    onNavigate?: NavigateHandler;
-    openedByTree?: boolean;
-    returnIndex?: number | null;
-  } = {},
-) {
-  const treeNode = requireTreeNodeBridge(context);
-  const onNavigate: NavigateHandler = options.onNavigate ?? (() => void 0);
-
-  treeNode.listNavigation = {
-    onNavigate,
-    openedByTree: ref(options.openedByTree ?? false),
-    returnIndex: ref(options.returnIndex ?? null),
-  };
-
-  return {
-    onNavigate,
-    treeNode,
   };
 }
 
@@ -150,67 +112,6 @@ describe("tree interaction helpers", () => {
     vi.restoreAllMocks();
   });
 
-  it("restores the parent list navigation when the child bridge provides a return index", () => {
-    const { childHarness, rootHarness } = setupTreeInteractionHarness({
-      childOpen: true,
-      rootOpen: true,
-    });
-
-    const parentNavigate = vi.fn();
-    attachListNavigationBridge(rootHarness.context, {
-      onNavigate: parentNavigate,
-    });
-    attachListNavigationBridge(childHarness.context, {
-      openedByTree: true,
-      returnIndex: 2,
-    });
-
-    const interaction = resolveTreeInteraction(childHarness.context);
-    interaction.restoreParentNavigation();
-
-    expect(parentNavigate).toHaveBeenCalledWith(2);
-  });
-
-  it("skips parent restoration when the child has no return index", () => {
-    const { childHarness, rootHarness } = setupTreeInteractionHarness({
-      childOpen: true,
-      rootOpen: true,
-    });
-
-    const parentNavigate = vi.fn();
-    attachListNavigationBridge(rootHarness.context, {
-      onNavigate: parentNavigate,
-    });
-    attachListNavigationBridge(childHarness.context, {
-      openedByTree: true,
-      returnIndex: null,
-    });
-
-    resolveTreeInteraction(childHarness.context).restoreParentNavigation();
-
-    expect(parentNavigate).not.toHaveBeenCalled();
-  });
-
-  it("skips parent restoration when the parent branch is already closed", () => {
-    const { childHarness, rootHarness } = setupTreeInteractionHarness({
-      childOpen: true,
-      rootOpen: false,
-    });
-
-    const parentNavigate = vi.fn();
-    attachListNavigationBridge(rootHarness.context, {
-      onNavigate: parentNavigate,
-    });
-    attachListNavigationBridge(childHarness.context, {
-      openedByTree: true,
-      returnIndex: 1,
-    });
-
-    resolveTreeInteraction(childHarness.context).restoreParentNavigation();
-
-    expect(parentNavigate).not.toHaveBeenCalled();
-  });
-
   it("closes the local context when closeCurrent is used without a tree node", () => {
     const { harness } = setupStandaloneInteractionHarness(true);
 
@@ -261,5 +162,20 @@ describe("tree interaction helpers", () => {
 
     expect(rootHarness.context.state.open.value).toBe(false);
     expect(childHarness.context.state.open.value).toBe(false);
+  });
+
+  it("preserves the close reason when closing the active branch through tree interaction", () => {
+    const { childHarness, rootHarness } = setupTreeInteractionHarness({
+      childOpen: true,
+      rootOpen: true,
+    });
+
+    const childSetOpenSpy = vi.spyOn(childHarness.context.state, "setOpen");
+
+    resolveTreeInteraction(rootHarness.context).closeActiveBranch("escape-key");
+
+    expect(childSetOpenSpy).toHaveBeenCalledWith(false, "escape-key", undefined);
+    expect(childHarness.context.state.open.value).toBe(false);
+    expect(rootHarness.context.state.open.value).toBe(true);
   });
 });

@@ -1,14 +1,4 @@
-import {
-  computed,
-  hasInjectionContext,
-  inject,
-  type MaybeRefOrGetter,
-  provide,
-  type Ref,
-  readonly,
-  ref,
-  toValue,
-} from "vue";
+import { computed, type MaybeRefOrGetter, type Ref, readonly, ref, toValue } from "vue";
 import type { OpenChangeReason } from "@/types";
 import type { FloatingTreeNode } from "./use-floating-tree-node";
 
@@ -20,6 +10,14 @@ export interface UseFloatingTreeOptions {
    * The tree id to reuse instead of generating one.
    */
   id?: MaybeRefOrGetter<string | undefined>;
+  /**
+   * Whether opening one node should close sibling branches.
+   */
+  closeSiblingsOnOpen?: MaybeRefOrGetter<boolean | undefined>;
+  /**
+   * Whether closing one node should close descendant branches.
+   */
+  closeChildrenOnClose?: MaybeRefOrGetter<boolean | undefined>;
 }
 
 /**
@@ -35,10 +33,10 @@ export interface FloatingTree {
   activePath: Readonly<Ref<string[]>>;
   actions: {
     getNode: (id: string) => FloatingTreeNode | null;
-    closeAll: (event?: Event) => void;
-    closeBranch: (id: string, event?: Event) => void;
-    closeChildren: (id: string, event?: Event) => void;
-    closeSiblings: (id: string, event?: Event) => void;
+    closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
     isTargetWithinTree: (target: EventTarget | null) => boolean;
     isTargetWithinBranch: (id: string, target: EventTarget | null) => boolean;
   };
@@ -57,18 +55,17 @@ export interface FloatingTreePrivateActions {
   /**
    * Marks a node as the most recently opened tree entry.
    */
-  markOpened: (id: string) => void;
+  markOpened: (id: string, event?: Event) => void;
   /**
    * Updates tree bookkeeping after a node closes.
    */
-  markClosed: (id: string) => void;
+  markClosed: (id: string, event?: Event) => void;
   /**
    * Closes a node while preserving the requested reason.
    */
   closeNodeWithReason: (id: string, reason: OpenChangeReason, event?: Event) => void;
 }
 
-const FLOATING_TREE_INJECTION_KEY = Symbol("vfloat-floating-tree");
 const FLOATING_TREE_PRIVATE_SYMBOL = Symbol("vfloat-floating-tree-private");
 
 type FloatingTreeWithPrivate = FloatingTree & {
@@ -141,6 +138,20 @@ function collectBranchNodeIds(
   return ids;
 }
 
+function normalizeCloseArgs(reasonOrEvent?: OpenChangeReason | Event, event?: Event) {
+  if (typeof reasonOrEvent === "string") {
+    return {
+      reason: reasonOrEvent,
+      event,
+    };
+  }
+
+  return {
+    reason: "programmatic" as OpenChangeReason,
+    event: reasonOrEvent,
+  };
+}
+
 /**
  * Creates a registry that coordinates related floating contexts.
  */
@@ -150,6 +161,9 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
   const nodeRegistrations = new Map<string, FloatingTreeNodeRegistration>();
   const activationOrderById = new Map<string, number>();
   let activationOrderCursor = 0;
+
+  const shouldCloseSiblingsOnOpen = () => toValue(options.closeSiblingsOnOpen) ?? true;
+  const shouldCloseChildrenOnClose = () => toValue(options.closeChildrenOnClose) ?? true;
 
   const resolveNode = (id: string): FloatingTreeNode | null => {
     return nodeRegistrations.get(id)?.node ?? null;
@@ -181,7 +195,12 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
   };
 
   const closeNodeWithReason = (id: string, reason: OpenChangeReason, event?: Event) => {
-    nodeRegistrations.get(id)?.closeWithReason(reason, event);
+    const registration = nodeRegistrations.get(id);
+    if (!registration?.node.context.state.open.value) {
+      return;
+    }
+
+    registration.closeWithReason(reason, event);
   };
 
   const closeBranchWithReason = (id: string, reason: OpenChangeReason, event?: Event) => {
@@ -192,13 +211,53 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
     }
   };
 
-  const markOpened = (id: string) => {
+  const closeChildrenWithReason = (id: string, reason: OpenChangeReason, event?: Event) => {
+    const node = resolveNode(id);
+    if (!node) {
+      return;
+    }
+
+    // Close each child subtree independently so sibling branches stay isolated.
+    for (const childId of node.childIds.value) {
+      closeBranchWithReason(childId, reason, event);
+    }
+  };
+
+  const closeSiblingsWithReason = (id: string, reason: OpenChangeReason, event?: Event) => {
+    const node = resolveNode(id);
+    if (!node) {
+      return;
+    }
+
+    const nodeParentId = node.parentId.value;
+    const siblingIds = [...nodeRegistrations.values()]
+      .map((registration) => registration.node)
+      .filter(
+        (candidateNode) =>
+          candidateNode.id.value !== id && candidateNode.parentId.value === nodeParentId,
+      )
+      .map((candidateNode) => candidateNode.id.value);
+
+    for (const siblingId of siblingIds) {
+      closeBranchWithReason(siblingId, reason, event);
+    }
+  };
+
+  const markOpened = (id: string, event?: Event) => {
+    if (shouldCloseSiblingsOnOpen()) {
+      closeSiblingsWithReason(id, "programmatic", event);
+    }
+
     activationOrderCursor += 1;
     activationOrderById.set(id, activationOrderCursor);
     activeId.value = id;
   };
 
-  const markClosed = (id: string) => {
+  const markClosed = (id: string, event?: Event) => {
+    if (shouldCloseChildrenOnClose()) {
+      closeChildrenWithReason(id, "programmatic", event);
+    }
+
     const currentActiveId = activeId.value;
     if (!currentActiveId) {
       return;
@@ -289,7 +348,9 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
     activePath,
     actions: {
       getNode: resolveNode,
-      closeAll: (event?: Event) => {
+      closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+
         // Prefer root nodes so multiple top-level branches collapse in a stable order.
         const rootIds = [...nodeRegistrations.values()]
           .filter((registration) => registration.node.parentId.value == null)
@@ -297,41 +358,20 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
 
         const targetIds = rootIds.length > 0 ? rootIds : [...nodeRegistrations.keys()];
         for (const targetId of targetIds) {
-          closeBranchWithReason(targetId, "programmatic", event);
+          closeBranchWithReason(targetId, closeArgs.reason, closeArgs.event);
         }
       },
-      closeBranch: (id: string, event?: Event) => {
-        closeBranchWithReason(id, "programmatic", event);
+      closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+        closeBranchWithReason(id, closeArgs.reason, closeArgs.event);
       },
-      closeChildren: (id: string, event?: Event) => {
-        const node = resolveNode(id);
-        if (!node) {
-          return;
-        }
-
-        // Close each child subtree independently so sibling branches stay isolated.
-        for (const childId of node.childIds.value) {
-          closeBranchWithReason(childId, "programmatic", event);
-        }
+      closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+        closeChildrenWithReason(id, closeArgs.reason, closeArgs.event);
       },
-      closeSiblings: (id: string, event?: Event) => {
-        const node = resolveNode(id);
-        if (!node) {
-          return;
-        }
-
-        const nodeParentId = node.parentId.value;
-        const siblingIds = [...nodeRegistrations.values()]
-          .map((registration) => registration.node)
-          .filter(
-            (candidateNode) =>
-              candidateNode.id.value !== id && candidateNode.parentId.value === nodeParentId,
-          )
-          .map((candidateNode) => candidateNode.id.value);
-
-        for (const siblingId of siblingIds) {
-          closeBranchWithReason(siblingId, "programmatic", event);
-        }
+      closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+        closeSiblingsWithReason(id, closeArgs.reason, closeArgs.event);
       },
       isTargetWithinTree: (target: EventTarget | null) => {
         return [...nodeRegistrations.values()].some((registration) =>
@@ -357,35 +397,6 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
   (tree as FloatingTreeWithPrivate)[FLOATING_TREE_PRIVATE_SYMBOL] = privateActions;
 
   return tree;
-}
-
-/**
- * Provides a floating tree through Vue dependency injection.
- */
-export function provideFloatingTree(tree: FloatingTree): FloatingTree {
-  if (hasInjectionContext()) {
-    provide(FLOATING_TREE_INJECTION_KEY, tree);
-    return tree;
-  }
-
-  if (import.meta.env.DEV) {
-    console.warn(
-      "[provideFloatingTree] Called without an active injection context. Descendants cannot inject this tree automatically.",
-    );
-  }
-
-  return tree;
-}
-
-/**
- * Returns the current floating tree from Vue dependency injection when available.
- */
-export function useCurrentFloatingTree(): FloatingTree | null {
-  if (!hasInjectionContext()) {
-    return null;
-  }
-
-  return inject(FLOATING_TREE_INJECTION_KEY, null);
 }
 
 export function getFloatingTreePrivateActions(

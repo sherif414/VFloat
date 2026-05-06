@@ -42,7 +42,6 @@ export interface FloatingTreeInteraction {
   closeActive: (reason: OpenChangeReason, event?: Event) => void;
   closeActiveBranch: (reason: OpenChangeReason, event?: Event) => void;
   closeActiveChildren: (reason: OpenChangeReason, event?: Event) => void;
-  restoreParentNavigation: (event?: Event) => void;
 }
 
 /**
@@ -105,7 +104,7 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
       return;
     }
 
-    node.actions.closeBranch(event);
+    node.actions.closeBranch(reason, event);
   };
 
   const closeNodeChildren = (
@@ -113,14 +112,12 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
     reason: OpenChangeReason,
     event?: Event,
   ) => {
-    void reason;
-
     if (!node) {
       closeNodeWithReason(resolveTreeNode(), reason, event);
       return;
     }
 
-    node.actions.closeChildren(event);
+    node.actions.closeChildren(reason, event);
   };
 
   const closeNodeSiblings = (
@@ -128,29 +125,12 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
     reason: OpenChangeReason,
     event?: Event,
   ) => {
-    void reason;
-
     if (!node) {
       closeNodeWithReason(resolveTreeNode(), reason, event);
       return;
     }
 
-    node.actions.closeSiblings(event);
-  };
-
-  const restoreParentNavigation = (event?: Event) => {
-    void event;
-
-    // When the active node closes, hand keyboard state back to the parent list item.
-    const treeNode = resolveTreeNode();
-    const parentNode = resolveParentNode();
-    const returnIndex = treeNode?.listNavigation?.returnIndex.value ?? null;
-
-    if (!treeNode || !parentNode || returnIndex == null || !parentNode.context.state.open.value) {
-      return;
-    }
-
-    parentNode.listNavigation?.onNavigate?.(returnIndex);
+    node.actions.closeSiblings(reason, event);
   };
 
   return {
@@ -226,6 +206,5 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
 
       closeNodeChildren(resolveTreeNode(), reason, event);
     },
-    restoreParentNavigation,
   };
 }

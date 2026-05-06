@@ -7,12 +7,7 @@ import {
 } from "@/composables/positioning/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
-import {
-  type FloatingTree,
-  getFloatingTreePrivateActions,
-  useCurrentFloatingTree,
-  useFloatingTree,
-} from "./use-floating-tree";
+import { type FloatingTree, getFloatingTreePrivateActions } from "./use-floating-tree";
 
 /**
  * Options for attaching a floating context to a tree node.
@@ -30,14 +25,6 @@ export interface UseFloatingTreeNodeOptions {
    * The parent node to attach this node beneath.
    */
   parent?: MaybeRefOrGetter<FloatingTreeNode | null | undefined>;
-  /**
-   * Whether sibling branches should close when this node opens.
-   */
-  closeSiblingsOnOpen?: MaybeRefOrGetter<boolean | undefined>;
-  /**
-   * Whether descendants should close when this node closes.
-   */
-  closeChildrenOnClose?: MaybeRefOrGetter<boolean | undefined>;
 }
 
 /**
@@ -57,9 +44,9 @@ export interface FloatingTreeNode {
   actions: {
     open: (event?: Event) => void;
     close: (event?: Event) => void;
-    closeBranch: (event?: Event) => void;
-    closeChildren: (event?: Event) => void;
-    closeSiblings: (event?: Event) => void;
+    closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
     isTargetWithinNode: (target: EventTarget | null) => boolean;
     isTargetWithinBranch: (target: EventTarget | null) => boolean;
   };
@@ -72,23 +59,15 @@ function createFloatingTreeNodeId() {
   return `floating-node-${floatingTreeNodeIdCounter}`;
 }
 
-function warnMissingTree() {
-  if (!import.meta.env.DEV) {
-    return;
-  }
-
-  console.warn(
-    "[useFloatingTreeNode] Missing floating tree. Pass `options.tree`, pass a `parent` node, or call `provideFloatingTree(useFloatingTree())` before registering nodes.",
+function createMissingTreeError() {
+  return new Error(
+    "[useFloatingTreeNode] Missing floating tree. Pass `options.tree` for a root node or `options.parent` for a child node.",
   );
 }
 
-function warnCrossTreeParent() {
-  if (!import.meta.env.DEV) {
-    return;
-  }
-
-  console.warn(
-    "[useFloatingTreeNode] Ignoring `parent` from a different tree. Parent and child nodes must belong to the same floating tree.",
+function createCrossTreeParentError() {
+  return new Error(
+    "[useFloatingTreeNode] Parent and child nodes must belong to the same floating tree.",
   );
 }
 
@@ -141,6 +120,20 @@ function resolveTreeNodeBridgeById(tree: FloatingTree, id: string): FloatingTree
   return getFloatingInternals(node.context)?.treeNode ?? null;
 }
 
+function normalizeCloseArgs(reasonOrEvent?: OpenChangeReason | Event, event?: Event) {
+  if (typeof reasonOrEvent === "string") {
+    return {
+      reason: reasonOrEvent,
+      event,
+    };
+  }
+
+  return {
+    reason: "programmatic" as OpenChangeReason,
+    event: reasonOrEvent,
+  };
+}
+
 function shouldRestoreFocus(node: FloatingTreeNode, reason: OpenChangeReason, event?: Event) {
   if (reason === "outside-pointer") {
     return false;
@@ -187,16 +180,14 @@ export function useFloatingTreeNode(
   const parentOption = toValue(options.parent) ?? null;
   const explicitTree = options.tree ?? null;
 
-  let tree = explicitTree ?? parentOption?.tree ?? useCurrentFloatingTree();
+  const tree = explicitTree ?? parentOption?.tree ?? null;
   if (!tree) {
-    warnMissingTree();
-    tree = useFloatingTree();
+    throw createMissingTreeError();
   }
 
   let parentNode = parentOption;
   if (parentNode && parentNode.tree !== tree) {
-    warnCrossTreeParent();
-    parentNode = null;
+    throw createCrossTreeParentError();
   }
 
   const nodeId = ref(toValue(options.id) ?? createFloatingTreeNodeId());
@@ -204,54 +195,14 @@ export function useFloatingTreeNode(
   const childIds = ref<string[]>([]);
   const treePrivateActions = getFloatingTreePrivateActions(tree);
 
-  const closeSiblingsOnOpen = computed(() => {
-    const explicitValue = toValue(options.closeSiblingsOnOpen);
-    if (explicitValue != null) {
-      return explicitValue;
-    }
-
-    return parentId.value != null;
-  });
-
-  const closeChildrenOnClose = computed(() => {
-    return toValue(options.closeChildrenOnClose) ?? true;
-  });
-
   let nodeBridge!: FloatingTreeNodeBridge;
 
-  const restoreParentNavigation = (event?: Event) => {
-    void event;
-
-    // When a child closes, parent list navigation should jump back to the item that opened it.
-    const returnIndex = nodeBridge.listNavigation?.returnIndex.value ?? null;
-    if (returnIndex == null || parentId.value == null) {
-      return;
-    }
-
-    const parentBridge = resolveTreeNodeBridgeById(tree, parentId.value);
-    if (!parentBridge?.context.state.open.value) {
-      return;
-    }
-
-    parentBridge.listNavigation?.onNavigate?.(returnIndex);
-  };
-
   const applyOpenRules = (event?: Event) => {
-    if (closeSiblingsOnOpen.value) {
-      tree.actions.closeSiblings(nodeId.value, event);
-    }
-
-    treePrivateActions?.markOpened(nodeId.value);
+    treePrivateActions?.markOpened(nodeId.value, event);
   };
 
   const applyCloseRules = (event?: Event) => {
-    // Closing a node should collapse any descendants first, then update tree bookkeeping.
-    if (closeChildrenOnClose.value) {
-      tree.actions.closeChildren(nodeId.value, event);
-    }
-
-    treePrivateActions?.markClosed(nodeId.value);
-    restoreParentNavigation(event);
+    treePrivateActions?.markClosed(nodeId.value, event);
   };
 
   const closeWithReason = (reason: OpenChangeReason, event?: Event) => {
@@ -289,14 +240,17 @@ export function useFloatingTreeNode(
       close: (event?: Event) => {
         closeWithReason("programmatic", event);
       },
-      closeBranch: (event?: Event) => {
-        tree.actions.closeBranch(nodeId.value, event);
+      closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+        tree.actions.closeBranch(nodeId.value, closeArgs.reason, closeArgs.event);
       },
-      closeChildren: (event?: Event) => {
-        tree.actions.closeChildren(nodeId.value, event);
+      closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+        tree.actions.closeChildren(nodeId.value, closeArgs.reason, closeArgs.event);
       },
-      closeSiblings: (event?: Event) => {
-        tree.actions.closeSiblings(nodeId.value, event);
+      closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => {
+        const closeArgs = normalizeCloseArgs(reasonOrEvent, event);
+        tree.actions.closeSiblings(nodeId.value, closeArgs.reason, closeArgs.event);
       },
       isTargetWithinNode: (target: EventTarget | null) => {
         const targetNode = resolveTargetNode(target);
@@ -337,10 +291,14 @@ export function useFloatingTreeNode(
       activeId: tree.activeId,
       actions: {
         getNode: (id: string) => resolveTreeNodeBridgeById(tree, id),
-        closeAll: (event?: Event) => tree.actions.closeAll(event),
-        closeBranch: (id: string, event?: Event) => tree.actions.closeBranch(id, event),
-        closeChildren: (id: string, event?: Event) => tree.actions.closeChildren(id, event),
-        closeSiblings: (id: string, event?: Event) => tree.actions.closeSiblings(id, event),
+        closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+          tree.actions.closeAll(reasonOrEvent, event),
+        closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+          tree.actions.closeBranch(id, reasonOrEvent, event),
+        closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+          tree.actions.closeChildren(id, reasonOrEvent, event),
+        closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+          tree.actions.closeSiblings(id, reasonOrEvent, event),
         isTargetWithinTree: (target: EventTarget | null) => tree.actions.isTargetWithinTree(target),
         isTargetWithinBranch: (id: string, target: EventTarget | null) =>
           tree.actions.isTargetWithinBranch(id, target),
@@ -349,11 +307,13 @@ export function useFloatingTreeNode(
     state: node.state,
     actions: {
       close: (event?: Event) => node.actions.close(event),
-      closeBranch: (event?: Event) => node.actions.closeBranch(event),
-      closeChildren: (event?: Event) => node.actions.closeChildren(event),
-      closeSiblings: (event?: Event) => node.actions.closeSiblings(event),
+      closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+        node.actions.closeBranch(reasonOrEvent, event),
+      closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+        node.actions.closeChildren(reasonOrEvent, event),
+      closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) =>
+        node.actions.closeSiblings(reasonOrEvent, event),
       closeWithReason,
-      restoreParentNavigation,
       isTargetWithinNode: (target: EventTarget | null) => node.actions.isTargetWithinNode(target),
       isTargetWithinBranch: (target: EventTarget | null) =>
         node.actions.isTargetWithinBranch(target),

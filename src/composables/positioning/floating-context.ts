@@ -118,10 +118,10 @@ export interface FloatingTreeBridge {
   activeId: Readonly<Ref<string | null>>;
   actions: {
     getNode: (id: string) => FloatingTreeNodeBridge | null;
-    closeBranch: (id: string, event?: Event) => void;
-    closeChildren: (id: string, event?: Event) => void;
-    closeSiblings: (id: string, event?: Event) => void;
-    closeAll: (event?: Event) => void;
+    closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
     isTargetWithinTree: (target: EventTarget | null) => boolean;
     isTargetWithinBranch: (id: string, target: EventTarget | null) => boolean;
   };
@@ -144,11 +144,10 @@ export interface FloatingTreeNodeBridge {
   listNavigation?: FloatingListNavigationBridge;
   actions: {
     close: (event?: Event) => void;
-    closeBranch: (event?: Event) => void;
-    closeChildren: (event?: Event) => void;
-    closeSiblings: (event?: Event) => void;
+    closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
     closeWithReason: (reason: OpenChangeReason, event?: Event) => void;
-    restoreParentNavigation: (event?: Event) => void;
     isTargetWithinNode: (target: EventTarget | null) => boolean;
     isTargetWithinBranch: (target: EventTarget | null) => boolean;
   };

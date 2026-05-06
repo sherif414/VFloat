@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, ref } from "vue";
 import {
-  provideFloatingTree,
-  useCurrentFloatingTree,
   useFloatingTree,
   useFloatingTreeNode,
   type FloatingTree,
@@ -116,6 +114,75 @@ describe("useFloatingTree", () => {
     scope.stop();
   });
 
+  it("does not restore focus for siblings that were already closed", async () => {
+    const scope = effectScope();
+    let childNodeA!: FloatingTreeNode;
+    let childNodeB!: FloatingTreeNode;
+    let childAnchorElB!: HTMLButtonElement;
+
+    scope.run(() => {
+      const tree = useFloatingTree();
+      const rootNode = useFloatingTreeNode(createFloatingContext(true).context, {
+        tree,
+        id: "root",
+      });
+      const childContextA = createFloatingContext(false).context;
+      const childContextB = createFloatingContext(false);
+      childAnchorElB = childContextB.anchorEl;
+
+      childNodeA = useFloatingTreeNode(childContextA, {
+        parent: rootNode,
+        id: "child-a",
+      });
+      childNodeB = useFloatingTreeNode(childContextB.context, {
+        parent: rootNode,
+        id: "child-b",
+      });
+    });
+
+    childNodeA.actions.open();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(childNodeA.context.state.open.value).toBe(true);
+    expect(childNodeB.context.state.open.value).toBe(false);
+    expect(document.activeElement).not.toBe(childAnchorElB);
+
+    scope.stop();
+  });
+
+  it("keeps sibling branches open when the tree disables sibling closing", () => {
+    const scope = effectScope();
+    let childNodeA!: FloatingTreeNode;
+    let childNodeB!: FloatingTreeNode;
+
+    scope.run(() => {
+      const tree = useFloatingTree({
+        closeSiblingsOnOpen: false,
+      });
+      const rootNode = useFloatingTreeNode(createFloatingContext(true).context, {
+        tree,
+        id: "root",
+      });
+
+      childNodeA = useFloatingTreeNode(createFloatingContext(false).context, {
+        parent: rootNode,
+        id: "child-a",
+      });
+      childNodeB = useFloatingTreeNode(createFloatingContext(false).context, {
+        parent: rootNode,
+        id: "child-b",
+      });
+    });
+
+    childNodeA.actions.open();
+    childNodeB.actions.open();
+
+    expect(childNodeA.context.state.open.value).toBe(true);
+    expect(childNodeB.context.state.open.value).toBe(true);
+
+    scope.stop();
+  });
+
   it("closes descendants when a parent closes by default", () => {
     const scope = effectScope();
     let tree!: FloatingTree;
@@ -143,6 +210,94 @@ describe("useFloatingTree", () => {
     expect(rootNode.context.state.open.value).toBe(false);
     expect(childNode.context.state.open.value).toBe(false);
     expect(grandChildNode.context.state.open.value).toBe(false);
+
+    scope.stop();
+  });
+
+  it("keeps descendants open when the tree disables descendant closing", () => {
+    const scope = effectScope();
+    let rootNode!: FloatingTreeNode;
+    let childNode!: FloatingTreeNode;
+
+    scope.run(() => {
+      const tree = useFloatingTree({
+        closeChildrenOnClose: false,
+      });
+
+      rootNode = useFloatingTreeNode(createFloatingContext(true).context, { tree, id: "root" });
+      childNode = useFloatingTreeNode(createFloatingContext(true).context, {
+        parent: rootNode,
+        id: "child",
+      });
+    });
+
+    rootNode.actions.close();
+
+    expect(rootNode.context.state.open.value).toBe(false);
+    expect(childNode.context.state.open.value).toBe(true);
+
+    scope.stop();
+  });
+
+  it("closes descendant branches leaf-first with the initiating reason", () => {
+    const scope = effectScope();
+    let tree!: FloatingTree;
+    let rootNode!: FloatingTreeNode;
+    let childNode!: FloatingTreeNode;
+    let grandChildNode!: FloatingTreeNode;
+
+    scope.run(() => {
+      tree = useFloatingTree();
+
+      rootNode = useFloatingTreeNode(createFloatingContext(true).context, {
+        tree,
+        id: "root",
+      });
+      childNode = useFloatingTreeNode(createFloatingContext(true).context, {
+        parent: rootNode,
+        id: "child",
+      });
+      grandChildNode = useFloatingTreeNode(createFloatingContext(true).context, {
+        parent: childNode,
+        id: "grand-child",
+      });
+    });
+
+    const closeOrder: string[] = [];
+    const rootSetOpen = rootNode.context.state.setOpen;
+    const childSetOpen = childNode.context.state.setOpen;
+    const grandChildSetOpen = grandChildNode.context.state.setOpen;
+
+    const rootSpy = vi.spyOn(rootNode.context.state, "setOpen").mockImplementation((...args) => {
+      if (!args[0]) {
+        closeOrder.push("root");
+      }
+
+      rootSetOpen(...args);
+    });
+    const childSpy = vi.spyOn(childNode.context.state, "setOpen").mockImplementation((...args) => {
+      if (!args[0]) {
+        closeOrder.push("child");
+      }
+
+      childSetOpen(...args);
+    });
+    const grandChildSpy = vi
+      .spyOn(grandChildNode.context.state, "setOpen")
+      .mockImplementation((...args) => {
+        if (!args[0]) {
+          closeOrder.push("grand-child");
+        }
+
+        grandChildSetOpen(...args);
+      });
+
+    tree.actions.closeBranch(rootNode.id.value, "escape-key");
+
+    expect(closeOrder).toEqual(["grand-child", "child", "root"]);
+    expect(rootSpy).toHaveBeenCalledWith(false, "escape-key", undefined);
+    expect(childSpy).toHaveBeenCalledWith(false, "escape-key", undefined);
+    expect(grandChildSpy).toHaveBeenCalledWith(false, "escape-key", undefined);
 
     scope.stop();
   });
@@ -250,40 +405,43 @@ describe("useFloatingTree", () => {
     scope.stop();
   });
 
-  it("warns in development when no tree can be resolved", () => {
+  it("throws when no tree can be resolved", () => {
     const scope = effectScope();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    scope.run(() => {
-      const context = createFloatingContext(false).context;
-      useFloatingTreeNode(context, {
-        id: "orphan",
+    expect(() => {
+      scope.run(() => {
+        const context = createFloatingContext(false).context;
+        useFloatingTreeNode(context, {
+          id: "orphan",
+        });
       });
-    });
-
-    expect(
-      warnSpy.mock.calls.some(([message]) =>
-        String(message).includes("[useFloatingTreeNode] Missing floating tree"),
-      ),
-    ).toBe(true);
+    }).toThrow("[useFloatingTreeNode] Missing floating tree");
 
     scope.stop();
   });
 
-  it("returns the provided tree and exposes null outside injection context", () => {
-    const tree = useFloatingTree({
-      id: "provided-tree",
-    });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("throws when parent and tree belong to different trees", () => {
+    const scope = effectScope();
 
-    expect(provideFloatingTree(tree)).toBe(tree);
-    expect(
-      warnSpy.mock.calls.some(([message]) =>
-        String(message).includes(
-          "[provideFloatingTree] Called without an active injection context",
-        ),
-      ),
-    ).toBe(true);
-    expect(useCurrentFloatingTree()).toBeNull();
+    expect(() => {
+      scope.run(() => {
+        const parentTree = useFloatingTree({ id: "parent-tree" });
+        const childTree = useFloatingTree({ id: "child-tree" });
+        const parentNode = useFloatingTreeNode(createFloatingContext(false).context, {
+          tree: parentTree,
+          id: "parent",
+        });
+
+        useFloatingTreeNode(createFloatingContext(false).context, {
+          tree: childTree,
+          parent: parentNode,
+          id: "child",
+        });
+      });
+    }).toThrow(
+      "[useFloatingTreeNode] Parent and child nodes must belong to the same floating tree",
+    );
+
+    scope.stop();
   });
 });

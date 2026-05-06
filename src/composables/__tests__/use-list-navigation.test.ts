@@ -503,6 +503,25 @@ describe("useListNavigation", () => {
       await flushListNavigation();
       expect(ctx.activeIndex.value).toBe(6);
     });
+
+    it("can include disabled items in APG-style composite navigation", async () => {
+      const ctx = setupListNavigation(
+        {
+          disabledIndices: [1],
+          focusDisabledItems: true,
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        true,
+      );
+      ctx.activeIndex.value = 0;
+
+      dispatchKey(ctx.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(ctx.activeIndex.value).toBe(1);
+      expect(document.activeElement).toBe(ctx.items[1]);
+    });
   });
 
   describe("grid navigation", () => {
@@ -576,6 +595,104 @@ describe("useListNavigation", () => {
       expect(virtualItemRef.value).toBe(ctx.items[2]);
       expect(document.activeElement).not.toBe(ctx.items[2]);
     });
+
+    it("supports container-targeted aria-activedescendant with Home and End navigation", async () => {
+      const virtualItemRef = ref<HTMLElement | null>(null);
+      const activeDescendantEl = ref<HTMLElement | null>(null);
+      const ctx = setupListNavigation(
+        {
+          activeDescendantEl,
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          virtual: true,
+          virtualItemRef,
+        },
+        true,
+      );
+
+      activeDescendantEl.value = ctx.floatingEl;
+      ctx.items.forEach((item, index) => {
+        item.id = `container-option-${index}`;
+      });
+      ctx.activeIndex.value = 2;
+      await flushListNavigation();
+
+      expect(ctx.floatingEl.getAttribute("aria-activedescendant")).toBe("container-option-2");
+      expect(ctx.anchorEl.hasAttribute("aria-activedescendant")).toBe(false);
+
+      dispatchKey(ctx.floatingEl, "End");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(7);
+      expect(ctx.floatingEl.getAttribute("aria-activedescendant")).toBe("container-option-7");
+
+      dispatchKey(ctx.floatingEl, "Home");
+      await flushListNavigation();
+      expect(ctx.activeIndex.value).toBe(0);
+      expect(virtualItemRef.value).toBe(ctx.items[0]);
+    });
+
+    it("leaves Home and End to the anchor by default in input-style virtual focus", async () => {
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          virtual: true,
+        },
+        true,
+      );
+      ctx.activeIndex.value = 2;
+
+      dispatchKey(ctx.floatingEl, "End");
+      await flushListNavigation();
+
+      expect(ctx.activeIndex.value).toBe(2);
+    });
+  });
+
+  describe("focus strategy", () => {
+    it("syncs roving tabindex in DOM-focus mode", async () => {
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        true,
+      );
+
+      ctx.activeIndex.value = 2;
+      await flushListNavigation();
+
+      expect(ctx.items[0].getAttribute("tabindex")).toBe("-1");
+      expect(ctx.items[2].getAttribute("tabindex")).toBe("0");
+      expect(ctx.items[3].getAttribute("tabindex")).toBe("-1");
+
+      ctx.activeIndex.value = 3;
+      await flushListNavigation();
+
+      expect(ctx.items[2].getAttribute("tabindex")).toBe("-1");
+      expect(ctx.items[3].getAttribute("tabindex")).toBe("0");
+
+      ctx.result.cleanup();
+
+      expect(ctx.items[2].hasAttribute("tabindex")).toBe(false);
+      expect(ctx.items[3].hasAttribute("tabindex")).toBe(false);
+    });
+
+    it("does not apply roving tabindex in virtual focus mode", async () => {
+      const ctx = setupListNavigation(
+        {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+          virtual: true,
+        },
+        true,
+      );
+
+      ctx.activeIndex.value = 2;
+      await flushListNavigation();
+
+      expect(ctx.items[2].hasAttribute("tabindex")).toBe(false);
+    });
   });
 
   describe("hover behavior", () => {
@@ -645,6 +762,145 @@ describe("useListNavigation", () => {
 
       expect(child.context.state.open.value).toBe(true);
       expect(document.activeElement).toBe(child.items[0]);
+    });
+
+    it("opens child branches with Enter and Space from the parent item", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-activation-key",
+        },
+        childOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-activation-key",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      root.activeIndex.value = 1;
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "Enter");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(document.activeElement).toBe(child.items[0]);
+
+      child.context.state.setOpen(false, "programmatic");
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, " ");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(document.activeElement).toBe(child.items[0]);
+    });
+
+    it("does not open disabled child branches when disabled items are focusable", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-disabled-activation",
+        },
+        childOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-disabled-activation",
+        },
+        rootOptions: {
+          disabledIndices: [1],
+          focusDisabledItems: true,
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      root.activeIndex.value = 1;
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "Enter");
+      await flushListNavigation();
+
+      expect(document.activeElement).toBe(root.items[1]);
+      expect(child.context.state.open.value).toBe(false);
+    });
+
+    it("closes stale child branches when hover navigation moves the parent active item away", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-hover-stale",
+        },
+        childOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-hover-stale",
+        },
+        rootOptions: {
+          focusItemOnHover: true,
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      root.activeIndex.value = 1;
+      root.items[1].focus();
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "ArrowRight");
+      await flushListNavigation();
+      expect(child.context.state.open.value).toBe(true);
+
+      root.items[0].dispatchEvent(
+        new MouseEvent("mousemove", { bubbles: true, clientX: 10, clientY: 10 }),
+      );
+      await flushListNavigation();
+
+      expect(root.activeIndex.value).toBe(0);
+      expect(child.context.state.open.value).toBe(false);
+      expect(document.activeElement).toBe(root.items[0]);
+    });
+
+    it("closes the whole tree on Tab without preventing page focus movement", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: true,
+        childNodeOptions: {
+          id: "child-tab-close",
+        },
+        childOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-tab-close",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      const event = new KeyboardEvent("keydown", { bubbles: true, key: "Tab" });
+      child.floatingEl.dispatchEvent(event);
+      await flushListNavigation();
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(child.context.state.open.value).toBe(false);
+      expect(root.context.state.open.value).toBe(false);
     });
 
     it("restores DOM focus to the submenu trigger on backward close in non-virtual mode", async () => {
@@ -1076,6 +1332,58 @@ describe("useListNavigation", () => {
 
       expect(child.context.state.open.value).toBe(false);
       expect(root.activeIndex.value).toBe(1);
+    });
+
+    it("refocuses an already-active child item when reopening a nested branch", async () => {
+      const { root, child } = setupTreeListNavigation({
+        childInitialOpen: false,
+        childNodeOptions: {
+          id: "child-reopen-refocus",
+        },
+        childOptions: {
+          focusItemOnOpen: true,
+          orientation: "vertical",
+        },
+        rootInitialOpen: true,
+        rootNodeOptions: {
+          id: "root-reopen-refocus",
+        },
+        rootOptions: {
+          focusItemOnOpen: false,
+          orientation: "vertical",
+        },
+      });
+
+      root.activeIndex.value = 1;
+      root.items[1].focus();
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "ArrowRight");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(document.activeElement).toBe(child.items[0]);
+
+      dispatchKey(child.floatingEl, "ArrowLeft");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(false);
+      root.items[1].focus();
+      await flushListNavigation();
+
+      dispatchKey(root.floatingEl, "ArrowRight");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(child.activeIndex.value).toBe(0);
+      expect(document.activeElement).toBe(child.items[0]);
+
+      dispatchKey(child.floatingEl, "ArrowDown");
+      await flushListNavigation();
+
+      expect(child.context.state.open.value).toBe(true);
+      expect(child.activeIndex.value).toBe(1);
+      expect(document.activeElement).toBe(child.items[1]);
     });
 
     it("uses ArrowDown and ArrowUp for horizontal parent and child branches", async () => {

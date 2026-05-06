@@ -11,6 +11,7 @@ import {
 import {
   type FloatingContext,
   getFloatingInternals,
+  type FloatingTreeNodeBridge,
   patchFloatingInternals,
 } from "@/composables/positioning/floating-context";
 import { isTypeableElement } from "@/shared/dom";
@@ -27,6 +28,8 @@ import {
   type StrategyContext,
 } from "./list-navigation/strategies";
 import type { FloatingTreeNode } from "./use-floating-tree-node";
+
+type TreeNavigationNode = FloatingTreeNode | FloatingTreeNodeBridge;
 
 // ============================================================================
 // List Navigation Composable
@@ -74,10 +77,17 @@ export interface UseListNavigationOptions {
   orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
 
   /**
-   * Indices that should be treated as disabled and skipped by navigation.
+   * Indices that should be treated as disabled.
    * Can be an array of indices or a predicate.
    */
   disabledIndices?: Array<number> | ((index: number) => boolean);
+
+  /**
+   * If true, disabled items can still receive focus during navigation.
+   * This matches APG-style menu behavior where disabled commands are announced
+   * but cannot be activated by the consumer's item handlers.
+   */
+  focusDisabledItems?: MaybeRefOrGetter<boolean>;
 
   /**
    * If true, hovering an item moves the active index to that item.
@@ -137,6 +147,19 @@ export interface UseListNavigationOptions {
   virtual?: MaybeRefOrGetter<boolean>;
 
   /**
+   * Element that receives `aria-activedescendant` in virtual focus mode.
+   * Defaults to the anchor element, which is useful for combobox-like inputs.
+   * Pass the floating element for container-focus menus, listboxes, grids, or trees.
+   */
+  activeDescendantEl?: MaybeRefOrGetter<HTMLElement | null | undefined>;
+
+  /**
+   * Whether Home/End should move to the first/last item.
+   * Defaults to true for roving focus and for virtual focus when `activeDescendantEl` is provided.
+   */
+  handleHomeEndKeys?: MaybeRefOrGetter<boolean>;
+
+  /**
    * Receives the HTMLElement corresponding to the virtual active item.
    * Used for aria-activedescendant and screen reader announcement.
    */
@@ -151,6 +174,12 @@ export interface UseListNavigationOptions {
    * If true, allows escaping to a null active index via keyboard (e.g., ArrowDown on last).
    */
   allowEscape?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, Tab and Shift+Tab close the current floating tree/list without preventing page focus movement.
+   * @default true
+   */
+  closeOnTab?: MaybeRefOrGetter<boolean>;
 
   /**
    * Defines the wrapping behavior for grid navigation when moving horizontally past the end of a row.
@@ -199,6 +228,7 @@ export function useListNavigation(
     loop = false,
     orientation = "vertical",
     disabledIndices,
+    focusDisabledItems = false,
     focusItemOnHover = true,
     openOnArrowKeyDown = true,
     scrollItemIntoView = true,
@@ -210,6 +240,7 @@ export function useListNavigation(
     virtualItemRef,
     cols = 1,
     allowEscape = false,
+    closeOnTab = true,
   } = options;
 
   // --------------------------------------------------------------------------
@@ -229,8 +260,18 @@ export function useListNavigation(
   });
   const floatingEl = computed(() => refs.floatingEl.value);
   const isVirtual = computed(() => !!toValue(virtual));
+  const activeDescendantEl = computed(() => toValue(options.activeDescendantEl) ?? anchorEl.value);
   const isRtl = computed(() => !!toValue(rtl));
   const gridCols = computed(() => Math.max(1, Number(toValue(cols) ?? 1)));
+  const canFocusDisabledItems = computed(() => !!toValue(focusDisabledItems));
+  const shouldHandleHomeEndKeys = computed(() => {
+    const explicitValue = toValue(options.handleHomeEndKeys);
+    if (explicitValue != null) {
+      return explicitValue;
+    }
+
+    return !isVirtual.value || toValue(options.activeDescendantEl) != null;
+  });
   const isNestedTreeAnchorWithinParentBranch = () => {
     const currentAnchorEl = anchorEl.value;
     const parentNode = tree.parentNode;
@@ -265,20 +306,20 @@ export function useListNavigation(
     return Array.isArray(disabledIndices) ? disabledIndices.includes(idx) : !!disabledIndices(idx);
   };
 
-  const isNavigableIndex = (idx: number | null): idx is number => {
+  const isFocusableIndex = (idx: number | null): boolean => {
     return (
       idx != null &&
       idx >= 0 &&
       idx < listRef.value.length &&
       !!listRef.value[idx] &&
-      !isDisabled(idx)
+      (canFocusDisabledItems.value || !isDisabled(idx))
     );
   };
 
   const getFirstEnabledIndex = (): number | null => {
     const items = listRef.value;
     for (let i = 0; i < items.length; i++) {
-      if (items[i] && !isDisabled(i)) return i;
+      if (isFocusableIndex(i)) return i;
     }
     return null;
   };
@@ -286,14 +327,14 @@ export function useListNavigation(
   const getLastEnabledIndex = (): number | null => {
     const items = listRef.value;
     for (let i = items.length - 1; i >= 0; i--) {
-      if (items[i] && !isDisabled(i)) return i;
+      if (isFocusableIndex(i)) return i;
     }
     return null;
   };
 
   const getSelectedEnabledIndex = (): number | null => {
     const idx = selectedIndex !== undefined ? toValue(selectedIndex) : null;
-    return isNavigableIndex(idx) ? idx : null;
+    return isFocusableIndex(idx) ? idx : null;
   };
 
   const resolveInitialOpenIndex = (key: string | null): number | null => {
@@ -316,7 +357,7 @@ export function useListNavigation(
         if (!wrap) return null;
         i = (i + len) % len;
       }
-      if (items[i] && !isDisabled(i)) return i;
+      if (isFocusableIndex(i)) return i;
       i += dir;
     }
     return null;
@@ -344,6 +385,17 @@ export function useListNavigation(
     });
 
     return getFloatingInternals(context as object)?.treeNode ?? null;
+  };
+
+  const restoreParentListNavigation = () => {
+    const returnIndex = treeNodeReturnIndexBridge.value;
+    const parentNode = tree.parentNode;
+
+    if (returnIndex == null || !parentNode?.context.state.open.value) {
+      return;
+    }
+
+    parentNode.listNavigation?.onNavigate?.(returnIndex);
   };
 
   const ensureChildListNavigationBridge = (childNode: FloatingTreeNode | null, index: number) => {
@@ -375,6 +427,101 @@ export function useListNavigation(
     return getFloatingInternals(childNode.context as object)?.treeNode ?? null;
   };
 
+  const isTreeNodeWithinBranch = (
+    candidateNode: TreeNavigationNode | null,
+    branchRootNode: TreeNavigationNode | null,
+  ) => {
+    const floatingTree = tree.tree;
+    if (!candidateNode || !branchRootNode || !floatingTree) {
+      return false;
+    }
+
+    const visited = new Set<string>();
+    let currentNode: TreeNavigationNode | null = candidateNode;
+
+    while (currentNode) {
+      const currentId = currentNode.id.value;
+      if (currentId === branchRootNode.id.value) {
+        return true;
+      }
+
+      if (visited.has(currentId)) {
+        return false;
+      }
+
+      visited.add(currentId);
+
+      const parentId: string | null = currentNode.parentId.value;
+      currentNode = parentId ? floatingTree.actions.getNode(parentId) : null;
+    }
+
+    return false;
+  };
+
+  const clearDescendantReturnIndexes = (branchRootNode: TreeNavigationNode) => {
+    const floatingTree = tree.tree;
+    if (!floatingTree) {
+      return;
+    }
+
+    const visited = new Set<string>();
+
+    const visit = (node: TreeNavigationNode) => {
+      const nodeId = node.id.value;
+      if (visited.has(nodeId)) {
+        return;
+      }
+
+      visited.add(nodeId);
+
+      for (const childId of node.childIds.value) {
+        const childNode = floatingTree.actions.getNode(childId);
+        if (!childNode) {
+          continue;
+        }
+
+        const returnIndex = childNode.listNavigation?.returnIndex;
+        if (returnIndex) {
+          returnIndex.value = null;
+        }
+
+        visit(childNode);
+      }
+    };
+
+    visit(branchRootNode);
+  };
+
+  const closeStaleChildBranchesForNavigation = (nextIndex: number | null, event?: Event) => {
+    const currentNode = tree.treeNode;
+    const activeNode = tree.activeNode;
+
+    if (!currentNode || !activeNode || activeNode.id.value === currentNode.id.value) {
+      return;
+    }
+
+    if (!isTreeNodeWithinBranch(activeNode, currentNode)) {
+      return;
+    }
+
+    const nextChildNode =
+      nextIndex == null
+        ? null
+        : ensureChildListNavigationBridge(options.getChildNode?.(nextIndex) ?? null, nextIndex);
+
+    if (nextChildNode && isTreeNodeWithinBranch(activeNode, nextChildNode)) {
+      return;
+    }
+
+    clearDescendantReturnIndexes(currentNode);
+    tree.closeCurrentChildren("programmatic", event);
+  };
+
+  const navigate = (index: number | null, event?: Event) => {
+    closeStaleChildBranchesForNavigation(index, event);
+    onNavigate?.(index);
+  };
+
   const openChildNode = (childNode: FloatingTreeNode, index: number, event?: Event) => {
     ensureChildListNavigationBridge(childNode, index);
     childNode.context.state.setOpen(true, "keyboard-activate", event);
@@ -402,6 +549,34 @@ export function useListNavigation(
         typeof opts === "boolean" ? { block: "nearest", inline: "nearest" } : opts,
       );
     }
+  };
+
+  const restoreManagedAttributes = (
+    attributes: Array<{ attribute: string; el: HTMLElement; previousValue: string | null }>,
+  ) => {
+    for (const { attribute, el, previousValue } of [...attributes].reverse()) {
+      if (previousValue == null) {
+        el.removeAttribute(attribute);
+      } else {
+        el.setAttribute(attribute, previousValue);
+      }
+    }
+
+    attributes.length = 0;
+  };
+
+  const setManagedAttribute = (
+    attributes: Array<{ attribute: string; el: HTMLElement; previousValue: string | null }>,
+    el: HTMLElement,
+    attribute: string,
+    value: string,
+  ) => {
+    attributes.push({
+      attribute,
+      el,
+      previousValue: el.getAttribute(attribute),
+    });
+    el.setAttribute(attribute, value);
   };
 
   // --------------------------------------------------------------------------
@@ -452,27 +627,39 @@ export function useListNavigation(
 
     const key = e.key;
     const ori = toValue(orientation);
+    if (key === "Tab" && open.value && toValue(closeOnTab)) {
+      if (tree.tree) {
+        tree.tree.actions.closeAll("programmatic", e);
+      } else {
+        setOpen(false, "programmatic", e);
+      }
+      return;
+    }
+
     const items = listRef.value;
     if (!items.length) return;
     const currentIndex = getActiveIndex();
 
-    // Handle Home/End (skip in virtual mode to allow text cursor navigation)
-    if (!isVirtual.value) {
+    if (shouldHandleHomeEndKeys.value) {
       if (key === "Home") {
         e.preventDefault();
         const idx = getFirstEnabledIndex();
-        if (idx != null) onNavigate?.(idx);
+        if (idx != null) navigate(idx, e);
         return;
       }
       if (key === "End") {
         e.preventDefault();
         const idx = getLastEnabledIndex();
-        if (idx != null) onNavigate?.(idx);
+        if (idx != null) navigate(idx, e);
         return;
       }
     }
 
-    if (currentIndex != null && isTreeChildOpenKey(key, ori, isRtl.value)) {
+    if (
+      currentIndex != null &&
+      !isDisabled(currentIndex) &&
+      (isTreeChildOpenKey(key, ori, isRtl.value) || key === "Enter" || key === " ")
+    ) {
       const childNode = options.getChildNode?.(currentIndex) ?? null;
       if (childNode) {
         e.preventDefault();
@@ -498,7 +685,7 @@ export function useListNavigation(
       isVirtual: isVirtual.value,
       cols: gridCols.value,
       nested: isNested(),
-      isDisabled,
+      isDisabled: (index: number) => !isFocusableIndex(index),
       findNextEnabled,
       getFirstEnabledIndex,
       getLastEnabledIndex,
@@ -510,7 +697,7 @@ export function useListNavigation(
     e.preventDefault();
 
     if (result.type === "navigate") {
-      onNavigate?.(result.index);
+      navigate(result.index, e);
       const nextIndex = result.index;
       if (nextIndex == null) {
         pendingChildOpen = null;
@@ -543,6 +730,54 @@ export function useListNavigation(
   // --------------------------------------------------------------------------
   // Watchers & Event Listeners
   // --------------------------------------------------------------------------
+
+  registerCleanup(
+    watchPostEffect(() => {
+      const managedAttributes: Array<{
+        attribute: string;
+        el: HTMLElement;
+        previousValue: string | null;
+      }> = [];
+
+      onWatcherCleanup(() => {
+        restoreManagedAttributes(managedAttributes);
+      });
+
+      if (!isEnabled.value || !open.value || isVirtual.value) {
+        return;
+      }
+
+      const activeIndexValue = getActiveIndex();
+
+      for (let index = 0; index < listRef.value.length; index++) {
+        const itemEl = listRef.value[index];
+        if (!itemEl) {
+          continue;
+        }
+
+        setManagedAttribute(
+          managedAttributes,
+          itemEl,
+          "tabindex",
+          index === activeIndexValue ? "0" : "-1",
+        );
+      }
+    }),
+  );
+
+  registerCleanup(
+    watch(
+      [open, currentActiveIndex],
+      ([isOpen, idx], [wasOpen, previousIndex]) => {
+        if (!isEnabled.value || !isOpen || !wasOpen || idx === previousIndex) {
+          return;
+        }
+
+        closeStaleChildBranchesForNavigation(idx);
+      },
+      { flush: "pre" },
+    ),
+  );
 
   // Focus active item when it changes
   registerCleanup(
@@ -632,7 +867,7 @@ export function useListNavigation(
         if (!target) return;
 
         const idx = findItemIndexFromTarget(target);
-        if (idx >= 0 && !isDisabled(idx)) onNavigate?.(idx);
+        if (isFocusableIndex(idx)) navigate(idx, evt);
       };
 
       container.addEventListener("mousemove", onMove);
@@ -656,6 +891,7 @@ export function useListNavigation(
         }
 
         if (!isOpen) {
+          restoreParentListNavigation();
           clearOpenCycleState();
           treeNodeReturnIndexBridge.value = null;
           treeNodeOpenedByTreeBridge.value = false;
@@ -687,12 +923,20 @@ export function useListNavigation(
 
         const idx = resolveInitialOpenIndex(currentOpenIntent?.key ?? null);
         if (idx != null) {
+          const previousIndex = getActiveIndex();
           pendingOpenNavigation = {
-            previousIndex: getActiveIndex(),
+            previousIndex,
             requestedIndex: idx,
             shouldFocus,
           };
           onNavigate?.(idx);
+
+          if (idx === previousIndex) {
+            pendingOpenNavigation = null;
+            if (shouldFocus) {
+              focusItem(idx, true);
+            }
+          }
         } else {
           pendingOpenNavigation = null;
         }
@@ -718,7 +962,7 @@ export function useListNavigation(
   // --------------------------------------------------------------------------
 
   const { activeItem, cleanup: cleanupActiveDescendant } = useActiveDescendant(
-    anchorEl,
+    activeDescendantEl,
     listRef,
     currentActiveIndex,
     { virtual, open },
