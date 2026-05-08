@@ -3,10 +3,9 @@ import { computed, type MaybeRefOrGetter, ref, toValue } from "vue";
 import type { FloatingMiddlewareRegistry } from "../floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 
-type MiddlewareRegistration = {
-  id: number;
-  middleware: MaybeRefOrGetter<Middleware | null | undefined>;
-};
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Merges base middleware passed to `useFloating()` with middleware registered
@@ -66,3 +65,12 @@ export function createMiddlewareRegistry(
     register,
   };
 }
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+type MiddlewareRegistration = {
+  id: number;
+  middleware: MaybeRefOrGetter<Middleware | null | undefined>;
+};

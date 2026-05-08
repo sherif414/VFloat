@@ -6,6 +6,10 @@ import type {
   VirtualElementFactoryOptions,
 } from "./types";
 
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
+
 /**
  * Creates Floating UI compatible virtual elements from pointer coordinates.
  */

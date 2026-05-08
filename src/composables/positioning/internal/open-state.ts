@@ -1,13 +1,9 @@
 import { type Ref, ref } from "vue";
 import type { OpenChangeReason } from "@/types";
 
-/**
- * Options for creating the open-state controller.
- */
-export interface OpenStateControllerOptions {
-  open?: Ref<boolean>;
-  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Normalizes controlled and uncontrolled open state into one small interface.
@@ -28,4 +24,16 @@ export function createOpenStateController(options: OpenStateControllerOptions = 
     open,
     setOpen,
   };
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for creating the open-state controller.
+ */
+export interface OpenStateControllerOptions {
+  open?: Ref<boolean>;
+  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 }

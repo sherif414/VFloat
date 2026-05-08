@@ -6,114 +6,7 @@ import { type SafePolygonOptions, safePolygon } from "./polygon";
 import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
-// 📌 Types & Interfaces
-//=======================================================================================
-
-export interface UseHoverOptions {
-  /**
-   * Whether hover event listeners are enabled.
-   * @default true
-   */
-  enabled?: MaybeRef<boolean>;
-
-  /**
-   * Delay in milliseconds before showing/hiding the floating element.
-   * Can be a single number for both open and close, or an object
-   * specifying different delays.
-   * @default 0
-   */
-  delay?: MaybeRef<number | { open?: number; close?: number }>;
-
-  /**
-   * Time in milliseconds the pointer must rest within the reference
-   * element before opening the floating element.
-   * this option is ignored if an open delay is specified.
-   * @default 0
-   */
-  restMs?: MaybeRef<number>;
-
-  /**
-   * Whether hover events should only trigger for mouse like pointers (mouse, pen ,stylus ..etc).
-   * @default false
-   */
-  mouseOnly?: MaybeRef<boolean>;
-
-  /**
-   * Enable floating-ui style safe polygon algorithm that keeps the
-   * floating element open while the pointer traverses the rectangle/triangle
-   * region between the reference and floating elements.
-   * – `true` → enabled with defaults
-   * – `false | undefined` → disabled (current behaviour)
-   * – `SafePolygonOptions` → enabled with custom buffer
-   */
-  safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
-}
-
-//=======================================================================================
-// 📌 Constants
-//=======================================================================================
-
-const POINTER_MOVE_THRESHOLD = 10; // Threshold in pixels for movement detection
-
-//=======================================================================================
-// 📌 Helper Functions
-//=======================================================================================
-
-interface UseDelayedOpenOptions {
-  delay: MaybeRef<number | { open?: number; close?: number }>;
-}
-
-function useDelayedOpen(
-  show: (event?: Event) => void,
-  hide: (event?: Event) => void,
-  options: UseDelayedOpenOptions,
-) {
-  const { delay } = options;
-
-  const showDelay = computed<number>(() => {
-    const delayVal = toValue(delay);
-    return (typeof delayVal === "number" ? delayVal : delayVal.open) ?? 0;
-  });
-  const hideDelay = computed<number>(() => {
-    const delayVal = toValue(delay);
-    return (typeof delayVal === "number" ? delayVal : delayVal.close) ?? 0;
-  });
-
-  let showTimeoutID: ReturnType<typeof setTimeout> | undefined;
-  let hideTimeoutID: ReturnType<typeof setTimeout> | undefined;
-
-  const clearTimeouts = () => {
-    clearTimeout(showTimeoutID);
-    clearTimeout(hideTimeoutID);
-  };
-
-  tryOnScopeDispose(clearTimeouts);
-
-  return {
-    show: (overrideDelay?: number, event?: Event) => {
-      clearTimeouts();
-      const resolvedDelay = overrideDelay ?? showDelay.value;
-
-      if (resolvedDelay === 0) show(event);
-      else showTimeoutID = setTimeout(() => show(event), resolvedDelay);
-    },
-
-    hide: (overrideDelay?: number, event?: Event) => {
-      clearTimeouts();
-      const resolvedDelay = overrideDelay ?? hideDelay.value;
-
-      if (resolvedDelay === 0) hide(event);
-      else hideTimeoutID = setTimeout(() => hide(event), resolvedDelay);
-    },
-
-    showDelay,
-    hideDelay,
-    clearTimeouts,
-  };
-}
-
-//=======================================================================================
-// 📌 Main Logic
+// 📌 Main
 //=======================================================================================
 
 /**
@@ -172,9 +65,9 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     { delay },
   );
 
-  //-------------------------
+  //=====================================================================================
   // Rest Detection
-  //-------------------------
+  //=====================================================================================
 
   let restCoords: Coords | null = null;
   let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -228,9 +121,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     clearTimeout(restTimeoutId);
   });
 
-  //-------------------------
+  //=====================================================================================
   // General Event Handlers
-  //-------------------------
+  //=====================================================================================
+
   function isValidPointerType(e: PointerEvent): boolean {
     if (toValue(mouseOnly)) {
       // When mouseOnly is true, only accept actual mouse events
@@ -324,6 +218,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     }
   }
 
+  //=====================================================================================
+  // Wiring
+  //=====================================================================================
+
   watchPostEffect(() => {
     const el = reference.value;
     if (!el || !enabled.value) return;
@@ -353,4 +251,106 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   tryOnScopeDispose(() => {
     cleanupPolygon();
   });
+}
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+const POINTER_MOVE_THRESHOLD = 10; // Threshold in pixels for movement detection
+
+function useDelayedOpen(
+  show: (event?: Event) => void,
+  hide: (event?: Event) => void,
+  options: UseDelayedOpenOptions,
+) {
+  const { delay } = options;
+
+  const showDelay = computed<number>(() => {
+    const delayVal = toValue(delay);
+    return (typeof delayVal === "number" ? delayVal : delayVal.open) ?? 0;
+  });
+  const hideDelay = computed<number>(() => {
+    const delayVal = toValue(delay);
+    return (typeof delayVal === "number" ? delayVal : delayVal.close) ?? 0;
+  });
+
+  let showTimeoutID: ReturnType<typeof setTimeout> | undefined;
+  let hideTimeoutID: ReturnType<typeof setTimeout> | undefined;
+
+  const clearTimeouts = () => {
+    clearTimeout(showTimeoutID);
+    clearTimeout(hideTimeoutID);
+  };
+
+  tryOnScopeDispose(clearTimeouts);
+
+  return {
+    show: (overrideDelay?: number, event?: Event) => {
+      clearTimeouts();
+      const resolvedDelay = overrideDelay ?? showDelay.value;
+
+      if (resolvedDelay === 0) show(event);
+      else showTimeoutID = setTimeout(() => show(event), resolvedDelay);
+    },
+
+    hide: (overrideDelay?: number, event?: Event) => {
+      clearTimeouts();
+      const resolvedDelay = overrideDelay ?? hideDelay.value;
+
+      if (resolvedDelay === 0) hide(event);
+      else hideTimeoutID = setTimeout(() => hide(event), resolvedDelay);
+    },
+
+    showDelay,
+    hideDelay,
+    clearTimeouts,
+  };
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+export interface UseHoverOptions {
+  /**
+   * Whether hover event listeners are enabled.
+   * @default true
+   */
+  enabled?: MaybeRef<boolean>;
+
+  /**
+   * Delay in milliseconds before showing/hiding the floating element.
+   * Can be a single number for both open and close, or an object
+   * specifying different delays.
+   * @default 0
+   */
+  delay?: MaybeRef<number | { open?: number; close?: number }>;
+
+  /**
+   * Time in milliseconds the pointer must rest within the reference
+   * element before opening the floating element.
+   * this option is ignored if an open delay is specified.
+   * @default 0
+   */
+  restMs?: MaybeRef<number>;
+
+  /**
+   * Whether hover events should only trigger for mouse like pointers (mouse, pen ,stylus ..etc).
+   * @default false
+   */
+  mouseOnly?: MaybeRef<boolean>;
+
+  /**
+   * Enable floating-ui style safe polygon algorithm that keeps the
+   * floating element open while the pointer traverses the rectangle/triangle
+   * region between the reference and floating elements.
+   * – `true` → enabled with defaults
+   * – `false | undefined` → disabled (current behaviour)
+   * – `SafePolygonOptions` → enabled with custom buffer
+   */
+  safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
+}
+
+interface UseDelayedOpenOptions {
+  delay: MaybeRef<number | { open?: number; close?: number }>;
 }

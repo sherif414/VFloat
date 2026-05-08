@@ -1,11 +1,37 @@
 import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue";
 import { useEventListener } from "@/shared/use-event-listener";
 
-interface CompositionState {
-  scope: ReturnType<typeof effectScope>;
-  isComposing: Ref<boolean>;
-  consumers: number;
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
+
+/**
+ * Exposes whether the user is currently composing text through an IME.
+ */
+export function useComposition() {
+  const state = getSharedCompositionState();
+
+  state.consumers += 1;
+
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      state.consumers -= 1;
+
+      if (state.consumers <= 0) {
+        state.scope.stop();
+        sharedCompositionState = undefined;
+      }
+    });
+  }
+
+  return {
+    isComposing: state.isComposing,
+  };
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 let sharedCompositionState: CompositionState | undefined;
 
@@ -36,26 +62,12 @@ function getSharedCompositionState(): CompositionState {
   return sharedCompositionState;
 }
 
-/**
- * Exposes whether the user is currently composing text through an IME.
- */
-export function useComposition() {
-  const state = getSharedCompositionState();
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
 
-  state.consumers += 1;
-
-  if (getCurrentScope()) {
-    onScopeDispose(() => {
-      state.consumers -= 1;
-
-      if (state.consumers <= 0) {
-        state.scope.stop();
-        sharedCompositionState = undefined;
-      }
-    });
-  }
-
-  return {
-    isComposing: state.isComposing,
-  };
+interface CompositionState {
+  scope: ReturnType<typeof effectScope>;
+  isComposing: Ref<boolean>;
+  consumers: number;
 }

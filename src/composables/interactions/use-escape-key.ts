@@ -4,55 +4,9 @@ import { type FloatingContext } from "@/composables/positioning/floating-context
 import { useEventListener } from "@/shared/use-event-listener";
 import { resolveTreeInteraction } from "./internal/tree-interaction";
 
-const TREE_ESCAPE_HANDLED = Symbol("vfloat-tree-escape-handled");
-
-type TreeEscapeEvent = KeyboardEvent & {
-  [TREE_ESCAPE_HANDLED]?: boolean;
-};
-
-// =======================================================================================
-// 📌 Types
-// =======================================================================================
-
-/**
- * Context required by `useEscapeKey`.
- */
-export interface UseEscapeKeyContext {
-  /**
-   * The floating state that should respond to Escape.
-   */
-  state: FloatingContext["state"];
-}
-
-export interface UseEscapeKeyOptions {
-  /**
-   * Condition to enable the escape key listener.
-   * @default true
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether to use capture phase for document event listeners.
-   * @default false
-   */
-  capture?: boolean;
-
-  /**
-   * Whether to call preventDefault on the escape key event before handling it.
-   * @default false
-   */
-  preventDefault?: boolean;
-
-  /**
-   * Custom callback function to be executed when the escape key is pressed.
-   * When provided, overrides default behavior.
-   */
-  onEscape?: (event: KeyboardEvent) => void;
-}
-
-// =======================================================================================
-// 📌 Composition
-// =======================================================================================
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * A composable to handle the escape key press with composition event handling.
@@ -147,4 +101,54 @@ export function useEscapeKey(
 
   // Event listener setup
   useEventListener(document, "keydown", handleEscape, capture);
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+const TREE_ESCAPE_HANDLED = Symbol("vfloat-tree-escape-handled");
+
+type TreeEscapeEvent = KeyboardEvent & {
+  [TREE_ESCAPE_HANDLED]?: boolean;
+};
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Context required by `useEscapeKey`.
+ */
+export interface UseEscapeKeyContext {
+  /**
+   * The floating state that should respond to Escape.
+   */
+  state: FloatingContext["state"];
+}
+
+export interface UseEscapeKeyOptions {
+  /**
+   * Condition to enable the escape key listener.
+   * @default true
+   */
+  enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether to use capture phase for document event listeners.
+   * @default false
+   */
+  capture?: boolean;
+
+  /**
+   * Whether to call preventDefault on the escape key event before handling it.
+   * @default false
+   */
+  preventDefault?: boolean;
+
+  /**
+   * Custom callback function to be executed when the escape key is pressed.
+   * When provided, overrides default behavior.
+   */
+  onEscape?: (event: KeyboardEvent) => void;
 }

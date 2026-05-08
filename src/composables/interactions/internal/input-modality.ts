@@ -1,6 +1,19 @@
 import { readonly, ref } from "vue";
 
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
+
 const mutableRef = ref(false);
+
+/**
+ * Shared signal describing the user's latest input modality.
+ */
+export const isUsingKeyboard = readonly(mutableRef);
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 if (typeof window !== "undefined") {
   const options = { capture: true };
@@ -22,7 +35,6 @@ if (typeof window !== "undefined") {
   switchToPointer();
 }
 
-/**
- * Shared signal describing the user's latest input modality.
- */
-export const isUsingKeyboard = readonly(mutableRef);
+//=======================================================================================
+// 📌 Types
+//=======================================================================================

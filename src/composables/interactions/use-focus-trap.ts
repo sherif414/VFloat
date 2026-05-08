@@ -14,129 +14,7 @@ import type { OpenChangeReason } from "@/types";
 import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-/**
- * Context required by `useFocusTrap`.
- */
-export interface UseFocusTrapContext {
-  /**
-   * The floating refs that expose the trap container.
-   */
-  refs: FloatingContext["refs"];
-  /**
-   * The floating state and open-state mutators.
-   */
-  state: FloatingContext["state"];
-}
-
-/**
- * Options that control how the focus trap behaves while the floating surface is open.
- */
-export interface UseFocusTrapOptions {
-  /**
-   * Determines if the focus trap should be enabled.
-   * When `true`, the focus trap is active.
-   * @default true
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-  /**
-   * When `true`, content outside the trap will be hidden from accessibility
-   * trees (via `aria-hidden`) and potentially made inert (via `inert` attribute
-   * if `outsideElementsInert` is `true` and supported).
-   * This mimics modal behavior.
-   * @default false
-   */
-  modal?: MaybeRefOrGetter<boolean>;
-  /**
-   * Specifies the element that should receive initial focus when the trap is activated.
-   * - `undefined` or omitted: Focuses the first tabbable element within the trap.
-   * - CSS selector string: Queries and focuses the first matching element.
-   * - `HTMLElement`: Focuses the specific provided HTML element.
-   * - `Function`: A function that returns an `HTMLElement` or `false`. The returned
-   *   element will receive focus.
-   * - `false`: Prevents any initial focus from being set by the trap.
-   */
-  initialFocus?: HTMLElement | (() => HTMLElement | false) | string | false;
-  /**
-   * When `true`, focus will be returned to the element that was focused
-   * immediately before the trap was activated, upon deactivation.
-   * @default true
-   */
-  returnFocus?: MaybeRefOrGetter<boolean>;
-  /**
-   * When `true` and the trap is not `modal`, the trap will deactivate (and potentially close
-   * the associated component) if focus moves outside the defined trap elements.
-   * @default false
-   */
-  closeOnFocusOut?: MaybeRefOrGetter<boolean>;
-  /**
-   * Controls whether the browser should scroll to the focused element.
-   * Passed directly to the `focus()` method's `preventScroll` option.
-   * @default true
-   */
-  preventScroll?: MaybeRefOrGetter<boolean>;
-  /**
-   * When `true` and `modal` is `true`, applies the `inert` attribute (if supported
-   * by the browser) to elements outside the focus trap to prevent user interaction
-   * and assistive technology access.
-   * @default false
-   */
-  outsideElementsInert?: MaybeRefOrGetter<boolean>;
-  /**
-   * An optional error handler function that will be called if there's an
-   * issue during the focus trap activation process.
-   * @param error - The error object.
-   */
-  onError?: (error: unknown) => void;
-}
-
-/**
- * Control handles exposed by `useFocusTrap`.
- */
-export interface UseFocusTrapReturn {
-  /** Check if the focus trap is currently active. */
-  isActive: ComputedRef<boolean>;
-  /** Manually activate the focus trap when it is eligible. */
-  activate: () => void;
-  /** Manually deactivate the focus trap. */
-  deactivate: () => void;
-}
-
-//=======================================================================================
-// 📌 Constants & State Management
-//=======================================================================================
-
-// Check for inert support
-const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype;
-const isDev = import.meta.env.DEV;
-const sharedTrapStack: FocusTrap[] = [];
-
-type TrapIsolationMode = false | "inert" | "aria-hidden";
-type CloseRequest = {
-  reason: OpenChangeReason;
-  event?: Event;
-};
-
-/**
- * Normalizes focus-trap's flexible `initialFocus` option into a callback.
- */
-function resolveInitialFocus(initialFocus: UseFocusTrapOptions["initialFocus"]) {
-  return () => (typeof initialFocus === "function" ? initialFocus() : initialFocus);
-}
-
-/**
- * Picks the strongest outside-world isolation mode the environment can support.
- */
-function resolveIsolationMode(modal: boolean, outsideElementsInert: boolean): TrapIsolationMode {
-  if (!modal) return false;
-  if (outsideElementsInert && supportsInert) return "inert";
-  return "aria-hidden";
-}
-
-//=======================================================================================
-// 📌 Main Composable
+// 📌 Main
 //=======================================================================================
 
 /**
@@ -332,4 +210,126 @@ export function useFocusTrap(
         },
       }),
   };
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+// Check for inert support
+const supportsInert = typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype;
+const isDev = import.meta.env.DEV;
+const sharedTrapStack: FocusTrap[] = [];
+
+type TrapIsolationMode = false | "inert" | "aria-hidden";
+type CloseRequest = {
+  reason: OpenChangeReason;
+  event?: Event;
+};
+
+/**
+ * Normalizes focus-trap's flexible `initialFocus` option into a callback.
+ */
+function resolveInitialFocus(initialFocus: UseFocusTrapOptions["initialFocus"]) {
+  return () => (typeof initialFocus === "function" ? initialFocus() : initialFocus);
+}
+
+/**
+ * Picks the strongest outside-world isolation mode the environment can support.
+ */
+function resolveIsolationMode(modal: boolean, outsideElementsInert: boolean): TrapIsolationMode {
+  if (!modal) return false;
+  if (outsideElementsInert && supportsInert) return "inert";
+  return "aria-hidden";
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Context required by `useFocusTrap`.
+ */
+export interface UseFocusTrapContext {
+  /**
+   * The floating refs that expose the trap container.
+   */
+  refs: FloatingContext["refs"];
+  /**
+   * The floating state and open-state mutators.
+   */
+  state: FloatingContext["state"];
+}
+
+/**
+ * Options that control how the focus trap behaves while the floating surface is open.
+ */
+export interface UseFocusTrapOptions {
+  /**
+   * Determines if the focus trap should be enabled.
+   * When `true`, the focus trap is active.
+   * @default true
+   */
+  enabled?: MaybeRefOrGetter<boolean>;
+  /**
+   * When `true`, content outside the trap will be hidden from accessibility
+   * trees (via `aria-hidden`) and potentially made inert (via `inert` attribute
+   * if `outsideElementsInert` is `true` and supported).
+   * This mimics modal behavior.
+   * @default false
+   */
+  modal?: MaybeRefOrGetter<boolean>;
+  /**
+   * Specifies the element that should receive initial focus when the trap is activated.
+   * - `undefined` or omitted: Focuses the first tabbable element within the trap.
+   * - CSS selector string: Queries and focuses the first matching element.
+   * - `HTMLElement`: Focuses the specific provided HTML element.
+   * - `Function`: A function that returns an `HTMLElement` or `false`. The returned
+   *   element will receive focus.
+   * - `false`: Prevents any initial focus from being set by the trap.
+   */
+  initialFocus?: HTMLElement | (() => HTMLElement | false) | string | false;
+  /**
+   * When `true`, focus will be returned to the element that was focused
+   * immediately before the trap was activated, upon deactivation.
+   * @default true
+   */
+  returnFocus?: MaybeRefOrGetter<boolean>;
+  /**
+   * When `true` and the trap is not `modal`, the trap will deactivate (and potentially close
+   * the associated component) if focus moves outside the defined trap elements.
+   * @default false
+   */
+  closeOnFocusOut?: MaybeRefOrGetter<boolean>;
+  /**
+   * Controls whether the browser should scroll to the focused element.
+   * Passed directly to the `focus()` method's `preventScroll` option.
+   * @default true
+   */
+  preventScroll?: MaybeRefOrGetter<boolean>;
+  /**
+   * When `true` and `modal` is `true`, applies the `inert` attribute (if supported
+   * by the browser) to elements outside the focus trap to prevent user interaction
+   * and assistive technology access.
+   * @default false
+   */
+  outsideElementsInert?: MaybeRefOrGetter<boolean>;
+  /**
+   * An optional error handler function that will be called if there's an
+   * issue during the focus trap activation process.
+   * @param error - The error object.
+   */
+  onError?: (error: unknown) => void;
+}
+
+/**
+ * Control handles exposed by `useFocusTrap`.
+ */
+export interface UseFocusTrapReturn {
+  /** Check if the focus trap is currently active. */
+  isActive: ComputedRef<boolean>;
+  /** Manually activate the focus trap when it is eligible. */
+  activate: () => void;
+  /** Manually deactivate the focus trap. */
+  deactivate: () => void;
 }

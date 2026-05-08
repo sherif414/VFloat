@@ -1,6 +1,8 @@
 import { useId as vueUseId } from "vue";
 
-let idCounter = 0;
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Wraps Vue's `useId()` and falls back to a counter when SSR or tests return an empty string.
@@ -33,3 +35,9 @@ export function matchesFocusVisible(element: Element): boolean {
   if (typeof (element as Element)?.matches !== "function") return false;
   return element.matches(":focus-visible");
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+let idCounter = 0;

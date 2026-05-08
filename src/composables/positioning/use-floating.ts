@@ -13,56 +13,9 @@ import {
 import { createOpenStateController } from "./internal/open-state";
 import { createPositionController } from "./internal/position-controller";
 
-export interface UseFloatingOptions {
-  /**
-   * Preferred side/alignment for the floating element.
-   * Falls back to `"bottom"` when omitted.
-   */
-  placement?: MaybeRefOrGetter<Placement | undefined>;
-
-  /**
-   * CSS positioning strategy used for the floating element.
-   * Falls back to `"absolute"` when omitted.
-   */
-  strategy?: MaybeRefOrGetter<Strategy | undefined>;
-
-  /**
-   * Whether computed coordinates should be applied with `transform`
-   * instead of `top` and `left`.
-   */
-  transform?: MaybeRefOrGetter<boolean | undefined>;
-
-  /**
-   * Base middleware list passed to the positioning engine.
-   */
-  middlewares?: MaybeRefOrGetter<Middleware[]>;
-
-  /**
-   * Enables automatic re-positioning while the floating element is open.
-   * Pass an options object to customize Floating UI's `autoUpdate`.
-   */
-  autoUpdate?: boolean | AutoUpdateOptions;
-
-  /**
-   * Optional controlled open state.
-   */
-  open?: Ref<boolean>;
-
-  /**
-   * Called whenever the open state changes through VFloat helpers.
-   */
-  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
-}
-
-export type {
-  AnchorElement,
-  FloatingContext,
-  FloatingElement,
-  FloatingPosition,
-  FloatingRefs,
-  FloatingRoot,
-  FloatingStyles,
-} from "./floating-context";
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Creates the shared floating context used by positioning and interaction composables.
@@ -131,3 +84,62 @@ export function useFloating(
 
   return context;
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+export interface UseFloatingOptions {
+  /**
+   * Preferred side/alignment for the floating element.
+   * Falls back to `"bottom"` when omitted.
+   */
+  placement?: MaybeRefOrGetter<Placement | undefined>;
+
+  /**
+   * CSS positioning strategy used for the floating element.
+   * Falls back to `"absolute"` when omitted.
+   */
+  strategy?: MaybeRefOrGetter<Strategy | undefined>;
+
+  /**
+   * Whether computed coordinates should be applied with `transform`
+   * instead of `top` and `left`.
+   */
+  transform?: MaybeRefOrGetter<boolean | undefined>;
+
+  /**
+   * Base middleware list passed to the positioning engine.
+   */
+  middlewares?: MaybeRefOrGetter<Middleware[]>;
+
+  /**
+   * Enables automatic re-positioning while the floating element is open.
+   * Pass an options object to customize Floating UI's `autoUpdate`.
+   */
+  autoUpdate?: boolean | AutoUpdateOptions;
+
+  /**
+   * Optional controlled open state.
+   */
+  open?: Ref<boolean>;
+
+  /**
+   * Called whenever the open state changes through VFloat helpers.
+   */
+  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
+}
+
+export type {
+  AnchorElement,
+  FloatingContext,
+  FloatingElement,
+  FloatingPosition,
+  FloatingRefs,
+  FloatingRoot,
+  FloatingStyles,
+} from "./floating-context";

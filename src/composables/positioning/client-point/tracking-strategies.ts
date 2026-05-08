@@ -1,6 +1,10 @@
 import { isMouseLikePointerType } from "@/shared/dom";
 import type { Coordinates, PointerEventData, TrackingContext, TrackingMode } from "./types";
 
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
+
 /**
  * Base contract for client-point tracking behaviors.
  *

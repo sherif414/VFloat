@@ -31,170 +31,9 @@ import type { FloatingTreeNode } from "./use-floating-tree-node";
 
 type TreeNavigationNode = FloatingTreeNode | FloatingTreeNodeBridge;
 
-// ============================================================================
-// List Navigation Composable
-// ============================================================================
-
-/**
- * Options for configuring list-style keyboard/mouse navigation behavior.
- *
- * This interface drives how items in a floating list/grid are navigated,
- * focused, and announced (including support for virtual focus).
- */
-export interface UseListNavigationOptions {
-  /**
-   * Reactive collection of list item elements in DOM order.
-   * Null entries are allowed while items mount/unmount.
-   */
-  listRef: Ref<Array<HTMLElement | null>>;
-
-  /**
-   * The currently active (navigated) index. Null means no active item.
-   */
-  activeIndex?: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Callback invoked when navigation sets a new active index.
-   */
-  onNavigate?: (index: number | null) => void;
-
-  /**
-   * Whether navigation behavior is enabled.
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, arrow-key navigation wraps from end-to-start and vice versa.
-   */
-  loop?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Primary navigation orientation.
-   * - "vertical": Up/Down to navigate
-   * - "horizontal": Left/Right to navigate
-   * - "both": Grid navigation (supports cols/itemSizes)
-   */
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
-
-  /**
-   * Indices that should be treated as disabled.
-   * Can be an array of indices or a predicate.
-   */
-  disabledIndices?: Array<number> | ((index: number) => boolean);
-
-  /**
-   * If true, disabled items can still receive focus during navigation.
-   * This matches APG-style menu behavior where disabled commands are announced
-   * but cannot be activated by the consumer's item handlers.
-   */
-  focusDisabledItems?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, hovering an item moves the active index to that item.
-   */
-  focusItemOnHover?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, pressing an arrow key when closed opens and moves focus.
-   */
-  openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Controls automatic scrolling when the active item changes.
-   * true for default "nearest" behavior or a custom ScrollIntoViewOptions.
-   */
-  scrollItemIntoView?: boolean | ScrollIntoViewOptions;
-
-  /**
-   * Index to prefer when opening (e.g., currently selected option).
-   */
-  selectedIndex?: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Controls focusing an item when the list opens.
-   * - true: always focus an item
-   * - false: never focus an item
-   * - "auto": focus based on input modality/heuristics
-   */
-  focusItemOnOpen?: MaybeRefOrGetter<boolean | "auto">;
-
-  /**
-   * Whether this list is nested inside another navigable list.
-   * Affects cross-orientation close/open key handling.
-   */
-  nested?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Returns the child tree node for a given list index.
-   * When provided, list navigation can open and restore nested floating children.
-   */
-  getChildNode?: (index: number) => FloatingTreeNode | null;
-
-  /**
-   * When true, keyboard navigation landing on a child item opens it automatically.
-   * @default false
-   */
-  openChildOnFocus?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Right-to-left layout flag affecting horizontal arrow semantics.
-   */
-  rtl?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Enables virtual focus mode (aria-activedescendant) instead of DOM focus.
-   */
-  virtual?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Element that receives `aria-activedescendant` in virtual focus mode.
-   * Defaults to the anchor element, which is useful for combobox-like inputs.
-   * Pass the floating element for container-focus menus, listboxes, grids, or trees.
-   */
-  activeDescendantEl?: MaybeRefOrGetter<HTMLElement | null | undefined>;
-
-  /**
-   * Whether Home/End should move to the first/last item.
-   * Defaults to true for roving focus and for virtual focus when `activeDescendantEl` is provided.
-   */
-  handleHomeEndKeys?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Receives the HTMLElement corresponding to the virtual active item.
-   * Used for aria-activedescendant and screen reader announcement.
-   */
-  virtualItemRef?: Ref<HTMLElement | null>;
-
-  /**
-   * Column count for grid navigation when orientation is "both".
-   */
-  cols?: MaybeRefOrGetter<number>;
-
-  /**
-   * If true, allows escaping to a null active index via keyboard (e.g., ArrowDown on last).
-   */
-  allowEscape?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, Tab and Shift+Tab close the current floating tree/list without preventing page focus movement.
-   * @default true
-   */
-  closeOnTab?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Defines the wrapping behavior for grid navigation when moving horizontally past the end of a row.
-   * - "row": Wraps to the start of the *same* row (default).
-   * - "next": Moves to the start of the *next* row (or previous row if moving left).
-   */
-  gridLoopDirection?: MaybeRefOrGetter<"row" | "next">;
-}
-
-export interface UseListNavigationReturn {
-  /**
-   * Stops all listeners and watchers created by the composable.
-   */
-  cleanup: () => void;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Coordinates keyboard and hover navigation for floating lists, grids, and nested branches.
@@ -243,9 +82,9 @@ export function useListNavigation(
     closeOnTab = true,
   } = options;
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Derived State
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   const isEnabled = computed(() => toValue(enabled));
   const isNested = () => toValue(nestedOption) ?? tree.parentNode != null;
@@ -281,9 +120,9 @@ export function useListNavigation(
     return !!currentAnchorEl && !!parentNode?.actions.isTargetWithinBranch(currentAnchorEl);
   };
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Cleanup Registry
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   const cleanupRegistry = createCleanupRegistry();
   const registerCleanup = cleanupRegistry.add;
@@ -294,9 +133,9 @@ export function useListNavigation(
   let treeNodeOpenedByTreeBridge = treeNodeOpenedByTree;
   let pendingChildOpen: PendingChildOpen | null = null;
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Index Helpers
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   const getActiveIndex = () => (activeIndex !== undefined ? toValue(activeIndex) : null);
   const currentActiveIndex = computed(() => getActiveIndex());
@@ -529,9 +368,9 @@ export function useListNavigation(
 
   syncTreeNodeBridge();
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Focus Management
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   const focusItem = (index: number | null, forceScroll = false): void => {
     if (index == null) return;
@@ -579,9 +418,9 @@ export function useListNavigation(
     el.setAttribute(attribute, value);
   };
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Event Handlers
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   let openIntent: OpenIntent | null = null;
   let pendingOpenNavigation: PendingOpenNavigation | null = null;
@@ -727,9 +566,9 @@ export function useListNavigation(
     }
   };
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Watchers & Event Listeners
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   registerCleanup(
     watchPostEffect(() => {
@@ -957,9 +796,9 @@ export function useListNavigation(
     return -1;
   };
 
-  // --------------------------------------------------------------------------
+  //=====================================================================================
   // Active Descendant (Virtual Focus)
-  // --------------------------------------------------------------------------
+  //=====================================================================================
 
   const { activeItem, cleanup: cleanupActiveDescendant } = useActiveDescendant(
     activeDescendantEl,
@@ -986,4 +825,169 @@ export function useListNavigation(
   }
 
   return { cleanup: runCleanups };
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for configuring list-style keyboard/mouse navigation behavior.
+ *
+ * This interface drives how items in a floating list/grid are navigated,
+ * focused, and announced (including support for virtual focus).
+ */
+export interface UseListNavigationOptions {
+  /**
+   * Reactive collection of list item elements in DOM order.
+   * Null entries are allowed while items mount/unmount.
+   */
+  listRef: Ref<Array<HTMLElement | null>>;
+
+  /**
+   * The currently active (navigated) index. Null means no active item.
+   */
+  activeIndex?: MaybeRefOrGetter<number | null>;
+
+  /**
+   * Callback invoked when navigation sets a new active index.
+   */
+  onNavigate?: (index: number | null) => void;
+
+  /**
+   * Whether navigation behavior is enabled.
+   */
+  enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, arrow-key navigation wraps from end-to-start and vice versa.
+   */
+  loop?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Primary navigation orientation.
+   * - "vertical": Up/Down to navigate
+   * - "horizontal": Left/Right to navigate
+   * - "both": Grid navigation (supports cols/itemSizes)
+   */
+  orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
+
+  /**
+   * Indices that should be treated as disabled.
+   * Can be an array of indices or a predicate.
+   */
+  disabledIndices?: Array<number> | ((index: number) => boolean);
+
+  /**
+   * If true, disabled items can still receive focus during navigation.
+   * This matches APG-style menu behavior where disabled commands are announced
+   * but cannot be activated by the consumer's item handlers.
+   */
+  focusDisabledItems?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, hovering an item moves the active index to that item.
+   */
+  focusItemOnHover?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, pressing an arrow key when closed opens and moves focus.
+   */
+  openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Controls automatic scrolling when the active item changes.
+   * true for default "nearest" behavior or a custom ScrollIntoViewOptions.
+   */
+  scrollItemIntoView?: boolean | ScrollIntoViewOptions;
+
+  /**
+   * Index to prefer when opening (e.g., currently selected option).
+   */
+  selectedIndex?: MaybeRefOrGetter<number | null>;
+
+  /**
+   * Controls focusing an item when the list opens.
+   * - true: always focus an item
+   * - false: never focus an item
+   * - "auto": focus based on input modality/heuristics
+   */
+  focusItemOnOpen?: MaybeRefOrGetter<boolean | "auto">;
+
+  /**
+   * Whether this list is nested inside another navigable list.
+   * Affects cross-orientation close/open key handling.
+   */
+  nested?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Returns the child tree node for a given list index.
+   * When provided, list navigation can open and restore nested floating children.
+   */
+  getChildNode?: (index: number) => FloatingTreeNode | null;
+
+  /**
+   * When true, keyboard navigation landing on a child item opens it automatically.
+   * @default false
+   */
+  openChildOnFocus?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Right-to-left layout flag affecting horizontal arrow semantics.
+   */
+  rtl?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Enables virtual focus mode (aria-activedescendant) instead of DOM focus.
+   */
+  virtual?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Element that receives `aria-activedescendant` in virtual focus mode.
+   * Defaults to the anchor element, which is useful for combobox-like inputs.
+   * Pass the floating element for container-focus menus, listboxes, grids, or trees.
+   */
+  activeDescendantEl?: MaybeRefOrGetter<HTMLElement | null | undefined>;
+
+  /**
+   * Whether Home/End should move to the first/last item.
+   * Defaults to true for roving focus and for virtual focus when `activeDescendantEl` is provided.
+   */
+  handleHomeEndKeys?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Receives the HTMLElement corresponding to the virtual active item.
+   * Used for aria-activedescendant and screen reader announcement.
+   */
+  virtualItemRef?: Ref<HTMLElement | null>;
+
+  /**
+   * Column count for grid navigation when orientation is "both".
+   */
+  cols?: MaybeRefOrGetter<number>;
+
+  /**
+   * If true, allows escaping to a null active index via keyboard (e.g., ArrowDown on last).
+   */
+  allowEscape?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, Tab and Shift+Tab close the current floating tree/list without preventing page focus movement.
+   * @default true
+   */
+  closeOnTab?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Defines the wrapping behavior for grid navigation when moving horizontally past the end of a row.
+   * - "row": Wraps to the start of the *same* row (default).
+   * - "next": Moves to the start of the *next* row (or previous row if moving left).
+   */
+  gridLoopDirection?: MaybeRefOrGetter<"row" | "next">;
+}
+
+export interface UseListNavigationReturn {
+  /**
+   * Stops all listeners and watchers created by the composable.
+   */
+  cleanup: () => void;
 }

@@ -3,30 +3,9 @@ import { getFloatingInternals } from "./floating-context";
 import { arrow } from "../middlewares";
 import type { FloatingContext } from "./floating-context";
 
-/**
- * Computed arrow coordinates and styles returned by `useArrow()`.
- */
-export interface UseArrowReturn {
-  arrowX: ComputedRef<number>;
-  arrowY: ComputedRef<number>;
-  arrowStyles: ComputedRef<Record<string, string>>;
-}
-
-/**
- * Options for connecting an arrow element to the floating context.
- */
-export interface UseArrowOptions {
-  /**
-   * Arrow element that should be measured and positioned by middleware.
-   */
-  element: Ref<HTMLElement | null>;
-
-  /**
-   * Offset applied to the static side of the arrow.
-   * Useful when the arrow visually overlaps the floating panel border.
-   */
-  offset?: string;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Connects an arrow element to the current floating context and exposes the computed coordinates and styles needed to place it.
@@ -100,4 +79,33 @@ export function useArrow(context: FloatingContext, options: UseArrowOptions): Us
     arrowY,
     arrowStyles,
   };
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Computed arrow coordinates and styles returned by `useArrow()`.
+ */
+export interface UseArrowReturn {
+  arrowX: ComputedRef<number>;
+  arrowY: ComputedRef<number>;
+  arrowStyles: ComputedRef<Record<string, string>>;
+}
+
+/**
+ * Options for connecting an arrow element to the floating context.
+ */
+export interface UseArrowOptions {
+  /**
+   * Arrow element that should be measured and positioned by middleware.
+   */
+  element: Ref<HTMLElement | null>;
+
+  /**
+   * Offset applied to the static side of the arrow.
+   * Useful when the arrow visually overlaps the floating panel border.
+   */
+  offset?: string;
 }

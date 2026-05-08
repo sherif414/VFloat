@@ -2,155 +2,9 @@ import { computed, type MaybeRefOrGetter, type Ref, readonly, ref, toValue } fro
 import type { OpenChangeReason } from "@/types";
 import type { FloatingTreeNode } from "./use-floating-tree-node";
 
-/**
- * Options for creating or reusing a floating tree registry.
- */
-export interface UseFloatingTreeOptions {
-  /**
-   * The tree id to reuse instead of generating one.
-   */
-  id?: MaybeRefOrGetter<string | undefined>;
-  /**
-   * Whether opening one node should close sibling branches.
-   */
-  closeSiblingsOnOpen?: MaybeRefOrGetter<boolean | undefined>;
-  /**
-   * Whether closing one node should close descendant branches.
-   */
-  closeChildrenOnClose?: MaybeRefOrGetter<boolean | undefined>;
-}
-
-/**
- * The shared registry and coordination surface for related floating contexts.
- */
-export interface FloatingTree {
-  id: Readonly<Ref<string>>;
-  activeId: Readonly<Ref<string | null>>;
-  /**
-   * The current open path, ordered from the root node down to the active node.
-   * This is useful for subtree-aware closing and keyboard handoff.
-   */
-  activePath: Readonly<Ref<string[]>>;
-  actions: {
-    getNode: (id: string) => FloatingTreeNode | null;
-    closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    isTargetWithinTree: (target: EventTarget | null) => boolean;
-    isTargetWithinBranch: (id: string, target: EventTarget | null) => boolean;
-  };
-}
-
-interface FloatingTreeNodeRegistration {
-  node: FloatingTreeNode;
-  closeWithReason: (reason: OpenChangeReason, event?: Event) => void;
-}
-
-export interface FloatingTreePrivateActions {
-  /**
-   * Registers a node so tree bookkeeping can track it.
-   */
-  registerNode: (registration: FloatingTreeNodeRegistration) => () => void;
-  /**
-   * Marks a node as the most recently opened tree entry.
-   */
-  markOpened: (id: string, event?: Event) => void;
-  /**
-   * Updates tree bookkeeping after a node closes.
-   */
-  markClosed: (id: string, event?: Event) => void;
-  /**
-   * Closes a node while preserving the requested reason.
-   */
-  closeNodeWithReason: (id: string, reason: OpenChangeReason, event?: Event) => void;
-}
-
-const FLOATING_TREE_PRIVATE_SYMBOL = Symbol("vfloat-floating-tree-private");
-
-type FloatingTreeWithPrivate = FloatingTree & {
-  [FLOATING_TREE_PRIVATE_SYMBOL]: FloatingTreePrivateActions;
-};
-
-let floatingTreeIdCounter = 0;
-
-function createFloatingTreeId() {
-  floatingTreeIdCounter += 1;
-  return `floating-tree-${floatingTreeIdCounter}`;
-}
-
-function isNodeWithinBranch(
-  nodeId: string,
-  branchRootId: string,
-  resolveNode: (id: string) => FloatingTreeNode | null,
-): boolean {
-  const visited = new Set<string>();
-  let currentNode = resolveNode(nodeId);
-
-  while (currentNode) {
-    const currentId = currentNode.id.value;
-    if (currentId === branchRootId) {
-      return true;
-    }
-
-    if (visited.has(currentId)) {
-      return false;
-    }
-
-    visited.add(currentId);
-
-    const currentParentId = currentNode.parentId.value;
-    currentNode = currentParentId ? resolveNode(currentParentId) : null;
-  }
-
-  return false;
-}
-
-function collectBranchNodeIds(
-  branchRootId: string,
-  resolveNode: (id: string) => FloatingTreeNode | null,
-): string[] {
-  // Walk the subtree depth-first so we can close descendants before their parent.
-  const visited = new Set<string>();
-  const ids: string[] = [];
-
-  const visit = (nodeId: string) => {
-    if (visited.has(nodeId)) {
-      return;
-    }
-
-    visited.add(nodeId);
-
-    const node = resolveNode(nodeId);
-    if (!node) {
-      return;
-    }
-
-    for (const childId of node.childIds.value) {
-      visit(childId);
-    }
-
-    ids.push(nodeId);
-  };
-
-  visit(branchRootId);
-
-  return ids;
-}
-
-function normalizeCloseArgs(reasonOrEvent?: OpenChangeReason | Event, event?: Event) {
-  if (typeof reasonOrEvent === "string") {
-    return {
-      reason: reasonOrEvent,
-      event,
-    };
-  }
-
-  return {
-    reason: "programmatic" as OpenChangeReason,
-    event: reasonOrEvent,
-  };
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Creates a registry that coordinates related floating contexts.
@@ -399,9 +253,167 @@ export function useFloatingTree(options: UseFloatingTreeOptions = {}): FloatingT
   return tree;
 }
 
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+const FLOATING_TREE_PRIVATE_SYMBOL = Symbol("vfloat-floating-tree-private");
+
+let floatingTreeIdCounter = 0;
+
+function createFloatingTreeId() {
+  floatingTreeIdCounter += 1;
+  return `floating-tree-${floatingTreeIdCounter}`;
+}
+
+function isNodeWithinBranch(
+  nodeId: string,
+  branchRootId: string,
+  resolveNode: (id: string) => FloatingTreeNode | null,
+): boolean {
+  const visited = new Set<string>();
+  let currentNode = resolveNode(nodeId);
+
+  while (currentNode) {
+    const currentId = currentNode.id.value;
+    if (currentId === branchRootId) {
+      return true;
+    }
+
+    if (visited.has(currentId)) {
+      return false;
+    }
+
+    visited.add(currentId);
+
+    const currentParentId = currentNode.parentId.value;
+    currentNode = currentParentId ? resolveNode(currentParentId) : null;
+  }
+
+  return false;
+}
+
+function collectBranchNodeIds(
+  branchRootId: string,
+  resolveNode: (id: string) => FloatingTreeNode | null,
+): string[] {
+  // Walk the subtree depth-first so we can close descendants before their parent.
+  const visited = new Set<string>();
+  const ids: string[] = [];
+
+  const visit = (nodeId: string) => {
+    if (visited.has(nodeId)) {
+      return;
+    }
+
+    visited.add(nodeId);
+
+    const node = resolveNode(nodeId);
+    if (!node) {
+      return;
+    }
+
+    for (const childId of node.childIds.value) {
+      visit(childId);
+    }
+
+    ids.push(nodeId);
+  };
+
+  visit(branchRootId);
+
+  return ids;
+}
+
+function normalizeCloseArgs(reasonOrEvent?: OpenChangeReason | Event, event?: Event) {
+  if (typeof reasonOrEvent === "string") {
+    return {
+      reason: reasonOrEvent,
+      event,
+    };
+  }
+
+  return {
+    reason: "programmatic" as OpenChangeReason,
+    event: reasonOrEvent,
+  };
+}
+
 export function getFloatingTreePrivateActions(
   tree: FloatingTree,
 ): FloatingTreePrivateActions | null {
   const privateActions = (tree as FloatingTreeWithPrivate)[FLOATING_TREE_PRIVATE_SYMBOL];
   return privateActions ?? null;
 }
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for creating or reusing a floating tree registry.
+ */
+export interface UseFloatingTreeOptions {
+  /**
+   * The tree id to reuse instead of generating one.
+   */
+  id?: MaybeRefOrGetter<string | undefined>;
+  /**
+   * Whether opening one node should close sibling branches.
+   */
+  closeSiblingsOnOpen?: MaybeRefOrGetter<boolean | undefined>;
+  /**
+   * Whether closing one node should close descendant branches.
+   */
+  closeChildrenOnClose?: MaybeRefOrGetter<boolean | undefined>;
+}
+
+/**
+ * The shared registry and coordination surface for related floating contexts.
+ */
+export interface FloatingTree {
+  id: Readonly<Ref<string>>;
+  activeId: Readonly<Ref<string | null>>;
+  /**
+   * The current open path, ordered from the root node down to the active node.
+   * This is useful for subtree-aware closing and keyboard handoff.
+   */
+  activePath: Readonly<Ref<string[]>>;
+  actions: {
+    getNode: (id: string) => FloatingTreeNode | null;
+    closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    isTargetWithinTree: (target: EventTarget | null) => boolean;
+    isTargetWithinBranch: (id: string, target: EventTarget | null) => boolean;
+  };
+}
+
+interface FloatingTreeNodeRegistration {
+  node: FloatingTreeNode;
+  closeWithReason: (reason: OpenChangeReason, event?: Event) => void;
+}
+
+export interface FloatingTreePrivateActions {
+  /**
+   * Registers a node so tree bookkeeping can track it.
+   */
+  registerNode: (registration: FloatingTreeNodeRegistration) => () => void;
+  /**
+   * Marks a node as the most recently opened tree entry.
+   */
+  markOpened: (id: string, event?: Event) => void;
+  /**
+   * Updates tree bookkeeping after a node closes.
+   */
+  markClosed: (id: string, event?: Event) => void;
+  /**
+   * Closes a node while preserving the requested reason.
+   */
+  closeNodeWithReason: (id: string, reason: OpenChangeReason, event?: Event) => void;
+}
+
+type FloatingTreeWithPrivate = FloatingTree & {
+  [FLOATING_TREE_PRIVATE_SYMBOL]: FloatingTreePrivateActions;
+};

@@ -9,166 +9,9 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 import { type FloatingTree, getFloatingTreePrivateActions } from "./use-floating-tree";
 
-/**
- * Options for attaching a floating context to a tree node.
- */
-export interface UseFloatingTreeNodeOptions {
-  /**
-   * The tree to register this node with.
-   */
-  tree?: FloatingTree | null;
-  /**
-   * The node id to reuse instead of generating one.
-   */
-  id?: MaybeRefOrGetter<string | undefined>;
-  /**
-   * The parent node to attach this node beneath.
-   */
-  parent?: MaybeRefOrGetter<FloatingTreeNode | null | undefined>;
-}
-
-/**
- * A registered floating node that participates in tree-aware open/close coordination.
- */
-export interface FloatingTreeNode {
-  tree: FloatingTree;
-  id: Readonly<Ref<string>>;
-  parentId: Readonly<Ref<string | null>>;
-  childIds: Readonly<Ref<string[]>>;
-  context: FloatingContext;
-  state: {
-    isRoot: Readonly<Ref<boolean>>;
-    isLeaf: Readonly<Ref<boolean>>;
-    isActive: Readonly<Ref<boolean>>;
-  };
-  actions: {
-    open: (event?: Event) => void;
-    close: (event?: Event) => void;
-    closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    isTargetWithinNode: (target: EventTarget | null) => boolean;
-    isTargetWithinBranch: (target: EventTarget | null) => boolean;
-  };
-}
-
-let floatingTreeNodeIdCounter = 0;
-
-function createFloatingTreeNodeId() {
-  floatingTreeNodeIdCounter += 1;
-  return `floating-node-${floatingTreeNodeIdCounter}`;
-}
-
-function createMissingTreeError() {
-  return new Error(
-    "[useFloatingTreeNode] Missing floating tree. Pass `options.tree` for a root node or `options.parent` for a child node.",
-  );
-}
-
-function createCrossTreeParentError() {
-  return new Error(
-    "[useFloatingTreeNode] Parent and child nodes must belong to the same floating tree.",
-  );
-}
-
-function appendChildId(parentNode: FloatingTreeNode, childId: string) {
-  const childIdsRef = parentNode.childIds as Ref<string[]>;
-
-  if (childIdsRef.value.includes(childId)) {
-    return;
-  }
-
-  childIdsRef.value = [...childIdsRef.value, childId];
-}
-
-function removeChildId(parentNode: FloatingTreeNode, childId: string) {
-  const childIdsRef = parentNode.childIds as Ref<string[]>;
-
-  if (!childIdsRef.value.includes(childId)) {
-    return;
-  }
-
-  childIdsRef.value = childIdsRef.value.filter((id) => id !== childId);
-}
-
-function resolveTargetNode(target: EventTarget | null): Node | null {
-  return target instanceof Node ? target : null;
-}
-
-function isTargetWithinAnchor(
-  anchorEl: FloatingContext["refs"]["anchorEl"]["value"],
-  target: Node,
-) {
-  if (anchorEl instanceof Element) {
-    return anchorEl.contains(target);
-  }
-
-  const anchorContextEl = anchorEl?.contextElement;
-  if (anchorContextEl instanceof Element) {
-    return anchorContextEl.contains(target);
-  }
-
-  return false;
-}
-
-function resolveTreeNodeBridgeById(tree: FloatingTree, id: string): FloatingTreeNodeBridge | null {
-  const node = tree.actions.getNode(id);
-  if (!node) {
-    return null;
-  }
-
-  return getFloatingInternals(node.context)?.treeNode ?? null;
-}
-
-function normalizeCloseArgs(reasonOrEvent?: OpenChangeReason | Event, event?: Event) {
-  if (typeof reasonOrEvent === "string") {
-    return {
-      reason: reasonOrEvent,
-      event,
-    };
-  }
-
-  return {
-    reason: "programmatic" as OpenChangeReason,
-    event: reasonOrEvent,
-  };
-}
-
-function shouldRestoreFocus(node: FloatingTreeNode, reason: OpenChangeReason, event?: Event) {
-  if (reason === "outside-pointer") {
-    return false;
-  }
-
-  if (!event) {
-    return true;
-  }
-
-  if (event instanceof KeyboardEvent) {
-    return true;
-  }
-
-  return node.actions.isTargetWithinNode(event.target);
-}
-
-function restoreNodeFocus(node: FloatingTreeNode, reason: OpenChangeReason, event?: Event) {
-  // Tree-driven closes should hand focus back to the trigger that owns the branch.
-  if (!shouldRestoreFocus(node, reason, event)) {
-    return;
-  }
-
-  const anchorEl = node.context.refs.anchorEl.value;
-  if (!(anchorEl instanceof HTMLElement)) {
-    return;
-  }
-
-  setTimeout(() => {
-    if (!anchorEl.isConnected) {
-      return;
-    }
-
-    anchorEl.focus({ preventScroll: true });
-  }, 0);
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Registers a floating context as a node in a floating tree and wires tree-aware state updates.
@@ -369,4 +212,173 @@ export function useFloatingTreeNode(
   });
 
   return node;
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+let floatingTreeNodeIdCounter = 0;
+
+function createFloatingTreeNodeId() {
+  floatingTreeNodeIdCounter += 1;
+  return `floating-node-${floatingTreeNodeIdCounter}`;
+}
+
+function createMissingTreeError() {
+  return new Error(
+    "[useFloatingTreeNode] Missing floating tree. Pass `options.tree` for a root node or `options.parent` for a child node.",
+  );
+}
+
+function createCrossTreeParentError() {
+  return new Error(
+    "[useFloatingTreeNode] Parent and child nodes must belong to the same floating tree.",
+  );
+}
+
+function appendChildId(parentNode: FloatingTreeNode, childId: string) {
+  const childIdsRef = parentNode.childIds as Ref<string[]>;
+
+  if (childIdsRef.value.includes(childId)) {
+    return;
+  }
+
+  childIdsRef.value = [...childIdsRef.value, childId];
+}
+
+function removeChildId(parentNode: FloatingTreeNode, childId: string) {
+  const childIdsRef = parentNode.childIds as Ref<string[]>;
+
+  if (!childIdsRef.value.includes(childId)) {
+    return;
+  }
+
+  childIdsRef.value = childIdsRef.value.filter((id) => id !== childId);
+}
+
+function resolveTargetNode(target: EventTarget | null): Node | null {
+  return target instanceof Node ? target : null;
+}
+
+function isTargetWithinAnchor(
+  anchorEl: FloatingContext["refs"]["anchorEl"]["value"],
+  target: Node,
+) {
+  if (anchorEl instanceof Element) {
+    return anchorEl.contains(target);
+  }
+
+  const anchorContextEl = anchorEl?.contextElement;
+  if (anchorContextEl instanceof Element) {
+    return anchorContextEl.contains(target);
+  }
+
+  return false;
+}
+
+function resolveTreeNodeBridgeById(tree: FloatingTree, id: string): FloatingTreeNodeBridge | null {
+  const node = tree.actions.getNode(id);
+  if (!node) {
+    return null;
+  }
+
+  return getFloatingInternals(node.context)?.treeNode ?? null;
+}
+
+function normalizeCloseArgs(reasonOrEvent?: OpenChangeReason | Event, event?: Event) {
+  if (typeof reasonOrEvent === "string") {
+    return {
+      reason: reasonOrEvent,
+      event,
+    };
+  }
+
+  return {
+    reason: "programmatic" as OpenChangeReason,
+    event: reasonOrEvent,
+  };
+}
+
+function shouldRestoreFocus(node: FloatingTreeNode, reason: OpenChangeReason, event?: Event) {
+  if (reason === "outside-pointer") {
+    return false;
+  }
+
+  if (!event) {
+    return true;
+  }
+
+  if (event instanceof KeyboardEvent) {
+    return true;
+  }
+
+  return node.actions.isTargetWithinNode(event.target);
+}
+
+function restoreNodeFocus(node: FloatingTreeNode, reason: OpenChangeReason, event?: Event) {
+  // Tree-driven closes should hand focus back to the trigger that owns the branch.
+  if (!shouldRestoreFocus(node, reason, event)) {
+    return;
+  }
+
+  const anchorEl = node.context.refs.anchorEl.value;
+  if (!(anchorEl instanceof HTMLElement)) {
+    return;
+  }
+
+  setTimeout(() => {
+    if (!anchorEl.isConnected) {
+      return;
+    }
+
+    anchorEl.focus({ preventScroll: true });
+  }, 0);
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for attaching a floating context to a tree node.
+ */
+export interface UseFloatingTreeNodeOptions {
+  /**
+   * The tree to register this node with.
+   */
+  tree?: FloatingTree | null;
+  /**
+   * The node id to reuse instead of generating one.
+   */
+  id?: MaybeRefOrGetter<string | undefined>;
+  /**
+   * The parent node to attach this node beneath.
+   */
+  parent?: MaybeRefOrGetter<FloatingTreeNode | null | undefined>;
+}
+
+/**
+ * A registered floating node that participates in tree-aware open/close coordination.
+ */
+export interface FloatingTreeNode {
+  tree: FloatingTree;
+  id: Readonly<Ref<string>>;
+  parentId: Readonly<Ref<string | null>>;
+  childIds: Readonly<Ref<string[]>>;
+  context: FloatingContext;
+  state: {
+    isRoot: Readonly<Ref<boolean>>;
+    isLeaf: Readonly<Ref<boolean>>;
+    isActive: Readonly<Ref<boolean>>;
+  };
+  actions: {
+    open: (event?: Event) => void;
+    close: (event?: Event) => void;
+    closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
+    isTargetWithinNode: (target: EventTarget | null) => boolean;
+    isTargetWithinBranch: (target: EventTarget | null) => boolean;
+  };
 }

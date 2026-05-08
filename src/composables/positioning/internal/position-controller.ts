@@ -11,19 +11,9 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { AnchorElement, FloatingElement, FloatingStyles } from "../floating-context";
 import { createMiddlewareRegistry } from "./middleware-registry";
 
-/**
- * Options for wiring the reactive position controller.
- */
-export interface PositionControllerOptions {
-  anchorEl: Ref<AnchorElement>;
-  floatingEl: Ref<FloatingElement>;
-  open: Ref<boolean>;
-  placement?: MaybeRefOrGetter<Placement | undefined>;
-  strategy?: MaybeRefOrGetter<Strategy | undefined>;
-  transform?: MaybeRefOrGetter<boolean | undefined>;
-  middlewares?: MaybeRefOrGetter<Middleware[]>;
-  autoUpdate?: boolean | AutoUpdateOptions;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Owns the reactive bridge between VFloat state and Floating UI's position engine.
@@ -164,6 +154,10 @@ export function createPositionController(options: PositionControllerOptions) {
   };
 }
 
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
 function roundByDPR(el: HTMLElement, value: number) {
   const dpr = getDPR(el);
   return Math.round(value * dpr) / dpr;
@@ -176,4 +170,22 @@ function getDPR(el: HTMLElement) {
 
   const win = el.ownerDocument.defaultView || window;
   return win.devicePixelRatio || 1;
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for wiring the reactive position controller.
+ */
+export interface PositionControllerOptions {
+  anchorEl: Ref<AnchorElement>;
+  floatingEl: Ref<FloatingElement>;
+  open: Ref<boolean>;
+  placement?: MaybeRefOrGetter<Placement | undefined>;
+  strategy?: MaybeRefOrGetter<Strategy | undefined>;
+  transform?: MaybeRefOrGetter<boolean | undefined>;
+  middlewares?: MaybeRefOrGetter<Middleware[]>;
+  autoUpdate?: boolean | AutoUpdateOptions;
 }

@@ -7,6 +7,50 @@ import type {
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
+
+/**
+ * Attaches internal positioning state to a public floating context object.
+ */
+export function setFloatingInternals(target: object, internals: FloatingInternals) {
+  floatingInternals.set(target, internals);
+}
+
+/**
+ * Reads the internal state previously attached with `setFloatingInternals()`.
+ */
+export function getFloatingInternals(target: object) {
+  return floatingInternals.get(target);
+}
+
+/**
+ * Updates a subset of the internal state attached to a floating context.
+ */
+export function patchFloatingInternals(target: object, patch: Partial<FloatingInternals>) {
+  const current = floatingInternals.get(target);
+
+  if (!current) {
+    return;
+  }
+
+  floatingInternals.set(target, {
+    ...current,
+    ...patch,
+  });
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+const floatingInternals = new WeakMap<object, FloatingInternals>();
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
 /**
  * Anchor values accepted by the floating context.
  */
@@ -159,36 +203,4 @@ export interface FloatingTreeNodeBridge {
 export interface FloatingInternals {
   middlewareRegistry: FloatingMiddlewareRegistry;
   treeNode?: FloatingTreeNodeBridge;
-}
-
-const floatingInternals = new WeakMap<object, FloatingInternals>();
-
-/**
- * Attaches internal positioning state to a public floating context object.
- */
-export function setFloatingInternals(target: object, internals: FloatingInternals) {
-  floatingInternals.set(target, internals);
-}
-
-/**
- * Reads the internal state previously attached with `setFloatingInternals()`.
- */
-export function getFloatingInternals(target: object) {
-  return floatingInternals.get(target);
-}
-
-/**
- * Updates a subset of the internal state attached to a floating context.
- */
-export function patchFloatingInternals(target: object, patch: Partial<FloatingInternals>) {
-  const current = floatingInternals.get(target);
-
-  if (!current) {
-    return;
-  }
-
-  floatingInternals.set(target, {
-    ...current,
-    ...patch,
-  });
 }

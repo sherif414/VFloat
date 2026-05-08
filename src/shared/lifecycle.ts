@@ -1,5 +1,9 @@
 import { getCurrentScope, onScopeDispose } from "vue";
 
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
+
 /**
  * Registers a cleanup only when called inside an active Vue effect scope.
  */

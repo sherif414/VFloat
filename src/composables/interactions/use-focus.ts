@@ -8,18 +8,7 @@ import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
-// 📌 Constants
-//=======================================================================================
-
-/**
- * Delay in milliseconds for checking active element after blur event.
- * Using 0ms ensures check happens in next event loop tick, which is more
- * reliable than relatedTarget for Shadow DOM and programmatic focus changes.
- */
-const BLUR_CHECK_DELAY = 0;
-
-//=======================================================================================
-// 📌 Main Composable
+// 📌 Main
 //=======================================================================================
 
 /**
@@ -36,7 +25,6 @@ const BLUR_CHECK_DELAY = 0;
  * useFocus(ctx)
  * ```
  */
-
 export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
   const { open, setOpen } = context.state;
   const { floatingEl, anchorEl: _anchorEl } = context.refs;
@@ -261,6 +249,17 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     cleanup: runCleanups,
   };
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+/**
+ * Delay in milliseconds for checking active element after blur event.
+ * Using 0ms ensures check happens in next event loop tick, which is more
+ * reliable than relatedTarget for Shadow DOM and programmatic focus changes.
+ */
+const BLUR_CHECK_DELAY = 0;
 
 //=======================================================================================
 // 📌 Types

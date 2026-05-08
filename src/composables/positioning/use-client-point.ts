@@ -18,66 +18,9 @@ import type {
 import { VirtualElementFactory } from "./client-point/virtual-element-factory";
 import type { AnchorElement, FloatingContext } from "./floating-context";
 
-const sanitizeCoordinate = (value: number | null | undefined): number | null => {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-};
-
-export type { AxisConstraint, Coordinates, TrackingMode } from "./client-point/types";
-export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
-
-/**
- * Options for pointer-driven virtual anchor tracking.
- */
-export interface UseClientPointOptions {
-  /**
-   * Element that should receive the pointer listeners used to drive the virtual anchor.
-   */
-  pointerTarget: Ref<HTMLElement | null>;
-
-  /**
-   * Enables or disables client-point behavior without removing the composable.
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Restricts tracking to the x axis, y axis, or both.
-   */
-  axis?: MaybeRefOrGetter<AxisConstraint>;
-
-  /**
-   * Optional externally controlled x coordinate.
-   */
-  x?: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Optional externally controlled y coordinate.
-   */
-  y?: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Chooses how the pointer position behaves after the floating element opens.
-   */
-  trackingMode?: TrackingMode;
-}
-
-/**
- * Coordinates and updater returned by `useClientPoint()`.
- */
-export interface UseClientPointReturn {
-  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
-  updatePosition: (x: number, y: number) => void;
-}
-
-/**
- * Minimal floating context shape required by `useClientPoint()`.
- */
-export interface UseClientPointContext {
-  refs: {
-    anchorEl: Ref<AnchorElement>;
-  };
-  state: FloatingContext["state"];
-  position?: Pick<FloatingContext["position"], "update">;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Replaces the anchor element with a virtual element that follows pointer coordinates.
@@ -277,6 +220,76 @@ export function useClientPoint(
   };
 }
 
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+const sanitizeCoordinate = (value: number | null | undefined): number | null => {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+};
+
 function createTrackingStrategy(trackingMode: TrackingMode): TrackingStrategy {
   return trackingMode === "follow" ? new FollowTracker() : new StaticTracker();
 }
+
+export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for pointer-driven virtual anchor tracking.
+ */
+export interface UseClientPointOptions {
+  /**
+   * Element that should receive the pointer listeners used to drive the virtual anchor.
+   */
+  pointerTarget: Ref<HTMLElement | null>;
+
+  /**
+   * Enables or disables client-point behavior without removing the composable.
+   */
+  enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Restricts tracking to the x axis, y axis, or both.
+   */
+  axis?: MaybeRefOrGetter<AxisConstraint>;
+
+  /**
+   * Optional externally controlled x coordinate.
+   */
+  x?: MaybeRefOrGetter<number | null>;
+
+  /**
+   * Optional externally controlled y coordinate.
+   */
+  y?: MaybeRefOrGetter<number | null>;
+
+  /**
+   * Chooses how the pointer position behaves after the floating element opens.
+   */
+  trackingMode?: TrackingMode;
+}
+
+/**
+ * Coordinates and updater returned by `useClientPoint()`.
+ */
+export interface UseClientPointReturn {
+  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
+  updatePosition: (x: number, y: number) => void;
+}
+
+/**
+ * Minimal floating context shape required by `useClientPoint()`.
+ */
+export interface UseClientPointContext {
+  refs: {
+    anchorEl: Ref<AnchorElement>;
+  };
+  state: FloatingContext["state"];
+  position?: Pick<FloatingContext["position"], "update">;
+}
+
+export type { AxisConstraint, Coordinates, TrackingMode } from "./client-point/types";

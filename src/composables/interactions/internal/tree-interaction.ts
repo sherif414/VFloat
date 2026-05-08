@@ -6,43 +6,9 @@ import type {
 import { getFloatingInternals } from "@/composables/positioning/floating-context";
 import type { OpenChangeReason } from "@/types";
 
-interface FloatingContextLike {
-  state: FloatingContext["state"];
-  refs?: FloatingContext["refs"];
-}
-
-export interface FloatingTreeInteraction {
-  /**
-   * The current tree node bridge for this context, if one exists.
-   */
-  readonly treeNode: FloatingTreeNodeBridge | null;
-  /**
-   * The owning floating tree bridge, if the context participates in one.
-   */
-  readonly tree: FloatingTreeBridge | null;
-  /**
-   * The immediate parent node bridge.
-   */
-  readonly parentNode: FloatingTreeNodeBridge | null;
-  /**
-   * The active node bridge for the current tree branch.
-   */
-  readonly activeNode: FloatingTreeNodeBridge | null;
-  readonly isTree: boolean;
-  readonly isRoot: boolean;
-  readonly isLeaf: boolean;
-  readonly isActive: boolean;
-  isTargetWithinNode: (target: EventTarget | null) => boolean;
-  isTargetWithinBranch: (target: EventTarget | null) => boolean;
-  isTargetWithinTree: (target: EventTarget | null) => boolean;
-  closeCurrent: (reason: OpenChangeReason, event?: Event) => void;
-  closeCurrentBranch: (reason: OpenChangeReason, event?: Event) => void;
-  closeCurrentChildren: (reason: OpenChangeReason, event?: Event) => void;
-  closeCurrentSiblings: (reason: OpenChangeReason, event?: Event) => void;
-  closeActive: (reason: OpenChangeReason, event?: Event) => void;
-  closeActiveBranch: (reason: OpenChangeReason, event?: Event) => void;
-  closeActiveChildren: (reason: OpenChangeReason, event?: Event) => void;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Returns the tree node bridge stored on the current floating context.
@@ -207,4 +173,50 @@ export function resolveTreeInteraction(context: FloatingContextLike): FloatingTr
       closeNodeChildren(resolveTreeNode(), reason, event);
     },
   };
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+interface FloatingContextLike {
+  state: FloatingContext["state"];
+  refs?: FloatingContext["refs"];
+}
+
+export interface FloatingTreeInteraction {
+  /**
+   * The current tree node bridge for this context, if one exists.
+   */
+  readonly treeNode: FloatingTreeNodeBridge | null;
+  /**
+   * The owning floating tree bridge, if the context participates in one.
+   */
+  readonly tree: FloatingTreeBridge | null;
+  /**
+   * The immediate parent node bridge.
+   */
+  readonly parentNode: FloatingTreeNodeBridge | null;
+  /**
+   * The active node bridge for the current tree branch.
+   */
+  readonly activeNode: FloatingTreeNodeBridge | null;
+  readonly isTree: boolean;
+  readonly isRoot: boolean;
+  readonly isLeaf: boolean;
+  readonly isActive: boolean;
+  isTargetWithinNode: (target: EventTarget | null) => boolean;
+  isTargetWithinBranch: (target: EventTarget | null) => boolean;
+  isTargetWithinTree: (target: EventTarget | null) => boolean;
+  closeCurrent: (reason: OpenChangeReason, event?: Event) => void;
+  closeCurrentBranch: (reason: OpenChangeReason, event?: Event) => void;
+  closeCurrentChildren: (reason: OpenChangeReason, event?: Event) => void;
+  closeCurrentSiblings: (reason: OpenChangeReason, event?: Event) => void;
+  closeActive: (reason: OpenChangeReason, event?: Event) => void;
+  closeActiveBranch: (reason: OpenChangeReason, event?: Event) => void;
+  closeActiveChildren: (reason: OpenChangeReason, event?: Event) => void;
 }
