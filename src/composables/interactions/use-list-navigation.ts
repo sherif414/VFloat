@@ -8,12 +8,7 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
-import {
-  type FloatingContext,
-  getFloatingInternals,
-  type FloatingTreeNodeBridge,
-  patchFloatingInternals,
-} from "@/composables/positioning/floating-context";
+import { type FloatingContext } from "@/composables/positioning/floating-context";
 import { isTypeableElement } from "@/shared/dom";
 import { createCleanupRegistry } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -27,9 +22,8 @@ import {
   isTreeChildOpenKey,
   type StrategyContext,
 } from "./list-navigation/strategies";
+import { createTreeCoordinator } from "./list-navigation/tree-coordination";
 import type { FloatingTreeNode } from "./use-floating-tree-node";
-
-type TreeNavigationNode = FloatingTreeNode | FloatingTreeNodeBridge;
 
 //=======================================================================================
 // 📌 Main
@@ -49,10 +43,6 @@ export function useListNavigation(
     previousIndex: number | null;
     requestedIndex: number;
     shouldFocus: boolean;
-  };
-  type PendingChildOpen = {
-    childNode: FloatingTreeNode;
-    index: number;
   };
 
   const refs = context.refs;
@@ -127,11 +117,17 @@ export function useListNavigation(
   const cleanupRegistry = createCleanupRegistry();
   const registerCleanup = cleanupRegistry.add;
   const runCleanups = cleanupRegistry.flush;
-  const treeNodeReturnIndex = ref<number | null>(null);
-  const treeNodeOpenedByTree = ref(false);
-  let treeNodeReturnIndexBridge = treeNodeReturnIndex;
-  let treeNodeOpenedByTreeBridge = treeNodeOpenedByTree;
-  let pendingChildOpen: PendingChildOpen | null = null;
+
+  //=====================================================================================
+  // Tree Coordination
+  //=====================================================================================
+
+  const treeCoordinator = createTreeCoordinator({
+    context,
+    tree,
+    onNavigate,
+    getChildNode: options.getChildNode,
+  });
 
   //=====================================================================================
   // Index Helpers
@@ -202,171 +198,7 @@ export function useListNavigation(
     return null;
   };
 
-  const syncTreeNodeBridge = () => {
-    const treeNode = tree.treeNode;
-    if (!treeNode) {
-      return null;
-    }
-
-    // Keep the internal bridge updated so sibling composables can discover list-navigation state.
-    treeNodeReturnIndexBridge = treeNode.listNavigation?.returnIndex ?? treeNodeReturnIndexBridge;
-    treeNodeOpenedByTreeBridge =
-      treeNode.listNavigation?.openedByTree ?? treeNodeOpenedByTreeBridge;
-
-    treeNode.listNavigation = {
-      returnIndex: treeNodeReturnIndexBridge,
-      openedByTree: treeNodeOpenedByTreeBridge,
-      onNavigate: (index: number | null) => onNavigate?.(index),
-    };
-
-    patchFloatingInternals(context, {
-      treeNode,
-    });
-
-    return getFloatingInternals(context as object)?.treeNode ?? null;
-  };
-
-  const restoreParentListNavigation = () => {
-    const returnIndex = treeNodeReturnIndexBridge.value;
-    const parentNode = tree.parentNode;
-
-    if (returnIndex == null || !parentNode?.context.state.open.value) {
-      return;
-    }
-
-    parentNode.listNavigation?.onNavigate?.(returnIndex);
-  };
-
-  const ensureChildListNavigationBridge = (childNode: FloatingTreeNode | null, index: number) => {
-    if (!childNode) {
-      return null;
-    }
-
-    // Child lists inherit the index that opened them so Escape / ArrowLeft can return cleanly.
-    const childTreeNode = getFloatingInternals(childNode.context as object)?.treeNode;
-    if (!childTreeNode) {
-      return null;
-    }
-
-    const returnIndex = childTreeNode.listNavigation?.returnIndex ?? ref<number | null>(null);
-    const openedByTree = childTreeNode.listNavigation?.openedByTree ?? ref(false);
-    returnIndex.value = index;
-    openedByTree.value = true;
-
-    childTreeNode.listNavigation = {
-      returnIndex,
-      openedByTree,
-      onNavigate: childTreeNode.listNavigation?.onNavigate,
-    };
-
-    patchFloatingInternals(childNode.context as object, {
-      treeNode: childTreeNode,
-    });
-
-    return getFloatingInternals(childNode.context as object)?.treeNode ?? null;
-  };
-
-  const isTreeNodeWithinBranch = (
-    candidateNode: TreeNavigationNode | null,
-    branchRootNode: TreeNavigationNode | null,
-  ) => {
-    const floatingTree = tree.tree;
-    if (!candidateNode || !branchRootNode || !floatingTree) {
-      return false;
-    }
-
-    const visited = new Set<string>();
-    let currentNode: TreeNavigationNode | null = candidateNode;
-
-    while (currentNode) {
-      const currentId = currentNode.id.value;
-      if (currentId === branchRootNode.id.value) {
-        return true;
-      }
-
-      if (visited.has(currentId)) {
-        return false;
-      }
-
-      visited.add(currentId);
-
-      const parentId: string | null = currentNode.parentId.value;
-      currentNode = parentId ? floatingTree.actions.getNode(parentId) : null;
-    }
-
-    return false;
-  };
-
-  const clearDescendantReturnIndexes = (branchRootNode: TreeNavigationNode) => {
-    const floatingTree = tree.tree;
-    if (!floatingTree) {
-      return;
-    }
-
-    const visited = new Set<string>();
-
-    const visit = (node: TreeNavigationNode) => {
-      const nodeId = node.id.value;
-      if (visited.has(nodeId)) {
-        return;
-      }
-
-      visited.add(nodeId);
-
-      for (const childId of node.childIds.value) {
-        const childNode = floatingTree.actions.getNode(childId);
-        if (!childNode) {
-          continue;
-        }
-
-        const returnIndex = childNode.listNavigation?.returnIndex;
-        if (returnIndex) {
-          returnIndex.value = null;
-        }
-
-        visit(childNode);
-      }
-    };
-
-    visit(branchRootNode);
-  };
-
-  const closeStaleChildBranchesForNavigation = (nextIndex: number | null, event?: Event) => {
-    const currentNode = tree.treeNode;
-    const activeNode = tree.activeNode;
-
-    if (!currentNode || !activeNode || activeNode.id.value === currentNode.id.value) {
-      return;
-    }
-
-    if (!isTreeNodeWithinBranch(activeNode, currentNode)) {
-      return;
-    }
-
-    const nextChildNode =
-      nextIndex == null
-        ? null
-        : ensureChildListNavigationBridge(options.getChildNode?.(nextIndex) ?? null, nextIndex);
-
-    if (nextChildNode && isTreeNodeWithinBranch(activeNode, nextChildNode)) {
-      return;
-    }
-
-    clearDescendantReturnIndexes(currentNode);
-    tree.closeCurrentChildren("programmatic", event);
-  };
-
-  const navigate = (index: number | null, event?: Event) => {
-    closeStaleChildBranchesForNavigation(index, event);
-    onNavigate?.(index);
-  };
-
-  const openChildNode = (childNode: FloatingTreeNode, index: number, event?: Event) => {
-    ensureChildListNavigationBridge(childNode, index);
-    childNode.context.state.setOpen(true, "keyboard-activate", event);
-  };
-
-  syncTreeNodeBridge();
+  treeCoordinator.syncBridge();
 
   //=====================================================================================
   // Focus Management
@@ -428,7 +260,7 @@ export function useListNavigation(
   const clearOpenCycleState = () => {
     openIntent = null;
     pendingOpenNavigation = null;
-    pendingChildOpen = null;
+    treeCoordinator.clearPendingChildOpen();
   };
 
   const handleAnchorKeyDown = (e: KeyboardEvent): void => {
@@ -462,7 +294,7 @@ export function useListNavigation(
   const handleFloatingKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented) return;
 
-    syncTreeNodeBridge();
+    treeCoordinator.syncBridge();
 
     const key = e.key;
     const ori = toValue(orientation);
@@ -483,13 +315,13 @@ export function useListNavigation(
       if (key === "Home") {
         e.preventDefault();
         const idx = getFirstEnabledIndex();
-        if (idx != null) navigate(idx, e);
+        if (idx != null) treeCoordinator.navigate(idx, e);
         return;
       }
       if (key === "End") {
         e.preventDefault();
         const idx = getLastEnabledIndex();
-        if (idx != null) navigate(idx, e);
+        if (idx != null) treeCoordinator.navigate(idx, e);
         return;
       }
     }
@@ -502,7 +334,7 @@ export function useListNavigation(
       const childNode = options.getChildNode?.(currentIndex) ?? null;
       if (childNode) {
         e.preventDefault();
-        openChildNode(childNode, currentIndex, e);
+        treeCoordinator.openChild(childNode, currentIndex, e);
         return;
       }
     }
@@ -536,10 +368,10 @@ export function useListNavigation(
     e.preventDefault();
 
     if (result.type === "navigate") {
-      navigate(result.index, e);
+      treeCoordinator.navigate(result.index, e);
       const nextIndex = result.index;
       if (nextIndex == null) {
-        pendingChildOpen = null;
+        treeCoordinator.clearPendingChildOpen();
         return;
       }
 
@@ -547,15 +379,12 @@ export function useListNavigation(
 
       if (childNode && shouldOpenChildOnFocus.value) {
         if (nextIndex === currentIndex) {
-          openChildNode(childNode, nextIndex, e);
+          treeCoordinator.openChild(childNode, nextIndex, e);
         } else {
-          pendingChildOpen = {
-            childNode,
-            index: nextIndex,
-          };
+          treeCoordinator.setPendingChildOpen(childNode, nextIndex);
         }
       } else {
-        pendingChildOpen = null;
+        treeCoordinator.clearPendingChildOpen();
       }
     } else if (result.type === "close") {
       if (tree.isTree) {
@@ -612,7 +441,7 @@ export function useListNavigation(
           return;
         }
 
-        closeStaleChildBranchesForNavigation(idx);
+        treeCoordinator.closeStaleChildBranches(idx);
       },
       { flush: "pre" },
     ),
@@ -644,16 +473,10 @@ export function useListNavigation(
           return;
         }
 
-        if (pendingChildOpen) {
-          if (idx === pendingChildOpen.index) {
-            const childNode = pendingChildOpen.childNode;
-            pendingChildOpen = null;
-            // The pending child opens after the active index settles so focus lands on the right item.
-            ensureChildListNavigationBridge(childNode, idx);
-            childNode.context.state.setOpen(true, "keyboard-activate");
-          } else {
-            pendingChildOpen = null;
-          }
+        const pendingChild = treeCoordinator.consumePendingChildOpen(idx);
+        if (pendingChild) {
+          // The pending child opens after the active index settles so focus lands on the right item.
+          pendingChild.context.state.setOpen(true, "keyboard-activate");
 
           return;
         }
@@ -706,7 +529,7 @@ export function useListNavigation(
         if (!target) return;
 
         const idx = findItemIndexFromTarget(target);
-        if (isFocusableIndex(idx)) navigate(idx, evt);
+        if (isFocusableIndex(idx)) treeCoordinator.navigate(idx, evt);
       };
 
       container.addEventListener("mousemove", onMove);
@@ -720,20 +543,17 @@ export function useListNavigation(
     watch(
       () => open.value,
       (isOpen, wasOpen) => {
-        syncTreeNodeBridge();
+        treeCoordinator.syncBridge();
 
         if (!isEnabled.value) {
           clearOpenCycleState();
-          treeNodeReturnIndexBridge.value = null;
-          treeNodeOpenedByTreeBridge.value = false;
+          treeCoordinator.reset();
           return;
         }
 
         if (!isOpen) {
-          restoreParentListNavigation();
+          treeCoordinator.handleClose();
           clearOpenCycleState();
-          treeNodeReturnIndexBridge.value = null;
-          treeNodeOpenedByTreeBridge.value = false;
           prevOpen.value = false;
           return;
         }
@@ -747,7 +567,7 @@ export function useListNavigation(
         openIntent = null;
 
         const focusMode = toValue(focusItemOnOpen);
-        const treeOpened = treeNodeOpenedByTreeBridge.value;
+        const { openedByTree: treeOpened } = treeCoordinator.handleOpen();
         const shouldNavigate =
           currentOpenIntent != null || focusMode === true || (treeOpened && focusMode === "auto");
         const shouldFocus =
@@ -755,7 +575,6 @@ export function useListNavigation(
 
         if (!shouldNavigate) {
           pendingOpenNavigation = null;
-          treeNodeOpenedByTreeBridge.value = false;
           prevOpen.value = true;
           return;
         }
@@ -780,7 +599,6 @@ export function useListNavigation(
           pendingOpenNavigation = null;
         }
 
-        treeNodeOpenedByTreeBridge.value = false;
         prevOpen.value = true;
       },
       { flush: "post", immediate: true },

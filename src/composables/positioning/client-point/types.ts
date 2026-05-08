@@ -1,9 +1,5 @@
 import type { VirtualElement } from "@/types";
 
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
 export interface Coordinates {
   /**
    * Horizontal viewport coordinate.
