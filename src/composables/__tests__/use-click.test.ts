@@ -1,13 +1,7 @@
 import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import {
-  type UseClickOptions,
-  type UseClickContext,
-  useClick,
-  useFloatingTree,
-  useFloatingTreeNode,
-} from "@/composables/interactions";
+import { type UseClickOptions, type UseClickContext, useClick } from "@/composables/interactions";
 import { type AnchorElement, type FloatingElement, useFloating } from "@/composables/positioning";
 
 // Track elements created during tests for cleanup
@@ -453,70 +447,43 @@ describe("useClick", () => {
     });
   });
 
-  describe("floating tree integration", () => {
-    it("treats a child submenu as inside the parent branch for outside dismissal", async () => {
+  describe("ignoreOutsideClick predicate", () => {
+    it("respects the ignoreOutsideClick predicate to prevent outside dismissal", async () => {
       scope = effectScope();
 
-      const rootAnchorEl = trackElement(document.createElement("button"));
-      const rootFloatingEl = trackElement(document.createElement("div"));
-      const childAnchorEl = trackElement(document.createElement("button"));
-      const childFloatingEl = trackElement(document.createElement("div"));
       const outsideEl = createOutsideElement();
-
-      rootAnchorEl.textContent = "Root anchor";
-      childAnchorEl.textContent = "Child anchor";
-      rootFloatingEl.textContent = "Root floating";
-      childFloatingEl.textContent = "Child floating";
-      Object.assign(rootFloatingEl.style, { width: "120px", height: "80px" });
-      Object.assign(childFloatingEl.style, { width: "120px", height: "80px" });
-
-      document.body.appendChild(rootAnchorEl);
-      document.body.appendChild(rootFloatingEl);
-      document.body.appendChild(childAnchorEl);
-      document.body.appendChild(childFloatingEl);
-
-      let rootContext!: ReturnType<typeof useFloating>;
-      let childContext!: ReturnType<typeof useFloating>;
+      const childPopupEl = trackElement(document.createElement("div"));
+      childPopupEl.id = "child-popup";
+      childPopupEl.style.width = "100px";
+      childPopupEl.style.height = "100px";
+      document.body.appendChild(childPopupEl);
 
       scope.run(() => {
-        rootContext = useFloating(ref(rootAnchorEl), ref(rootFloatingEl), {
-          open: ref(true),
-        });
-        childContext = useFloating(ref(childAnchorEl), ref(childFloatingEl), {
-          open: ref(true),
-        });
-
-        const tree = useFloatingTree();
-        const rootNode = useFloatingTreeNode(rootContext, {
-          tree,
-          id: "root",
-        });
-
-        useFloatingTreeNode(childContext, {
-          parent: rootNode,
-          id: "child",
-        });
-
-        useClick(rootContext, {
+        useClick(context, {
           closeOnOutsideClick: true,
           outsideClickEvent: "click",
-          toggle: false,
+          ignoreOutsideClick: (target) => {
+            return target instanceof Node && childPopupEl.contains(target);
+          },
         });
       });
 
+      // Start with open
+      setOpenMock.mockClear();
+      context.state.setOpen(true);
       await nextTick();
 
-      await userEvent.click(childFloatingEl);
+      // Click the child popup - should be ignored
+      await userEvent.click(childPopupEl);
       await nextTick();
+      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(context.state.open.value).toBe(true);
 
-      expect(rootContext.state.open.value).toBe(true);
-      expect(childContext.state.open.value).toBe(true);
-
+      // Click the outside element - should close
       await userEvent.click(outsideEl);
       await nextTick();
-
-      expect(rootContext.state.open.value).toBe(false);
-      expect(childContext.state.open.value).toBe(false);
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
     });
   });
 });

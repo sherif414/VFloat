@@ -8,7 +8,7 @@ import type { VirtualElement } from "@/types";
 /**
  * Resolves the real DOM element behind either a DOM anchor or a virtual anchor.
  */
-export function resolveAnchorElement(anchor: AnchorDomElement): HTMLElement | null {
+export function getAnchorElement(anchor: AnchorDomElement): HTMLElement | null {
   if (!anchor) {
     return null;
   }

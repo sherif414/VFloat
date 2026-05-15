@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import {
-  type UseFocusContext,
-  type UseFocusOptions,
-  useFocus,
-  useFloatingTree,
-  useFloatingTreeNode,
-} from "@/composables/interactions";
+import { type UseFocusContext, type UseFocusOptions, useFocus } from "@/composables/interactions";
 import type { AnchorElement, FloatingElement } from "@/composables/positioning";
 import { useFloating } from "@/composables/positioning";
 
@@ -283,71 +277,31 @@ describe("useFocus", () => {
     });
   });
 
-  describe("floating tree integration", () => {
-    it("keeps the parent open while focus moves into a child submenu and closes the child on return", async () => {
-      const rootAnchorEl = createButton("root-anchor", "Root anchor");
-      const rootFloatingEl = createFloatingElement("root-floating");
-      const childAnchorEl = createButton("child-anchor", "Child anchor");
-      const childFloatingEl = createFloatingElement("child-floating");
+  describe("ignoreFocusOut predicate", () => {
+    it("keeps the floating element open when focus moves to an ignored element", async () => {
+      const ignoredEl = createButton("ignored", "Ignored");
+      document.body.appendChild(ignoredEl);
+      const outsideEl = createButton("outside", "Outside");
+      document.body.appendChild(outsideEl);
 
-      document.body.appendChild(rootAnchorEl);
-      document.body.appendChild(rootFloatingEl);
-      document.body.appendChild(childAnchorEl);
-      document.body.appendChild(childFloatingEl);
-
-      const scope = effectScope();
-      activeScopes.push(scope);
-
-      let rootContext!: ReturnType<typeof useFloating>;
-      let childContext!: ReturnType<typeof useFloating>;
-
-      scope.run(() => {
-        const tree = useFloatingTree({ id: "focus-tree" });
-        rootContext = useFloating(
-          ref<AnchorElement>(rootAnchorEl),
-          ref<FloatingElement>(rootFloatingEl),
-          {
-            open: ref(false),
-          },
-        );
-        const rootNode = useFloatingTreeNode(rootContext, {
-          tree,
-          id: "root",
-        });
-        useFocus(rootContext, { requireFocusVisible: false });
-
-        childContext = useFloating(
-          ref<AnchorElement>(childAnchorEl),
-          ref<FloatingElement>(childFloatingEl),
-          {
-            open: ref(false),
-          },
-        );
-        useFloatingTreeNode(childContext, {
-          parent: rootNode,
-          id: "child",
-        });
-        useFocus(childContext, { requireFocusVisible: false });
+      const ctx = await setupFocusReady({
+        requireFocusVisible: false,
+        ignoreFocusOut: (target) => target === ignoredEl,
       });
 
-      await nextTick();
+      ctx.anchorEl.focus();
+      await flushFocus();
+      expect(ctx.context.state.open.value).toBe(true);
 
-      rootAnchorEl.focus();
+      ignoredEl.focus();
       await flushFocus();
 
-      expect(rootContext.state.open.value).toBe(true);
+      expect(ctx.context.state.open.value).toBe(true);
 
-      childAnchorEl.focus();
+      outsideEl.focus();
       await flushFocus();
 
-      expect(rootContext.state.open.value).toBe(true);
-      expect(childContext.state.open.value).toBe(true);
-
-      rootAnchorEl.focus();
-      await flushFocus();
-
-      expect(rootContext.state.open.value).toBe(true);
-      expect(childContext.state.open.value).toBe(false);
+      expect(ctx.context.state.open.value).toBe(false);
     });
   });
 

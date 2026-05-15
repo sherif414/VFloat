@@ -29,8 +29,8 @@ A navigation pattern where buttons reveal ordinary links while preserving normal
 _Avoid_: ARIA menu.
 
 **Floating tree**:
-A relationship model that coordinates related floating surfaces so nested branches open, close, and restore focus predictably.
-_Avoid_: Menu-only registry.
+A unified user-facing collection that explicitly manages the hierarchical state, expanded nodes, and focus order of nested floating surfaces (where a 1D list is simply a tree of depth 1).
+_Avoid_: Implicit interaction registry.
 
 ## Relationships
 

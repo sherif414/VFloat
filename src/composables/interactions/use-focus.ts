@@ -5,7 +5,6 @@ import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import { isEventTargetWithin, isTypeableElement } from "@/shared/dom";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
-import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
 // 📌 Main
@@ -27,10 +26,13 @@ import { resolveTreeInteraction } from "./internal/tree-interaction";
  */
 export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
   const { open, setOpen } = context.state;
-  const { floatingEl, anchorEl: _anchorEl } = context.refs;
-  const tree = resolveTreeInteraction(context);
+  const { floatingEl, anchorEl: anchorElOption } = context.refs;
 
-  const { enabled = true, requireFocusVisible = true } = options;
+  const {
+    enabled: enabledOption = true,
+    requireFocusVisible: requireFocusVisibleOption = true,
+    ignoreFocusOut: ignoreFocusOutOption,
+  } = options;
   const globalDocument = typeof document !== "undefined" ? document : null;
   const globalWindow = typeof window !== "undefined" ? window : null;
 
@@ -40,28 +42,28 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
    * to reference the actual DOM element for positioning calculations.
    */
   const anchorEl = computed(() => {
-    if (!_anchorEl.value) return null;
-    if (_anchorEl.value instanceof HTMLElement) {
-      return _anchorEl.value;
+    if (!anchorElOption.value) return null;
+    if (anchorElOption.value instanceof HTMLElement) {
+      return anchorElOption.value;
     }
 
-    const contextElement = _anchorEl.value.contextElement;
+    const contextElement = anchorElOption.value.contextElement;
     return contextElement instanceof HTMLElement ? contextElement : null;
   });
   const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? globalDocument);
   const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
-  const isEnabled = computed(() => toValue(enabled));
+  const isEnabled = computed(() => toValue(enabledOption));
 
   let isFocusBlocked = false;
   const isSafariOnMac = isMac() && isSafari();
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let blurTimeoutId: ReturnType<typeof setTimeout> | undefined;
   const cleanupRegistry = createCleanupRegistry();
   const registerCleanup = cleanupRegistry.add;
-  const runCleanups = cleanupRegistry.flush;
+  const cleanup = cleanupRegistry.cleanup;
 
   function clearBlurTimeout() {
-    clearTimeout(timeoutId);
-    timeoutId = undefined;
+    clearTimeout(blurTimeoutId);
+    blurTimeoutId = undefined;
   }
 
   // --- Window Event Listeners for Edge Cases ---
@@ -115,7 +117,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     }
 
     const target = event.target instanceof Element ? event.target : null;
-    if (toValue(requireFocusVisible) && target) {
+    if (toValue(requireFocusVisibleOption) && target) {
       // Safari fails to match `:focus-visible` if focus was initially outside
       // the document. This is a workaround.
       if (isSafariOnMac && !event.relatedTarget) {
@@ -145,7 +147,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     // Use a timeout to check the activeElement in the next event loop tick.
     // This is more reliable than `event.relatedTarget` for complex cases
     // like Shadow DOM or when focus is programmatically moved.
-    timeoutId = currentWindow.setTimeout(() => {
+    blurTimeoutId = currentWindow.setTimeout(() => {
       if (!open.value) return;
 
       const currentDocument = ownerDocument.value;
@@ -158,7 +160,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         return;
       }
 
-      if (activeEl instanceof Element && tree.isTree && tree.isTargetWithinBranch(activeEl)) {
+      if (activeEl instanceof Element && ignoreFocusOutOption && ignoreFocusOutOption(activeEl)) {
         return;
       }
 
@@ -173,11 +175,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
       }
 
       // If neither of the above conditions are met, focus has moved elsewhere.
-      if (tree.isTree) {
-        tree.closeCurrent("blur", event);
-      } else {
-        setOpen(false, "blur", event);
-      }
+      setOpen(false, "blur", event);
     }, BLUR_CHECK_DELAY);
   }
 
@@ -188,26 +186,20 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     useEventListener(
       () => (isEnabled.value ? ownerDocument.value : null),
       "focusin",
-      (evt: FocusEvent) => {
+      (e: FocusEvent) => {
         if (!open.value) return;
 
-        const target = evt.target;
+        const target = e.target;
         if (!(target instanceof Element)) return;
 
-        if (tree.isTree) {
-          if (tree.isTargetWithinBranch(target)) return;
-        } else {
-          // Ignore focus entering the anchor itself
-          if (isEventTargetWithin(evt, anchorEl.value)) return;
+        if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
 
-          if (isEventTargetWithin(evt, floatingEl.value)) return;
-        }
+        // Ignore focus entering the anchor itself
+        if (isEventTargetWithin(e, anchorEl.value)) return;
 
-        if (tree.isTree) {
-          tree.closeCurrent("blur", evt);
-        } else {
-          setOpen(false, "blur", evt);
-        }
+        if (isEventTargetWithin(e, floatingEl.value)) return;
+
+        setOpen(false, "blur", e);
       },
       { capture: true },
     ),
@@ -238,7 +230,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 
   // Ensure the cleanup runs if the component unmounts.
   tryOnScopeDispose(() => {
-    runCleanups();
+    cleanup();
   });
 
   return {
@@ -246,7 +238,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
      * Cleanup function that removes all event listeners and clears pending timeouts.
      * Useful for manual cleanup in testing scenarios.
      */
-    cleanup: runCleanups,
+    cleanup,
   };
 }
 
@@ -295,6 +287,13 @@ export interface UseFocusOptions {
    * @default true
    */
   requireFocusVisible?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Predicate to determine if focus moving to a specific outside target should be ignored.
+   * @param target - The event target receiving focus
+   * @returns true if the focus out should be ignored
+   */
+  ignoreFocusOut?: (target: EventTarget | null) => boolean;
 }
 
 /**

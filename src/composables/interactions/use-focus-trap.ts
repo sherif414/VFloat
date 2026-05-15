@@ -11,7 +11,6 @@ import {
 import type { FloatingContext } from "@/composables/positioning/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
-import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 //=======================================================================================
 // 📌 Main
@@ -31,7 +30,6 @@ export function useFocusTrap(
 ): UseFocusTrapReturn {
   const { floatingEl } = context.refs;
   const { open, setOpen } = context.state;
-  const tree = resolveTreeInteraction(context);
 
   const {
     enabled = true,
@@ -41,6 +39,7 @@ export function useFocusTrap(
     closeOnFocusOut = false,
     preventScroll = true,
     outsideElementsInert = false,
+    ignoreFocusOut,
     onError,
   } = options;
 
@@ -75,11 +74,7 @@ export function useFocusTrap(
       if (options.closeRequest && open.value) {
         const { reason, event } = options.closeRequest;
         pendingCloseRequest = null;
-        if (tree.isTree) {
-          tree.closeCurrent(reason, event);
-        } else {
-          setOpen(false, reason, event);
-        }
+        setOpen(false, reason, event);
       }
 
       return;
@@ -131,18 +126,14 @@ export function useFocusTrap(
         pendingCloseRequest = null;
 
         if (closeRequest) {
-          if (tree.isTree) {
-            tree.closeCurrent(closeRequest.reason, closeRequest.event);
-          } else {
-            setOpen(false, closeRequest.reason, closeRequest.event);
-          }
+          setOpen(false, closeRequest.reason, closeRequest.event);
         }
       },
       initialFocus: resolveInitialFocus(initialFocus),
       fallbackFocus: () => container,
       returnFocusOnDeactivate: shouldReturnFocus.value,
       clickOutsideDeactivates: (event) => {
-        if (tree.isTargetWithinBranch(event?.target ?? null)) {
+        if (ignoreFocusOut && ignoreFocusOut(event?.target ?? null)) {
           return false;
         }
 
@@ -154,7 +145,7 @@ export function useFocusTrap(
         return true;
       },
       allowOutsideClick: (event) => {
-        if (tree.isTargetWithinBranch(event?.target ?? null)) {
+        if (ignoreFocusOut && ignoreFocusOut(event?.target ?? null)) {
           return true;
         }
 
@@ -320,6 +311,13 @@ export interface UseFocusTrapOptions {
    * @param error - The error object.
    */
   onError?: (error: unknown) => void;
+
+  /**
+   * Predicate to determine if focus moving to a specific outside target should be ignored.
+   * @param target - The event target
+   * @returns true if the focus out should be ignored
+   */
+  ignoreFocusOut?: (target: EventTarget | null) => boolean;
 }
 
 /**

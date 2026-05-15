@@ -1,0 +1,137 @@
+import { describe, expect, it } from "vite-plus/test";
+import { useCollection } from "@/composables/collection/use-collection";
+import { ref } from "vue";
+
+describe("useCollection", () => {
+  it("initializes with null activeValue", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2" }],
+      itemValue: (item) => item.id,
+    });
+    expect(collection.activeValue.value).toBeNull();
+  });
+
+  it("advances to the next item", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2" }, { id: "3" }],
+      itemValue: (item) => item.id,
+    });
+
+    collection.setNext();
+    expect(collection.activeValue.value).toBe("1");
+
+    collection.setNext();
+    expect(collection.activeValue.value).toBe("2");
+
+    collection.setNext();
+    expect(collection.activeValue.value).toBe("3");
+  });
+
+  it("stops at the last item without wrapping", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2" }],
+      itemValue: (item) => item.id,
+    });
+
+    collection.setActiveValue("2");
+    collection.setNext();
+    expect(collection.activeValue.value).toBe("2");
+  });
+
+  it("wraps to the start when loop is enabled", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2" }],
+      itemValue: (item) => item.id,
+    });
+
+    collection.setActiveValue("2");
+    collection.setNext({ loop: true });
+    expect(collection.activeValue.value).toBe("1");
+  });
+
+  it("navigates backwards", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2" }],
+      itemValue: (item) => item.id,
+    });
+
+    collection.setActiveValue("2");
+    collection.setPrevious();
+    expect(collection.activeValue.value).toBe("1");
+  });
+
+  it("wraps to the end when looping backwards", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2" }],
+      itemValue: (item) => item.id,
+    });
+
+    collection.setActiveValue("1");
+    collection.setPrevious({ loop: true });
+    expect(collection.activeValue.value).toBe("2");
+  });
+
+  it("skips disabled items", () => {
+    const collection = useCollection({
+      items: [{ id: "1" }, { id: "2", disabled: true }, { id: "3" }],
+      itemValue: (item) => item.id,
+      itemDisabled: (item) => !!item.disabled,
+    });
+
+    collection.setActiveValue("1");
+    collection.setNext();
+    expect(collection.activeValue.value).toBe("3");
+  });
+
+  it("sets to first and last enabled items", () => {
+    const collection = useCollection({
+      items: [{ id: "1", disabled: true }, { id: "2" }, { id: "3" }, { id: "4", disabled: true }],
+      itemValue: (item) => item.id,
+      itemDisabled: (item) => !!item.disabled,
+    });
+
+    collection.setFirst();
+    expect(collection.activeValue.value).toBe("2");
+
+    collection.setLast();
+    expect(collection.activeValue.value).toBe("3");
+  });
+});
+
+describe("useCollection (2D Tree)", () => {
+  it("flattens items based on expanded branches", () => {
+    type TreeNode = { id: string; children?: TreeNode[] };
+    const items: TreeNode[] = [
+      {
+        id: "1",
+        children: [{ id: "1-1" }, { id: "1-2" }],
+      },
+      { id: "2" },
+    ];
+
+    const collection = useCollection<TreeNode>({
+      items,
+      itemValue: (item) => item.id,
+      itemChildren: (item) => item.children,
+    });
+
+    // Initially, only root items should be in flattenedItems
+    expect(collection.flattenedItems.value.map((i) => i.id)).toEqual(["1", "2"]);
+
+    // Expand branch 1
+    collection.expandBranch("1");
+    expect(collection.expandedValues.value.has("1")).toBe(true);
+    expect(collection.flattenedItems.value.map((i) => i.id)).toEqual(["1", "1-1", "1-2", "2"]);
+
+    // Collapse branch 1
+    collection.collapseBranch("1");
+    expect(collection.expandedValues.value.has("1")).toBe(false);
+    expect(collection.flattenedItems.value.map((i) => i.id)).toEqual(["1", "2"]);
+
+    // Expand again, then collapse all
+    collection.expandBranch("1");
+    collection.collapseAll();
+    expect(collection.expandedValues.value.size).toBe(0);
+    expect(collection.flattenedItems.value.map((i) => i.id)).toEqual(["1", "2"]);
+  });
+});

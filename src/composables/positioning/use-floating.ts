@@ -80,6 +80,7 @@ export function useFloating(
   // so the public context shape can stay small and stable.
   setFloatingInternals(context, {
     middlewareRegistry: positionController.middlewareRegistry,
+    updatePosition: positionController.position.update,
   });
 
   return context;

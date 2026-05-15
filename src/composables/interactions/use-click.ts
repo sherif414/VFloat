@@ -11,7 +11,6 @@ import {
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import type { OpenChangeReason } from "@/types";
-import { resolveTreeInteraction } from "./internal/tree-interaction";
 
 type PointerType = "mouse" | "touch" | "pen";
 
@@ -55,18 +54,19 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   const { open, setOpen } = context.state;
   const refs = context.refs;
   const {
-    enabled = true,
+    enabled: enabledOption = true,
     event: eventOption = "click",
-    toggle = true,
-    ignoreMouse = false,
-    ignoreKeyboard = false,
-    ignoreTouch = false,
-    closeOnOutsideClick = false,
-    outsideClickEvent = "pointerdown",
-    outsideCapture = true,
-    onOutsideClick,
-    ignoreScrollbar = true,
-    ignoreDrag = true,
+    toggle: toggleOption = true,
+    ignoreMouse: ignoreMouseOption = false,
+    ignoreKeyboard: ignoreKeyboardOption = false,
+    ignoreTouch: ignoreTouchOption = false,
+    closeOnOutsideClick: closeOnOutsideClickOption = false,
+    outsideClickEvent: outsideClickEventOption = "pointerdown",
+    outsideCapture: outsideCaptureOption = true,
+    onOutsideClick: onOutsideClickOption,
+    ignoreOutsideClick: ignoreOutsideClickOption,
+    ignoreScrollbar: ignoreScrollbarOption = true,
+    ignoreDrag: ignoreDragOption = true,
   } = options;
 
   //=====================================================================================
@@ -85,8 +85,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   // Stored so we can cancel/avoid late updates on unmount/anchor change.
   let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  const isEnabled = computed(() => toValue(enabled));
-  const isOutsideClickEnabled = computed(() => toValue(closeOnOutsideClick));
+  const isEnabled = computed(() => toValue(enabledOption));
+  const isOutsideClickEnabled = computed(() => toValue(closeOnOutsideClickOption));
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value;
@@ -95,7 +95,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   });
 
   const floatingEl = computed(() => refs.floatingEl.value);
-  const tree = resolveTreeInteraction(context);
 
   //=====================================================================================
   // Event Handlers (Anchor & Outside)
@@ -107,12 +106,12 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     dragResetTimeoutId = undefined;
   }
 
-  function handleOpenChange(reason: OpenChangeReason, event: Event) {
+  function onOpenChange(reason: OpenChangeReason, event: Event) {
     interactionState.interactionInProgress = true;
     try {
       if (open.value) {
         // When `toggle` is enabled, anchor clicks toggle open/closed.
-        if (toValue(toggle)) {
+        if (toValue(toggleOption)) {
           setOpen(false, reason, event);
         }
       } else {
@@ -127,7 +126,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     }
   }
 
-  function resetInteractionState() {
+  function clearInteractionState() {
     interactionState.pointerType = undefined;
     interactionState.didKeyDown = false;
     interactionState.dragStartedInside = false;
@@ -141,42 +140,42 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   function isSyntheticKeyboardClick(e: MouseEvent): boolean {
     // When keyboard interactions are disabled, browsers may still dispatch a
     // click after Enter/Space activation on some elements.
-    return toValue(ignoreKeyboard) && e.detail === 0;
+    return toValue(ignoreKeyboardOption) && e.detail === 0;
   }
 
   function onMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
     if (toValue(eventOption) === "click") return;
-    if (shouldIgnorePointerType(interactionState.pointerType)) return;
+    if (isIgnoredPointerType(interactionState.pointerType)) return;
 
-    handleOpenChange("anchor-click", e);
+    onOpenChange("anchor-click", e);
   }
 
   function onClick(e: MouseEvent): void {
     if (isSyntheticKeyboardClick(e)) {
-      resetInteractionState();
+      clearInteractionState();
       return;
     }
 
     if (toValue(eventOption) === "mousedown" && interactionState.pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
-      resetInteractionState();
+      clearInteractionState();
       return;
     }
 
-    if (shouldIgnorePointerType(interactionState.pointerType)) {
-      resetInteractionState();
+    if (isIgnoredPointerType(interactionState.pointerType)) {
+      clearInteractionState();
       return;
     }
 
-    handleOpenChange("anchor-click", e);
-    resetInteractionState();
+    onOpenChange("anchor-click", e);
+    clearInteractionState();
   }
 
   function onKeyDown(e: KeyboardEvent) {
     interactionState.pointerType = undefined;
 
-    if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e)) {
+    if (e.defaultPrevented || toValue(ignoreKeyboardOption) || isButtonTarget(e)) {
       return;
     }
 
@@ -190,7 +189,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     }
 
     if (e.key === "Enter") {
-      handleOpenChange("keyboard-activate", e);
+      onOpenChange("keyboard-activate", e);
     }
   }
 
@@ -198,24 +197,29 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     const el = anchorEl.value;
     if (!el) return;
 
-    if (e.defaultPrevented || toValue(ignoreKeyboard) || isButtonTarget(e) || isSpaceIgnored(el)) {
+    if (
+      e.defaultPrevented ||
+      toValue(ignoreKeyboardOption) ||
+      isButtonTarget(e) ||
+      isSpaceIgnored(el)
+    ) {
       return;
     }
 
     if (e.key === " " && interactionState.didKeyDown) {
       interactionState.didKeyDown = false;
-      handleOpenChange("keyboard-activate", e);
+      onOpenChange("keyboard-activate", e);
     }
   }
 
-  function onOutsideClickHandler(event: MouseEvent) {
+  function onOutsideClick(event: MouseEvent) {
     if (!isEnabled.value || !isOutsideClickEnabled.value || !open.value) {
       return;
     }
 
     // Suppress outside-close for click sequences caused by a drag that started
     // inside the floating content.
-    if (suppressOutsideClickForDragSequence()) return;
+    if (isDragSuppressed()) return;
 
     // Don't process outside clicks during ongoing interactions
     if (interactionState.interactionInProgress) {
@@ -227,7 +231,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
     // Clicked on a scrollbar
     if (
-      toValue(ignoreScrollbar) &&
+      toValue(ignoreScrollbarOption) &&
       isHTMLElement(target) &&
       floatingEl.value &&
       isClickOnScrollbar(event, target)
@@ -235,31 +239,27 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return;
     }
 
-    if (tree.isTargetWithinBranch(target)) {
+    if (ignoreOutsideClickOption && ignoreOutsideClickOption(target)) {
       return;
     }
 
     if (
-      !tree.isTree &&
-      (isEventTargetWithin(event, anchorEl.value) || isEventTargetWithin(event, floatingEl.value))
+      isEventTargetWithin(event, anchorEl.value) ||
+      isEventTargetWithin(event, floatingEl.value)
     ) {
       return;
     }
 
-    if (onOutsideClick) {
-      onOutsideClick(event);
+    if (onOutsideClickOption) {
+      onOutsideClickOption(event);
     } else {
-      if (tree.isTree) {
-        tree.closeCurrent("outside-pointer", event);
-      } else {
-        setOpen(false, "outside-pointer", event);
-      }
+      setOpen(false, "outside-pointer", event);
     }
   }
 
-  function suppressOutsideClickForDragSequence(): boolean {
-    if (toValue(outsideClickEvent) !== "click") return false;
-    if (!toValue(ignoreDrag)) return false;
+  function isDragSuppressed(): boolean {
+    if (toValue(outsideClickEventOption) !== "click") return false;
+    if (!toValue(ignoreDragOption)) return false;
     if (!interactionState.dragStartedInside) return false;
 
     interactionState.dragStartedInside = false;
@@ -278,11 +278,11 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     }, 0);
   }
 
-  function shouldIgnorePointerType(type: PointerType | undefined): boolean {
-    if (isMouseLikePointerType(type, true) && toValue(ignoreMouse)) {
+  function isIgnoredPointerType(type: PointerType | undefined): boolean {
+    if (isMouseLikePointerType(type, true) && toValue(ignoreMouseOption)) {
       return true;
     }
-    if (type === "touch" && toValue(ignoreTouch)) {
+    if (type === "touch" && toValue(ignoreTouchOption)) {
       return true;
     }
     return false;
@@ -313,7 +313,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       el.removeEventListener("click", onClick);
       el.removeEventListener("keydown", onKeyDown);
       el.removeEventListener("keyup", onKeyUp);
-      resetInteractionState();
+      clearInteractionState();
     });
   });
 
@@ -323,14 +323,14 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   useEventListener(
     () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
-    outsideClickEvent,
-    onOutsideClickHandler,
-    { capture: toValue(outsideCapture) },
+    outsideClickEventOption,
+    onOutsideClick,
+    { capture: toValue(outsideCaptureOption) },
   );
 
   useEventListener(
     () =>
-      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDrag)
+      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDragOption)
         ? floatingEl.value
         : null,
     "mousedown",
@@ -340,7 +340,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   useEventListener(
     () =>
-      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDrag)
+      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDragOption)
         ? floatingEl.value
         : null,
     "mouseup",
@@ -434,6 +434,13 @@ export interface UseClickOptions {
    * @param event - The mouse event that triggered the outside click
    */
   onOutsideClick?: (event: MouseEvent) => void;
+
+  /**
+   * Predicate to determine if an outside click should be ignored.
+   * @param target - The event target
+   * @returns true if the click should be ignored
+   */
+  ignoreOutsideClick?: (target: EventTarget | null) => boolean;
 
   /**
    * Whether to ignore clicks on scrollbars (prevent them from closing the floating element).

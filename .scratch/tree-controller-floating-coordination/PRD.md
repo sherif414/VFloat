@@ -1,6 +1,6 @@
 # PRD: Tree Controller for Floating Coordination
 
-Status: needs-triage
+Status: wontfix
 
 ## Problem Statement
 
@@ -66,3 +66,7 @@ Introduce a tree-controller coordination model that keeps `useFloating()` unchan
 - This PRD intentionally aligns with VFloat's pre-1.0 evolution model and allows targeted breaking cleanup when it simplifies architecture.
 - The deepest-value outcome is a deep, stable coordination module with thin node adapters and predictable interaction integration points.
 - Triage should prioritize risks around semantic close reason preservation and focus behavior ownership boundaries, as those are the most regression-prone seams.
+
+## Comments
+
+**[AI Triage]**: Marked as `wontfix` by the maintainer. This architectural approach (Tree Controller) has been superseded by the "Unified Collection" (`useCollection`) paradigm.

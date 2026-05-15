@@ -25,6 +25,103 @@
 - Boolean option names should read like flags. Prefer prefixes such as `enabled`, `allow`, `ignore`, `closeOn`, `openOn`, `prevent`, `require`, `return`, and `focus` when they match the behavior.
 - When documenting or demoing the floating root, prefer a local variable name like `context` so examples stay consistent with the grouped API shape.
 
+### Internal Naming
+
+Internal naming covers variables, functions, and patterns inside the implementation — everything that isn't part of the public API surface.
+
+#### Guiding Principle: Let Scope Carry Meaning
+
+A name should only encode information that the reader can't already see from the **file** it's in, the **function** it's inside, the **section banner** above it, or the **type signature**. Don't repeat your surroundings. A long name is fine when it adds genuinely new information; a short name is fine when context already tells the story.
+
+One-line test: _"If I removed a word from this name, would the reader still know what it means from context? If yes, remove it."_
+
+#### Verb Vocabulary
+
+Use a fixed set of verbs with non-overlapping meanings. Do not invent synonyms.
+
+**Creation and lookup:**
+
+| Verb     | Meaning                                                                                                                    | Example                                              |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `create` | Factory that allocates a new object or closure. Always returns something new.                                              | `createCleanupRegistry()`, `createTreeCoordinator()` |
+| `get`    | Pure accessor that reads an existing value. No side effects, no searching. Includes derivations and lookups with fallback. | `getFloatingInternals()`, `getFirstEnabledIndex()`   |
+| `find`   | Searches a collection. May return `null`.                                                                                  | `findNextEnabled()`, `findItemIndexFromTarget()`     |
+
+Do not use `resolve`, `build`, or `make`. Every `resolve` is really a `get` (lookup/coerce) or a `create` (new object).
+
+**Cleanup and teardown:**
+
+| Verb      | Meaning                                                                                                | Example                                  |
+| --------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| `clear`   | Zero out a specific piece of state — a timeout, a ref, a flag. Targeted and surgical.                  | `clearTimeout()`, `clearPendingChild()`  |
+| `cleanup` | Tear down listeners, watchers, and side effects. Bulk disposal. The "undo all side effects" operation. | `cleanup()`, `cleanupRegistry.cleanup()` |
+
+Do not use `reset` (too vague) or `flush` (unclear).
+
+**Mutation:**
+
+| Verb             | Meaning                                          | Example                               |
+| ---------------- | ------------------------------------------------ | ------------------------------------- |
+| `set`            | Write a complete value (overwrite).              | `setOpen()`, `setFloatingInternals()` |
+| `patch`          | Merge a partial value into an existing one.      | `patchFloatingInternals()`            |
+| `add` / `remove` | Collection membership — registries, child lists. | `cleanupRegistry.add()`               |
+
+`sync` (coordination between two data sources) and `restore` (inverse of a previous `set`, e.g. DOM attribute rollback) are acceptable as special-purpose verbs.
+
+#### Event Handlers
+
+All internal event handler functions use the `on` prefix. Do not use `handle`.
+
+| Pattern             | When to use                                | Example                                                          |
+| ------------------- | ------------------------------------------ | ---------------------------------------------------------------- |
+| `on{Event}`         | Only one handler for that event in scope.  | `onFocus`, `onBlur`, `onClick`                                   |
+| `on{Target}{Event}` | Same event handled differently per target. | `onAnchorKeyDown`, `onFloatingKeyDown`, `onFloatingPointerEnter` |
+
+Do not encode purpose in the suffix (no `onPointerMoveForRest`, no `onOutsideClickHandler`).
+
+#### Boolean Predicates
+
+| Prefix | Meaning                                                              | Example                                                    |
+| ------ | -------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `is`   | Primary boolean predicate — functions, computeds, and inline checks. | `isEnabled`, `isDisabled(idx)`, `isAnchorInParentBranch()` |
+| `can`  | Capability gate — whether an action is permitted.                    | `canFocusDisabledItems`                                    |
+
+Do not use `should` as a predicate prefix.
+
+#### Computed Wrappers for Options
+
+When a composable destructures an option and wraps it in a `computed`, use the `*Option` suffix on the destructured value so the computed gets the clean name.
+
+```ts
+// Boolean options → computed uses `is*`
+const { enabled: enabledOption = true } = options;
+const isEnabled = computed(() => toValue(enabledOption));
+
+// Non-boolean options → computed gets the clean name
+const { delay: delayOption = 0 } = options;
+const delay = computed(() => toValue(delayOption));
+```
+
+#### Timer and Timeout IDs
+
+- Use `camelCase` for acronyms: `timeoutId`, not `timeoutID`.
+- Name pattern: `{purpose}TimeoutId`. Always include what the timer is for.
+- A bare `timeoutId` is acceptable only when there is exactly one timer in scope.
+
+#### Accepted Abbreviations
+
+Only these abbreviations are permitted. Everything else must be spelled out.
+
+| Abbreviation | Meaning                                   |
+| ------------ | ----------------------------------------- |
+| `el`         | element                                   |
+| `idx`        | index                                     |
+| `ref`        | reference (Vue ref)                       |
+| `fn`         | function                                  |
+| `e`          | event parameter (always `e`, never `evt`) |
+| `dx` / `dy`  | delta x / delta y (math convention)       |
+| `id`         | identifier                                |
+
 ## Type Conventions
 
 - Public composable companion types use `UseXOptions`, `UseXReturn`, and `UseXContext` when those shapes are exposed.

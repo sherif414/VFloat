@@ -11,6 +11,8 @@ import type { OpenChangeReason, VirtualElement } from "@/types";
 // 📌 Main
 //=======================================================================================
 
+const floatingInternals = new WeakMap<object, FloatingInternals>();
+
 /**
  * Attaches internal positioning state to a public floating context object.
  */
@@ -40,12 +42,6 @@ export function patchFloatingInternals(target: object, patch: Partial<FloatingIn
     ...patch,
   });
 }
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-const floatingInternals = new WeakMap<object, FloatingInternals>();
 
 //=======================================================================================
 // 📌 Types
@@ -147,60 +143,9 @@ export interface FloatingMiddlewareRegistry {
 }
 
 /**
- * Optional list-navigation bridge stored on the floating context.
- */
-export interface FloatingListNavigationBridge {
-  onNavigate?: (index: number | null) => void;
-  returnIndex: Ref<number | null>;
-  openedByTree: Ref<boolean>;
-}
-
-/**
- * Tree bridge that coordinates related floating branches.
- */
-export interface FloatingTreeBridge {
-  activeId: Readonly<Ref<string | null>>;
-  actions: {
-    getNode: (id: string) => FloatingTreeNodeBridge | null;
-    closeBranch: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeChildren: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeSiblings: (id: string, reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeAll: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    isTargetWithinTree: (target: EventTarget | null) => boolean;
-    isTargetWithinBranch: (id: string, target: EventTarget | null) => boolean;
-  };
-}
-
-/**
- * Tree node bridge stored on a floating context that participates in a tree.
- */
-export interface FloatingTreeNodeBridge {
-  id: Readonly<Ref<string>>;
-  parentId: Readonly<Ref<string | null>>;
-  childIds: Readonly<Ref<string[]>>;
-  context: Pick<FloatingContext, "refs" | "state">;
-  tree: FloatingTreeBridge;
-  state: {
-    isRoot: Readonly<Ref<boolean>>;
-    isLeaf: Readonly<Ref<boolean>>;
-    isActive: Readonly<Ref<boolean>>;
-  };
-  listNavigation?: FloatingListNavigationBridge;
-  actions: {
-    close: (event?: Event) => void;
-    closeBranch: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeChildren: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeSiblings: (reasonOrEvent?: OpenChangeReason | Event, event?: Event) => void;
-    closeWithReason: (reason: OpenChangeReason, event?: Event) => void;
-    isTargetWithinNode: (target: EventTarget | null) => boolean;
-    isTargetWithinBranch: (target: EventTarget | null) => boolean;
-  };
-}
-
-/**
  * Internal capabilities attached to the floating context via a WeakMap.
  */
 export interface FloatingInternals {
   middlewareRegistry: FloatingMiddlewareRegistry;
-  treeNode?: FloatingTreeNodeBridge;
+  updatePosition: () => Promise<void>;
 }

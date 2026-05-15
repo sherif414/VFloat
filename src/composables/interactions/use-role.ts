@@ -21,8 +21,23 @@ import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
  */
 export function useRole(context: FloatingContext, options: UseRoleOptions = {}): UseRoleReturn {
   const { open } = context.state;
-  const isEnabled = computed(() => toValue(options.enabled) ?? true);
-  const shouldControlPopup = computed(() => toValue(options.controls) ?? true);
+  const {
+    enabled: enabledOption = true,
+    role: roleOption = null,
+    controls: controlsOption = true,
+    label: labelOption,
+    labelledBy: labelledByOption,
+    describedBy: describedByOption,
+    modal: modalOption,
+    listRef,
+    itemRole: itemRoleOption,
+    disabledIndices: disabledIndicesOption,
+    checkedIndices: checkedIndicesOption,
+    selectedIndices: selectedIndicesOption,
+  } = options;
+
+  const isEnabled = computed(() => toValue(enabledOption));
+  const shouldControlPopup = computed(() => toValue(controlsOption));
   const cleanupRegistry = createCleanupRegistry();
 
   const stop = watchPostEffect(() => {
@@ -36,24 +51,24 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
       return;
     }
 
-    const role = toValue(options.role) ?? null;
-    const anchorEl = resolveAnchorEl(context.refs.anchorEl.value);
+    const role = toValue(roleOption);
+    const anchorEl = getAnchorEl(context.refs.anchorEl.value);
     const floatingEl = context.refs.floatingEl.value;
 
     if (floatingEl && role) {
       setManagedAttribute(managedAttributes, floatingEl, "role", role);
-      setManagedAttribute(managedAttributes, floatingEl, "aria-label", toValue(options.label));
+      setManagedAttribute(managedAttributes, floatingEl, "aria-label", toValue(labelOption));
       setManagedAttribute(
         managedAttributes,
         floatingEl,
         "aria-labelledby",
-        toValue(options.labelledBy),
+        toValue(labelledByOption),
       );
       setManagedAttribute(
         managedAttributes,
         floatingEl,
         "aria-describedby",
-        toValue(options.describedBy),
+        toValue(describedByOption),
       );
 
       if (role === "dialog") {
@@ -61,7 +76,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
           managedAttributes,
           floatingEl,
           "aria-modal",
-          toValue(options.modal) ? "true" : null,
+          toValue(modalOption) ? "true" : null,
         );
       }
     }
@@ -89,7 +104,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
       }
     }
 
-    const items = options.listRef?.value ?? [];
+    const items = listRef?.value ?? [];
 
     for (let index = 0; index < items.length; index++) {
       const itemEl = items[index];
@@ -98,14 +113,14 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
         continue;
       }
 
-      const itemRole = resolveItemRole(options.itemRole, role, index, itemEl);
+      const itemRole = getItemRole(itemRoleOption, role, index, itemEl);
       setManagedAttribute(managedAttributes, itemEl, "role", itemRole);
 
       setManagedAttribute(
         managedAttributes,
         itemEl,
         "aria-disabled",
-        matchesIndex(index, options.disabledIndices) ? "true" : null,
+        matchesIndex(index, disabledIndicesOption) ? "true" : null,
       );
 
       if (isCheckedItemRole(itemRole)) {
@@ -113,7 +128,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
           managedAttributes,
           itemEl,
           "aria-checked",
-          matchesIndex(index, options.checkedIndices) ? "true" : "false",
+          matchesIndex(index, checkedIndicesOption) ? "true" : "false",
         );
       }
 
@@ -122,17 +137,17 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
           managedAttributes,
           itemEl,
           "aria-selected",
-          matchesIndex(index, options.selectedIndices) ? "true" : null,
+          matchesIndex(index, selectedIndicesOption) ? "true" : null,
         );
       }
     }
   });
 
   cleanupRegistry.add(stop);
-  tryOnScopeDispose(cleanupRegistry.flush);
+  tryOnScopeDispose(cleanupRegistry.cleanup);
 
   return {
-    cleanup: cleanupRegistry.flush,
+    cleanup: cleanupRegistry.cleanup,
   };
 }
 
@@ -147,7 +162,7 @@ function createRoleId(prefix: string) {
   return `vfloat-${prefix}-${roleIdCounter}`;
 }
 
-function resolveAnchorEl(anchorEl: FloatingContext["refs"]["anchorEl"]["value"]) {
+function getAnchorEl(anchorEl: FloatingContext["refs"]["anchorEl"]["value"]) {
   if (anchorEl instanceof HTMLElement) {
     return anchorEl;
   }
@@ -249,7 +264,7 @@ function restoreManagedAttributes(managedAttributes: ManagedAttribute[]) {
   managedAttributes.length = 0;
 }
 
-function resolveItemRole(
+function getItemRole(
   itemRole: UseRoleOptions["itemRole"],
   role: FloatingRole | null | undefined,
   index: number,

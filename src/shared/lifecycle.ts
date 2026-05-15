@@ -30,7 +30,7 @@ export function createCleanupRegistry() {
     };
   };
 
-  const flush = () => {
+  const cleanup = () => {
     for (const cleanup of [...cleanups].reverse()) {
       cleanups.delete(cleanup);
       cleanup();
@@ -39,6 +39,6 @@ export function createCleanupRegistry() {
 
   return {
     add,
-    flush,
+    cleanup,
   };
 }

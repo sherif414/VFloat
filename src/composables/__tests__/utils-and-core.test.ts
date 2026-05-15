@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { ref } from "vue";
-import { createRefSetter, resolveAnchorElement } from "@/shared/elements";
+import { createRefSetter, getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import type { VirtualElement } from "@/types";
@@ -160,7 +160,7 @@ describe("utils and core helpers", () => {
     const cleanupRegistry = createCleanupRegistry();
     const cleanup = vi.fn();
     cleanupRegistry.add(cleanup);
-    cleanupRegistry.flush();
+    cleanupRegistry.cleanup();
     expect(cleanup).toHaveBeenCalledTimes(1);
     expect(tryOnScopeDispose(() => {})).toBe(false);
 
@@ -195,13 +195,13 @@ describe("utils and core helpers", () => {
     const setterTarget = ref<HTMLElement | null>(null);
     createRefSetter(setterTarget)(anchorEl.value);
     expect(setterTarget.value).toBe(anchorEl.value);
-    expect(resolveAnchorElement(anchorEl.value)).toBe(anchorEl.value);
+    expect(getAnchorElement(anchorEl.value)).toBe(anchorEl.value);
     expect(
-      resolveAnchorElement({
+      getAnchorElement({
         contextElement: anchorEl.value,
         getBoundingClientRect: () => anchorEl.value.getBoundingClientRect(),
       }),
     ).toBe(anchorEl.value);
-    expect(resolveAnchorElement(null)).toBeNull();
+    expect(getAnchorElement(null)).toBeNull();
   });
 });
