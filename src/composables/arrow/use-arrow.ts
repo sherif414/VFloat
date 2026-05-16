@@ -1,7 +1,7 @@
 import { type ComputedRef, computed, type Ref, toValue, watch } from "vue";
-import { getFloatingInternals } from "../floating/floating-context";
+import { getFloatingInternals } from "@/composables/floating";
 import { arrow } from "../middlewares";
-import type { FloatingContext } from "../floating/floating-context";
+import type { FloatingContext } from "@/composables/floating";
 
 //=======================================================================================
 // 📌 Main

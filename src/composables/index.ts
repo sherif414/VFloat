@@ -4,7 +4,7 @@ export * from "./click/use-click";
 export * from "./client-point/use-client-point";
 export * from "./collection";
 export * from "./escape-key/use-escape-key";
-export * from "./floating/use-floating";
+export * from "./floating";
 export * from "./focus/use-focus";
 export * from "./focus-trap/use-focus-trap";
 export * from "./hover/use-hover";

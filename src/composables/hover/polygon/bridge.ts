@@ -1,9 +1,5 @@
 import { computed } from "vue";
-import type {
-  AnchorElement,
-  FloatingContext,
-  FloatingElement,
-} from "@/composables/floating/floating-context";
+import type { AnchorElement, FloatingContext, FloatingElement } from "@/composables/floating";
 import {
   clearTimeoutIfSet,
   contains,

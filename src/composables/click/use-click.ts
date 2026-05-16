@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import { type FloatingContext } from "@/composables/floating/floating-context";
+import { type FloatingContext } from "@/composables/floating";
 import {
   isButtonTarget,
   isClickOnScrollbar,

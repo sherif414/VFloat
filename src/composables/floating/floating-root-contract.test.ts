@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import { getFloatingInternals } from "@/composables/floating/floating-context";
+import { getFloatingInternals } from "@/composables/floating";
 import { useHover } from "@/composables";
 import { useArrow, useClientPoint, useFloating } from "@/composables";
 

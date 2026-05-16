@@ -11,7 +11,7 @@ import {
 import { FollowTracker, StaticTracker, TrackingStrategy } from "./tracking-strategies";
 import type { AxisConstraint, Coordinates, PointerEventData, TrackingMode } from "./types";
 import { VirtualElementFactory } from "./virtual-element-factory";
-import type { AnchorElement, FloatingContext } from "../floating/floating-context";
+import type { AnchorElement, FloatingContext } from "@/composables/floating";
 
 //=======================================================================================
 // 📌 Main

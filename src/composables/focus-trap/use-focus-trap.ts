@@ -8,7 +8,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating/floating-context";
+import type { FloatingContext } from "@/composables/floating";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 
