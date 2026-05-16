@@ -31,4 +31,5 @@ export type OpenChangeReason =
   | "blur"
   | "hover"
   | "escape-key"
+  | "tab-key"
   | "programmatic";

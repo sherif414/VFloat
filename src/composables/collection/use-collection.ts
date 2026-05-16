@@ -94,7 +94,8 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
 
   const flattenedItems = computed(() => {
     const rawItems = getItems();
-    if (!options.itemChildren) return rawItems;
+    const itemChildren = options.itemChildren;
+    if (!itemChildren) return rawItems;
 
     const result: T[] = [];
     const traverse = (items: T[]) => {
@@ -102,7 +103,7 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
         result.push(item);
         const val = options.itemValue(item);
         if (expandedValues.value.has(val)) {
-          const children = options.itemChildren ? options.itemChildren(item) : null;
+          const children = itemChildren(item);
           if (children && children.length > 0) {
             traverse(children);
           }
@@ -117,8 +118,9 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
     const rawItems = getItems();
     const parents = new Map<string, string>();
     const withChildren = new Set<string>();
+    const itemChildren = options.itemChildren;
 
-    if (!options.itemChildren) return { parents, withChildren };
+    if (!itemChildren) return { parents, withChildren };
 
     const traverse = (items: T[], parentVal: string | null) => {
       for (const item of items) {
@@ -126,7 +128,7 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
         if (parentVal != null) {
           parents.set(val, parentVal);
         }
-        const children = options.itemChildren ? options.itemChildren(item) : null;
+        const children = itemChildren(item);
         if (children && children.length > 0) {
           withChildren.add(val);
           traverse(children, val);
@@ -175,6 +177,11 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
       (item) => options.itemValue(item) === activeValue.value,
     );
 
+    if (currentIndex === -1) {
+      activeValue.value = options.itemValue(focusableItems[0]);
+      return;
+    }
+
     let nextIndex = currentIndex + 1;
     if (nextIndex >= focusableItems.length) {
       if (navOptions.loop) {
@@ -199,6 +206,11 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
     const currentIndex = focusableItems.findIndex(
       (item) => options.itemValue(item) === activeValue.value,
     );
+
+    if (currentIndex === -1) {
+      activeValue.value = options.itemValue(focusableItems[focusableItems.length - 1]);
+      return;
+    }
 
     let previousIndex = currentIndex - 1;
     if (previousIndex < 0) {
