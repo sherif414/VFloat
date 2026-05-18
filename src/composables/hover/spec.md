@@ -1,3 +1,0 @@
-# useHover
-
-<!-- TODO: populate specification -->

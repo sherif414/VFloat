@@ -1,3 +1,0 @@
-# useFocusTrap
-
-<!-- TODO: populate specification -->

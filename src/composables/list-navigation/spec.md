@@ -1,3 +1,0 @@
-# useListNavigation
-
-<!-- TODO: populate specification -->

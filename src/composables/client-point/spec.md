@@ -1,3 +1,0 @@
-# useClientPoint
-
-<!-- TODO: populate specification -->

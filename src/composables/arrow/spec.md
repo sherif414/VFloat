@@ -1,3 +1,0 @@
-# useArrow
-
-<!-- TODO: populate specification -->

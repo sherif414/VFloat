@@ -1,3 +1,0 @@
-# useFocus
-
-<!-- TODO: populate specification -->

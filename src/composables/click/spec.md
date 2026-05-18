@@ -1,3 +1,0 @@
-# useClick
-
-<!-- TODO: populate specification -->

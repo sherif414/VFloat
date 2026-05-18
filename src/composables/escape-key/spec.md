@@ -1,3 +1,0 @@
-# useEscapeKey
-
-<!-- TODO: populate specification -->

@@ -1,3 +1,0 @@
-# useFloating
-
-<!-- TODO: populate specification -->
