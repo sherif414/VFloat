@@ -90,15 +90,6 @@ function setupFocusTrap(
       anchorEl: anchorRef,
       floatingEl: floatingRef,
       arrowEl: arrowRef,
-      setAnchor: (value) => {
-        anchorRef.value = value;
-      },
-      setFloating: (value) => {
-        floatingRef.value = value;
-      },
-      setArrow: (value) => {
-        arrowRef.value = value;
-      },
     },
     state: {
       open: openRef,

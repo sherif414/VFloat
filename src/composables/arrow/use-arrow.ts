@@ -18,7 +18,7 @@ export function useArrow(context: FloatingContext, options: UseArrowOptions): Us
   watch(
     arrowEl,
     (element) => {
-      refs.setArrow(element);
+      refs.arrowEl.value = element;
     },
     { immediate: true },
   );

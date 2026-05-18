@@ -1,8 +1,14 @@
 import type { Middleware, Placement } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { nextTick, ref } from "vue";
+import { effectScope, nextTick, ref } from "vue";
+import {
+  getFloatingInternals,
+  useArrow,
+  useClientPoint,
+  useFloating,
+  useHover,
+} from "@/composables";
 import type { AnchorElement, FloatingElement, UseFloatingOptions } from "@/composables";
-import { useFloating } from "@/composables";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];
@@ -592,6 +598,113 @@ describe("useFloating", () => {
         expect(context.position.isPositioned.value).toBe(true);
       });
       // The exposed update method may or may not be invoked directly by autoUpdate.
+    });
+  });
+
+  describe("Root Contract", () => {
+    it("returns grouped state and position sections only", () => {
+      const anchorEl = trackElement(createMockElement("button"));
+      const floatingEl = trackElement(createMockElement("div"));
+      anchorEl.getBoundingClientRect = () =>
+        ({
+          x: 10,
+          y: 20,
+          width: 80,
+          height: 30,
+          top: 20,
+          left: 10,
+          right: 90,
+          bottom: 50,
+          toJSON: () => ({ x: 10, y: 20, width: 80, height: 30 }),
+        }) as DOMRect;
+      floatingEl.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 0,
+          width: 120,
+          height: 60,
+          top: 0,
+          left: 0,
+          right: 120,
+          bottom: 60,
+          toJSON: () => ({ x: 0, y: 0, width: 120, height: 60 }),
+        }) as DOMRect;
+
+      const context = useFloating(ref(anchorEl), ref(floatingEl));
+
+      expect(context.state.open.value).toBe(false);
+      expect(typeof context.state.setOpen).toBe("function");
+      expect(context.position.placement.value).toBe("bottom");
+      expect(context.position.styles.value.position).toBe("absolute");
+      expect("open" in context).toBe(false);
+      expect("floatingStyles" in context).toBe(false);
+      expect("update" in context).toBe(false);
+    });
+
+    it("registers arrow middleware when useArrow owns the arrow element", () => {
+      const anchorEl = trackElement(createMockElement("button"));
+      const floatingEl = trackElement(createMockElement("div"));
+      const arrowEl = ref(trackElement(createMockElement("div")));
+      const context = useFloating(ref(anchorEl), ref(floatingEl));
+
+      useArrow(context, { element: arrowEl });
+
+      expect(context.refs.arrowEl.value).toBe(arrowEl.value);
+      expect(
+        getFloatingInternals(context)?.middlewareRegistry.middlewares.value.some(
+          (middleware) => middleware.name === "arrow",
+        ),
+      ).toBe(true);
+    });
+
+    it("supports the canonical useClientPoint signature", async () => {
+      const triggerEl = trackElement(createMockElement("div"));
+      const anchorEl = trackElement(createMockElement("button"));
+      const floatingEl = trackElement(createMockElement("div"));
+
+      const context = useFloating(ref(anchorEl), ref(floatingEl), {
+        open: ref(true),
+      });
+
+      const { coordinates } = useClientPoint(context, {
+        pointerTarget: ref(triggerEl),
+        trackingMode: "follow",
+      });
+
+      triggerEl.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          clientX: 140,
+          clientY: 240,
+          pointerType: "mouse",
+        }),
+      );
+
+      await nextTick();
+
+      expect(coordinates.value).toEqual({ x: 140, y: 240 });
+    });
+
+    it("does not emit scope-dispose warnings during normal hook usage", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const scope = effectScope();
+      const anchorEl = trackElement(createMockElement("button"));
+      const floatingEl = trackElement(createMockElement("div"));
+      const context = useFloating(ref(anchorEl), ref(floatingEl));
+
+      scope.run(() => {
+        useHover(context);
+      });
+
+      scope.stop();
+
+      expect(
+        warnSpy.mock.calls.some(([message]) =>
+          String(message).includes(
+            "onScopeDispose() is called when there is no active effect scope",
+          ),
+        ),
+      ).toBe(false);
     });
   });
 });

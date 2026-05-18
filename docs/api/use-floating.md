@@ -34,9 +34,6 @@ description: The composition root for VFloat, returning grouped refs, state, and
       anchorEl: Ref<AnchorElement>;
       floatingEl: Ref<FloatingElement>;
       arrowEl: Ref<HTMLElement | null>;
-      setAnchor: (value: AnchorElement) => void;
-      setFloating: (value: FloatingElement) => void;
-      setArrow: (value: HTMLElement | null) => void;
     };
     state: {
       open: Readonly<Ref<boolean>>;

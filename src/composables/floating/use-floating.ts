@@ -16,7 +16,6 @@ import {
   toValue,
   watch,
 } from "vue";
-import { createRefSetter } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 
@@ -217,9 +216,6 @@ export function useFloating(
     anchorEl,
     floatingEl,
     arrowEl,
-    setAnchor: createRefSetter(anchorEl),
-    setFloating: createRefSetter(floatingEl),
-    setArrow: createRefSetter(arrowEl),
   };
 
   const position: FloatingPosition = {
@@ -323,16 +319,7 @@ export type FloatingStyles = {
 /**
  * Reactive refs owned by the floating context.
  */
-export interface FloatingRefs extends FloatingRefsShape {
-  setAnchor: (value: AnchorElement) => void;
-  setFloating: (value: FloatingElement) => void;
-  setArrow: (value: HTMLElement | null) => void;
-}
-
-/**
- * Reactive refs shape for internal use.
- */
-export interface FloatingRefsShape {
+export interface FloatingRefs {
   anchorEl: Ref<AnchorElement>;
   floatingEl: Ref<FloatingElement>;
   arrowEl: Ref<HTMLElement | null>;

@@ -66,15 +66,6 @@ describe("useClick", () => {
         anchorEl: anchorRef,
         floatingEl: floatingRef,
         arrowEl: arrowRef,
-        setAnchor: (value) => {
-          anchorRef.value = value;
-        },
-        setFloating: (value) => {
-          floatingRef.value = value;
-        },
-        setArrow: (value) => {
-          arrowRef.value = value;
-        },
       },
       state: {
         open: openRef,
@@ -469,9 +460,9 @@ describe("useClick", () => {
       });
 
       // Start with open
-      setOpenMock.mockClear();
       context.state.setOpen(true);
       await nextTick();
+      setOpenMock.mockClear();
 
       // Click the child popup - should be ignored
       await userEvent.click(childPopupEl);
