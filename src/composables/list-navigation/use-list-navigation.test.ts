@@ -154,12 +154,23 @@ describe("useListNavigation", () => {
     expect(collection.activeValue.value).toBe("1");
   });
 
-  it("closes on Tab", () => {
+  it("closes on Tab without preventing default", () => {
     const { floatingEl, openRef } = setup();
     openRef.value = true;
 
-    dispatchKey(floatingEl, "Tab");
+    const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    floatingEl.dispatchEvent(event);
     expect(openRef.value).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("ignores keydowns on floating element when closed", () => {
+    const { floatingEl, openRef, collection } = setup();
+    openRef.value = false;
+    collection.setActiveValue("1");
+
+    dispatchKey(floatingEl, "ArrowDown");
+    expect(collection.activeValue.value).toBe("1");
   });
 
   it("resets collection activeValue when closed", async () => {
@@ -173,7 +184,13 @@ describe("useListNavigation", () => {
   });
 
   describe("2D Navigation", () => {
-    function setup2D(options: { rtl?: boolean } = {}) {
+    function setup2D(
+      options: {
+        rtl?: boolean;
+        items?: any[];
+        itemDisabled?: (item: any) => boolean;
+      } = {},
+    ) {
       scope = effectScope();
 
       const anchorEl = document.createElement("button");
@@ -181,6 +198,7 @@ describe("useListNavigation", () => {
 
       document.body.appendChild(anchorEl);
       document.body.appendChild(floatingEl);
+      elementsToCleanUp.push(anchorEl, floatingEl);
 
       const openRef = ref(true);
       const anchorRef = ref(anchorEl);
@@ -189,8 +207,7 @@ describe("useListNavigation", () => {
       let resultContext: any;
       let collection: ReturnType<typeof useCollection>;
 
-      type TreeNode = { id: string; children?: TreeNode[] };
-      const items: TreeNode[] = [
+      const items = options.items || [
         {
           id: "1",
           children: [{ id: "1-1" }, { id: "1-2" }],
@@ -201,10 +218,11 @@ describe("useListNavigation", () => {
       scope.run(() => {
         const context = useFloating(anchorRef, floatingRef, { open: openRef });
 
-        collection = useCollection<TreeNode>({
+        collection = useCollection({
           items,
           itemValue: (item) => item.id,
           itemChildren: (item) => item.children,
+          itemDisabled: options.itemDisabled,
         });
 
         const navigation = useListNavigation(context, {
@@ -221,7 +239,7 @@ describe("useListNavigation", () => {
         navigation: ReturnType<typeof useListNavigation>;
         collection: ReturnType<typeof useCollection>;
         floatingEl: HTMLDivElement;
-        items: TreeNode[];
+        items: any[];
       };
     }
 
@@ -259,6 +277,51 @@ describe("useListNavigation", () => {
       dispatchKey(floatingEl, "ArrowRight");
       expect(collection.expandedValues.value.has("1")).toBe(false);
       expect(collection.activeValue.value).toBe("1");
+    });
+
+    it("skips disabled immediate children on branch expansion and targets first enabled descendant", () => {
+      const customItems = [
+        {
+          id: "1",
+          children: [
+            { id: "1-1", disabled: true },
+            { id: "1-2", disabled: true, children: [{ id: "1-2-1", disabled: true }] },
+            { id: "1-3", disabled: false },
+          ],
+        },
+      ];
+      const { floatingEl, collection } = setup2D({
+        items: customItems,
+        itemDisabled: (item) => !!item.disabled,
+      });
+      collection.setActiveValue("1");
+
+      dispatchKey(floatingEl, "ArrowRight");
+
+      expect(collection.expandedValues.value.has("1")).toBe(true);
+      expect(collection.activeValue.value).toBe("1-3"); // skipped disabled 1-1, 1-2, 1-2-1
+    });
+
+    it("stays on parent opener when expanding a branch where all descendants are disabled", () => {
+      const customItems = [
+        {
+          id: "1",
+          children: [
+            { id: "1-1", disabled: true },
+            { id: "1-2", disabled: true },
+          ],
+        },
+      ];
+      const { floatingEl, collection } = setup2D({
+        items: customItems,
+        itemDisabled: (item) => !!item.disabled,
+      });
+      collection.setActiveValue("1");
+
+      dispatchKey(floatingEl, "ArrowRight");
+
+      expect(collection.expandedValues.value.has("1")).toBe(true);
+      expect(collection.activeValue.value).toBe("1"); // stays on opener
     });
   });
 

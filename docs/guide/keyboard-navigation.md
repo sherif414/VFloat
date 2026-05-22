@@ -1,173 +1,225 @@
 ---
-description: Add keyboard navigation to floating menus and list-like surfaces.
+description: Add keyboard navigation to floating menus, dropdowns, and nested tree structures.
 ---
 
 # Keyboard Navigation
 
-When a floating surface contains selectable items, keyboard support becomes part of the feature, not a nice extra. Menus, listboxes, combobox panels, and nested menus all depend on predictable item navigation.
+Predictable keyboard navigation is a core requirement for accessible floating surfaces like menus, listboxes, comboboxes, and submenus.
 
-VFloat handles movement with [`useListNavigation`](/api/use-list-navigation). When the surface uses ARIA menu or listbox semantics, [`useRole`](/api/use-role) keeps the roles and ARIA state synchronized separately.
+In VFloat, keyboard navigation is split into a clean separation of concerns:
 
-This guide shows the two focus models you will run into most often.
+1. **[`useCollection`](/api/use-collection)** is a data-first reactive manager. It handles items, hierarchies (for 2D nested trees), disabled nodes, and moves the active selection. It has no knowledge of DOM elements or events.
+2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
+3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and states (e.g. `aria-expanded`, `aria-controls`, `aria-activedescendant`) to anchor and list elements.
 
-## First Decide How Focus Should Move
+---
 
-Before you think about the options, decide what kind of focus model you want.
+## 1. DOM Focus Model: Menus and Action Lists
 
-### DOM focus
+In this model, focus actually shifts into the floating list, and arrow keys move physical DOM focus between list items using a roving `tabindex`. Only the active item is focusable (`tabindex="0"`), while the rest are ignored (`tabindex="-1"`).
 
-Use real DOM focus when each item should actually receive focus. This is common for menus, action lists, and simple dropdowns. In this mode, [`useListNavigation`](/api/use-list-navigation) manages roving `tabindex` so only the active item is tabbable inside the composite.
-
-### Virtual focus
-
-Use virtual focus when a container should keep DOM focus while the active item changes underneath it. This is common for combobox-like panels and inputs that should keep accepting text, but it can also be used with a focused menu, listbox, grid, or tree container.
-
-## DOM Focus Example: Menu Navigation
-
-This is the usual menu-style setup.
+### Composable Setup
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useListNavigation, useRole } from "v-float";
+import { ref, watch, nextTick } from "vue";
+import { useFloating, useCollection, useListNavigation, useRole } from "v-float";
+
+interface MenuItem {
+  id: string;
+  label: string;
+  disabled?: boolean;
+}
+
+const items = ref<MenuItem[]>([
+  { id: "edit", label: "Edit Item" },
+  { id: "duplicate", label: "Duplicate" },
+  { id: "archive", label: "Archive Item", disabled: true },
+  { id: "delete", label: "Delete" },
+]);
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
-const activeIndex = ref<number | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
 
+// 1. Manage navigation state
+const collection = useCollection({
+  items,
+  itemValue: (item) => item.id,
+  itemDisabled: (item) => !!item.disabled,
+});
+
+// 2. Intercept keyboard navigation on elements
+useListNavigation(context, {
+  collection,
+  orientation: "vertical",
+  loop: true,
+});
+
+// 3. Keep ARIA roles synchronized
 useRole(context, {
   role: "menu",
-  label: "Actions",
   listRef: itemsRef,
+  disabledIndices: (idx) => !!items.value[idx]?.disabled,
 });
-useListNavigation(context, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate(index) {
-    activeIndex.value = index;
-  },
-  loop: true,
-  openOnArrowKeyDown: true,
-  focusItemOnHover: true,
+
+// 4. Focus the active item in the DOM when the selection moves
+watch(collection.activeValue, async (val) => {
+  if (val == null) return;
+  await nextTick();
+  const index = items.value.findIndex((item) => item.id === val);
+  const element = itemsRef.value[index];
+  if (element && document.activeFocus !== element) {
+    element.focus();
+  }
 });
 </script>
 ```
 
-## Render The Items In DOM Order
+### Template
 
-The item refs must be stable and match DOM order.
+Render item elements with roving `tabindex` and bind dynamic active classes:
 
 ```vue
 <template>
-  <button ref="anchorEl" type="button">Open menu</button>
+  <button ref="anchorEl" type="button" @click="context.state.setOpen(!context.state.open.value)">
+    Menu Options
+  </button>
 
-  <ul v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <ul
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    role="menu"
+    :style="context.position.styles.value"
+  >
     <li
-      v-for="(item, index) in ['Edit', 'Duplicate', 'Archive']"
-      :key="item"
+      v-for="(item, index) in items"
+      :key="item.id"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
-      tabindex="-1"
+      role="menuitem"
+      :aria-disabled="item.disabled"
+      :tabindex="collection.activeValue.value === item.id ? 0 : -1"
+      :class="{ active: collection.activeValue.value === item.id }"
+      @click="collection.setActiveValue(item.id)"
     >
-      {{ item }}
+      {{ item.label }}
     </li>
   </ul>
 </template>
 ```
 
-The function ref inside `v-for` matters because `useListNavigation()` needs a live array of item elements so it can move predictably through the list.
+---
 
-## Virtual Focus Example: Combobox-Like Behavior
+## 2. Virtual Focus Model: Combobox and Inputs
 
-If the anchor is an input that should keep typing focus, use virtual focus instead.
+In this model, DOM focus stays securely inside a text input or combobox container, allowing the user to keep typing. Arrow keys move a "virtual focus" selection, communicating the active choice to screen readers using `aria-activedescendant`.
+
+### Composable Setup
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useListNavigation, useRole } from "v-float";
+import { useFloating, useCollection, useListNavigation, useRole } from "v-float";
+
+interface SearchOption {
+  value: string;
+  label: string;
+}
+
+const options = ref<SearchOption[]>([
+  { value: "vue", label: "Vue.js" },
+  { value: "react", label: "React" },
+  { value: "svelte", label: "Svelte" },
+]);
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
-const activeIndex = ref<number | null>(null);
-const virtualItemRef = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
+
+const collection = useCollection({
+  items: options,
+  itemValue: (item) => item.value,
+});
+
+useListNavigation(context, {
+  collection,
+  orientation: "vertical",
+  openOnArrowKeyDown: true,
+});
 
 useRole(context, {
   role: "listbox",
   listRef: itemsRef,
 });
-useListNavigation(context, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate(index) {
-    activeIndex.value = index;
-  },
-  virtual: true,
-  virtualItemRef,
-  focusItemOnOpen: "auto",
-});
 </script>
 ```
 
-In virtual mode, the anchor keeps DOM focus. The active item is announced through `aria-activedescendant` instead of by moving real focus into the list.
+### Template
 
-For combobox-like inputs, leave `activeDescendantEl` unset so the anchor receives `aria-activedescendant`. For container-focus composites, pass the floating element:
-
-```ts
-useListNavigation(context, {
-  listRef: itemsRef,
-  activeIndex,
-  activeDescendantEl: floatingEl,
-  virtual: true,
-  onNavigate(index) {
-    activeIndex.value = index;
-  },
-});
-```
-
-## Render Virtual-Focus Items With Stable IDs
-
-Virtual focus depends on stable item IDs.
+Directly bind `aria-activedescendant` on the input trigger referencing the active option ID:
 
 ```vue
 <template>
   <input
     ref="anchorEl"
+    type="text"
     role="combobox"
+    aria-autocomplete="list"
     :aria-expanded="context.state.open.value"
-    :aria-activedescendant="virtualItemRef?.id"
+    :aria-activedescendant="
+      collection.activeValue.value ? `opt-${collection.activeValue.value}` : undefined
+    "
+    @focus="context.state.setOpen(true)"
   />
 
-  <ul v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <ul
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    role="listbox"
+    :style="context.position.styles.value"
+  >
     <li
-      v-for="(item, index) in ['One', 'Two', 'Three']"
-      :key="item"
+      v-for="(item, index) in options"
+      :key="item.value"
+      :id="`opt-${item.value}`"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
-      :id="`option-${index}`"
+      role="option"
+      :aria-selected="collection.activeValue.value === item.value"
+      :class="{ active: collection.activeValue.value === item.value }"
+      @click="collection.setActiveValue(item.value)"
     >
-      {{ item }}
+      {{ item.label }}
     </li>
   </ul>
 </template>
 ```
 
-## A Few Options That Matter A Lot
+---
 
-These options shape behavior the most:
+## 3. Keyboard Interactions Resolved
 
-- `openOnArrowKeyDown`
-- `focusItemOnOpen`
-- `loop`
-- `selectedIndex`
-- `focusItemOnHover`
-- `virtual`
+Here are the key events handled automatically by `useListNavigation`:
 
-## Where To Go Next
+| Key          | Orientation               | Action                                                                                                                                  |
+| ------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `ArrowDown`  | `"vertical"` / `"both"`   | Selects next enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects first item.                               |
+| `ArrowUp`    | `"vertical"` / `"both"`   | Selects previous enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects last item.                            |
+| `ArrowRight` | `"horizontal"` / `"both"` | Selects next enabled item (or previous in RTL).                                                                                         |
+| `ArrowLeft`  | `"horizontal"` / `"both"` | Selects previous enabled item (or next in RTL).                                                                                         |
+| `ArrowRight` | `"vertical"` (Tree)       | Expands the branch at the active item and targets its first enabled descendant (via Depth-First Search).                                |
+| `ArrowLeft`  | `"vertical"` (Tree)       | Collapses the current branch, shifting active value back to the parent item.                                                            |
+| `Home`       | Any                       | Selects the first enabled item in the visible flat list.                                                                                |
+| `End`        | Any                       | Selects the last enabled item in the visible flat list.                                                                                 |
+| `Tab`        | Any                       | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |
 
-- Read [Build Nested Menus](/guide/build-nested-menus) if items can open child branches.
-- Read [Focus Models](/guide/focus-models) if you want the deeper conceptual tradeoffs.
-- Read [List Navigation Gotchas](/guide/list-navigation-gotchas) for the common failure modes.
+---
+
+## 4. Where To Go Next
+
+- Learn how to build highly responsive, multi-level dropdown hierarchies in [Build Nested Menus](/guide/build-nested-menus).
+- Read the [useCollection API](/api/use-collection) reference.
+- Read the [useListNavigation API](/api/use-list-navigation) reference.

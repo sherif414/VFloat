@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -10,11 +10,11 @@ Implement the foundational `useCollection` primitive designed to handle 1D flat 
 
 ## Acceptance criteria
 
-- [ ] `useCollection` is implemented and can be initialized with a flat array of data items and an `itemValue` key getter.
-- [ ] `useCollection` successfully manages a single `activeValue` and exposes pure methods to mutate it.
-- [ ] `useListNavigation` is rewritten to accept `collection` instead of `listRef` and `activeIndex`.
-- [ ] Pressing `ArrowDown` and `ArrowUp` inside a floating list correctly updates the collection's `activeValue`.
-- [ ] All 1D navigation tests are updated to verify collection state mutations rather than internal DOM traversal.
+- [x] `useCollection` is implemented and can be initialized with a flat array of data items and an `itemValue` key getter.
+- [x] `useCollection` successfully manages a single `activeValue` and exposes pure methods to mutate it.
+- [x] `useListNavigation` is rewritten to accept `collection` instead of `listRef` and `activeIndex`.
+- [x] Pressing `ArrowDown` and `ArrowUp` inside a floating list correctly updates the collection's `activeValue`.
+- [x] All 1D navigation tests are updated to verify collection state mutations rather than internal DOM traversal.
 
 ## Blocked by
 

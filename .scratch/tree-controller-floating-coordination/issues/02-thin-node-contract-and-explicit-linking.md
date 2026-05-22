@@ -1,6 +1,6 @@
 # Thin node contract and explicit linking
 
-Status: ready-for-human
+Status: wontfix
 
 ## Parent
 

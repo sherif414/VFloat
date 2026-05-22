@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -10,11 +10,11 @@ Extend the `useCollection` primitive to handle deeply nested 2D data (trees). Th
 
 ## Acceptance criteria
 
-- [ ] `useCollection` accepts an `itemChildren` option and calculates a reactive `flattenedItems` array.
-- [ ] `useCollection` exposes mutators to expand and collapse branches (`expandBranch`, `collapseBranch`, `collapseAll`).
-- [ ] `useListNavigation` correctly handles `ArrowRight` by expanding the active item's child branch (if any) and moving `activeValue` into it.
-- [ ] `useListNavigation` correctly handles `ArrowLeft` by collapsing the current child branch and moving `activeValue` back to the parent item.
-- [ ] Integration tests verify that 2D navigation properly maintains a single global `activeValue` across nested branches.
+- [x] `useCollection` accepts an `itemChildren` option and calculates a reactive `flattenedItems` array.
+- [x] `useCollection` exposes mutators to expand and collapse branches (`expandBranch`, `collapseBranch`, `collapseAll`).
+- [x] `useListNavigation` correctly handles `ArrowRight` by expanding the active item's child branch (if any) and moving `activeValue` into it.
+- [x] `useListNavigation` correctly handles `ArrowLeft` by collapsing the current child branch and moving `activeValue` back to the parent item.
+- [x] Integration tests verify that 2D navigation properly maintains a single global `activeValue` across nested branches.
 
 ## Blocked by
 

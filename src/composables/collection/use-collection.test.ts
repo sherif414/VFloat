@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
 import { useCollection } from "@/composables/collection/use-collection";
-import { ref } from "vue";
 
 describe("useCollection", () => {
   it("initializes with null activeValue", () => {
@@ -133,5 +132,60 @@ describe("useCollection (2D Tree)", () => {
     collection.collapseAll();
     expect(collection.expandedValues.value.size).toBe(0);
     expect(collection.flattenedItems.value.map((i) => i.id)).toEqual(["1", "2"]);
+  });
+
+  it("finds the first enabled descendant value", () => {
+    type TreeNode = { id: string; disabled?: boolean; children?: TreeNode[] };
+    const items: TreeNode[] = [
+      {
+        id: "root-1",
+        children: [
+          { id: "child-1-1", disabled: true },
+          {
+            id: "child-1-2",
+            disabled: true,
+            children: [{ id: "grandchild-1-2-1", disabled: true }],
+          },
+          { id: "child-1-3", disabled: false },
+          { id: "child-1-4", disabled: false },
+        ],
+      },
+      {
+        id: "root-2",
+        children: [
+          {
+            id: "child-2-1",
+            disabled: true,
+            children: [{ id: "grandchild-2-1-1", disabled: false }],
+          },
+        ],
+      },
+      {
+        id: "root-3",
+        children: [{ id: "child-3-1", disabled: true }],
+      },
+    ];
+
+    const collection = useCollection<TreeNode>({
+      items,
+      itemValue: (item) => item.id,
+      itemDisabled: (item) => !!item.disabled,
+      itemChildren: (item) => item.children,
+    });
+
+    // Case 1: First enabled descendant is immediate but skipped disabled ones
+    expect(collection.getFirstEnabledDescendantValue("root-1")).toBe("child-1-3");
+
+    // Case 2: Immediate child is disabled, but its child is enabled (nested DFS check)
+    expect(collection.getFirstEnabledDescendantValue("root-2")).toBe("grandchild-2-1-1");
+
+    // Case 3: All descendants are disabled
+    expect(collection.getFirstEnabledDescendantValue("root-3")).toBeNull();
+
+    // Case 4: Non-existent item
+    expect(collection.getFirstEnabledDescendantValue("non-existent")).toBeNull();
+
+    // Case 5: Item has no children/descendants
+    expect(collection.getFirstEnabledDescendantValue("child-1-3")).toBeNull();
   });
 });

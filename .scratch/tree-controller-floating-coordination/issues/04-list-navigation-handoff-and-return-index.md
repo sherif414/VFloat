@@ -1,6 +1,6 @@
 # List navigation handoff and return-index behavior
 
-Status: ready-for-human
+Status: wontfix
 
 ## Parent
 

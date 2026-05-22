@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -10,12 +10,12 @@ Finalize the architectural migration by completely deleting the old implicit flo
 
 ## Acceptance criteria
 
-- [ ] `src/composables/interactions/use-floating-tree.ts` is deleted.
-- [ ] `src/composables/interactions/use-floating-tree-node.ts` is deleted.
-- [ ] `src/composables/interactions/internal/tree-interaction.ts` is deleted.
-- [ ] `src/composables/interactions/list-navigation/tree-coordination.ts` is deleted.
-- [ ] `FloatingContext` and `UseFloatingReturn` types are updated to remove `treeNode` and `FloatingTreeBridge`.
-- [ ] All related internal tree tests are removed or replaced by the new collection tests.
+- [x] `src/composables/interactions/use-floating-tree.ts` is deleted.
+- [x] `src/composables/interactions/use-floating-tree-node.ts` is deleted.
+- [x] `src/composables/interactions/internal/tree-interaction.ts` is deleted.
+- [x] `src/composables/interactions/list-navigation/tree-coordination.ts` is deleted.
+- [x] `FloatingContext` and `UseFloatingReturn` types are updated to remove `treeNode` and `FloatingTreeBridge`.
+- [x] All related internal tree tests are removed or replaced by the new collection tests.
 
 ## Blocked by
 

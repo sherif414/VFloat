@@ -124,7 +124,6 @@ export default defineConfigWithTheme({
             { text: "Middleware Ordering Gotchas", link: "/guide/middleware-ordering-gotchas" },
             { text: "Virtual Anchor Gotchas", link: "/guide/virtual-anchor-gotchas" },
             { text: "List Navigation Gotchas", link: "/guide/list-navigation-gotchas" },
-            { text: "Tree Debugging", link: "/guide/tree-debugging" },
           ],
         },
       ],
@@ -149,15 +148,14 @@ export default defineConfigWithTheme({
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useFocusTrap", link: "/api/use-focus-trap" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
-            { text: "useListNavigation", link: "/api/use-list-navigation" },
             { text: "useRole", link: "/api/use-role" },
           ],
         },
         {
-          text: "Tree Coordination",
+          text: "Collections",
           items: [
-            { text: "useFloatingTree", link: "/api/use-floating-tree" },
-            { text: "useFloatingTreeNode", link: "/api/use-floating-tree-node" },
+            { text: "useCollection", link: "/api/use-collection" },
+            { text: "useListNavigation", link: "/api/use-list-navigation" },
           ],
         },
         {

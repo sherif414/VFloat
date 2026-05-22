@@ -1,6 +1,6 @@
 # Interaction adapter alignment for tree semantics
 
-Status: ready-for-human
+Status: wontfix
 
 ## Parent
 

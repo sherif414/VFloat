@@ -131,10 +131,11 @@ export function useListNavigation(
 
   const onFloatingKeyDown = (e: KeyboardEvent) => {
     if (e.defaultPrevented || !isEnabled.value) return;
+    if (!open.value) return;
 
     const key = e.key;
 
-    if (key === "Tab" && open.value && isCloseOnTab.value) {
+    if (key === "Tab" && isCloseOnTab.value) {
       setOpen(false, "tab-key", e);
       return;
     }
@@ -163,7 +164,10 @@ export function useListNavigation(
         if (isExpandKey) {
           if (activeValue && collection.hasChildren(activeValue)) {
             collection.expandBranch(activeValue);
-            collection.setNext();
+            const firstEnabled = collection.getFirstEnabledDescendantValue(activeValue);
+            if (firstEnabled) {
+              collection.setActiveValue(firstEnabled);
+            }
           }
         } else {
           if (activeValue) {
@@ -178,10 +182,18 @@ export function useListNavigation(
       }
     } else if (orientation.value === "horizontal") {
       if (key === "ArrowRight") {
-        isRtl.value ? collection.setPrevious(navOptions) : collection.setNext(navOptions);
+        if (isRtl.value) {
+          collection.setPrevious(navOptions);
+        } else {
+          collection.setNext(navOptions);
+        }
         handled = true;
       } else if (key === "ArrowLeft") {
-        isRtl.value ? collection.setNext(navOptions) : collection.setPrevious(navOptions);
+        if (isRtl.value) {
+          collection.setNext(navOptions);
+        } else {
+          collection.setPrevious(navOptions);
+        }
         handled = true;
       }
     } else if (orientation.value === "both") {
@@ -192,10 +204,18 @@ export function useListNavigation(
         collection.setPrevious(navOptions);
         handled = true;
       } else if (key === "ArrowRight") {
-        isRtl.value ? collection.setPrevious(navOptions) : collection.setNext(navOptions);
+        if (isRtl.value) {
+          collection.setPrevious(navOptions);
+        } else {
+          collection.setNext(navOptions);
+        }
         handled = true;
       } else if (key === "ArrowLeft") {
-        isRtl.value ? collection.setNext(navOptions) : collection.setPrevious(navOptions);
+        if (isRtl.value) {
+          collection.setNext(navOptions);
+        } else {
+          collection.setPrevious(navOptions);
+        }
         handled = true;
       }
     }

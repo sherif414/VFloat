@@ -1,6 +1,6 @@
 # Tree coordination regression tests
 
-Status: ready-for-human
+Status: wontfix
 
 ## Parent
 

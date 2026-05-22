@@ -1,10 +1,10 @@
 ---
-description: Moves between items with the keyboard.
+description: Coordinates keyboard-driven list navigation in VFloat.
 ---
 
 # useListNavigation
 
-`useListNavigation` adds arrow-key navigation for list, grid, and nested tree items inside a floating element.
+`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for lists, grids, and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a data-first [`useCollection`](/api/use-collection) state coordinator to manage item activity without raw DOM query selectors or index tracking.
 
 ## Type
 
@@ -15,116 +15,133 @@ function useListNavigation(
 ): UseListNavigationReturn;
 
 interface UseListNavigationOptions {
-  listRef: Ref<Array<HTMLElement | null>>;
-  activeIndex?: MaybeRefOrGetter<number | null>;
-  onNavigate?: (index: number | null) => void;
+  /**
+   * The reactive collection manager for list structure, active state, and traversal.
+   */
+  collection: UseCollectionReturn<any>;
+
+  /**
+   * Whether navigation behavior is enabled.
+   * @default true
+   */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, arrow-key navigation wraps from end-to-start and vice-versa.
+   * @default false
+   */
   loop?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Primary navigation orientation.
+   * - "vertical": ArrowUp/Down to navigate; ArrowLeft/Right to collapse/expand branches (trees)
+   * - "horizontal": ArrowLeft/Right to navigate
+   * - "both": Up/Down/Left/Right to navigate flat grids
+   * @default "vertical"
+   */
   orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
-  disabledIndices?: Array<number> | ((index: number) => boolean);
-  focusDisabledItems?: MaybeRefOrGetter<boolean>;
-  focusItemOnHover?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, pressing an arrow key when closed opens the floating surface and activates the first/last item.
+   * @default true
+   */
   openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
-  scrollItemIntoView?: boolean | ScrollIntoViewOptions;
-  selectedIndex?: MaybeRefOrGetter<number | null>;
-  focusItemOnOpen?: MaybeRefOrGetter<boolean | "auto">;
-  nested?: MaybeRefOrGetter<boolean>;
-  getChildNode?: (index: number) => FloatingTreeNode | null;
-  openChildOnFocus?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Right-to-left layout flag affecting horizontal arrow semantics.
+   * @default false
+   */
   rtl?: MaybeRefOrGetter<boolean>;
-  virtual?: MaybeRefOrGetter<boolean>;
-  activeDescendantEl?: MaybeRefOrGetter<HTMLElement | null | undefined>;
-  handleHomeEndKeys?: MaybeRefOrGetter<boolean>;
-  virtualItemRef?: Ref<HTMLElement | null>;
-  cols?: MaybeRefOrGetter<number>;
-  allowEscape?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, pressing Tab closes the floating list/tree without preventing normal browser page focus movement.
+   * @default true
+   */
   closeOnTab?: MaybeRefOrGetter<boolean>;
-  gridLoopDirection?: MaybeRefOrGetter<"row" | "next">;
 }
 
 interface UseListNavigationReturn {
+  /**
+   * Stops all event listeners and state watchers created by the composable.
+   */
   cleanup: () => void;
 }
 ```
 
 ## Details
 
-`useListNavigation` keeps the list order stable, moves focus or active descendant state, and can open a closed surface when the user presses an arrow key. Pair it with [`useRole`](/api/use-role) when the list uses ARIA menu, listbox, tree, or grid semantics.
+`useListNavigation` separates keyboard coordination from active item management:
 
-- `orientation` controls whether navigation is vertical, horizontal, or grid-based.
-- DOM-focus mode manages roving `tabindex`: the active item receives `tabindex="0"` and the rest receive `-1`.
-- `virtual: true` keeps DOM focus on a container and uses `aria-activedescendant`.
-- `activeDescendantEl` chooses the virtual-focus target. Leave it unset for combobox-like anchors; pass the floating element for container-focus menus, listboxes, grids, or trees.
-- `handleHomeEndKeys` defaults to true for roving focus and for virtual focus when `activeDescendantEl` is provided.
-- `openOnArrowKeyDown` lets a closed list open from the keyboard.
-- Keyboard and hover navigation skip disabled items by default.
-- `focusDisabledItems: true` lets disabled items receive navigation focus for ARIA menu patterns where disabled commands should still be announced.
-- `selectedIndex` only wins on open when that item can receive navigation focus.
-- `focusItemOnOpen: "auto"` only moves focus for the current arrow-key open path.
-- Grid navigation respects `rtl: true` for left/right movement too, including wrapped row movement.
-- `getChildNode` lets forward arrows, `Enter`, and `Space` open child branches when a list item owns a submenu node.
-- `openChildOnFocus` can open child branches as keyboard navigation lands on them.
-- `nested` can be set explicitly when you want nested key behavior without tree inference.
-- `closeOnTab` closes the current menu/list tree on Tab without preventing normal page focus movement.
-- `cleanup()` removes the registered listeners and watchers, clears `aria-activedescendant`, resets `virtualItemRef`, and clears tree-navigation bookkeeping.
+- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.expandBranch()`, etc.
+- **Roving & Virtual Focus:** It is compatible with both roving tabindex DOM focus and virtual focus configurations. Simply sync `collection.activeValue` with your elements' focus or `aria-activedescendant` attribute.
+- **Nested Branch Expansion (2D):** In vertical orientation, horizontal arrow keys expand or collapse branches. It uses depth-first pre-order searches on the collection (`collection.getFirstEnabledDescendantValue`) to safely target the first enabled child. If all descendants are disabled, focus remains securely on the opener.
+- **RTL Semantics:** Horizontal arrow keys for list navigation and tree branch expansion automatically reverse their meaning when `rtl` is enabled.
+- **Natural Tab Exit:** Pressing `Tab` closes the list tree to clean up references, but does not prevent natural browser focus movement.
 
 ## Example
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useListNavigation, useRole } from "v-float";
+import { useCollection, useFloating, useListNavigation } from "v-float";
+
+interface Option {
+  value: string;
+  label: string;
+}
+
+const options = ref<Option[]>([
+  { value: "us", label: "United States" },
+  { value: "ca", label: "Canada" },
+  { value: "mx", label: "Mexico" },
+]);
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
-const itemsRef = ref<Array<HTMLElement | null>>([]);
-const activeIndex = ref<number | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
 
-useRole(context, {
-  role: "menu",
-  label: "Actions",
-  listRef: itemsRef,
+const collection = useCollection({
+  items: options,
+  itemValue: (item) => item.value,
 });
+
 useListNavigation(context, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate: (index) => {
-    activeIndex.value = index;
-  },
+  collection,
   orientation: "vertical",
   loop: true,
-  focusItemOnOpen: "auto",
 });
 </script>
 
 <template>
   <button ref="anchorEl" @click="context.state.setOpen(!context.state.open.value)">
-    Open menu
+    Select Country
   </button>
 
-  <ul v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    <li
-      v-for="item in 3"
-      :key="item"
-      :ref="(el) => (itemsRef[item - 1] = el as HTMLElement | null)"
-      tabindex="-1"
+  <div
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    role="listbox"
+    :style="context.position.styles.value"
+  >
+    <div
+      v-for="item in collection.flattenedItems.value"
+      :key="item.value"
+      role="option"
+      :aria-selected="collection.activeValue.value === item.value"
+      :class="{ active: collection.activeValue.value === item.value }"
+      @click="collection.setActiveValue(item.value)"
     >
-      Item {{ item }}
-    </li>
-  </ul>
+      {{ item.label }}
+    </div>
+  </div>
 </template>
 ```
 
 ## See Also
 
+- [`useCollection`](/api/use-collection)
 - [`useFloating`](/api/use-floating)
-- [`useClick`](/api/use-click)
-- [`useFocus`](/api/use-focus)
-- [`useEscapeKey`](/api/use-escape-key)
 - [`useRole`](/api/use-role)
-- [`useFloatingTree`](/api/use-floating-tree)
-- [`useFloatingTreeNode`](/api/use-floating-tree-node)
-- [Keyboard Navigation](/guide/keyboard-navigation)
-- [Build Nested Menus](/guide/build-nested-menus)
+- [Keyboard Navigation Guide](/guide/keyboard-navigation)
+- [Build Nested Menus Guide](/guide/build-nested-menus)

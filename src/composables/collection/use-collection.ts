@@ -79,6 +79,10 @@ export interface UseCollectionReturn<T> {
    * Go to the last focusable item.
    */
   setLast: () => void;
+  /**
+   * Get the first enabled descendant value for a given branch value.
+   */
+  getFirstEnabledDescendantValue: (value: string) => string | null;
 }
 
 /**
@@ -236,6 +240,49 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
     activeValue.value = options.itemValue(focusableItems[focusableItems.length - 1]);
   };
 
+  const findItemByValue = (items: T[], val: string): T | null => {
+    const itemChildren = options.itemChildren;
+    for (const item of items) {
+      if (options.itemValue(item) === val) {
+        return item;
+      }
+      if (itemChildren) {
+        const children = itemChildren(item);
+        if (children && children.length > 0) {
+          const found = findItemByValue(children, val);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  };
+
+  const findFirstEnabledDescendant = (item: T): T | null => {
+    const itemChildren = options.itemChildren;
+    if (!itemChildren) return null;
+    const children = itemChildren(item);
+    if (!children || children.length === 0) return null;
+
+    for (const child of children) {
+      if (!isDisabled(child)) {
+        return child;
+      }
+      const descendant = findFirstEnabledDescendant(child);
+      if (descendant) {
+        return descendant;
+      }
+    }
+    return null;
+  };
+
+  const getFirstEnabledDescendantValue = (value: string): string | null => {
+    const rawItems = getItems();
+    const item = findItemByValue(rawItems, value);
+    if (!item) return null;
+    const descendant = findFirstEnabledDescendant(item);
+    return descendant ? options.itemValue(descendant) : null;
+  };
+
   return {
     activeValue,
     expandedValues,
@@ -250,5 +297,6 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
     setPrevious,
     setFirst,
     setLast,
+    getFirstEnabledDescendantValue,
   };
 }

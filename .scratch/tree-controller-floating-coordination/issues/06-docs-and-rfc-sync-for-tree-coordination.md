@@ -1,6 +1,6 @@
 # Docs and RFC sync for tree coordination
 
-Status: ready-for-human
+Status: wontfix
 
 ## Parent
 

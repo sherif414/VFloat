@@ -1,133 +1,156 @@
 ---
-description: Build nested menus with coordinated floating trees and pointer intent.
+description: Build nested multi-level menus with coordinated reactive collections and nested components.
 ---
 
 # Build Nested Menus
 
-Nested menus are where floating UI stops being only about position. Once one menu can open another, the surfaces have to coordinate so branches open and close predictably and keyboard users are not stranded.
+Nested menus (submenus) introduce state challenges beyond standard one-dimensional list navigation:
 
-VFloat handles that coordination with [`useFloatingTree`](/api/use-floating-tree), [`useFloatingTreeNode`](/api/use-floating-tree-node), [`useListNavigation`](/api/use-list-navigation), and [`useRole`](/api/use-role).
+- Which submenus are currently open?
+- When the user presses the expand key (e.g., `ArrowRight`), which item should gain focus next?
+- When the user presses the collapse key (e.g., `ArrowLeft`), how does focus return to the parent trigger item?
+- If items in a submenu are disabled, how does keyboard traversal safely bypass them?
 
-## What Tree Coordination Solves
+In VFloat, these questions are resolved by configuring a single **2D Tree Collection** via `useCollection`. The entire menu tree coordinates reactively, eliminating complex manual node registration or context passing.
 
-A nested menu has problems that plain positioning does not solve:
+---
 
-- Which submenu is currently active?
-- When one submenu opens, should a sibling close?
-- When a child closes, where should focus return?
-- How should forward and backward arrow keys move through the tree?
+## The 2D Tree Model
 
-Those are tree questions, not geometry questions.
+By providing `itemChildren` to `useCollection`, you transform a flat list into a reactive 2D structure:
 
-## Step 1: Create One Shared Tree
+1. **`expandedValues`** acts as the single source of truth for which submenus are currently open.
+2. **`flattenedItems`** is a computed list that automatically flattens only the expanded branches in a depth-first traversal.
+3. **`useListNavigation`** automatically reads this 2D structure. In vertical mode:
+   - Pressing **`ArrowRight`** (or `ArrowLeft` in RTL) expands a submenu branch and automatically jumps focus to the first enabled descendant.
+   - Pressing **`ArrowLeft`** (or `ArrowRight` in RTL) collapses the active branch and automatically returns focus to its parent trigger.
 
-Start by creating one tree for the whole menu family.
+---
 
-```vue
-<script setup lang="ts">
-import { useFloatingTree } from "v-float";
+## Complete Nested Menu Example
 
-const tree = useFloatingTree({ id: "main-menu-tree" });
-</script>
-```
+Here is how to build a fully accessible, keyboard-traversable multi-level nested dropdown.
 
-## Step 2: Register The Root Menu
-
-Build a root menu with `useFloating()` and register it as a tree node.
+### 1. Define the Hierarchical Data Structure
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import {
-  useFloating,
-  useFloatingTree,
-  useFloatingTreeNode,
-  useListNavigation,
-  useRole,
-} from "v-float";
+import { useFloating, useCollection, useListNavigation, useRole } from "v-float";
 
-const tree = useFloatingTree({ id: "main-menu-tree" });
+interface MenuItem {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  children?: MenuItem[];
+}
+
+const menuItems = ref<MenuItem[]>([
+  { id: "edit", label: "Edit" },
+  {
+    id: "share-branch",
+    label: "Share As...",
+    children: [
+      { id: "share-email", label: "Email Link", disabled: true },
+      { id: "share-slack", label: "Send to Slack" },
+      { id: "share-teams", label: "Send to Teams" },
+    ],
+  },
+  { id: "delete", label: "Delete" },
+]);
+
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
-const activeIndex = ref<number | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open: ref(true),
+const context = useFloating(anchorEl, floatingEl);
+
+// Define the 2D collection
+const collection = useCollection<MenuItem>({
+  items: menuItems,
+  itemValue: (item) => item.id,
+  itemDisabled: (item) => !!item.disabled,
+  itemChildren: (item) => item.children, // Activates 2D Tree Navigation
 });
 
-const rootNode = useFloatingTreeNode(context, {
-  tree,
-  id: "root-menu",
-});
-
-useRole(context, {
-  role: "menu",
-  label: "Main menu",
-  listRef: itemsRef,
-});
+// Configure keyboard navigation
 useListNavigation(context, {
+  collection,
+  orientation: "vertical",
+});
+
+// Sync ARIA roles for trees
+useRole(context, {
+  role: "tree",
   listRef: itemsRef,
-  activeIndex,
-  onNavigate(index) {
-    activeIndex.value = index;
-  },
 });
 </script>
 ```
 
-## Step 3: Register A Child Menu
+### 2. Render the Tree Recursively or Dynamically
 
-Create the submenu the same way, but attach it to the parent node.
+Since `collection.flattenedItems` contains a flat list of _currently visible_ nodes (taking expansion state into account), you can render them in a single flat list while applying indentation to sub-items based on their parent hierarchy.
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useFloating, useFloatingTreeNode, useListNavigation, useRole } from "v-float";
+Alternatively, you can render them as traditional nested popovers by matching `collection.expandedValues` to toggle submenus.
 
-const childAnchorEl = ref<HTMLElement | null>(null);
-const childFloatingEl = ref<HTMLElement | null>(null);
-const childItemsRef = ref<Array<HTMLElement | null>>([]);
-const childActiveIndex = ref<number | null>(null);
-
-const childContext = useFloating(childAnchorEl, childFloatingEl, {
-  open: ref(false),
-});
-
-const childNode = useFloatingTreeNode(childContext, {
-  parent: rootNode,
-  id: "file-submenu",
-});
-
-useRole(childContext, {
-  role: "menu",
-  label: "File submenu",
-  listRef: childItemsRef,
-});
-useListNavigation(childContext, {
-  listRef: childItemsRef,
-  activeIndex: childActiveIndex,
-  nested: true,
-  onNavigate(index) {
-    childActiveIndex.value = index;
-  },
-});
-</script>
-```
-
-## Step 4: Connect Parent Items To Child Nodes
-
-Tell the parent list which item owns which child branch.
+Here is the clean flat roving-tabindex render pattern using indentation:
 
 ```vue
-useListNavigation(context, { listRef: itemsRef, activeIndex, onNavigate(index) { activeIndex.value =
-index; }, getChildNode: (index) => (index === 1 ? childNode : null), openChildOnFocus: true, });
+<template>
+  <button ref="anchorEl" type="button" @click="context.state.setOpen(!context.state.open.value)">
+    Project Actions
+  </button>
+
+  <div
+    v-if="context.state.open.value"
+    ref="floatingEl"
+    role="tree"
+    :style="context.position.styles.value"
+  >
+    <div
+      v-for="(item, index) in collection.flattenedItems.value"
+      :key="item.id"
+      :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
+      role="treeitem"
+      :aria-disabled="item.disabled"
+      :aria-expanded="
+        collection.hasChildren(item.id) ? collection.expandedValues.value.has(item.id) : undefined
+      "
+      :tabindex="collection.activeValue.value === item.id ? 0 : -1"
+      :class="{
+        active: collection.activeValue.value === item.id,
+        'is-submenu-trigger': collection.hasChildren(item.id),
+        'indent-sub': collection.getParentValue(item.id) !== null,
+      }"
+      @click="collection.setActiveValue(item.id)"
+    >
+      <span>{{ item.label }}</span>
+      <span v-if="collection.hasChildren(item.id)">▶</span>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.indent-sub {
+  padding-left: 24px; /* visually separate submenu items */
+}
+</style>
 ```
 
-That handoff is what lets forward keys open the submenu and backward keys restore the parent item.
+---
 
-## Where To Go Next
+## Tree Coordination Edge Cases Solved Automatically
 
-- Read [Tree Coordination Explained](/guide/tree-coordination-explained) for the deeper mental model.
-- Read [Keyboard Navigation](/guide/keyboard-navigation) if the focus model still feels fuzzy.
-- Read [Tree Debugging](/guide/tree-debugging) if a nested branch is not opening or closing the way you expect.
+By routing your tree layout through `useCollection` and `useListNavigation`, VFloat handles the following complex behaviors out-of-the-box:
+
+- **Disabled Skipped Sub-Nodes:** Expanding a branch containing disabled items automatically bypasses them (pre-order DFS) to focus the first _enabled_ submenu choice.
+- **Opener Safeguard:** If a submenu branch exists but all of its nested children are disabled, expanding the branch leaves focus safely on the parent trigger item, avoiding focus traps.
+- **RTL Support:** Right-to-Left writing directions naturally swap the expansion and collapse directions (e.g., `ArrowLeft` expands submenus and `ArrowRight` collapses them).
+
+---
+
+## See Also
+
+- [`useCollection`](/api/use-collection)
+- [`useListNavigation`](/api/use-list-navigation)
+- [Keyboard Navigation Guide](/guide/keyboard-navigation)

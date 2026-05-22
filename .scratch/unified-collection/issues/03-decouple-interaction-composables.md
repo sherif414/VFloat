@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -10,10 +10,10 @@ Update the existing interaction composables (`useClick`, `useHover`, `useFocusTr
 
 ## Acceptance criteria
 
-- [ ] `useClick` is updated to accept an `ignoreOutsideClick` predicate function.
-- [ ] `useHover` is updated to accept a similar predicate for keeping branches alive during hover cascades.
-- [ ] Internal references to `treeNodeBridge` or `createTreeInteraction` are completely removed from the interaction composables.
-- [ ] The composables function perfectly as generic, single-level overlay handlers when no predicates are provided.
+- [x] `useClick` is updated to accept an `ignoreOutsideClick` predicate function.
+- [x] `useHover` is updated to accept a similar predicate for keeping branches alive during hover cascades.
+- [x] Internal references to `treeNodeBridge` or `createTreeInteraction` are completely removed from the interaction composables.
+- [x] The composables function perfectly as generic, single-level overlay handlers when no predicates are provided.
 
 ## Blocked by
 
