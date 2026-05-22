@@ -1,4 +1,12 @@
-import { type MaybeRefOrGetter, type Ref, type ComputedRef, computed, ref, toValue } from "vue";
+import {
+  type MaybeRefOrGetter,
+  type Ref,
+  type ComputedRef,
+  computed,
+  ref,
+  toValue,
+  watch,
+} from "vue";
 
 export interface UseCollectionOptions<T> {
   /**
@@ -147,6 +155,9 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
   const getParentValue = (value: string) => itemState.value.parents.get(value) ?? null;
 
   const getFocusableItems = () => flattenedItems.value.filter((item) => !isDisabled(item));
+  const focusableValues = computed(() =>
+    getFocusableItems().map((item) => options.itemValue(item)),
+  );
 
   const expandBranch = (value: string) => {
     const newSet = new Set(expandedValues.value);
@@ -167,6 +178,16 @@ export function useCollection<T>(options: UseCollectionOptions<T>): UseCollectio
   const setActiveValue = (value: string | null) => {
     activeValue.value = value;
   };
+
+  watch(
+    [activeValue, focusableValues],
+    ([value, values]) => {
+      if (value != null && !values.includes(value)) {
+        activeValue.value = null;
+      }
+    },
+    { flush: "sync" },
+  );
 
   const setNext = (navOptions: CollectionNavigationOptions = {}) => {
     const focusableItems = getFocusableItems();

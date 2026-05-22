@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { useCollection } from "@/composables/collection/use-collection";
+import { nextTick, ref } from "vue";
 
 describe("useCollection", () => {
   it("initializes with null activeValue", () => {
@@ -95,6 +96,47 @@ describe("useCollection", () => {
     collection.setLast();
     expect(collection.activeValue.value).toBe("3");
   });
+
+  it("clears active value when the active item is removed", async () => {
+    const items = ref([{ id: "1" }, { id: "2" }]);
+    const collection = useCollection({
+      items,
+      itemValue: (item) => item.id,
+    });
+
+    collection.setActiveValue("2");
+    items.value = [{ id: "1" }];
+    await nextTick();
+
+    expect(collection.activeValue.value).toBeNull();
+  });
+
+  it("clears active value when the active item becomes disabled", async () => {
+    const items = ref([{ id: "1", disabled: false }]);
+    const collection = useCollection({
+      items,
+      itemValue: (item) => item.id,
+      itemDisabled: (item) => item.disabled,
+    });
+
+    collection.setActiveValue("1");
+    items.value = [{ id: "1", disabled: true }];
+    await nextTick();
+
+    expect(collection.activeValue.value).toBeNull();
+  });
+
+  it("does not allow a disabled item to become active", () => {
+    const collection = useCollection({
+      items: [{ id: "1", disabled: true }],
+      itemValue: (item) => item.id,
+      itemDisabled: (item) => item.disabled,
+    });
+
+    collection.setActiveValue("1");
+
+    expect(collection.activeValue.value).toBeNull();
+  });
 });
 
 describe("useCollection (2D Tree)", () => {
@@ -132,6 +174,29 @@ describe("useCollection (2D Tree)", () => {
     collection.collapseAll();
     expect(collection.expandedValues.value.size).toBe(0);
     expect(collection.flattenedItems.value.map((i) => i.id)).toEqual(["1", "2"]);
+  });
+
+  it("clears active value when the active item is hidden by a collapsed branch", () => {
+    type TreeNode = { id: string; children?: TreeNode[] };
+    const items: TreeNode[] = [
+      {
+        id: "1",
+        children: [{ id: "1-1" }, { id: "1-2" }],
+      },
+      { id: "2" },
+    ];
+
+    const collection = useCollection<TreeNode>({
+      items,
+      itemValue: (item) => item.id,
+      itemChildren: (item) => item.children,
+    });
+
+    collection.expandBranch("1");
+    collection.setActiveValue("1-1");
+    collection.collapseBranch("1");
+
+    expect(collection.activeValue.value).toBeNull();
   });
 
   it("finds the first enabled descendant value", () => {
