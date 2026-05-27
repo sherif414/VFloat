@@ -1,60 +1,30 @@
-import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
+import { computed, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue";
 import type { FloatingContext } from "@/composables/floating";
 import { useEventListener } from "@/shared/use-event-listener";
-import { createCleanupRegistry } from "@/shared/lifecycle";
-import type { UseCollectionReturn } from "../collection/use-collection";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isTypeableElement } from "@/shared/dom";
 import { resolveKeyboardIntent } from "./intent";
 
-export interface UseListNavigationOptions {
-  /**
-   * The collection manager to navigate.
-   */
-  collection: UseCollectionReturn<any>;
-
-  /**
-   * Whether navigation behavior is enabled.
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, arrow-key navigation wraps from end-to-start and vice versa.
-   */
-  loop?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Primary navigation orientation.
-   * - "vertical": Up/Down to navigate, Left/Right for enter/exit (tree)
-   * - "horizontal": Left/Right to navigate, Down for enter (menubar)
-   */
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal">;
-
-  /**
-   * If true, pressing an arrow key when closed opens and sets the active value.
-   */
-  openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Right-to-left layout flag affecting horizontal arrow semantics.
-   */
-  rtl?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, Tab closes the current floating tree/list without preventing page focus movement.
-   * @default true
-   */
-  closeOnTab?: MaybeRefOrGetter<boolean>;
-}
-
-export interface UseListNavigationReturn {
-  /**
-   * Stops all listeners and watchers created by the composable.
-   */
-  cleanup: () => void;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Coordinates keyboard navigation for floating collections.
+ *
+ * @param context - The floating context object containing state and refs.
+ * @param options - Configuration options for list navigation.
+ * @returns An object containing a cleanup function.
+ *
+ * @example
+ * ```ts
+ * const collection = useCollection({ items, itemValue: i => i.id });
+ * useListNavigation(context, {
+ *   collection,
+ *   orientation: "vertical",
+ *   loop: true
+ * });
+ * ```
  */
 export function useListNavigation(
   context: FloatingContext,
@@ -62,18 +32,26 @@ export function useListNavigation(
 ): UseListNavigationReturn {
   const refs = context.refs;
   const { open, setOpen } = context.state;
-  const collection = options.collection;
+  const {
+    collection,
+    enabled: enabledOption = true,
+    loop: loopOption = false,
+    orientation: orientationOption = "vertical",
+    rtl: rtlOption = false,
+    openOnArrowKeyDown: openOnArrowKeyDownOption = true,
+    closeOnTab: closeOnTabOption = true,
+    onEnter,
+    onExit,
+  } = options;
 
-  const isEnabled = computed(() => toValue(options.enabled) ?? true);
-  const isLoop = computed(() => toValue(options.loop) ?? false);
-  const orientation = computed(() => toValue(options.orientation) ?? "vertical");
-  const isRtl = computed(() => toValue(options.rtl) ?? false);
-  const isOpenOnArrowKeyDown = computed(() => toValue(options.openOnArrowKeyDown) ?? true);
-  const isCloseOnTab = computed(() => toValue(options.closeOnTab) ?? true);
+  const isEnabled = computed(() => toValue(enabledOption));
+  const isLoop = computed(() => toValue(loopOption));
+  const orientation = computed(() => toValue(orientationOption));
+  const isRtl = computed(() => toValue(rtlOption));
+  const isOpenOnArrowKeyDown = computed(() => toValue(openOnArrowKeyDownOption));
+  const isCloseOnTab = computed(() => toValue(closeOnTabOption));
 
   const cleanupRegistry = createCleanupRegistry();
-  const registerCleanup = cleanupRegistry.add;
-  const cleanup = cleanupRegistry.cleanup;
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value;
@@ -129,37 +107,38 @@ export function useListNavigation(
     let handled = false;
     const navOptions = { loop: isLoop.value };
 
-    if (intent === "first") {
-      collection.setFirst();
-      handled = true;
-    } else if (intent === "last") {
-      collection.setLast();
-      handled = true;
-    } else if (intent === "next") {
-      collection.setNext(navOptions);
-      handled = true;
-    } else if (intent === "previous") {
-      collection.setPrevious(navOptions);
-      handled = true;
-    } else if (intent === "enter") {
-      const activeValue = collection.activeValue.value;
-      if (activeValue && collection.hasChildren(activeValue)) {
-        collection.expandBranch(activeValue);
-        const firstEnabled = collection.getFirstEnabledDescendantValue(activeValue);
-        if (firstEnabled) {
-          collection.setActiveValue(firstEnabled);
-        }
+    switch (intent) {
+      case "first":
+        collection.setFirst();
         handled = true;
-      }
-    } else if (intent === "exit") {
-      const activeValue = collection.activeValue.value;
-      if (activeValue) {
-        const parentValue = collection.getParentValue(activeValue);
-        if (parentValue) {
-          collection.setActiveValue(parentValue);
-          collection.collapseBranch(parentValue);
+        break;
+      case "last":
+        collection.setLast();
+        handled = true;
+        break;
+      case "next":
+        collection.setNext(navOptions);
+        handled = true;
+        break;
+      case "previous":
+        collection.setPrevious(navOptions);
+        handled = true;
+        break;
+      case "enter": {
+        const activeValue = collection.activeValue.value;
+        if (activeValue && onEnter) {
+          onEnter(activeValue, e);
           handled = true;
         }
+        break;
+      }
+      case "exit": {
+        const activeValue = collection.activeValue.value;
+        if (activeValue && onExit) {
+          onExit(activeValue, e);
+          handled = true;
+        }
+        break;
       }
     }
 
@@ -168,10 +147,10 @@ export function useListNavigation(
     }
   };
 
-  registerCleanup(
+  cleanupRegistry.add(
     useEventListener(() => (isEnabled.value ? anchorEl.value : null), "keydown", onAnchorKeyDown),
   );
-  registerCleanup(
+  cleanupRegistry.add(
     useEventListener(
       () => (isEnabled.value ? floatingEl.value : null),
       "keydown",
@@ -181,7 +160,7 @@ export function useListNavigation(
 
   // Sync flush ensures activeValue is cleared before downstream watchers see the closed state,
   // preventing stale active-item references during the close transition.
-  registerCleanup(
+  cleanupRegistry.add(
     watch(
       () => open.value,
       (isOpen) => {
@@ -193,5 +172,95 @@ export function useListNavigation(
     ),
   );
 
-  return { cleanup };
+  tryOnScopeDispose(cleanupRegistry.cleanup);
+
+  return { cleanup: cleanupRegistry.cleanup };
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+export interface NavigableCollection {
+  /**
+   * The currently active value in the collection.
+   */
+  activeValue: Ref<string | null>;
+  /**
+   * Set the active value directly.
+   */
+  setActiveValue: (value: string | null) => void;
+  /**
+   * Advance to the next focusable item.
+   */
+  setNext: (options?: { loop?: boolean }) => void;
+  /**
+   * Go back to the previous focusable item.
+   */
+  setPrevious: (options?: { loop?: boolean }) => void;
+  /**
+   * Go to the first focusable item.
+   */
+  setFirst: () => void;
+  /**
+   * Go to the last focusable item.
+   */
+  setLast: () => void;
+}
+
+export interface UseListNavigationOptions {
+  /**
+   * The collection manager to navigate.
+   */
+  collection: NavigableCollection;
+
+  /**
+   * Whether navigation behavior is enabled.
+   */
+  enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, arrow-key navigation wraps from end-to-start and vice versa.
+   */
+  loop?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Primary navigation orientation.
+   * - "vertical": Up/Down to navigate, Left/Right for enter/exit (tree)
+   * - "horizontal": Left/Right to navigate, Down for enter (menubar)
+   */
+  orientation?: MaybeRefOrGetter<"vertical" | "horizontal">;
+
+  /**
+   * If true, pressing an arrow key when closed opens and sets the active value.
+   */
+  openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Right-to-left layout flag affecting horizontal arrow semantics.
+   */
+  rtl?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * If true, Tab closes the current floating tree/list without preventing page focus movement.
+   * @default true
+   */
+  closeOnTab?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Callback triggered when a branch "enter" intent is detected (e.g. ArrowRight in LTR).
+   */
+  onEnter?: (activeValue: string, e: KeyboardEvent) => void;
+
+  /**
+   * Callback triggered when a branch "exit" intent is detected (e.g. ArrowLeft in LTR).
+   */
+  onExit?: (activeValue: string, e: KeyboardEvent) => void;
+}
+
+export interface UseListNavigationReturn {
+  /**
+   * Stops all listeners and watchers created by the composable.
+   */
+  cleanup: () => void;
 }

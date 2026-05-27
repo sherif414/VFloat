@@ -229,6 +229,22 @@ describe("useListNavigation", () => {
           collection,
           orientation: "vertical",
           rtl: options.rtl,
+          onEnter(activeValue) {
+            if (collection.hasChildren(activeValue)) {
+              collection.expandBranch(activeValue);
+              const firstEnabled = collection.getFirstEnabledDescendantValue(activeValue);
+              if (firstEnabled) {
+                collection.setActiveValue(firstEnabled);
+              }
+            }
+          },
+          onExit(activeValue) {
+            const parentValue = collection.getParentValue(activeValue);
+            if (parentValue) {
+              collection.setActiveValue(parentValue);
+              collection.collapseBranch(parentValue);
+            }
+          },
         });
 
         resultContext = { context, navigation, collection, floatingEl, items };
@@ -720,7 +736,26 @@ describe("useListNavigation", () => {
           itemValue: (item) => item.id,
           itemChildren: (item) => item.children,
         });
-        useListNavigation(context, { collection, orientation: "vertical" });
+        useListNavigation(context, {
+          collection,
+          orientation: "vertical",
+          onEnter(activeValue) {
+            if (collection.hasChildren(activeValue)) {
+              collection.expandBranch(activeValue);
+              const firstEnabled = collection.getFirstEnabledDescendantValue(activeValue);
+              if (firstEnabled) {
+                collection.setActiveValue(firstEnabled);
+              }
+            }
+          },
+          onExit(activeValue) {
+            const parentValue = collection.getParentValue(activeValue);
+            if (parentValue) {
+              collection.setActiveValue(parentValue);
+              collection.collapseBranch(parentValue);
+            }
+          },
+        });
       });
 
       // 1. Set active to root item "1"
@@ -765,6 +800,98 @@ describe("useListNavigation", () => {
       openRef.value = false;
       await nextTick();
       expect(collection.activeValue.value).toBeNull();
+    });
+  });
+
+  describe("Decoupled Callbacks & Custom Collection", () => {
+    it("supports decoupled custom collection conforming to NavigableCollection interface", () => {
+      scope = effectScope();
+      const anchorEl = document.createElement("button");
+      const floatingEl = document.createElement("div");
+      document.body.appendChild(anchorEl);
+      document.body.appendChild(floatingEl);
+      elementsToCleanUp.push(anchorEl, floatingEl);
+
+      const openRef = ref(true);
+      const anchorRef = ref(anchorEl);
+      const floatingRef = ref(floatingEl);
+
+      let setNextCalled = false;
+      let setPreviousCalled = false;
+
+      const mockCollection = {
+        activeValue: ref("item-1"),
+        setActiveValue: () => {},
+        setNext: () => {
+          setNextCalled = true;
+        },
+        setPrevious: () => {
+          setPreviousCalled = true;
+        },
+        setFirst: () => {},
+        setLast: () => {},
+      };
+
+      scope.run(() => {
+        const context = useFloating(anchorRef, floatingRef, { open: openRef });
+        useListNavigation(context, {
+          collection: mockCollection,
+          orientation: "vertical",
+        });
+      });
+
+      dispatchKey(floatingEl, "ArrowDown");
+      expect(setNextCalled).toBe(true);
+
+      dispatchKey(floatingEl, "ArrowUp");
+      expect(setPreviousCalled).toBe(true);
+    });
+
+    it("triggers onEnter and onExit with activeValue and KeyboardEvent", () => {
+      scope = effectScope();
+      const anchorEl = document.createElement("button");
+      const floatingEl = document.createElement("div");
+      document.body.appendChild(anchorEl);
+      document.body.appendChild(floatingEl);
+      elementsToCleanUp.push(anchorEl, floatingEl);
+
+      const openRef = ref(true);
+      const anchorRef = ref(anchorEl);
+      const floatingRef = ref(floatingEl);
+
+      let enterArgs: any[] = [];
+      let exitArgs: any[] = [];
+
+      const mockCollection = {
+        activeValue: ref("item-active"),
+        setActiveValue: () => {},
+        setNext: () => {},
+        setPrevious: () => {},
+        setFirst: () => {},
+        setLast: () => {},
+      };
+
+      scope.run(() => {
+        const context = useFloating(anchorRef, floatingRef, { open: openRef });
+        useListNavigation(context, {
+          collection: mockCollection,
+          orientation: "vertical",
+          onEnter: (activeValue, e) => {
+            enterArgs = [activeValue, e];
+          },
+          onExit: (activeValue, e) => {
+            exitArgs = [activeValue, e];
+          },
+        });
+      });
+
+      dispatchKey(floatingEl, "ArrowRight");
+      expect(enterArgs[0]).toBe("item-active");
+      expect(enterArgs[1] instanceof KeyboardEvent).toBe(true);
+
+      dispatchKey(floatingEl, "ArrowLeft");
+      expect(exitArgs[0]).toBe("item-active");
+      expect(exitArgs[1] instanceof KeyboardEvent).toBe(true);
     });
   });
 });
