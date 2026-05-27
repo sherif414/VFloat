@@ -4,6 +4,7 @@ import { useEventListener } from "@/shared/use-event-listener";
 import { createCleanupRegistry } from "@/shared/lifecycle";
 import type { UseCollectionReturn } from "../collection/use-collection";
 import { isTypeableElement } from "@/shared/dom";
+import { resolveKeyboardIntent } from "./intent";
 
 export interface UseListNavigationOptions {
   /**
@@ -23,11 +24,10 @@ export interface UseListNavigationOptions {
 
   /**
    * Primary navigation orientation.
-   * - "vertical": Up/Down to navigate
-   * - "horizontal": Left/Right to navigate
-   * - "both": Grid navigation
+   * - "vertical": Up/Down to navigate, Left/Right for enter/exit (tree)
+   * - "horizontal": Left/Right to navigate, Down for enter (menubar)
    */
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
+  orientation?: MaybeRefOrGetter<"vertical" | "horizontal">;
 
   /**
    * If true, pressing an arrow key when closed opens and sets the active value.
@@ -92,37 +92,18 @@ export function useListNavigation(
     const target = e.target as Element | null;
     if (target && isTypeableElement(target) && target !== anchorEl.value) return;
 
-    const key = e.key;
-    const currentOrientation = orientation.value;
+    const intent = resolveKeyboardIntent(e, {
+      orientation: orientation.value,
+      rtl: isRtl.value,
+    });
 
-    let isMainOrientation = false;
-    let isBackward = false;
-
-    if (currentOrientation === "vertical" || currentOrientation === "both") {
-      if (key === "ArrowDown") isMainOrientation = true;
-      if (key === "ArrowUp") {
-        isMainOrientation = true;
-        isBackward = true;
-      }
-    }
-    if (currentOrientation === "horizontal" || currentOrientation === "both") {
-      if (key === "ArrowRight") {
-        isMainOrientation = true;
-        isBackward = isRtl.value;
-      }
-      if (key === "ArrowLeft") {
-        isMainOrientation = true;
-        isBackward = !isRtl.value;
-      }
-    }
-
-    if (!isMainOrientation) return;
+    if (intent !== "next" && intent !== "previous") return;
     if (open.value || !isOpenOnArrowKeyDown.value) return;
 
     e.preventDefault();
     setOpen(true, "keyboard-activate", e);
 
-    if (isBackward) {
+    if (intent === "previous") {
       collection.setLast();
     } else {
       collection.setFirst();
@@ -133,90 +114,52 @@ export function useListNavigation(
     if (e.defaultPrevented || !isEnabled.value) return;
     if (!open.value) return;
 
-    const key = e.key;
+    const intent = resolveKeyboardIntent(e, {
+      orientation: orientation.value,
+      rtl: isRtl.value,
+    });
 
-    if (key === "Tab" && isCloseOnTab.value) {
+    if (intent === "close" && e.key === "Tab" && isCloseOnTab.value) {
       setOpen(false, "tab-key", e);
       return;
     }
 
+    if (!intent || intent === "activate" || intent === "close") return;
+
     let handled = false;
     const navOptions = { loop: isLoop.value };
 
-    if (key === "Home") {
+    if (intent === "first") {
       collection.setFirst();
       handled = true;
-    } else if (key === "End") {
+    } else if (intent === "last") {
       collection.setLast();
       handled = true;
-    } else if (orientation.value === "vertical") {
-      // Tree expand/collapse (ArrowRight/Left) is only supported in vertical orientation.
-      // In "both" mode, ArrowRight/Left are consumed for flat grid navigation.
-      if (key === "ArrowDown") {
-        collection.setNext(navOptions);
-        handled = true;
-      } else if (key === "ArrowUp") {
-        collection.setPrevious(navOptions);
-        handled = true;
-      } else if (key === "ArrowRight" || key === "ArrowLeft") {
-        const isExpandKey = isRtl.value ? key === "ArrowLeft" : key === "ArrowRight";
-        const activeValue = collection.activeValue.value;
-        if (isExpandKey) {
-          if (activeValue && collection.hasChildren(activeValue)) {
-            collection.expandBranch(activeValue);
-            const firstEnabled = collection.getFirstEnabledDescendantValue(activeValue);
-            if (firstEnabled) {
-              collection.setActiveValue(firstEnabled);
-            }
-          }
-        } else {
-          if (activeValue) {
-            const parentValue = collection.getParentValue(activeValue);
-            if (parentValue) {
-              collection.setActiveValue(parentValue);
-              collection.collapseBranch(parentValue);
-            }
-          }
+    } else if (intent === "next") {
+      collection.setNext(navOptions);
+      handled = true;
+    } else if (intent === "previous") {
+      collection.setPrevious(navOptions);
+      handled = true;
+    } else if (intent === "enter") {
+      const activeValue = collection.activeValue.value;
+      if (activeValue && collection.hasChildren(activeValue)) {
+        collection.expandBranch(activeValue);
+        const firstEnabled = collection.getFirstEnabledDescendantValue(activeValue);
+        if (firstEnabled) {
+          collection.setActiveValue(firstEnabled);
         }
         handled = true;
       }
-    } else if (orientation.value === "horizontal") {
-      if (key === "ArrowRight") {
-        if (isRtl.value) {
-          collection.setPrevious(navOptions);
-        } else {
-          collection.setNext(navOptions);
+    } else if (intent === "exit") {
+      const activeValue = collection.activeValue.value;
+      if (activeValue) {
+        const parentValue = collection.getParentValue(activeValue);
+        if (parentValue) {
+          collection.setActiveValue(parentValue);
+          collection.collapseBranch(parentValue);
+          handled = true;
         }
-        handled = true;
-      } else if (key === "ArrowLeft") {
-        if (isRtl.value) {
-          collection.setNext(navOptions);
-        } else {
-          collection.setPrevious(navOptions);
-        }
-        handled = true;
-      }
-    } else if (orientation.value === "both") {
-      if (key === "ArrowDown") {
-        collection.setNext(navOptions);
-        handled = true;
-      } else if (key === "ArrowUp") {
-        collection.setPrevious(navOptions);
-        handled = true;
-      } else if (key === "ArrowRight") {
-        if (isRtl.value) {
-          collection.setPrevious(navOptions);
-        } else {
-          collection.setNext(navOptions);
-        }
-        handled = true;
-      } else if (key === "ArrowLeft") {
-        if (isRtl.value) {
-          collection.setNext(navOptions);
-        } else {
-          collection.setPrevious(navOptions);
-        }
-        handled = true;
       }
     }
 

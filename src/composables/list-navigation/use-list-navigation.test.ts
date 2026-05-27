@@ -428,35 +428,6 @@ describe("useListNavigation", () => {
         expect(collection.activeValue.value).toBe("1");
       });
     });
-
-    describe("both orientation (grid)", () => {
-      it("opens on all arrow keys when closed", () => {
-        const arrowKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
-        for (const key of arrowKeys) {
-          const { anchorEl, openRef } = setup({ orientation: "both" });
-          dispatchKey(anchorEl, key);
-          expect(openRef.value).toBe(true);
-        }
-      });
-
-      it("navigates on all arrow keys when open", () => {
-        const { floatingEl, openRef, collection } = setup({ orientation: "both" });
-        openRef.value = true;
-        collection.setActiveValue("2");
-
-        dispatchKey(floatingEl, "ArrowDown");
-        expect(collection.activeValue.value).toBe("3");
-
-        dispatchKey(floatingEl, "ArrowUp");
-        expect(collection.activeValue.value).toBe("2");
-
-        dispatchKey(floatingEl, "ArrowLeft");
-        expect(collection.activeValue.value).toBe("1");
-
-        dispatchKey(floatingEl, "ArrowRight");
-        expect(collection.activeValue.value).toBe("2");
-      });
-    });
   });
 
   describe("Option: openOnArrowKeyDown", () => {
