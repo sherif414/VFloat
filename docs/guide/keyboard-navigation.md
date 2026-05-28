@@ -8,7 +8,7 @@ Predictable keyboard navigation is a core requirement for accessible floating su
 
 In VFloat, keyboard navigation is split into a clean separation of concerns:
 
-1. **[`useCollection`](/api/use-collection)** is a data-first reactive manager. It handles items, hierarchies (for 2D nested trees), disabled nodes, and moves the active selection. It has no knowledge of DOM elements or events.
+1. **[`useTree`](/api/use-tree)** is a data-first reactive manager. It handles items, hierarchies (for 2D nested trees), disabled nodes, and moves the active selection. It has no knowledge of DOM elements or events.
 2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
 3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and states (e.g. `aria-expanded`, `aria-controls`, `aria-activedescendant`) to anchor and list elements.
 
@@ -23,7 +23,7 @@ In this model, focus actually shifts into the floating list, and arrow keys move
 ```vue
 <script setup lang="ts">
 import { ref, watch, nextTick } from "vue";
-import { useFloating, useCollection, useListNavigation, useRole } from "v-float";
+import { useFloating, useTree, useListNavigation, useRole } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -45,15 +45,15 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 const context = useFloating(anchorEl, floatingEl);
 
 // 1. Manage navigation state
-const collection = useCollection({
+const tree = useTree({
   items,
-  itemValue: (item) => item.id,
-  itemDisabled: (item) => !!item.disabled,
+  getItemId: (item) => item.id,
+  isItemDisabled: (item) => !!item.disabled,
 });
 
 // 2. Intercept keyboard navigation on elements
 useListNavigation(context, {
-  collection,
+  collection: tree.rootBranch,
   orientation: "vertical",
   loop: true,
 });
@@ -66,7 +66,7 @@ useRole(context, {
 });
 
 // 4. Focus the active item in the DOM when the selection moves
-watch(collection.activeValue, async (val) => {
+watch(tree.activeValue, async (val) => {
   if (val == null) return;
   await nextTick();
   const index = items.value.findIndex((item) => item.id === val);
@@ -100,9 +100,9 @@ Render item elements with roving `tabindex` and bind dynamic active classes:
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       role="menuitem"
       :aria-disabled="item.disabled"
-      :tabindex="collection.activeValue.value === item.id ? 0 : -1"
-      :class="{ active: collection.activeValue.value === item.id }"
-      @click="collection.setActiveValue(item.id)"
+      :tabindex="tree.activeValue.value === item.id ? 0 : -1"
+      :class="{ active: tree.activeValue.value === item.id }"
+      @click="tree.setActiveValue(item.id)"
     >
       {{ item.label }}
     </li>
@@ -121,7 +121,7 @@ In this model, DOM focus stays securely inside a text input or combobox containe
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useCollection, useListNavigation, useRole } from "v-float";
+import { useFloating, useTree, useListNavigation, useRole } from "v-float";
 
 interface SearchOption {
   value: string;
@@ -140,13 +140,13 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 
 const context = useFloating(anchorEl, floatingEl);
 
-const collection = useCollection({
+const tree = useTree({
   items: options,
-  itemValue: (item) => item.value,
+  getItemId: (item) => item.value,
 });
 
 useListNavigation(context, {
-  collection,
+  collection: tree.rootBranch,
   orientation: "vertical",
   openOnArrowKeyDown: true,
 });
@@ -170,9 +170,7 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
     role="combobox"
     aria-autocomplete="list"
     :aria-expanded="context.state.open.value"
-    :aria-activedescendant="
-      collection.activeValue.value ? `opt-${collection.activeValue.value}` : undefined
-    "
+    :aria-activedescendant="tree.activeValue.value ? `opt-${tree.activeValue.value}` : undefined"
     @focus="context.state.setOpen(true)"
   />
 
@@ -188,9 +186,9 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
       :id="`opt-${item.value}`"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       role="option"
-      :aria-selected="collection.activeValue.value === item.value"
-      :class="{ active: collection.activeValue.value === item.value }"
-      @click="collection.setActiveValue(item.value)"
+      :aria-selected="tree.activeValue.value === item.value"
+      :class="{ active: tree.activeValue.value === item.value }"
+      @click="tree.setActiveValue(item.value)"
     >
       {{ item.label }}
     </li>
@@ -221,5 +219,5 @@ Here are the key events handled automatically by `useListNavigation`:
 ## 4. Where To Go Next
 
 - Learn how to build highly responsive, multi-level dropdown hierarchies in [Build Nested Menus](/guide/build-nested-menus).
-- Read the [useCollection API](/api/use-collection) reference.
+- Read the [useTree API](/api/use-tree) reference.
 - Read the [useListNavigation API](/api/use-list-navigation) reference.

@@ -11,13 +11,13 @@ Nested menus (submenus) introduce state challenges beyond standard one-dimension
 - When the user presses the collapse key (e.g., `ArrowLeft`), how does focus return to the parent trigger item?
 - If items in a submenu are disabled, how does keyboard traversal safely bypass them?
 
-In VFloat, these questions are resolved by configuring a single **2D Tree Collection** via `useCollection`. The entire menu tree coordinates reactively, eliminating complex manual node registration or context passing.
+In VFloat, these questions are resolved by configuring a single **2D Tree Collection** via `useTree`. The entire menu tree coordinates reactively, eliminating complex manual node registration or context passing.
 
 ---
 
 ## The 2D Tree Model
 
-By providing `itemChildren` to `useCollection`, you transform a flat list into a reactive 2D structure:
+By providing `getItemChildren` to `useTree`, you transform a flat list into a reactive 2D structure:
 
 1. **`expandedValues`** acts as the single source of truth for which submenus are currently open.
 2. **`flattenedItems`** is a computed list that automatically flattens only the expanded branches in a depth-first traversal.
@@ -36,7 +36,7 @@ Here is how to build a fully accessible, keyboard-traversable multi-level nested
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useCollection, useListNavigation, useRole } from "v-float";
+import { useFloating, useTree, useListNavigation, useRole } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -66,16 +66,16 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 const context = useFloating(anchorEl, floatingEl);
 
 // Define the 2D collection
-const collection = useCollection<MenuItem>({
+const tree = useTree<MenuItem>({
   items: menuItems,
-  itemValue: (item) => item.id,
-  itemDisabled: (item) => !!item.disabled,
-  itemChildren: (item) => item.children, // Activates 2D Tree Navigation
+  getItemId: (item) => item.id,
+  isItemDisabled: (item) => !!item.disabled,
+  getItemChildren: (item) => item.children, // Activates 2D Tree Navigation
 });
 
 // Configure keyboard navigation
 useListNavigation(context, {
-  collection,
+  collection: tree.rootBranch,
   orientation: "vertical",
 });
 
@@ -89,9 +89,9 @@ useRole(context, {
 
 ### 2. Render the Tree Recursively or Dynamically
 
-Since `collection.flattenedItems` contains a flat list of _currently visible_ nodes (taking expansion state into account), you can render them in a single flat list while applying indentation to sub-items based on their parent hierarchy.
+Since `tree.flattenedItems` contains a flat list of _currently visible_ nodes (taking expansion state into account), you can render them in a single flat list while applying indentation to sub-items based on their parent hierarchy.
 
-Alternatively, you can render them as traditional nested popovers by matching `collection.expandedValues` to toggle submenus.
+Alternatively, you can render them as traditional nested popovers by matching `tree.expandedValues` to toggle submenus.
 
 Here is the clean flat roving-tabindex render pattern using indentation:
 
@@ -108,24 +108,24 @@ Here is the clean flat roving-tabindex render pattern using indentation:
     :style="context.position.styles.value"
   >
     <div
-      v-for="(item, index) in collection.flattenedItems.value"
+      v-for="(item, index) in tree.flattenedItems.value"
       :key="item.id"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       role="treeitem"
       :aria-disabled="item.disabled"
       :aria-expanded="
-        collection.hasChildren(item.id) ? collection.expandedValues.value.has(item.id) : undefined
+        tree.hasChildren(item.id) ? tree.expandedValues.value.has(item.id) : undefined
       "
-      :tabindex="collection.activeValue.value === item.id ? 0 : -1"
+      :tabindex="tree.activeValue.value === item.id ? 0 : -1"
       :class="{
-        active: collection.activeValue.value === item.id,
-        'is-submenu-trigger': collection.hasChildren(item.id),
-        'indent-sub': collection.getParentValue(item.id) !== null,
+        active: tree.activeValue.value === item.id,
+        'is-submenu-trigger': tree.hasChildren(item.id),
+        'indent-sub': tree.getParentValue(item.id) !== null,
       }"
-      @click="collection.setActiveValue(item.id)"
+      @click="tree.setActiveValue(item.id)"
     >
       <span>{{ item.label }}</span>
-      <span v-if="collection.hasChildren(item.id)">▶</span>
+      <span v-if="tree.hasChildren(item.id)">▶</span>
     </div>
   </div>
 </template>
@@ -141,7 +141,7 @@ Here is the clean flat roving-tabindex render pattern using indentation:
 
 ## Tree Coordination Edge Cases Solved Automatically
 
-By routing your tree layout through `useCollection` and `useListNavigation`, VFloat handles the following complex behaviors out-of-the-box:
+By routing your tree layout through `useTree` and `useListNavigation`, VFloat handles the following complex behaviors out-of-the-box:
 
 - **Disabled Skipped Sub-Nodes:** Expanding a branch containing disabled items automatically bypasses them (pre-order DFS) to focus the first _enabled_ submenu choice.
 - **Opener Safeguard:** If a submenu branch exists but all of its nested children are disabled, expanding the branch leaves focus safely on the parent trigger item, avoiding focus traps.
@@ -151,6 +151,6 @@ By routing your tree layout through `useCollection` and `useListNavigation`, VFl
 
 ## See Also
 
-- [`useCollection`](/api/use-collection)
+- [`useTree`](/api/use-tree)
 - [`useListNavigation`](/api/use-list-navigation)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)

@@ -154,7 +154,7 @@ export default defineConfigWithTheme({
         {
           text: "Collections",
           items: [
-            { text: "useCollection", link: "/api/use-collection" },
+            { text: "useTree", link: "/api/use-tree" },
             { text: "useListNavigation", link: "/api/use-list-navigation" },
           ],
         },

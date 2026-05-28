@@ -4,7 +4,7 @@ description: Coordinates keyboard-driven list navigation in VFloat.
 
 # useListNavigation
 
-`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for lists, grids, and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a data-first [`useCollection`](/api/use-collection) state coordinator to manage item activity without raw DOM query selectors or index tracking.
+`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for lists, grids, and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a reactive tree branch conforming to the `NavigableCollection` contract (such as the branches returned by [`useTree`](/api/use-tree)) to manage item activity without raw DOM query selectors or index tracking.
 
 ## Type
 
@@ -14,11 +14,42 @@ function useListNavigation(
   options: UseListNavigationOptions,
 ): UseListNavigationReturn;
 
+interface NavigableCollection {
+  /**
+   * The currently active value in the collection.
+   */
+  activeValue: Ref<string | null>;
+  /**
+   * Set the active value directly.
+   */
+  setActiveValue: (value: string | null) => void;
+  /**
+   * Advance to the next focusable item.
+   */
+  setNext: (options?: { loop?: boolean }) => void;
+  /**
+   * Go back to the previous focusable item.
+   */
+  setPrevious: (options?: { loop?: boolean }) => void;
+  /**
+   * Go to the first focusable item.
+   */
+  setFirst: () => void;
+  /**
+   * Go to the last focusable item.
+   */
+  setLast: () => void;
+  /**
+   * Check if a specific value is disabled.
+   */
+  isItemDisabled?: (value: string) => boolean;
+}
+
 interface UseListNavigationOptions {
   /**
-   * The reactive collection manager for list structure, active state, and traversal.
+   * The collection manager to navigate.
    */
-  collection: UseCollectionReturn<any>;
+  collection: NavigableCollection;
 
   /**
    * Whether navigation behavior is enabled.
@@ -36,10 +67,9 @@ interface UseListNavigationOptions {
    * Primary navigation orientation.
    * - "vertical": ArrowUp/Down to navigate; ArrowLeft/Right to collapse/expand branches (trees)
    * - "horizontal": ArrowLeft/Right to navigate
-   * - "both": Up/Down/Left/Right to navigate flat grids
    * @default "vertical"
    */
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
+  orientation?: MaybeRefOrGetter<"vertical" | "horizontal">;
 
   /**
    * If true, pressing an arrow key when closed opens the floating surface and activates the first/last item.
@@ -58,6 +88,16 @@ interface UseListNavigationOptions {
    * @default true
    */
   closeOnTab?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Callback triggered when a branch "enter" intent is detected from an enabled item.
+   */
+  onEnter?: (activeValue: string, e: KeyboardEvent) => void;
+
+  /**
+   * Callback triggered when a branch "exit" intent is detected from an enabled item.
+   */
+  onExit?: (activeValue: string, e: KeyboardEvent) => void;
 }
 
 interface UseListNavigationReturn {
@@ -72,9 +112,9 @@ interface UseListNavigationReturn {
 
 `useListNavigation` separates keyboard coordination from active item management:
 
-- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.expandBranch()`, etc.
+- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc.
 - **Roving & Virtual Focus:** It is compatible with both roving tabindex DOM focus and virtual focus configurations. Simply sync `collection.activeValue` with your elements' focus or `aria-activedescendant` attribute.
-- **Nested Branch Expansion (2D):** In vertical orientation, horizontal arrow keys expand or collapse branches. It uses depth-first pre-order searches on the collection (`collection.getFirstEnabledDescendantValue`) to safely target the first enabled child. If all descendants are disabled, focus remains securely on the opener.
+- **Nested Branch Expansion (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on branches. It relies on horizontal arrow detection to fire `onEnter` and `onExit` events. In a tree setup, these events are used to expand or collapse submenus, safely shifting the active value to children or returning it to the parent trigger.
 - **RTL Semantics:** Horizontal arrow keys for list navigation and tree branch expansion automatically reverse their meaning when `rtl` is enabled.
 - **Natural Tab Exit:** Pressing `Tab` closes the list tree to clean up references, but does not prevent natural browser focus movement.
 
@@ -83,7 +123,7 @@ interface UseListNavigationReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useCollection, useFloating, useListNavigation } from "v-float";
+import { useTree, useFloating, useListNavigation } from "v-float";
 
 interface Option {
   value: string;
@@ -101,13 +141,13 @@ const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloating(anchorEl, floatingEl);
 
-const collection = useCollection({
+const tree = useTree({
   items: options,
-  itemValue: (item) => item.value,
+  getItemId: (item) => item.value,
 });
 
 useListNavigation(context, {
-  collection,
+  collection: tree.rootBranch,
   orientation: "vertical",
   loop: true,
 });
@@ -125,12 +165,12 @@ useListNavigation(context, {
     :style="context.position.styles.value"
   >
     <div
-      v-for="item in collection.flattenedItems.value"
+      v-for="item in tree.flattenedItems.value"
       :key="item.value"
       role="option"
-      :aria-selected="collection.activeValue.value === item.value"
-      :class="{ active: collection.activeValue.value === item.value }"
-      @click="collection.setActiveValue(item.value)"
+      :aria-selected="tree.activeValue.value === item.value"
+      :class="{ active: tree.activeValue.value === item.value }"
+      @click="tree.setActiveValue(item.value)"
     >
       {{ item.label }}
     </div>
@@ -140,7 +180,7 @@ useListNavigation(context, {
 
 ## See Also
 
-- [`useCollection`](/api/use-collection)
+- [`useTree`](/api/use-tree)
 - [`useFloating`](/api/use-floating)
 - [`useRole`](/api/use-role)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)

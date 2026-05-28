@@ -9,7 +9,7 @@ Coordinating nested and hierarchical floating components (like multi-level subme
 - **Teleportation gaps:** Nested floating panels are frequently teleposted to `<Teleport to="body">` to avoid CSS overflow clipping. When portals move elements out of their original DOM positions, standard DOM selectors like `.parentNode` or `.contains()` break.
 - **Race conditions:** Managing active indices across multiple nested Vue components often introduces timing synchronization bugs during quick mouse movement or keyboard traversals.
 
-In VFloat, these issues are elegantly bypassed using **Data-First Tree Coordination** managed by a central [`useCollection`](/api/use-collection) state manager.
+In VFloat, these issues are elegantly bypassed using **Data-First Tree Coordination** managed by a central [`useTree`](/api/use-tree) structural mediator.
 
 ---
 
@@ -27,7 +27,7 @@ Instead of every nested submenu tracking its own isolated state and communicatin
 
 ### The State Registry
 
-A single `useCollection` instance maintains:
+A single `useTree` instance maintains:
 
 - **`activeValue`:** A single reactive string value referencing the currently active item anywhere in the visible tree hierarchy.
 - **`expandedValues`:** A reactive `Set` containing the IDs of all currently expanded branches.
@@ -56,5 +56,5 @@ This single reactive collection coordinates all interactive behaviors:
 ## Next Steps
 
 - Follow the step-by-step tutorial to [Build Nested Menus](/guide/build-nested-menus).
-- Read the [useCollection API Reference](/api/use-collection).
+- Read the [useTree API Reference](/api/use-tree).
 - Read the [useListNavigation API Reference](/api/use-list-navigation).

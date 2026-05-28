@@ -18,9 +18,9 @@ import { resolveKeyboardIntent } from "./intent";
  *
  * @example
  * ```ts
- * const collection = useCollection({ items, itemValue: i => i.id });
+ * const tree = useTree({ items, getItemId: i => i.id });
  * useListNavigation(context, {
- *   collection,
+ *   collection: tree.rootBranch,
  *   orientation: "vertical",
  *   loop: true
  * });
@@ -126,7 +126,7 @@ export function useListNavigation(
         break;
       case "enter": {
         const activeValue = collection.activeValue.value;
-        if (activeValue && onEnter) {
+        if (activeValue && !collection.isItemDisabled?.(activeValue) && onEnter) {
           onEnter(activeValue, e);
           handled = true;
         }
@@ -134,7 +134,7 @@ export function useListNavigation(
       }
       case "exit": {
         const activeValue = collection.activeValue.value;
-        if (activeValue && onExit) {
+        if (activeValue && !collection.isItemDisabled?.(activeValue) && onExit) {
           onExit(activeValue, e);
           handled = true;
         }
@@ -206,6 +206,10 @@ export interface NavigableCollection {
    * Go to the last focusable item.
    */
   setLast: () => void;
+  /**
+   * Check if a specific value is disabled.
+   */
+  isItemDisabled?: (value: string) => boolean;
 }
 
 export interface UseListNavigationOptions {
@@ -248,12 +252,12 @@ export interface UseListNavigationOptions {
   closeOnTab?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Callback triggered when a branch "enter" intent is detected (e.g. ArrowRight in LTR).
+   * Callback triggered when a branch "enter" intent is detected from an enabled item (e.g. ArrowRight in LTR).
    */
   onEnter?: (activeValue: string, e: KeyboardEvent) => void;
 
   /**
-   * Callback triggered when a branch "exit" intent is detected (e.g. ArrowLeft in LTR).
+   * Callback triggered when a branch "exit" intent is detected from an enabled item (e.g. ArrowLeft in LTR).
    */
   onExit?: (activeValue: string, e: KeyboardEvent) => void;
 }
