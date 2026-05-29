@@ -55,6 +55,7 @@ export default defineConfigWithTheme({
   // ============================================================================
   markdown: {
     ...vueThemeConfig.markdown,
+    theme: "material-theme-palenight",
     config(md) {
       md.use(demoMdPlugin);
     },
@@ -80,7 +81,7 @@ export default defineConfigWithTheme({
         {
           text: "Getting Started",
           items: [
-            { text: "Overview", link: "/guide/" },
+            { text: "Introduction", link: "/guide/" },
             { text: "First Tooltip", link: "/guide/first-tooltip" },
             { text: "First Popover", link: "/guide/first-popover" },
             { text: "Control Open State", link: "/guide/control-open-state" },
