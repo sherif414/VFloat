@@ -278,7 +278,6 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
     getFirstEnabledDescendantValue,
     rootBranch,
     getBranch,
-    cleanup: cleanupRegistry.cleanup,
   };
 }
 
@@ -446,8 +445,4 @@ export interface UseTreeReturn<T> {
    * Branch instances are cached — same parent always returns the same reference.
    */
   getBranch: (parentValue: string) => TreeBranch<T> | null;
-  /**
-   * Stop all internal watchers created by the composable.
-   */
-  cleanup: () => void;
 }

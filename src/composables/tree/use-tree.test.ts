@@ -504,27 +504,6 @@ describe("useTree (descendant queries)", () => {
 describe("useTree (hardened features & lifecycle)", () => {
   type TreeNode = { id: string; children?: TreeNode[] };
 
-  it("exposes cleanup and stops watchers when invoked", async () => {
-    const items = ref([{ id: "1" }, { id: "2" }]);
-    const tree = useTree<TreeNode>({
-      items,
-      getItemId: (item) => item.id,
-      getItemChildren: (item) => item.children,
-    });
-
-    tree.setActiveValue("2");
-    expect(tree.activeValue.value).toBe("2");
-
-    // Execute cleanup
-    tree.cleanup();
-
-    // Change model/items now — activeValue should NOT clear since watcher is stopped
-    items.value = [{ id: "1" }];
-    await nextTick();
-
-    expect(tree.activeValue.value).toBe("2");
-  });
-
   it("exposes readonly expandedValues ref which prevents direct mutations", () => {
     const tree = createTestTree();
     // TS check - expandedValues doesn't support add/delete/clear due to ReadonlySet type

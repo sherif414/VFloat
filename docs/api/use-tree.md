@@ -173,11 +173,6 @@ interface UseTreeReturn<T> {
    * Branch instances are cached — same parent always returns the same reference.
    */
   getBranch: (parentValue: string) => TreeBranch<T> | null;
-
-  /**
-   * Stop all internal watchers created by the composable.
-   */
-  cleanup: () => void;
 }
 ```
 
@@ -190,7 +185,6 @@ interface UseTreeReturn<T> {
 - **Keyboard Helpers:** Public methods like `setNext()` and `setPrevious()` automatically bypass disabled items (using the `isItemDisabled` predicate).
 - **DFS Targeting:** `getFirstEnabledDescendantValue` performs a pre-order depth-first search to find the first enabled descendant of a branch, supporting highly resilient multi-level submenus.
 - **Scope-Aware Sub-Branches:** Every parent node with children forms a unique branch. Its `activeValue` is projected, meaning it is only non-null when the global active value of the tree belongs to that branch. This structurally satisfies the `NavigableCollection` contract needed by `useListNavigation` to achieve scope-aware keyboard navigation without cross-branch contamination.
-- **Manual Teardown:** Call `cleanup()` to stop all internal watchers manually, which is useful when coordinating tree state inside stores or manually managed scopes outside a normal component lifecycle.
 
 ## Example
 
