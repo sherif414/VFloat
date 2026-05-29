@@ -1,6 +1,5 @@
 /// <reference path="../../../env.d.ts" />
 
-import "vitepress/dist/client/theme-default/styles/components/vp-code.css";
 import "./styles/home.css";
 import { useData } from "vitepress";
 import DefaultTheme from "vitepress/theme";
