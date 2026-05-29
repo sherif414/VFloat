@@ -268,39 +268,6 @@ describe("useTree (expansion)", () => {
     expect(tree.flattenedItems.value.map((i) => i.id)).toEqual(["1", "2"]);
   });
 
-  it("toggleBranch toggles expansion state", () => {
-    const items: TreeNode[] = [{ id: "1", children: [{ id: "1-1" }] }];
-    const tree = useTree<TreeNode>({
-      items,
-      getItemId: (item) => item.id,
-      getItemChildren: (item) => item.children,
-    });
-
-    tree.toggleBranch("1");
-    expect(tree.isExpanded("1")).toBe(true);
-
-    tree.toggleBranch("1");
-    expect(tree.isExpanded("1")).toBe(false);
-  });
-
-  it("expandAll expands every branch parent", () => {
-    const items: TreeNode[] = [
-      { id: "1", children: [{ id: "1-1", children: [{ id: "1-1-1" }] }] },
-      { id: "2", children: [{ id: "2-1" }] },
-    ];
-    const tree = useTree<TreeNode>({
-      items,
-      getItemId: (item) => item.id,
-      getItemChildren: (item) => item.children,
-    });
-
-    tree.expandAll();
-    expect(tree.isExpanded("1")).toBe(true);
-    expect(tree.isExpanded("1-1")).toBe(true);
-    expect(tree.isExpanded("2")).toBe(true);
-    expect(tree.flattenedItems.value.map((i) => i.id)).toEqual(["1", "1-1", "1-1-1", "2", "2-1"]);
-  });
-
   it("collapseAll collapses everything", () => {
     const items: TreeNode[] = [
       { id: "1", children: [{ id: "1-1" }] },

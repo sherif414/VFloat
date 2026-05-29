@@ -113,16 +113,6 @@ interface UseTreeReturn<T> {
   collapseBranch: (value: string) => void;
 
   /**
-   * Toggle a branch's expansion state.
-   */
-  toggleBranch: (value: string) => void;
-
-  /**
-   * Expand all branches that have children.
-   */
-  expandAll: () => void;
-
-  /**
    * Collapse all branches.
    */
   collapseAll: () => void;

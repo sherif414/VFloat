@@ -1,0 +1,32 @@
+# Make branches stable across model updates
+
+Status: needs-triage
+
+## Parent
+
+`C:\projects\VFloat\.scratch\tree-controller-floating-coordination\PRD.md`
+
+## What to build
+
+Keep `TreeBranch` instances stable for the lifetime of a `useTree` instance, even when the underlying `items` input changes, so callers can safely retain branch references across model refreshes.
+
+## Why this matters
+
+`getBranch(parentValue)` currently behaves like a cached lookup only until the tree model changes, at which point the cache is cleared and new branch objects can be created. That makes branch identity snapshot-shaped rather than stable. For callers that memoize behavior, keep references across renders, or attach branch-scoped logic to a branch object, that contract is easy to misunderstand and can cause unnecessary churn.
+
+## Acceptance criteria
+
+- [ ] `rootBranch` remains the same object for the entire tree lifetime.
+- [ ] `getBranch(parentValue)` returns the same branch object for a given parent across model updates.
+- [ ] Branch fields continue to reflect the latest model snapshot after `items` changes.
+- [ ] Missing or removed parents degrade gracefully instead of invalidating the branch object.
+
+## Suggested implementation shape
+
+- Keep the branch cache alive across model refreshes.
+- Make branch-computed fields read from the current `model.value` so they stay fresh without recreating the branch.
+- Avoid clearing the cache on every model update unless a branch must be explicitly invalidated for a stronger correctness reason.
+
+## Blocked by
+
+None - can start immediately.

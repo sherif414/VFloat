@@ -69,30 +69,17 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
   const isExpanded = (value: string) => expandedValues.value.has(value);
 
   const expandBranch = (value: string) => {
-    if (!hasChildren(value)) return;
-    if (expandedValues.value.has(value)) return;
+    if (!hasChildren(value) || isExpanded(value)) return;
     const next = new Set(expandedValues.value);
     next.add(value);
     expandedValues.value = next;
   };
 
   const collapseBranch = (value: string) => {
-    if (!expandedValues.value.has(value)) return;
+    if (!isExpanded(value)) return;
     const next = new Set(expandedValues.value);
     next.delete(value);
     expandedValues.value = next;
-  };
-
-  const toggleBranch = (value: string) => {
-    if (isExpanded(value)) {
-      collapseBranch(value);
-    } else {
-      expandBranch(value);
-    }
-  };
-
-  const expandAll = () => {
-    expandedValues.value = new Set(model.value.branchParents);
   };
 
   const collapseAll = () => {
@@ -130,8 +117,14 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
 
   const createBranch = (parentVal: string | null): TreeBranch<T> => {
     const branchItems = computed(() => model.value.childrenItemsMap.get(parentVal) ?? []);
-    const enabledItems = computed(() =>
-      branchItems.value.filter((item) => !model.value.isItemDisabled(getItemId(item))),
+    const enabledValues = computed(() =>
+      branchItems.value.reduce<string[]>((acc, item) => {
+        const id = getItemId(item);
+        if (!model.value.isItemDisabled(id)) {
+          acc.push(id);
+        }
+        return acc;
+      }, []),
     );
 
     /**
@@ -151,44 +144,27 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
     });
 
     const navigate = (direction: "next" | "prev", loop = false) => {
-      const enabled = enabledItems.value;
+      const enabled = enabledValues.value;
       if (enabled.length === 0) return;
-
       const currentActive = branchActiveValue.value;
-      if (currentActive == null) {
-        branchActiveValue.value = getItemId(
-          direction === "next" ? enabled[0] : enabled[enabled.length - 1],
-        );
+
+      if (currentActive == null || enabled.indexOf(currentActive) === -1) {
+        if (direction === "next") setFirst();
+        else setLast();
         return;
       }
 
-      const currentIdx = enabled.findIndex((item) => getItemId(item) === currentActive);
-      if (currentIdx === -1) {
-        branchActiveValue.value = getItemId(
-          direction === "next" ? enabled[0] : enabled[enabled.length - 1],
-        );
-        return;
+      let nextIdx = enabled.indexOf(currentActive) + (direction === "next" ? 1 : -1);
+      if (direction === "next" && nextIdx >= enabled.length) {
+        if (loop) nextIdx = 0;
+        else return;
       }
 
-      let nextIdx = currentIdx + (direction === "next" ? 1 : -1);
-      if (direction === "next") {
-        if (nextIdx >= enabled.length) {
-          if (loop) {
-            nextIdx = 0;
-          } else {
-            return;
-          }
-        }
-      } else {
-        if (nextIdx < 0) {
-          if (loop) {
-            nextIdx = enabled.length - 1;
-          } else {
-            return;
-          }
-        }
+      if (direction === "prev" && nextIdx < 0) {
+        if (loop) nextIdx = enabled.length - 1;
+        else return;
       }
-      branchActiveValue.value = getItemId(enabled[nextIdx]);
+      branchActiveValue.value = enabled[nextIdx];
     };
 
     const setNext = (navOptions: { loop?: boolean } = {}) => {
@@ -200,15 +176,15 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
     };
 
     const setFirst = () => {
-      const enabled = enabledItems.value;
+      const enabled = enabledValues.value;
       if (enabled.length === 0) return;
-      branchActiveValue.value = getItemId(enabled[0]);
+      branchActiveValue.value = enabled[0];
     };
 
     const setLast = () => {
-      const enabled = enabledItems.value;
+      const enabled = enabledValues.value;
       if (enabled.length === 0) return;
-      branchActiveValue.value = getItemId(enabled[enabled.length - 1]);
+      branchActiveValue.value = enabled[enabled.length - 1];
     };
 
     return {
@@ -273,8 +249,6 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
     setActiveValue,
     expandBranch,
     collapseBranch,
-    toggleBranch,
-    expandAll,
     collapseAll,
     isExpanded,
     getItem,
@@ -398,14 +372,6 @@ export interface UseTreeReturn<T> {
    * Collapse a branch by its parent item value.
    */
   collapseBranch: (value: string) => void;
-  /**
-   * Toggle a branch's expansion state.
-   */
-  toggleBranch: (value: string) => void;
-  /**
-   * Expand all branches that have children.
-   */
-  expandAll: () => void;
   /**
    * Collapse all branches.
    */
