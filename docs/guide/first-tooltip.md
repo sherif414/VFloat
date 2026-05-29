@@ -13,6 +13,16 @@ By the end of this page, you will have a tooltip that sits next to a button, ope
 ::: demo src="./demos/first-tooltip-demo.vue" title="A small tooltip"
 :::
 
+## Install VFloat
+
+Add the package to your project:
+
+```sh
+vp add v-float
+```
+
+If your project does not use Vite+, install `v-float` with your package manager.
+
 ## A Few Words First
 
 There are a few names on this page that are worth knowing up front:

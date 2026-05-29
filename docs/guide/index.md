@@ -1,87 +1,96 @@
 ---
-description: An overview of the guide section and a suggested path through the VFloat docs.
+description: Learn the VFloat mental model before building your first floating surface.
 ---
 
-# Guide Overview
+# Introduction
 
-This guide is here to help you build tooltips, popovers, menus, dialogs, and other floating surfaces in Vue with VFloat.
+VFloat is a Vue toolkit for building anchored floating interfaces.
 
-You can read it straight through if you are new to the library, or jump to the part that matches what you are building.
+It helps with the parts that are easy to get subtly wrong: positioning a floating element next to an anchor, keeping it in view, coordinating open state, and composing interactions such as hover, click, focus, escape key handling, and keyboard navigation.
 
-The goal is simple:
+It is not a component library. VFloat does not give you a finished dropdown, tooltip, menu, or dialog with a fixed visual design. You bring the markup, styling, and product decisions. VFloat gives you the positioning and interaction primitives.
 
-- You can build the floating behavior you came here to build.
-- You understand why the pattern works, so you can adapt it later.
+## The Core Shape
 
-## What VFloat Is And Is Not
+Most VFloat examples start with two element refs.
 
-VFloat gives you low-level building blocks for floating UI in Vue.
+- `anchorEl` is the element the floating surface is positioned against.
+- `floatingEl` is the element that moves.
 
-It is heavily inspired by [Floating UI](https://floating-ui.com/), so some ideas and API names may look familiar. At the same time, VFloat has its own shape, so it is worth learning it as VFloat.
+You pass both refs to [`useFloating`](/api/use-floating):
 
-The basic pieces are:
+```ts
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom-start",
+});
+```
 
-- [`useFloating`](/api/use-floating) computes position and exposes the shared `context`.
-- Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useEscapeKey`](/api/use-escape-key) decide when that surface opens and closes.
-- `middlewares` such as [`offset`](/api/offset), [`flip`](/api/flip), and [`shift`](/api/shift) refine the final placement.
+The returned `context` is the shared object for the rest of the floating behavior.
 
-VFloat is not:
+- `context.refs` keeps the registered elements.
+- `context.state` owns open state.
+- `context.position` exposes the computed placement, coordinates, and styles.
 
-- A component library with ready-made dropdowns and tooltips
-- A design system
+In templates, the most common binding is:
 
-It is closer to a toolkit. You bring the markup, styles, and product decisions. VFloat handles the positioning and interaction primitives.
+```vue
+<div ref="floatingEl" :style="context.position.styles.value">
+  Floating content
+</div>
+```
+
+That style binding is what moves the floating element to its computed position.
+
+## Middlewares Adjust Placement
+
+The initial `placement` says where the surface should prefer to go. `middlewares` refine that result.
+
+```ts
+const context = useFloating(anchorEl, floatingEl, {
+  placement: "bottom-start",
+  middlewares: [offset(8), flip(), shift()],
+});
+```
+
+[`offset`](/api/offset) adds space between the anchor and the floating element. [`flip`](/api/flip) can choose the opposite side when there is not enough room. [`shift`](/api/shift) nudges the surface back into view.
+
+You can start with only `offset`. Add more middleware when the surface needs to respond to viewport edges, arrows, available size, or hidden anchors.
+
+## Interactions Compose Around Context
+
+Positioning alone does not decide when a surface opens. Interaction composables use the same `context` to update open state.
+
+```ts
+const context = useFloating(anchorEl, floatingEl);
+
+useHover(context);
+useEscapeKey(context);
+```
+
+That pattern lets you build the interaction model that matches the surface. A tooltip might use hover and focus. A popover might use click and escape. A menu might add list navigation and tree coordination.
+
+## VFloat And Floating UI
+
+VFloat is heavily inspired by Floating UI, and some names will feel familiar if you have used it before. It is still its own Vue-first library with its own public shape.
+
+The stable root call is:
+
+```ts
+useFloating(anchorEl, floatingEl, options);
+```
+
+The grouped return value uses VFloat's `refs`, `state`, and `position` vocabulary. When in doubt, follow the VFloat docs and API pages rather than copying Floating UI examples directly.
 
 ## How To Read These Docs
 
-The guide is split into five sections.
+Use the guide when you want workflows, mental models, and examples. Use the [API Reference](/api/) when you need exact option names, defaults, signatures, and return values.
 
-### Getting Started
+If you are new to VFloat, go to [First Tooltip](/guide/first-tooltip) next. It builds a small floating surface and shows the main pieces in one place.
 
-Start here if you are new to VFloat. These pages walk through the basic shape of the library one step at a time.
-
-### Guides
-
-Use these when you have a concrete job to do, like building a tooltip, dropdown, dialog, or nested menu.
-
-### Concepts
-
-These pages explain the mental model behind VFloat: the shared context, positioning, middleware, and interaction patterns.
-
-### Design Notes
-
-These pages explain why the library is shaped the way it is, and where some of the design tradeoffs come from.
-
-### Deep Dives
-
-These are the pages to read when something feels subtle, surprising, or hard to debug in a real app.
-
-## A Good Starting Path
-
-If you are not sure where to begin, this is a good path:
-
-1. Read [First Tooltip](/guide/first-tooltip).
-2. Read [First Popover](/guide/first-popover).
-3. Read [Floating Context](/guide/floating-context).
-4. Pick the task guide that matches what you need to build.
-
-If you already know what you want to build, you can jump straight to the matching guide:
+If you already know what you are building, jump to the closest guide:
 
 - Tooltip: [Build Accessible Tooltips](/guide/build-accessible-tooltips)
 - Popover or dropdown: [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns)
 - Context menu or cursor-following UI: [Use Virtual Anchors](/guide/use-virtual-anchors)
 - Nested menu: [Build Nested Menus](/guide/build-nested-menus)
 - Dialog: [Build Dialogs and Modals](/guide/build-dialogs-and-modals)
-
-## Keep The Contract Boundary In Mind
-
-These guide pages are meant to teach the workflow and the mental model. They are not the contract source.
-
-- Use the guide when you want workflow, mental models, tradeoffs, and examples.
-- Use the [API Reference](/api/) when you need exact signatures, defaults, and return shapes.
-
-That split keeps the guides easier to read and the API pages precise.
-
-## Next Step
-
-Start with [First Tooltip](/guide/first-tooltip). It is the smallest example, and it gives you a good feel for how the main pieces fit together.
