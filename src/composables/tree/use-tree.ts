@@ -3,12 +3,14 @@ import {
   type Ref,
   type ComputedRef,
   computed,
+  readonly,
   ref,
   shallowRef,
   toValue,
   watch,
 } from "vue";
 import { TreeModel } from "./tree-model";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
 // 📌 Main
@@ -204,12 +206,11 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
   branchCache.set(null, rootBranch);
 
   const getBranch = (parentVal: string): TreeBranch<T> | null => {
-    if (!hasChildren(parentVal)) return null;
     let branch = branchCache.get(parentVal);
-    if (!branch) {
-      branch = createBranch(parentVal);
-      branchCache.set(parentVal, branch);
-    }
+    if (branch) return branch;
+    if (!hasChildren(parentVal)) return null;
+    branch = createBranch(parentVal);
+    branchCache.set(parentVal, branch);
     return branch;
   };
 
@@ -217,10 +218,12 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
   // Wiring
   //=====================================================================================
 
+  const cleanupRegistry = createCleanupRegistry();
+
   // Clear active value when the active item is removed from the dataset or becomes disabled.
   // Does NOT clear when an item is merely hidden by a collapsed branch (unopinionated).
   // Uses direct O(1) checks against the compiled model maps to maintain integrity.
-  watch(
+  const stopActiveWatcher = watch(
     [activeValue, model],
     ([val, m]) => {
       if (val != null) {
@@ -233,18 +236,32 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
     { flush: "sync" },
   );
 
-  // Clear branch cache on model updates (but keep rootBranch references intact)
-  watch(model, () => {
-    const rootBranchCached = branchCache.get(null);
-    branchCache.clear();
-    if (rootBranchCached) {
-      branchCache.set(null, rootBranchCached);
-    }
-  });
+  cleanupRegistry.add(stopActiveWatcher);
+
+  // Prune expandedValues when the tree model changes
+  const stopPruneWatcher = watch(
+    model,
+    (newModel) => {
+      const nextExpanded = new Set<string>();
+      for (const val of expandedValues.value) {
+        if (newModel.branchParents.has(val)) {
+          nextExpanded.add(val);
+        }
+      }
+      if (nextExpanded.size !== expandedValues.value.size) {
+        expandedValues.value = nextExpanded;
+      }
+    },
+    { flush: "sync" },
+  );
+
+  cleanupRegistry.add(stopPruneWatcher);
+
+  tryOnScopeDispose(cleanupRegistry.cleanup);
 
   return {
     activeValue,
-    expandedValues,
+    expandedValues: readonly(expandedValues) as unknown as Ref<ReadonlySet<string>>,
     flattenedItems,
     setActiveValue,
     expandBranch,
@@ -261,6 +278,7 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
     getFirstEnabledDescendantValue,
     rootBranch,
     getBranch,
+    cleanup: cleanupRegistry.cleanup,
   };
 }
 
@@ -349,7 +367,7 @@ export interface UseTreeReturn<T> {
   /**
    * Set of item values whose branches are currently expanded.
    */
-  expandedValues: Ref<Set<string>>;
+  expandedValues: Ref<ReadonlySet<string>>;
   /**
    * DFS-order flattened array of currently visible items based on expansion state.
    */
@@ -428,4 +446,8 @@ export interface UseTreeReturn<T> {
    * Branch instances are cached — same parent always returns the same reference.
    */
   getBranch: (parentValue: string) => TreeBranch<T> | null;
+  /**
+   * Stop all internal watchers created by the composable.
+   */
+  cleanup: () => void;
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { TreeModel } from "./tree-model";
 
 interface TestNode {
@@ -161,6 +161,71 @@ describe("TreeModel", () => {
       // Non-existent or leaf
       expect(model.getFirstEnabledDescendantValue("non-existent")).toBeNull();
       expect(model.getFirstEnabledDescendantValue("child-1-3")).toBeNull();
+    });
+  });
+
+  describe("Hardened Integrity and Performance Optimization", () => {
+    it("detects and throws on duplicate IDs", () => {
+      const items: TestNode[] = [
+        { id: "1" },
+        { id: "2" },
+        { id: "1" }, // Duplicate root ID
+      ];
+
+      expect(() => new TreeModel(items, { getItemId })).toThrow(
+        '[VFloat] Duplicate item ID detected: "1"',
+      );
+
+      const itemsNested: TestNode[] = [
+        {
+          id: "1",
+          children: [{ id: "duplicate-id" }],
+        },
+        {
+          id: "2",
+          children: [{ id: "duplicate-id" }], // Sibling branch duplicate ID
+        },
+      ];
+
+      expect(() => new TreeModel(itemsNested, { getItemId, getItemChildren })).toThrow(
+        '[VFloat] Duplicate item ID detected: "duplicate-id"',
+      );
+    });
+
+    it("detects and throws on cyclic parent/child structures", () => {
+      const nodeA: TestNode = { id: "A", children: [] };
+      const nodeB: TestNode = { id: "B", children: [nodeA] };
+      nodeA.children = [nodeB]; // A -> B -> A cycle
+
+      expect(() => new TreeModel([nodeA], { getItemId, getItemChildren })).toThrow(
+        '[VFloat] Cyclic tree dependency detected at item: "A"',
+      );
+    });
+
+    it("does not call getItemChildren a second time during flattening", () => {
+      const items: TestNode[] = [
+        {
+          id: "1",
+          children: [{ id: "1-1" }],
+        },
+      ];
+
+      const childrenSpy = vi.fn((item: TestNode) => item.children);
+
+      const model = new TreeModel(items, {
+        getItemId,
+        getItemChildren: childrenSpy,
+      });
+
+      // Clear spy call counts from constructor traversal pass
+      childrenSpy.mockClear();
+
+      // Flatting
+      const flattened = model.getFlattenedItems(new Set(["1"]));
+      expect(flattened.map((i) => i.id)).toEqual(["1", "1-1"]);
+
+      // getItemChildren should NOT be called at all during getFlattenedItems
+      expect(childrenSpy).not.toHaveBeenCalled();
     });
   });
 });

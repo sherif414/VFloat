@@ -18,6 +18,7 @@ interface UseEscapeKeyOptions {
   capture?: boolean;
   preventDefault?: boolean;
   onEscape?: (event: KeyboardEvent) => void;
+  ignoreEscapeKey?: (event: KeyboardEvent) => boolean;
 }
 ```
 
@@ -29,6 +30,7 @@ interface UseEscapeKeyOptions {
 - `capture` defaults to `false`.
 - `preventDefault` defaults to `false`.
 - `onEscape` replaces the default close behavior when you need custom handling.
+- `ignoreEscapeKey` is a predicate to determine if an escape key press should be ignored, allowing sub-components or child branches to handle the escape event first.
 
 ## Example
 

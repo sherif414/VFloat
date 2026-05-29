@@ -24,6 +24,7 @@ interface UseClickOptions {
   outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
   outsideCapture?: MaybeRefOrGetter<boolean>;
   onOutsideClick?: (event: MouseEvent) => void;
+  ignoreOutsideClick?: (target: EventTarget | null) => boolean;
   ignoreScrollbar?: MaybeRefOrGetter<boolean>;
   ignoreDrag?: MaybeRefOrGetter<boolean>;
 }
@@ -38,6 +39,7 @@ interface UseClickOptions {
 - `closeOnOutsideClick` defaults to `false`, so enable it explicitly when you want dismiss-on-outside-click behavior.
 - `outsideClickEvent` defaults to `"pointerdown"`.
 - `onOutsideClick` replaces the default outside-close behavior when you need custom logic.
+- `ignoreOutsideClick` is a predicate to determine if a click on a specific outside element (such as a nested submenu trigger or helper overlay) should be ignored, preventing the floating element from closing.
 
 ## Example
 

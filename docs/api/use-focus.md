@@ -16,6 +16,7 @@ interface UseFocusContext extends Pick<FloatingContext, "refs" | "state"> {}
 interface UseFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;
   requireFocusVisible?: MaybeRefOrGetter<boolean>;
+  ignoreFocusOut?: (target: EventTarget | null) => boolean;
 }
 
 interface UseFocusReturn {
@@ -30,6 +31,7 @@ interface UseFocusReturn {
 - `requireFocusVisible` defaults to `true`.
 - With the default `requireFocusVisible: true`, keyboard focus opens the surface while pointer-only focus usually does not.
 - Focus can move into the floating element, or stay within the anchor subtree, without immediately closing the surface.
+- `ignoreFocusOut` is a predicate to determine if focus moving to a specific outside target should be ignored, leaving the floating element open.
 - Safari, window blur, and cross-document focus edge cases are handled internally.
 - Call `cleanup()` if you need to remove the anchor, document, and window listeners manually and clear any pending blur timeout.
 

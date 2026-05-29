@@ -118,7 +118,7 @@ useListNavigation(context, {
 - [`useFloating`](/api/use-floating)
 - [`useClick`](/api/use-click)
 - [`useListNavigation`](/api/use-list-navigation)
-- [`useFloatingTreeNode`](/api/use-floating-tree-node)
+- [`useTree`](/api/use-tree)
 - [Keyboard Navigation](/guide/keyboard-navigation)
 - [Build Nested Menus](/guide/build-nested-menus)
 - [Choosing the Right Pattern](/guide/choosing-the-right-pattern)

@@ -9,13 +9,12 @@ description: Connects an arrow element to a floating context.
 ## Type
 
 ```ts
-function useArrow(
-  context: FloatingContext,
-  options: {
-    element: Ref<HTMLElement | null>;
-    offset?: string;
-  },
-): UseArrowReturn;
+function useArrow(context: FloatingContext, options: UseArrowOptions): UseArrowReturn;
+
+interface UseArrowOptions {
+  element: Ref<HTMLElement | null>;
+  offset?: string;
+}
 
 interface UseArrowReturn {
   arrowX: ComputedRef<number>;

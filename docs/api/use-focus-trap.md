@@ -28,6 +28,7 @@ interface UseFocusTrapOptions {
   preventScroll?: MaybeRefOrGetter<boolean>;
   outsideElementsInert?: MaybeRefOrGetter<boolean>;
   onError?: (error: unknown) => void;
+  ignoreFocusOut?: (target: EventTarget | null) => boolean;
 }
 
 interface UseFocusTrapReturn {
@@ -46,6 +47,7 @@ interface UseFocusTrapReturn {
 - `initialFocus` can be an element, selector, function, or `false`.
 - `returnFocus` defaults to `true`.
 - `preventScroll` defaults to `true`.
+- `ignoreFocusOut` is a predicate to determine if focus moving to a specific outside target should be ignored, preventing the focus trap from deactivating.
 - `onError` receives activation errors when the trap cannot be created.
 
 ## Example

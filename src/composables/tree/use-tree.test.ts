@@ -500,3 +500,133 @@ describe("useTree (descendant queries)", () => {
     expect(tree.getFirstEnabledDescendantValue("child-1-3")).toBeNull();
   });
 });
+
+describe("useTree (hardened features & lifecycle)", () => {
+  type TreeNode = { id: string; children?: TreeNode[] };
+
+  it("exposes cleanup and stops watchers when invoked", async () => {
+    const items = ref([{ id: "1" }, { id: "2" }]);
+    const tree = useTree<TreeNode>({
+      items,
+      getItemId: (item) => item.id,
+      getItemChildren: (item) => item.children,
+    });
+
+    tree.setActiveValue("2");
+    expect(tree.activeValue.value).toBe("2");
+
+    // Execute cleanup
+    tree.cleanup();
+
+    // Change model/items now — activeValue should NOT clear since watcher is stopped
+    items.value = [{ id: "1" }];
+    await nextTick();
+
+    expect(tree.activeValue.value).toBe("2");
+  });
+
+  it("exposes readonly expandedValues ref which prevents direct mutations", () => {
+    const tree = createTestTree();
+    // TS check - expandedValues doesn't support add/delete/clear due to ReadonlySet type
+    // @ts-expect-error - expandedValues.value is ReadonlySet
+    tree.expandedValues.value.add?.("xyz");
+
+    // The set must not be mutated
+    expect(tree.expandedValues.value.size).toBe(0);
+  });
+
+  it("prunes stale expandedValues when tree model changes", async () => {
+    const items = ref<TreeNode[]>([
+      { id: "parent-1", children: [{ id: "child-1" }] },
+      { id: "parent-2", children: [{ id: "child-2" }] },
+    ]);
+    const tree = useTree<TreeNode>({
+      items,
+      getItemId: (item) => item.id,
+      getItemChildren: (item) => item.children,
+    });
+
+    tree.expandBranch("parent-1");
+    tree.expandBranch("parent-2");
+
+    expect(tree.isExpanded("parent-1")).toBe(true);
+    expect(tree.isExpanded("parent-2")).toBe(true);
+
+    // parent-2 is removed completely, parent-1 children are removed (becomes leaf)
+    items.value = [{ id: "parent-1" }];
+    await nextTick();
+
+    // parent-2 is no longer in the tree, parent-1 is now a leaf, so both are pruned
+    expect(tree.isExpanded("parent-1")).toBe(false);
+    expect(tree.isExpanded("parent-2")).toBe(false);
+    expect(tree.expandedValues.value.size).toBe(0);
+  });
+
+  it("keeps TreeBranch references stable across model refreshes", async () => {
+    const items = ref<TreeNode[]>([
+      { id: "parent", children: [{ id: "child-1" }, { id: "child-2" }] },
+    ]);
+    const tree = useTree<TreeNode>({
+      items,
+      getItemId: (item) => item.id,
+      getItemChildren: (item) => item.children,
+    });
+
+    const rootBranchBefore = tree.rootBranch;
+    const parentBranchBefore = tree.getBranch("parent");
+    expect(parentBranchBefore).not.toBeNull();
+
+    // Trigger data refresh/model change
+    items.value = [
+      { id: "parent", children: [{ id: "child-1" }, { id: "child-2" }, { id: "child-3" }] },
+    ];
+    await nextTick();
+
+    const rootBranchAfter = tree.rootBranch;
+    const parentBranchAfter = tree.getBranch("parent");
+
+    // References MUST remain identical
+    expect(rootBranchBefore).toBe(rootBranchAfter);
+    expect(parentBranchBefore).toBe(parentBranchAfter);
+
+    // But the branch fields should dynamically reflect the latest items
+    expect(parentBranchAfter?.items.value.map((i) => i.id)).toEqual([
+      "child-1",
+      "child-2",
+      "child-3",
+    ]);
+  });
+
+  it("gracefully degrades when cached branch parent is removed", async () => {
+    const items = ref<TreeNode[]>([{ id: "parent", children: [{ id: "child-1" }] }]);
+    const tree = useTree<TreeNode>({
+      items,
+      getItemId: (item) => item.id,
+      getItemChildren: (item) => item.children,
+    });
+
+    const branch = tree.getBranch("parent");
+    expect(branch).not.toBeNull();
+    expect(branch?.items.value.length).toBe(1);
+
+    // Parent is removed
+    items.value = [{ id: "other" }];
+    await nextTick();
+
+    // getBranch still returns the exact same cached branch object
+    expect(tree.getBranch("parent")).toBe(branch);
+    // But it has degraded gracefully to empty items
+    expect(branch?.items.value).toEqual([]);
+  });
+});
+
+// Helper for test tree creation
+function createTestTree() {
+  type TreeNode = { id: string; children?: TreeNode[] };
+  const items: TreeNode[] = [{ id: "1", children: [{ id: "1-1" }] }];
+  return useTree<TreeNode>({
+    items,
+    getItemId: (item) => item.id,
+    getItemChildren: (item) => item.children,
+  });
+}

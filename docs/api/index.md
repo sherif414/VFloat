@@ -26,13 +26,12 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 - [`useFocus`](/api/use-focus) - Opens and closes floating content on focus
 - [`useFocusTrap`](/api/use-focus-trap) - Keeps keyboard focus inside floating content
 - [`useEscapeKey`](/api/use-escape-key) - Closes floating content when Escape is pressed
-- [`useListNavigation`](/api/use-list-navigation) - Moves between items with the keyboard
 - [`useRole`](/api/use-role) - Synchronizes ARIA roles and states for floating surfaces
 
-## Tree Coordination
+## Collections
 
-- [`useFloatingTree`](/api/use-floating-tree) - Coordinates related floating contexts
-- [`useFloatingTreeNode`](/api/use-floating-tree-node) - Registers a floating context inside a tree
+- [`useTree`](/api/use-tree) - Manages and coordinates flat list and hierarchical tree collections
+- [`useListNavigation`](/api/use-list-navigation) - Moves active focus between items in a collection with the keyboard
 
 ## Middleware
 

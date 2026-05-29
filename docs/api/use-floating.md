@@ -24,7 +24,7 @@ description: The composition root for VFloat, returning grouped refs, state, and
     strategy?: MaybeRefOrGetter<Strategy | undefined>;
     transform?: MaybeRefOrGetter<boolean | undefined>;
     middlewares?: MaybeRefOrGetter<Middleware[]>;
-    autoUpdate?: boolean | AutoUpdateOptions;
+    autoUpdate?: MaybeRefOrGetter<boolean | AutoUpdateOptions | undefined>;
     open?: Ref<boolean>;
     onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
   }
@@ -60,7 +60,7 @@ description: The composition root for VFloat, returning grouped refs, state, and
   - `strategy` defaults to `"absolute"`.
   - `transform` is enabled by default and writes coordinates as a CSS transform.
   - `middlewares` still accepts the Floating UI-style middleware pipeline.
-  - `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object to forward advanced options.
+  - `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object or ref to forward advanced options.
   - `open` defaults to `ref(false)`. If you pass your own ref, `useFloating` reuses it as the shared state source.
   - `state.setOpen(open, reason?, event?)` updates the shared open state and calls `onOpenChange`. Missing reasons fall back to `"programmatic"`.
   - `position.styles` is the style ref you bind to the floating element in templates.

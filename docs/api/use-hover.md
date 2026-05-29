@@ -17,6 +17,7 @@ interface UseHoverOptions {
   restMs?: MaybeRef<number>;
   mouseOnly?: MaybeRef<boolean>;
   safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
+  ignorePointerLeave?: (target: EventTarget | null) => boolean;
 }
 
 interface SafePolygonOptions {
@@ -34,6 +35,7 @@ interface SafePolygonOptions {
 - `restMs` only matters when the open delay is `0`.
 - `mouseOnly` limits hover behavior to mouse-like pointers.
 - `safePolygon` keeps the surface open while the pointer moves between trigger and panel.
+- `ignorePointerLeave` is a predicate to determine if a pointer leave event should be ignored (for example, to keep a parent menu open when hovering a nested submenu/child branch).
 
 `useHover` opens and closes with the `hover` reason.
 

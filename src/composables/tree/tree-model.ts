@@ -23,9 +23,22 @@ export class TreeModel<T> {
     const { getItemId, isItemDisabled: isItemDisabledOpt, getItemChildren } = options;
     this.childrenItemsMap.set(null, items);
 
+    const visitedIds = new Set<string>();
+
     const traverse = (itemList: T[], parentVal: string | null, depth: number) => {
       for (const item of itemList) {
         const val = getItemId(item);
+
+        // 1. Cycle detection (active ancestor in path)
+        if (visitedIds.has(val)) {
+          throw new Error(`[VFloat] Cyclic tree dependency detected at item: "${val}"`);
+        }
+
+        // 2. Duplicate ID check (non-ancestor duplicate in tree)
+        if (this.itemMap.has(val)) {
+          throw new Error(`[VFloat] Duplicate item ID detected: "${val}"`);
+        }
+
         this.itemMap.set(val, item);
         this.depthMap.set(val, depth);
         if (parentVal !== null) {
@@ -40,7 +53,9 @@ export class TreeModel<T> {
           if (children && children.length > 0) {
             this.branchParents.add(val);
             this.childrenItemsMap.set(val, children);
+            visitedIds.add(val);
             traverse(children, val, depth + 1);
+            visitedIds.delete(val);
           }
         }
       }
@@ -69,16 +84,16 @@ export class TreeModel<T> {
     return this.disabledValues.has(value);
   }
 
-  getFlattenedItems(expandedValues: Set<string>): T[] {
+  getFlattenedItems(expandedValues: Set<string> | ReadonlySet<string>): T[] {
     const result: T[] = [];
-    const { getItemId, getItemChildren } = this.options;
+    const getItemId = this.options.getItemId;
 
     const traverse = (itemList: T[]) => {
       for (const item of itemList) {
         result.push(item);
         const val = getItemId(item);
         if (expandedValues.has(val)) {
-          const children = getItemChildren?.(item);
+          const children = this.childrenItemsMap.get(val);
           if (children && children.length > 0) {
             traverse(children);
           }
@@ -110,21 +125,20 @@ export class TreeModel<T> {
 
   getFirstEnabledDescendantValue(value: string): string | null {
     const item = this.itemMap.get(value);
-    if (!item || !this.options.getItemChildren) return null;
-    return this.findFirstEnabledDescendant(item);
+    if (!item) return null;
+    return this.findFirstEnabledDescendant(value);
   }
 
-  private findFirstEnabledDescendant(item: T): string | null {
-    const { getItemId, getItemChildren } = this.options;
-    const children = getItemChildren?.(item);
+  private findFirstEnabledDescendant(value: string): string | null {
+    const children = this.childrenItemsMap.get(value);
     if (!children || children.length === 0) return null;
 
     for (const child of children) {
-      const childVal = getItemId(child);
+      const childVal = this.options.getItemId(child);
       if (!this.disabledValues.has(childVal)) {
         return childVal;
       }
-      const descendant = this.findFirstEnabledDescendant(child);
+      const descendant = this.findFirstEnabledDescendant(childVal);
       if (descendant !== null) {
         return descendant;
       }
