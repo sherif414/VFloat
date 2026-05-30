@@ -42,7 +42,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -62,7 +62,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -94,7 +94,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -109,7 +109,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl" type="button">Open popover</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
     <p>Popover content goes here.</p>
     <button type="button">Action</button>
   </div>

@@ -140,6 +140,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 const tree = useTree({
   items: options,
@@ -158,12 +159,7 @@ useListNavigation(context, {
     Select Country
   </button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="listbox"
-    :style="position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" role="listbox" :style="styles">
     <div
       v-for="item in tree.flattenedItems.value"
       :key="item.value"

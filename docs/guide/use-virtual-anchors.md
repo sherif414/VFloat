@@ -35,7 +35,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "right-start",
 });
 
@@ -65,7 +65,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
 });
 
@@ -118,7 +118,7 @@ const virtualAnchor = {
 const anchorEl = ref(virtualAnchor);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
-const position = usePosition(context, {});
+const { styles } = usePosition(context, {});
 </script>
 ```
 

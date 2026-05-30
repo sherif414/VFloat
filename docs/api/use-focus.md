@@ -46,15 +46,14 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 useFocus(context);
 </script>
 
 <template>
   <button ref="anchorEl">Focus me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

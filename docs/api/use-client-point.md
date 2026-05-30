@@ -51,7 +51,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "right-start",
 });
 
@@ -67,7 +67,7 @@ useHover(context);
   <div ref="trackingArea">
     Move the pointer here
 
-    <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
       Tooltip follows the pointer
     </div>
   </div>

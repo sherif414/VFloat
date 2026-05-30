@@ -43,6 +43,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 useClick(context);
 useEscapeKey(context);
 </script>
@@ -50,9 +51,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl">Toggle</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    Press Escape to close
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Press Escape to close</div>
 </template>
 ```
 

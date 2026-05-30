@@ -37,7 +37,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   middlewares: [
     flip({
       fallbackPlacements: ["top", "right", "bottom"],
@@ -49,9 +49,7 @@ const position = usePosition(context, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

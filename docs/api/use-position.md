@@ -48,7 +48,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
   enabled: () => context.state.open.value,
@@ -60,9 +60,7 @@ useRole(context, { role: "tooltip" });
 
 <template>
   <button ref="anchorEl">Hover me</button>
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    Helpful detail
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Helpful detail</div>
 </template>
 ```
 

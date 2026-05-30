@@ -30,7 +30,7 @@ description: Exposes visibility state for clipped references and escaped floatin
 
   Use `referenceHidden` when you want to hide the floating element if its anchor is fully obscured. Use `escaped` when you want to know whether the floating element has moved outside its clipping context.
 
-  The middleware does not hide anything by itself. It only writes data to `position.middlewareData.value.hide`, which you can map to `visibility`, `display`, or an accessibility state.
+  The middleware does not hide anything by itself. It only writes data to `middlewareData.value.hide`, which you can map to `visibility`, `display`, or an accessibility state.
 
 - Example
 
@@ -44,23 +44,19 @@ const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
-const position = usePosition(context, {
+const { middlewareData, styles } = usePosition(context, {
   middlewares: [hide()],
 });
 
 const visibility = computed(() => {
-  return position.middlewareData.value.hide?.referenceHidden ? "hidden" : "visible";
+  return middlewareData.value.hide?.referenceHidden ? "hidden" : "visible";
 });
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    :style="{ ...position.styles.value, visibility }"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" :style="{ ...styles.value, visibility }">
     Floating content
   </div>
 </template>

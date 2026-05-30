@@ -43,6 +43,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 // 1. Manage navigation state
 const tree = useTree({
@@ -88,7 +89,7 @@ Render item elements with roving `tabindex` and bind dynamic active classes:
     Menu Options
   </button>
 
-  <ul v-if="context.state.open.value" ref="floatingEl" role="menu" :style="position.styles.value">
+  <ul v-if="context.state.open.value" ref="floatingEl" role="menu" :style="styles">
     <li
       v-for="(item, index) in items"
       :key="item.id"
@@ -134,6 +135,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 const tree = useTree({
   items: options,
@@ -169,12 +171,7 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
     @focus="context.state.setOpen(true)"
   />
 
-  <ul
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="listbox"
-    :style="position.styles.value"
-  >
+  <ul v-if="context.state.open.value" ref="floatingEl" role="listbox" :style="styles">
     <li
       v-for="(item, index) in options"
       :key="item.value"

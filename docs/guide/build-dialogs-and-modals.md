@@ -32,6 +32,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 </script>
 ```
 
@@ -48,6 +49,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 useClick(context, {
   closeOnOutsideClick: true,
@@ -71,13 +73,7 @@ Render the dialog with explicit semantics.
 
   <Teleport to="body">
     <div v-if="context.state.open.value" class="backdrop">
-      <div
-        ref="floatingEl"
-        role="dialog"
-        aria-modal="true"
-        tabindex="-1"
-        :style="position.styles.value"
-      >
+      <div ref="floatingEl" role="dialog" aria-modal="true" tabindex="-1" :style="styles">
         <h2>Edit profile</h2>
         <p>Update your public display information.</p>
         <button type="button">Save</button>

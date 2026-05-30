@@ -21,7 +21,7 @@ You pass both refs to [`useFloatingContext`](/api/use-floating-context):
 
 ```ts
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
 });
 ```
@@ -30,12 +30,12 @@ The returned `context` is the shared object for the rest of the floating behavio
 
 - `context.refs` keeps the registered elements.
 - `context.state` owns open state.
-- `position` exposes the computed placement, coordinates, and styles.
+- `styles` contains the computed CSS you bind to the floating element.
 
 In templates, the most common binding is:
 
 ```vue
-<div ref="floatingEl" :style="position.styles.value">
+<div ref="floatingEl" :style="styles">
   Floating content
 </div>
 ```
@@ -48,7 +48,7 @@ The initial `placement` says where the surface should prefer to go. `middlewares
 
 ```ts
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8), flip(), shift()],
 });

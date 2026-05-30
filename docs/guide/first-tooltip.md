@@ -62,7 +62,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   // [!code focus:4]
   placement: "top", // [!code ++]
   middlewares: [offset(8)], // [!code ++]
@@ -87,7 +87,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -113,7 +113,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -128,7 +128,7 @@ useHover(context);
     v-if="context.state.open.value"
     ref="floatingEl"
     role="tooltip"
-    :style="position.styles.value"
+    :style="styles"
   >
     This button saves your changes.
   </div>
@@ -139,7 +139,7 @@ There are three lines worth noticing:
 
 - `v-if="context.state.open.value"` decides whether the tooltip exists in the DOM
 - `ref="floatingEl"` gives VFloat access to the rendered node
-- `:style="position.styles.value"` applies the computed position
+- `:style="styles"` applies the computed position
 
 ## Why `offset` Matters Even In A Tiny Example
 
@@ -160,7 +160,7 @@ The main pieces are:
 If you only remember one thing from this page, remember the `context`:
 
 - `context.state.open.value` tells you if the surface is open
-- `position.styles.value` tells you how to place it
+- `styles.value` tells you how to place it
 
 ## Next Step
 

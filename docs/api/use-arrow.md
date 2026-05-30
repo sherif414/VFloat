@@ -54,6 +54,7 @@ const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
+const { styles } = position;
 
 useHover(context);
 
@@ -66,7 +67,7 @@ const { arrowStyles } = useArrow(context, position, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
     Floating content
     <div ref="arrowEl" style="position: absolute" :style="arrowStyles">^</div>
   </div>

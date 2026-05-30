@@ -37,7 +37,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -57,7 +57,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -85,7 +85,7 @@ Render the trigger and tooltip from the same shared state.
     id="save-tooltip"
     ref="floatingEl"
     role="tooltip"
-    :style="position.styles.value"
+    :style="styles"
   >
     Save the current draft without publishing it.
   </div>

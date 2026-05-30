@@ -28,7 +28,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -48,7 +48,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -75,12 +75,7 @@ Now render the content the user actually came for.
 <template>
   <button ref="anchorEl" type="button" class="trigger">Open actions</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    class="panel"
-    :style="position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" class="panel" :style="styles">
     <h2>Quick actions</h2>
     <p>Choose the next step for this record.</p>
     <div class="actions">
@@ -113,7 +108,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8), flip(), shift({ padding: 8 })],
 });

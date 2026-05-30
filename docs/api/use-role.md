@@ -78,6 +78,7 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 const activeIndex = ref<number | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 useClick(context);
 useRole(context, {
@@ -100,7 +101,7 @@ useListNavigation(context, {
 <template>
   <button ref="anchorEl" type="button">Actions</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
     <button
       v-for="(item, index) in ['Edit', 'Duplicate', 'Archive']"
       :key="item"

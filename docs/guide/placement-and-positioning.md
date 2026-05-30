@@ -30,7 +30,7 @@ That matters because VFloat's positioning model is based on geometry, not on the
 
 The `position` group gives you the current computed result.
 
-In everyday template code, the most important field is `position.styles.value`.
+In everyday template code, the most important field is `styles.value`.
 
 When you need more insight, you can also inspect `placement`, `middlewareData`, `isPositioned`, and `update`.
 

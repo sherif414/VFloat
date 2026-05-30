@@ -50,7 +50,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
 });
 
@@ -63,9 +63,7 @@ useHover(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    Tooltip content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Tooltip content</div>
 </template>
 ```
 

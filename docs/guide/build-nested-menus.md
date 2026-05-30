@@ -64,6 +64,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
 const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 // Define the 2D collection
 const tree = useTree<MenuItem>({
@@ -101,7 +102,7 @@ Here is the clean flat roving-tabindex render pattern using indentation:
     Project Actions
   </button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" role="tree" :style="position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" role="tree" :style="styles">
     <div
       v-for="(item, index) in tree.flattenedItems.value"
       :key="item.id"

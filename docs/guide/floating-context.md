@@ -65,7 +65,7 @@ It includes things like:
 - `styles`
 - `update`
 
-Most templates only need `position.styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
+Most templates only need `styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
 
 ## The Core Loop
 
@@ -90,7 +90,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom",
   middlewares: [offset(8)],
 });
@@ -101,9 +101,7 @@ useHover(context);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 
