@@ -4,7 +4,7 @@ description: Keep floating content within the viewport with middleware and sizin
 
 # Keep Content in View
 
-Base placement gets you close. Real floating surfaces still run into viewport edges, scroll containers, and size limits. That is where `middlewares` help.
+Base placement gets you close. Real floating surfaces still run into viewport edges, scroll containers, and size limits. That is where `middleware` options help.
 
 This guide treats middleware like a small set of fixes. When you notice a problem, pick the fix that matches it.
 
@@ -27,7 +27,7 @@ This is the stack many production surfaces end up using first.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift, useFloatingContext, usePosition } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -36,16 +36,20 @@ const open = ref(true);
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8), flip(), shift({ padding: 8 })],
+  middleware: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+  },
 });
 </script>
 ```
 
 Read this stack from left to right:
 
-- `offset(8)` creates a visual gap
-- `flip()` switches sides when the preferred side does not fit
-- `shift({ padding: 8 })` nudges the panel back into view when needed
+- `middleware.offset: 8` creates a visual gap
+- `middleware.flip: true` switches sides when the preferred side does not fit
+- `middleware.shift: { padding: 8 }` nudges the panel back into view when needed
 
 ## Problem 1: "The Surface Feels Jammed Against The Trigger"
 
@@ -66,7 +70,7 @@ Use [`size`](/api/size).
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift, size, useFloatingContext, usePosition } from "v-float";
+import { size, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -75,21 +79,23 @@ const open = ref(true);
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [
-    offset(8),
-    flip(),
-    shift({ padding: 8 }),
-    size({
-      apply({ rects, availableHeight }) {
-        if (!floatingEl.value) return;
+  middleware: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+    custom: [
+      size({
+        apply({ rects, availableHeight }) {
+          if (!floatingEl.value) return;
 
-        Object.assign(floatingEl.value.style, {
-          minWidth: `${rects.reference.width}px`,
-          maxHeight: `${availableHeight - 16}px`,
-        });
-      },
-    }),
-  ],
+          Object.assign(floatingEl.value.style, {
+            minWidth: `${rects.reference.width}px`,
+            maxHeight: `${availableHeight - 16}px`,
+          });
+        },
+      }),
+    ],
+  },
 });
 </script>
 ```
@@ -105,7 +111,7 @@ Use the [`arrow`](/api/arrow) middleware with [`useArrow`](/api/use-arrow).
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { arrow, offset, useArrow, useFloatingContext, usePosition } from "v-float";
+import { useArrow, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -113,9 +119,12 @@ const arrowEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
-const { styles } = usePosition(context, {
-  middlewares: [offset(8), arrow({ element: arrowEl })],
+const position = usePosition(context, {
+  middleware: {
+    offset: 8,
+  },
 });
+const { styles } = position;
 
 const { arrowStyles } = useArrow(context, position, {
   element: arrowEl,

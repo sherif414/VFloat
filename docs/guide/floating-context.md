@@ -84,7 +84,7 @@ This small example shows the context in use without much extra ceremony.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -92,7 +92,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 
 useHover(context);

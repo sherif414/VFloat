@@ -22,7 +22,7 @@ Start with the anchor, the floating element, and a shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -30,7 +30,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 </script>
 ```
@@ -42,7 +44,7 @@ Now add the behavior that makes the surface feel like a popover.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -50,7 +52,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 
 useClick(context, {
@@ -89,20 +93,12 @@ Now render the content the user actually came for.
 
 ## A Safer Default For Real Panels
 
-If the panel can run into the viewport edge, add `flip()` and `shift()`.
+If the panel can run into the viewport edge, set `middleware.flip: true` and `middleware.shift`.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import {
-  flip,
-  offset,
-  shift,
-  useClick,
-  useEscapeKey,
-  useFloatingContext,
-  usePosition,
-} from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -110,7 +106,11 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8), flip(), shift({ padding: 8 })],
+  middleware: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+  },
 });
 
 useClick(context, {

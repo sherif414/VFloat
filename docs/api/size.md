@@ -50,16 +50,18 @@ const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
-  middlewares: [
-    size({
-      apply({ availableWidth, availableHeight, elements }) {
-        Object.assign(elements.floating.style, {
-          maxWidth: `${availableWidth}px`,
-          maxHeight: `${availableHeight}px`,
-        });
-      },
-    }),
-  ],
+  middleware: {
+    custom: [
+      size({
+        apply({ availableWidth, availableHeight, elements }) {
+          Object.assign(elements.floating.style, {
+            maxWidth: `${availableWidth}px`,
+            maxHeight: `${availableHeight}px`,
+          });
+        },
+      }),
+    ],
+  },
 });
 </script>
 

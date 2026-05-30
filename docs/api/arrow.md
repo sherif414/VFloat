@@ -34,7 +34,7 @@ description: Positions the arrow so it stays aligned with the reference element.
   ```vue
   <script setup lang="ts">
   import { computed, ref } from "vue";
-  import { arrow, offset, useFloatingContext, usePosition } from "v-float";
+  import { arrow, useFloatingContext, usePosition } from "v-float";
 
   const anchorEl = ref<HTMLElement | null>(null);
   const floatingEl = ref<HTMLElement | null>(null);
@@ -44,7 +44,10 @@ description: Positions the arrow so it stays aligned with the reference element.
   const context = useFloatingContext(anchorEl, floatingEl, { open });
   const { middlewareData, styles } = usePosition(context, {
     placement: "top",
-    middlewares: [offset(8), arrow({ element: arrowEl, padding: 8 })],
+    middleware: {
+      offset: 8,
+      custom: [arrow({ element: arrowEl, padding: 8 })],
+    },
   });
 
   const arrowStyles = computed(() => {

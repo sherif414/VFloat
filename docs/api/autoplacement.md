@@ -43,11 +43,13 @@ const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
-  middlewares: [
-    autoPlacement({
-      allowedPlacements: ["top", "bottom"],
-    }),
-  ],
+  middleware: {
+    custom: [
+      autoPlacement({
+        allowedPlacements: ["top", "bottom"],
+      }),
+    ],
+  },
 });
 </script>
 

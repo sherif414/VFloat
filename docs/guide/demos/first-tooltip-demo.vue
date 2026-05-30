@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -8,7 +8,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(10)],
+  middleware: {
+    offset: 10,
+  },
 });
 
 useHover(context);

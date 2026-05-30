@@ -6,7 +6,7 @@ description: Understand how middleware runs and how each step affects positionin
 
 Middleware is what makes VFloat feel adaptable instead of rigid.
 
-Without middleware, you get a base placement. With middleware, that first guess can react to spacing, collisions, size constraints, and arrow alignment.
+Without middleware, you get a base placement. With middleware options, that first guess can react to spacing, collisions, size constraints, and arrow alignment.
 
 ## Base Placement Comes First
 
@@ -14,16 +14,20 @@ Every floating surface starts with a placement such as `"bottom"` or `"top-start
 
 That gives VFloat an initial answer to the question: where should this surface appear if nothing gets in the way?
 
-Then middleware runs.
+Then VFloat turns the middleware options into a pipeline.
 
 ## Middleware Is A Pipeline, Not A Bag
 
-The easiest mistake is to think of middleware as a list of independent features. In practice, they run in order and influence each other.
+The easiest mistake is to think of middleware options as a list of independent features. In practice, VFloat turns them into middleware that run in order and influence each other.
 
 That is why this:
 
 ```ts
-middlewares: [offset(8), flip(), shift({ padding: 8 })];
+middleware: {
+  offset: 8,
+  flip: true,
+  shift: { padding: 8 },
+};
 ```
 
 is not equivalent to the same helpers in a different order.

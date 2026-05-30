@@ -45,7 +45,9 @@ const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { middlewareData, styles } = usePosition(context, {
-  middlewares: [hide()],
+  middleware: {
+    custom: [hide()],
+  },
 });
 
 const visibility = computed(() => {

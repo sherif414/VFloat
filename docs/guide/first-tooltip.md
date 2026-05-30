@@ -30,7 +30,7 @@ There are a few names on this page that are worth knowing up front:
 - `anchorEl` is the element the tooltip is positioned against. In this example, that is the button.
 - `floatingEl` is the element positioned relative to the anchor. In this example, that is the tooltip.
 - [`context`](/guide/floating-context) is the shared object returned by [`useFloatingContext`](/api/use-floating-context). Other composables use it too.
-- `middlewares` are small helpers that adjust the final position. On this page, we will use [`offset`](/api/offset) to add a little space.
+- `middleware` is the set of positioning options that adjust the final position. On this page, we will use [`offset`](/api/offset) to add a little space.
 
 If those names do not feel natural yet, that is okay. They will make more sense once we build the example.
 
@@ -56,7 +56,7 @@ Now pass those refs into `useFloatingContext`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition } from "v-float"; // [!code ++]
+import { useFloatingContext, usePosition } from "v-float"; // [!code ++]
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -65,14 +65,14 @@ const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   // [!code focus:4]
   placement: "top", // [!code ++]
-  middlewares: [offset(8)], // [!code ++]
+  middleware: { offset: 8 }, // [!code ++]
 }); // [!code ++]
 </script>
 ```
 
-`useFloatingContext()` does two important things here. It computes the tooltip position, and it returns the shared `context` object that the rest of the page will use.
+`useFloatingContext()` does two important things here. It gives us the shared `context` object and lets `usePosition()` compute the tooltip position.
 
-The `placement: "top"` option means we want the tooltip above the button. The `offset(8)` middleware adds a small gap so the tooltip does not sit right against the anchor.
+The `placement: "top"` option means we want the tooltip above the button. The `middleware.offset: 8` option adds a small gap so the tooltip does not sit right against the anchor.
 
 ## Step 3: Add Hover Behavior
 
@@ -81,7 +81,7 @@ Next, we will make the tooltip open and close on hover.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition, useHover } from "v-float"; // [!code ++]
+import { useFloatingContext, usePosition, useHover } from "v-float"; // [!code ++]
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -89,7 +89,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: { offset: 8 },
 });
 
 useHover(context); // [!code focus]
@@ -107,7 +107,7 @@ Now we can render the button and the tooltip.
 ```vue{17,21-23}
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -115,7 +115,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: { offset: 8 },
 });
 
 useHover(context);
@@ -143,7 +143,7 @@ There are three lines worth noticing:
 
 ## Why `offset` Matters Even In A Tiny Example
 
-The tooltip would still work without `offset(8)`, but it would sit right against the button. In most interfaces that feels a little cramped.
+The tooltip would still work without `middleware.offset: 8`, but it would sit right against the button. In most interfaces that feels a little cramped.
 
 Using `offset` here also gives you a first look at what middleware is for. It is just a small function that adjusts the final result.
 

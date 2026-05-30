@@ -20,7 +20,11 @@ So if a stack feels wrong, ask:
 Many stacks work well when they start like this:
 
 ```ts
-middlewares: [offset(8), flip(), shift({ padding: 8 })];
+middleware: {
+  offset: 8,
+  flip: true,
+  shift: { padding: 8 },
+};
 ```
 
 That order reads naturally:

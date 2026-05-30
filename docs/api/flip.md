@@ -30,7 +30,7 @@ description: Switches to another placement when the current side is blocked.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, useFloatingContext, usePosition } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -38,11 +38,11 @@ const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
-  middlewares: [
-    flip({
+  middleware: {
+    flip: {
       fallbackPlacements: ["top", "right", "bottom"],
-    }),
-  ],
+    },
+  },
 });
 </script>
 

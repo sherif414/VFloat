@@ -1,11 +1,22 @@
 import type {
   AutoUpdateOptions,
+  FlipOptions,
   Middleware,
   MiddlewareData,
+  OffsetOptions,
+  Padding,
   Placement,
+  ShiftOptions,
   Strategy,
 } from "@floating-ui/dom";
-import { autoUpdate as floatingUIAutoUpdate, computePosition } from "@floating-ui/dom";
+import {
+  autoUpdate as floatingUIAutoUpdate,
+  computePosition,
+  flip,
+  offset,
+  shift,
+  size,
+} from "@floating-ui/dom";
 import {
   computed,
   type ComputedRef,
@@ -19,6 +30,7 @@ import {
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { FloatingContext } from "@/composables/floating-context";
 import { setFloatingInternals } from "@/composables/floating-context";
+import { arrow } from "@/composables/middlewares/arrow";
 
 //=======================================================================================
 // Main
@@ -35,6 +47,7 @@ export function usePosition(
     placement: placementOption = "bottom",
     strategy: strategyOption = "absolute",
     transform: transformOption = true,
+    middleware: semanticMiddlewareOption,
     middlewares: middlewaresOption = [],
     autoUpdate: autoUpdateOption = true,
     enabled: enabledOption = true,
@@ -50,7 +63,11 @@ export function usePosition(
   let nextRegistrationId = 0;
 
   const mergedMiddlewares = computed(() => {
-    const base = toValue(middlewaresOption) ?? [];
+    const base = getMiddleware(
+      context,
+      toValue(semanticMiddlewareOption),
+      toValue(middlewaresOption) ?? [],
+    );
     const merged = [...base];
 
     for (const registration of registrations.value) {
@@ -208,6 +225,59 @@ function getDPR(el: HTMLElement) {
   return win.devicePixelRatio || 1;
 }
 
+function getMiddleware(
+  context: FloatingContext,
+  options: UsePositionMiddlewareOptions | undefined,
+  middlewares: Middleware[],
+) {
+  return [...getSemanticMiddleware(context, options), ...middlewares];
+}
+
+function getSemanticMiddleware(
+  context: FloatingContext,
+  options: UsePositionMiddlewareOptions | undefined,
+) {
+  if (!options) return [];
+
+  const middlewares: Middleware[] = [];
+
+  if (options.offset !== undefined && options.offset !== false) {
+    middlewares.push(offset(options.offset === true ? undefined : options.offset));
+  }
+
+  if (options.flip !== undefined && options.flip !== false) {
+    middlewares.push(flip(options.flip === true ? undefined : options.flip));
+  }
+
+  if (options.shift !== undefined && options.shift !== false) {
+    middlewares.push(shift(options.shift === true ? undefined : options.shift));
+  }
+
+  if (options.matchWidth) {
+    middlewares.push(
+      size({
+        apply({ rects, elements }) {
+          elements.floating.style.width = `${rects.reference.width}px`;
+        },
+      }),
+    );
+  }
+
+  if (options.arrow !== undefined && options.arrow !== false) {
+    const arrowOptions = options.arrow === true ? {} : options.arrow;
+    middlewares.push(
+      arrow({
+        element: context.refs.arrowEl,
+        ...arrowOptions,
+      }),
+    );
+  }
+
+  middlewares.push(...(toValue(options.custom) ?? []));
+
+  return middlewares;
+}
+
 //=======================================================================================
 // Types
 //=======================================================================================
@@ -248,6 +318,41 @@ export interface FloatingMiddlewareRegistry {
 }
 
 /**
+ * Declarative middleware options for common positioning behavior.
+ */
+export interface UsePositionMiddlewareOptions {
+  /**
+   * Space between the anchor and floating element.
+   */
+  offset?: true | false | OffsetOptions;
+
+  /**
+   * Whether the floating element can flip when the preferred side overflows.
+   */
+  flip?: true | false | FlipOptions;
+
+  /**
+   * Whether the floating element can shift to stay inside the viewport.
+   */
+  shift?: true | false | ShiftOptions;
+
+  /**
+   * Whether the floating element should match the anchor width.
+   */
+  matchWidth?: boolean;
+
+  /**
+   * Whether to position the context arrow element.
+   */
+  arrow?: true | false | { padding?: Padding };
+
+  /**
+   * Raw middleware appended after the built-in semantic middleware.
+   */
+  custom?: MaybeRefOrGetter<Middleware[] | undefined>;
+}
+
+/**
  * Options for configuring the positioning behavior.
  */
 export interface UsePositionOptions {
@@ -268,6 +373,11 @@ export interface UsePositionOptions {
    * instead of `top` and `left`.
    */
   transform?: MaybeRefOrGetter<boolean | undefined>;
+
+  /**
+   * Declarative middleware configuration for common positioning behavior.
+   */
+  middleware?: MaybeRefOrGetter<UsePositionMiddlewareOptions | undefined>;
 
   /**
    * Base middleware list passed to the positioning engine.

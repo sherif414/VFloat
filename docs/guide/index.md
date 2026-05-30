@@ -42,15 +42,19 @@ In templates, the most common binding is:
 
 That style binding is what moves the floating element to its computed position.
 
-## Middlewares Adjust Placement
+## Middleware Adjusts Placement
 
-The initial `placement` says where the surface should prefer to go. `middlewares` refine that result.
+The initial `placement` says where the surface should prefer to go. `middleware` options refine that result.
 
 ```ts
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8), flip(), shift()],
+  middleware: {
+    offset: 8,
+    flip: true,
+    shift: true,
+  },
 });
 ```
 
@@ -81,7 +85,7 @@ The stable root call is:
 useFloatingContext(anchorEl, floatingEl, options);
 ```
 
-The grouped return value uses VFloat's `refs`, `state`, and `position` vocabulary. When in doubt, follow the VFloat docs and API pages rather than copying Floating UI examples directly.
+The grouped return value uses VFloat's `refs` and `state` vocabulary. When in doubt, follow the VFloat docs and API pages rather than copying Floating UI examples directly.
 
 ## How To Read These Docs
 

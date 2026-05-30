@@ -43,7 +43,7 @@ This example shows the root-first `useArrow()` form.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useArrow, useFloatingContext, usePosition, useHover } from "v-float";
+import { useArrow, useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -52,7 +52,9 @@ const arrowEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const position = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 const { styles } = position;
 

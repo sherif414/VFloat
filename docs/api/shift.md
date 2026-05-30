@@ -37,7 +37,7 @@ description: Keeps the floating element within the available viewport space.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { shift, useFloatingContext, usePosition } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -45,7 +45,9 @@ const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
-  middlewares: [shift({ padding: 8, crossAxis: true })],
+  middleware: {
+    shift: { padding: 8, crossAxis: true },
+  },
 });
 </script>
 

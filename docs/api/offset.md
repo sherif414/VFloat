@@ -38,7 +38,7 @@ description: Adds distance between the anchor and floating element.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -46,7 +46,9 @@ const open = ref(true);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
 const { styles } = usePosition(context, {
-  middlewares: [offset(10)],
+  middleware: {
+    offset: 10,
+  },
 });
 </script>
 

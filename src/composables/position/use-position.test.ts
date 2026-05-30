@@ -79,6 +79,48 @@ describe("usePosition", () => {
     expect(position.placement.value).toBeDefined();
   });
 
+  it("creates built-in middleware from declarative options", () => {
+    const context = useFloatingContext(
+      ref<AnchorElement>(anchorEl),
+      ref<FloatingElement>(floatingEl),
+    );
+    const position = usePosition(context, {
+      middleware: {
+        offset: 8,
+        flip: true,
+        shift: { padding: 8 },
+        matchWidth: true,
+        arrow: true,
+      },
+    });
+
+    expect(
+      getFloatingInternals(position)?.middlewareRegistry?.middlewares.value.map(
+        (middleware) => middleware.name,
+      ),
+    ).toEqual(["offset", "flip", "shift", "size", "arrow"]);
+  });
+
+  it("appends custom middleware after declarative middleware", () => {
+    const middleware = createMiddleware("custom", { ok: true });
+    const context = useFloatingContext(
+      ref<AnchorElement>(anchorEl),
+      ref<FloatingElement>(floatingEl),
+    );
+    const position = usePosition(context, {
+      middleware: {
+        offset: 8,
+        custom: [middleware],
+      },
+    });
+
+    expect(
+      getFloatingInternals(position)?.middlewareRegistry?.middlewares.value.map(
+        (middleware) => middleware.name,
+      ),
+    ).toEqual(["offset", "custom"]);
+  });
+
   it("gates computation when disabled", async () => {
     const enabled = ref(false);
     const context = useFloatingContext(

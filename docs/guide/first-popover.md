@@ -36,7 +36,7 @@ Start with the same refs and placement you used for the tooltip.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloatingContext, usePosition } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -44,7 +44,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 </script>
 ```
@@ -56,7 +58,7 @@ Now swap the hover behavior for click-based interaction.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -64,7 +66,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 
 useClick(context, {
@@ -88,7 +92,7 @@ Now render the trigger and the panel with the shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -96,7 +100,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 
 useClick(context, {
