@@ -20,13 +20,12 @@ The anchor is the thing the surface is positioned against. The floating element 
 
 ## Why The Context Exists
 
-VFloat intentionally groups the returned data into:
+VFloat intentionally keeps the shared context small:
 
 - `refs`
 - `state`
-- `position`
 
-That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions.
+That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions. Positioning is added separately with [`usePosition`](/api/use-position), which reads the same context and returns the computed geometry.
 
 ## `refs`
 
@@ -50,11 +49,11 @@ It includes:
 
 Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useEscapeKey`](/api/use-escape-key) all coordinate through this same state object.
 
-## `position`
+## Positioning Lives Next To The Context
 
-The `position` group is about geometry and the computed result.
+The context itself does not compute coordinates, run middlewares, or wire auto-update listeners.
 
-It includes things like:
+When a surface needs JavaScript positioning, call `usePosition(context)`. That returns geometry fields such as:
 
 - `x`
 - `y`
@@ -74,8 +73,9 @@ This is the loop to keep in your head:
 1. You create refs for the anchor and floating element.
 2. You pass them into [`useFloatingContext`](/api/use-floating-context).
 3. `useFloatingContext()` returns the shared `context`.
-4. Other composables read from and write to that `context`.
-5. Your template renders from `context.state` and `position`.
+4. `usePosition(context)` adds positioning when the surface needs it.
+5. Other composables read from and write to the same `context`.
+6. Your template renders from `context.state` and the returned `styles`.
 
 ## A Minimal Example
 

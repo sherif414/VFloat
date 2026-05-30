@@ -11,19 +11,19 @@ Nested menus (submenus) introduce state challenges beyond standard one-dimension
 - When the user presses the collapse key (e.g., `ArrowLeft`), how does focus return to the parent trigger item?
 - If items in a submenu are disabled, how does keyboard traversal safely bypass them?
 
-In VFloat, these questions are resolved by configuring a single **2D Tree Collection** via `useTree`. The entire menu tree coordinates reactively, eliminating complex manual node registration or context passing.
+In VFloat, these questions are resolved by configuring a single tree collection with [`useTree`](/api/use-tree). The menu tree coordinates through reactive data instead of nested DOM assumptions.
 
 ---
 
 ## The 2D Tree Model
 
-By providing `getItemChildren` to `useTree`, you transform a flat list into a reactive 2D structure:
+By providing `getItemChildren` to `useTree`, you transform a flat list into a reactive tree structure:
 
 1. **`expandedValues`** acts as the single source of truth for which submenus are currently open.
 2. **`flattenedItems`** is a computed list that automatically flattens only the expanded branches in a depth-first traversal.
-3. **`useListNavigation`** automatically reads this 2D structure. In vertical mode:
-   - Pressing **`ArrowRight`** (or `ArrowLeft` in RTL) expands a submenu branch and automatically jumps focus to the first enabled descendant.
-   - Pressing **`ArrowLeft`** (or `ArrowRight` in RTL) collapses the active branch and automatically returns focus to its parent trigger.
+3. **`useListNavigation`** reads this structure and emits enter/exit intents. In vertical mode:
+   - Pressing **`ArrowRight`** (or `ArrowLeft` in RTL) can expand a submenu branch through `onEnter`.
+   - Pressing **`ArrowLeft`** (or `ArrowRight` in RTL) can collapse a branch through `onExit`.
 
 ---
 
@@ -78,6 +78,20 @@ const tree = useTree<MenuItem>({
 useListNavigation(context, {
   collection: tree.rootBranch,
   orientation: "vertical",
+  onEnter(activeValue) {
+    if (!tree.hasChildren(activeValue)) return;
+
+    tree.expandBranch(activeValue);
+    const firstEnabled = tree.getFirstEnabledDescendantValue(activeValue);
+    if (firstEnabled) tree.setActiveValue(firstEnabled);
+  },
+  onExit(activeValue) {
+    const parentValue = tree.getParentValue(activeValue);
+    if (!parentValue) return;
+
+    tree.setActiveValue(parentValue);
+    tree.collapseBranch(parentValue);
+  },
 });
 
 // Sync ARIA roles for trees
@@ -137,11 +151,11 @@ Here is the clean flat roving-tabindex render pattern using indentation:
 
 ## Tree Coordination Edge Cases Solved Automatically
 
-By routing your tree layout through `useTree` and `useListNavigation`, VFloat handles the following complex behaviors out-of-the-box:
+By routing your tree layout through `useTree` and `useListNavigation`, VFloat gives you the pieces for these behaviors:
 
 - **Disabled Skipped Sub-Nodes:** Expanding a branch containing disabled items automatically bypasses them (pre-order DFS) to focus the first _enabled_ submenu choice.
 - **Opener Safeguard:** If a submenu branch exists but all of its nested children are disabled, expanding the branch leaves focus safely on the parent trigger item, avoiding focus traps.
-- **RTL Support:** Right-to-Left writing directions naturally swap the expansion and collapse directions (e.g., `ArrowLeft` expands submenus and `ArrowRight` collapses them).
+- **RTL Support:** Right-to-left writing directions can swap the expansion and collapse directions (for example, `ArrowLeft` expands submenus and `ArrowRight` collapses them).
 
 ---
 

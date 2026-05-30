@@ -28,7 +28,7 @@ That matters because VFloat's positioning model is based on geometry, not on the
 
 ## Positioning Is Computed, Not Hardcoded
 
-The `position` group gives you the current computed result.
+[`usePosition`](/api/use-position) gives you the current computed result.
 
 In everyday template code, the most important field is `styles.value`.
 
@@ -40,7 +40,8 @@ One of the easiest mistakes in floating UI is to blur the line between where a s
 
 VFloat keeps these separate on purpose:
 
-- positioning belongs to `useFloatingContext()` and middleware
+- shared refs and open state belong to `useFloatingContext()`
+- positioning belongs to `usePosition()` and middlewares
 - interaction belongs to composables like `useHover()` and `useClick()`
 
 ## Next Step

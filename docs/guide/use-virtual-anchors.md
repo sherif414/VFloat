@@ -118,7 +118,7 @@ const virtualAnchor = {
 const anchorEl = ref(virtualAnchor);
 
 const context = useFloatingContext(anchorEl, floatingEl, { open });
-const { styles } = usePosition(context, {});
+const { styles } = usePosition(context);
 </script>
 ```
 

@@ -70,7 +70,7 @@ const { styles } = usePosition(context, {
 </script>
 ```
 
-`useFloatingContext()` does two important things here. It gives us the shared `context` object and lets `usePosition()` compute the tooltip position.
+`useFloatingContext()` gives us the shared `context` object. `usePosition(context)` then reads that context and computes the tooltip position.
 
 The `placement: "top"` option means we want the tooltip above the button. The `middleware.offset: 8` option adds a small gap so the tooltip does not sit right against the anchor.
 
@@ -153,7 +153,8 @@ You now have a working tooltip.
 
 The main pieces are:
 
-- [`useFloatingContext`](/api/use-floating-context) for shared state and position
+- [`useFloatingContext`](/api/use-floating-context) for shared refs and open state
+- [`usePosition`](/api/use-position) for placement and computed styles
 - [`useHover`](/api/use-hover) for hover-driven open state
 - [`offset`](/api/offset) for spacing
 

@@ -57,6 +57,20 @@ useListNavigation(context, {
   collection: tree.rootBranch,
   orientation: "vertical",
   loop: true,
+  onEnter(activeValue) {
+    if (!tree.hasChildren(activeValue)) return;
+
+    tree.expandBranch(activeValue);
+    const firstEnabled = tree.getFirstEnabledDescendantValue(activeValue);
+    if (firstEnabled) tree.setActiveValue(firstEnabled);
+  },
+  onExit(activeValue) {
+    const parentValue = tree.getParentValue(activeValue);
+    if (!parentValue) return;
+
+    tree.setActiveValue(parentValue);
+    tree.collapseBranch(parentValue);
+  },
 });
 
 // 3. Keep ARIA roles synchronized
@@ -72,7 +86,7 @@ watch(tree.activeValue, async (val) => {
   await nextTick();
   const index = items.value.findIndex((item) => item.id === val);
   const element = itemsRef.value[index];
-  if (element && document.activeFocus !== element) {
+  if (element && document.activeElement !== element) {
     element.focus();
   }
 });
@@ -110,7 +124,7 @@ Render item elements with roving `tabindex` and bind dynamic active classes:
 
 ## 2. Virtual Focus Model: Combobox and Inputs
 
-In this model, DOM focus stays securely inside a text input or combobox container, allowing the user to keep typing. Arrow keys move a "virtual focus" selection, communicating the active choice to screen readers using `aria-activedescendant`.
+In this model, DOM focus stays inside a text input or combobox container, allowing the user to keep typing. Arrow keys move a "virtual focus" selection, communicating the active choice to screen readers using `aria-activedescendant`.
 
 ### Composable Setup
 
@@ -200,8 +214,8 @@ Here are the key events handled automatically by `useListNavigation`:
 | `ArrowUp`    | `"vertical"` / `"both"`   | Selects previous enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects last item.                            |
 | `ArrowRight` | `"horizontal"` / `"both"` | Selects next enabled item (or previous in RTL).                                                                                         |
 | `ArrowLeft`  | `"horizontal"` / `"both"` | Selects previous enabled item (or next in RTL).                                                                                         |
-| `ArrowRight` | `"vertical"` (Tree)       | Expands the branch at the active item and targets its first enabled descendant (via Depth-First Search).                                |
-| `ArrowLeft`  | `"vertical"` (Tree)       | Collapses the current branch, shifting active value back to the parent item.                                                            |
+| `ArrowRight` | `"vertical"` (Tree)       | Fires `onEnter`; tree setups usually expand the active branch and target the first enabled descendant.                                  |
+| `ArrowLeft`  | `"vertical"` (Tree)       | Fires `onExit`; tree setups usually move active value back to the parent item and collapse that branch.                                 |
 | `Home`       | Any                       | Selects the first enabled item in the visible flat list.                                                                                |
 | `End`        | Any                       | Selects the last enabled item in the visible flat list.                                                                                 |
 | `Tab`        | Any                       | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |
