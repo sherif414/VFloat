@@ -17,7 +17,7 @@ hero:
 features:
   - icon: 🎯
     title: Positioning that stays out of your way
-    details: Use `useFloatingContext` with middleware options like `offset`, `flip`, and `shift`, plus `custom` middleware like `size` when you need to keep floating surfaces aligned and in view.
+    details: Create shared refs and open state with `useFloatingContext`, then add `usePosition` with middleware options like `offset`, `flip`, `shift`, and `custom` middleware such as `size`.
   - icon: 🧩
     title: Interactions that compose cleanly
     details: Combine `useHover`, `useClick`, `useFocus`, `useEscapeKey`, and `useListNavigation` without locking yourself into prebuilt components.

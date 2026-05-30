@@ -10,7 +10,7 @@ In VFloat, keyboard navigation is split into a clean separation of concerns:
 
 1. **[`useTree`](/api/use-tree)** is a data-first reactive manager. It handles items, hierarchies (for 2D nested trees), disabled nodes, and moves the active selection. It has no knowledge of DOM elements or events.
 2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
-3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and states (e.g. `aria-expanded`, `aria-controls`, `aria-activedescendant`) to anchor and list elements.
+3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
 
 ---
 
@@ -208,17 +208,17 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
 
 Here are the key events handled automatically by `useListNavigation`:
 
-| Key          | Orientation               | Action                                                                                                                                  |
-| ------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `ArrowDown`  | `"vertical"` / `"both"`   | Selects next enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects first item.                               |
-| `ArrowUp`    | `"vertical"` / `"both"`   | Selects previous enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects last item.                            |
-| `ArrowRight` | `"horizontal"` / `"both"` | Selects next enabled item (or previous in RTL).                                                                                         |
-| `ArrowLeft`  | `"horizontal"` / `"both"` | Selects previous enabled item (or next in RTL).                                                                                         |
-| `ArrowRight` | `"vertical"` (Tree)       | Fires `onEnter`; tree setups usually expand the active branch and target the first enabled descendant.                                  |
-| `ArrowLeft`  | `"vertical"` (Tree)       | Fires `onExit`; tree setups usually move active value back to the parent item and collapse that branch.                                 |
-| `Home`       | Any                       | Selects the first enabled item in the visible flat list.                                                                                |
-| `End`        | Any                       | Selects the last enabled item in the visible flat list.                                                                                 |
-| `Tab`        | Any                       | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |
+| Key          | Orientation         | Action                                                                                                                                  |
+| ------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `ArrowDown`  | `"vertical"`        | Selects next enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects first item.                               |
+| `ArrowUp`    | `"vertical"`        | Selects previous enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects last item.                            |
+| `ArrowRight` | `"horizontal"`      | Selects next enabled item (or previous in RTL).                                                                                         |
+| `ArrowLeft`  | `"horizontal"`      | Selects previous enabled item (or next in RTL).                                                                                         |
+| `ArrowRight` | `"vertical"` (Tree) | Fires `onEnter`; tree setups usually expand the active branch and target the first enabled descendant.                                  |
+| `ArrowLeft`  | `"vertical"` (Tree) | Fires `onExit`; tree setups usually move active value back to the parent item and collapse that branch.                                 |
+| `Home`       | Any                 | Selects the first enabled item in the visible flat list.                                                                                |
+| `End`        | Any                 | Selects the last enabled item in the visible flat list.                                                                                 |
+| `Tab`        | Any                 | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |
 
 ---
 

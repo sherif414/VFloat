@@ -36,7 +36,6 @@ It includes:
 - `anchorEl`
 - `floatingEl`
 - `arrowEl`
-- setter helpers for those refs
 
 ## `state`
 

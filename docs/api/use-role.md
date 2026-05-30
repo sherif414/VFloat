@@ -63,22 +63,34 @@ interface UseRoleReturn {
 
 ARIA roles are a contract. For example, `role="menu"` should be reserved for desktop-style command menus that also implement managed focus and arrow-key behavior.
 
-`useRole` does not manage `tabindex` or `aria-activedescendant`. Those belong to [`useListNavigation`](/api/use-list-navigation), which supports both roving focus and virtual focus.
+`useRole` does not manage `tabindex` or `aria-activedescendant`. Keep those in your render layer and drive them from the active value managed by [`useListNavigation`](/api/use-list-navigation).
 
 ## Example
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useFloatingContext, usePosition, useListNavigation, useRole } from "v-float";
+import {
+  useClick,
+  useFloatingContext,
+  useListNavigation,
+  usePosition,
+  useRole,
+  useTree,
+} from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
-const activeIndex = ref<number | null>(null);
+const items = ["Edit", "Duplicate", "Archive"];
 
 const context = useFloatingContext(anchorEl, floatingEl);
 const { styles } = usePosition(context);
+const tree = useTree({
+  items,
+  getItemId: (item) => item,
+  isItemDisabled: (item) => item === "Archive",
+});
 
 useClick(context);
 useRole(context, {
@@ -88,13 +100,9 @@ useRole(context, {
   disabledIndices: [2],
 });
 useListNavigation(context, {
-  listRef: itemsRef,
-  activeIndex,
-  onNavigate(index) {
-    activeIndex.value = index;
-  },
+  collection: tree.rootBranch,
   loop: true,
-  focusItemOnOpen: "auto",
+  orientation: "vertical",
 });
 </script>
 
@@ -103,10 +111,12 @@ useListNavigation(context, {
 
   <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
     <button
-      v-for="(item, index) in ['Edit', 'Duplicate', 'Archive']"
+      v-for="(item, index) in items"
       :key="item"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       type="button"
+      :disabled="tree.isItemDisabled(item)"
+      :class="{ active: tree.activeValue.value === item }"
     >
       {{ item }}
     </button>

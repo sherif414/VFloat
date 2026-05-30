@@ -29,7 +29,7 @@ By providing `getItemChildren` to `useTree`, you transform a flat list into a re
 
 ## Complete Nested Menu Example
 
-Here is how to build a fully accessible, keyboard-traversable multi-level nested dropdown.
+Here is how to build the coordinated data, keyboard, and ARIA pieces for a multi-level nested dropdown.
 
 ### 1. Define the Hierarchical Data Structure
 
@@ -153,7 +153,7 @@ Here is the clean flat roving-tabindex render pattern using indentation:
 
 By routing your tree layout through `useTree` and `useListNavigation`, VFloat gives you the pieces for these behaviors:
 
-- **Disabled Skipped Sub-Nodes:** Expanding a branch containing disabled items automatically bypasses them (pre-order DFS) to focus the first _enabled_ submenu choice.
+- **Disabled Skipped Sub-Nodes:** The `onEnter` handler shown above uses `getFirstEnabledDescendantValue()` to bypass disabled descendants and focus the first _enabled_ submenu choice.
 - **Opener Safeguard:** If a submenu branch exists but all of its nested children are disabled, expanding the branch leaves focus safely on the parent trigger item, avoiding focus traps.
 - **RTL Support:** Right-to-left writing directions can swap the expansion and collapse directions (for example, `ArrowLeft` expands submenus and `ArrowRight` collapses them).
 

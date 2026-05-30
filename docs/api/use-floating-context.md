@@ -50,7 +50,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext(anchorEl, floatingEl);
 
 useEscapeKey(context);
-const { floatingProps } = useRole(context, { role: "dialog" });
+useRole(context, { role: "dialog" });
 </script>
 
 <template>
@@ -58,7 +58,7 @@ const { floatingProps } = useRole(context, { role: "dialog" });
     Open dialog
   </button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" class="dialog" v-bind="floatingProps">
+  <div v-if="context.state.open.value" ref="floatingEl" class="dialog">
     <button @click="context.state.setOpen(false, 'programmatic', $event)">Close</button>
   </div>
 </template>

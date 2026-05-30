@@ -191,7 +191,7 @@ interface UseTreeReturn<T> {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useTree, useFloatingContext, usePosition, useListNavigation } from "v-float";
+import { useTree, useClick, useFloatingContext, useListNavigation, usePosition } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -218,6 +218,7 @@ const tree = useTree({
   isItemDisabled: (item) => !!item.disabled,
 });
 
+useClick(context);
 useListNavigation(context, {
   collection: tree.rootBranch,
   orientation: "vertical",

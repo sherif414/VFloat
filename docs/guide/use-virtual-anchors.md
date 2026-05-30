@@ -35,9 +35,10 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const { styles } = usePosition(context, {
+const position = usePosition(context, {
   placement: "right-start",
 });
+const { styles } = position;
 
 useClientPoint(context, {
   position,
@@ -65,9 +66,10 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext(anchorEl, floatingEl);
-const { styles } = usePosition(context, {
+const position = usePosition(context, {
   placement: "bottom-start",
 });
+const { styles } = position;
 
 useClientPoint(context, {
   position,

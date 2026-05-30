@@ -4,7 +4,7 @@ description: Coordinates keyboard-driven list navigation in VFloat.
 
 # useListNavigation
 
-`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for lists, grids, and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a reactive tree branch conforming to the `NavigableCollection` contract (such as the branches returned by [`useTree`](/api/use-tree)) to manage item activity without raw DOM query selectors or index tracking.
+`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for one-dimensional lists and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a reactive tree branch conforming to the `NavigableCollection` contract (such as the branches returned by [`useTree`](/api/use-tree)) to manage item activity without raw DOM query selectors or index tracking.
 
 ## Type
 
