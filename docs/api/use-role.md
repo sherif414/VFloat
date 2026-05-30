@@ -70,14 +70,14 @@ ARIA roles are a contract. For example, `role="menu"` should be reserved for des
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useFloating, useListNavigation, useRole } from "v-float";
+import { useClick, useFloatingContext, usePosition, useListNavigation, useRole } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 const activeIndex = ref<number | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 useClick(context);
 useRole(context, {
@@ -100,7 +100,7 @@ useListNavigation(context, {
 <template>
   <button ref="anchorEl" type="button">Actions</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     <button
       v-for="(item, index) in ['Edit', 'Duplicate', 'Archive']"
       :key="item"
@@ -115,7 +115,7 @@ useListNavigation(context, {
 
 ## See Also
 
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useClick`](/api/use-click)
 - [`useListNavigation`](/api/use-list-navigation)
 - [`useTree`](/api/use-tree)

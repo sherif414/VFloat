@@ -1,6 +1,6 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
-import { type FloatingContext } from "@/composables/floating";
+import { type FloatingContext } from "@/composables/floating-context";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
@@ -17,7 +17,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  *
  * @example Basic usage
  * ```ts
- * const context = useFloating(...)
+ * const context = useFloatingContext(...)
  * useEscapeKey(context) // Closes the floating element on escape
  * ```
  *

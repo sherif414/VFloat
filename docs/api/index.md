@@ -15,7 +15,8 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 ## Positioning
 
-- [`useFloating`](/api/use-floating) - Positions a floating element relative to an anchor element
+- [`useFloatingContext`](/api/use-floating-context) - Creates shared refs and open state
+- [`usePosition`](/api/use-position) - Positions a floating element relative to an anchor element
 - [`useArrow`](/api/use-arrow) - Connects an arrow element to a floating context
 - [`useClientPoint`](/api/use-client-point) - Positions a floating element relative to pointer coordinates
 

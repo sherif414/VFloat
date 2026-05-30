@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import { type FloatingContext } from "@/composables/floating";
+import { type FloatingContext } from "@/composables/floating-context";
 import {
   isButtonTarget,
   isClickOnScrollbar,
@@ -30,7 +30,7 @@ type PointerType = "mouse" | "touch" | "pen";
  *
  * @example Basic usage with outside click enabled
  * ```ts
- * const context = useFloating(...)
+ * const context = useFloatingContext(...)
  * useClick(context, {
  *   toggle: true,
  *   closeOnOutsideClick: true,

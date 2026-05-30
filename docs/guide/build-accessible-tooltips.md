@@ -22,7 +22,7 @@ We want one tooltip that works for two real user paths:
 - A mouse user hovers the trigger
 - A keyboard user tabs to the trigger
 
-That usually means [`useFloating`](/api/use-floating), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
+That usually means [`useFloatingContext`](/api/use-floating-context), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
 
 ## Step 1: Build The Shared Context
 
@@ -31,12 +31,13 @@ Start by wiring the anchor, floating element, and placement.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating } from "v-float";
+import { offset, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -50,12 +51,13 @@ Now add the interaction layer that matches tooltip expectations.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useFocus, useHover } from "v-float";
+import { offset, useFloatingContext, usePosition, useFocus, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -83,7 +85,7 @@ Render the trigger and tooltip from the same shared state.
     id="save-tooltip"
     ref="floatingEl"
     role="tooltip"
-    :style="context.position.styles.value"
+    :style="position.styles.value"
   >
     Save the current draft without publishing it.
   </div>

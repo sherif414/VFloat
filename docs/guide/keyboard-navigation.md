@@ -23,7 +23,7 @@ In this model, focus actually shifts into the floating list, and arrow keys move
 ```vue
 <script setup lang="ts">
 import { ref, watch, nextTick } from "vue";
-import { useFloating, useTree, useListNavigation, useRole } from "v-float";
+import { useFloatingContext, usePosition, useTree, useListNavigation, useRole } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -42,7 +42,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 // 1. Manage navigation state
 const tree = useTree({
@@ -88,12 +88,7 @@ Render item elements with roving `tabindex` and bind dynamic active classes:
     Menu Options
   </button>
 
-  <ul
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="menu"
-    :style="context.position.styles.value"
-  >
+  <ul v-if="context.state.open.value" ref="floatingEl" role="menu" :style="position.styles.value">
     <li
       v-for="(item, index) in items"
       :key="item.id"
@@ -121,7 +116,7 @@ In this model, DOM focus stays securely inside a text input or combobox containe
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useTree, useListNavigation, useRole } from "v-float";
+import { useFloatingContext, usePosition, useTree, useListNavigation, useRole } from "v-float";
 
 interface SearchOption {
   value: string;
@@ -138,7 +133,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 const tree = useTree({
   items: options,
@@ -178,7 +173,7 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
     v-if="context.state.open.value"
     ref="floatingEl"
     role="listbox"
-    :style="context.position.styles.value"
+    :style="position.styles.value"
   >
     <li
       v-for="(item, index) in options"

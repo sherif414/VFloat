@@ -27,14 +27,14 @@ This is the stack many production surfaces end up using first.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift, useFloating } from "v-float";
+import { flip, offset, shift, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8), flip(), shift({ padding: 8 })],
 });
@@ -66,14 +66,14 @@ Use [`size`](/api/size).
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift, size, useFloating } from "v-float";
+import { flip, offset, shift, size, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [
     offset(8),
@@ -105,19 +105,19 @@ Use the [`arrow`](/api/arrow) middleware with [`useArrow`](/api/use-arrow).
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { arrow, offset, useArrow, useFloating } from "v-float";
+import { arrow, offset, useArrow, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {
   middlewares: [offset(8), arrow({ element: arrowEl })],
 });
 
-const { arrowStyles } = useArrow(context, {
+const { arrowStyles } = useArrow(context, position, {
   element: arrowEl,
 });
 </script>

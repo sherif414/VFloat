@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import type { AnchorElement, FloatingContext, FloatingElement } from "@/composables/floating";
+import type { AnchorElement, FloatingElement } from "@/composables/floating-context";
 import {
   clearTimeoutIfSet,
   contains,
@@ -58,7 +58,7 @@ export type SafePolygonHandler = (event: MouseEvent) => void;
 export interface CreateSafePolygonHandlerContext {
   x: number;
   y: number;
-  placement: FloatingContext["position"]["placement"]["value"];
+  placement: string;
   elements: {
     domReference: AnchorElement | null;
     floating: FloatingElement | null;

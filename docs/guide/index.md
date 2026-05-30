@@ -17,10 +17,11 @@ Most VFloat examples start with two element refs.
 - `anchorEl` is the element the floating surface is positioned against.
 - `floatingEl` is the element that moves.
 
-You pass both refs to [`useFloating`](/api/use-floating):
+You pass both refs to [`useFloatingContext`](/api/use-floating-context):
 
 ```ts
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom-start",
 });
 ```
@@ -29,12 +30,12 @@ The returned `context` is the shared object for the rest of the floating behavio
 
 - `context.refs` keeps the registered elements.
 - `context.state` owns open state.
-- `context.position` exposes the computed placement, coordinates, and styles.
+- `position` exposes the computed placement, coordinates, and styles.
 
 In templates, the most common binding is:
 
 ```vue
-<div ref="floatingEl" :style="context.position.styles.value">
+<div ref="floatingEl" :style="position.styles.value">
   Floating content
 </div>
 ```
@@ -46,7 +47,8 @@ That style binding is what moves the floating element to its computed position.
 The initial `placement` says where the surface should prefer to go. `middlewares` refine that result.
 
 ```ts
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8), flip(), shift()],
 });
@@ -61,7 +63,7 @@ You can start with only `offset`. Add more middleware when the surface needs to 
 Positioning alone does not decide when a surface opens. Interaction composables use the same `context` to update open state.
 
 ```ts
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 useHover(context);
 useEscapeKey(context);
@@ -76,7 +78,7 @@ VFloat is heavily inspired by Floating UI, and some names will feel familiar if 
 The stable root call is:
 
 ```ts
-useFloating(anchorEl, floatingEl, options);
+useFloatingContext(anchorEl, floatingEl, options);
 ```
 
 The grouped return value uses VFloat's `refs`, `state`, and `position` vocabulary. When in doubt, follow the VFloat docs and API pages rather than copying Floating UI examples directly.

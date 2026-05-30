@@ -11,7 +11,7 @@ That is where virtual anchors come in.
 This guide covers two practical paths:
 
 - Pointer-driven positioning with [`useClientPoint`](/api/use-client-point)
-- Manual virtual anchors passed into [`useFloating`](/api/use-floating)
+- Manual virtual anchors passed into [`useFloatingContext`](/api/use-floating-context)
 
 ## When To Reach For A Virtual Anchor
 
@@ -28,17 +28,19 @@ Use a virtual anchor when:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useFloating, useHover } from "v-float";
+import { useClientPoint, useFloatingContext, usePosition, useHover } from "v-float";
 
 const trackingArea = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "right-start",
 });
 
 useClientPoint(context, {
+  position,
   pointerTarget: trackingArea,
   trackingMode: "follow",
 });
@@ -56,17 +58,19 @@ Sometimes you want the surface to open at the pointer location and stay there ev
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useEscapeKey, useFloating } from "v-float";
+import { useClientPoint, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const area = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom-start",
 });
 
 useClientPoint(context, {
+  position,
   pointerTarget: area,
   trackingMode: "static",
 });
@@ -83,12 +87,12 @@ Static mode matters because it prevents the menu from drifting as the pointer mo
 
 ## Manual Virtual Anchors
 
-If you already have coordinates or a computed rectangle, you do not need `useClientPoint()`. You can pass a manual virtual anchor to `useFloating()`.
+If you already have coordinates or a computed rectangle, you do not need `useClientPoint()`. You can pass a manual virtual anchor to `useFloatingContext()`.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
@@ -113,9 +117,8 @@ const virtualAnchor = {
 
 const anchorEl = ref(virtualAnchor);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
-});
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {});
 </script>
 ```
 

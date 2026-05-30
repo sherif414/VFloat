@@ -36,7 +36,7 @@ Here is how to build a fully accessible, keyboard-traversable multi-level nested
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useTree, useListNavigation, useRole } from "v-float";
+import { useFloatingContext, usePosition, useTree, useListNavigation, useRole } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -63,7 +63,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 // Define the 2D collection
 const tree = useTree<MenuItem>({
@@ -101,12 +101,7 @@ Here is the clean flat roving-tabindex render pattern using indentation:
     Project Actions
   </button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="tree"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" role="tree" :style="position.styles.value">
     <div
       v-for="(item, index) in tree.flattenedItems.value"
       :key="item.id"

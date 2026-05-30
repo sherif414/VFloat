@@ -30,26 +30,26 @@ description: Exposes visibility state for clipped references and escaped floatin
 
   Use `referenceHidden` when you want to hide the floating element if its anchor is fully obscured. Use `escaped` when you want to know whether the floating element has moved outside its clipping context.
 
-  The middleware does not hide anything by itself. It only writes data to `context.position.middlewareData.value.hide`, which you can map to `visibility`, `display`, or an accessibility state.
+  The middleware does not hide anything by itself. It only writes data to `position.middlewareData.value.hide`, which you can map to `visibility`, `display`, or an accessibility state.
 
 - Example
 
 ```vue
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { hide, useFloating } from "v-float";
+import { hide, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {
   middlewares: [hide()],
 });
 
 const visibility = computed(() => {
-  return context.position.middlewareData.value.hide?.referenceHidden ? "hidden" : "visible";
+  return position.middlewareData.value.hide?.referenceHidden ? "hidden" : "visible";
 });
 </script>
 
@@ -59,7 +59,7 @@ const visibility = computed(() => {
   <div
     v-if="context.state.open.value"
     ref="floatingEl"
-    :style="{ ...context.position.styles.value, visibility }"
+    :style="{ ...position.styles.value, visibility }"
   >
     Floating content
   </div>

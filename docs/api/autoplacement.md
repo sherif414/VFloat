@@ -35,14 +35,14 @@ description: Chooses a placement that fits the available space.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { autoPlacement, useFloating } from "v-float";
+import { autoPlacement, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {
   middlewares: [
     autoPlacement({
       allowedPlacements: ["top", "bottom"],
@@ -54,7 +54,7 @@ const context = useFloating(anchorEl, floatingEl, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     Floating content
   </div>
 </template>
@@ -63,4 +63,4 @@ const context = useFloating(anchorEl, floatingEl, {
 - See also
   - [flip](/api/flip) - Keeps a preferred placement and falls back when needed
   - [shift](/api/shift) - Nudges the floating element back into view
-  - [useFloating](/api/use-floating) - Core positioning composable
+  - [useFloatingContext](/api/use-floating-context) - Core positioning composable

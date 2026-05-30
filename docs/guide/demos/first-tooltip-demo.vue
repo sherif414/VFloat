@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useHover } from "v-float";
+import { offset, useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(10)],
 });
@@ -24,7 +25,7 @@ useHover(context);
       ref="floatingEl"
       class="tooltip-demo__floating"
       role="tooltip"
-      :style="context.position.styles.value"
+      :style="position.styles.value"
     >
       This button saves your changes.
     </div>

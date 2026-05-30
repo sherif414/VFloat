@@ -42,14 +42,14 @@ description: Measures available space so the floating element can size itself.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { size, useFloating } from "v-float";
+import { size, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const position = usePosition(context, {
   middlewares: [
     size({
       apply({ availableWidth, availableHeight, elements }) {
@@ -66,7 +66,7 @@ const context = useFloating(anchorEl, floatingEl, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     Floating content
   </div>
 </template>

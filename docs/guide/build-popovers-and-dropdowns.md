@@ -10,7 +10,7 @@ Tooltips teach hover. Popovers usually teach click. The shape is still simple, b
 
 For a straightforward popover or dropdown, start with:
 
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useClick`](/api/use-click)
 - [`useEscapeKey`](/api/use-escape-key)
 - [`offset`](/api/offset)
@@ -22,12 +22,13 @@ Start with the anchor, the floating element, and a shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating } from "v-float";
+import { offset, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -41,12 +42,13 @@ Now add the behavior that makes the surface feel like a popover.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useClick, useEscapeKey, useFloating } from "v-float";
+import { offset, useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8)],
 });
@@ -77,7 +79,7 @@ Now render the content the user actually came for.
     v-if="context.state.open.value"
     ref="floatingEl"
     class="panel"
-    :style="context.position.styles.value"
+    :style="position.styles.value"
   >
     <h2>Quick actions</h2>
     <p>Choose the next step for this record.</p>
@@ -97,12 +99,21 @@ If the panel can run into the viewport edge, add `flip()` and `shift()`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift, useClick, useEscapeKey, useFloating } from "v-float";
+import {
+  flip,
+  offset,
+  shift,
+  useClick,
+  useEscapeKey,
+  useFloatingContext,
+  usePosition,
+} from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(8), flip(), shift({ padding: 8 })],
 });

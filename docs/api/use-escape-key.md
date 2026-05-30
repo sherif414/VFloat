@@ -37,12 +37,12 @@ interface UseEscapeKeyOptions {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloating } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 useClick(context);
 useEscapeKey(context);
 </script>
@@ -50,7 +50,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl">Toggle</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     Press Escape to close
   </div>
 </template>

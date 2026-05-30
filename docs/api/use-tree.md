@@ -191,7 +191,7 @@ interface UseTreeReturn<T> {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useTree, useFloating, useListNavigation } from "v-float";
+import { useTree, useFloatingContext, usePosition, useListNavigation } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -209,7 +209,7 @@ const items = ref<MenuItem[]>([
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 const tree = useTree({
   items,
@@ -226,12 +226,7 @@ useListNavigation(context, {
 <template>
   <button ref="anchorEl">File Menu</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="menu"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" role="menu" :style="position.styles.value">
     <div
       v-for="item in tree.flattenedItems.value"
       :key="item.id"
@@ -249,6 +244,6 @@ useListNavigation(context, {
 ## See Also
 
 - [`useListNavigation`](/api/use-list-navigation)
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)
 - [Build Nested Menus Guide](/guide/build-nested-menus)

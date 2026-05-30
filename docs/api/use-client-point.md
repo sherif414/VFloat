@@ -44,17 +44,19 @@ This example shows the root-first overload.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useFloating, useHover } from "v-float";
+import { useClientPoint, useFloatingContext, usePosition, useHover } from "v-float";
 
 const trackingArea = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "right-start",
 });
 
 useClientPoint(context, {
+  position,
   pointerTarget: trackingArea,
 });
 
@@ -65,7 +67,7 @@ useHover(context);
   <div ref="trackingArea">
     Move the pointer here
 
-    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
       Tooltip follows the pointer
     </div>
   </div>
@@ -74,6 +76,6 @@ useHover(context);
 
 ## See Also
 
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useHover`](/api/use-hover)
 - [Use Virtual Anchors](/guide/use-virtual-anchors)

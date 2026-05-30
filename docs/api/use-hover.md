@@ -44,12 +44,13 @@ interface SafePolygonOptions {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
 });
 
@@ -62,7 +63,7 @@ useHover(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     Tooltip content
   </div>
 </template>
@@ -72,5 +73,5 @@ useHover(context, {
 
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips)

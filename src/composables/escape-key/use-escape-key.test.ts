@@ -1,16 +1,8 @@
 import { effectScope, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { useEscapeKey, type UseEscapeKeyContext } from "@/composables";
-import { useFloating } from "@/composables";
 
 const createdElements: HTMLElement[] = [];
-
-function createElement<K extends keyof HTMLElementTagNameMap>(tag: K) {
-  const element = document.createElement(tag);
-  createdElements.push(element);
-  document.body.appendChild(element);
-  return element;
-}
 
 // Test utilities
 function createMockFloatingContext(): UseEscapeKeyContext {
@@ -25,10 +17,6 @@ function createMockFloatingContext(): UseEscapeKeyContext {
       setOpen,
     },
   };
-}
-
-async function flushEscapeHandling() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe("useEscapeKey", () => {

@@ -17,7 +17,7 @@ A dialog usually needs:
 - focus containment while open
 - clear semantics such as `role="dialog"` and `aria-modal="true"` for modal flows
 
-In VFloat terms, the core stack is usually [`useFloating`](/api/use-floating), [`useClick`](/api/use-click) or manual open state, [`useEscapeKey`](/api/use-escape-key), and [`useFocusTrap`](/api/use-focus-trap).
+In VFloat terms, the core stack is usually [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click) or manual open state, [`useEscapeKey`](/api/use-escape-key), and [`useFocusTrap`](/api/use-focus-trap).
 
 ## Step 1: Build The Shared Context
 
@@ -26,12 +26,12 @@ Start with the same stable `context` shape.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 </script>
 ```
 
@@ -42,12 +42,12 @@ Now add the behavior layer that makes the surface act like a dialog.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloating, useFocusTrap } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition, useFocusTrap } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 useClick(context, {
   closeOnOutsideClick: true,
@@ -76,7 +76,7 @@ Render the dialog with explicit semantics.
         role="dialog"
         aria-modal="true"
         tabindex="-1"
-        :style="context.position.styles.value"
+        :style="position.styles.value"
       >
         <h2>Edit profile</h2>
         <p>Update your public display information.</p>

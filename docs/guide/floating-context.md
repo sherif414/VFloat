@@ -65,17 +65,17 @@ It includes things like:
 - `styles`
 - `update`
 
-Most templates only need `context.position.styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
+Most templates only need `position.styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
 
 ## The Core Loop
 
 This is the loop to keep in your head:
 
 1. You create refs for the anchor and floating element.
-2. You pass them into [`useFloating`](/api/use-floating).
-3. `useFloating()` returns the shared `context`.
+2. You pass them into [`useFloatingContext`](/api/use-floating-context).
+3. `useFloatingContext()` returns the shared `context`.
 4. Other composables read from and write to that `context`.
-5. Your template renders from `context.state` and `context.position`.
+5. Your template renders from `context.state` and `position`.
 
 ## A Minimal Example
 
@@ -84,12 +84,13 @@ This small example shows the context in use without much extra ceremony.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useHover } from "v-float";
+import { offset, useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "bottom",
   middlewares: [offset(8)],
 });
@@ -100,7 +101,7 @@ useHover(context);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     Floating content
   </div>
 </template>

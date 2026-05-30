@@ -156,7 +156,7 @@ describe("utils and core helpers", () => {
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("covers lifecycle helpers and floating context shape", () => {
+  it("covers lifecycle helpers and floating context plus position shapes", () => {
     const cleanupRegistry = createCleanupRegistry();
     const cleanup = vi.fn();
     cleanupRegistry.add(cleanup);
@@ -185,12 +185,12 @@ describe("utils and core helpers", () => {
     const context = {
       refs: { anchorEl, floatingEl, arrowEl },
       state: { open, setOpen },
-      position: { x, y, strategy, placement, middlewareData, isPositioned, styles, update },
     };
+    const position = { x, y, strategy, placement, middlewareData, isPositioned, styles, update };
 
     expect(context.refs).toBe(context.refs);
     expect(context.state.open).toBe(open);
-    expect(context.position.update).toBe(update);
+    expect(position.update).toBe(update);
 
     const setterTarget = ref<HTMLElement | null>(null);
     createRefSetter(setterTarget)(anchorEl.value);

@@ -16,7 +16,7 @@ If you have used Floating UI before, several things will feel familiar:
 - middleware-driven refinement
 - virtual elements
 - collision handling concepts
-- API names such as `useFloating`, `offset`, `flip`, and `shift`
+- API names such as `useFloatingContext`, `offset`, `flip`, and `shift`
 
 ## What Does Not Carry Over Cleanly
 
@@ -24,7 +24,7 @@ Familiar names do not always mean identical API shape or identical mental model.
 
 VFloat has its own public vocabulary and its own grouping model:
 
-- the public root is centered around `useFloating(anchorEl, floatingEl, options)`
+- the public root is centered around `useFloatingContext(anchorEl, floatingEl, options)`
 - the return value is grouped into `refs`, `state`, and `position`
 - interaction composables are designed around that grouped root
 - some composition patterns are Vue-specific and intentionally tailored to this library

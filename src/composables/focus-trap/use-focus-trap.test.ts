@@ -9,7 +9,6 @@ import {
 } from "@/composables/focus-trap/use-focus-trap";
 
 import type { AnchorElement, FloatingElement } from "@/composables";
-import { useFloating } from "@/composables";
 
 type FocusTrapTestContext = {
   anchorEl: HTMLButtonElement;
