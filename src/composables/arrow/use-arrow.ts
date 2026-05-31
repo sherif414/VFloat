@@ -3,6 +3,7 @@ import { getFloatingInternals } from "@/composables/floating-context";
 import { arrow } from "../middlewares";
 import type { FloatingContext } from "@/composables/floating-context";
 import type { FloatingPosition } from "@/composables/position";
+import type { Padding } from "@floating-ui/dom";
 
 //=======================================================================================
 // 📌 Main
@@ -16,7 +17,7 @@ export function useArrow(
   position: FloatingPosition,
   options: UseArrowOptions,
 ): UseArrowReturn {
-  const { element: arrowEl, offset = "-4px" } = options;
+  const { element: arrowEl, offset = "-4px", padding } = options;
   const { refs } = context;
   const { middlewareData, placement } = position;
 
@@ -31,11 +32,8 @@ export function useArrow(
   const internals = getFloatingInternals(position);
   internals?.middlewareRegistry?.register(
     computed(() => {
-      if (!arrowEl.value) {
-        return null;
-      }
-
-      return arrow({ element: arrowEl });
+      if (!arrowEl.value) return null;
+      return arrow({ element: arrowEl, padding });
     }),
   );
 
@@ -113,4 +111,10 @@ export interface UseArrowOptions {
    * Useful when the arrow visually overlaps the floating panel border.
    */
   offset?: string;
+
+  /**
+   * The padding between the arrow element and the floating element edges.
+   * Useful when the floating element has rounded corners.
+   */
+  padding?: Padding;
 }
