@@ -15,12 +15,12 @@
 ## Naming Conventions
 
 - Follow existing VFloat naming before borrowing Floating UI terminology. Similarity is fine, but VFloat is not a direct copy.
-- Public composables use `useX` export names with kebab-case filenames. Example: `useFloating` lives in `use-floating.ts`.
+- Public composables use `useX` export names with kebab-case filenames. Example: `useFloatingContext` lives in `use-floating-context.ts`.
 - Element refs and variables should use explicit `*El` names. Prefer `anchorEl`, `floatingEl`, and `arrowEl` over generic names like `reference` or `element`.
-- The stable public entrypoint remains `useFloating(anchorEl, floatingEl, options)`. Preserve that call shape unless a change is explicitly requested.
-- Grouped floating return data uses the `refs`, `state`, and `position` vocabulary. New API additions should fit into those groups rather than flattening more fields onto the root.
+- The stable public entrypoint is `useFloatingContext(options)` where `options` contains `refs`, optional `state`, and optional `parentContext`. Preserve that call shape unless a change is explicitly requested.
+- Grouped floating return data uses the `refs` and `state` vocabulary. Positioning is a separate composable (`usePosition`). New API additions should fit into those groups rather than flattening more fields onto the root.
 - Open-change reasons and similar string-literal event names should use kebab-case. Example: `anchor-click`, `outside-pointer`, and `escape-key`.
-- Internal implementation files should use descriptive kebab-case nouns with role-oriented suffixes where helpful, such as `*-controller.ts`, `*-registry.ts`, `*-factory.ts`, `*-strategies.ts`, `geometry.ts`, and `bridge.ts`.
+- Internal implementation files should use descriptive kebab-case nouns with role-oriented suffixes where helpful, such as `*-controller.ts`, `*-registry.ts`, `*-factory.ts`, `*-strategies.ts`, `*-model.ts`, `*-state.ts`, `*-modality.ts`, `geometry.ts`, `bridge.ts`, and `intent.ts`.
 - Tests should mirror the source name they cover and use the `.test.ts` suffix.
 - Boolean option names should read like flags. Prefer prefixes such as `enabled`, `allow`, `ignore`, `closeOn`, `openOn`, `prevent`, `require`, `return`, and `focus` when they match the behavior.
 - When documenting or demoing the floating root, prefer a local variable name like `context` so examples stay consistent with the grouped API shape.
@@ -41,22 +41,24 @@ Use a fixed set of verbs with non-overlapping meanings. Do not invent synonyms.
 
 **Creation and lookup:**
 
-| Verb     | Meaning                                                                                                                    | Example                                              |
-| -------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `create` | Factory that allocates a new object or closure. Always returns something new.                                              | `createCleanupRegistry()`, `createTreeCoordinator()` |
-| `get`    | Pure accessor that reads an existing value. No side effects, no searching. Includes derivations and lookups with fallback. | `getFloatingInternals()`, `getFirstEnabledIndex()`   |
-| `find`   | Searches a collection. May return `null`.                                                                                  | `findNextEnabled()`, `findItemIndexFromTarget()`     |
+| Verb      | Meaning                                                                                                                    | Example                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `create`  | Factory that allocates a new object or closure. Always returns something new.                                              | `createCleanupRegistry()`, `createBranch()`                                  |
+| `get`     | Pure accessor that reads an existing value. No side effects, no searching. Includes derivations and lookups with fallback. | `getFloatingInternals()`, `getFirstEnabledDescendantValue()`                 |
+| `find`    | Searches a collection. May return `null`.                                                                                  | `findDeepestOpenFloatingContext()`                                           |
+| `resolve` | Stateless transformation or normalization of inputs. Maps raw values to derived forms without side effects.                | `resolveKeyboardIntent()`, `resolveInitialFocus()`, `resolveIsolationMode()` |
 
-Do not use `resolve`, `build`, or `make`. Every `resolve` is really a `get` (lookup/coerce) or a `create` (new object).
+Do not use `build` or `make`.
 
 **Cleanup and teardown:**
 
-| Verb      | Meaning                                                                                                | Example                                  |
-| --------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| `clear`   | Zero out a specific piece of state — a timeout, a ref, a flag. Targeted and surgical.                  | `clearTimeout()`, `clearPendingChild()`  |
-| `cleanup` | Tear down listeners, watchers, and side effects. Bulk disposal. The "undo all side effects" operation. | `cleanup()`, `cleanupRegistry.cleanup()` |
+| Verb      | Meaning                                                                                                | Example                                                           |
+| --------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `clear`   | Zero out a specific piece of state — a timeout, a ref, a flag. Targeted and surgical.                  | `clearTimeout()`, `clearDragResetTimeout()`, `clearBlurTimeout()` |
+| `cleanup` | Tear down listeners, watchers, and side effects. Bulk disposal. The "undo all side effects" operation. | `cleanup()`, `cleanupRegistry.cleanup()`                          |
+| `reset`   | Return strategy or tracker state to initial conditions. Acceptable on stateful class instances.        | `TrackingStrategy.reset()`                                        |
 
-Do not use `reset` (too vague) or `flush` (unclear).
+Do not use `flush` (unclear).
 
 **Mutation:**
 
@@ -81,12 +83,11 @@ Do not encode purpose in the suffix (no `onPointerMoveForRest`, no `onOutsideCli
 
 #### Boolean Predicates
 
-| Prefix | Meaning                                                              | Example                                                    |
-| ------ | -------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `is`   | Primary boolean predicate — functions, computeds, and inline checks. | `isEnabled`, `isDisabled(idx)`, `isAnchorInParentBranch()` |
-| `can`  | Capability gate — whether an action is permitted.                    | `canFocusDisabledItems`                                    |
-
-Do not use `should` as a predicate prefix.
+| Prefix   | Meaning                                                                                        | Example                                                            |
+| -------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `is`     | Primary boolean predicate — functions, computeds, and inline checks.                           | `isEnabled`, `isItemDisabled(value)`, `isExpanded(value)`          |
+| `can`    | Capability gate — whether an action is permitted.                                              | `canFocusDisabledItems`                                            |
+| `should` | Computed derivation that combines multiple conditions into a single actionable boolean signal. | `shouldCloseOnFocusOut`, `shouldReturnFocus`, `shouldControlPopup` |
 
 #### Computed Wrappers for Options
 
@@ -124,13 +125,12 @@ Only these abbreviations are permitted. Everything else must be spelled out.
 
 ## Type Conventions
 
-- Public composable companion types use `UseXOptions`, `UseXReturn`, and `UseXContext` when those shapes are exposed.
-- Shared root and state types use the `Floating*` prefix. Examples: `FloatingRoot`, `FloatingContext`, `FloatingRefs`, `FloatingState`, and `FloatingPosition`.
-- Prefer `interface` for object-shaped public contracts and configuration objects. Examples: `UseFloatingOptions`, `UseClickContext`, and `FloatingPosition`.
-- Prefer `type` for unions, function signatures, tuples, and simple aliases. Examples: `OpenChangeReason`, `SafePolygonHandler`, `Point`, and `AnchorElement`.
-- Domain-specific aliases should keep the domain noun in the type name. Prefer names like `AnchorElement`, `FloatingElement`, `Coordinates`, and `PointerEventData` over generic aliases.
-- Internal structural adapter types can use suffixes like `Shape` and `Like` when they describe partial or compatibility contracts rather than primary public types. Examples: `FloatingRefsShape` and `FloatingPositionLike`.
-- Internal service and protocol types should use explicit role suffixes when applicable, such as `*Controller`, `*Registry`, `*Strategy`, `*Contract`, and `*Registration`.
+- Public composable companion types use `UseXOptions`, `UseXReturn`, and `UseXContext` when those shapes are exposed. Examples: `UseClickOptions`, `UseArrowReturn`, `UseClickContext`.
+- Shared root and state types use the `Floating*` prefix. Examples: `FloatingContext`, `FloatingRefs`, `FloatingState`, `FloatingPosition`, `FloatingInternals`, and `FloatingMiddlewareRegistry`.
+- Prefer `interface` for object-shaped public contracts and configuration objects. Examples: `UseFloatingContextOptions`, `UseClickContext`, `FloatingPosition`, and `NavigableCollection`.
+- Prefer `type` for unions, function signatures, tuples, and simple aliases. Examples: `OpenChangeReason`, `SafePolygonHandler`, `Point`, `AnchorElement`, `FloatingRole`, and `NavigationIntent`.
+- Domain-specific aliases should keep the domain noun in the type name. Prefer names like `AnchorElement`, `FloatingElement`, `Coordinates`, `PointerEventData`, `AxisConstraint`, and `TrackingMode` over generic aliases.
+- Internal service and protocol types should use explicit role suffixes when applicable, such as `*Controller`, `*Registry`, `*Strategy`, `*Contract`, and `*Registration`. Example: `TrackingStrategy`, `VirtualElementFactoryContract`.
 
 ## Coding Style
 
