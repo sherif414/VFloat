@@ -1,9 +1,11 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import { type FloatingContext } from "@/composables/floating-context";
+import {
+  type FloatingContext,
+  isFloatingContextTargetWithin,
+} from "@/composables/floating-context";
 import {
   isButtonTarget,
   isClickOnScrollbar,
-  isEventTargetWithin,
   isHTMLElement,
   isMouseLikePointerType,
   isSpaceIgnored,
@@ -239,14 +241,11 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return;
     }
 
-    if (ignoreOutsideClickOption && ignoreOutsideClickOption(target)) {
+    if (isFloatingContextTargetWithin(context, target)) {
       return;
     }
 
-    if (
-      isEventTargetWithin(event, anchorEl.value) ||
-      isEventTargetWithin(event, floatingEl.value)
-    ) {
+    if (ignoreOutsideClickOption && ignoreOutsideClickOption(target)) {
       return;
     }
 

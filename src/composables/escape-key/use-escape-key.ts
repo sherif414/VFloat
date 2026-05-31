@@ -1,6 +1,9 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
-import { type FloatingContext } from "@/composables/floating-context";
+import {
+  type FloatingContext,
+  getDeepestOpenFloatingContext,
+} from "@/composables/floating-context";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
@@ -46,7 +49,7 @@ export function useEscapeKey(
     ignoreEscapeKey,
   } = options;
   const { isComposing } = useComposition();
-  const { open, setOpen } = context.state;
+  const { open } = context.state;
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
@@ -73,8 +76,8 @@ export function useEscapeKey(
       return;
     }
 
-    // Default behavior: close current context
-    setOpen(false, "escape-key", event);
+    const targetContext = getDeepestOpenFloatingContext(context);
+    targetContext.state.setOpen(false, "escape-key", event);
   };
 
   // Event listener setup

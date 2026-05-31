@@ -8,7 +8,11 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
+import {
+  type FloatingContext,
+  getFloatingContextFloatingElements,
+  isFloatingContextTargetWithin,
+} from "@/composables/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 
@@ -101,14 +105,15 @@ export function useFocusTrap(
     deactivateTrap({ returnFocus: false });
 
     const container = floatingEl.value;
-    if (!container) {
+    const containers = getFloatingContextFloatingElements(context);
+    if (!container || containers.length === 0) {
       if (isDev) {
         console.warn("[useFocusTrap] No floating element available for focus trap");
       }
       return;
     }
 
-    trapRef.value = createFocusTrap(container, {
+    trapRef.value = createFocusTrap(containers, {
       onActivate: () => {
         trapIsActive.value = true;
       },
@@ -133,6 +138,10 @@ export function useFocusTrap(
       fallbackFocus: () => container,
       returnFocusOnDeactivate: shouldReturnFocus.value,
       clickOutsideDeactivates: (event) => {
+        if (isFloatingContextTargetWithin(context, event?.target ?? null)) {
+          return false;
+        }
+
         if (ignoreFocusOut && ignoreFocusOut(event?.target ?? null)) {
           return false;
         }
@@ -145,6 +154,10 @@ export function useFocusTrap(
         return true;
       },
       allowOutsideClick: (event) => {
+        if (isFloatingContextTargetWithin(context, event?.target ?? null)) {
+          return true;
+        }
+
         if (ignoreFocusOut && ignoreFocusOut(event?.target ?? null)) {
           return true;
         }

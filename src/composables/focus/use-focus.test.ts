@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseFocusContext, type UseFocusOptions, useFocus } from "@/composables";
+import {
+  type UseFocusContext,
+  type UseFocusOptions,
+  useFloatingContext,
+  useFocus,
+} from "@/composables";
 import type { AnchorElement, FloatingElement } from "@/composables";
 
 vi.mock("@/shared/platform", async (importOriginal) => {
@@ -292,6 +297,96 @@ describe("useFocus", () => {
       await flushFocus();
 
       expect(ctx.context.state.open.value).toBe(false);
+    });
+  });
+
+  describe("parent-linked contexts", () => {
+    it("keeps a parent open when focus moves into a child floating element", async () => {
+      const parentAnchorEl = createButton("parent-anchor");
+      const parentFloatingEl = createFloatingElement("parent-floating");
+      const childAnchorEl = createButton("child-anchor");
+      const childFloatingEl = createFloatingElement("child-floating");
+      const outsideEl = createOutsideButton();
+      document.body.append(parentAnchorEl, parentFloatingEl, childAnchorEl, childFloatingEl);
+
+      const parentOpen = ref(true);
+      const childOpen = ref(true);
+      const parentChanges = vi.fn();
+      const scope = effectScope();
+      activeScopes.push(scope);
+
+      scope.run(() => {
+        const parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(parentAnchorEl),
+            floatingEl: ref(parentFloatingEl),
+          },
+          state: {
+            open: parentOpen,
+            onOpenChange: parentChanges,
+          },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+        useFocus(parentContext, { requireFocusVisible: false });
+      });
+
+      await nextTick();
+      childFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await flushFocus();
+
+      expect(parentOpen.value).toBe(true);
+      expect(parentChanges).not.toHaveBeenCalled();
+
+      outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await flushFocus();
+
+      expect(parentOpen.value).toBe(false);
+    });
+
+    it("closes a child when focus moves into the parent floating element", async () => {
+      const parentAnchorEl = createButton("parent-anchor");
+      const parentFloatingEl = createFloatingElement("parent-floating");
+      const childAnchorEl = createButton("child-anchor");
+      const childFloatingEl = createFloatingElement("child-floating");
+      document.body.append(parentAnchorEl, parentFloatingEl, childAnchorEl, childFloatingEl);
+
+      const parentOpen = ref(true);
+      const childOpen = ref(true);
+      const scope = effectScope();
+      activeScopes.push(scope);
+
+      scope.run(() => {
+        const parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(parentAnchorEl),
+            floatingEl: ref(parentFloatingEl),
+          },
+          state: { open: parentOpen },
+        });
+        const childContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+        useFocus(childContext, { requireFocusVisible: false });
+      });
+
+      await nextTick();
+      parentFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await flushFocus();
+
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(false);
     });
   });
 

@@ -2,11 +2,12 @@ import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
 import {
+  useFloatingContext,
   type UseFocusTrapContext,
   type UseFocusTrapOptions,
   type UseFocusTrapReturn,
   useFocusTrap,
-} from "@/composables/focus-trap/use-focus-trap";
+} from "@/composables";
 
 import type { AnchorElement, FloatingElement } from "@/composables";
 
@@ -379,6 +380,56 @@ describe("useFocusTrap", () => {
 
       expect(parent.result.isActive.value).toBe(true);
       expect(child.result.isActive.value).toBe(false);
+    });
+
+    it("keeps a parent trap open when clicking inside a linked child floating element", async () => {
+      const parentAnchorEl = trackElement(document.createElement("button"));
+      const parentFloatingEl = trackElement(document.createElement("div"));
+      const childAnchorEl = trackElement(document.createElement("button"));
+      const childFloatingEl = trackElement(document.createElement("div"));
+      parentAnchorEl.textContent = "parent anchor";
+      childAnchorEl.textContent = "child anchor";
+      parentFloatingEl.id = "parent-floating";
+      childFloatingEl.id = "child-floating";
+      parentFloatingEl.tabIndex = -1;
+      childFloatingEl.tabIndex = -1;
+      document.body.append(parentAnchorEl, parentFloatingEl, childAnchorEl, childFloatingEl);
+      appendButton(parentFloatingEl, "parent-button");
+      const childButton = appendButton(childFloatingEl, "child-button");
+
+      const parentOpen = ref(true);
+      const childOpen = ref(true);
+      const scope = effectScope();
+      activeScopes.push(scope);
+      let result!: UseFocusTrapReturn;
+
+      scope.run(() => {
+        const parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(parentAnchorEl),
+            floatingEl: ref(parentFloatingEl),
+          },
+          state: { open: parentOpen },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+        result = useFocusTrap(parentContext, { closeOnFocusOut: true });
+      });
+
+      await flushFocusTrap();
+      expect(result.isActive.value).toBe(true);
+
+      await userEvent.click(childButton);
+      await flushFocusTrap();
+
+      expect(parentOpen.value).toBe(true);
+      expect(result.isActive.value).toBe(true);
     });
 
     it("does nothing when activate() is called while closed", () => {

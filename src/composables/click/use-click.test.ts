@@ -1,7 +1,12 @@
 import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseClickOptions, type UseClickContext, useClick } from "@/composables";
+import {
+  type UseClickOptions,
+  type UseClickContext,
+  useClick,
+  useFloatingContext,
+} from "@/composables";
 import type { AnchorElement, FloatingElement } from "@/composables";
 
 // Track elements created during tests for cleanup
@@ -475,6 +480,94 @@ describe("useClick", () => {
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
+    });
+  });
+
+  describe("parent-linked contexts", () => {
+    it("keeps a parent open when clicking inside a child floating element", async () => {
+      const childAnchorEl = trackElement(document.createElement("button"));
+      const childFloatingEl = trackElement(document.createElement("div"));
+      childFloatingEl.style.width = "100px";
+      childFloatingEl.style.height = "100px";
+      document.body.appendChild(childAnchorEl);
+      document.body.appendChild(childFloatingEl);
+      const parentOpen = ref(true);
+      const childOpen = ref(true);
+      const onParentOpenChange = vi.fn();
+
+      scope = effectScope();
+      scope.run(() => {
+        const parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(anchorEl),
+            floatingEl: ref(floatingEl),
+          },
+          state: {
+            open: parentOpen,
+            onOpenChange: onParentOpenChange,
+          },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+
+        useClick(parentContext, {
+          closeOnOutsideClick: true,
+          outsideClickEvent: "click",
+        });
+      });
+
+      await userEvent.click(childFloatingEl);
+      await nextTick();
+
+      expect(parentOpen.value).toBe(true);
+      expect(onParentOpenChange).not.toHaveBeenCalled();
+    });
+
+    it("treats parent blank areas as outside for child contexts", async () => {
+      const childAnchorEl = trackElement(document.createElement("button"));
+      const childFloatingEl = trackElement(document.createElement("div"));
+      childFloatingEl.style.width = "100px";
+      childFloatingEl.style.height = "100px";
+      document.body.appendChild(childAnchorEl);
+      document.body.appendChild(childFloatingEl);
+      const parentOpen = ref(true);
+      const childOpen = ref(true);
+
+      scope = effectScope();
+      scope.run(() => {
+        const parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(anchorEl),
+            floatingEl: ref(floatingEl),
+          },
+          state: { open: parentOpen },
+        });
+        const childContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+
+        useClick(childContext, {
+          closeOnOutsideClick: true,
+          outsideClickEvent: "click",
+        });
+      });
+
+      await userEvent.click(floatingEl);
+      await nextTick();
+
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(false);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { effectScope, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { useEscapeKey, type UseEscapeKeyContext } from "@/composables";
+import { useEscapeKey, useFloatingContext, type UseEscapeKeyContext } from "@/composables";
 
 const createdElements: HTMLElement[] = [];
 
@@ -282,6 +282,121 @@ describe("useEscapeKey", () => {
       scopeA.stop();
       scopeB.stop();
       addEventListenerSpy.mockRestore();
+    });
+
+    it("closes linked descendants from deepest to root across repeated Escape presses", () => {
+      const calls: string[] = [];
+      const rootOpen = ref(true);
+      const childOpen = ref(true);
+      const grandchildOpen = ref(true);
+
+      scope = effectScope();
+      scope.run(() => {
+        const root = useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          state: {
+            open: rootOpen,
+            onOpenChange: () => calls.push("root"),
+          },
+        });
+        const child = useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          parentContext: root,
+          state: {
+            open: childOpen,
+            onOpenChange: () => calls.push("child"),
+          },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          parentContext: child,
+          state: {
+            open: grandchildOpen,
+            onOpenChange: () => calls.push("grandchild"),
+          },
+        });
+
+        useEscapeKey(root);
+      });
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+      expect(rootOpen.value).toBe(false);
+      expect(childOpen.value).toBe(false);
+      expect(grandchildOpen.value).toBe(false);
+      expect(calls).toEqual(["grandchild", "child", "root"]);
+    });
+
+    it("closes the deepest open descendant across sibling branches", () => {
+      const calls: string[] = [];
+      const rootOpen = ref(true);
+      const firstChildOpen = ref(true);
+      const secondChildOpen = ref(true);
+      const secondGrandchildOpen = ref(true);
+
+      scope = effectScope();
+      scope.run(() => {
+        const root = useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          state: { open: rootOpen },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          parentContext: root,
+          state: {
+            open: firstChildOpen,
+            onOpenChange: () => calls.push("first-child"),
+          },
+        });
+        const secondChild = useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          parentContext: root,
+          state: {
+            open: secondChildOpen,
+            onOpenChange: () => calls.push("second-child"),
+          },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          },
+          parentContext: secondChild,
+          state: {
+            open: secondGrandchildOpen,
+            onOpenChange: () => calls.push("second-grandchild"),
+          },
+        });
+
+        useEscapeKey(root);
+      });
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+      expect(firstChildOpen.value).toBe(true);
+      expect(secondChildOpen.value).toBe(true);
+      expect(secondGrandchildOpen.value).toBe(false);
+      expect(calls).toEqual(["second-grandchild"]);
     });
   });
 });

@@ -1,9 +1,12 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
+import {
+  type FloatingContext,
+  isFloatingContextTargetWithin,
+} from "@/composables/floating-context";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
-import { isEventTargetWithin, isTypeableElement } from "@/shared/dom";
+import { isTypeableElement } from "@/shared/dom";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 
 //=======================================================================================
@@ -26,7 +29,7 @@ import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
  */
 export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
   const { open, setOpen } = context.state;
-  const { floatingEl, anchorEl: anchorElOption } = context.refs;
+  const { anchorEl: anchorElOption } = context.refs;
 
   const {
     enabled: enabledOption = true,
@@ -160,17 +163,11 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         return;
       }
 
+      if (isFloatingContextTargetWithin(context, activeEl)) {
+        return;
+      }
+
       if (activeEl instanceof Element && ignoreFocusOutOption && ignoreFocusOutOption(activeEl)) {
-        return;
-      }
-
-      // Keep the surface open while focus stays on the anchor or moves within it.
-      if (activeEl instanceof Element && anchorEl.value?.contains(activeEl)) {
-        return;
-      }
-
-      // Case 2: Check if focus is within the floating element
-      if (activeEl && floatingEl.value?.contains(activeEl)) {
         return;
       }
 
@@ -192,12 +189,9 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         const target = e.target;
         if (!(target instanceof Element)) return;
 
+        if (isFloatingContextTargetWithin(context, target)) return;
+
         if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
-
-        // Ignore focus entering the anchor itself
-        if (isEventTargetWithin(e, anchorEl.value)) return;
-
-        if (isEventTargetWithin(e, floatingEl.value)) return;
 
         setOpen(false, "blur", e);
       },

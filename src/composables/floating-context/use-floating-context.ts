@@ -1,7 +1,8 @@
-import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
-import { ref } from "vue";
+import type { ComputedRef, MaybeRefOrGetter, Ref, ShallowRef } from "vue";
+import { ref, shallowRef } from "vue";
 import type { Middleware } from "@floating-ui/dom";
 import type { OpenChangeReason, VirtualElement } from "@/types";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
 // Main
@@ -11,19 +12,23 @@ import type { OpenChangeReason, VirtualElement } from "@/types";
  * Creates the shared floating context used by interaction and positioning composables.
  */
 export function useFloatingContext(options: UseFloatingContextOptions): FloatingContext {
-  const { refs, state = {} } = options;
+  const { refs, state = {}, parentContext } = options;
   const { anchorEl, floatingEl, arrowEl: arrowElOption } = refs;
   const { open: openOption, onOpenChange } = state;
   const open = openOption ?? ref(false);
   const arrowEl = arrowElOption ?? ref<HTMLElement | null>(null);
 
-  const setOpen = (value: boolean, reason?: OpenChangeReason, event?: Event) => {
-    if (open.value === value) return;
+  const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
+    if (open.value === value) {
+      if (!value) closeFloatingDescendants(context, reason, event);
+      return;
+    }
+    if (!value) closeFloatingDescendants(context, reason, event);
     open.value = value;
-    onOpenChange?.(value, reason ?? "programmatic", event);
+    onOpenChange?.(value, reason, event);
   };
 
-  return {
+  const context: FloatingContext = {
     refs: {
       anchorEl,
       floatingEl,
@@ -34,6 +39,10 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
       setOpen,
     },
   };
+
+  registerFloatingParent(context, parentContext ?? null);
+
+  return context;
 }
 
 //=======================================================================================
@@ -47,7 +56,7 @@ const floatingInternals = new WeakMap<object, FloatingInternals>();
  * @internal
  */
 export function setFloatingInternals(target: object, internals: FloatingInternals) {
-  floatingInternals.set(target, internals);
+  patchFloatingInternals(target, internals);
 }
 
 /**
@@ -64,8 +73,170 @@ export function getFloatingInternals(target: object) {
  */
 export function patchFloatingInternals(target: object, patch: Partial<FloatingInternals>) {
   const current = floatingInternals.get(target);
-  if (!current) return;
   floatingInternals.set(target, { ...current, ...patch });
+}
+
+/**
+ * Returns whether `target` is inside the context's own anchor/floating elements
+ * or any descendant context's anchor/floating elements.
+ *
+ * @internal
+ */
+export function isFloatingContextTargetWithin(
+  context: FloatingContext,
+  target: EventTarget | null,
+) {
+  if (!isNodeTarget(target)) return false;
+  return containsFloatingTarget(context, target);
+}
+
+/**
+ * Returns the deepest open descendant for a linked context family, or the
+ * original context when no open descendant exists.
+ *
+ * @internal
+ */
+export function getDeepestOpenFloatingContext<T extends { state: FloatingState }>(
+  context: T,
+): T | FloatingContext {
+  const childContexts = getFloatingInternals(context)?.childContexts?.value;
+  let deepest: OpenFloatingContextMatch | null = null;
+
+  if (childContexts) {
+    for (const childContext of childContexts) {
+      const match = findDeepestOpenFloatingContext(childContext, 1);
+      if (match && (!deepest || match.depth >= deepest.depth)) {
+        deepest = match;
+      }
+    }
+  }
+
+  return deepest?.context ?? context;
+}
+
+/**
+ * Returns mounted floating elements for a context and its linked descendants.
+ *
+ * @internal
+ */
+export function getFloatingContextFloatingElements(context: FloatingContext): HTMLElement[] {
+  const elements: HTMLElement[] = [];
+  const floatingEl = context.refs.floatingEl.value;
+  if (floatingEl) elements.push(floatingEl);
+
+  const childContexts = getFloatingInternals(context)?.childContexts?.value;
+  if (!childContexts) return elements;
+
+  for (const childContext of childContexts) {
+    elements.push(...getFloatingContextFloatingElements(childContext));
+  }
+
+  return elements;
+}
+
+/**
+ * Closes all descendant contexts from deepest child to nearest child.
+ *
+ * @internal
+ */
+export function closeFloatingDescendants(
+  context: FloatingContext,
+  reason: OpenChangeReason = "programmatic",
+  event?: Event,
+) {
+  for (const descendant of getFloatingDescendants(context).reverse()) {
+    descendant.state.setOpen(false, reason, event);
+  }
+}
+
+function registerFloatingParent(context: FloatingContext, parentContext: FloatingContext | null) {
+  const internals = ensureFloatingInternals(context);
+  internals.parentContext = parentContext;
+  internals.childContexts ??= shallowRef(new Set());
+
+  if (!parentContext) return;
+
+  const parentInternals = ensureFloatingInternals(parentContext);
+  parentInternals.childContexts ??= shallowRef(new Set());
+  parentInternals.childContexts.value = new Set(parentInternals.childContexts.value).add(context);
+
+  tryOnScopeDispose(() => {
+    if (parentInternals.childContexts) {
+      const nextChildContexts = new Set(parentInternals.childContexts.value);
+      nextChildContexts.delete(context);
+      parentInternals.childContexts.value = nextChildContexts;
+    }
+    internals.parentContext = null;
+  });
+}
+
+function ensureFloatingInternals(target: object): FloatingInternals {
+  const internals = floatingInternals.get(target) ?? {};
+  floatingInternals.set(target, internals);
+  return internals;
+}
+
+function getFloatingDescendants(context: FloatingContext): FloatingContext[] {
+  const childContexts = getFloatingInternals(context)?.childContexts?.value;
+  if (!childContexts) return [];
+
+  const descendants: FloatingContext[] = [];
+  for (const childContext of childContexts) {
+    descendants.push(childContext, ...getFloatingDescendants(childContext));
+  }
+  return descendants;
+}
+
+function containsFloatingTarget(context: FloatingContext, target: Node): boolean {
+  if (containsContextTarget(context, target)) return true;
+
+  const childContexts = getFloatingInternals(context)?.childContexts?.value;
+  if (!childContexts) return false;
+
+  for (const childContext of childContexts) {
+    if (containsFloatingTarget(childContext, target)) return true;
+  }
+  return false;
+}
+
+function containsContextTarget(context: FloatingContext, target: Node): boolean {
+  const anchorEl = context.refs.anchorEl.value;
+  const anchorDomEl =
+    anchorEl instanceof HTMLElement
+      ? anchorEl
+      : ((anchorEl?.contextElement as HTMLElement | undefined) ?? null);
+
+  return !!(anchorDomEl?.contains(target) || context.refs.floatingEl.value?.contains(target));
+}
+
+function isNodeTarget(target: EventTarget | null): target is Node {
+  return target instanceof Node;
+}
+
+interface OpenFloatingContextMatch {
+  context: FloatingContext;
+  depth: number;
+}
+
+function findDeepestOpenFloatingContext(
+  context: FloatingContext,
+  depth: number,
+): OpenFloatingContextMatch | null {
+  let deepest: OpenFloatingContextMatch | null = context.state.open.value
+    ? { context, depth }
+    : null;
+
+  const childContexts = getFloatingInternals(context)?.childContexts?.value;
+  if (!childContexts) return deepest;
+
+  for (const childContext of childContexts) {
+    const match = findDeepestOpenFloatingContext(childContext, depth + 1);
+    if (match && (!deepest || match.depth >= deepest.depth)) {
+      deepest = match;
+    }
+  }
+
+  return deepest;
 }
 
 //=======================================================================================
@@ -155,12 +326,19 @@ export interface UseFloatingContextOptions {
    * Optional state configuration.
    */
   state?: UseFloatingContextState;
+
+  /**
+   * Optional parent floating context used to coordinate related floating surfaces.
+   */
+  parentContext?: FloatingContext | null;
 }
 
 /**
  * Internal capabilities attached to a context or position result via a WeakMap.
  */
 export interface FloatingInternals {
+  parentContext?: FloatingContext | null;
+  childContexts?: ShallowRef<Set<FloatingContext>>;
   middlewareRegistry?: {
     middlewares: ComputedRef<Middleware[]>;
     register: (middleware: MaybeRefOrGetter<Middleware | null | undefined>) => () => void;

@@ -1,7 +1,7 @@
 import type { Strategy } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { computed, effectScope, nextTick, ref } from "vue";
-import { type UseHoverOptions, useHover } from "@/composables";
+import { type UseHoverOptions, useFloatingContext, useHover } from "@/composables";
 import type { FloatingContext } from "@/composables";
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
@@ -354,6 +354,126 @@ describe("useHover", () => {
         referenceEl.remove();
         floatingEl.remove();
         ignoredEl.remove();
+      }
+    });
+  });
+
+  describe("parent-linked contexts", () => {
+    it("keeps a parent open when the pointer leaves into a child floating element", async () => {
+      const parentAnchorEl = document.createElement("div");
+      const parentFloatingEl = document.createElement("div");
+      const childAnchorEl = document.createElement("div");
+      const childFloatingEl = document.createElement("div");
+      document.body.appendChild(parentAnchorEl);
+      document.body.appendChild(parentFloatingEl);
+      document.body.appendChild(childAnchorEl);
+      document.body.appendChild(childFloatingEl);
+
+      const parentOpen = ref(false);
+      const childOpen = ref(true);
+      const scope = effectScope();
+      let parentContext!: FloatingContext;
+
+      scope.run(() => {
+        parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(parentAnchorEl),
+            floatingEl: ref(parentFloatingEl),
+          },
+          state: { open: parentOpen },
+        });
+        useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+
+        useHover(parentContext);
+      });
+
+      try {
+        await nextTick();
+        parentAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+        await nextTick();
+
+        expect(parentContext.state.open.value).toBe(true);
+
+        parentAnchorEl.dispatchEvent(
+          makePointerEvent("pointerleave", {
+            relatedTarget: childFloatingEl,
+          }),
+        );
+        await nextTick();
+
+        expect(parentContext.state.open.value).toBe(true);
+      } finally {
+        scope.stop();
+        parentAnchorEl.remove();
+        parentFloatingEl.remove();
+        childAnchorEl.remove();
+        childFloatingEl.remove();
+      }
+    });
+
+    it("closes a child when the pointer leaves into the parent floating element", async () => {
+      const parentAnchorEl = document.createElement("div");
+      const parentFloatingEl = document.createElement("div");
+      const childAnchorEl = document.createElement("div");
+      const childFloatingEl = document.createElement("div");
+      document.body.appendChild(parentAnchorEl);
+      document.body.appendChild(parentFloatingEl);
+      document.body.appendChild(childAnchorEl);
+      document.body.appendChild(childFloatingEl);
+
+      const parentOpen = ref(true);
+      const childOpen = ref(false);
+      const scope = effectScope();
+      let childContext!: FloatingContext;
+
+      scope.run(() => {
+        const parentContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(parentAnchorEl),
+            floatingEl: ref(parentFloatingEl),
+          },
+          state: { open: parentOpen },
+        });
+        childContext = useFloatingContext({
+          refs: {
+            anchorEl: ref(childAnchorEl),
+            floatingEl: ref(childFloatingEl),
+          },
+          parentContext,
+          state: { open: childOpen },
+        });
+
+        useHover(childContext);
+      });
+
+      try {
+        await nextTick();
+        childAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+        await nextTick();
+
+        expect(childContext.state.open.value).toBe(true);
+
+        childAnchorEl.dispatchEvent(
+          makePointerEvent("pointerleave", {
+            relatedTarget: parentFloatingEl,
+          }),
+        );
+        await nextTick();
+
+        expect(childContext.state.open.value).toBe(false);
+      } finally {
+        scope.stop();
+        parentAnchorEl.remove();
+        parentFloatingEl.remove();
+        childAnchorEl.remove();
+        childFloatingEl.remove();
       }
     });
   });
