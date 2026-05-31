@@ -141,9 +141,22 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
         return parent === parentVal ? active : null;
       },
       set(value: string | null) {
-        setActiveValue(value);
+        setBranchActiveValue(value);
       },
     });
+
+    const setBranchActiveValue = (value: string | null) => {
+      if (value === null) {
+        if (branchActiveValue.value !== null) {
+          setActiveValue(null);
+        }
+        return;
+      }
+
+      if (model.value.getItem(value) === null) return;
+      if (model.value.getParentValue(value) !== parentVal) return;
+      setActiveValue(value);
+    };
 
     const navigate = (direction: "next" | "prev", loop = false) => {
       const enabled = enabledValues.value;
@@ -193,7 +206,7 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
       parentValue: parentVal,
       items: branchItems,
       activeValue: branchActiveValue,
-      setActiveValue,
+      setActiveValue: setBranchActiveValue,
       setNext,
       setPrevious,
       setFirst,
@@ -206,9 +219,9 @@ export function useTree<T>(options: UseTreeOptions<T>): UseTreeReturn<T> {
   branchCache.set(null, rootBranch);
 
   const getBranch = (parentVal: string): TreeBranch<T> | null => {
+    if (!hasChildren(parentVal)) return null;
     let branch = branchCache.get(parentVal);
     if (branch) return branch;
-    if (!hasChildren(parentVal)) return null;
     branch = createBranch(parentVal);
     branchCache.set(parentVal, branch);
     return branch;

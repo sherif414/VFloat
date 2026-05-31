@@ -395,6 +395,40 @@ describe("useTree (branch navigation)", () => {
     expect(childBranch.activeValue.value).toBeNull();
   });
 
+  it("branch setActiveValue only mutates active values inside its own branch", () => {
+    const tree = useTree<TreeNode>({
+      items: [
+        {
+          id: "parent",
+          children: [{ id: "child-1" }, { id: "child-2" }],
+        },
+        { id: "sibling" },
+      ],
+      getItemId: (item) => item.id,
+      getItemChildren: (item) => item.children,
+    });
+
+    const rootBranch = tree.rootBranch;
+    const childBranch = tree.getBranch("parent")!;
+
+    tree.setActiveValue("sibling");
+    childBranch.setActiveValue(null);
+    expect(tree.activeValue.value).toBe("sibling");
+
+    childBranch.setActiveValue("sibling");
+    expect(tree.activeValue.value).toBe("sibling");
+
+    tree.setActiveValue("child-1");
+    rootBranch.setActiveValue(null);
+    expect(tree.activeValue.value).toBe("child-1");
+
+    rootBranch.setActiveValue("child-2");
+    expect(tree.activeValue.value).toBe("child-1");
+
+    childBranch.setActiveValue(null);
+    expect(tree.activeValue.value).toBeNull();
+  });
+
   it("branch skips disabled items during navigation", () => {
     const tree = useTree<TreeNode>({
       items: [
@@ -576,7 +610,7 @@ describe("useTree (hardened features & lifecycle)", () => {
     ]);
   });
 
-  it("gracefully degrades when cached branch parent is removed", async () => {
+  it("returns null for fresh lookups when cached branch parent is removed", async () => {
     const items = ref<TreeNode[]>([{ id: "parent", children: [{ id: "child-1" }] }]);
     const tree = useTree<TreeNode>({
       items,
@@ -592,10 +626,10 @@ describe("useTree (hardened features & lifecycle)", () => {
     items.value = [{ id: "other" }];
     await nextTick();
 
-    // getBranch still returns the exact same cached branch object
-    expect(tree.getBranch("parent")).toBe(branch);
-    // But it has degraded gracefully to empty items
+    // Held branch references degrade gracefully to empty items.
     expect(branch?.items.value).toEqual([]);
+    // Fresh lookups reflect the current model and no longer expose a stale branch.
+    expect(tree.getBranch("parent")).toBeNull();
   });
 });
 
