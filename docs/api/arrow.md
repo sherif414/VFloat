@@ -41,7 +41,7 @@ description: Positions the arrow so it stays aligned with the reference element.
   const arrowEl = ref<HTMLElement | null>(null);
   const open = ref(true);
 
-  const context = useFloatingContext(anchorEl, floatingEl, { open });
+  const context = useFloatingContext({ refs: { anchorEl, floatingEl }, state: { open } });
   const { middlewareData, styles } = usePosition(context, {
     placement: "top",
     middleware: {

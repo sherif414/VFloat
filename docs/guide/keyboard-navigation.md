@@ -42,7 +42,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 const { styles } = usePosition(context);
 
 // 1. Manage navigation state
@@ -148,7 +148,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 const { styles } = usePosition(context);
 
 const tree = useTree({

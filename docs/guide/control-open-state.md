@@ -12,7 +12,7 @@ This page shows both models and when each one makes sense.
 
 ## The Default: Let VFloat Own It
 
-If you call [`useFloatingContext`](/api/use-floating-context) without an `open` ref, VFloat creates and owns that state for you.
+If you call [`useFloatingContext`](/api/use-floating-context) without `state.open`, VFloat creates and owns that state for you.
 
 ```vue
 <script setup lang="ts">
@@ -22,7 +22,7 @@ import { useClick, useFloatingContext } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 
 useClick(context);
 </script>
@@ -32,7 +32,7 @@ This is usually the simplest starting point. The component stays small, and your
 
 ## The Controlled Version
 
-When the parent needs authority, pass `open` and `onOpenChange`.
+When the parent needs authority, pass `state.open` and `state.onOpenChange`.
 
 ```vue
 <script setup lang="ts">
@@ -43,10 +43,13 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-const context = useFloatingContext(anchorEl, floatingEl, {
-  open,
-  onOpenChange(nextOpen, reason, event) {
-    open.value = nextOpen;
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl },
+  state: {
+    open,
+    onOpenChange(nextOpen, reason, event) {
+      open.value = nextOpen;
+    },
   },
 });
 

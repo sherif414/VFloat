@@ -28,7 +28,6 @@ interface UsePositionMiddlewareOptions {
   flip?: true | false | FlipOptions;
   shift?: true | false | ShiftOptions;
   matchWidth?: boolean;
-  arrow?: true | false | { padding?: Padding };
   custom?: MaybeRefOrGetter<Middleware[] | undefined>;
 }
 ```
@@ -59,7 +58,9 @@ import { useFloatingContext, useHover, usePosition, useRole } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl },
+});
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: {

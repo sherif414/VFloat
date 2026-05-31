@@ -45,7 +45,7 @@ import { useFloatingContext, usePosition, useFocus } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 const { styles } = usePosition(context);
 useFocus(context);
 </script>

@@ -61,7 +61,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-const context = useFloatingContext(anchorEl, floatingEl, { open });
+const context = useFloatingContext({ refs: { anchorEl, floatingEl }, state: { open } });
 
 useFocusTrap(context, { modal: true });
 </script>

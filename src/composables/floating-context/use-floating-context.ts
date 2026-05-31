@@ -10,14 +10,12 @@ import type { OpenChangeReason, VirtualElement } from "@/types";
 /**
  * Creates the shared floating context used by interaction and positioning composables.
  */
-export function useFloatingContext(
-  anchorEl: Ref<AnchorElement>,
-  floatingEl: Ref<FloatingElement>,
-  options: UseFloatingContextOptions = {},
-): FloatingContext {
-  const { open: openOption, onOpenChange } = options;
+export function useFloatingContext(options: UseFloatingContextOptions): FloatingContext {
+  const { refs, state = {} } = options;
+  const { anchorEl, floatingEl, arrowEl: arrowElOption } = refs;
+  const { open: openOption, onOpenChange } = state;
   const open = openOption ?? ref(false);
-  const arrowEl = ref<HTMLElement | null>(null);
+  const arrowEl = arrowElOption ?? ref<HTMLElement | null>(null);
 
   const setOpen = (value: boolean, reason?: OpenChangeReason, event?: Event) => {
     if (open.value === value) return;
@@ -110,9 +108,29 @@ export interface FloatingContext {
 }
 
 /**
+ * Element refs owned by the floating context.
+ */
+export interface UseFloatingContextRefs {
+  /**
+   * Anchor element or virtual element the floating panel is positioned against.
+   */
+  anchorEl: Ref<AnchorElement>;
+
+  /**
+   * Floating panel element.
+   */
+  floatingEl: Ref<FloatingElement>;
+
+  /**
+   * Optional arrow element used by `useArrow()`.
+   */
+  arrowEl?: Ref<HTMLElement | null>;
+}
+
+/**
  * Options for configuring context-owned state.
  */
-export interface UseFloatingContextOptions {
+export interface UseFloatingContextState {
   /**
    * Optional controlled open state.
    */
@@ -122,6 +140,21 @@ export interface UseFloatingContextOptions {
    * Called whenever the open state changes through VFloat helpers.
    */
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
+}
+
+/**
+ * Options for creating a floating context.
+ */
+export interface UseFloatingContextOptions {
+  /**
+   * Element refs shared by companion composables.
+   */
+  refs: UseFloatingContextRefs;
+
+  /**
+   * Optional state configuration.
+   */
+  state?: UseFloatingContextState;
 }
 
 /**

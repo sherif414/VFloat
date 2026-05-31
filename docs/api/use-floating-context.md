@@ -9,15 +9,22 @@ description: Create the shared refs and open state used by VFloat behavior compo
 ## Type
 
 ```ts
-function useFloatingContext(
-  anchorEl: Ref<AnchorElement>,
-  floatingEl: Ref<FloatingElement>,
-  options?: UseFloatingContextOptions,
-): FloatingContext;
+function useFloatingContext(options: UseFloatingContextOptions): FloatingContext;
 ```
 
 ```ts
 interface UseFloatingContextOptions {
+  refs: UseFloatingContextRefs;
+  state?: UseFloatingContextState;
+}
+
+interface UseFloatingContextRefs {
+  anchorEl: Ref<AnchorElement>;
+  floatingEl: Ref<FloatingElement>;
+  arrowEl?: Ref<HTMLElement | null>;
+}
+
+interface UseFloatingContextState {
   open?: Ref<boolean>;
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 }
@@ -27,10 +34,10 @@ interface UseFloatingContextOptions {
 
 `useFloatingContext` does not compute coordinates, run middlewares, or wire auto-update listeners. Add [`usePosition`](/api/use-position) when a surface needs JavaScript positioning.
 
-- `refs.anchorEl` and `refs.floatingEl` are the refs passed to the composable.
-- `refs.arrowEl` is available for arrow helpers.
+- `refs.anchorEl` and `refs.floatingEl` are required.
+- `refs.arrowEl` is optional and used by [`useArrow`](/api/use-arrow).
 - `state.open` defaults to `ref(false)`.
-- Passing `open` makes the context use your controlled ref.
+- Passing `state.open` makes the context use your controlled ref.
 - `state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
 - Missing reasons fall back to `"programmatic"`.
 - Setting the current open value is a no-op.
@@ -47,7 +54,9 @@ import { useEscapeKey, useFloatingContext, useRole } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl },
+});
 
 useEscapeKey(context);
 useRole(context, { role: "dialog" });

@@ -21,7 +21,7 @@ Every floating surface starts with three pieces:
 Create the context first:
 
 ```ts
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 ```
 
 [`useFloatingContext`](/api/use-floating-context) owns the shared parts of a floating surface:
@@ -61,7 +61,7 @@ That separation is important:
 A tooltip, popover, menu, and dialog can all share the same basic shape, but they use different behavior composables.
 
 ```ts
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: {

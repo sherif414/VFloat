@@ -33,7 +33,10 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext(anchorEl, floatingEl, { open });
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl },
+  state: { open },
+});
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -76,7 +79,10 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext(anchorEl, floatingEl, { open });
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl },
+  state: { open },
+});
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -106,7 +112,7 @@ Use [`autoPlacement`](/api/autoplacement) when the exact side is less important 
 
 ## Problem 6: "I Need An Arrow"
 
-Use the [`arrow`](/api/arrow) middleware with [`useArrow`](/api/use-arrow).
+Use [`useArrow`](/api/use-arrow) to register the arrow middleware and read arrow styles.
 
 ```vue
 <script setup lang="ts">
@@ -118,7 +124,10 @@ const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext(anchorEl, floatingEl, { open });
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl, arrowEl },
+  state: { open },
+});
 const position = usePosition(context, {
   middleware: {
     offset: 8,
@@ -126,9 +135,7 @@ const position = usePosition(context, {
 });
 const { styles } = position;
 
-const { arrowStyles } = useArrow(context, position, {
-  element: arrowEl,
-});
+const { arrowStyles } = useArrow(context, position);
 </script>
 ```
 

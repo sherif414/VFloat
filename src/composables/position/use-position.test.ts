@@ -48,10 +48,12 @@ describe("usePosition", () => {
   });
 
   it("computes position from context refs without mutating open state", async () => {
-    const context = useFloatingContext(
-      ref<AnchorElement>(anchorEl),
-      ref<FloatingElement>(floatingEl),
-    );
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      },
+    });
     const position = usePosition(context, { placement: "top", strategy: "fixed" });
 
     await position.update();
@@ -65,10 +67,12 @@ describe("usePosition", () => {
   it("reacts to positioning options and middleware data", async () => {
     const placement = ref<Placement>("top");
     const middleware = createMiddleware("custom", { ok: true });
-    const context = useFloatingContext(
-      ref<AnchorElement>(anchorEl),
-      ref<FloatingElement>(floatingEl),
-    );
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      },
+    });
     const position = usePosition(context, { placement, middlewares: [middleware] });
 
     await position.update();
@@ -80,17 +84,18 @@ describe("usePosition", () => {
   });
 
   it("creates built-in middleware from declarative options", () => {
-    const context = useFloatingContext(
-      ref<AnchorElement>(anchorEl),
-      ref<FloatingElement>(floatingEl),
-    );
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      },
+    });
     const position = usePosition(context, {
       middleware: {
         offset: 8,
         flip: true,
         shift: { padding: 8 },
         matchWidth: true,
-        arrow: true,
       },
     });
 
@@ -98,15 +103,17 @@ describe("usePosition", () => {
       getFloatingInternals(position)?.middlewareRegistry?.middlewares.value.map(
         (middleware) => middleware.name,
       ),
-    ).toEqual(["offset", "flip", "shift", "size", "arrow"]);
+    ).toEqual(["offset", "flip", "shift", "size"]);
   });
 
   it("appends custom middleware after declarative middleware", () => {
     const middleware = createMiddleware("custom", { ok: true });
-    const context = useFloatingContext(
-      ref<AnchorElement>(anchorEl),
-      ref<FloatingElement>(floatingEl),
-    );
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      },
+    });
     const position = usePosition(context, {
       middleware: {
         offset: 8,
@@ -123,10 +130,12 @@ describe("usePosition", () => {
 
   it("gates computation when disabled", async () => {
     const enabled = ref(false);
-    const context = useFloatingContext(
-      ref<AnchorElement>(anchorEl),
-      ref<FloatingElement>(floatingEl),
-    );
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      },
+    });
     const position = usePosition(context, { enabled });
 
     await position.update();
@@ -140,14 +149,17 @@ describe("usePosition", () => {
   });
 
   it("registers arrow middleware through positioning", () => {
-    const context = useFloatingContext(
-      ref<AnchorElement>(anchorEl),
-      ref<FloatingElement>(floatingEl),
-    );
-    const position = usePosition(context);
     const arrowEl = ref(createElement("div"));
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+        arrowEl,
+      },
+    });
+    const position = usePosition(context);
 
-    useArrow(context, position, { element: arrowEl });
+    useArrow(context, position);
 
     expect(context.refs.arrowEl.value).toBe(arrowEl.value);
     expect(

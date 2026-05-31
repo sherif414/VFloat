@@ -1,4 +1,4 @@
-import { type ComputedRef, computed, type Ref, toValue, watch } from "vue";
+import { type ComputedRef, computed, toValue } from "vue";
 import { getFloatingInternals } from "@/composables/floating-context";
 import { arrow } from "../middlewares";
 import type { FloatingContext } from "@/composables/floating-context";
@@ -10,24 +10,51 @@ import type { Padding } from "@floating-ui/dom";
 //=======================================================================================
 
 /**
- * Connects an arrow element to the current floating context and exposes the computed coordinates and styles needed to place it.
+ * Connects an arrow element to the current floating context and exposes computed coordinates and inline styles.
+ *
+ * This composable handles arrow registration inside the floating position's middleware registry
+ * and returns the reactive styles and offsets needed to render a floating arrow pointing to the anchor.
+ *
+ * @param context - The shared floating context.
+ * @param position - The resolved positioning and layout data.
+ * @param options - Configuration options for arrow positioning.
+ * @returns An object containing computed coordinates and styles for the arrow.
+ *
+ * @example Basic usage in `<script setup>`
+ * ```vue
+ * <script setup lang="ts">
+ * import { ref } from "vue";
+ * import { useArrow, useFloatingContext, usePosition } from "v-float";
+ *
+ * const anchorEl = ref<HTMLElement | null>(null);
+ * const floatingEl = ref<HTMLElement | null>(null);
+ * const arrowEl = ref<HTMLElement | null>(null);
+ *
+ * const context = useFloatingContext({
+ *   refs: { anchorEl, floatingEl, arrowEl },
+ * });
+ * const position = usePosition(context, { placement: "top" });
+ * const { arrowStyles } = useArrow(context, position);
+ * </script>
+ *
+ * <template>
+ *   <button ref="anchorEl">Anchor</button>
+ *   <div ref="floatingEl" :style="position.styles.value">
+ *     Tooltip content
+ *     <div ref="arrowEl" style="position: absolute" :style="arrowStyles.value" />
+ *   </div>
+ * </template>
+ * ```
  */
 export function useArrow(
   context: FloatingContext,
   position: FloatingPosition,
-  options: UseArrowOptions,
+  options: UseArrowOptions = {},
 ): UseArrowReturn {
-  const { element: arrowEl, offset = "-4px", padding } = options;
   const { refs } = context;
   const { middlewareData, placement } = position;
-
-  watch(
-    arrowEl,
-    (element) => {
-      refs.arrowEl.value = element;
-    },
-    { immediate: true },
-  );
+  const { arrowEl } = refs;
+  const { offset = "-4px", padding } = options;
 
   const internals = getFloatingInternals(position);
   internals?.middlewareRegistry?.register(
@@ -41,9 +68,7 @@ export function useArrow(
   const arrowY = computed(() => middlewareData.value.arrow?.y ?? 0);
 
   const arrowStyles = computed(() => {
-    const arrowElement = arrowEl.value || refs.arrowEl.value;
-
-    if (!arrowElement || !middlewareData.value.arrow) {
+    if (!arrowEl.value || !middlewareData.value.arrow) {
       return {};
     }
 
@@ -92,29 +117,37 @@ export function useArrow(
  * Computed arrow coordinates and styles returned by `useArrow()`.
  */
 export interface UseArrowReturn {
+  /**
+   * The computed horizontal coordinate of the arrow relative to the floating element.
+   */
   arrowX: ComputedRef<number>;
+
+  /**
+   * The computed vertical coordinate of the arrow relative to the floating element.
+   */
   arrowY: ComputedRef<number>;
+
+  /**
+   * Computed CSS inline styles (inset properties) to apply to the arrow element.
+   * Position coordinates are converted into logical properties (e.g. `inset-inline-start`,
+   * `inset-block-start`) based on the active placement.
+   */
   arrowStyles: ComputedRef<Record<string, string>>;
 }
 
 /**
- * Options for connecting an arrow element to the floating context.
+ * Options for positioning the context-owned arrow element.
  */
 export interface UseArrowOptions {
   /**
-   * Arrow element that should be measured and positioned by middleware.
-   */
-  element: Ref<HTMLElement | null>;
-
-  /**
-   * Offset applied to the static side of the arrow.
-   * Useful when the arrow visually overlaps the floating panel border.
+   * Offset applied to the static side of the arrow (e.g. overlapping borders).
+   * @default "-4px"
    */
   offset?: string;
 
   /**
-   * The padding between the arrow element and the floating element edges.
-   * Useful when the floating element has rounded corners.
+   * The padding in pixels between the arrow element and the floating element edges
+   * to prevent the arrow from overflowing rounded corners.
    */
   padding?: Padding;
 }

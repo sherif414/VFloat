@@ -7,7 +7,13 @@ describe("useFloatingContext", () => {
     const open = ref(false);
     const onOpenChange = vi.fn();
     const event = new KeyboardEvent("keydown");
-    const context = useFloatingContext(ref(null), ref(null), { open, onOpenChange });
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+      state: { open, onOpenChange },
+    });
 
     context.state.setOpen(true, "keyboard-activate", event);
 
@@ -17,7 +23,13 @@ describe("useFloatingContext", () => {
 
   it("falls back to programmatic reasons and ignores duplicate updates", () => {
     const onOpenChange = vi.fn();
-    const context = useFloatingContext(ref(null), ref(null), { onOpenChange });
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+      state: { onOpenChange },
+    });
 
     context.state.setOpen(true);
     context.state.setOpen(true, "anchor-click");

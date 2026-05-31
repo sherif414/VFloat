@@ -42,7 +42,7 @@ import { useClick, useEscapeKey, useFloatingContext } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 
 useClick(context, {
   closeOnOutsideClick: true,

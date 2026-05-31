@@ -4,7 +4,6 @@ import type {
   Middleware,
   MiddlewareData,
   OffsetOptions,
-  Padding,
   Placement,
   ShiftOptions,
   Strategy,
@@ -30,7 +29,6 @@ import {
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { FloatingContext } from "@/composables/floating-context";
 import { setFloatingInternals } from "@/composables/floating-context";
-import { arrow } from "@/composables/middlewares/arrow";
 
 //=======================================================================================
 // Main
@@ -63,11 +61,7 @@ export function usePosition(
   let nextRegistrationId = 0;
 
   const mergedMiddlewares = computed(() => {
-    const base = getMiddleware(
-      context,
-      toValue(semanticMiddlewareOption),
-      toValue(middlewaresOption) ?? [],
-    );
+    const base = getMiddleware(toValue(semanticMiddlewareOption), toValue(middlewaresOption) ?? []);
     const merged = [...base];
 
     for (const registration of registrations.value) {
@@ -226,17 +220,13 @@ function getDPR(el: HTMLElement) {
 }
 
 function getMiddleware(
-  context: FloatingContext,
   options: UsePositionMiddlewareOptions | undefined,
   middlewares: Middleware[],
 ) {
-  return [...getSemanticMiddleware(context, options), ...middlewares];
+  return [...getSemanticMiddleware(options), ...middlewares];
 }
 
-function getSemanticMiddleware(
-  context: FloatingContext,
-  options: UsePositionMiddlewareOptions | undefined,
-) {
+function getSemanticMiddleware(options: UsePositionMiddlewareOptions | undefined) {
   if (!options) return [];
 
   const middlewares: Middleware[] = [];
@@ -259,16 +249,6 @@ function getSemanticMiddleware(
         apply({ rects, elements }) {
           elements.floating.style.width = `${rects.reference.width}px`;
         },
-      }),
-    );
-  }
-
-  if (options.arrow !== undefined && options.arrow !== false) {
-    const arrowOptions = options.arrow === true ? {} : options.arrow;
-    middlewares.push(
-      arrow({
-        element: context.refs.arrowEl,
-        ...arrowOptions,
       }),
     );
   }
@@ -340,11 +320,6 @@ export interface UsePositionMiddlewareOptions {
    * Whether the floating element should match the anchor width.
    */
   matchWidth?: boolean;
-
-  /**
-   * Whether to position the context arrow element.
-   */
-  arrow?: true | false | { padding?: Padding };
 
   /**
    * Raw middleware appended after the built-in semantic middleware.
