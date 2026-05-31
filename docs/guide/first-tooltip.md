@@ -29,8 +29,8 @@ There are a few names on this page that are worth knowing up front:
 
 - `anchorEl` is the element the tooltip is positioned against. In this example, that is the button.
 - `floatingEl` is the element positioned relative to the anchor. In this example, that is the tooltip.
-- [`context`](/guide/floating-context) is the shared object returned by [`useFloating`](/api/use-floating). Other composables use it too.
-- `middlewares` are small helpers that adjust the final position. On this page, we will use [`offset`](/api/offset) to add a little space.
+- [`context`](/guide/floating-context) is the shared object returned by [`useFloatingContext`](/api/use-floating-context). Other composables use it too.
+- `middleware` is the set of positioning options that adjust the final position. On this page, we will use [`offset`](/api/offset) to add a little space.
 
 If those names do not feel natural yet, that is okay. They will make more sense once we build the example.
 
@@ -51,27 +51,28 @@ These refs connect the template to VFloat. Later, when the button and tooltip ar
 
 ## Step 2: Create The Floating Context
 
-Now pass those refs into `useFloating`.
+Now pass those refs into `useFloatingContext`.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating } from "v-float"; // [!code ++]
+import { useFloatingContext, usePosition } from "v-float"; // [!code ++]
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   // [!code focus:4]
   placement: "top", // [!code ++]
-  middlewares: [offset(8)], // [!code ++]
+  middleware: { offset: 8 }, // [!code ++]
 }); // [!code ++]
 </script>
 ```
 
-`useFloating()` does two important things here. It computes the tooltip position, and it returns the shared `context` object that the rest of the page will use.
+`useFloatingContext()` gives us the shared `context` object. `usePosition(context)` then reads that context and computes the tooltip position.
 
-The `placement: "top"` option means we want the tooltip above the button. The `offset(8)` middleware adds a small gap so the tooltip does not sit right against the anchor.
+The `placement: "top"` option means we want the tooltip above the button. The `middleware.offset: 8` option adds a small gap so the tooltip does not sit right against the anchor.
 
 ## Step 3: Add Hover Behavior
 
@@ -80,14 +81,15 @@ Next, we will make the tooltip open and close on hover.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useHover } from "v-float"; // [!code ++]
+import { useFloatingContext, usePosition, useHover } from "v-float"; // [!code ++]
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: { offset: 8 },
 });
 
 useHover(context); // [!code focus]
@@ -105,14 +107,15 @@ Now we can render the button and the tooltip.
 ```vue{17,21-23}
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: { offset: 8 },
 });
 
 useHover(context);
@@ -125,7 +128,7 @@ useHover(context);
     v-if="context.state.open.value"
     ref="floatingEl"
     role="tooltip"
-    :style="context.position.styles.value"
+    :style="styles"
   >
     This button saves your changes.
   </div>
@@ -136,11 +139,11 @@ There are three lines worth noticing:
 
 - `v-if="context.state.open.value"` decides whether the tooltip exists in the DOM
 - `ref="floatingEl"` gives VFloat access to the rendered node
-- `:style="context.position.styles.value"` applies the computed position
+- `:style="styles"` applies the computed position
 
 ## Why `offset` Matters Even In A Tiny Example
 
-The tooltip would still work without `offset(8)`, but it would sit right against the button. In most interfaces that feels a little cramped.
+The tooltip would still work without `middleware.offset: 8`, but it would sit right against the button. In most interfaces that feels a little cramped.
 
 Using `offset` here also gives you a first look at what middleware is for. It is just a small function that adjusts the final result.
 
@@ -150,14 +153,15 @@ You now have a working tooltip.
 
 The main pieces are:
 
-- [`useFloating`](/api/use-floating) for shared state and position
+- [`useFloatingContext`](/api/use-floating-context) for shared refs and open state
+- [`usePosition`](/api/use-position) for placement and computed styles
 - [`useHover`](/api/use-hover) for hover-driven open state
 - [`offset`](/api/offset) for spacing
 
 If you only remember one thing from this page, remember the `context`:
 
 - `context.state.open.value` tells you if the surface is open
-- `context.position.styles.value` tells you how to place it
+- `styles.value` tells you how to place it
 
 ## Next Step
 

@@ -4,7 +4,7 @@ description: Coordinates keyboard-driven list navigation in VFloat.
 
 # useListNavigation
 
-`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for lists, grids, and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a reactive tree branch conforming to the `NavigableCollection` contract (such as the branches returned by [`useTree`](/api/use-tree)) to manage item activity without raw DOM query selectors or index tracking.
+`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for one-dimensional lists and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a reactive tree branch conforming to the `NavigableCollection` contract (such as the branches returned by [`useTree`](/api/use-tree)) to manage item activity without raw DOM query selectors or index tracking.
 
 ## Type
 
@@ -123,7 +123,7 @@ interface UseListNavigationReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useTree, useFloating, useListNavigation } from "v-float";
+import { useTree, useFloatingContext, usePosition, useListNavigation } from "v-float";
 
 interface Option {
   value: string;
@@ -139,7 +139,8 @@ const options = ref<Option[]>([
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 
 const tree = useTree({
   items: options,
@@ -158,12 +159,7 @@ useListNavigation(context, {
     Select Country
   </button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    role="listbox"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" role="listbox" :style="styles">
     <div
       v-for="item in tree.flattenedItems.value"
       :key="item.value"
@@ -181,7 +177,7 @@ useListNavigation(context, {
 ## See Also
 
 - [`useTree`](/api/use-tree)
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useRole`](/api/use-role)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)
 - [Build Nested Menus Guide](/guide/build-nested-menus)

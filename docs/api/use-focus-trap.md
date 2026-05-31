@@ -55,18 +55,13 @@ interface UseFocusTrapReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFocusTrap, useFloating } from "v-float";
+import { useFocusTrap, useFloatingContext } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
-  onOpenChange: (value) => {
-    open.value = value;
-  },
-});
+const context = useFloatingContext(anchorEl, floatingEl, { open });
 
 useFocusTrap(context, { modal: true });
 </script>
@@ -78,13 +73,7 @@ useFocusTrap(context, { modal: true });
 
   <Teleport to="body">
     <div v-if="context.state.open.value" class="backdrop">
-      <div
-        ref="floatingEl"
-        :style="context.position.styles.value"
-        role="dialog"
-        aria-modal="true"
-        tabindex="-1"
-      >
+      <div ref="floatingEl" role="dialog" aria-modal="true" tabindex="-1">
         <h2>Dialog</h2>
         <input placeholder="Focus stays inside" />
         <button @click="context.state.setOpen(false)">Close</button>

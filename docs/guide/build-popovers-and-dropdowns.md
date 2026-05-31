@@ -10,7 +10,7 @@ Tooltips teach hover. Popovers usually teach click. The shape is still simple, b
 
 For a straightforward popover or dropdown, start with:
 
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useClick`](/api/use-click)
 - [`useEscapeKey`](/api/use-escape-key)
 - [`offset`](/api/offset)
@@ -22,14 +22,17 @@ Start with the anchor, the floating element, and a shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 </script>
 ```
@@ -41,14 +44,17 @@ Now add the behavior that makes the surface feel like a popover.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useClick, useEscapeKey, useFloating } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 
 useClick(context, {
@@ -73,12 +79,7 @@ Now render the content the user actually came for.
 <template>
   <button ref="anchorEl" type="button" class="trigger">Open actions</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
-    class="panel"
-    :style="context.position.styles.value"
-  >
+  <div v-if="context.state.open.value" ref="floatingEl" class="panel" :style="styles">
     <h2>Quick actions</h2>
     <p>Choose the next step for this record.</p>
     <div class="actions">
@@ -92,19 +93,24 @@ Now render the content the user actually came for.
 
 ## A Safer Default For Real Panels
 
-If the panel can run into the viewport edge, add `flip()` and `shift()`.
+If the panel can run into the viewport edge, set `middleware.flip: true` and `middleware.shift`.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift, useClick, useEscapeKey, useFloating } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(8), flip(), shift({ padding: 8 })],
+  middleware: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+  },
 });
 
 useClick(context, {

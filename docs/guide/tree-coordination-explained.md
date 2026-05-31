@@ -6,14 +6,14 @@ description: Understand how VFloat coordinates nested lists, menus, and hierarch
 
 Coordinating nested and hierarchical floating components (like multi-level submenus or cascading dropdowns) is notoriously difficult. If you try to coordinate them using DOM hierarchies or component boundaries, you quickly run into issues:
 
-- **Teleportation gaps:** Nested floating panels are frequently teleposted to `<Teleport to="body">` to avoid CSS overflow clipping. When portals move elements out of their original DOM positions, standard DOM selectors like `.parentNode` or `.contains()` break.
+- **Teleportation gaps:** Nested floating panels are frequently teleported to `<Teleport to="body">` to avoid CSS overflow clipping. When portals move elements out of their original DOM positions, standard DOM selectors like `.parentNode` or `.contains()` break.
 - **Race conditions:** Managing active indices across multiple nested Vue components often introduces timing synchronization bugs during quick mouse movement or keyboard traversals.
 
-In VFloat, these issues are elegantly bypassed using **Data-First Tree Coordination** managed by a central [`useTree`](/api/use-tree) structural mediator.
+VFloat avoids those issues by keeping nested menu state in a data-first tree managed by [`useTree`](/api/use-tree).
 
 ---
 
-## The Centralized Tree Model
+## The Tree Model
 
 Instead of every nested submenu tracking its own isolated state and communicating through event buses or nested DOM contexts, **the entire menu family is modeled as a single hierarchical data tree**.
 
@@ -39,17 +39,17 @@ A single `useTree` instance maintains:
 
 This single reactive collection coordinates all interactive behaviors:
 
-1. **`useListNavigation`** handles arrow key, Home, and End event capturing on the DOM elements, then delegates state changes to the collection (e.g., calling `.setNext()`, `.expandBranch()`, or `.collapseBranch()`).
-2. **`useRole`** reads the list items array and synchronization settings to bind correct ARIA attributes (e.g., matching the current index to `aria-selected` or `aria-disabled`).
-3. **Your Component Template** renders the list elements, applying active visual styling when an item matches `collection.activeValue`.
+1. **`useListNavigation`** handles arrow key, Home, End, and Tab events on the anchor and floating elements, then delegates movement to the collection or emits branch enter/exit callbacks.
+2. **`useRole`** applies the semantic role and any item ARIA state you provide through options such as `listRef`, `disabledIndices`, `checkedIndices`, or `selectedIndices`.
+3. **Your Component Template** renders the list elements, applying active visual styling when an item matches `tree.activeValue`.
 
 ---
 
-## Advantages of Data-First Coordination
+## Why Data-First Coordination Helps
 
-- **Unbreakable Teleportation:** Because the state of what is open, collapsed, active, or parent-child is resolved entirely in the reactive JavaScript model, teleposting your menus to the root body has zero impact on keyboard navigation or state synchronization.
-- **Predictable Escapes:** Collapsing or closing a submenu naturally restores focus to the correct parent opener because the collection retains parent-child indices in data (via `collection.getParentValue()`).
-- **Resilient Keyboard Traversals:** If nested submenus contain disabled items, `useListNavigation` can quickly query the data structure (`collection.getFirstEnabledDescendantValue`) using Depth-First Search (DFS) to jump focus to the correct next choice, staying securely on the parent opener if all choices are disabled.
+- **Teleportation safety:** Because open, collapsed, active, and parent-child state lives in the reactive JavaScript model, teleporting menus to the document body does not break the tree relationship.
+- **Predictable Escapes:** Collapsing or closing a submenu can restore focus to the correct parent opener because `useTree()` keeps parent-child relationships in data through helpers such as `tree.getParentValue()`.
+- **Resilient Keyboard Traversals:** If nested submenus contain disabled items, the tree can query the data structure with `getFirstEnabledDescendantValue()` to target the next usable choice, or stay on the parent opener if all choices are disabled.
 
 ---
 

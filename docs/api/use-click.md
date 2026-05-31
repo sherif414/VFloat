@@ -46,12 +46,13 @@ interface UseClickOptions {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloating } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 useClick(context, { closeOnOutsideClick: true });
 useEscapeKey(context);
 </script>
@@ -59,15 +60,13 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl">Toggle</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 
 ## See Also
 
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useHover`](/api/use-hover)
 - [`useFocus`](/api/use-focus)
 - [`useEscapeKey`](/api/use-escape-key)

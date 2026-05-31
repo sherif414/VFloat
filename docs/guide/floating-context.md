@@ -20,13 +20,12 @@ The anchor is the thing the surface is positioned against. The floating element 
 
 ## Why The Context Exists
 
-VFloat intentionally groups the returned data into:
+VFloat intentionally keeps the shared context small:
 
 - `refs`
 - `state`
-- `position`
 
-That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions.
+That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions. Positioning is added separately with [`usePosition`](/api/use-position), which reads the same context and returns the computed geometry.
 
 ## `refs`
 
@@ -37,7 +36,6 @@ It includes:
 - `anchorEl`
 - `floatingEl`
 - `arrowEl`
-- setter helpers for those refs
 
 ## `state`
 
@@ -50,11 +48,11 @@ It includes:
 
 Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useEscapeKey`](/api/use-escape-key) all coordinate through this same state object.
 
-## `position`
+## Positioning Lives Next To The Context
 
-The `position` group is about geometry and the computed result.
+The context itself does not compute coordinates, run middlewares, or wire auto-update listeners.
 
-It includes things like:
+When a surface needs JavaScript positioning, call `usePosition(context)`. That returns geometry fields such as:
 
 - `x`
 - `y`
@@ -65,17 +63,18 @@ It includes things like:
 - `styles`
 - `update`
 
-Most templates only need `context.position.styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
+Most templates only need `styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
 
 ## The Core Loop
 
 This is the loop to keep in your head:
 
 1. You create refs for the anchor and floating element.
-2. You pass them into [`useFloating`](/api/use-floating).
-3. `useFloating()` returns the shared `context`.
-4. Other composables read from and write to that `context`.
-5. Your template renders from `context.state` and `context.position`.
+2. You pass them into [`useFloatingContext`](/api/use-floating-context).
+3. `useFloatingContext()` returns the shared `context`.
+4. `usePosition(context)` adds positioning when the surface needs it.
+5. Other composables read from and write to the same `context`.
+6. Your template renders from `context.state` and the returned `styles`.
 
 ## A Minimal Example
 
@@ -84,14 +83,17 @@ This small example shows the context in use without much extra ceremony.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "bottom",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 
 useHover(context);
@@ -100,9 +102,7 @@ useHover(context);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

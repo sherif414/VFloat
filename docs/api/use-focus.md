@@ -40,21 +40,20 @@ interface UseFocusReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useFocus } from "v-float";
+import { useFloatingContext, usePosition, useFocus } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context);
 useFocus(context);
 </script>
 
 <template>
   <button ref="anchorEl">Focus me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

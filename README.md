@@ -37,12 +37,13 @@ yarn add v-float
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloating, useHover, offset } from "v-float";
+import { useFloatingContext, usePosition, useHover, offset } from "v-float";
 
 const anchorEl = useTemplateRef("anchorEl");
 const floatingEl = useTemplateRef("floatingEl");
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -53,7 +54,7 @@ useHover(context);
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
     This is a tooltip
   </div>
 </template>
@@ -64,12 +65,21 @@ useHover(context);
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloating, useClick, useEscapeKey, offset, flip, shift } from "v-float";
+import {
+  useFloatingContext,
+  usePosition,
+  useClick,
+  useEscapeKey,
+  offset,
+  flip,
+  shift,
+} from "v-float";
 
 const triggerEl = useTemplateRef("triggerEl");
 const menuEl = useTemplateRef("menuEl");
 
-const context = useFloating(triggerEl, menuEl, {
+const context = useFloatingContext(triggerEl, menuEl);
+const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
 });
@@ -83,7 +93,7 @@ useEscapeKey(context, {
 <template>
   <button ref="triggerEl">Open Menu</button>
 
-  <div v-if="context.state.open.value" ref="menuEl" :style="context.position.styles.value">
+  <div v-if="context.state.open.value" ref="menuEl" :style="position.styles.value">
     <div>Menu Item 1</div>
     <div>Menu Item 2</div>
     <div>Menu Item 3</div>
@@ -96,20 +106,21 @@ useEscapeKey(context, {
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloating, useHover, useArrow, offset, flip } from "v-float";
+import { useFloatingContext, usePosition, useHover, useArrow, offset, flip } from "v-float";
 
 const anchorEl = useTemplateRef("anchorEl");
 const tooltipEl = useTemplateRef("tooltipEl");
 const arrowEl = useTemplateRef("arrowEl");
 
-const context = useFloating(anchorEl, tooltipEl, {
+const context = useFloatingContext(anchorEl, tooltipEl);
+const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8), flip()],
 });
 
 useHover(context);
 
-const { arrowStyles } = useArrow(context, {
+const { arrowStyles } = useArrow(context, position, {
   element: arrowEl,
   offset: "-4px",
 });
@@ -121,7 +132,7 @@ const { arrowStyles } = useArrow(context, {
   <div
     v-if="context.state.open.value"
     ref="tooltipEl"
-    :style="context.position.styles.value"
+    :style="position.styles.value"
     class="tooltip"
   >
     This is a tooltip with an arrow
@@ -154,7 +165,7 @@ const { arrowStyles } = useArrow(context, {
 
 ### Positioning
 
-- `**useFloating**`: Core positioning logic with middleware support
+- `**useFloatingContext**`: Core positioning logic with middleware support
 - `**useArrow**`: Position arrow elements pointing to the anchor
 
 ### Interactions

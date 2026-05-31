@@ -20,7 +20,7 @@ This feels good when:
 
 ## Controlled: The Parent Owns The Truth
 
-In the controlled model, the parent owns an `open` ref and gives it to [`useFloating`](/api/use-floating), along with `onOpenChange`.
+In the controlled model, the parent owns an `open` ref and gives it to [`useFloatingContext`](/api/use-floating-context), along with `onOpenChange`.
 
 This feels good when:
 

@@ -6,7 +6,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables";
+import type { FloatingContext } from "@/composables/floating-context";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================

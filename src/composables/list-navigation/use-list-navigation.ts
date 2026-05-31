@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue";
-import type { FloatingContext } from "@/composables/floating";
+import type { FloatingContext } from "@/composables/floating-context";
 import { useEventListener } from "@/shared/use-event-listener";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isTypeableElement } from "@/shared/dom";

@@ -1,7 +1,8 @@
 import { type ComputedRef, computed, type Ref, toValue, watch } from "vue";
-import { getFloatingInternals } from "@/composables/floating";
+import { getFloatingInternals } from "@/composables/floating-context";
 import { arrow } from "../middlewares";
-import type { FloatingContext } from "@/composables/floating";
+import type { FloatingContext } from "@/composables/floating-context";
+import type { FloatingPosition } from "@/composables/position";
 
 //=======================================================================================
 // 📌 Main
@@ -10,10 +11,14 @@ import type { FloatingContext } from "@/composables/floating";
 /**
  * Connects an arrow element to the current floating context and exposes the computed coordinates and styles needed to place it.
  */
-export function useArrow(context: FloatingContext, options: UseArrowOptions): UseArrowReturn {
+export function useArrow(
+  context: FloatingContext,
+  position: FloatingPosition,
+  options: UseArrowOptions,
+): UseArrowReturn {
   const { element: arrowEl, offset = "-4px" } = options;
   const { refs } = context;
-  const { middlewareData, placement } = context.position;
+  const { middlewareData, placement } = position;
 
   watch(
     arrowEl,
@@ -23,8 +28,8 @@ export function useArrow(context: FloatingContext, options: UseArrowOptions): Us
     { immediate: true },
   );
 
-  const internals = getFloatingInternals(context);
-  internals?.middlewareRegistry.register(
+  const internals = getFloatingInternals(position);
+  internals?.middlewareRegistry?.register(
     computed(() => {
       if (!arrowEl.value) {
         return null;

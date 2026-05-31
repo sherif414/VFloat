@@ -136,7 +136,8 @@ export default defineConfigWithTheme({
         {
           text: "Positioning",
           items: [
-            { text: "useFloating", link: "/api/use-floating" },
+            { text: "useFloatingContext", link: "/api/use-floating-context" },
+            { text: "usePosition", link: "/api/use-position" },
             { text: "useArrow", link: "/api/use-arrow" },
             { text: "useClientPoint", link: "/api/use-client-point" },
           ],

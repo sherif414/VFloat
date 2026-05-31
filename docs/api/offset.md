@@ -38,24 +38,24 @@ description: Adds distance between the anchor and floating element.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloating(anchorEl, floatingEl, {
-  open,
-  middlewares: [offset(10)],
+const context = useFloatingContext(anchorEl, floatingEl, { open });
+const { styles } = usePosition(context, {
+  middleware: {
+    offset: 10,
+  },
 });
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Floating content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

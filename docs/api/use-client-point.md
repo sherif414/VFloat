@@ -21,6 +21,7 @@ interface UseClientPointOptions {
   x?: MaybeRefOrGetter<number | null>;
   y?: MaybeRefOrGetter<number | null>;
   trackingMode?: "follow" | "static";
+  position?: Pick<FloatingPosition, "update">;
 }
 
 interface UseClientPointReturn {
@@ -36,6 +37,7 @@ interface UseClientPointReturn {
 - `trackingMode: "follow"` keeps the floating element in sync with pointer movement.
 - `trackingMode: "static"` captures the initial point and keeps the surface anchored there.
 - If both `x` and `y` are provided, the composable behaves like a controlled source of coordinates.
+- Pass the `usePosition()` return as `position` when the surface should update immediately after the virtual anchor changes.
 
 ## Example
 
@@ -44,17 +46,20 @@ This example shows the root-first overload.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useFloating, useHover } from "v-float";
+import { useClientPoint, useFloatingContext, usePosition, useHover } from "v-float";
 
 const trackingArea = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "right-start",
 });
+const { styles } = position;
 
 useClientPoint(context, {
+  position,
   pointerTarget: trackingArea,
 });
 
@@ -65,7 +70,7 @@ useHover(context);
   <div ref="trackingArea">
     Move the pointer here
 
-    <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
+    <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
       Tooltip follows the pointer
     </div>
   </div>
@@ -74,6 +79,6 @@ useHover(context);
 
 ## See Also
 
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [`useHover`](/api/use-hover)
 - [Use Virtual Anchors](/guide/use-virtual-anchors)

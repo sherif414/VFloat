@@ -2,7 +2,7 @@ import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
 import { type UseClickOptions, type UseClickContext, useClick } from "@/composables";
-import { type AnchorElement, type FloatingElement, useFloating } from "@/composables";
+import type { AnchorElement, FloatingElement } from "@/composables";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];

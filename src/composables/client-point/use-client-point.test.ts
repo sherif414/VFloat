@@ -83,6 +83,7 @@ type ClientPointHarness = {
   context: UseClientPointContext;
   open: Ref<boolean>;
   pointerTarget: Ref<HTMLElement | null>;
+  position: UseClientPointOptions["position"];
   updateSpy: ReturnType<typeof vi.fn>;
   scope: ReturnType<typeof effectScope> | null;
 };
@@ -97,15 +98,15 @@ function createClientPointHarness(): ClientPointHarness {
   return {
     open,
     pointerTarget,
+    position: {
+      update: updateSpy,
+    },
     updateSpy,
     scope: null,
     context: {
       state: {
         open,
         setOpen: vi.fn(),
-      },
-      position: {
-        update: updateSpy,
       },
       refs: {
         anchorEl: ref<AnchorElement>(null),
@@ -232,6 +233,7 @@ describe("useClientPoint", () => {
     harness.scope.run(() => {
       result = useClientPoint(harness.context, {
         pointerTarget: harness.pointerTarget,
+        position: harness.position,
         ...options,
       });
     });

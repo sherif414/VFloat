@@ -17,6 +17,7 @@ interface UseHoverOptions {
   restMs?: MaybeRef<number>;
   mouseOnly?: MaybeRef<boolean>;
   safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
+  position?: Pick<FloatingPosition, "placement">;
   ignorePointerLeave?: (target: EventTarget | null) => boolean;
 }
 
@@ -35,6 +36,7 @@ interface SafePolygonOptions {
 - `restMs` only matters when the open delay is `0`.
 - `mouseOnly` limits hover behavior to mouse-like pointers.
 - `safePolygon` keeps the surface open while the pointer moves between trigger and panel.
+- Pass the `usePosition()` return as `position` when `safePolygon` should use the current placement instead of falling back to `bottom`.
 - `ignorePointerLeave` is a predicate to determine if a pointer leave event should be ignored (for example, to keep a parent menu open when hovering a nested submenu/child branch).
 
 `useHover` opens and closes with the `hover` reason.
@@ -44,16 +46,19 @@ interface SafePolygonOptions {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloating, useHover } from "v-float";
+import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
 });
+const { styles } = position;
 
 useHover(context, {
+  position,
   delay: { open: 100, close: 150 },
   safePolygon: true,
 });
@@ -62,9 +67,7 @@ useHover(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="context.position.styles.value">
-    Tooltip content
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Tooltip content</div>
 </template>
 ```
 
@@ -72,5 +75,5 @@ useHover(context, {
 
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
-- [`useFloating`](/api/use-floating)
+- [`useFloatingContext`](/api/use-floating-context)
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips)

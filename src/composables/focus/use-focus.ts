@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/floating";
+import type { FloatingContext } from "@/composables/floating-context";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -20,7 +20,7 @@ import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
  *
  * @example
  * ```ts
- * const ctx = useFloating(...)
+ * const ctx = useFloatingContext(...)
  * useFocus(ctx)
  * ```
  */

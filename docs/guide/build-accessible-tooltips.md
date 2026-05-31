@@ -22,7 +22,7 @@ We want one tooltip that works for two real user paths:
 - A mouse user hovers the trigger
 - A keyboard user tabs to the trigger
 
-That usually means [`useFloating`](/api/use-floating), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
+That usually means [`useFloatingContext`](/api/use-floating-context), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
 
 ## Step 1: Build The Shared Context
 
@@ -31,14 +31,17 @@ Start by wiring the anchor, floating element, and placement.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating } from "v-float";
+import { useFloatingContext, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
 </script>
 ```
@@ -50,17 +53,22 @@ Now add the interaction layer that matches tooltip expectations.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { offset, useFloating, useFocus, useHover } from "v-float";
+import { useFloatingContext, usePosition, useFocus, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl, {
+const context = useFloatingContext(anchorEl, floatingEl);
+const position = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: {
+    offset: 8,
+  },
 });
+const { styles } = position;
 
 useHover(context, {
+  position,
   safePolygon: true,
 });
 
@@ -68,7 +76,7 @@ useFocus(context);
 </script>
 ```
 
-`useHover(context)` opens and closes from pointer movement. `safePolygon: true` protects the pointer path between the trigger and the tooltip. `useFocus(context)` opens the same tooltip for keyboard users.
+`useHover(context)` opens and closes from pointer movement. Passing `position` lets `safePolygon: true` protect the pointer path using the current placement. `useFocus(context)` opens the same tooltip for keyboard users.
 
 ## Step 3: Render The Tooltip
 
@@ -83,7 +91,7 @@ Render the trigger and tooltip from the same shared state.
     id="save-tooltip"
     ref="floatingEl"
     role="tooltip"
-    :style="context.position.styles.value"
+    :style="styles"
   >
     Save the current draft without publishing it.
   </div>
@@ -97,7 +105,7 @@ Two accessibility details are worth calling out:
 
 ## Why `safePolygon` Matters
 
-Once you add `offset(8)`, there is a visible gap between the trigger and the tooltip. If hover closes immediately on `pointerleave`, the tooltip can disappear while the pointer is still moving naturally toward it.
+Once you add `middleware.offset: 8`, there is a visible gap between the trigger and the tooltip. If hover closes immediately on `pointerleave`, the tooltip can disappear while the pointer is still moving naturally toward it.
 
 `safePolygon` protects that path between the anchor and the floating element.
 

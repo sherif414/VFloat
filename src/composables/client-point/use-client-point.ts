@@ -11,7 +11,8 @@ import {
 import { FollowTracker, StaticTracker, TrackingStrategy } from "./tracking-strategies";
 import type { AxisConstraint, Coordinates, PointerEventData, TrackingMode } from "./types";
 import { VirtualElementFactory } from "./virtual-element-factory";
-import type { AnchorElement, FloatingContext } from "@/composables/floating";
+import type { AnchorElement, FloatingContext } from "@/composables/floating-context";
+import type { FloatingPosition } from "@/composables/position";
 
 //=======================================================================================
 // 📌 Main
@@ -27,7 +28,7 @@ export function useClientPoint(
   const { pointerTarget } = options;
   const { open } = context.state;
   const refs = context.refs;
-  const update = context.position?.update;
+  const update = options.position?.update;
 
   const virtualElementFactory = new VirtualElementFactory();
   const internalCoordinates = ref<Coordinates>({ x: null, y: null });
@@ -120,14 +121,14 @@ export function useClientPoint(
         refs.anchorEl.value = preservedAnchorEl.value;
 
         if (open.value) {
-          update?.();
+          void update?.();
         }
 
         return;
       }
 
       // Rebuild the virtual anchor whenever its geometry inputs change so
-      // `useFloating()` always positions against the latest pointer state.
+      // `useFloatingContext()` always positions against the latest pointer state.
       const virtualAnchorEl = virtualElementFactory.create({
         coordinates: constrainedCoordinates.value,
         referenceElement: pointerTarget.value,
@@ -138,7 +139,7 @@ export function useClientPoint(
       refs.anchorEl.value = virtualAnchorEl;
 
       if (open.value) {
-        update?.();
+        void update?.();
       }
     },
     { immediate: true },
@@ -266,6 +267,11 @@ export interface UseClientPointOptions {
    * Chooses how the pointer position behaves after the floating element opens.
    */
   trackingMode?: TrackingMode;
+
+  /**
+   * Optional positioning result to refresh when the virtual anchor changes.
+   */
+  position?: Pick<FloatingPosition, "update">;
 }
 
 /**
@@ -284,7 +290,6 @@ export interface UseClientPointContext {
     anchorEl: Ref<AnchorElement>;
   };
   state: FloatingContext["state"];
-  position?: Pick<FloatingContext["position"], "update">;
 }
 
 export type { AxisConstraint, Coordinates, TrackingMode } from "./types";

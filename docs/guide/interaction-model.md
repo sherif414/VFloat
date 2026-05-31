@@ -37,12 +37,12 @@ This example shows a common click-driven combination.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloating } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloating(anchorEl, floatingEl);
+const context = useFloatingContext(anchorEl, floatingEl);
 
 useClick(context, {
   closeOnOutsideClick: true,
