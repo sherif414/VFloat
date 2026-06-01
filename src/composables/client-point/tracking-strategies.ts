@@ -24,7 +24,7 @@ export abstract class TrackingStrategy {
   }
 
   onClose(): void {
-    this.lastKnownCoordinates = null;
+    this.reset();
   }
 
   reset(): void {
@@ -101,11 +101,6 @@ export class StaticTracker extends TrackingStrategy {
 
   reset(): void {
     super.reset();
-    this.triggerCoordinates = null;
-  }
-
-  onClose(): void {
-    super.onClose();
     this.triggerCoordinates = null;
   }
 }

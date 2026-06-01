@@ -1,5 +1,3 @@
-import type { VirtualElement } from "@/types";
-
 export interface Coordinates {
   /**
    * Horizontal viewport coordinate.
@@ -66,11 +64,4 @@ export interface VirtualElementFactoryOptions {
    * Axis constraint applied to the generated virtual rect.
    */
   axis?: AxisConstraint;
-}
-
-export interface VirtualElementFactoryContract {
-  /**
-   * Creates a Floating UI compatible virtual element from pointer data.
-   */
-  create(options: VirtualElementFactoryOptions): VirtualElement;
 }

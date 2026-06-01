@@ -1,10 +1,14 @@
 import type { VirtualElement } from "@/types";
-import type {
-  AxisConstraint,
-  Coordinates,
-  VirtualElementFactoryContract,
-  VirtualElementFactoryOptions,
-} from "./types";
+import type { AxisConstraint, Coordinates, VirtualElementFactoryOptions } from "./types";
+
+const DEFAULT_DIMENSIONS = { width: 100, height: 30 };
+
+type VirtualElementConfig = {
+  coordinates: Coordinates;
+  referenceElement: HTMLElement | null;
+  baselineCoordinates: Coordinates | null;
+  axis: AxisConstraint;
+};
 
 //=======================================================================================
 // 📌 Main
@@ -27,38 +31,22 @@ import type {
  * });
  * ```
  */
-export class VirtualElementFactory implements VirtualElementFactoryContract {
-  private static readonly DEFAULT_DIMENSIONS = { width: 100, height: 30 };
-
+export class VirtualElementFactory {
   create(options: VirtualElementFactoryOptions): VirtualElement {
-    const config = this.resolveConfiguration(options);
-
-    return {
-      contextElement: config.referenceElement || undefined,
-      getBoundingClientRect: () => this.resolveBoundingRect(config),
-    };
-  }
-
-  private resolveConfiguration(options: VirtualElementFactoryOptions): {
-    coordinates: Coordinates;
-    referenceElement: HTMLElement | null;
-    baselineCoordinates: Coordinates | null;
-    axis: AxisConstraint;
-  } {
-    return {
+    const config: VirtualElementConfig = {
       coordinates: options.coordinates,
       referenceElement: options.referenceElement ?? null,
       baselineCoordinates: options.baselineCoordinates ?? null,
       axis: options.axis ?? "both",
     };
+
+    return {
+      contextElement: config.referenceElement ?? undefined,
+      getBoundingClientRect: () => this.resolveBoundingRect(config),
+    };
   }
 
-  private resolveBoundingRect(config: {
-    coordinates: Coordinates;
-    referenceElement: HTMLElement | null;
-    baselineCoordinates: Coordinates | null;
-    axis: AxisConstraint;
-  }): DOMRect {
+  private resolveBoundingRect(config: VirtualElementConfig): DOMRect {
     const referenceRect = this.getReferenceRect(config.referenceElement);
     const position = this.resolvePosition(config, referenceRect);
     const size = this.calculateSize(config.axis, referenceRect);
@@ -86,17 +74,13 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
     return this.createDOMRect({
       x: 0,
       y: 0,
-      width: VirtualElementFactory.DEFAULT_DIMENSIONS.width,
-      height: VirtualElementFactory.DEFAULT_DIMENSIONS.height,
+      width: DEFAULT_DIMENSIONS.width,
+      height: DEFAULT_DIMENSIONS.height,
     });
   }
 
   private resolvePosition(
-    config: {
-      coordinates: Coordinates;
-      baselineCoordinates: Coordinates | null;
-      axis: AxisConstraint;
-    },
+    config: VirtualElementConfig,
     referenceRect: DOMRect,
   ): { x: number; y: number } {
     return {
@@ -143,26 +127,18 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
     width: number;
     height: number;
   } {
-    const ensurePositive = (value: number, fallback: number) => Math.max(0, value || fallback);
-
     switch (axis) {
       case "both":
         return { width: 0, height: 0 };
       case "x":
         return {
-          width: ensurePositive(
-            referenceRect.width,
-            VirtualElementFactory.DEFAULT_DIMENSIONS.width,
-          ),
+          width: getPositiveSize(referenceRect.width, DEFAULT_DIMENSIONS.width),
           height: 0,
         };
       case "y":
         return {
           width: 0,
-          height: ensurePositive(
-            referenceRect.height,
-            VirtualElementFactory.DEFAULT_DIMENSIONS.height,
-          ),
+          height: getPositiveSize(referenceRect.height, DEFAULT_DIMENSIONS.height),
         };
     }
   }
@@ -184,4 +160,12 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
       toJSON: () => ({ x, y, width: safeWidth, height: safeHeight }),
     } as DOMRect;
   }
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+function getPositiveSize(value: number, fallback: number): number {
+  return Math.max(0, value || fallback);
 }
