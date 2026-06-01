@@ -210,6 +210,30 @@ VFloat is built with TypeScript and provides comprehensive type definitions:
 
 For complete documentation with interactive examples, visit the [VFloat Documentation](https://vfloat.pages.dev/).
 
+## Documentation deployment
+
+Documentation is built with VitePress and deployed to Cloudflare Pages from your local machine.
+
+Set these environment variables before deploying:
+
+- `CLOUDFLARE_API_TOKEN` with permission to deploy the Pages project
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_PAGES_PROJECT_NAME`, if the Pages project is not named `vfloat`
+
+Deploy the docs with:
+
+```sh
+vp run docs:deploy
+```
+
+The script runs `vp run docs:build`, then deploys `docs/.vitepress/dist` with Wrangler. Pass `-- --project <name>` or `-- --branch <name>` to override the defaults.
+
+To verify the local flow without deploying, run:
+
+```sh
+vp run docs:deploy -- --dry-run
+```
+
 ## Contributing
 
 Contributions are welcome! Please read our contributing guidelines and submit pull requests to

@@ -28,6 +28,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
+    "docs:deploy": "node scripts/release/deploy-docs.mjs",
     "release": "vp exec release-it",
     "release:patch": "vp exec release-it patch",
     "release:minor": "vp exec release-it minor",
@@ -70,7 +71,8 @@
     "vitepress-plugin-demo": "^0.8.1",
     "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.14",
     "vitest-browser-vue": "^2.1.0",
-    "vue-tsc": "^3.2.6"
+    "vue-tsc": "^3.2.6",
+    "wrangler": "^4.95.0"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.14",
