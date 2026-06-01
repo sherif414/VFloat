@@ -4,7 +4,7 @@ description: Opens and closes floating content on click.
 
 # useClick
 
-`useClick` toggles a floating context from pointer and keyboard activation. Enable outside-click closing when you want popover or menu behavior instead of a pure trigger toggle.
+`useClick` toggles a floating context from pointer and keyboard activation. Outside-click dismissal is on by default — opt out with `closeOnOutsideClick: false` when you need a pure trigger toggle.
 
 ## Type
 
@@ -36,7 +36,7 @@ interface UseClickOptions {
 
 - `event` controls which mouse event toggles the trigger. It defaults to `"click"`.
 - `toggle` defaults to `true`.
-- `closeOnOutsideClick` defaults to `false`, so enable it explicitly when you want dismiss-on-outside-click behavior.
+- `closeOnOutsideClick` defaults to `true`. Set it to `false` to keep the floating element open when clicking outside.
 - `outsideClickEvent` defaults to `"pointerdown"`.
 - `onOutsideClick` replaces the default outside-close behavior when you need custom logic.
 - `ignoreOutsideClick` is a predicate to determine if a click on a specific outside element (such as a nested submenu trigger or helper overlay) should be ignored, preventing the floating element from closing.
@@ -53,8 +53,30 @@ const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 const { styles } = usePosition(context);
-useClick(context, { closeOnOutsideClick: true });
+useClick(context);
 useEscapeKey(context);
+</script>
+
+<template>
+  <button ref="anchorEl">Toggle</button>
+
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
+</template>
+```
+
+### Disable outside-click dismissal
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useClick, useFloatingContext, usePosition } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const { styles } = usePosition(context);
+useClick(context, { closeOnOutsideClick: false });
 </script>
 
 <template>

@@ -21,8 +21,7 @@ type PointerType = "mouse" | "touch" | "pen";
 //=======================================================================================
 
 /**
- * Enables showing/hiding the floating element when clicking the anchor element
- * and optionally when clicking outside both the anchor and floating elements.
+ * Enables showing/hiding the floating element when clicking the anchor element.
  *
  * This composable provides unified event handlers for both inside click interactions
  * (to open/toggle floating elements) and outside click interactions (to close them).
@@ -30,20 +29,15 @@ type PointerType = "mouse" | "touch" | "pen";
  * @param context - The floating context with open state and change handler.
  * @param options - Configuration options for click behavior.
  *
- * @example Basic usage with outside click enabled
+ * @example Basic usage
  * ```ts
  * const context = useFloatingContext(...)
- * useClick(context, {
- *   toggle: true,
- *   closeOnOutsideClick: true,
- *   outsideClickEvent: 'pointerdown'
- * })
+ * useClick(context)
  * ```
  *
  * @example Custom outside click handler
  * ```ts
  * useClick(context, {
- *   closeOnOutsideClick: true,
  *   onOutsideClick: (event) => {
  *     if (confirm("Close dialog?")) {
  *       context.state.setOpen(false)
@@ -62,7 +56,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     ignoreMouse: ignoreMouseOption = false,
     ignoreKeyboard: ignoreKeyboardOption = false,
     ignoreTouch: ignoreTouchOption = false,
-    closeOnOutsideClick: closeOnOutsideClickOption = false,
+    closeOnOutsideClick: closeOnOutsideClickOption = true,
     outsideClickEvent: outsideClickEventOption = "pointerdown",
     outsideCapture: outsideCaptureOption = true,
     onOutsideClick: onOutsideClickOption,
@@ -411,7 +405,7 @@ export interface UseClickOptions {
 
   /**
    * Whether to close the floating element when clicking outside.
-   * @default false
+   * @default true
    */
   closeOnOutsideClick?: MaybeRefOrGetter<boolean>;
 
