@@ -1,4 +1,11 @@
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+import {
+  computed,
+  isRef,
+  type MaybeRefOrGetter,
+  onWatcherCleanup,
+  toValue,
+  watchPostEffect,
+} from "vue";
 import {
   type FloatingContext,
   isFloatingContextTargetWithin,
@@ -35,14 +42,12 @@ type PointerType = "mouse" | "touch" | "pen";
  * useClick(context)
  * ```
  *
- * @example Custom outside click handler
+ * @example Custom outside click predicate
  * ```ts
  * useClick(context, {
- *   onOutsideClick: (event) => {
- *     if (confirm("Close dialog?")) {
- *       context.state.setOpen(false)
- *     }
- *   },
+ *   closeOnOutsideClick: (event, target) => {
+ *     return target instanceof Node && !helperOverlayEl.value?.contains(target)
+ *   }
  * })
  * ```
  */
@@ -60,7 +65,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     outsideClickEvent: outsideClickEventOption = "pointerdown",
     outsideCapture: outsideCaptureOption = true,
     onOutsideClick: onOutsideClickOption,
-    ignoreOutsideClick: ignoreOutsideClickOption,
     ignoreScrollbar: ignoreScrollbarOption = true,
     ignoreDrag: ignoreDragOption = true,
   } = options;
@@ -82,7 +86,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const isEnabled = computed(() => toValue(enabledOption));
-  const isOutsideClickEnabled = computed(() => toValue(closeOnOutsideClickOption));
+  const isOutsideClickEnabled = computed(() => resolveOutsideClickEnabled());
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value;
@@ -239,7 +243,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return;
     }
 
-    if (ignoreOutsideClickOption && ignoreOutsideClickOption(target)) {
+    if (!shouldCloseOnOutsideClick(event, target)) {
       return;
     }
 
@@ -279,6 +283,29 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       return true;
     }
     return false;
+  }
+
+  function resolveOutsideClickEnabled(): boolean {
+    const option = getOutsideClickOption();
+    return typeof option === "function" || option;
+  }
+
+  function shouldCloseOnOutsideClick(event: MouseEvent, target: EventTarget | null): boolean {
+    const option = getOutsideClickOption();
+    if (typeof option === "function") {
+      return option(event, target);
+    }
+    return option;
+  }
+
+  function getOutsideClickOption(): boolean | OutsideClickPredicate {
+    if (isRef(closeOnOutsideClickOption)) {
+      return closeOnOutsideClickOption.value;
+    }
+    if (typeof closeOnOutsideClickOption === "function" && closeOnOutsideClickOption.length === 0) {
+      return (closeOnOutsideClickOption as () => boolean | OutsideClickPredicate)();
+    }
+    return closeOnOutsideClickOption as boolean | OutsideClickPredicate;
   }
 
   // Ensure the drag suppression timer can't update state after unmount.
@@ -405,9 +432,10 @@ export interface UseClickOptions {
 
   /**
    * Whether to close the floating element when clicking outside.
+   * Pass a predicate to decide per outside click.
    * @default true
    */
-  closeOnOutsideClick?: MaybeRefOrGetter<boolean>;
+  closeOnOutsideClick?: MaybeRefOrGetter<boolean | OutsideClickPredicate>;
 
   /**
    * The event to use for outside click detection.
@@ -429,13 +457,6 @@ export interface UseClickOptions {
   onOutsideClick?: (event: MouseEvent) => void;
 
   /**
-   * Predicate to determine if an outside click should be ignored.
-   * @param target - The event target
-   * @returns true if the click should be ignored
-   */
-  ignoreOutsideClick?: (target: EventTarget | null) => boolean;
-
-  /**
    * Whether to ignore clicks on scrollbars (prevent them from closing the floating element).
    * @default true
    */
@@ -448,3 +469,8 @@ export interface UseClickOptions {
    */
   ignoreDrag?: MaybeRefOrGetter<boolean>;
 }
+
+/**
+ * Predicate used by `closeOnOutsideClick` to decide whether an outside click should close.
+ */
+export type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | null) => boolean;

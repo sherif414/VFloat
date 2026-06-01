@@ -163,6 +163,23 @@ describe("useClick", () => {
       expect(context.state.open.value).toBe(false);
     });
 
+    it("does not close on outside click when closeOnOutsideClick is disabled", async () => {
+      const outsideElement = createOutsideElement();
+
+      initClick({ closeOnOutsideClick: false, outsideClickEvent: "click" });
+      await nextTick();
+
+      await userEvent.click(anchorEl);
+      expect(context.state.open.value).toBe(true);
+      setOpenMock.mockClear();
+
+      await userEvent.click(outsideElement);
+      await nextTick();
+
+      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(context.state.open.value).toBe(true);
+    });
+
     it("does not close when clicking the anchor while outside dismissal is enabled", async () => {
       initClick({ closeOnOutsideClick: true, toggle: false, outsideClickEvent: "click" });
       await nextTick();
@@ -443,8 +460,8 @@ describe("useClick", () => {
     });
   });
 
-  describe("ignoreOutsideClick predicate", () => {
-    it("respects the ignoreOutsideClick predicate to prevent outside dismissal", async () => {
+  describe("closeOnOutsideClick predicate", () => {
+    it("uses the closeOnOutsideClick predicate for per-target dismissal", async () => {
       scope = effectScope();
 
       const outsideEl = createOutsideElement();
@@ -456,10 +473,9 @@ describe("useClick", () => {
 
       scope.run(() => {
         useClick(context, {
-          closeOnOutsideClick: true,
           outsideClickEvent: "click",
-          ignoreOutsideClick: (target) => {
-            return target instanceof Node && childPopupEl.contains(target);
+          closeOnOutsideClick: (_event, target) => {
+            return !(target instanceof Node && childPopupEl.contains(target));
           },
         });
       });

@@ -20,14 +20,15 @@ interface UseClickOptions {
   ignoreMouse?: MaybeRefOrGetter<boolean>;
   ignoreKeyboard?: MaybeRefOrGetter<boolean>;
   ignoreTouch?: MaybeRefOrGetter<boolean>;
-  closeOnOutsideClick?: MaybeRefOrGetter<boolean>;
+  closeOnOutsideClick?: MaybeRefOrGetter<boolean | OutsideClickPredicate>;
   outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
   outsideCapture?: MaybeRefOrGetter<boolean>;
   onOutsideClick?: (event: MouseEvent) => void;
-  ignoreOutsideClick?: (target: EventTarget | null) => boolean;
   ignoreScrollbar?: MaybeRefOrGetter<boolean>;
   ignoreDrag?: MaybeRefOrGetter<boolean>;
 }
+
+type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | null) => boolean;
 ```
 
 ## Details
@@ -36,10 +37,9 @@ interface UseClickOptions {
 
 - `event` controls which mouse event toggles the trigger. It defaults to `"click"`.
 - `toggle` defaults to `true`.
-- `closeOnOutsideClick` defaults to `true`. Set it to `false` to keep the floating element open when clicking outside.
+- `closeOnOutsideClick` defaults to `true`. Set it to `false` to keep the floating element open when clicking outside. Pass a predicate to decide per outside click.
 - `outsideClickEvent` defaults to `"pointerdown"`.
 - `onOutsideClick` replaces the default outside-close behavior when you need custom logic.
-- `ignoreOutsideClick` is a predicate to determine if a click on a specific outside element (such as a nested submenu trigger or helper overlay) should be ignored, preventing the floating element from closing.
 
 ## Example
 
@@ -83,6 +83,36 @@ useClick(context, { closeOnOutsideClick: false });
   <button ref="anchorEl">Toggle</button>
 
   <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
+</template>
+```
+
+### Ignore specific outside targets
+
+Use a predicate when some outside targets should keep the floating element open.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useClick, useFloatingContext, usePosition } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const helperEl = ref<HTMLElement | null>(null);
+
+const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const { styles } = usePosition(context);
+useClick(context, {
+  closeOnOutsideClick: (_event, target) => {
+    return !(target instanceof Node && helperEl.value?.contains(target));
+  },
+});
+</script>
+
+<template>
+  <button ref="anchorEl">Toggle</button>
+
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
+  <div ref="helperEl">Helper content</div>
 </template>
 ```
 
