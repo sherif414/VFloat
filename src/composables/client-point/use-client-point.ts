@@ -63,18 +63,12 @@ export function useClientPoint(
   const refs = context.refs;
   const update = positionOption?.update;
 
-  //=====================================================================================
-  // Internal State
-  //=====================================================================================
   const virtualElementFactory = new VirtualElementFactory();
   const internalCoordinates = ref<Coordinates>({ x: null, y: null });
   const lockedCoordinates = ref<Coordinates | null>(null);
   const managedAnchorEl = ref<AnchorElement>(null);
   const preservedAnchorEl = ref<AnchorElement>(refs.anchorEl.value);
 
-  //=====================================================================================
-  // Derived State
-  //=====================================================================================
   const isEnabled = computed(() => toValue(enabledOption));
   const axis = computed(() => toValue(axisOption));
   const externalX = computed(() => sanitizeCoordinate(toValue(xOption)));
@@ -110,9 +104,6 @@ export function useClientPoint(
 
   const trackingStrategy = createTrackingStrategy(trackingModeOption);
 
-  //=====================================================================================
-  // Event Handlers
-  //=====================================================================================
   const setCoordinates = (x: number | null, y: number | null) => {
     if (isExternallyControlled.value) {
       return;
@@ -155,9 +146,6 @@ export function useClientPoint(
     pointermove: onPointerTargetMove,
   };
 
-  //=====================================================================================
-  // Wiring
-  //=====================================================================================
   watch(
     () => refs.anchorEl.value,
     (anchorEl) => {
