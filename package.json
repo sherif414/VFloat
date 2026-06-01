@@ -39,8 +39,6 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
-    "@typescript/native-preview": "7.0.0-dev.20260327.2",
-    "@vue/theme": "^2.4.0",
     "focus-trap": "^8.0.1",
     "tabbable": "^6.4.0",
     "vue": "^3.5.31"
@@ -51,8 +49,10 @@
     "@tsconfig/node22": "^22.0.5",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260327.2",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vitest/coverage-v8": "^4.1.2",
+    "@vue/theme": "^2.4.0",
     "@vue/tsconfig": "^0.9.1",
     "changelogen": "^0.6.2",
     "jsdom": "^29.0.1",
@@ -76,5 +76,17 @@
     "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.14",
     "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.14"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "vite": "0.1.14",
+        "vitest": "0.1.14"
+      },
+      "ignoreMissing": [
+        "react",
+        "react-dom"
+      ]
+    }
+  }
 }
