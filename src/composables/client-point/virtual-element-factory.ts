@@ -11,7 +11,21 @@ import type {
 //=======================================================================================
 
 /**
- * Creates Floating UI compatible virtual elements from pointer coordinates.
+ * Factory for creating virtual elements from pointer coordinates.
+ *
+ * Virtual elements are used to position floating components relative to the cursor
+ * rather than a static DOM anchor. This factory manages coordinate fallback,
+ * axis constraints, baseline coordinates, and custom context elements.
+ *
+ * @example Creating a virtual element
+ * ```ts
+ * const factory = new VirtualElementFactory();
+ * const virtualEl = factory.create({
+ *   coordinates: { x: 100, y: 150 },
+ *   referenceElement: triggerEl.value,
+ *   axis: "both",
+ * });
+ * ```
  */
 export class VirtualElementFactory implements VirtualElementFactoryContract {
   private static readonly DEFAULT_DIMENSIONS = { width: 100, height: 30 };
