@@ -1,4 +1,4 @@
-/// <reference path="../../../env.d.ts" />
+import "../../../env.d.ts";
 
 import "./styles/home.css";
 import { useData } from "vitepress";
