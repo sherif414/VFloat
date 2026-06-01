@@ -16,6 +16,7 @@ function useFloatingContext(options: UseFloatingContextOptions): FloatingContext
 interface UseFloatingContextOptions {
   refs: UseFloatingContextRefs;
   state?: UseFloatingContextState;
+  parentContext?: FloatingContext | null;
 }
 
 interface UseFloatingContextRefs {
@@ -27,6 +28,16 @@ interface UseFloatingContextRefs {
 interface UseFloatingContextState {
   open?: Ref<boolean>;
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
+}
+
+interface FloatingContext {
+  refs: FloatingRefs;
+  state: FloatingState;
+}
+
+interface FloatingState {
+  open: Readonly<Ref<boolean>>;
+  setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
 }
 ```
 
@@ -40,7 +51,24 @@ interface UseFloatingContextState {
 - Passing `state.open` makes the context use your controlled ref.
 - `state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
 - Missing reasons fall back to `"programmatic"`.
-- Setting the current open value is a no-op.
+- `parentContext` links related floating contexts so outside-click and focus checks can treat descendants as part of the same floating family.
+- Closing a context also closes its descendant contexts from deepest child to nearest child.
+- Setting the current open value is a no-op, except setting `false` still closes descendants.
+
+Open-change reasons use these string values:
+
+```ts
+type OpenChangeReason =
+  | "anchor-click"
+  | "keyboard-activate"
+  | "outside-pointer"
+  | "focus"
+  | "blur"
+  | "hover"
+  | "escape-key"
+  | "tab-key"
+  | "programmatic";
+```
 
 ## Example
 

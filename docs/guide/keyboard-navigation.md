@@ -8,7 +8,7 @@ Predictable keyboard navigation is a core requirement for accessible floating su
 
 In VFloat, keyboard navigation is split into a clean separation of concerns:
 
-1. **[`useTree`](/api/use-tree)** is a data-first reactive manager. It handles items, hierarchies (for 2D nested trees), disabled nodes, and moves the active selection. It has no knowledge of DOM elements or events.
+1. **[`useCollection`](/api/use-collection) or [`useTree`](/api/use-tree)** is the data-first reactive manager. `useCollection` covers flat string-valued lists; `useTree` covers item objects and nested branches.
 2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
 3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
 
@@ -225,5 +225,6 @@ Here are the key events handled automatically by `useListNavigation`:
 ## 4. Where To Go Next
 
 - Learn how to build highly responsive, multi-level dropdown hierarchies in [Build Nested Menus](/guide/build-nested-menus).
+- Read the [useCollection API](/api/use-collection) reference for flat string-valued lists.
 - Read the [useTree API](/api/use-tree) reference.
 - Read the [useListNavigation API](/api/use-list-navigation) reference.

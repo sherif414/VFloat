@@ -30,6 +30,27 @@ interface UsePositionMiddlewareOptions {
   matchWidth?: boolean;
   custom?: MaybeRefOrGetter<Middleware[] | undefined>;
 }
+
+interface FloatingPosition {
+  x: Readonly<Ref<number>>;
+  y: Readonly<Ref<number>>;
+  strategy: Readonly<Ref<Strategy>>;
+  placement: Readonly<Ref<Placement>>;
+  middlewareData: Readonly<Ref<MiddlewareData>>;
+  isPositioned: Readonly<Ref<boolean>>;
+  styles: Readonly<Ref<FloatingStyles>>;
+  update: () => Promise<void>;
+}
+
+type FloatingStyles = {
+  position: Strategy;
+  top: string;
+  left: string;
+  transform?: string;
+  "will-change"?: string;
+} & {
+  [key: `--${string}`]: any;
+};
 ```
 
 ## Details
@@ -44,7 +65,9 @@ interface UsePositionMiddlewareOptions {
 - `middlewares` still accepts a raw middleware pipeline for existing code, but new code should prefer `middleware` and `middleware.custom`.
 - `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object.
 - `enabled` gates computation and auto-update listeners without tying positioning to open state.
+- `x`, `y`, `placement`, `strategy`, `middlewareData`, and `isPositioned` expose the last computed positioning result.
 - `styles` is the style ref you usually bind to the floating element.
+- Other composables, such as [`useArrow`](/api/use-arrow), can register middleware through the internal registry attached to the returned position object.
 
 ## Example
 

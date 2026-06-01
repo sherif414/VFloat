@@ -4,7 +4,7 @@ description: A data-first structural mediator for flat lists and nested trees in
 
 # useTree
 
-`useTree` is a data-first structural mediator for coordinating flat lists and hierarchical tree collections (such as dropdowns, popovers, select lists, and nested/recursive menus). It manages active focus state, item expansion, hierarchical branch structures, and keyboard traversals without interacting directly with the DOM.
+`useTree` is a data-first structural mediator for coordinating item objects and hierarchical tree collections (such as dropdowns, popovers, select lists, and nested/recursive menus). It manages active focus state, item expansion, hierarchical branch structures, and keyboard traversals without interacting directly with the DOM.
 
 ## Type
 
@@ -178,7 +178,7 @@ interface UseTreeReturn<T> {
 
 ## Details
 
-`useTree` serves as the single source of truth for items in a navigation structure:
+`useTree` serves as the single source of truth for items in a navigation structure. For a simple flat list of stable strings, [`useCollection`](/api/use-collection) is the smaller API.
 
 - **Decoupled State:** It maintains reactive indices/IDs (`activeValue` and `expandedValues`) and translates relative movements (next, previous, first, last) to state changes.
 - **Tree Coordination (2D support):** When `getItemChildren` is provided, it supports expanding and collapsing branches. `flattenedItems` computed property automatically resolves nested children in depth-first order only if their parent is marked as expanded in `expandedValues`.
@@ -246,6 +246,7 @@ useListNavigation(context, {
 ## See Also
 
 - [`useListNavigation`](/api/use-list-navigation)
+- [`useCollection`](/api/use-collection)
 - [`useFloatingContext`](/api/use-floating-context)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)
 - [Build Nested Menus Guide](/guide/build-nested-menus)

@@ -4,7 +4,7 @@ description: Coordinates keyboard-driven list navigation in VFloat.
 
 # useListNavigation
 
-`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for one-dimensional lists and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates closely with a reactive tree branch conforming to the `NavigableCollection` contract (such as the branches returned by [`useTree`](/api/use-tree)) to manage item activity without raw DOM query selectors or index tracking.
+`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for one-dimensional lists and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates with any reactive collection that satisfies the `NavigableCollection` contract, such as [`useCollection`](/api/use-collection) for flat lists or branches returned by [`useTree`](/api/use-tree).
 
 ## Type
 
@@ -112,7 +112,7 @@ interface UseListNavigationReturn {
 
 `useListNavigation` separates keyboard coordination from active item management:
 
-- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc.
+- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc. Flat lists can use [`useCollection`](/api/use-collection); nested menus can use [`useTree`](/api/use-tree).
 - **Roving & Virtual Focus:** It is compatible with both roving tabindex DOM focus and virtual focus configurations. Simply sync `collection.activeValue` with your elements' focus or `aria-activedescendant` attribute.
 - **Nested Branch Expansion (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on branches. It relies on horizontal arrow detection to fire `onEnter` and `onExit` events. In a tree setup, these events are used to expand or collapse submenus, safely shifting the active value to children or returning it to the parent trigger.
 - **RTL Semantics:** Horizontal arrow keys for list navigation and tree branch expansion automatically reverse their meaning when `rtl` is enabled.
@@ -177,6 +177,7 @@ useListNavigation(context, {
 ## See Also
 
 - [`useTree`](/api/use-tree)
+- [`useCollection`](/api/use-collection)
 - [`useFloatingContext`](/api/use-floating-context)
 - [`useRole`](/api/use-role)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)
