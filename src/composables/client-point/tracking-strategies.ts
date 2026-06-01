@@ -16,7 +16,7 @@ export abstract class TrackingStrategy {
 
   protected lastKnownCoordinates: Coordinates | null = null;
 
-  abstract process(event: PointerEventData, context: TrackingContext): Coordinates | null;
+  abstract process(e: PointerEventData, context: TrackingContext): Coordinates | null;
   abstract getRequiredEvents(): PointerEventData["type"][];
 
   getCoordinatesForOpening(): Coordinates | null {
@@ -42,17 +42,17 @@ export class FollowTracker extends TrackingStrategy {
     return ["pointerdown", "pointermove", "pointerenter"];
   }
 
-  process(event: PointerEventData, context: TrackingContext): Coordinates | null {
-    const coordinates = event.coordinates;
+  process(e: PointerEventData, context: TrackingContext): Coordinates | null {
+    const coordinates = e.coordinates;
     this.lastKnownCoordinates = coordinates;
 
-    switch (event.type) {
+    switch (e.type) {
       case "pointerdown":
         return coordinates;
       case "pointermove":
         // Keep following while open, but only for mouse-like pointers. Touch input
         // should not drag the floating element around after the initial trigger.
-        if (context.isOpen && isMouseLikePointerType(event.originalEvent.pointerType, true)) {
+        if (context.isOpen && isMouseLikePointerType(e.originalEvent.pointerType, true)) {
           return coordinates;
         }
 
@@ -77,11 +77,11 @@ export class StaticTracker extends TrackingStrategy {
     return ["pointerdown", "pointerenter", "pointermove"];
   }
 
-  process(event: PointerEventData, context: TrackingContext): Coordinates | null {
-    const coordinates = event.coordinates;
+  process(e: PointerEventData, context: TrackingContext): Coordinates | null {
+    const coordinates = e.coordinates;
     this.lastKnownCoordinates = coordinates;
 
-    if (event.type === "pointerdown") {
+    if (e.type === "pointerdown") {
       // Remember the trigger point so opening can anchor to the original click
       // even if the pointer moves before the floating element becomes visible.
       this.triggerCoordinates = coordinates;

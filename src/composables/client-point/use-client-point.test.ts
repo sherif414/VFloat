@@ -53,7 +53,7 @@ function createRect({
   } as DOMRect;
 }
 
-function makePointerEvent(
+function createPointerEvent(
   type: "pointerdown" | "pointermove" | "pointerenter",
   options: Partial<PointerEventInit> = {},
 ): PointerEvent {
@@ -72,7 +72,7 @@ const createPointerEventData = (
 ) => ({
   type,
   coordinates,
-  originalEvent: makePointerEvent(type, {
+  originalEvent: createPointerEvent(type, {
     pointerType,
     clientX: coordinates.x,
     clientY: coordinates.y,
@@ -292,7 +292,7 @@ describe("useClientPoint", () => {
       });
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointerenter", {
+        createPointerEvent("pointerenter", {
           clientX: 100,
           clientY: 200,
         }),
@@ -314,7 +314,7 @@ describe("useClientPoint", () => {
         await nextTick();
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointermove", {
+          createPointerEvent("pointermove", {
             clientX: 100,
             clientY: 200,
           }),
@@ -323,7 +323,7 @@ describe("useClientPoint", () => {
         expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointermove", {
+          createPointerEvent("pointermove", {
             clientX: 150,
             clientY: 250,
           }),
@@ -340,7 +340,7 @@ describe("useClientPoint", () => {
         });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerdown", {
+          createPointerEvent("pointerdown", {
             clientX: 100,
             clientY: 200,
           }),
@@ -355,7 +355,7 @@ describe("useClientPoint", () => {
         expect(coordinates.value).toEqual({ x: null, y: null });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerdown", {
+          createPointerEvent("pointerdown", {
             clientX: 150,
             clientY: 250,
           }),
@@ -373,14 +373,14 @@ describe("useClientPoint", () => {
         });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointermove", {
+          createPointerEvent("pointermove", {
             clientX: 100,
             clientY: 200,
           }),
         );
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerdown", {
+          createPointerEvent("pointerdown", {
             clientX: 500,
             clientY: 300,
           }),
@@ -398,14 +398,14 @@ describe("useClientPoint", () => {
         });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerdown", {
+          createPointerEvent("pointerdown", {
             clientX: 500,
             clientY: 300,
           }),
         );
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointermove", {
+          createPointerEvent("pointermove", {
             clientX: 150,
             clientY: 220,
           }),
@@ -423,7 +423,7 @@ describe("useClientPoint", () => {
         });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerenter", {
+          createPointerEvent("pointerenter", {
             clientX: 320,
             clientY: 180,
           }),
@@ -441,7 +441,7 @@ describe("useClientPoint", () => {
         });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerdown", {
+          createPointerEvent("pointerdown", {
             clientX: 500,
             clientY: 300,
           }),
@@ -473,14 +473,14 @@ describe("useClientPoint", () => {
         expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerenter", {
+          createPointerEvent("pointerenter", {
             clientX: 150,
             clientY: 250,
           }),
         );
 
         harness.pointerTarget.value?.dispatchEvent(
-          makePointerEvent("pointerdown", {
+          createPointerEvent("pointerdown", {
             clientX: 200,
             clientY: 300,
           }),
@@ -517,7 +517,7 @@ describe("useClientPoint", () => {
       });
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointerdown", {
+        createPointerEvent("pointerdown", {
           clientX: 100,
           clientY: 200,
         }),
@@ -533,7 +533,7 @@ describe("useClientPoint", () => {
       });
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointerdown", {
+        createPointerEvent("pointerdown", {
           clientX: 100,
           clientY: 200,
         }),
@@ -554,7 +554,7 @@ describe("useClientPoint", () => {
       await nextTick();
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointermove", {
+        createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
         }),
@@ -575,7 +575,7 @@ describe("useClientPoint", () => {
       const initialAnchor = harness.context.refs.anchorEl.value;
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointermove", {
+        createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
         }),
@@ -608,7 +608,7 @@ describe("useClientPoint", () => {
       await nextTick();
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointermove", {
+        createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
         }),
@@ -645,7 +645,7 @@ describe("useClientPoint", () => {
       await nextTick();
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointermove", {
+        createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
         }),
@@ -676,7 +676,7 @@ describe("useClientPoint", () => {
       updateSpy.mockClear();
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointermove", {
+        createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
         }),
@@ -720,7 +720,7 @@ describe("useClientPoint", () => {
       await nextTick();
 
       harness.pointerTarget.value?.dispatchEvent(
-        makePointerEvent("pointermove", {
+        createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
         }),

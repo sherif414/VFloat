@@ -20,26 +20,65 @@ import type { FloatingPosition } from "@/composables/position";
 
 /**
  * Replaces the anchor element with a virtual element that follows pointer coordinates.
+ *
+ * This composable listens to pointer interactions on a target element and updates
+ * the floating context's anchor reference to a dynamic virtual element.
+ *
+ * @param context - The minimal floating context required to manage the anchor element ref and open state.
+ * @param options - Configuration options for pointer-driven virtual anchor tracking.
+ * @returns An object containing the readonly pointer coordinates and a manual position updater.
+ *
+ * @example Basic usage
+ * ```vue
+ * <script setup lang="ts">
+ * import { ref } from "vue";
+ * import { useClientPoint, useFloatingContext, usePosition } from "v-float";
+ *
+ * const trackingArea = ref<HTMLElement | null>(null);
+ * const context = useFloatingContext();
+ * const position = usePosition(context);
+ *
+ * useClientPoint(context, {
+ *   position,
+ *   pointerTarget: trackingArea,
+ * });
+ * </script>
+ * ```
  */
 export function useClientPoint(
   context: UseClientPointContext,
   options: UseClientPointOptions,
 ): UseClientPointReturn {
-  const { pointerTarget } = options;
+  const {
+    pointerTarget,
+    enabled: enabledOption = true,
+    axis: axisOption = "both",
+    x: xOption = null,
+    y: yOption = null,
+    trackingMode: trackingModeOption = "follow",
+    position: positionOption,
+  } = options;
+
   const { open } = context.state;
   const refs = context.refs;
-  const update = options.position?.update;
+  const update = positionOption?.update;
 
+  //=====================================================================================
+  // Internal State
+  //=====================================================================================
   const virtualElementFactory = new VirtualElementFactory();
   const internalCoordinates = ref<Coordinates>({ x: null, y: null });
   const lockedCoordinates = ref<Coordinates | null>(null);
   const managedAnchorEl = ref<AnchorElement>(null);
   const preservedAnchorEl = ref<AnchorElement>(refs.anchorEl.value);
 
-  const axis = computed(() => toValue(options.axis ?? "both"));
-  const enabled = computed(() => toValue(options.enabled ?? true));
-  const externalX = computed(() => sanitizeCoordinate(toValue(options.x ?? null)));
-  const externalY = computed(() => sanitizeCoordinate(toValue(options.y ?? null)));
+  //=====================================================================================
+  // Derived State
+  //=====================================================================================
+  const isEnabled = computed(() => toValue(enabledOption));
+  const axis = computed(() => toValue(axisOption));
+  const externalX = computed(() => sanitizeCoordinate(toValue(xOption)));
+  const externalY = computed(() => sanitizeCoordinate(toValue(yOption)));
   const isExternallyControlled = computed(
     () => externalX.value !== null && externalY.value !== null,
   );
@@ -69,8 +108,11 @@ export function useClientPoint(
     }
   });
 
-  const trackingStrategy = createTrackingStrategy(options.trackingMode ?? "follow");
+  const trackingStrategy = createTrackingStrategy(trackingModeOption);
 
+  //=====================================================================================
+  // Event Handlers
+  //=====================================================================================
   const setCoordinates = (x: number | null, y: number | null) => {
     if (isExternallyControlled.value) {
       return;
@@ -88,12 +130,12 @@ export function useClientPoint(
     }
   };
 
-  const processPointerEvent = (event: PointerEvent, type: PointerEventData["type"]) => {
+  const onPointerTargetEvent = (e: PointerEvent, type: PointerEventData["type"]) => {
     const nextCoordinates = trackingStrategy.process(
       {
         type,
-        coordinates: { x: event.clientX, y: event.clientY },
-        originalEvent: event,
+        coordinates: { x: e.clientX, y: e.clientY },
+        originalEvent: e,
       },
       { isOpen: open.value },
     );
@@ -103,6 +145,19 @@ export function useClientPoint(
     }
   };
 
+  const onPointerTargetDown = (e: PointerEvent) => onPointerTargetEvent(e, "pointerdown");
+  const onPointerTargetEnter = (e: PointerEvent) => onPointerTargetEvent(e, "pointerenter");
+  const onPointerTargetMove = (e: PointerEvent) => onPointerTargetEvent(e, "pointermove");
+
+  const handlers: Record<PointerEventData["type"], (e: PointerEvent) => void> = {
+    pointerdown: onPointerTargetDown,
+    pointerenter: onPointerTargetEnter,
+    pointermove: onPointerTargetMove,
+  };
+
+  //=====================================================================================
+  // Wiring
+  //=====================================================================================
   watch(
     () => refs.anchorEl.value,
     (anchorEl) => {
@@ -114,9 +169,9 @@ export function useClientPoint(
   );
 
   watch(
-    [enabled, constrainedCoordinates, lockedCoordinates, axis, pointerTarget, preservedAnchorEl],
+    [isEnabled, constrainedCoordinates, lockedCoordinates, axis, pointerTarget, preservedAnchorEl],
     () => {
-      if (!enabled.value) {
+      if (!isEnabled.value) {
         managedAnchorEl.value = null;
         refs.anchorEl.value = preservedAnchorEl.value;
 
@@ -150,7 +205,7 @@ export function useClientPoint(
       return;
     }
 
-    if (!enabled.value) {
+    if (!isEnabled.value) {
       if (!isOpen) {
         trackingStrategy.onClose();
         resetCoordinates();
@@ -180,14 +235,8 @@ export function useClientPoint(
     lockedCoordinates.value = null;
   });
 
-  const handlers: Record<PointerEventData["type"], (event: PointerEvent) => void> = {
-    pointerdown: (event) => processPointerEvent(event, "pointerdown"),
-    pointerenter: (event) => processPointerEvent(event, "pointerenter"),
-    pointermove: (event) => processPointerEvent(event, "pointermove"),
-  };
-
   watchEffect((onCleanup) => {
-    if (isExternallyControlled.value || !enabled.value) {
+    if (isExternallyControlled.value || !isEnabled.value) {
       return;
     }
 

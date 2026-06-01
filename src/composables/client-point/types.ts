@@ -70,7 +70,7 @@ export interface VirtualElementFactoryOptions {
 
 export interface VirtualElementFactoryContract {
   /**
-   * Builds a Floating UI compatible virtual element from pointer data.
+   * Creates a Floating UI compatible virtual element from pointer data.
    */
   create(options: VirtualElementFactoryOptions): VirtualElement;
 }

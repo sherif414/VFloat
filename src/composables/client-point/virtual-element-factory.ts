@@ -17,15 +17,15 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
   private static readonly DEFAULT_DIMENSIONS = { width: 100, height: 30 };
 
   create(options: VirtualElementFactoryOptions): VirtualElement {
-    const config = this.buildConfiguration(options);
+    const config = this.resolveConfiguration(options);
 
     return {
       contextElement: config.referenceElement || undefined,
-      getBoundingClientRect: () => this.buildBoundingRect(config),
+      getBoundingClientRect: () => this.resolveBoundingRect(config),
     };
   }
 
-  private buildConfiguration(options: VirtualElementFactoryOptions): {
+  private resolveConfiguration(options: VirtualElementFactoryOptions): {
     coordinates: Coordinates;
     referenceElement: HTMLElement | null;
     baselineCoordinates: Coordinates | null;
@@ -39,7 +39,7 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
     };
   }
 
-  private buildBoundingRect(config: {
+  private resolveBoundingRect(config: {
     coordinates: Coordinates;
     referenceElement: HTMLElement | null;
     baselineCoordinates: Coordinates | null;
@@ -50,7 +50,7 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
     const size = this.calculateSize(config.axis, referenceRect);
 
     // Floating UI expects a full DOMRect-like object even for virtual anchors.
-    return this.buildDOMRect({
+    return this.createDOMRect({
       x: position.x,
       y: position.y,
       width: size.width,
@@ -69,7 +69,7 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
       }
     }
 
-    return this.buildDOMRect({
+    return this.createDOMRect({
       x: 0,
       y: 0,
       width: VirtualElementFactory.DEFAULT_DIMENSIONS.width,
@@ -153,7 +153,7 @@ export class VirtualElementFactory implements VirtualElementFactoryContract {
     }
   }
 
-  private buildDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
+  private createDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
     const { x, y, width, height } = rect;
     const safeWidth = Math.max(0, width);
     const safeHeight = Math.max(0, height);
