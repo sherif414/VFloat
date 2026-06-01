@@ -1,11 +1,4 @@
-import {
-  computed,
-  isRef,
-  type MaybeRefOrGetter,
-  onWatcherCleanup,
-  toValue,
-  watchPostEffect,
-} from "vue";
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import {
   type FloatingContext,
   isFloatingContextTargetWithin,
@@ -86,7 +79,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const isEnabled = computed(() => toValue(enabledOption));
-  const isOutsideClickEnabled = computed(() => resolveOutsideClickEnabled());
+  const shouldListenForOutsideClick =
+    typeof closeOnOutsideClickOption === "function" || closeOnOutsideClickOption;
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value;
@@ -213,7 +207,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   }
 
   function onOutsideClick(event: MouseEvent) {
-    if (!isEnabled.value || !isOutsideClickEnabled.value || !open.value) {
+    if (!isEnabled.value || !shouldListenForOutsideClick || !open.value) {
       return;
     }
 
@@ -285,27 +279,11 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     return false;
   }
 
-  function resolveOutsideClickEnabled(): boolean {
-    const option = getOutsideClickOption();
-    return typeof option === "function" || option;
-  }
-
   function shouldCloseOnOutsideClick(event: MouseEvent, target: EventTarget | null): boolean {
-    const option = getOutsideClickOption();
-    if (typeof option === "function") {
-      return option(event, target);
+    if (typeof closeOnOutsideClickOption === "function") {
+      return closeOnOutsideClickOption(event, target);
     }
-    return option;
-  }
-
-  function getOutsideClickOption(): boolean | OutsideClickPredicate {
-    if (isRef(closeOnOutsideClickOption)) {
-      return closeOnOutsideClickOption.value;
-    }
-    if (typeof closeOnOutsideClickOption === "function" && closeOnOutsideClickOption.length === 0) {
-      return (closeOnOutsideClickOption as () => boolean | OutsideClickPredicate)();
-    }
-    return closeOnOutsideClickOption as boolean | OutsideClickPredicate;
+    return closeOnOutsideClickOption;
   }
 
   // Ensure the drag suppression timer can't update state after unmount.
@@ -342,7 +320,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   //=====================================================================================
 
   useEventListener(
-    () => (isEnabled.value && isOutsideClickEnabled.value ? document : null),
+    () => (isEnabled.value && shouldListenForOutsideClick ? document : null),
     outsideClickEventOption,
     onOutsideClick,
     { capture: toValue(outsideCaptureOption) },
@@ -350,7 +328,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   useEventListener(
     () =>
-      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDragOption)
+      isEnabled.value && shouldListenForOutsideClick && toValue(ignoreDragOption)
         ? floatingEl.value
         : null,
     "mousedown",
@@ -360,7 +338,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   useEventListener(
     () =>
-      isEnabled.value && isOutsideClickEnabled.value && toValue(ignoreDragOption)
+      isEnabled.value && shouldListenForOutsideClick && toValue(ignoreDragOption)
         ? floatingEl.value
         : null,
     "mouseup",
@@ -435,7 +413,7 @@ export interface UseClickOptions {
    * Pass a predicate to decide per outside click.
    * @default true
    */
-  closeOnOutsideClick?: MaybeRefOrGetter<boolean | OutsideClickPredicate>;
+  closeOnOutsideClick?: boolean | OutsideClickPredicate;
 
   /**
    * The event to use for outside click detection.

@@ -20,7 +20,7 @@ interface UseClickOptions {
   ignoreMouse?: MaybeRefOrGetter<boolean>;
   ignoreKeyboard?: MaybeRefOrGetter<boolean>;
   ignoreTouch?: MaybeRefOrGetter<boolean>;
-  closeOnOutsideClick?: MaybeRefOrGetter<boolean | OutsideClickPredicate>;
+  closeOnOutsideClick?: boolean | OutsideClickPredicate;
   outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
   outsideCapture?: MaybeRefOrGetter<boolean>;
   onOutsideClick?: (event: MouseEvent) => void;
@@ -37,7 +37,7 @@ type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | null) => 
 
 - `event` controls which mouse event toggles the trigger. It defaults to `"click"`.
 - `toggle` defaults to `true`.
-- `closeOnOutsideClick` defaults to `true`. Set it to `false` to keep the floating element open when clicking outside. Pass a predicate to decide per outside click.
+- `closeOnOutsideClick` defaults to `true`. Set it to `false` to keep the floating element open when clicking outside. Pass a predicate to decide per outside click. Unlike the other boolean click options, this option is not reactive because function values are reserved for predicates.
 - `outsideClickEvent` defaults to `"pointerdown"`.
 - `onOutsideClick` replaces the default outside-close behavior when you need custom logic.
 
