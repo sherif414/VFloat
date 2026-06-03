@@ -4,7 +4,7 @@ description: Create the shared refs and open state used by VFloat behavior compo
 
 # useFloatingContext
 
-`useFloatingContext` creates the shared floating context. It owns refs, open state, reasoned open changes, and the identity object passed to behavior composables.
+`useFloatingContext` creates the shared floating context. It owns refs, open state, reasoned open changes, and the stable identity passed to behavior composables.
 
 ## Type
 
@@ -31,9 +31,12 @@ interface UseFloatingContextState {
 }
 
 interface FloatingContext {
+  id: FloatingContextId;
   refs: FloatingRefs;
   state: FloatingState;
 }
+
+type FloatingContextId = symbol;
 
 interface FloatingState {
   open: Readonly<Ref<boolean>>;
@@ -47,6 +50,7 @@ interface FloatingState {
 
 - `refs.anchorEl` and `refs.floatingEl` are required.
 - `refs.arrowEl` is optional and used by [`useArrow`](/api/use-arrow).
+- `context.id` is a stable symbol created with the context and used to coordinate related contexts without comparing context objects by identity.
 - `state.open` defaults to `ref(false)`.
 - Passing `state.open` makes the context use your controlled ref.
 - `state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.

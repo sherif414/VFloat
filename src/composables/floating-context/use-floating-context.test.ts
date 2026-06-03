@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref, watchEffect } from "vue";
-import { getFloatingContextFloatingElements, useFloatingContext } from "@/composables";
+import {
+  getFloatingContextFloatingElements,
+  getFloatingInternals,
+  useFloatingContext,
+} from "@/composables";
 
 describe("useFloatingContext", () => {
   it("uses controlled open state and forwards reasons and events", () => {
@@ -37,6 +41,25 @@ describe("useFloatingContext", () => {
     expect(context.state.open.value).toBe(true);
     expect(onOpenChange).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(true, "programmatic", undefined);
+  });
+
+  it("assigns each context a stable symbol id", () => {
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+    });
+    const otherContext = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+    });
+
+    expect(typeof context.id).toBe("symbol");
+    expect(context.id).toBe(context.id);
+    expect(context.id).not.toBe(otherContext.id);
   });
 
   it("closes descendant contexts from deepest to nearest child before closing the parent", () => {
@@ -162,6 +185,35 @@ describe("useFloatingContext", () => {
 
     expect(rootOpen.value).toBe(false);
     expect(childOpen.value).toBe(true);
+  });
+
+  it("tracks child links by context id", () => {
+    const root = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+    });
+    const scope = effectScope();
+    let childId: symbol | undefined;
+
+    scope.run(() => {
+      const child = useFloatingContext({
+        refs: {
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        },
+        parentContext: root,
+      });
+      childId = child.id;
+    });
+
+    const childContextIds = getFloatingInternals(root)?.childContextIds?.value;
+    expect(childContextIds).toEqual(new Set([childId]));
+
+    scope.stop();
+
+    expect(getFloatingInternals(root)?.childContextIds?.value.size).toBe(0);
   });
 
   it("updates descendant floating element helpers when child contexts mount later", async () => {

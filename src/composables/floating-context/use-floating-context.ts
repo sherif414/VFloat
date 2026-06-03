@@ -4,6 +4,8 @@ import type { Middleware } from "@floating-ui/dom";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 
+type FloatingContextTarget = Pick<FloatingContext, "refs" | "state">;
+
 //=======================================================================================
 // Main
 //=======================================================================================
@@ -15,6 +17,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
   const { refs, state = {}, parentContext } = options;
   const { anchorEl, floatingEl, arrowEl: arrowElOption } = refs;
   const { open: openOption, onOpenChange } = state;
+  const id = createFloatingContextId();
   const open = openOption ?? ref(false);
   const arrowEl = arrowElOption ?? ref<HTMLElement | null>(null);
 
@@ -29,6 +32,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
   };
 
   const context: FloatingContext = {
+    id,
     refs: {
       anchorEl,
       floatingEl,
@@ -40,6 +44,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
     },
   };
 
+  registerFloatingContext(context);
   registerFloatingParent(context, parentContext ?? null);
 
   return context;
@@ -50,6 +55,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
 //=======================================================================================
 
 const floatingInternals = new WeakMap<object, FloatingInternals>();
+const floatingContexts = new Map<FloatingContextId, FloatingContext>();
 
 /**
  * Attaches internal positioning state to a public floating object.
@@ -83,7 +89,7 @@ export function patchFloatingInternals(target: object, patch: Partial<FloatingIn
  * @internal
  */
 export function isFloatingContextTargetWithin(
-  context: FloatingContext,
+  context: FloatingContextTarget,
   target: EventTarget | null,
 ) {
   if (!isNodeTarget(target)) return false;
@@ -99,15 +105,13 @@ export function isFloatingContextTargetWithin(
 export function getDeepestOpenFloatingContext<T extends { state: FloatingState }>(
   context: T,
 ): T | FloatingContext {
-  const childContexts = getFloatingInternals(context)?.childContexts?.value;
+  const childContexts = getFloatingChildContexts(context);
   let deepest: OpenFloatingContextMatch | null = null;
 
-  if (childContexts) {
-    for (const childContext of childContexts) {
-      const match = findDeepestOpenFloatingContext(childContext, 1);
-      if (match && (!deepest || match.depth >= deepest.depth)) {
-        deepest = match;
-      }
+  for (const childContext of childContexts) {
+    const match = findDeepestOpenFloatingContext(childContext, 1);
+    if (match && (!deepest || match.depth >= deepest.depth)) {
+      deepest = match;
     }
   }
 
@@ -119,15 +123,12 @@ export function getDeepestOpenFloatingContext<T extends { state: FloatingState }
  *
  * @internal
  */
-export function getFloatingContextFloatingElements(context: FloatingContext): HTMLElement[] {
+export function getFloatingContextFloatingElements(context: FloatingContextTarget): HTMLElement[] {
   const elements: HTMLElement[] = [];
   const floatingEl = context.refs.floatingEl.value;
   if (floatingEl) elements.push(floatingEl);
 
-  const childContexts = getFloatingInternals(context)?.childContexts?.value;
-  if (!childContexts) return elements;
-
-  for (const childContext of childContexts) {
+  for (const childContext of getFloatingChildContexts(context)) {
     elements.push(...getFloatingContextFloatingElements(childContext));
   }
 
@@ -151,22 +152,31 @@ export function closeFloatingDescendants(
 
 function registerFloatingParent(context: FloatingContext, parentContext: FloatingContext | null) {
   const internals = ensureFloatingInternals(context);
-  internals.parentContext = parentContext;
-  internals.childContexts ??= shallowRef(new Set());
+  internals.parentContextId = parentContext?.id ?? null;
+  internals.childContextIds ??= shallowRef(new Set());
 
   if (!parentContext) return;
 
   const parentInternals = ensureFloatingInternals(parentContext);
-  parentInternals.childContexts ??= shallowRef(new Set());
-  parentInternals.childContexts.value = new Set(parentInternals.childContexts.value).add(context);
+  parentInternals.childContextIds ??= shallowRef(new Set());
+  parentInternals.childContextIds.value = new Set(parentInternals.childContextIds.value).add(
+    context.id,
+  );
 
   tryOnScopeDispose(() => {
-    if (parentInternals.childContexts) {
-      const nextChildContexts = new Set(parentInternals.childContexts.value);
-      nextChildContexts.delete(context);
-      parentInternals.childContexts.value = nextChildContexts;
+    if (parentInternals.childContextIds) {
+      const nextChildContextIds = new Set(parentInternals.childContextIds.value);
+      nextChildContextIds.delete(context.id);
+      parentInternals.childContextIds.value = nextChildContextIds;
     }
-    internals.parentContext = null;
+    internals.parentContextId = null;
+  });
+}
+
+function registerFloatingContext(context: FloatingContext) {
+  floatingContexts.set(context.id, context);
+  tryOnScopeDispose(() => {
+    floatingContexts.delete(context.id);
   });
 }
 
@@ -176,30 +186,40 @@ function ensureFloatingInternals(target: object): FloatingInternals {
   return internals;
 }
 
-function getFloatingDescendants(context: FloatingContext): FloatingContext[] {
-  const childContexts = getFloatingInternals(context)?.childContexts?.value;
-  if (!childContexts) return [];
+function createFloatingContextId(): FloatingContextId {
+  return Symbol("v-float-context");
+}
 
+function getFloatingChildContexts(context: object): FloatingContext[] {
+  const childContextIds = getFloatingInternals(context)?.childContextIds?.value;
+  if (!childContextIds) return [];
+
+  const childContexts: FloatingContext[] = [];
+  for (const childContextId of childContextIds) {
+    const childContext = floatingContexts.get(childContextId);
+    if (childContext) childContexts.push(childContext);
+  }
+  return childContexts;
+}
+
+function getFloatingDescendants(context: FloatingContext): FloatingContext[] {
   const descendants: FloatingContext[] = [];
-  for (const childContext of childContexts) {
+  for (const childContext of getFloatingChildContexts(context)) {
     descendants.push(childContext, ...getFloatingDescendants(childContext));
   }
   return descendants;
 }
 
-function containsFloatingTarget(context: FloatingContext, target: Node): boolean {
+function containsFloatingTarget(context: FloatingContextTarget, target: Node): boolean {
   if (containsContextTarget(context, target)) return true;
 
-  const childContexts = getFloatingInternals(context)?.childContexts?.value;
-  if (!childContexts) return false;
-
-  for (const childContext of childContexts) {
+  for (const childContext of getFloatingChildContexts(context)) {
     if (containsFloatingTarget(childContext, target)) return true;
   }
   return false;
 }
 
-function containsContextTarget(context: FloatingContext, target: Node): boolean {
+function containsContextTarget(context: FloatingContextTarget, target: Node): boolean {
   const anchorEl = context.refs.anchorEl.value;
   const anchorDomEl =
     anchorEl instanceof HTMLElement
@@ -226,10 +246,7 @@ function findDeepestOpenFloatingContext(
     ? { context, depth }
     : null;
 
-  const childContexts = getFloatingInternals(context)?.childContexts?.value;
-  if (!childContexts) return deepest;
-
-  for (const childContext of childContexts) {
+  for (const childContext of getFloatingChildContexts(context)) {
     const match = findDeepestOpenFloatingContext(childContext, depth + 1);
     if (match && (!deepest || match.depth >= deepest.depth)) {
       deepest = match;
@@ -254,6 +271,11 @@ export type AnchorElement = HTMLElement | VirtualElement | null;
 export type FloatingElement = HTMLElement | null;
 
 /**
+ * Stable identity for a floating context.
+ */
+export type FloatingContextId = symbol;
+
+/**
  * Reactive refs owned by the floating context.
  */
 export interface FloatingRefs {
@@ -274,6 +296,7 @@ export interface FloatingState {
  * Public floating context shared with companion composables.
  */
 export interface FloatingContext {
+  id: FloatingContextId;
   refs: FloatingRefs;
   state: FloatingState;
 }
@@ -337,8 +360,8 @@ export interface UseFloatingContextOptions {
  * Internal capabilities attached to a context or position result via a WeakMap.
  */
 export interface FloatingInternals {
-  parentContext?: FloatingContext | null;
-  childContexts?: ShallowRef<Set<FloatingContext>>;
+  parentContextId?: FloatingContextId | null;
+  childContextIds?: ShallowRef<Set<FloatingContextId>>;
   middlewareRegistry?: {
     middlewares: ComputedRef<Middleware[]>;
     register: (middleware: MaybeRefOrGetter<Middleware | null | undefined>) => () => void;
