@@ -8,7 +8,7 @@ if (!version) {
 
 const changelog = readFileSync("CHANGELOG.md", "utf8");
 const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const headingPattern = new RegExp(`^#{1,3} \\[?${escapedVersion}\\]?\\b.*$`, "m");
+const headingPattern = new RegExp(`^#{1,3} \\[?v?${escapedVersion}\\]?\\b.*$`, "m");
 const headingMatch = changelog.match(headingPattern);
 
 if (!headingMatch || headingMatch.index === undefined) {

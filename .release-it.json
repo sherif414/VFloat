@@ -13,7 +13,11 @@
   "hooks": {
     "before:init": ["node ./scripts/release/before-init.mjs"],
     "before:bump": ["vp check", "vp test"],
-    "after:bump": ["vp exec changelogen", "vp pack", "git add package.json CHANGELOG.md"],
+    "after:bump": [
+      "vp exec changelogen -r ${version} --output CHANGELOG.md",
+      "vp pack",
+      "git add package.json CHANGELOG.md"
+    ],
     "after:release": ["echo Successfully released ${name} v${version} to ${repo.repository}."]
   },
   "github": {
