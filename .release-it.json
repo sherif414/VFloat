@@ -3,7 +3,8 @@
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}",
     "pushRepo": "origin",
-    "requireBranch": "main"
+    "requireBranch": "main",
+    "requireCleanWorkingDir": true
   },
   "npm": {
     "publish": true,
@@ -11,15 +12,14 @@
   },
   "hooks": {
     "before:init": ["node ./scripts/release/before-init.mjs"],
-    "after:bump": ["vp pack", "vp exec changelogen", "git add CHANGELOG.md"],
-    "after:release": [
-      "vp exec changelogen gh release",
-      "echo Successfully released ${name} v${version} to ${repo.repository}."
-    ]
+    "before:bump": ["vp check", "vp test"],
+    "after:bump": ["vp exec changelogen", "vp pack", "git add package.json CHANGELOG.md"],
+    "after:release": ["echo Successfully released ${name} v${version} to ${repo.repository}."]
   },
   "github": {
     "release": true,
-    "releaseName": "v${version}"
+    "releaseName": "v${version}",
+    "releaseNotes": "node ./scripts/release/release-notes.mjs ${version}"
   },
   "plugins": {}
 }
