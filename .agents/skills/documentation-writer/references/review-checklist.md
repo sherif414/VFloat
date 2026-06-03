@@ -52,5 +52,5 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 
 1. Re-read the edited page next to the source and adjacent docs.
 2. Scan for duplicated contract details between API and guide pages.
-3. Run `npm run docs:build`.
+3. Run `vp run docs:build`.
 4. Fix issues and rerun until the build passes cleanly.

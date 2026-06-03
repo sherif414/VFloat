@@ -1,15 +1,36 @@
-# Triage Labels
+# Triage Labels And Workflow Statuses
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+The skills use two related vocabularies:
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+- **Triage roles** decide whether an issue is clear, blocked on information, or
+  suitable for AFK work.
+- **Operational statuses** describe where an issue is inside the AFK loop.
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+## Category Roles
 
-Edit the right-hand column to match whatever vocabulary you actually use.
+| Role          | Meaning                     |
+| ------------- | --------------------------- |
+| `bug`         | Something is broken.        |
+| `enhancement` | New feature or improvement. |
+
+## Triage State Roles
+
+| Role              | Meaning                                                  |
+| ----------------- | -------------------------------------------------------- |
+| `needs-triage`    | Maintainer or triage agent needs to evaluate this issue. |
+| `needs-info`      | Waiting on human input or reproduction details.          |
+| `ready-for-agent` | Fully specified and ready for `issue-worker`.            |
+| `ready-for-human` | Requires human judgment, credentials, or implementation. |
+| `wontfix`         | Will not be actioned.                                    |
+
+## Operational Workflow Statuses
+
+| Status             | Owner                 | Meaning                                                     |
+| ------------------ | --------------------- | ----------------------------------------------------------- |
+| `in-progress`      | coordinator/worker    | A worker has claimed the issue.                             |
+| `ready-for-review` | worker                | Implementation and validation are ready for review.         |
+| `review-blocked`   | reviewer              | Follow-up issues must complete before this issue completes. |
+| `completed`        | reviewer              | Implementation, validation, and review are complete.        |
+| `ready-to-commit`  | coordinator/committer | A completed feature is ready for commit proposal prep.      |
+
+Use the status strings exactly as written in markdown metadata.

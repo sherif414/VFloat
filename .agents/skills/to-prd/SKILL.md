@@ -1,74 +1,80 @@
 ---
 name: to-prd
-description: Turn the current conversation context into a PRD and publish it to the project issue tracker. Use when user wants to create a PRD from the current context.
+description: Turn conversation context into a VFloat PRD in .scratch for the AFK issue workflow. Use when creating a PRD, feature brief, or parent planning file that will later be broken into issue-worker tasks.
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
+# To PRD
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+This skill synthesizes the current conversation and codebase understanding into
+a PRD file for the local markdown issue tracker. Do not interview the user
+unless a product decision is genuinely missing.
+
+## Workflow Integration
+
+Read before writing:
+
+- `AGENTS.md`
+- `.agents/workflows/afk-issue-loop.md`
+- `.agents/issue-tracker.md`
+- `.agents/triage-labels.md`
+- `CONTEXT.md` and relevant ADRs, if present
+
+The PRD should be ready for `to-issues` to split into independently grabbable
+AFK issues. It should not assume Codex-only tooling.
 
 ## Process
 
-1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the PRD, and respect any ADRs in the area you're touching.
+1. Explore the repo enough to describe the current state accurately. Use the
+   project's domain glossary vocabulary and respect relevant ADRs.
+2. Identify the major modules or public interfaces likely to change. Prefer
+   behavioral contracts over file paths.
+3. Look for deep modules that can be tested in isolation, but keep the PRD at
+   the product and architectural decision level.
+4. Write `.scratch/<feature-slug>/PRD.md` using the template below.
+5. Set `Status: needs-triage` unless the user explicitly says the plan is
+   already approved for issue breakdown.
 
-2. Sketch out the major modules you will need to build or modify to complete the implementation. Actively look for opportunities to extract deep modules that can be tested in isolation.
+## PRD Template
 
-A deep module (as opposed to a shallow module) is one which encapsulates a lot of functionality in a simple, testable interface which rarely changes.
+```markdown
+Status: needs-triage
+Category: enhancement
 
-Check with the user that these modules match their expectations. Check with the user which modules they want tests written for.
-
-3. Write the PRD using the template below, then publish it to the project issue tracker. Apply the `needs-triage` triage label so it enters the normal triage flow.
-
-<prd-template>
+# <Feature Title>
 
 ## Problem Statement
 
-The problem that the user is facing, from the user's perspective.
+The problem from the user's perspective.
 
 ## Solution
 
-The solution to the problem, from the user's perspective.
+The intended solution from the user's perspective.
 
 ## User Stories
 
-A LONG, numbered list of user stories. Each user story should be in the format of:
-
-1. As an <actor>, I want a <feature>, so that <benefit>
-
-<user-story-example>
-1. As a mobile bank customer, I want to see balance on my accounts, so that I can make better informed decisions about my spending
-</user-story-example>
-
-This list of user stories should be extremely extensive and cover all aspects of the feature.
+1. As an <actor>, I want <feature>, so that <benefit>.
 
 ## Implementation Decisions
 
-A list of implementation decisions that were made. This can include:
-
-- The modules that will be built/modified
-- The interfaces of those modules that will be modified
-- Technical clarifications from the developer
-- Architectural decisions
-- Schema changes
-- API contracts
-- Specific interactions
-
-Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
+- Durable decisions about behavior, contracts, modules, or architecture.
+- Avoid brittle file paths and line numbers.
 
 ## Testing Decisions
 
-A list of testing decisions that were made. Include:
-
-- A description of what makes a good test (only test external behavior, not implementation details)
-- Which modules will be tested
-- Prior art for the tests (i.e. similar types of tests in the codebase)
+- Behaviors that need regression coverage.
+- Existing test patterns or seams to reuse.
+- Validation expectations for downstream issues.
 
 ## Out of Scope
 
-A description of the things that are out of scope for this PRD.
+- Related work that should not be included.
 
 ## Further Notes
 
-Any further notes about the feature.
+- Context useful for `to-issues`, `triage`, workers, reviewers, or committers.
+```
 
-</prd-template>
+## Handoff
+
+After publishing, tell the user the PRD path and that `to-issues` is the next
+skill for breaking it into AFK-ready vertical slices.

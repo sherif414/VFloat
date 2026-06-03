@@ -230,13 +230,24 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 
 ## Agent skills
 
+### AFK workflow
+
+Before creating PRDs/issues, triaging, implementing, reviewing, or preparing commits for `.scratch` work, read `.agents/workflows/afk-issue-loop.md`. Codex may coordinate the loop, but issue files must stay readable by any markdown-capable agent.
+
+Use these workflow skills when relevant:
+
+- `agent-workflow` for coordination and role handoffs.
+- `issue-worker` for implementing exactly one `ready-for-agent` issue.
+- `issue-reviewer` for reviewing one `ready-for-review` issue.
+- `issue-committer` for final validation and commit proposals.
+
 ### Issue tracker
 
-Local markdown files under `.scratch/`. See `.agents/issue-tracker.md`.
+Local markdown files under `.scratch/` using the AFK issue contract. See `.agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `.agents/triage-labels.md`.
+Triage roles plus operational workflow statuses. See `.agents/triage-labels.md`.
 
 ### Domain docs
 

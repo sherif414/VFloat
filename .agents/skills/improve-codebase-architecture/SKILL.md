@@ -28,6 +28,10 @@ Key principles (see [LANGUAGE.md](LANGUAGE.md) for the full list):
 
 This skill is _informed_ by the project's domain model. The domain language gives names to good seams; ADRs record decisions the skill should not re-litigate.
 
+## AFK Issue Workflow
+
+If invoked while working from a `.scratch` issue, read `.agents/workflows/afk-issue-loop.md` first. Record selected deepening opportunities, rejected alternatives, and any follow-up issue recommendations in that issue's `Work Log`. If the architecture work changes code, record focused and broad validation in `Validation Log`.
+
 ## Process
 
 ### 1. Explore

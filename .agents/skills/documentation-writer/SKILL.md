@@ -17,6 +17,8 @@ Use this skill to write accurate VFloat docs quickly. Default to calm, direct, t
 
 ## Core Workflow
 
+If this skill is invoked from a `.scratch` issue, read `.agents/workflows/afk-issue-loop.md` first. Update that issue's `Work Log` with documentation scope decisions and `Validation Log` with docs build results.
+
 1. Classify the task.
    - Reference page in `docs/api/`
    - Tutorial, how-to, or explanation in `docs/guide/`
@@ -41,7 +43,7 @@ Use this skill to write accurate VFloat docs quickly. Default to calm, direct, t
 6. Validate before finishing.
    - Read [references/review-checklist.md](references/review-checklist.md).
    - Compare the draft against the source and adjacent docs.
-   - Run `npm run docs:build`, fix failures, and rerun until it passes.
+   - Run `vp run docs:build`, fix failures, and rerun until it passes.
 
 ## Repo Gotchas
 
@@ -76,5 +78,5 @@ Use this skill to write accurate VFloat docs quickly. Default to calm, direct, t
 
 1. Re-read the relevant source and the edited doc side by side.
 2. Check links, headings, VitePress containers, and code block language tags.
-3. Run `npm run docs:build`.
+3. Run `vp run docs:build`.
 4. If build or review fails, fix the doc and repeat the loop.

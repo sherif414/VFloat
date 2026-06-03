@@ -1,81 +1,94 @@
 ---
 name: to-issues
-description: Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices. Use when user wants to convert a plan into issues, create implementation tickets, or break down work into issues.
+description: Break a VFloat PRD, plan, or spec into AFK workflow issue files under .scratch. Use when creating implementation tickets, vertical slices, or issue-worker tasks.
 ---
 
 # To Issues
 
-Break a plan into independently-grabbable issues using vertical slices (tracer bullets).
+Break a PRD or plan into independently grabbable vertical slices for the AFK
+issue loop.
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+## Workflow Integration
+
+Read before writing:
+
+- `AGENTS.md`
+- `.agents/workflows/afk-issue-loop.md`
+- `.agents/issue-tracker.md`
+- `.agents/triage-labels.md`
+- the source PRD or plan
+
+Issues must be understandable by any markdown-capable agent. Avoid Codex-only
+language in issue bodies.
 
 ## Process
 
-### 1. Gather context
+### 1. Gather Context
 
-Work from whatever is already in the conversation context. If the user passes an issue reference (issue number, URL, or path) as an argument, fetch it from the issue tracker and read its full body and comments.
+If the user passes a PRD, issue number, or path, read it fully. If the source is
+conversation context, explore the codebase enough to use VFloat terminology and
+respect relevant ADRs.
 
-### 2. Explore the codebase (optional)
+### 2. Draft Vertical Slices
 
-If you have not already explored the codebase, do so to understand the current state of the code. Issue titles and descriptions should use the project's domain glossary vocabulary, and respect ADRs in the area you're touching.
+Break the plan into tracer-bullet issues. Each issue should deliver a narrow,
+complete behavior path with its own acceptance criteria and validation
+expectations.
 
-### 3. Draft vertical slices
+Classify each slice:
 
-Break the plan into **tracer bullet** issues. Each issue is a thin vertical slice that cuts through ALL integration layers end-to-end, NOT a horizontal slice of one layer.
+- **AFK** - can become `ready-for-agent` after triage.
+- **HITL** - should become `ready-for-human` because it needs human judgment,
+  design approval, credentials, or manual verification.
 
-Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an architectural decision or a design review. AFK slices can be implemented and merged without human interaction. Prefer AFK over HITL where possible.
+Present the draft breakdown with title, type, blockers, and covered user
+stories. Iterate until approved.
 
-<vertical-slice-rules>
-- Each slice delivers a narrow but COMPLETE path through every layer (schema, API, UI, tests)
-- A completed slice is demoable or verifiable on its own
-- Prefer many thin slices over few thick ones
-</vertical-slice-rules>
+### 3. Publish Issues
 
-### 4. Quiz the user
+Create files at `.scratch/<feature-slug>/issues/<NN>-<slug>.md` in dependency
+order. New issues start as `Status: needs-triage`, even when they look AFK, so
+`triage` can verify readiness and add the final agent brief.
 
-Present the proposed breakdown as a numbered list. For each slice, show:
+## Issue Template
 
-- **Title**: short descriptive name
-- **Type**: HITL / AFK
-- **Blocked by**: which other slices (if any) must complete first
-- **User stories covered**: which user stories this addresses (if the source material has them)
+```markdown
+Status: needs-triage
+Category: enhancement
+Assignee: unassigned
+Branch/worktree: not-started
+Parent: .scratch/<feature-slug>/PRD.md
+Blocked by: None
 
-Ask the user:
-
-- Does the granularity feel right? (too coarse / too fine)
-- Are the dependency relationships correct?
-- Should any slices be merged or split further?
-- Are the correct slices marked as HITL and AFK?
-
-Iterate until the user approves the breakdown.
-
-### 5. Publish the issues to the issue tracker
-
-For each approved slice, publish a new issue to the issue tracker. Use the issue body template below. Apply the `needs-triage` triage label so each issue enters the normal triage flow.
-
-Publish issues in dependency order (blockers first) so you can reference real issue identifiers in the "Blocked by" field.
-
-<issue-template>
-## Parent
-
-A reference to the parent issue on the issue tracker (if the source was an existing issue, otherwise omit this section).
+# <Issue Title>
 
 ## What to build
 
-A concise description of this vertical slice. Describe the end-to-end behavior, not layer-by-layer implementation.
+A concise description of the end-to-end behavior this slice delivers.
 
 ## Acceptance criteria
 
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+- [ ] Specific, testable criterion 1
+- [ ] Specific, testable criterion 2
+- [ ] Specific, testable criterion 3
 
-## Blocked by
+## Agent Brief
 
-- A reference to the blocking ticket (if any)
+To be completed by triage before moving to `ready-for-agent`.
 
-Or "None - can start immediately" if no blockers.
+## Work Log
 
-</issue-template>
+- Not started.
 
-Do NOT close or modify any parent issue.
+## Validation Log
+
+- Not run.
+
+## Review Notes
+
+- Not reviewed.
+
+## Comments
+```
+
+Do not close or mark the parent PRD complete while publishing issues.

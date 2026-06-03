@@ -9,6 +9,10 @@ A discipline for hard bugs. Skip phases only when explicitly justified.
 
 When exploring the codebase, use the project's domain glossary to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
 
+## AFK issue workflow
+
+If invoked while working from a `.scratch` issue, read `.agents/workflows/afk-issue-loop.md` first. Record the reproduction loop, confirmed symptom, final hypothesis, fix summary, and regression validation in that issue's `Work Log` and `Validation Log`. Do not move the issue to `ready-for-review`; the `issue-worker` skill owns that transition.
+
 ## Phase 1 — Build a feedback loop
 
 **This is the skill.** Everything else is mechanical. If you have a fast, deterministic, agent-runnable pass/fail signal for the bug, you will find the cause — bisection, hypothesis-testing, and instrumentation all just consume that signal. If you don't have one, no amount of staring at code will save you.

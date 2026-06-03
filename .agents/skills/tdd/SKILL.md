@@ -15,6 +15,10 @@ description: Test-driven development with red-green-refactor loop. Use when user
 
 See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
 
+## AFK Issue Workflow
+
+If invoked while working from a `.scratch` issue, read `.agents/workflows/afk-issue-loop.md` first. Treat the issue acceptance criteria as the behavior backlog, update `Work Log` with each red-green-refactor slice, and record exact test commands/results in `Validation Log`. The `issue-worker` skill owns the final move to `ready-for-review`.
+
 ## Anti-Pattern: Horizontal Slices
 
 **DO NOT write all tests first, then all implementation.** This is "horizontal slicing" - treating RED as "write all tests" and GREEN as "write all code."
