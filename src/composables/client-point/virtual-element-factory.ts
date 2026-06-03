@@ -51,7 +51,6 @@ export class VirtualElementFactory {
     const position = this.resolvePosition(config, referenceRect);
     const size = this.calculateSize(config.axis, referenceRect);
 
-    // Floating UI expects a full DOMRect-like object even for virtual anchors.
     return this.createDOMRect({
       x: position.x,
       y: position.y,

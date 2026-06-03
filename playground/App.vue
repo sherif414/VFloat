@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import TreeListNavigationDxDemo from "./demo/TreeListNavigationDxDemo.vue";
+import ClientPoint from "./demo/ClientPoint.vue";
 </script>
 
 <template>
-  <TreeListNavigationDxDemo />
+  <ClientPoint />
 </template>

@@ -34,13 +34,15 @@ import type { FloatingPosition } from "@/composables/position";
  * import { ref } from "vue";
  * import { useClientPoint, useFloatingContext, usePosition } from "v-float";
  *
- * const trackingArea = ref<HTMLElement | null>(null);
- * const context = useFloatingContext();
+ * const trackingAreaEl = ref<HTMLElement | null>(null);
+ * const anchorEl = ref<HTMLElement | null>(null);
+ * const floatingEl = ref<HTMLElement | null>(null);
+ * const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
  * const position = usePosition(context);
  *
  * useClientPoint(context, {
  *   position,
- *   pointerTarget: trackingArea,
+ *   trackingTarget: trackingAreaEl,
  * });
  * </script>
  * ```
@@ -50,7 +52,7 @@ export function useClientPoint(
   options: UseClientPointOptions,
 ): UseClientPointReturn {
   const {
-    pointerTarget,
+    trackingTarget: trackingTargetOption,
     enabled: enabledOption = true,
     axis: axisOption = "both",
     x: xOption = null,
@@ -73,6 +75,9 @@ export function useClientPoint(
   const axis = computed(() => toValue(axisOption));
   const externalX = computed(() => sanitizeCoordinate(toValue(xOption)));
   const externalY = computed(() => sanitizeCoordinate(toValue(yOption)));
+  const trackingTargetEl = computed(
+    () => trackingTargetOption?.value ?? getDefaultTrackingTarget(),
+  );
   const isExternallyControlled = computed(
     () => externalX.value !== null && externalY.value !== null,
   );
@@ -157,7 +162,14 @@ export function useClientPoint(
   );
 
   watch(
-    [isEnabled, constrainedCoordinates, lockedCoordinates, axis, pointerTarget, preservedAnchorEl],
+    [
+      isEnabled,
+      constrainedCoordinates,
+      lockedCoordinates,
+      axis,
+      trackingTargetEl,
+      preservedAnchorEl,
+    ],
     () => {
       if (!isEnabled.value) {
         managedAnchorEl.value = null;
@@ -174,7 +186,7 @@ export function useClientPoint(
       // `useFloatingContext()` always positions against the latest pointer state.
       const virtualAnchorEl = virtualElementFactory.create({
         coordinates: constrainedCoordinates.value,
-        referenceElement: pointerTarget.value,
+        referenceElement: trackingTargetEl.value,
         baselineCoordinates: lockedCoordinates.value,
         axis: axis.value,
       });
@@ -228,7 +240,7 @@ export function useClientPoint(
       return;
     }
 
-    const target = pointerTarget.value;
+    const target = trackingTargetEl.value;
 
     if (!target) {
       return;
@@ -261,6 +273,10 @@ const sanitizeCoordinate = (value: number | null | undefined): number | null => 
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 };
 
+const getDefaultTrackingTarget = (): HTMLElement | null => {
+  return typeof document === "undefined" ? null : document.documentElement;
+};
+
 function createTrackingStrategy(trackingMode: TrackingMode): TrackingStrategy {
   return trackingMode === "follow" ? new FollowTracker() : new StaticTracker();
 }
@@ -276,9 +292,11 @@ export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory }
  */
 export interface UseClientPointOptions {
   /**
-   * Element that should receive the pointer listeners used to drive the virtual anchor.
+   * Element that receives pointer listeners and provides fallback geometry for the virtual anchor.
+   *
+   * Defaults to `document.documentElement` in browser environments.
    */
-  pointerTarget: Ref<HTMLElement | null>;
+  trackingTarget?: Ref<HTMLElement | null>;
 
   /**
    * Enables or disables client-point behavior without removing the composable.

@@ -82,22 +82,22 @@ const createPointerEventData = (
 type ClientPointHarness = {
   context: UseClientPointContext;
   open: Ref<boolean>;
-  pointerTarget: Ref<HTMLElement | null>;
+  trackingTargetEl: Ref<HTMLElement | null>;
   position: UseClientPointOptions["position"];
   updateSpy: ReturnType<typeof vi.fn>;
   scope: ReturnType<typeof effectScope> | null;
 };
 
 function createClientPointHarness(): ClientPointHarness {
-  const pointerTarget = ref(trackElement(document.createElement("div")));
+  const trackingTargetEl = ref(trackElement(document.createElement("div")));
   const open = ref(false);
   const updateSpy = vi.fn();
 
-  document.body.appendChild(pointerTarget.value);
+  document.body.appendChild(trackingTargetEl.value);
 
   return {
     open,
-    pointerTarget,
+    trackingTargetEl,
     position: {
       update: updateSpy,
     },
@@ -232,7 +232,7 @@ describe("useClientPoint", () => {
     let result!: ReturnType<typeof useClientPoint>;
     harness.scope.run(() => {
       result = useClientPoint(harness.context, {
-        pointerTarget: harness.pointerTarget,
+        trackingTarget: harness.trackingTargetEl,
         position: harness.position,
         ...options,
       });
@@ -256,6 +256,31 @@ describe("useClientPoint", () => {
       const { coordinates } = initClientPoint();
 
       expect(coordinates.value).toEqual({ x: null, y: null });
+    });
+
+    it("uses the document element as the default tracking target", async () => {
+      const { coordinates } = initClientPoint({
+        trackingMode: "follow",
+        trackingTarget: undefined,
+      });
+
+      harness.open.value = true;
+      await nextTick();
+
+      document.documentElement.dispatchEvent(
+        createPointerEvent("pointermove", {
+          clientX: 100,
+          clientY: 200,
+        }),
+      );
+      await nextTick();
+
+      const virtualAnchor = harness.context.refs.anchorEl.value;
+      expect(coordinates.value).toEqual({ x: 100, y: 200 });
+      expect(isVirtualElement(virtualAnchor)).toBe(true);
+      expect((virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
+        document.documentElement,
+      );
     });
 
     it("sanitizes invalid coordinates", async () => {
@@ -291,7 +316,7 @@ describe("useClientPoint", () => {
         enabled: false,
       });
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointerenter", {
           clientX: 100,
           clientY: 200,
@@ -313,7 +338,7 @@ describe("useClientPoint", () => {
         harness.open.value = true;
         await nextTick();
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointermove", {
             clientX: 100,
             clientY: 200,
@@ -322,7 +347,7 @@ describe("useClientPoint", () => {
 
         expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointermove", {
             clientX: 150,
             clientY: 250,
@@ -339,7 +364,7 @@ describe("useClientPoint", () => {
           trackingMode: "static",
         });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerdown", {
             clientX: 100,
             clientY: 200,
@@ -354,7 +379,7 @@ describe("useClientPoint", () => {
         await nextTick();
         expect(coordinates.value).toEqual({ x: null, y: null });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerdown", {
             clientX: 150,
             clientY: 250,
@@ -372,14 +397,14 @@ describe("useClientPoint", () => {
           trackingMode: "static",
         });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointermove", {
             clientX: 100,
             clientY: 200,
           }),
         );
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerdown", {
             clientX: 500,
             clientY: 300,
@@ -397,14 +422,14 @@ describe("useClientPoint", () => {
           trackingMode: "static",
         });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerdown", {
             clientX: 500,
             clientY: 300,
           }),
         );
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointermove", {
             clientX: 150,
             clientY: 220,
@@ -422,7 +447,7 @@ describe("useClientPoint", () => {
           trackingMode: "static",
         });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerenter", {
             clientX: 320,
             clientY: 180,
@@ -440,7 +465,7 @@ describe("useClientPoint", () => {
           trackingMode: "static",
         });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerdown", {
             clientX: 500,
             clientY: 300,
@@ -472,14 +497,14 @@ describe("useClientPoint", () => {
         await nextTick();
         expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerenter", {
             clientX: 150,
             clientY: 250,
           }),
         );
 
-        harness.pointerTarget.value?.dispatchEvent(
+        harness.trackingTargetEl.value?.dispatchEvent(
           createPointerEvent("pointerdown", {
             clientX: 200,
             clientY: 300,
@@ -516,7 +541,7 @@ describe("useClientPoint", () => {
         axis: "x",
       });
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointerdown", {
           clientX: 100,
           clientY: 200,
@@ -532,7 +557,7 @@ describe("useClientPoint", () => {
         axis: "y",
       });
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointerdown", {
           clientX: 100,
           clientY: 200,
@@ -553,7 +578,7 @@ describe("useClientPoint", () => {
       harness.open.value = true;
       await nextTick();
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
@@ -574,7 +599,7 @@ describe("useClientPoint", () => {
 
       const initialAnchor = harness.context.refs.anchorEl.value;
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
@@ -596,7 +621,7 @@ describe("useClientPoint", () => {
   });
 
   describe("reactive virtual element behavior", () => {
-    it("updates the virtual element when the pointer target changes", async () => {
+    it("updates the virtual element when the tracking target changes", async () => {
       const newTarget = trackElement(document.createElement("span"));
       document.body.appendChild(newTarget);
 
@@ -607,7 +632,7 @@ describe("useClientPoint", () => {
       harness.open.value = true;
       await nextTick();
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
@@ -620,9 +645,9 @@ describe("useClientPoint", () => {
       expect(isVirtualElement(initialVirtualElement)).toBe(true);
       expect(
         (initialVirtualElement as Exclude<AnchorElement, HTMLElement | null>).contextElement,
-      ).toBe(harness.pointerTarget.value);
+      ).toBe(harness.trackingTargetEl.value);
 
-      harness.pointerTarget.value = newTarget;
+      harness.trackingTargetEl.value = newTarget;
       await nextTick();
 
       const updatedVirtualElement = harness.context.refs.anchorEl.value;
@@ -644,7 +669,7 @@ describe("useClientPoint", () => {
       harness.open.value = true;
       await nextTick();
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
@@ -675,7 +700,7 @@ describe("useClientPoint", () => {
       const updateSpy = harness.updateSpy;
       updateSpy.mockClear();
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
@@ -686,29 +711,34 @@ describe("useClientPoint", () => {
       expect(updateSpy).not.toHaveBeenCalled();
     });
 
-    it("handles a null pointer target gracefully", async () => {
-      harness.pointerTarget.value = null;
+    it("falls back to the document element when the tracking target is null", async () => {
+      harness.trackingTargetEl.value = null;
 
-      const { coordinates, updatePosition } = initClientPoint({
+      const { coordinates } = initClientPoint({
         trackingMode: "follow",
       });
 
       harness.open.value = true;
       await nextTick();
 
-      updatePosition(100, 200);
+      document.documentElement.dispatchEvent(
+        createPointerEvent("pointermove", {
+          clientX: 100,
+          clientY: 200,
+        }),
+      );
       await nextTick();
 
       const virtualAnchor = harness.context.refs.anchorEl.value;
       expect(virtualAnchor).toBeDefined();
       expect(isVirtualElement(virtualAnchor)).toBe(true);
-      expect(
-        (virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement,
-      ).toBeUndefined();
+      expect((virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
+        document.documentElement,
+      );
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
     });
 
-    it("preserves coordinates across pointer target changes", async () => {
+    it("preserves coordinates across tracking target changes", async () => {
       const newTarget = trackElement(document.createElement("div"));
       document.body.appendChild(newTarget);
 
@@ -719,7 +749,7 @@ describe("useClientPoint", () => {
       harness.open.value = true;
       await nextTick();
 
-      harness.pointerTarget.value?.dispatchEvent(
+      harness.trackingTargetEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
           clientX: 100,
           clientY: 200,
@@ -729,7 +759,7 @@ describe("useClientPoint", () => {
 
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
-      harness.pointerTarget.value = newTarget;
+      harness.trackingTargetEl.value = newTarget;
       await nextTick();
 
       expect(coordinates.value).toEqual({ x: 100, y: 200 });

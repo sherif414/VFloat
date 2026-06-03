@@ -23,14 +23,12 @@ Use a virtual anchor when:
 
 ## Path 1: Follow The Pointer
 
-`useClientPoint()` is the easiest entry point when the pointer position should drive the anchor.
-
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
 import { useClientPoint, useFloatingContext, usePosition, useHover } from "v-float";
 
-const trackingArea = ref<HTMLElement | null>(null);
+const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
@@ -42,7 +40,7 @@ const { styles } = position;
 
 useClientPoint(context, {
   position,
-  pointerTarget: trackingArea,
+  trackingTarget: trackingAreaEl,
   trackingMode: "follow",
 });
 
@@ -61,7 +59,7 @@ Sometimes you want the surface to open at the pointer location and stay there ev
 import { ref } from "vue";
 import { useClientPoint, useEscapeKey, useFloatingContext, usePosition } from "v-float";
 
-const area = ref<HTMLElement | null>(null);
+const areaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
@@ -73,7 +71,7 @@ const { styles } = position;
 
 useClientPoint(context, {
   position,
-  pointerTarget: area,
+  trackingTarget: areaEl,
   trackingMode: "static",
 });
 

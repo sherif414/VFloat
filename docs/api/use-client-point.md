@@ -15,7 +15,7 @@ function useClientPoint(
 ): UseClientPointReturn;
 
 interface UseClientPointOptions {
-  pointerTarget: Ref<HTMLElement | null>;
+  trackingTarget?: Ref<HTMLElement | null>;
   enabled?: MaybeRefOrGetter<boolean>;
   axis?: MaybeRefOrGetter<"x" | "y" | "both">;
   x?: MaybeRefOrGetter<number | null>;
@@ -32,8 +32,9 @@ interface UseClientPointReturn {
 
 ## Details
 
-`useClientPoint` is centered on the floating root. Pass the floating context first, then the tracking target in `options.pointerTarget`.
+`useClientPoint` is centered on the floating root. Pass the floating context first. By default, pointer tracking listens on `document.documentElement`. Pass `options.trackingTarget` when tracking should be scoped to a specific element.
 
+- `trackingTarget` receives pointer listeners and provides fallback geometry for the virtual anchor.
 - `trackingMode: "follow"` keeps the floating element in sync with pointer movement.
 - `trackingMode: "static"` captures the initial point and keeps the surface anchored there.
 - If both `x` and `y` are provided, the composable behaves like a controlled source of coordinates.
@@ -48,7 +49,7 @@ This example shows the root-first overload.
 import { ref } from "vue";
 import { useClientPoint, useFloatingContext, usePosition, useHover } from "v-float";
 
-const trackingArea = ref<HTMLElement | null>(null);
+const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
@@ -60,14 +61,14 @@ const { styles } = position;
 
 useClientPoint(context, {
   position,
-  pointerTarget: trackingArea,
+  trackingTarget: trackingAreaEl,
 });
 
 useHover(context);
 </script>
 
 <template>
-  <div ref="trackingArea">
+  <div ref="trackingAreaEl">
     Move the pointer here
 
     <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
