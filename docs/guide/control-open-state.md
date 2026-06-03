@@ -17,7 +17,7 @@ If you call [`useFloatingContext`](/api/use-floating-context) without `state.ope
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useFloatingContext } from "v-float";
+import { useClick, useFloatingContext, useOutsideClick } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -53,9 +53,8 @@ const context = useFloatingContext({
   },
 });
 
-useClick(context, {
-  closeOnOutsideClick: true,
-});
+useClick(context);
+useOutsideClick(context);
 </script>
 ```
 

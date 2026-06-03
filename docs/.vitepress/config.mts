@@ -150,6 +150,7 @@ export default defineConfigWithTheme({
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useFocusTrap", link: "/api/use-focus-trap" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
+            { text: "useOutsideClick", link: "/api/use-outside-click" },
             { text: "useRole", link: "/api/use-role" },
           ],
         },

@@ -1,12 +1,7 @@
 import { userEvent } from "vite-plus/test/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref } from "vue";
-import {
-  type UseClickOptions,
-  type UseClickContext,
-  useClick,
-  useFloatingContext,
-} from "@/composables";
+import { type UseClickOptions, type UseClickContext, useClick } from "@/composables";
 import type { AnchorElement, FloatingElement } from "@/composables";
 
 // Track elements created during tests for cleanup
@@ -24,21 +19,6 @@ function clearTrackedElements() {
     }
   }
   elementsToCleanUp.length = 0;
-}
-
-function createOutsideElement(): HTMLElement {
-  const outsideElement = trackElement(document.createElement("div"));
-  outsideElement.id = "outside";
-  Object.assign(outsideElement.style, {
-    position: "fixed",
-    bottom: "0",
-    left: "0",
-    width: "100px",
-    height: "100px",
-    zIndex: "1",
-  });
-  document.body.appendChild(outsideElement);
-  return outsideElement;
 }
 
 describe("useClick", () => {
@@ -141,74 +121,6 @@ describe("useClick", () => {
     });
   });
 
-  describe("outside dismissal behavior", () => {
-    it("closes on outside click when closeOnOutsideClick is enabled", async () => {
-      const outsideElement = createOutsideElement();
-
-      initClick({ toggle: false, closeOnOutsideClick: true, outsideClickEvent: "click" });
-      await nextTick();
-      expect(context.state.open.value).toBe(false);
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      setOpenMock.mockClear();
-
-      await userEvent.click(outsideElement);
-      await nextTick();
-
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-      expect(context.state.open.value).toBe(false);
-    });
-
-    it("does not close on outside click when closeOnOutsideClick is disabled", async () => {
-      const outsideElement = createOutsideElement();
-
-      initClick({ closeOnOutsideClick: false, outsideClickEvent: "click" });
-      await nextTick();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      await userEvent.click(outsideElement);
-      await nextTick();
-
-      expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.state.open.value).toBe(true);
-    });
-
-    it("does not close when clicking the anchor while outside dismissal is enabled", async () => {
-      initClick({ closeOnOutsideClick: true, toggle: false, outsideClickEvent: "click" });
-      await nextTick();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      await userEvent.click(anchorEl);
-
-      expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.state.open.value).toBe(true);
-    });
-
-    it("does not close when clicking the floating element while outside dismissal is enabled", async () => {
-      initClick({ closeOnOutsideClick: true, toggle: false, outsideClickEvent: "click" });
-      await nextTick();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      await userEvent.click(floatingEl);
-
-      expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.state.open.value).toBe(true);
-    });
-  });
-
   describe("pointer behavior", () => {
     it("does not toggle on mouse click if ignoreMouse is true", async () => {
       initClick({ ignoreMouse: true });
@@ -242,25 +154,6 @@ describe("useClick", () => {
       expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
       expect(context.state.open.value).toBe(false);
-    });
-  });
-
-  describe("drag behavior", () => {
-    it("ignores outside click after drag that started inside when outsideClickEvent is 'click'", async () => {
-      initClick({ closeOnOutsideClick: true, outsideClickEvent: "click", ignoreDrag: true });
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      floatingEl.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-
-      const outside = createOutsideElement();
-      outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      await nextTick();
-
-      expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -380,210 +273,6 @@ describe("useClick", () => {
       await userEvent.click(anchorEl);
       expect(setOpenMock).not.toHaveBeenCalled();
       expect(context.state.open.value).toBe(true);
-    });
-  });
-
-  describe("combined interaction flows", () => {
-    it("supports complete interaction flow: open with inside click, close with outside click", async () => {
-      const outsideElement = createOutsideElement();
-
-      initClick({ closeOnOutsideClick: true, toggle: true });
-      expect(context.state.open.value).toBe(false);
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-      setOpenMock.mockClear();
-
-      await userEvent.click(outsideElement);
-      expect(context.state.open.value).toBe(false);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-      setOpenMock.mockClear();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
-    });
-  });
-
-  describe("combined behavior with outside clicks", () => {
-    it("supports toggle behavior with outside click enabled", async () => {
-      const outsideElement = createOutsideElement();
-
-      initClick({ closeOnOutsideClick: true, toggle: true });
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(false);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-      setOpenMock.mockClear();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      await userEvent.click(outsideElement);
-      expect(context.state.open.value).toBe(false);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-    });
-  });
-
-  describe("combined behavior with disabled state", () => {
-    it("respects disabled state for both inside and outside clicks", async () => {
-      const outsideElement = createOutsideElement();
-
-      const enabled = ref(false);
-      initClick({ enabled, closeOnOutsideClick: true });
-
-      await userEvent.click(anchorEl);
-      expect(setOpenMock).not.toHaveBeenCalled();
-
-      await userEvent.click(outsideElement);
-      expect(setOpenMock).not.toHaveBeenCalled();
-
-      enabled.value = true;
-      await nextTick();
-
-      await userEvent.click(anchorEl);
-      expect(context.state.open.value).toBe(true);
-      setOpenMock.mockClear();
-
-      enabled.value = false;
-      await nextTick();
-
-      await userEvent.click(outsideElement);
-      expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.state.open.value).toBe(true);
-    });
-  });
-
-  describe("closeOnOutsideClick predicate", () => {
-    it("uses the closeOnOutsideClick predicate for per-target dismissal", async () => {
-      scope = effectScope();
-
-      const outsideEl = createOutsideElement();
-      const childPopupEl = trackElement(document.createElement("div"));
-      childPopupEl.id = "child-popup";
-      childPopupEl.style.width = "100px";
-      childPopupEl.style.height = "100px";
-      document.body.appendChild(childPopupEl);
-
-      scope.run(() => {
-        useClick(context, {
-          outsideClickEvent: "click",
-          closeOnOutsideClick: (_event, target) => {
-            return !(target instanceof Node && childPopupEl.contains(target));
-          },
-        });
-      });
-
-      // Start with open
-      context.state.setOpen(true);
-      await nextTick();
-      setOpenMock.mockClear();
-
-      // Click the child popup - should be ignored
-      await userEvent.click(childPopupEl);
-      await nextTick();
-      expect(setOpenMock).not.toHaveBeenCalled();
-      expect(context.state.open.value).toBe(true);
-
-      // Click the outside element - should close
-      await userEvent.click(outsideEl);
-      await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
-    });
-  });
-
-  describe("parent-linked contexts", () => {
-    it("keeps a parent open when clicking inside a child floating element", async () => {
-      const childAnchorEl = trackElement(document.createElement("button"));
-      const childFloatingEl = trackElement(document.createElement("div"));
-      childFloatingEl.style.width = "100px";
-      childFloatingEl.style.height = "100px";
-      document.body.appendChild(childAnchorEl);
-      document.body.appendChild(childFloatingEl);
-      const parentOpen = ref(true);
-      const childOpen = ref(true);
-      const onParentOpenChange = vi.fn();
-
-      scope = effectScope();
-      scope.run(() => {
-        const parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(anchorEl),
-            floatingEl: ref(floatingEl),
-          },
-          state: {
-            open: parentOpen,
-            onOpenChange: onParentOpenChange,
-          },
-        });
-        useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
-          parentContext,
-          state: { open: childOpen },
-        });
-
-        useClick(parentContext, {
-          closeOnOutsideClick: true,
-          outsideClickEvent: "click",
-        });
-      });
-
-      await userEvent.click(childFloatingEl);
-      await nextTick();
-
-      expect(parentOpen.value).toBe(true);
-      expect(onParentOpenChange).not.toHaveBeenCalled();
-    });
-
-    it("treats parent blank areas as outside for child contexts", async () => {
-      const childAnchorEl = trackElement(document.createElement("button"));
-      const childFloatingEl = trackElement(document.createElement("div"));
-      childFloatingEl.style.width = "100px";
-      childFloatingEl.style.height = "100px";
-      document.body.appendChild(childAnchorEl);
-      document.body.appendChild(childFloatingEl);
-      const parentOpen = ref(true);
-      const childOpen = ref(true);
-
-      scope = effectScope();
-      scope.run(() => {
-        const parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(anchorEl),
-            floatingEl: ref(floatingEl),
-          },
-          state: { open: parentOpen },
-        });
-        const childContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
-          parentContext,
-          state: { open: childOpen },
-        });
-
-        useClick(childContext, {
-          closeOnOutsideClick: true,
-          outsideClickEvent: "click",
-        });
-      });
-
-      await userEvent.click(floatingEl);
-      await nextTick();
-
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(false);
     });
   });
 });

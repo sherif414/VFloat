@@ -17,7 +17,8 @@ Interaction composables do not usually position anything themselves. They answer
 Examples:
 
 - [`useHover`](/api/use-hover) reacts to pointer movement
-- [`useClick`](/api/use-click) reacts to anchor activation and outside clicks
+- [`useClick`](/api/use-click) reacts to anchor activation
+- [`useOutsideClick`](/api/use-outside-click) reacts to outside pointer input
 - [`useFocus`](/api/use-focus) reacts to focus and blur
 - [`useEscapeKey`](/api/use-escape-key) reacts to Escape
 - [`useFocusTrap`](/api/use-focus-trap) constrains focus while open
@@ -37,17 +38,15 @@ This example shows a common click-driven combination.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingContext } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, useOutsideClick } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
 
-useClick(context, {
-  closeOnOutsideClick: true,
-});
-
+useClick(context);
+useOutsideClick(context);
 useEscapeKey(context);
 </script>
 ```

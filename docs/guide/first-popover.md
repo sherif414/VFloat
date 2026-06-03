@@ -25,7 +25,7 @@ The main difference from the tooltip page is the interaction layer. For a popove
 - Click outside to close
 - Escape to close for keyboard users
 
-That means we will use [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click), [`useEscapeKey`](/api/use-escape-key), and [`offset`](/api/offset).
+That means we will use [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`offset`](/api/offset).
 
 If those names still feel abstract, that is fine. The example makes the shape easier to see.
 
@@ -58,7 +58,7 @@ Now swap the hover behavior for click-based interaction.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -71,10 +71,8 @@ const { styles } = usePosition(context, {
   },
 });
 
-useClick(context, {
-  closeOnOutsideClick: true,
-});
-
+useClick(context);
+useOutsideClick(context);
 useEscapeKey(context);
 </script>
 ```
@@ -92,7 +90,7 @@ Now render the trigger and the panel with the shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingContext, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -105,10 +103,8 @@ const { styles } = usePosition(context, {
   },
 });
 
-useClick(context, {
-  closeOnOutsideClick: true,
-});
-
+useClick(context);
+useOutsideClick(context);
 useEscapeKey(context);
 </script>
 
@@ -132,7 +128,7 @@ The popover uses the same core shape as the tooltip:
 - `floatingEl`
 - `context`
 
-The difference is that you replaced `useHover` with [`useClick`](/api/use-click) and [`useEscapeKey`](/api/use-escape-key).
+The difference is that you replaced `useHover` with [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), and [`useEscapeKey`](/api/use-escape-key).
 
 ## Next Step
 

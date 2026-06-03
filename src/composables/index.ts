@@ -12,4 +12,5 @@ export * from "./focus-trap/use-focus-trap";
 export * from "./hover/use-hover";
 export * from "./list-navigation/use-list-navigation";
 export * from "./middlewares";
+export * from "./outside-click/use-outside-click";
 export * from "./role/use-role";

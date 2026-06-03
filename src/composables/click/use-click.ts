@@ -1,17 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import {
-  type FloatingContext,
-  isFloatingContextTargetWithin,
-} from "@/composables/floating-context";
-import {
-  isButtonTarget,
-  isClickOnScrollbar,
-  isHTMLElement,
-  isMouseLikePointerType,
-  isSpaceIgnored,
-} from "@/shared/dom";
-import { tryOnScopeDispose } from "@/shared/lifecycle";
-import { useEventListener } from "@/shared/use-event-listener";
+import type { FloatingContext } from "@/composables/floating-context";
+import { isButtonTarget, isMouseLikePointerType, isSpaceIgnored } from "@/shared/dom";
 import type { OpenChangeReason } from "@/types";
 
 type PointerType = "mouse" | "touch" | "pen";
@@ -23,8 +12,7 @@ type PointerType = "mouse" | "touch" | "pen";
 /**
  * Enables showing/hiding the floating element when clicking the anchor element.
  *
- * This composable provides unified event handlers for both inside click interactions
- * (to open/toggle floating elements) and outside click interactions (to close them).
+ * This composable provides trigger handlers for opening/toggling floating elements.
  *
  * @param context - The floating context with open state and change handler.
  * @param options - Configuration options for click behavior.
@@ -33,15 +21,6 @@ type PointerType = "mouse" | "touch" | "pen";
  * ```ts
  * const context = useFloatingContext(...)
  * useClick(context)
- * ```
- *
- * @example Custom outside click predicate
- * ```ts
- * useClick(context, {
- *   closeOnOutsideClick: (event, target) => {
- *     return target instanceof Node && !helperOverlayEl.value?.contains(target)
- *   }
- * })
  * ```
  */
 export function useClick(context: UseClickContext, options: UseClickOptions = {}): void {
@@ -54,33 +33,19 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     ignoreMouse: ignoreMouseOption = false,
     ignoreKeyboard: ignoreKeyboardOption = false,
     ignoreTouch: ignoreTouchOption = false,
-    closeOnOutsideClick: closeOnOutsideClickOption = true,
-    outsideClickEvent: outsideClickEventOption = "pointerdown",
-    outsideCapture: outsideCaptureOption = true,
-    onOutsideClick: onOutsideClickOption,
-    ignoreScrollbar: ignoreScrollbarOption = true,
-    ignoreDrag: ignoreDragOption = true,
   } = options;
 
   //=====================================================================================
   // Interaction State
   //=====================================================================================
   // Kept as plain locals (not refs/reactive) because they only coordinate
-  // intra-event ordering and short-lived suppression windows.
+  // intra-event ordering.
   const interactionState = {
     pointerType: undefined as PointerType | undefined,
     didKeyDown: false,
-    dragStartedInside: false,
-    interactionInProgress: false,
   };
 
-  // Timeout used to clear `dragStartedInside` after a `mouseup`.
-  // Stored so we can cancel/avoid late updates on unmount/anchor change.
-  let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
-
   const isEnabled = computed(() => toValue(enabledOption));
-  const shouldListenForOutsideClick =
-    typeof closeOnOutsideClickOption === "function" || closeOnOutsideClickOption;
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value;
@@ -88,43 +53,24 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     return null;
   });
 
-  const floatingEl = computed(() => refs.floatingEl.value);
-
   //=====================================================================================
-  // Event Handlers (Anchor & Outside)
+  // Event Handlers
   //=====================================================================================
-
-  function clearDragResetTimeout() {
-    if (dragResetTimeoutId == null) return;
-    clearTimeout(dragResetTimeoutId);
-    dragResetTimeoutId = undefined;
-  }
 
   function onOpenChange(reason: OpenChangeReason, event: Event) {
-    interactionState.interactionInProgress = true;
-    try {
-      if (open.value) {
-        // When `toggle` is enabled, anchor clicks toggle open/closed.
-        if (toValue(toggleOption)) {
-          setOpen(false, reason, event);
-        }
-      } else {
-        setOpen(true, reason, event);
+    if (open.value) {
+      // When `toggle` is enabled, anchor clicks toggle open/closed.
+      if (toValue(toggleOption)) {
+        setOpen(false, reason, event);
       }
-    } finally {
-      // Reset after a micro-task so the same native event can finish bubbling
-      // before the document-level outside listener potentially closes the element.
-      queueMicrotask(() => {
-        interactionState.interactionInProgress = false;
-      });
+    } else {
+      setOpen(true, reason, event);
     }
   }
 
   function clearInteractionState() {
     interactionState.pointerType = undefined;
     interactionState.didKeyDown = false;
-    interactionState.dragStartedInside = false;
-    clearDragResetTimeout();
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -206,69 +152,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     }
   }
 
-  function onOutsideClick(event: MouseEvent) {
-    if (!isEnabled.value || !shouldListenForOutsideClick || !open.value) {
-      return;
-    }
-
-    // Suppress outside-close for click sequences caused by a drag that started
-    // inside the floating content.
-    if (isDragSuppressed()) return;
-
-    // Don't process outside clicks during ongoing interactions
-    if (interactionState.interactionInProgress) {
-      return;
-    }
-
-    const target = event.target as Node | null;
-    if (!target) return;
-
-    // Clicked on a scrollbar
-    if (
-      toValue(ignoreScrollbarOption) &&
-      isHTMLElement(target) &&
-      floatingEl.value &&
-      isClickOnScrollbar(event, target)
-    ) {
-      return;
-    }
-
-    if (isFloatingContextTargetWithin(context, target)) {
-      return;
-    }
-
-    if (!shouldCloseOnOutsideClick(event, target)) {
-      return;
-    }
-
-    if (onOutsideClickOption) {
-      onOutsideClickOption(event);
-    } else {
-      setOpen(false, "outside-pointer", event);
-    }
-  }
-
-  function isDragSuppressed(): boolean {
-    if (toValue(outsideClickEventOption) !== "click") return false;
-    if (!toValue(ignoreDragOption)) return false;
-    if (!interactionState.dragStartedInside) return false;
-
-    interactionState.dragStartedInside = false;
-    return true;
-  }
-
-  function onFloatingMouseDown() {
-    interactionState.dragStartedInside = true;
-  }
-
-  function onFloatingMouseUp() {
-    // Reset drag state after a brief delay to allow click events to process
-    clearDragResetTimeout();
-    dragResetTimeoutId = setTimeout(() => {
-      interactionState.dragStartedInside = false;
-    }, 0);
-  }
-
   function isIgnoredPointerType(type: PointerType | undefined): boolean {
     if (isMouseLikePointerType(type, true) && toValue(ignoreMouseOption)) {
       return true;
@@ -278,18 +161,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     }
     return false;
   }
-
-  function shouldCloseOnOutsideClick(event: MouseEvent, target: EventTarget | null): boolean {
-    if (typeof closeOnOutsideClickOption === "function") {
-      return closeOnOutsideClickOption(event, target);
-    }
-    return closeOnOutsideClickOption;
-  }
-
-  // Ensure the drag suppression timer can't update state after unmount.
-  tryOnScopeDispose(() => {
-    clearDragResetTimeout();
-  });
 
   //=====================================================================================
   // Wiring: attach handlers to the current anchor element
@@ -314,37 +185,6 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
       clearInteractionState();
     });
   });
-
-  //=====================================================================================
-  // Wiring: document outside-click listener + drag suppression on floating
-  //=====================================================================================
-
-  useEventListener(
-    () => (isEnabled.value && shouldListenForOutsideClick ? document : null),
-    outsideClickEventOption,
-    onOutsideClick,
-    { capture: toValue(outsideCaptureOption) },
-  );
-
-  useEventListener(
-    () =>
-      isEnabled.value && shouldListenForOutsideClick && toValue(ignoreDragOption)
-        ? floatingEl.value
-        : null,
-    "mousedown",
-    onFloatingMouseDown,
-    { capture: true },
-  );
-
-  useEventListener(
-    () =>
-      isEnabled.value && shouldListenForOutsideClick && toValue(ignoreDragOption)
-        ? floatingEl.value
-        : null,
-    "mouseup",
-    onFloatingMouseUp,
-    { capture: true },
-  );
 }
 
 //=======================================================================================
@@ -377,7 +217,7 @@ export interface UseClickOptions {
 
   /**
    * The type of event to use to determine a "click" with mouse input.
-   * This option does not effect keyboard interactions.
+   * This option does not affect keyboard interactions.
    * @default 'click'
    */
   event?: MaybeRefOrGetter<"click" | "mousedown">;
@@ -405,50 +245,4 @@ export interface UseClickOptions {
    * @default false
    */
   ignoreTouch?: MaybeRefOrGetter<boolean>;
-
-  // --- Outside Click Options ---
-
-  /**
-   * Whether to close the floating element when clicking outside.
-   * Pass a predicate to decide per outside click.
-   * @default true
-   */
-  closeOnOutsideClick?: boolean | OutsideClickPredicate;
-
-  /**
-   * The event to use for outside click detection.
-   * @default 'pointerdown'
-   */
-  outsideClickEvent?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
-
-  /**
-   * Whether to use capture phase for document outside click listener.
-   * @default true
-   */
-  outsideCapture?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Custom function to handle outside clicks.
-   * If provided, this function will be called instead of the default behavior.
-   * @param event - The mouse event that triggered the outside click
-   */
-  onOutsideClick?: (event: MouseEvent) => void;
-
-  /**
-   * Whether to ignore clicks on scrollbars (prevent them from closing the floating element).
-   * @default true
-   */
-  ignoreScrollbar?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether to ignore outside clicks that are part of a drag sequence
-   * (where the drag started inside the floating element and ended outside).
-   * @default true
-   */
-  ignoreDrag?: MaybeRefOrGetter<boolean>;
 }
-
-/**
- * Predicate used by `closeOnOutsideClick` to decide whether an outside click should close.
- */
-export type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | null) => boolean;
