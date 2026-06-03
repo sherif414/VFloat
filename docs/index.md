@@ -14,18 +14,5 @@ hero:
     - theme: alt
       text: Browse the API
       link: /api/
-features:
-  - icon: 🎯
-    title: Positioning that stays out of your way
-    details: Create shared refs and open state with `useFloatingContext`, then add `usePosition` with middleware options like `offset`, `flip`, `shift`, and `custom` middleware such as `size`.
-  - icon: 🧩
-    title: Interactions that compose cleanly
-    details: Combine `useHover`, `useClick`, `useFocus`, `useEscapeKey`, and `useListNavigation` without locking yourself into prebuilt components.
-  - icon: 🪝
-    title: Built around Vue composables
-    details: Work with explicit `anchorEl` and `floatingEl` refs, reactive state, and a grouped `context` that fits naturally into Vue 3 apps.
-  - icon: 🧠
-    title: Toolkit, not component library
-    details: Bring your own markup and styles. VFloat gives you the behavior and coordination layer so you can build the exact surface you need.
 footer: false
 ---
