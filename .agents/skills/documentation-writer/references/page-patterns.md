@@ -82,22 +82,28 @@ Use for workflow pages that teach composition or sequencing.
 
 Examples:
 
-- `docs/guide/interactions.md`
-- `docs/guide/middleware.md`
+- `docs/guide/first-tooltip.md`
+- `docs/guide/build-accessible-tooltips.md`
 
 Typical shape:
 
-- Short introduction
-- `## Step 1`, `## Step 2`, and later steps
-- `::: tip` or `::: warning` where they remove real friction
-- `## Further Reading`
+- Problem-first opening that names what the reader will build and why
+- The complete working example up front
+- Sections named after what the code does (not step numbers) that disassemble the example piece by piece
+- Lifecycle trace: a numbered walkthrough of what happens at runtime
+- `## Where To Go Next` with intent-based routing
 
 Rules:
 
+- Show the complete working code first, then take it apart. Readers need the whole picture before the explanation lands.
+- Name sections after what the code does: "The Context Ties Everything Together" over "Step 2: Create The Floating Context."
+- Open with the user's concrete goal and friction before naming the abstraction.
 - Teach the smallest working setup first.
 - Introduce each code block with one sentence.
-- Add complexity gradually.
+- Add complexity gradually across the disassembly sections.
 - Explain why the pattern is chosen, not just the raw calls.
+- Keep the reader oriented around the recurring VFloat pieces: context, positioning, interaction, and DOM bindings.
+- Include a lifecycle trace that walks through the runtime behavior (e.g., pointer enters → open state flips → position computes → pointer leaves → surface closes).
 - Link API pages for exact signatures or option details.
 
 ## Concept Guide
@@ -118,9 +124,38 @@ Typical shape:
 
 Rules:
 
-- Explain the model first, then show the smallest example that makes it concrete.
+- Start from the problem, tradeoff, or confusion the concept resolves.
+- Explain the model, then show the smallest example that makes it concrete.
 - Keep sections narrow and task-oriented.
 - Use examples to support the explanation rather than exhaust every option.
+- Use contrast to define boundaries when useful: what VFloat handles, what user code owns, and where similar Floating UI concepts stop mapping directly.
+- Prefer intent-based next steps over generic related-link lists.
+
+## Intro And Overview Page
+
+Use for top-level guide entries and broad overview pages.
+
+Examples:
+
+- `docs/guide/index.md`
+
+Typical shape:
+
+- Problem-first opening
+- One memorable architecture model
+- Small examples for each major piece
+- Boundary-setting section such as "What VFloat Is Not"
+- Relationship to adjacent tools or concepts when relevant
+- Intent-based `## Where To Go Next`
+
+Rules:
+
+- Make the reader understand why floating UI gets hard before explaining VFloat.
+- Present VFloat as composable primitives, not prebuilt components or named modes.
+- Keep the central model compact enough to remember. For VFloat, prefer context, positioning, and interaction.
+- Use code blocks as proof points, not as exhaustive examples.
+- Say explicitly which details transfer from Floating UI and which call-site assumptions do not.
+- Route readers by what they are trying to build next.
 
 ## Choosing Between API And Guide
 

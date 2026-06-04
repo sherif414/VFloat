@@ -11,10 +11,11 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 
 ## Structure And Audience
 
-- Tutorial: teaches a complete path from zero to a working result.
+- Tutorial: shows the complete working example first, then disassembles it piece by piece. Sections are named after what the code does, not step numbers.
 - How-to guide: solves one specific task or workflow.
 - Reference page: keeps the contract exact, compact, and scannable.
 - Explanation page: explains the mental model, tradeoffs, and why the design exists.
+- Intro or overview page: starts from real friction, gives one memorable architecture model, sets boundaries, and routes readers by intent.
 - API page: keep the contract canonical, concise, and scannable.
 - Middleware API page: preserve the existing family style unless the whole middleware family is being standardized together.
 - Guide page: teach a workflow or mental model; do not paste full interfaces that belong on the API page.
@@ -22,17 +23,23 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 
 ## Tone And Readability
 
-- Prefer a calm, direct, teacherly voice that feels closer to the Vue docs than product copy.
+- Prefer a calm, direct, teacherly voice with a clear point of view. The docs should feel like a maintainer explaining the system, not product copy.
+- Check that the page argues for the design rather than merely describing it. "That separation is the whole idea" over "VFloat uses separation."
 - Keep intros short and useful. Get to the example, concept, or next step quickly.
+- Check that guide intros start from a concrete problem, task, or confusion before introducing abstractions.
+- Check that concept pages teach a reusable mental model rather than listing pieces.
+- Use contrast where it clarifies boundaries: components vs composables, context vs positioning, VFloat concepts vs Floating UI call sites.
+- Make responsibility boundaries explicit when relevant: what VFloat handles and what the user's app still owns.
 - Explain terms near first use instead of front-loading a large glossary.
-- In tutorials, prefer a natural narrative flow over heavyweight setup lists unless a list genuinely helps the reader.
+- In tutorials, check that the complete working example appears before the disassembly begins.
+- In tutorials and concept pages, check for a lifecycle trace that walks through runtime behavior.
 - Use plain language, short paragraphs, and concrete wording.
 - Cut hype, filler, and corporate-sounding phrasing before finalizing.
 
 ## Examples And Markdown
 
 - Import examples from `v-float`.
-- Use `middlewares`, never `middleware`.
+- Use `middlewares` (plural) when referring to the middleware array or module.
 - Prefer `<script setup lang="ts">`.
 - Introduce every code block with one sentence.
 - Use the correct reactive form for style bindings in the surrounding page family, and fix stale examples when you are already editing the page.
@@ -46,6 +53,7 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 - API pages should link to the most relevant guides or sibling APIs.
 - Guides should point to API pages for exact contracts.
 - Tutorials should link outward to the next step or the owning reference page when the reader needs the exact contract.
+- `Where To Go Next` sections should map reader intent to specific pages instead of dumping related links. Each link should say what changes from the current page.
 - If the page is new, confirm the sidebar and overview pages mention it.
 
 ## Final Validation Loop
