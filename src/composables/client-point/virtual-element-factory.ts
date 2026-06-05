@@ -5,7 +5,7 @@ const DEFAULT_DIMENSIONS = { width: 100, height: 30 };
 
 type VirtualElementConfig = {
   coordinates: Coordinates;
-  referenceElement: HTMLElement | null;
+  trackingTarget: HTMLElement | null;
   baselineCoordinates: Coordinates | null;
   axis: AxisConstraint;
 };
@@ -26,7 +26,7 @@ type VirtualElementConfig = {
  * const factory = new VirtualElementFactory();
  * const virtualEl = factory.create({
  *   coordinates: { x: 100, y: 150 },
- *   referenceElement: triggerEl.value,
+ *   trackingTarget: triggerEl.value,
  *   axis: "both",
  * });
  * ```
@@ -35,19 +35,19 @@ export class VirtualElementFactory {
   create(options: VirtualElementFactoryOptions): VirtualElement {
     const config: VirtualElementConfig = {
       coordinates: options.coordinates,
-      referenceElement: options.referenceElement ?? null,
+      trackingTarget: options.trackingTarget ?? null,
       baselineCoordinates: options.baselineCoordinates ?? null,
       axis: options.axis ?? "both",
     };
 
     return {
-      contextElement: config.referenceElement ?? undefined,
+      contextElement: config.trackingTarget ?? undefined,
       getBoundingClientRect: () => this.resolveBoundingRect(config),
     };
   }
 
   private resolveBoundingRect(config: VirtualElementConfig): DOMRect {
-    const referenceRect = this.getReferenceRect(config.referenceElement);
+    const referenceRect = this.getReferenceRect(config.trackingTarget);
     const position = this.resolvePosition(config, referenceRect);
     const size = this.calculateSize(config.axis, referenceRect);
 

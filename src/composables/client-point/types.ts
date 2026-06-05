@@ -53,7 +53,7 @@ export interface VirtualElementFactoryOptions {
   /**
    * Real DOM element associated with the interaction, when available.
    */
-  referenceElement?: HTMLElement | null;
+  trackingTarget?: HTMLElement | null;
 
   /**
    * Coordinates captured at open time for partially locked tracking modes.

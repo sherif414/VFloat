@@ -126,7 +126,7 @@ describe("VirtualElementFactory", () => {
     const factory = new VirtualElementFactory();
     const virtualElement = factory.create({
       coordinates: { x: 150, y: 260 },
-      referenceElement: reference,
+      trackingTarget: reference,
       axis: "both",
     });
 
@@ -147,7 +147,7 @@ describe("VirtualElementFactory", () => {
     const virtualElement = factory.create({
       coordinates: { x: null, y: 220 },
       baselineCoordinates: { x: 120, y: null },
-      referenceElement: reference,
+      trackingTarget: reference,
       axis: "x",
     });
 
@@ -308,7 +308,7 @@ describe("useClientPoint", () => {
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
     });
 
-    it("preserves the original anchor when disabled", () => {
+    it("clears the anchor when disabled", () => {
       const originalAnchorEl = trackElement(document.createElement("button"));
       harness.context.refs.anchorEl.value = originalAnchorEl;
 
@@ -324,7 +324,7 @@ describe("useClientPoint", () => {
       );
 
       expect(coordinates.value).toEqual({ x: null, y: null });
-      expect(harness.context.refs.anchorEl.value).toBe(originalAnchorEl);
+      expect(harness.context.refs.anchorEl.value).toBeNull();
     });
   });
 

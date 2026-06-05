@@ -68,8 +68,6 @@ export function useClientPoint(
   const virtualElementFactory = new VirtualElementFactory();
   const internalCoordinates = ref<Coordinates>({ x: null, y: null });
   const lockedCoordinates = ref<Coordinates | null>(null);
-  const managedAnchorEl = ref<AnchorElement>(null);
-  const preservedAnchorEl = ref<AnchorElement>(refs.anchorEl.value);
 
   const isEnabled = computed(() => toValue(enabledOption));
   const axis = computed(() => toValue(axisOption));
@@ -83,18 +81,13 @@ export function useClientPoint(
   );
 
   const coordinates = computed<Coordinates>(() => {
-    if (isExternallyControlled.value) {
-      return {
-        x: externalX.value,
-        y: externalY.value,
-      };
-    }
+    const coords = isExternallyControlled.value
+      ? {
+          x: externalX.value,
+          y: externalY.value,
+        }
+      : internalCoordinates.value;
 
-    return internalCoordinates.value;
-  });
-
-  const constrainedCoordinates = computed<Coordinates>(() => {
-    const coords = coordinates.value;
     const currentAxis = axis.value;
 
     switch (currentAxis) {
@@ -121,12 +114,10 @@ export function useClientPoint(
   };
 
   const resetCoordinates = () => {
-    if (!isExternallyControlled.value) {
-      internalCoordinates.value = { x: null, y: null };
-    }
+    setCoordinates(null, null);
   };
 
-  const onPointerTargetEvent = (e: PointerEvent, type: PointerEventData["type"]) => {
+  const updateCoordinates = (e: PointerEvent, type: PointerEventData["type"]) => {
     const nextCoordinates = trackingStrategy.process(
       {
         type,
@@ -141,56 +132,30 @@ export function useClientPoint(
     }
   };
 
-  const onPointerTargetDown = (e: PointerEvent) => onPointerTargetEvent(e, "pointerdown");
-  const onPointerTargetEnter = (e: PointerEvent) => onPointerTargetEvent(e, "pointerenter");
-  const onPointerTargetMove = (e: PointerEvent) => onPointerTargetEvent(e, "pointermove");
+  const onPointerTargetDown = (e: PointerEvent) => updateCoordinates(e, "pointerdown");
+  const onPointerTargetEnter = (e: PointerEvent) => updateCoordinates(e, "pointerenter");
+  const onPointerTargetMove = (e: PointerEvent) => updateCoordinates(e, "pointermove");
 
-  const handlers: Record<PointerEventData["type"], (e: PointerEvent) => void> = {
+  const handlers = {
     pointerdown: onPointerTargetDown,
     pointerenter: onPointerTargetEnter,
     pointermove: onPointerTargetMove,
   };
 
   watch(
-    () => refs.anchorEl.value,
-    (anchorEl) => {
-      if (anchorEl !== managedAnchorEl.value) {
-        preservedAnchorEl.value = anchorEl;
-      }
-    },
-    { immediate: true },
-  );
-
-  watch(
-    [
-      isEnabled,
-      constrainedCoordinates,
-      lockedCoordinates,
-      axis,
-      trackingTargetEl,
-      preservedAnchorEl,
-    ],
+    [isEnabled, coordinates, lockedCoordinates, axis, trackingTargetEl],
     () => {
       if (!isEnabled.value) {
-        managedAnchorEl.value = null;
-        refs.anchorEl.value = preservedAnchorEl.value;
-
-        if (open.value) {
-          void update?.();
-        }
-
+        refs.anchorEl.value = null;
         return;
       }
 
-      // Rebuild the virtual anchor whenever its geometry inputs change so
-      // `useFloatingContext()` always positions against the latest pointer state.
       const virtualAnchorEl = virtualElementFactory.create({
-        coordinates: constrainedCoordinates.value,
-        referenceElement: trackingTargetEl.value,
+        coordinates: coordinates.value,
+        trackingTarget: trackingTargetEl.value,
         baselineCoordinates: lockedCoordinates.value,
         axis: axis.value,
       });
-      managedAnchorEl.value = virtualAnchorEl;
       refs.anchorEl.value = virtualAnchorEl;
 
       if (open.value) {
@@ -260,7 +225,7 @@ export function useClientPoint(
   });
 
   return {
-    coordinates: readonly(constrainedCoordinates),
+    coordinates: readonly(coordinates),
     updatePosition: (x: number, y: number) => setCoordinates(x, y),
   };
 }
