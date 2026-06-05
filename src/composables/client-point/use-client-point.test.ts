@@ -567,6 +567,76 @@ describe("useClientPoint", () => {
       expect(coordinates.value.x).toBe(null);
       expect(coordinates.value.y).toBe(200);
     });
+
+    it("keeps the opening y coordinate while x-axis tracking follows pointer movement", async () => {
+      const referenceRect = createRect({ x: 10, y: 20, width: 160, height: 60 });
+      vi.spyOn(harness.trackingTargetEl.value!, "getBoundingClientRect").mockReturnValue(
+        referenceRect,
+      );
+
+      initClientPoint({
+        axis: "x",
+        trackingMode: "follow",
+      });
+
+      harness.trackingTargetEl.value?.dispatchEvent(
+        createPointerEvent("pointerdown", {
+          clientX: 100,
+          clientY: 200,
+        }),
+      );
+
+      harness.open.value = true;
+      await nextTick();
+
+      harness.trackingTargetEl.value?.dispatchEvent(
+        createPointerEvent("pointermove", {
+          clientX: 150,
+          clientY: 250,
+        }),
+      );
+      await nextTick();
+
+      const rect = harness.context.refs.anchorEl.value?.getBoundingClientRect();
+      expect(rect?.x).toBe(150);
+      expect(rect?.y).toBe(200);
+      expect(rect?.y).not.toBe(referenceRect.y);
+    });
+
+    it("keeps the opening x coordinate while y-axis tracking follows pointer movement", async () => {
+      const referenceRect = createRect({ x: 10, y: 20, width: 160, height: 60 });
+      vi.spyOn(harness.trackingTargetEl.value!, "getBoundingClientRect").mockReturnValue(
+        referenceRect,
+      );
+
+      initClientPoint({
+        axis: "y",
+        trackingMode: "follow",
+      });
+
+      harness.trackingTargetEl.value?.dispatchEvent(
+        createPointerEvent("pointerdown", {
+          clientX: 100,
+          clientY: 200,
+        }),
+      );
+
+      harness.open.value = true;
+      await nextTick();
+
+      harness.trackingTargetEl.value?.dispatchEvent(
+        createPointerEvent("pointermove", {
+          clientX: 150,
+          clientY: 250,
+        }),
+      );
+      await nextTick();
+
+      const rect = harness.context.refs.anchorEl.value?.getBoundingClientRect();
+      expect(rect?.x).toBe(100);
+      expect(rect?.y).toBe(250);
+      expect(rect?.x).not.toBe(referenceRect.x);
+    });
   });
 
   describe("virtual element creation", () => {
@@ -767,6 +837,40 @@ describe("useClientPoint", () => {
       const rect = harness.context.refs.anchorEl.value?.getBoundingClientRect();
       expect(rect?.x).toBe(100);
       expect(rect?.y).toBe(200);
+    });
+
+    it("restores the preserved anchor when disabled reactively and clears state on close", async () => {
+      const enabled = ref(true);
+      const originalAnchorEl = trackElement(document.createElement("button"));
+      harness.context.refs.anchorEl.value = originalAnchorEl;
+
+      const { coordinates } = initClientPoint({
+        enabled,
+        trackingMode: "follow",
+      });
+
+      harness.open.value = true;
+      await nextTick();
+
+      harness.trackingTargetEl.value?.dispatchEvent(
+        createPointerEvent("pointermove", {
+          clientX: 100,
+          clientY: 200,
+        }),
+      );
+      await nextTick();
+
+      expect(coordinates.value).toEqual({ x: 100, y: 200 });
+
+      enabled.value = false;
+      await nextTick();
+
+      expect(harness.context.refs.anchorEl.value).toBe(originalAnchorEl);
+
+      harness.open.value = false;
+      await nextTick();
+
+      expect(coordinates.value).toEqual({ x: null, y: null });
     });
   });
 });

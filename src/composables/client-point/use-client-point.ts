@@ -1,15 +1,12 @@
+import { computed, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue";
+import { useClientPointAnchorController } from "./client-point-anchor-controller";
+import { createClientPointState } from "./client-point-state";
 import {
-  computed,
-  type MaybeRefOrGetter,
-  type Ref,
-  readonly,
-  ref,
-  toValue,
-  watch,
-  watchEffect,
-} from "vue";
+  createTrackingStrategy,
+  useClientPointTrackingController,
+} from "./client-point-tracking-controller";
 import { FollowTracker, StaticTracker, TrackingStrategy } from "./tracking-strategies";
-import type { AxisConstraint, Coordinates, PointerEventData, TrackingMode } from "./types";
+import type { AxisConstraint, TrackingMode } from "./types";
 import { VirtualElementFactory } from "./virtual-element-factory";
 import type { AnchorElement, FloatingContext } from "@/composables/floating-context";
 import type { FloatingPosition } from "@/composables/position";
@@ -62,206 +59,76 @@ export function useClientPoint(
   } = options;
 
   const { open } = context.state;
-  const refs = context.refs;
-  const update = positionOption?.update;
 
-  const virtualElementFactory = new VirtualElementFactory();
-  const internalCoordinates = ref<Coordinates>({ x: null, y: null });
-  const lockedCoordinates = ref<Coordinates | null>(null);
-  const managedAnchorEl = ref<AnchorElement>(null);
-  const preservedAnchorEl = ref<AnchorElement>(refs.anchorEl.value);
+  const clientPointState = createClientPointState({
+    axis: axisOption,
+    x: xOption,
+    y: yOption,
+  });
+  const trackingStrategy = createTrackingStrategy(trackingModeOption);
 
   const isEnabled = computed(() => toValue(enabledOption));
-  const axis = computed(() => toValue(axisOption));
-  const externalX = computed(() => sanitizeCoordinate(toValue(xOption)));
-  const externalY = computed(() => sanitizeCoordinate(toValue(yOption)));
   const trackingTargetEl = computed(
     () => trackingTargetOption?.value ?? getDefaultTrackingTarget(),
   );
-  const isExternallyControlled = computed(
-    () => externalX.value !== null && externalY.value !== null,
-  );
 
-  const coordinates = computed<Coordinates>(() => {
-    if (isExternallyControlled.value) {
-      return {
-        x: externalX.value,
-        y: externalY.value,
-      };
-    }
+  //=====================================================================================
+  // Session State
+  //=====================================================================================
 
-    return internalCoordinates.value;
-  });
-
-  const constrainedCoordinates = computed<Coordinates>(() => {
-    const coords = coordinates.value;
-    const currentAxis = axis.value;
-
-    switch (currentAxis) {
-      case "x":
-        return { x: coords.x, y: null };
-      case "y":
-        return { x: null, y: coords.y };
-      case "both":
-        return coords;
-    }
-  });
-
-  const trackingStrategy = createTrackingStrategy(trackingModeOption);
-
-  const setCoordinates = (x: number | null, y: number | null) => {
-    if (isExternallyControlled.value) {
-      return;
-    }
-
-    internalCoordinates.value = {
-      x: sanitizeCoordinate(x),
-      y: sanitizeCoordinate(y),
-    };
-  };
-
-  const resetCoordinates = () => {
-    if (!isExternallyControlled.value) {
-      internalCoordinates.value = { x: null, y: null };
-    }
-  };
-
-  const onPointerTargetEvent = (e: PointerEvent, type: PointerEventData["type"]) => {
-    const nextCoordinates = trackingStrategy.process(
-      {
-        type,
-        coordinates: { x: e.clientX, y: e.clientY },
-        originalEvent: e,
-      },
-      { isOpen: open.value },
-    );
-
-    if (nextCoordinates) {
-      setCoordinates(nextCoordinates.x, nextCoordinates.y);
-    }
-  };
-
-  const onPointerTargetDown = (e: PointerEvent) => onPointerTargetEvent(e, "pointerdown");
-  const onPointerTargetEnter = (e: PointerEvent) => onPointerTargetEvent(e, "pointerenter");
-  const onPointerTargetMove = (e: PointerEvent) => onPointerTargetEvent(e, "pointermove");
-
-  const handlers: Record<PointerEventData["type"], (e: PointerEvent) => void> = {
-    pointerdown: onPointerTargetDown,
-    pointerenter: onPointerTargetEnter,
-    pointermove: onPointerTargetMove,
-  };
-
-  watch(
-    () => refs.anchorEl.value,
-    (anchorEl) => {
-      if (anchorEl !== managedAnchorEl.value) {
-        preservedAnchorEl.value = anchorEl;
-      }
-    },
-    { immediate: true },
-  );
-
-  watch(
-    [
-      isEnabled,
-      constrainedCoordinates,
-      lockedCoordinates,
-      axis,
-      trackingTargetEl,
-      preservedAnchorEl,
-    ],
-    () => {
-      if (!isEnabled.value) {
-        managedAnchorEl.value = null;
-        refs.anchorEl.value = preservedAnchorEl.value;
-
-        if (open.value) {
-          void update?.();
-        }
-
-        return;
-      }
-
-      // Rebuild the virtual anchor whenever its geometry inputs change so
-      // `useFloatingContext()` always positions against the latest pointer state.
-      const virtualAnchorEl = virtualElementFactory.create({
-        coordinates: constrainedCoordinates.value,
-        referenceElement: trackingTargetEl.value,
-        baselineCoordinates: lockedCoordinates.value,
-        axis: axis.value,
-      });
-      managedAnchorEl.value = virtualAnchorEl;
-      refs.anchorEl.value = virtualAnchorEl;
-
-      if (open.value) {
-        void update?.();
-      }
-    },
-    { immediate: true },
-  );
+  function clearTrackingSession(): void {
+    trackingStrategy.onClose();
+    clientPointState.resetCoordinates();
+    clientPointState.clearOpeningBaselineCoordinates();
+  }
 
   watch(open, (isOpen) => {
-    if (isExternallyControlled.value) {
+    if (clientPointState.isControlled.value) {
       return;
     }
 
-    if (!isEnabled.value) {
-      if (!isOpen) {
-        trackingStrategy.onClose();
-        resetCoordinates();
-        lockedCoordinates.value = null;
-      }
-
+    if (!isEnabled.value && !isOpen) {
+      clearTrackingSession();
       return;
     }
 
     if (isOpen) {
-      // Some tracking modes want the opening position to "lock in" so the
-      // floating element does not jump as later pointer events arrive.
-      const openingCoordinates = trackingStrategy.getCoordinatesForOpening();
-
-      if (openingCoordinates) {
-        setCoordinates(openingCoordinates.x, openingCoordinates.y);
-        lockedCoordinates.value = { ...openingCoordinates };
-      } else {
-        lockedCoordinates.value = { ...internalCoordinates.value };
-      }
-
+      clientPointState.captureOpeningBaselineCoordinates(
+        trackingStrategy.getCoordinatesForOpening(),
+      );
       return;
     }
 
-    trackingStrategy.onClose();
-    resetCoordinates();
-    lockedCoordinates.value = null;
+    clearTrackingSession();
   });
 
-  watchEffect((onCleanup) => {
-    if (isExternallyControlled.value || !isEnabled.value) {
-      return;
-    }
+  //=====================================================================================
+  // Wiring
+  //=====================================================================================
 
-    const target = trackingTargetEl.value;
+  useClientPointAnchorController({
+    refs: context.refs,
+    isEnabled,
+    open,
+    coordinates: clientPointState.coordinates,
+    openingBaselineCoordinates: clientPointState.openingBaselineCoordinates,
+    axis: clientPointState.axis,
+    trackingTargetEl,
+    update: positionOption?.update,
+  });
 
-    if (!target) {
-      return;
-    }
-
-    const requiredEvents = trackingStrategy.getRequiredEvents();
-
-    for (const eventType of requiredEvents) {
-      target.addEventListener(eventType, handlers[eventType]);
-    }
-
-    onCleanup(() => {
-      for (const eventType of requiredEvents) {
-        target.removeEventListener(eventType, handlers[eventType]);
-      }
-    });
+  useClientPointTrackingController({
+    isEnabled,
+    isControlled: clientPointState.isControlled,
+    open,
+    trackingTargetEl,
+    trackingStrategy,
+    setCoordinates: clientPointState.setCoordinates,
   });
 
   return {
-    coordinates: readonly(constrainedCoordinates),
-    updatePosition: (x: number, y: number) => setCoordinates(x, y),
+    coordinates: clientPointState.coordinates,
+    updatePosition: clientPointState.updatePosition,
   };
 }
 
@@ -269,17 +136,9 @@ export function useClientPoint(
 // 📌 Helpers
 //=======================================================================================
 
-const sanitizeCoordinate = (value: number | null | undefined): number | null => {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-};
-
 const getDefaultTrackingTarget = (): HTMLElement | null => {
   return typeof document === "undefined" ? null : document.documentElement;
 };
-
-function createTrackingStrategy(trackingMode: TrackingMode): TrackingStrategy {
-  return trackingMode === "follow" ? new FollowTracker() : new StaticTracker();
-}
 
 export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
 
