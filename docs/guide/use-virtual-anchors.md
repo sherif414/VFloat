@@ -33,14 +33,12 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "right-start",
 });
-const { styles } = position;
 
 useClientPoint(context, {
-  position,
-  trackingTarget: trackingAreaEl,
+  trackingAreaEl,
   trackingMode: "follow",
 });
 
@@ -64,14 +62,12 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
 });
-const { styles } = position;
 
 useClientPoint(context, {
-  position,
-  trackingTarget: areaEl,
+  trackingAreaEl: areaEl,
   trackingMode: "static",
 });
 

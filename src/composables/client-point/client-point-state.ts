@@ -1,37 +1,35 @@
 import { computed, type MaybeRefOrGetter, ref, toValue, type Ref } from "vue";
-import type { AxisConstraint, Coordinates } from "./types";
+import type { Coordinates } from "./types";
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
+const DEFAULT_COORDINATES = { x: null, y: null };
+
 /**
  * Creates the coordinate state used by client-point virtual anchors.
  */
 export function createClientPointState(options: ClientPointStateOptions): ClientPointState {
-  const { axis: axisOption, x: xOption, y: yOption } = options;
+  const { x: xOption, y: yOption } = options;
 
-  const internalCoordinates = ref<Coordinates>(createEmptyCoordinates());
-  const openingBaselineCoordinates = ref<Coordinates | null>(null);
+  const initialCoordinates = ref<Coordinates | null>(null);
+  const internalCoordinates = ref<Coordinates>(DEFAULT_COORDINATES);
+  const externalCoordinates = computed(() => ({
+    x: sanitizeCoordinate(toValue(xOption)),
+    y: sanitizeCoordinate(toValue(yOption)),
+  }));
 
-  const axis = computed(() => toValue(axisOption));
-  const externalX = computed(() => sanitizeCoordinate(toValue(xOption)));
-  const externalY = computed(() => sanitizeCoordinate(toValue(yOption)));
-  const isControlled = computed(() => externalX.value !== null && externalY.value !== null);
+  const isControlled = computed(
+    () => externalCoordinates.value.x !== null && externalCoordinates.value.y !== null,
+  );
 
-  const sourceCoordinates = computed<Coordinates>(() => {
+  const coordinates = computed<Coordinates>(() => {
     if (isControlled.value) {
-      return {
-        x: externalX.value,
-        y: externalY.value,
-      };
+      return externalCoordinates.value;
     }
 
     return internalCoordinates.value;
-  });
-
-  const coordinates = computed<Coordinates>(() => {
-    return resolveConstrainedCoordinates(sourceCoordinates.value, axis.value);
   });
 
   function setCoordinates(x: number | null, y: number | null): void {
@@ -45,39 +43,35 @@ export function createClientPointState(options: ClientPointStateOptions): Client
     };
   }
 
-  function updatePosition(x: number, y: number): void {
-    setCoordinates(x, y);
-  }
-
   function resetCoordinates(): void {
     if (isControlled.value) {
       return;
     }
 
-    internalCoordinates.value = createEmptyCoordinates();
+    internalCoordinates.value = DEFAULT_COORDINATES;
   }
 
-  function captureOpeningBaselineCoordinates(coordinates: Coordinates | null): void {
+  function captureInitialCoordinates(coordinates: Coordinates | null): void {
     const nextCoordinates = coordinates ?? internalCoordinates.value;
 
     setCoordinates(nextCoordinates.x, nextCoordinates.y);
-    openingBaselineCoordinates.value = { ...nextCoordinates };
+    initialCoordinates.value = { ...nextCoordinates };
   }
 
-  function clearOpeningBaselineCoordinates(): void {
-    openingBaselineCoordinates.value = null;
+  function clearInitialCoordinates(): void {
+    initialCoordinates.value = null;
   }
 
   return {
-    axis,
-    coordinates,
-    openingBaselineCoordinates,
     isControlled,
+
+    coordinates,
     setCoordinates,
-    updatePosition,
     resetCoordinates,
-    captureOpeningBaselineCoordinates,
-    clearOpeningBaselineCoordinates,
+
+    initialCoordinates,
+    captureInitialCoordinates,
+    clearInitialCoordinates,
   };
 }
 
@@ -89,42 +83,21 @@ function sanitizeCoordinate(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function createEmptyCoordinates(): Coordinates {
-  return { x: null, y: null };
-}
-
-function resolveConstrainedCoordinates(
-  coordinates: Coordinates,
-  axis: AxisConstraint,
-): Coordinates {
-  switch (axis) {
-    case "x":
-      return { x: coordinates.x, y: null };
-    case "y":
-      return { x: null, y: coordinates.y };
-    case "both":
-      return coordinates;
-  }
-}
-
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
 
 interface ClientPointStateOptions {
-  axis: MaybeRefOrGetter<AxisConstraint>;
   x: MaybeRefOrGetter<number | null>;
   y: MaybeRefOrGetter<number | null>;
 }
 
 export interface ClientPointState {
-  axis: Readonly<Ref<AxisConstraint>>;
   coordinates: Readonly<Ref<Coordinates>>;
-  openingBaselineCoordinates: Readonly<Ref<Coordinates | null>>;
   isControlled: Readonly<Ref<boolean>>;
   setCoordinates: (x: number | null, y: number | null) => void;
-  updatePosition: (x: number, y: number) => void;
   resetCoordinates: () => void;
-  captureOpeningBaselineCoordinates: (coordinates: Coordinates | null) => void;
-  clearOpeningBaselineCoordinates: () => void;
+  initialCoordinates: Readonly<Ref<Coordinates | null>>;
+  captureInitialCoordinates: (coordinates: Coordinates | null) => void;
+  clearInitialCoordinates: () => void;
 }

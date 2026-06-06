@@ -15,13 +15,11 @@ function useClientPoint(
 ): UseClientPointReturn;
 
 interface UseClientPointOptions {
-  trackingTarget?: Ref<HTMLElement | null>;
+  trackingAreaEl?: Ref<HTMLElement | null>;
   enabled?: MaybeRefOrGetter<boolean>;
-  axis?: MaybeRefOrGetter<"x" | "y" | "both">;
   x?: MaybeRefOrGetter<number | null>;
   y?: MaybeRefOrGetter<number | null>;
   trackingMode?: "follow" | "static";
-  position?: Pick<FloatingPosition, "update">;
 }
 
 interface UseClientPointReturn {
@@ -32,13 +30,12 @@ interface UseClientPointReturn {
 
 ## Details
 
-`useClientPoint` is centered on the floating root. Pass the floating context first. By default, pointer tracking listens on `document.documentElement`. Pass `options.trackingTarget` when tracking should be scoped to a specific element.
+`useClientPoint` is centered on the floating root. Pass the floating context first. By default, pointer tracking listens on `document.documentElement`. Pass `options.trackingAreaEl` when tracking should be scoped to a specific element.
 
-- `trackingTarget` receives pointer listeners and provides fallback geometry for the virtual anchor.
+- `trackingAreaEl` receives pointer listeners and provides fallback geometry for the virtual anchor.
 - `trackingMode: "follow"` keeps the floating element in sync with pointer movement.
 - `trackingMode: "static"` captures the initial point and keeps the surface anchored there.
 - If both `x` and `y` are provided, the composable behaves like a controlled source of coordinates.
-- Pass the `usePosition()` return as `position` when the surface should update immediately after the virtual anchor changes.
 
 ## Example
 
@@ -54,14 +51,12 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "right-start",
 });
-const { styles } = position;
 
 useClientPoint(context, {
-  position,
-  trackingTarget: trackingAreaEl,
+  trackingAreaEl,
 });
 
 useHover(context);

@@ -1,15 +1,9 @@
-import { computed, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue";
-import { useClientPointAnchorController } from "./client-point-anchor-controller";
+import { computed, type MaybeRefOrGetter, type Ref, toValue, watch, watchEffect } from "vue";
 import { createClientPointState } from "./client-point-state";
-import {
-  createTrackingStrategy,
-  useClientPointTrackingController,
-} from "./client-point-tracking-controller";
-import { FollowTracker, StaticTracker, TrackingStrategy } from "./tracking-strategies";
-import type { AxisConstraint, TrackingMode } from "./types";
+import { FollowTracker, StaticTracker } from "./tracking-strategies";
+import type { PointerEventData, TrackingMode } from "./types";
 import { VirtualElementFactory } from "./virtual-element-factory";
 import type { AnchorElement, FloatingContext } from "@/composables/floating-context";
-import type { FloatingPosition } from "@/composables/position";
 
 //=======================================================================================
 // 📌 Main
@@ -23,7 +17,7 @@ import type { FloatingPosition } from "@/composables/position";
  *
  * @param context - The minimal floating context required to manage the anchor element ref and open state.
  * @param options - Configuration options for pointer-driven virtual anchor tracking.
- * @returns An object containing the readonly pointer coordinates and a manual position updater.
+ * @returns An object containing the readonly pointer coordinates.
  *
  * @example Basic usage
  * ```vue
@@ -35,11 +29,10 @@ import type { FloatingPosition } from "@/composables/position";
  * const anchorEl = ref<HTMLElement | null>(null);
  * const floatingEl = ref<HTMLElement | null>(null);
  * const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
- * const position = usePosition(context);
+ * const { styles } = usePosition(context);
  *
  * useClientPoint(context, {
- *   position,
- *   trackingTarget: trackingAreaEl,
+ *   trackingAreaEl,
  * });
  * </script>
  * ```
@@ -49,28 +42,24 @@ export function useClientPoint(
   options: UseClientPointOptions,
 ): UseClientPointReturn {
   const {
-    trackingTarget: trackingTargetOption,
+    trackingAreaEl: trackingAreaElOption,
     enabled: enabledOption = true,
-    axis: axisOption = "both",
     x: xOption = null,
     y: yOption = null,
     trackingMode: trackingModeOption = "follow",
-    position: positionOption,
   } = options;
 
   const { open } = context.state;
 
-  const clientPointState = createClientPointState({
-    axis: axisOption,
+  const state = createClientPointState({
     x: xOption,
     y: yOption,
   });
-  const trackingStrategy = createTrackingStrategy(trackingModeOption);
+  const trackingStrategy =
+    trackingModeOption === "follow" ? new FollowTracker() : new StaticTracker();
 
   const isEnabled = computed(() => toValue(enabledOption));
-  const trackingTargetEl = computed(
-    () => trackingTargetOption?.value ?? getDefaultTrackingTarget(),
-  );
+  const trackingAreaEl = computed(() => trackingAreaElOption?.value ?? getDefaultTrackingArea());
 
   //=====================================================================================
   // Session State
@@ -78,57 +67,78 @@ export function useClientPoint(
 
   function clearTrackingSession(): void {
     trackingStrategy.onClose();
-    clientPointState.resetCoordinates();
-    clientPointState.clearOpeningBaselineCoordinates();
+    state.resetCoordinates();
+    state.clearInitialCoordinates();
   }
 
   watch(open, (isOpen) => {
-    if (clientPointState.isControlled.value) {
-      return;
-    }
-
-    if (!isEnabled.value && !isOpen) {
+    if (state.isControlled.value) return;
+    if (!isOpen) {
       clearTrackingSession();
       return;
     }
-
-    if (isOpen) {
-      clientPointState.captureOpeningBaselineCoordinates(
-        trackingStrategy.getCoordinatesForOpening(),
-      );
-      return;
-    }
-
-    clearTrackingSession();
+    if (!isEnabled.value) return;
+    state.captureInitialCoordinates(trackingStrategy.getCoordinatesForOpening());
   });
 
   //=====================================================================================
   // Wiring
   //=====================================================================================
 
-  useClientPointAnchorController({
-    refs: context.refs,
-    isEnabled,
-    open,
-    coordinates: clientPointState.coordinates,
-    openingBaselineCoordinates: clientPointState.openingBaselineCoordinates,
-    axis: clientPointState.axis,
-    trackingTargetEl,
-    update: positionOption?.update,
+  const virtualElementFactory = new VirtualElementFactory();
+
+  watchEffect(() => {
+    if (!isEnabled.value) return;
+
+    context.refs.anchorEl.value = virtualElementFactory.create({
+      coordinates: state.coordinates.value,
+      referenceElement: trackingAreaEl.value,
+      baselineCoordinates: state.initialCoordinates.value,
+    });
   });
 
-  useClientPointTrackingController({
-    isEnabled,
-    isControlled: clientPointState.isControlled,
-    open,
-    trackingTargetEl,
-    trackingStrategy,
-    setCoordinates: clientPointState.setCoordinates,
+  function onPointerTargetEvent(e: PointerEvent, type: PointerEventData["type"]): void {
+    const nextCoordinates = trackingStrategy.process(
+      {
+        type,
+        coordinates: { x: e.clientX, y: e.clientY },
+        originalEvent: e,
+      },
+      { isOpen: open.value },
+    );
+
+    if (nextCoordinates) {
+      state.setCoordinates(nextCoordinates.x, nextCoordinates.y);
+    }
+  }
+
+  const handlers: Record<PointerEventData["type"], (e: PointerEvent) => void> = {
+    pointerdown: (e: PointerEvent) => onPointerTargetEvent(e, "pointerdown"),
+    pointerenter: (e: PointerEvent) => onPointerTargetEvent(e, "pointerenter"),
+    pointermove: (e: PointerEvent) => onPointerTargetEvent(e, "pointermove"),
+  };
+
+  watchEffect((onCleanup) => {
+    if (state.isControlled.value || !isEnabled.value) return;
+
+    const target = trackingAreaEl.value;
+    if (!target) return;
+
+    const requiredEvents = trackingStrategy.getRequiredEvents();
+
+    for (const eventType of requiredEvents) {
+      target.addEventListener(eventType, handlers[eventType]);
+    }
+
+    onCleanup(() => {
+      for (const eventType of requiredEvents) {
+        target.removeEventListener(eventType, handlers[eventType]);
+      }
+    });
   });
 
   return {
-    coordinates: clientPointState.coordinates,
-    updatePosition: clientPointState.updatePosition,
+    coordinates: state.coordinates,
   };
 }
 
@@ -136,11 +146,9 @@ export function useClientPoint(
 // 📌 Helpers
 //=======================================================================================
 
-const getDefaultTrackingTarget = (): HTMLElement | null => {
+const getDefaultTrackingArea = (): HTMLElement | null => {
   return typeof document === "undefined" ? null : document.documentElement;
 };
-
-export { FollowTracker, StaticTracker, TrackingStrategy, VirtualElementFactory };
 
 //=======================================================================================
 // 📌 Types
@@ -155,17 +163,12 @@ export interface UseClientPointOptions {
    *
    * Defaults to `document.documentElement` in browser environments.
    */
-  trackingTarget?: Ref<HTMLElement | null>;
+  trackingAreaEl?: Ref<HTMLElement | null>;
 
   /**
    * Enables or disables client-point behavior without removing the composable.
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Restricts tracking to the x axis, y axis, or both.
-   */
-  axis?: MaybeRefOrGetter<AxisConstraint>;
 
   /**
    * Optional externally controlled x coordinate.
@@ -181,19 +184,13 @@ export interface UseClientPointOptions {
    * Chooses how the pointer position behaves after the floating element opens.
    */
   trackingMode?: TrackingMode;
-
-  /**
-   * Optional positioning result to refresh when the virtual anchor changes.
-   */
-  position?: Pick<FloatingPosition, "update">;
 }
 
 /**
- * Coordinates and updater returned by `useClientPoint()`.
+ * Coordinates returned by `useClientPoint()`.
  */
 export interface UseClientPointReturn {
   coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
-  updatePosition: (x: number, y: number) => void;
 }
 
 /**
@@ -206,4 +203,4 @@ export interface UseClientPointContext {
   state: FloatingContext["state"];
 }
 
-export type { AxisConstraint, Coordinates, TrackingMode } from "./types";
+export type { Coordinates, TrackingMode } from "./types";
