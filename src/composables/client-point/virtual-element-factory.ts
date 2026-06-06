@@ -1,13 +1,12 @@
 import type { VirtualElement } from "@/types";
-import type { AxisConstraint, Coordinates, VirtualElementFactoryOptions } from "./types";
+import type { Coordinates, VirtualElementFactoryOptions } from "./types";
 
-const DEFAULT_DIMENSIONS = { width: 100, height: 30 };
+const DEFAULT_COORDINATES = { x: 0, y: 0 };
 
 type VirtualElementConfig = {
   coordinates: Coordinates;
   trackingTarget: HTMLElement | null;
   baselineCoordinates: Coordinates | null;
-  axis: AxisConstraint;
 };
 
 //=======================================================================================
@@ -19,7 +18,7 @@ type VirtualElementConfig = {
  *
  * Virtual elements are used to position floating components relative to the cursor
  * rather than a static DOM anchor. This factory manages coordinate fallback,
- * axis constraints, baseline coordinates, and custom context elements.
+ * baseline coordinates, and custom context elements.
  *
  * @example Creating a virtual element
  * ```ts
@@ -27,7 +26,6 @@ type VirtualElementConfig = {
  * const virtualEl = factory.create({
  *   coordinates: { x: 100, y: 150 },
  *   trackingTarget: triggerEl.value,
- *   axis: "both",
  * });
  * ```
  */
@@ -37,7 +35,6 @@ export class VirtualElementFactory {
       coordinates: options.coordinates,
       trackingTarget: options.trackingTarget ?? null,
       baselineCoordinates: options.baselineCoordinates ?? null,
-      axis: options.axis ?? "both",
     };
 
     return {
@@ -49,13 +46,12 @@ export class VirtualElementFactory {
   private resolveBoundingRect(config: VirtualElementConfig): DOMRect {
     const referenceRect = this.getReferenceRect(config.trackingTarget);
     const position = this.resolvePosition(config, referenceRect);
-    const size = this.calculateSize(config.axis, referenceRect);
 
     return this.createDOMRect({
       x: position.x,
       y: position.y,
-      width: size.width,
-      height: size.height,
+      width: 0,
+      height: 0,
     });
   }
 
@@ -71,10 +67,10 @@ export class VirtualElementFactory {
     }
 
     return this.createDOMRect({
-      x: 0,
-      y: 0,
-      width: DEFAULT_DIMENSIONS.width,
-      height: DEFAULT_DIMENSIONS.height,
+      x: DEFAULT_COORDINATES.x,
+      y: DEFAULT_COORDINATES.y,
+      width: 0,
+      height: 0,
     });
   }
 
@@ -83,30 +79,27 @@ export class VirtualElementFactory {
     referenceRect: DOMRect,
   ): { x: number; y: number } {
     return {
-      x: this.resolveAxisCoordinate({
+      x: this.resolveCoordinate({
         current: config.coordinates.x,
         baseline: config.baselineCoordinates?.x ?? null,
         fallback: referenceRect.x,
-        isAxisEnabled: config.axis === "x" || config.axis === "both",
       }),
-      y: this.resolveAxisCoordinate({
+      y: this.resolveCoordinate({
         current: config.coordinates.y,
         baseline: config.baselineCoordinates?.y ?? null,
         fallback: referenceRect.y,
-        isAxisEnabled: config.axis === "y" || config.axis === "both",
       }),
     };
   }
 
-  private resolveAxisCoordinate(sources: {
+  private resolveCoordinate(sources: {
     current: number | null;
     baseline: number | null;
     fallback: number;
-    isAxisEnabled: boolean;
   }): number {
-    const { current, baseline, fallback, isAxisEnabled } = sources;
+    const { current, baseline, fallback } = sources;
 
-    if (isAxisEnabled && current !== null) {
+    if (current !== null) {
       return current;
     }
 
@@ -114,32 +107,8 @@ export class VirtualElementFactory {
       return baseline;
     }
 
-    // Fall back to the reference element so partially constrained axes still
-    // produce a stable rect.
+    // Fall back to the reference element so missing coordinates still produce a stable rect.
     return fallback;
-  }
-
-  private calculateSize(
-    axis: AxisConstraint,
-    referenceRect: DOMRect,
-  ): {
-    width: number;
-    height: number;
-  } {
-    switch (axis) {
-      case "both":
-        return { width: 0, height: 0 };
-      case "x":
-        return {
-          width: getPositiveSize(referenceRect.width, DEFAULT_DIMENSIONS.width),
-          height: 0,
-        };
-      case "y":
-        return {
-          width: 0,
-          height: getPositiveSize(referenceRect.height, DEFAULT_DIMENSIONS.height),
-        };
-    }
   }
 
   private createDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
@@ -159,12 +128,4 @@ export class VirtualElementFactory {
       toJSON: () => ({ x, y, width: safeWidth, height: safeHeight }),
     } as DOMRect;
   }
-}
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-function getPositiveSize(value: number, fallback: number): number {
-  return Math.max(0, value || fallback);
 }

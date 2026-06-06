@@ -11,11 +11,6 @@ export interface Coordinates {
 }
 
 /**
- * Restricts client-point tracking to a single axis or both axes.
- */
-export type AxisConstraint = "x" | "y" | "both";
-
-/**
  * Defines how the virtual anchor should react after opening.
  */
 export type TrackingMode = "follow" | "static";
@@ -59,9 +54,4 @@ export interface VirtualElementFactoryOptions {
    * Coordinates captured at open time for partially locked tracking modes.
    */
   baselineCoordinates?: Coordinates | null;
-
-  /**
-   * Axis constraint applied to the generated virtual rect.
-   */
-  axis?: AxisConstraint;
 }
