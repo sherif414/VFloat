@@ -14,9 +14,9 @@ import {
   isInside,
   isPointerLeavingOppositeSide,
   isPointInPolygon,
+  resolveSide,
   type Point,
   type Polygon,
-  type Side,
 } from "./geometry";
 
 /**
@@ -52,13 +52,9 @@ export type SafePolygonHandler = (event: MouseEvent) => void;
 /**
  * Geometry and callback inputs used to build a safe-polygon handler.
  */
-/**
- * Geometry and callback inputs used to build a safe-polygon handler.
- */
 export interface CreateSafePolygonHandlerContext {
   x: number;
   y: number;
-  placement: string;
   elements: {
     domReference: AnchorElement | null;
     floating: FloatingElement | null;
@@ -78,7 +74,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
   let hasLanded = false;
 
   return function createSafePolygonHandler(context: CreateSafePolygonHandlerContext) {
-    const { x, y, placement, elements, buffer: contextBuffer, onClose } = context;
+    const { x, y, elements, buffer: contextBuffer, onClose } = context;
     const referenceEl = computed(() => {
       const domReference = elements.domReference;
 
@@ -103,13 +99,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       clearTimeoutIfSet(timeoutId);
       timeoutId = -1;
 
-      if (
-        !elements.domReference ||
-        !elements.floating ||
-        placement == null ||
-        x == null ||
-        y == null
-      ) {
+      if (!elements.domReference || !elements.floating || x == null || y == null) {
         return;
       }
 
@@ -119,10 +109,15 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       const isLeave = event.type === "mouseleave";
       const isOverFloatingEl = elements.floating && contains(elements.floating, target);
       const isOverReferenceEl = referenceEl.value && contains(referenceEl.value, target);
-      const refRect = referenceEl.value?.getBoundingClientRect();
-      const rect = elements.floating?.getBoundingClientRect();
-      const side = placement.split("-")[0] as Side;
-      const isOverReferenceRect = refRect ? isInside(clientPoint, refRect) : false;
+      const anchorRect = referenceEl.value?.getBoundingClientRect();
+      const floatingRect = elements.floating.getBoundingClientRect();
+
+      if (!anchorRect) {
+        return;
+      }
+
+      const side = resolveSide(floatingRect, anchorRect);
+      const isOverReferenceRect = isInside(clientPoint, anchorRect);
 
       if (isOverFloatingEl) {
         hasLanded = true;
@@ -150,13 +145,13 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
         return;
       }
 
-      if (isPointerLeavingOppositeSide(side, x, y, refRect)) {
+      if (isPointerLeavingOppositeSide(side, x, y, anchorRect)) {
         close();
         return;
       }
 
-      const rectPoly = buildRectangularTrough(side, rect, refRect);
-      const polygon = buildSafePolygon(side, x, y, rect, refRect, contextBuffer);
+      const rectPoly = buildRectangularTrough(side, floatingRect, anchorRect);
+      const polygon = buildSafePolygon(side, x, y, floatingRect, anchorRect, contextBuffer);
       options.onPolygonChange?.(polygon);
 
       // Keep the interaction alive while the cursor is still traveling through

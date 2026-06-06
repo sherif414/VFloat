@@ -59,16 +59,14 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middleware: {
     offset: 8,
   },
 });
-const { styles } = position;
 
 useHover(context, {
-  position,
   safePolygon: true,
 });
 
@@ -76,7 +74,7 @@ useFocus(context);
 </script>
 ```
 
-`useHover(context)` opens and closes from pointer movement. Passing `position` lets `safePolygon: true` protect the pointer path using the current placement. `useFocus(context)` opens the same tooltip for keyboard users.
+`useHover(context)` opens and closes from pointer movement. `safePolygon: true` measures the rendered anchor and floating element to protect the actual pointer path, including after positioning flips or shifts it. `useFocus(context)` opens the same tooltip for keyboard users.
 
 ## Step 3: Render The Tooltip
 

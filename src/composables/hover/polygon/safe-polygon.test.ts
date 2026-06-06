@@ -42,7 +42,7 @@ type SafePolygonTestContext = CreateSafePolygonHandlerContext & {
 const activeContexts = new Set<SafePolygonTestContext>();
 
 function createContext(
-  placement: string,
+  side: "top" | "right" | "bottom" | "left",
   overrides: Partial<CreateSafePolygonHandlerContext> = {},
 ): SafePolygonTestContext {
   const refEl = document.createElement("div");
@@ -50,14 +50,13 @@ function createContext(
   document.body.appendChild(refEl);
   document.body.appendChild(floatEl);
 
-  // Position rects based on placement
+  // Position rects on the requested side.
   const rects: Record<string, [number, number, number, number]> = {
     bottom: [75, 110, 150, 80], // below ref
     top: [75, -90, 150, 80], // above ref
     right: [210, 10, 150, 80], // right of ref
     left: [-160, 10, 150, 80], // left of ref
   };
-  const side = placement.split("-")[0] as string;
   const [fx, fy, fw, fh] = (rects[side] ?? rects.bottom)!;
 
   refEl.getBoundingClientRect = () => makeDOMRect(50, 0, 100, 100);
@@ -68,7 +67,6 @@ function createContext(
   const ctx: SafePolygonTestContext = {
     x: overrides.x ?? 100,
     y: overrides.y ?? 50,
-    placement: placement as any,
     elements: { domReference: refEl, floating: floatEl },
     buffer: overrides.buffer ?? 1,
     onClose: onCloseMock,
@@ -133,14 +131,6 @@ describe("safePolygon", () => {
     it("returns early when floating is null", () => {
       const ctx = createContext("bottom");
       ctx.elements.floating = null;
-      const handler = safePolygon()(ctx);
-      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
-      expect(ctx.onCloseMock).not.toHaveBeenCalled();
-    });
-
-    it("returns early when placement is null", () => {
-      const ctx = createContext("bottom");
-      (ctx as any).placement = null;
       const handler = safePolygon()(ctx);
       handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
@@ -233,7 +223,7 @@ describe("safePolygon", () => {
   // ── Opposite-side guard ──────────────────────────────────────────────────
 
   describe("opposite-side guard", () => {
-    it("closes when pointer leaves from the opposite side of placement=bottom", () => {
+    it("closes when pointer leaves opposite floating side=bottom", () => {
       // Floating is below ref → leaving from top of ref (y <= refRect.top+1) should close
       const ctx = createContext("bottom", { y: 1 });
       const handler = safePolygon()(ctx);
@@ -242,7 +232,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    it("closes when pointer leaves from the opposite side of placement=top", () => {
+    it("closes when pointer leaves opposite floating side=top", () => {
       // Floating is above ref → leaving from bottom of ref (y >= refRect.bottom-1) should close
       const ctx = createContext("top", { y: 99 });
       const handler = safePolygon()(ctx);
@@ -251,7 +241,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    it("closes when pointer leaves from the opposite side of placement=left", () => {
+    it("closes when pointer leaves opposite floating side=left", () => {
       const ctx = createContext("left", { x: 150 });
       const handler = safePolygon()(ctx);
 
@@ -259,7 +249,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    it("closes when pointer leaves from the opposite side of placement=right", () => {
+    it("closes when pointer leaves opposite floating side=right", () => {
       const ctx = createContext("right", { x: 51 });
       const handler = safePolygon()(ctx);
 
@@ -271,7 +261,7 @@ describe("safePolygon", () => {
   // ── Safe polygon hit testing ─────────────────────────────────────────────
 
   describe("safe zone hit testing", () => {
-    it("keeps open when pointer is within the safe polygon (bottom placement)", () => {
+    it("keeps open when pointer is within the safe polygon below the anchor", () => {
       // Cursor left from center of ref, moving straight down toward floating
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false })(ctx);
@@ -290,7 +280,7 @@ describe("safePolygon", () => {
     });
 
     for (const side of ["top", "bottom", "left", "right"] as const) {
-      it(`builds safe zones for placement="${side}"`, () => {
+      it(`builds safe zones for floating side="${side}"`, () => {
         const ctx = createContext(side, { x: 100, y: 50 });
         const handler = safePolygon({ requireIntent: false })(ctx);
 
@@ -444,27 +434,6 @@ describe("safePolygon", () => {
     });
   });
 
-  // ── Placement with alignment (e.g. "bottom-start") ──────────────────────
-
-  describe("placement with alignment", () => {
-    it("extracts the side correctly from 'bottom-start'", () => {
-      const ctx = createContext("bottom-start", { x: 100, y: 99 });
-      const handler = safePolygon({ requireIntent: false })(ctx);
-
-      // Should not crash; should work like "bottom"
-      handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }));
-      expect(ctx.onCloseMock).toHaveBeenCalled();
-    });
-
-    it("extracts the side correctly from 'top-end'", () => {
-      const ctx = createContext("top-end", { x: 100, y: 1 });
-      const handler = safePolygon({ requireIntent: false })(ctx);
-
-      handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }));
-      expect(ctx.onCloseMock).toHaveBeenCalled();
-    });
-  });
-
   // ── Multiple handler instances (closure isolation) ────────────────────────
 
   describe("closure isolation", () => {
@@ -491,15 +460,21 @@ describe("safePolygon", () => {
   // ── Rectangular trough safe zone ─────────────────────────────────────────
 
   describe("rectangular trough", () => {
-    it("keeps open when cursor is in the gap between ref and floating (bottom)", () => {
-      // Ref: y=0..100, Floating: y=110..190, gap=100..110
-      const ctx = createContext("bottom", { x: 100, y: 99 });
-      const handler = safePolygon({ requireIntent: false })(ctx);
+    it.each([
+      ["top", 100, 1, 100, -5],
+      ["right", 149, 50, 180, 50],
+      ["bottom", 100, 99, 100, 105],
+      ["left", 51, 50, 20, 50],
+    ] as const)(
+      "keeps open in the gap when the floating side is inferred as %s",
+      (side, x, y, clientX, clientY) => {
+        const ctx = createContext(side, { x, y });
+        const handler = safePolygon({ requireIntent: false })(ctx);
 
-      // Point in the gap between ref and floating
-      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
-      expect(ctx.onCloseMock).not.toHaveBeenCalled();
-    });
+        handler(makeMouseEvent("pointermove", { clientX, clientY }));
+        expect(ctx.onCloseMock).not.toHaveBeenCalled();
+      },
+    );
   });
 
   // ── hasLanded + outside reference rect → close ───────────────────────────

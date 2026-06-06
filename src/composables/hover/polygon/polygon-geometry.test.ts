@@ -4,6 +4,7 @@ import {
   buildSafePolygon,
   getCursorSpeed,
   isPointInPolygon,
+  resolveSide,
 } from "@/composables/hover/polygon";
 
 function createRect(x: number, y: number, width: number, height: number): DOMRect {
@@ -21,6 +22,27 @@ function createRect(x: number, y: number, width: number, height: number): DOMRec
 }
 
 describe("polygon geometry", () => {
+  it.each([
+    ["top", createRect(75, -90, 150, 80)],
+    ["right", createRect(210, 10, 150, 80)],
+    ["bottom", createRect(75, 110, 150, 80)],
+    ["left", createRect(-160, 10, 150, 80)],
+  ] as const)("resolves the %s side from element geometry", (side, floatingRect) => {
+    expect(resolveSide(floatingRect, createRect(50, 0, 100, 100))).toBe(side);
+  });
+
+  it("uses the greatest edge separation for diagonal geometry", () => {
+    expect(resolveSide(createRect(210, 110, 150, 80), createRect(50, 0, 100, 100))).toBe("right");
+  });
+
+  it("resolves overlapping rectangles from their nearest opposing edges", () => {
+    expect(resolveSide(createRect(75, 60, 150, 80), createRect(50, 0, 100, 100))).toBe("bottom");
+  });
+
+  it("falls back to bottom for coincident rectangles", () => {
+    expect(resolveSide(createRect(50, 0, 100, 100), createRect(50, 0, 100, 100))).toBe("bottom");
+  });
+
   it("builds a rectangular trough between the reference and floating element", () => {
     const trough = buildRectangularTrough(
       "bottom",

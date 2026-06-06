@@ -11,6 +11,48 @@ export type Rect = {
 export type Side = "top" | "right" | "bottom" | "left";
 
 /**
+ * Resolves which side the floating element is on relative to the anchor.
+ *
+ * It measures the gap (or overlap) between the facing edges of the anchor
+ * and floating element on all four sides:
+ *
+ * - `bottom`: floating top - anchor bottom (gap below anchor)
+ * - `top`: anchor top - floating bottom (gap above anchor)
+ * - `right`: floating left - anchor right (gap to the right of anchor)
+ * - `left`: anchor left - floating right (gap to the left of anchor)
+ *
+ * A positive distance indicates a visible gap; a negative distance indicates
+ * an overlap. The side with the largest separation (greatest positive gap or
+ * smallest overlap/least-negative value) wins.
+ *
+ * If there is a tie, it compares the centers of both rectangles to determine the
+ * dominant direction (horizontal vs. vertical center offset) as a tie-breaker.
+ */
+export function resolveSide(floatingRect: DOMRect, anchorRect: DOMRect): Side {
+  const separations: Array<[Side, number]> = [
+    ["bottom", floatingRect.top - anchorRect.bottom],
+    ["top", anchorRect.top - floatingRect.bottom],
+    ["right", floatingRect.left - anchorRect.right],
+    ["left", anchorRect.left - floatingRect.right],
+  ];
+  const greatestSeparation = Math.max(...separations.map(([, separation]) => separation));
+  const candidates = separations
+    .filter(([, separation]) => separation === greatestSeparation)
+    .map(([side]) => side);
+
+  if (candidates.length === 1) {
+    return candidates[0]!;
+  }
+
+  const dx = floatingRect.left + floatingRect.width / 2 - (anchorRect.left + anchorRect.width / 2);
+  const dy = floatingRect.top + floatingRect.height / 2 - (anchorRect.top + anchorRect.height / 2);
+  const centerSide: Side =
+    Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "top" : "bottom";
+
+  return candidates.includes(centerSide) ? centerSide : candidates[0]!;
+}
+
+/**
  * Checks whether a point falls within a rectangle.
  */
 export function isInside(point: Point, rect: Rect): boolean {

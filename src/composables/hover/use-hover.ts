@@ -4,7 +4,6 @@ import {
   type FloatingContext,
   isFloatingContextTargetWithin,
 } from "@/composables/floating-context";
-import type { FloatingPosition } from "@/composables/position";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
@@ -38,7 +37,6 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     restMs: restMsOption = 0,
     mouseOnly: mouseOnlyOption = false,
     safePolygon: safePolygonOption = false,
-    position,
     ignorePointerLeave: ignorePointerLeaveOption,
   } = options;
 
@@ -195,7 +193,6 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
         polygonPointerMoveHandler = safePolygon(safePolygonOptions.value)({
           x: clientX,
           y: clientY,
-          placement: position?.placement.value ?? "bottom",
           elements: {
             domReference: refEl,
             floating: floatEl,
@@ -348,11 +345,6 @@ export interface UseHoverOptions {
    * – `SafePolygonOptions` → enabled with custom buffer
    */
   safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
-
-  /**
-   * Positioning data used by safe-polygon geometry.
-   */
-  position?: Pick<FloatingPosition, "placement">;
 
   /**
    * Predicate to determine if a pointer leave should be ignored (e.g. to keep parent open when hovering a child branch).

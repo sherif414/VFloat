@@ -17,7 +17,6 @@ interface UseHoverOptions {
   restMs?: MaybeRef<number>;
   mouseOnly?: MaybeRef<boolean>;
   safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
-  position?: Pick<FloatingPosition, "placement">;
   ignorePointerLeave?: (target: EventTarget | null) => boolean;
 }
 
@@ -35,8 +34,7 @@ interface SafePolygonOptions {
 - `delay` can be a single number or separate open and close values.
 - `restMs` only matters when the open delay is `0`.
 - `mouseOnly` limits hover behavior to mouse-like pointers.
-- `safePolygon` keeps the surface open while the pointer moves between trigger and panel.
-- Pass the `usePosition()` return as `position` when `safePolygon` should use the current placement instead of falling back to `bottom`.
+- `safePolygon` keeps the surface open while the pointer moves between trigger and panel. It infers the travel direction from their rendered rectangles, so it does not depend on `usePosition`.
 - `ignorePointerLeave` is a predicate to determine if a pointer leave event should be ignored (for example, to keep a parent menu open when hovering a nested submenu/child branch).
 
 `useHover` opens and closes with the `hover` reason.
@@ -52,13 +50,11 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
 });
-const { styles } = position;
 
 useHover(context, {
-  position,
   delay: { open: 100, close: 150 },
   safePolygon: true,
 });
