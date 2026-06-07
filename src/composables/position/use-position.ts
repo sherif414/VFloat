@@ -117,13 +117,19 @@ export function usePosition(
       placement.value = result.placement;
       strategy.value = result.strategy;
       middlewareData.value = result.middlewareData;
-      isPositioned.value = true;
+      isPositioned.value = context.state.open.value;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error("[VFloat] Failed to compute position:", error);
       }
     }
   };
+
+  watch(context.state.open, (isOpen) => {
+    if (!isOpen) {
+      isPositioned.value = false;
+    }
+  });
 
   watch([preferredPlacement, preferredStrategy, mergedMiddlewares, isEnabled], () => {
     if (isEnabled.value) void update();

@@ -48,17 +48,19 @@ describe("usePosition", () => {
   });
 
   it("computes position from context refs without mutating open state", async () => {
+    const open = ref(true);
     const context = useFloatingContext({
       refs: {
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       },
+      state: { open },
     });
     const position = usePosition(context, { placement: "top", strategy: "fixed" });
 
     await position.update();
 
-    expect(context.state.open.value).toBe(false);
+    expect(context.state.open.value).toBe(true);
     expect(position.isPositioned.value).toBe(true);
     expect(position.strategy.value).toBe("fixed");
     expect(position.styles.value.position).toBe("fixed");
@@ -130,11 +132,13 @@ describe("usePosition", () => {
 
   it("gates computation when disabled", async () => {
     const enabled = ref(false);
+    const open = ref(true);
     const context = useFloatingContext({
       refs: {
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       },
+      state: { open },
     });
     const position = usePosition(context, { enabled });
 
