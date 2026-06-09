@@ -8,11 +8,11 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
+import type { FloatingContext } from "@/composables/floating-context";
 import {
-  type FloatingContext,
   getFloatingContextFloatingElements,
   isFloatingContextTargetWithin,
-} from "@/composables/floating-context";
+} from "@/composables/floating-context/floating-context-registry";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 

@@ -1,9 +1,7 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import {
-  type FloatingContext,
-  isFloatingContextTargetWithin,
-} from "@/composables/floating-context";
+import type { FloatingContext } from "@/composables/floating-context";
+import { isFloatingContextTargetWithin } from "@/composables/floating-context/floating-context-registry";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 

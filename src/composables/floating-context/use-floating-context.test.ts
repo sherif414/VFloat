@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { effectScope, nextTick, ref, watchEffect } from "vue";
-import {
-  getFloatingContextFloatingElements,
-  getFloatingInternals,
-  useFloatingContext,
-} from "@/composables";
+import { useFloatingContext } from "@/composables";
+import { getFloatingContextFloatingElements } from "@/composables/floating-context/floating-context-registry";
 
 describe("useFloatingContext", () => {
   it("uses controlled open state and forwards reasons and events", () => {
@@ -187,33 +184,32 @@ describe("useFloatingContext", () => {
     expect(childOpen.value).toBe(true);
   });
 
-  it("tracks child links by context id", () => {
+  it("unregisters child context links from family helpers on scope disposal", () => {
+    const rootFloatingEl = document.createElement("div");
+    const childFloatingEl = document.createElement("div");
     const root = useFloatingContext({
       refs: {
         anchorEl: ref(null),
-        floatingEl: ref(null),
+        floatingEl: ref(rootFloatingEl),
       },
     });
     const scope = effectScope();
-    let childId: symbol | undefined;
 
     scope.run(() => {
-      const child = useFloatingContext({
+      useFloatingContext({
         refs: {
           anchorEl: ref(null),
-          floatingEl: ref(null),
+          floatingEl: ref(childFloatingEl),
         },
         parentContext: root,
       });
-      childId = child.id;
     });
 
-    const childContextIds = getFloatingInternals(root)?.childContextIds?.value;
-    expect(childContextIds).toEqual(new Set([childId]));
+    expect(getFloatingContextFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
 
     scope.stop();
 
-    expect(getFloatingInternals(root)?.childContextIds?.value.size).toBe(0);
+    expect(getFloatingContextFloatingElements(root)).toEqual([rootFloatingEl]);
   });
 
   it("updates descendant floating element helpers when child contexts mount later", async () => {

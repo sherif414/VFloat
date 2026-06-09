@@ -1,8 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import {
-  type FloatingContext,
-  isFloatingContextTargetWithin,
-} from "@/composables/floating-context";
+import type { FloatingContext } from "@/composables/floating-context";
+import { isFloatingContextTargetWithin } from "@/composables/floating-context/floating-context-registry";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";

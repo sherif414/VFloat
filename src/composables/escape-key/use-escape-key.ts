@@ -1,9 +1,7 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
-import {
-  type FloatingContext,
-  getDeepestOpenFloatingContext,
-} from "@/composables/floating-context";
+import type { FloatingContext } from "@/composables/floating-context";
+import { getDeepestOpenFloatingContext } from "@/composables/floating-context/floating-context-registry";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
