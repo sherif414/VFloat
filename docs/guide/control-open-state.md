@@ -58,33 +58,15 @@ function close() {
 </script>
 ```
 
-VFloat will automatically update your parent `open` ref when interaction helpers (like clicks or keyboard shortcuts) trigger open state changes.
+When using this pattern, VFloat automatically updates the `open` ref when interaction helpers (like click or hover) trigger open changes.
+
+To update the state programmatically, **always call `context.state.setOpen()`** instead of mutating the `open` ref directly. This guarantees that internal cleanup tasks, such as dismissing nested menus, execute correctly.
 
 > [!IMPORTANT]
-> The `open` ref you pass to VFloat must be mutable so that internal interactions can write to it. If you are wrapping a read-only prop or implementing component `v-model` delegation, make sure to pass a **writable computed property**:
->
-> ```ts
-> import { computed, ref } from "vue";
-> import { useFloatingContext } from "v-float";
->
-> const props = defineProps<{ modelValue: boolean }>();
-> const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void }>();
->
-> const open = computed({
->   get: () => props.modelValue,
->   set: (value) => emit("update:modelValue", value),
-> });
->
-> const context = useFloatingContext({
->   refs: { anchorEl, floatingEl },
->   state: { open },
-> });
-> ```
-
-If your parent component needs to programmatically open or close the surface, call `context.state.setOpen()` instead of mutating your `open` ref directly. This ensures VFloat's internal cleanup routines (such as dismissing descendant menus) run correctly.
+> The `open` ref passed to the state configuration must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.
 
 > [!NOTE]
-> You can also pass an `onOpenChange` callback for debugging or logging, but it is not intended to be used for driving state updates.
+> `onOpenChange` is mainly for side-effects and debugging. Do not use it to synchronize or drive the `open` state.
 
 ## When Each Model Makes Sense
 
