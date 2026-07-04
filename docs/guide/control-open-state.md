@@ -32,7 +32,7 @@ This is usually the simplest starting point. The component stays small, and your
 
 ## The Controlled Version
 
-When the parent needs authority, pass `state.open` and `state.onOpenChange`.
+When the parent needs to read or react to the open state directly in its own logic, pass your own `open` ref.
 
 ```vue
 <script setup lang="ts">
@@ -45,20 +45,25 @@ const open = ref(false);
 
 const context = useFloatingContext({
   refs: { anchorEl, floatingEl },
-  state: {
-    open,
-    onOpenChange(nextOpen, reason, event) {
-      open.value = nextOpen;
-    },
-  },
+  state: { open },
 });
 
 useClick(context);
 useOutsideClick(context);
+
+// To change the state programmatically, call setOpen
+function close() {
+  context.state.setOpen(false);
+}
 </script>
 ```
 
-Now the parent-owned `open` ref is the source of truth, and VFloat reports changes through `onOpenChange(nextOpen, reason, event)`.
+VFloat will automatically update your parent `open` ref when interaction helpers (like clicks or keyboard shortcuts) trigger open state changes.
+
+If your parent component needs to programmatically open or close the surface, call `context.state.setOpen()` instead of mutating your `open` ref directly. This ensures VFloat's internal cleanup routines (such as dismissing descendant menus) run correctly.
+
+> [!NOTE]
+> You can also pass an `onOpenChange` callback for debugging or logging, but it is not intended to be used for driving state updates.
 
 ## When Each Model Makes Sense
 
