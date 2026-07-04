@@ -60,6 +60,27 @@ function close() {
 
 VFloat will automatically update your parent `open` ref when interaction helpers (like clicks or keyboard shortcuts) trigger open state changes.
 
+> [!IMPORTANT]
+> The `open` ref you pass to VFloat must be mutable so that internal interactions can write to it. If you are wrapping a read-only prop or implementing component `v-model` delegation, make sure to pass a **writable computed property**:
+>
+> ```ts
+> import { computed, ref } from "vue";
+> import { useFloatingContext } from "v-float";
+>
+> const props = defineProps<{ modelValue: boolean }>();
+> const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void }>();
+>
+> const open = computed({
+>   get: () => props.modelValue,
+>   set: (value) => emit("update:modelValue", value),
+> });
+>
+> const context = useFloatingContext({
+>   refs: { anchorEl, floatingEl },
+>   state: { open },
+> });
+> ```
+
 If your parent component needs to programmatically open or close the surface, call `context.state.setOpen()` instead of mutating your `open` ref directly. This ensures VFloat's internal cleanup routines (such as dismissing descendant menus) run correctly.
 
 > [!NOTE]
