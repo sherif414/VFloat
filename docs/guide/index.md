@@ -62,7 +62,7 @@ That means VFloat works with any visual design, any CSS framework, and any compo
 
 VFloat draws heavily from [Floating UI](https://floating-ui.com). The middleware pipeline — offset, flip, shift, size, arrow, hide, autoPlacement — follows the same model. Some composable names will look familiar.
 
-But VFloat is its own library with its own API shape. It uses `anchorEl` and `floatingEl` instead of `reference` and `floating`. It centers everything around a shared `context` object rather than passing individual refs to each function. If you're coming from Floating UI, the concepts will transfer — the call sites won't. Follow the VFloat docs rather than copying Floating UI examples directly.
+But VFloat is its own library with its own API shape. If you're coming from Floating UI, the concepts will transfer — the call sites won't. Follow the VFloat docs rather than copying Floating UI examples directly.
 
 ## Where To Go Next
 
