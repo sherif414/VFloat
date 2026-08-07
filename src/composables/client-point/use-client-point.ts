@@ -88,7 +88,12 @@ export function useClientPoint(
   const virtualElementFactory = new VirtualElementFactory();
 
   watchEffect(() => {
-    if (!isEnabled.value) return;
+    if (!isEnabled.value) {
+      if (!open.value) {
+        context.refs.anchorEl.value = null;
+      }
+      return;
+    }
 
     context.refs.anchorEl.value = virtualElementFactory.create({
       coordinates: state.coordinates.value,
