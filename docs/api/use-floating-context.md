@@ -27,6 +27,7 @@ interface UseFloatingContextRefs {
 
 interface UseFloatingContextState {
   open?: Ref<boolean>;
+  defaultOpen?: boolean;
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 }
 
@@ -51,8 +52,9 @@ interface FloatingState {
 - `refs.anchorEl` and `refs.floatingEl` are required.
 - `refs.arrowEl` is optional and used by [`useArrow`](/api/use-arrow).
 - `context.id` is a stable symbol created with the context and used to coordinate related contexts without comparing context objects by identity.
-- `state.open` defaults to `ref(false)`.
+- `state.open` defaults to internally managed state initialized from `state.defaultOpen` (or `false` when omitted).
 - Passing `state.open` makes the context use your controlled ref.
+- `state.defaultOpen` only seeds uncontrolled state; it is ignored when `state.open` is provided and is not watched after creation.
 - `state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
 - Missing reasons fall back to `"programmatic"`.
 - `parentContext` links related floating contexts so outside-click and focus checks can treat descendants as part of the same floating family.

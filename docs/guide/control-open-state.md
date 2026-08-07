@@ -14,6 +14,8 @@ This page shows both models and when each one makes sense.
 
 If you call [`useFloatingContext`](/api/use-floating-context) without `state.open`, VFloat creates and owns that state for you.
 
+To start an uncontrolled surface open, pass `state.defaultOpen`. It is an initial value, not a reactive input.
+
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
@@ -22,7 +24,10 @@ import { useClick, useFloatingContext } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({
+  refs: { anchorEl, floatingEl },
+  state: { defaultOpen: true },
+});
 
 useClick(context);
 </script>
