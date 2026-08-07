@@ -61,7 +61,10 @@ export class VirtualElementFactory {
         return element.getBoundingClientRect();
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.warn("VirtualElementFactory: Failed to get element bounds", { element, error });
+          console.warn("VirtualElementFactory: Failed to get element bounds", {
+            element,
+            error,
+          });
         }
       }
     }

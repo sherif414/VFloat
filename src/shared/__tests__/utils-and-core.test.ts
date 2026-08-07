@@ -1,9 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
-import { createRefSetter, getAnchorElement } from "@/shared/elements";
-import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
-import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
-import type { VirtualElement } from "@/types";
 import {
   clearTimeoutIfSet,
   getDomPath,
@@ -18,6 +14,10 @@ import {
   isTypeableElement,
   isVirtualElement,
 } from "@/shared/dom";
+import { createRefSetter, getAnchorElement } from "@/shared/elements";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
+import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
+import type { VirtualElement } from "@/types";
 
 const originalPlatform = navigator.platform;
 const originalUserAgent = navigator.userAgent;
@@ -76,7 +76,10 @@ describe("utils and core helpers", () => {
     ).toBe(false);
 
     const clickTarget = new KeyboardEvent("keydown");
-    Object.defineProperty(clickTarget, "target", { configurable: true, value: button });
+    Object.defineProperty(clickTarget, "target", {
+      configurable: true,
+      value: button,
+    });
     expect(isButtonTarget(clickTarget)).toBe(true);
     expect(isSpaceIgnored(input)).toBe(true);
     expect(isSpaceIgnored(button)).toBe(false);
@@ -99,7 +102,10 @@ describe("utils and core helpers", () => {
       configurable: true,
       value: () => [child, container, document.body],
     });
-    Object.defineProperty(composedEvent, "target", { configurable: true, value: child });
+    Object.defineProperty(composedEvent, "target", {
+      configurable: true,
+      value: child,
+    });
 
     const fallbackEvent = {
       target: child,
@@ -186,7 +192,16 @@ describe("utils and core helpers", () => {
       refs: { anchorEl, floatingEl, arrowEl },
       state: { open, setOpen },
     };
-    const position = { x, y, strategy, placement, middlewareData, isPositioned, styles, update };
+    const position = {
+      x,
+      y,
+      strategy,
+      placement,
+      middlewareData,
+      isPositioned,
+      styles,
+      update,
+    };
 
     expect(context.refs).toBe(context.refs);
     expect(context.state.open).toBe(open);

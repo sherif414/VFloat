@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { useEscapeKey, useFloatingContext, type UseEscapeKeyContext } from "@/composables";
+import { type UseEscapeKeyContext, useEscapeKey, useFloatingContext } from "@/composables";
 
 const createdElements: HTMLElement[] = [];
 
@@ -141,7 +141,11 @@ describe("useEscapeKey", () => {
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
       document.dispatchEvent(
-        new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32 } as any),
+        new KeyboardEvent("keydown", {
+          key: " ",
+          code: "Space",
+          keyCode: 32,
+        } as any),
       );
 
       expect(context.state.setOpen).not.toHaveBeenCalled();

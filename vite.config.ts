@@ -1,31 +1,17 @@
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
-import { defineConfig } from "vite-plus";
-import { playwright } from "vite-plus/test/browser-playwright";
+import { defineConfig } from "vite";
+import dts from "vite-plugin-dts";
 import vueDevtools from "vite-plugin-vue-devtools";
 
 export default defineConfig({
-  fmt: {
-    ignorePatterns: [],
-  },
-  staged: {
-    "*": "vp check --fix",
-  },
-  lint: { options: { typeAware: true, typeCheck: true } },
-  pack: {
-    dts: {
-      tsgo: true,
-      tsconfig: "tsconfig.build.json",
-    },
-    exports: true,
-  },
   test: {
     browser: {
       enabled: true,
       headless: true,
       screenshotFailures: false,
-      provider: playwright(),
+      provider: "playwright",
       instances: [{ browser: "chromium" }],
     },
     silent: "passed-only",
@@ -51,7 +37,7 @@ export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    // dts({ tsconfigPath: "./tsconfig.build.json", outDir: "dist", entryRoot: "src" }),
+    dts({ tsconfigPath: "./tsconfig.build.json", outDir: "dist", rollupTypes: true }),
     vueDevtools(),
   ],
   resolve: {
@@ -59,20 +45,18 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  // build: {
-  //   lib: {
-  //     entry: fileURLToPath(new URL("./src/index.ts", import.meta.url)),
-  //     name: "VFloat",
-  //     fileName: (format) => `v-float.${format}.js`,
-  //   },
-  //   rollupOptions: {
-  //     external: ["vue"],
-  //     output: {
-  //       exports: "named",
-  //       globals: {
-  //         vue: "Vue",
-  //       },
-  //     },
-  //   },
-  // },
+  build: {
+    lib: {
+      entry: fileURLToPath(new URL("./src/index.ts", import.meta.url)),
+      name: "VFloat",
+      fileName: () => "index.mjs",
+      formats: ["es"],
+    },
+    rollupOptions: {
+      external: ["vue", "@floating-ui/dom", "focus-trap", "tabbable"],
+      output: {
+        exports: "named",
+      },
+    },
+  },
 });

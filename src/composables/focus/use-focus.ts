@@ -2,10 +2,10 @@ import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEf
 import type { FloatingContext } from "@/composables/floating-context";
 import { isFloatingContextTargetWithin } from "@/composables/floating-context/floating-context-registry";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
-import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
-import { useEventListener } from "@/shared/use-event-listener";
 import { isTypeableElement } from "@/shared/dom";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
+import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
 // 📌 Main
@@ -57,7 +57,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 
   let isFocusBlocked = false;
   const isSafariOnMac = isMac() && isSafari();
-  let blurTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let blurTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
   const cleanupRegistry = createCleanupRegistry();
   const registerCleanup = cleanupRegistry.add;
   const cleanup = cleanupRegistry.cleanup;

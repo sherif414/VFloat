@@ -1,11 +1,11 @@
 import "../../../env.d.ts";
 
 import "./styles/home.css";
-import { useData } from "vitepress";
-import DefaultTheme from "vitepress/theme";
-import { h, defineComponent } from "vue";
 import { VPTheme } from "@vue/theme";
 import type { Theme } from "vitepress";
+import { useData } from "vitepress";
+import DefaultTheme from "vitepress/theme";
+import { defineComponent, h } from "vue";
 import DemoContainer from "./components/demo-container.vue";
 
 const renderLayout = h as any;

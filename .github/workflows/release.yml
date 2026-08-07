@@ -27,19 +27,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          cache: true
+          version: 10
 
-      - name: Run checks
-        run: vp check
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run lint
+        run: pnpm run lint
+
+      - name: Run type check
+        run: pnpm run type-check
 
       - name: Run tests
-        run: vp test
+        run: pnpm run test
 
       - name: Build package
-        run: vp pack
+        run: pnpm run build
 
       - name: Upload release artifacts
         if: startsWith(github.ref, 'refs/tags/v')

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 
@@ -48,7 +48,11 @@ describe("useControllableState", () => {
   it("supports functional updaters against a controlled value", () => {
     const external = ref(1);
     const onChange = vi.fn();
-    const value = useControllableState({ value: external, initialValue: 0, onChange });
+    const value = useControllableState({
+      value: external,
+      initialValue: 0,
+      onChange,
+    });
 
     value.value = value.value + 1;
     expect(external.value).toBe(1);

@@ -14,10 +14,8 @@ By the end of this page you'll have a tooltip that appears above a button on hov
 ## Install
 
 ```sh
-vp add v-float
+pnpm add v-float
 ```
-
-If your project doesn't use Vite+, install `v-float` with your package manager instead.
 
 ## The Complete Example
 

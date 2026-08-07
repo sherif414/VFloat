@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
+import type { AnchorElement, FloatingElement } from "@/composables";
 import {
   type UseFocusContext,
   type UseFocusOptions,
   useFloatingContext,
   useFocus,
 } from "@/composables";
-import type { AnchorElement, FloatingElement } from "@/composables";
 
 vi.mock("@/shared/platform", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/platform")>();

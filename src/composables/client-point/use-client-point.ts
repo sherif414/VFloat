@@ -1,9 +1,9 @@
 import { computed, type MaybeRefOrGetter, type Ref, toValue, watch, watchEffect } from "vue";
+import type { AnchorElement, FloatingContext } from "@/composables/floating-context";
 import { createClientPointState } from "./client-point-state";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
 import type { PointerEventData, TrackingMode } from "./types";
 import { VirtualElementFactory } from "./virtual-element-factory";
-import type { AnchorElement, FloatingContext } from "@/composables/floating-context";
 
 //=======================================================================================
 // 📌 Main

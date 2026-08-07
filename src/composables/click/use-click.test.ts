@@ -1,8 +1,8 @@
-import { userEvent } from "vite-plus/test/browser";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { userEvent } from "@vitest/browser/context";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseClickOptions, type UseClickContext, useClick } from "@/composables";
 import type { AnchorElement, FloatingElement } from "@/composables";
+import { type UseClickContext, type UseClickOptions, useClick } from "@/composables";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];
@@ -138,7 +138,11 @@ describe("useClick", () => {
 
       await nextTick();
       anchorEl.dispatchEvent(
-        new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }),
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+        }),
       );
       await nextTick();
 
@@ -148,7 +152,11 @@ describe("useClick", () => {
       setOpenMock.mockClear();
 
       anchorEl.dispatchEvent(
-        new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }),
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+        }),
       );
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
@@ -161,7 +169,11 @@ describe("useClick", () => {
     it("ignores synthetic keyboard click (detail === 0) when ignoreKeyboard is true", async () => {
       initClick({ ignoreKeyboard: true });
 
-      const synthetic = new MouseEvent("click", { bubbles: true, cancelable: true, detail: 0 });
+      const synthetic = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        detail: 0,
+      });
       anchorEl.dispatchEvent(synthetic);
       await nextTick();
 

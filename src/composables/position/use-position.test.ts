@@ -1,8 +1,8 @@
 import type { Middleware, Placement } from "@floating-ui/dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, ref } from "vue";
-import { getFloatingInternals, useArrow, useFloatingContext, usePosition } from "@/composables";
 import type { AnchorElement, FloatingElement } from "@/composables";
+import { getFloatingInternals, useArrow, useFloatingContext, usePosition } from "@/composables";
 
 const elements: HTMLElement[] = [];
 
@@ -38,7 +38,14 @@ describe("usePosition", () => {
   let floatingEl: HTMLElement;
 
   beforeEach(() => {
-    anchorEl = createElement("button", { x: 10, y: 20, top: 20, left: 10, right: 50, bottom: 40 });
+    anchorEl = createElement("button", {
+      x: 10,
+      y: 20,
+      top: 20,
+      left: 10,
+      right: 50,
+      bottom: 40,
+    });
     floatingEl = createElement("div");
   });
 
@@ -56,7 +63,10 @@ describe("usePosition", () => {
       },
       state: { open },
     });
-    const position = usePosition(context, { placement: "top", strategy: "fixed" });
+    const position = usePosition(context, {
+      placement: "top",
+      strategy: "fixed",
+    });
 
     await position.update();
 
@@ -75,7 +85,10 @@ describe("usePosition", () => {
         floatingEl: ref<FloatingElement>(floatingEl),
       },
     });
-    const position = usePosition(context, { placement, middlewares: [middleware] });
+    const position = usePosition(context, {
+      placement,
+      middlewares: [middleware],
+    });
 
     await position.update();
     placement.value = "bottom";

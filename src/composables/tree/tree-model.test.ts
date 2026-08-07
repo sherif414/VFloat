@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it, vi } from "vitest";
 import { TreeModel } from "./tree-model";
 
 interface TestNode {
@@ -60,7 +60,11 @@ describe("TreeModel", () => {
     ];
 
     it("correctly identifies parent relationships", () => {
-      const model = new TreeModel(items, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(items, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       expect(model.getParentValue("1")).toBeNull();
       expect(model.getParentValue("1-1")).toBe("1");
@@ -68,7 +72,11 @@ describe("TreeModel", () => {
     });
 
     it("calculates depth correctly at all levels", () => {
-      const model = new TreeModel(items, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(items, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       expect(model.getDepth("1")).toBe(0);
       expect(model.getDepth("1-2")).toBe(1);
@@ -76,7 +84,11 @@ describe("TreeModel", () => {
     });
 
     it("reports hasChildren accurately", () => {
-      const model = new TreeModel(items, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(items, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       expect(model.hasChildren("1")).toBe(true);
       expect(model.hasChildren("1-1")).toBe(false);
@@ -85,21 +97,33 @@ describe("TreeModel", () => {
     });
 
     it("retrieves ancestors from closest to farthest", () => {
-      const model = new TreeModel(items, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(items, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       expect(model.getAncestorValues("1-2-1")).toEqual(["1-2", "1"]);
       expect(model.getAncestorValues("1")).toEqual([]);
     });
 
     it("retrieves sibling values correctly", () => {
-      const model = new TreeModel(items, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(items, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       expect(model.getSiblingValues("1")).toEqual(["2", "3"]);
       expect(model.getSiblingValues("1-1")).toEqual(["1-2"]);
     });
 
     it("flattens items based on expansion state", () => {
-      const model = new TreeModel(items, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(items, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       // No expanded branches
       expect(model.getFlattenedItems(new Set()).map(getItemId)).toEqual(["1", "2", "3"]);
@@ -150,7 +174,11 @@ describe("TreeModel", () => {
         },
       ];
 
-      const model = new TreeModel(nestedItems, { getItemId, isItemDisabled, getItemChildren });
+      const model = new TreeModel(nestedItems, {
+        getItemId,
+        isItemDisabled,
+        getItemChildren,
+      });
 
       // Skips disabled direct children
       expect(model.getFirstEnabledDescendantValue("root-1")).toBe("child-1-3");

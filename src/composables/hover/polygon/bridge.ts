@@ -14,9 +14,9 @@ import {
   isInside,
   isPointerLeavingOppositeSide,
   isPointInPolygon,
-  resolveSide,
   type Point,
   type Polygon,
+  resolveSide,
 } from "./geometry";
 
 /**

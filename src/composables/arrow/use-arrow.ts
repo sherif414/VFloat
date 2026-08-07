@@ -1,9 +1,9 @@
-import { type ComputedRef, computed, toValue } from "vue";
-import { getFloatingInternals } from "@/composables/floating-context";
-import { arrow } from "../middlewares";
-import type { FloatingContext } from "@/composables/floating-context";
-import type { FloatingPosition } from "@/composables/position";
 import type { Padding } from "@floating-ui/dom";
+import { type ComputedRef, computed, toValue } from "vue";
+import type { FloatingContext } from "@/composables/floating-context";
+import { getFloatingInternals } from "@/composables/floating-context";
+import type { FloatingPosition } from "@/composables/position";
+import { arrow } from "../middlewares";
 
 //=======================================================================================
 // 📌 Main

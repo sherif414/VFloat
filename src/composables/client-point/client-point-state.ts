@@ -1,4 +1,4 @@
-import { computed, type MaybeRefOrGetter, ref, toValue, type Ref } from "vue";
+import { computed, type MaybeRefOrGetter, type Ref, ref, toValue } from "vue";
 import type { Coordinates } from "./types";
 
 //=======================================================================================

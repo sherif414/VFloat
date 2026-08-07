@@ -1,6 +1,6 @@
-import { shallowRef, type ShallowRef } from "vue";
-import type { OpenChangeReason } from "@/types";
+import { type ShallowRef, shallowRef } from "vue";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
+import type { OpenChangeReason } from "@/types";
 import type { FloatingContext, FloatingContextId, FloatingState } from "./use-floating-context";
 
 type FloatingContextTarget = Pick<FloatingContext, "refs" | "state">;

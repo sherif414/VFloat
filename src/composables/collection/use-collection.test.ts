@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it } from "vitest";
 import { ref } from "vue";
 import { useCollection } from "@/composables/collection/use-collection";
 

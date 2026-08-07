@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  safePolygon,
   type CreateSafePolygonHandlerContext,
   type Polygon,
+  safePolygon,
 } from "@/composables/hover/polygon";
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
@@ -178,9 +178,21 @@ describe("safePolygon", () => {
       const floatEl = ctx.elements.floating as HTMLElement;
 
       // Enter floating
-      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 130, target: floatEl }));
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 100,
+          clientY: 130,
+          target: floatEl,
+        }),
+      );
       // Leave floating → should close because hasLanded is true and pointer is outside safe zones
-      handler(makeMouseEvent("mouseleave", { clientX: 300, clientY: 300, target: floatEl }));
+      handler(
+        makeMouseEvent("mouseleave", {
+          clientX: 300,
+          clientY: 300,
+          target: floatEl,
+        }),
+      );
       vi.runAllTimers();
 
       expect(ctx.onCloseMock).toHaveBeenCalled();
@@ -195,7 +207,13 @@ describe("safePolygon", () => {
       const handler = safePolygon()(ctx);
       const refEl = ctx.elements.domReference as HTMLElement;
 
-      handler(makeMouseEvent("pointermove", { clientX: 80, clientY: 50, target: refEl }));
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 80,
+          clientY: 50,
+          target: refEl,
+        }),
+      );
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
   });
@@ -369,7 +387,13 @@ describe("safePolygon", () => {
       const floatEl = ctx.elements.floating as HTMLElement;
 
       // Land on floating element → sets hasLanded=true
-      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 130, target: floatEl }));
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 100,
+          clientY: 130,
+          target: floatEl,
+        }),
+      );
 
       // Move back into safe zone slowly
       vi.advanceTimersByTime(1000);
@@ -422,9 +446,10 @@ describe("safePolygon", () => {
       const onPolygonChange2 = vi.fn();
       const ctx2 = createContext("bottom", { x: 100, y: 99 });
       ctx2.buffer = 10;
-      const handler2 = safePolygon({ requireIntent: false, onPolygonChange: onPolygonChange2 })(
-        ctx2,
-      );
+      const handler2 = safePolygon({
+        requireIntent: false,
+        onPolygonChange: onPolygonChange2,
+      })(ctx2);
 
       handler2(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
       const poly2: Polygon = onPolygonChange2.mock.calls[0]![0] as Polygon;
@@ -486,7 +511,13 @@ describe("safePolygon", () => {
       const floatEl = ctx.elements.floating as HTMLElement;
 
       // Land on floating
-      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 130, target: floatEl }));
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 100,
+          clientY: 130,
+          target: floatEl,
+        }),
+      );
 
       // Move far outside everything
       handler(makeMouseEvent("pointermove", { clientX: 900, clientY: 900 }));

@@ -27,7 +27,7 @@ if (!options.dryRun && !process.env.CLOUDFLARE_ACCOUNT_ID) {
 }
 
 if (!options.skipBuild) {
-  run("vp", ["run", "docs:build"]);
+  run("pnpm", ["run", "docs:build"]);
 }
 
 const deployCommand = [
@@ -41,11 +41,11 @@ const deployCommand = [
 ];
 
 if (options.dryRun) {
-  console.log(`[docs:deploy] Dry run. Would run: vp ${deployCommand.join(" ")}`);
+  console.log(`[docs:deploy] Dry run. Would run: pnpm ${deployCommand.join(" ")}`);
   process.exit(0);
 }
 
-run("vp", deployCommand);
+run("pnpm", deployCommand);
 
 function getArgValue(name) {
   const index = args.indexOf(name);
@@ -83,10 +83,10 @@ function printHelp() {
   console.log(`Deploy VFloat documentation to Cloudflare Pages.
 
 Usage:
-  vp run docs:deploy
-  vp run docs:deploy -- --project vfloat --branch main
-  vp run docs:deploy -- --dry-run
-  vp run docs:deploy -- --skip-build
+  pnpm run docs:deploy
+  pnpm run docs:deploy -- --project vfloat --branch main
+  pnpm run docs:deploy -- --dry-run
+  pnpm run docs:deploy -- --skip-build
 
 Environment:
   CLOUDFLARE_API_TOKEN          Cloudflare API token with Pages deploy access.

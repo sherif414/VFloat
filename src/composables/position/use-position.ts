@@ -9,16 +9,16 @@ import type {
   Strategy,
 } from "@floating-ui/dom";
 import {
-  autoUpdate as floatingUIAutoUpdate,
   computePosition,
   flip,
+  autoUpdate as floatingUIAutoUpdate,
   offset,
   shift,
   size,
 } from "@floating-ui/dom";
 import {
-  computed,
   type ComputedRef,
+  computed,
   type MaybeRefOrGetter,
   type Ref,
   ref,
@@ -26,9 +26,9 @@ import {
   toValue,
   watch,
 } from "vue";
-import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { FloatingContext } from "@/composables/floating-context";
 import { setFloatingInternals } from "@/composables/floating-context";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
 // Main

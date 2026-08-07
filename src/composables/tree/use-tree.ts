@@ -1,16 +1,16 @@
 import {
-  type MaybeRefOrGetter,
-  type Ref,
   type ComputedRef,
   computed,
+  type MaybeRefOrGetter,
+  type Ref,
   readonly,
   ref,
   shallowRef,
   toValue,
   watch,
 } from "vue";
-import { TreeModel } from "./tree-model";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
+import { TreeModel } from "./tree-model";
 
 //=======================================================================================
 // 📌 Main

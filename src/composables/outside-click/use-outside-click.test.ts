@@ -1,5 +1,5 @@
-import { userEvent } from "vite-plus/test/browser";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { userEvent } from "@vitest/browser/context";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import {
   type AnchorElement,

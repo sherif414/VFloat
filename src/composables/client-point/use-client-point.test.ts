@@ -1,14 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { effectScope, nextTick, ref, type Ref } from "vue";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { effectScope, nextTick, type Ref, ref } from "vue";
 import type { AnchorElement } from "@/composables";
-import { isVirtualElement } from "@/shared/dom";
 import {
   type UseClientPointContext,
   type UseClientPointOptions,
   useClientPoint,
 } from "@/composables/client-point/use-client-point";
-import { VirtualElementFactory } from "./virtual-element-factory";
+import { isVirtualElement } from "@/shared/dom";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
+import { VirtualElementFactory } from "./virtual-element-factory";
 
 // Track elements created during tests for cleanup
 const elementsToCleanUp: HTMLElement[] = [];
@@ -166,14 +166,20 @@ describe("FollowTracker", () => {
 
     expect(tracker.process(mouseEvent, { isOpen: false })).toBeNull();
     expect(tracker.process(touchEvent, { isOpen: true })).toBeNull();
-    expect(tracker.process(mouseEvent, { isOpen: true })).toEqual({ x: 40, y: 60 });
+    expect(tracker.process(mouseEvent, { isOpen: true })).toEqual({
+      x: 40,
+      y: 60,
+    });
   });
 });
 
 describe("StaticTracker", () => {
   it("captures trigger coordinates on pointerdown and exposes them when opened", () => {
     const tracker = new StaticTracker();
-    const pointerdown = createPointerEventData("pointerdown", { x: 200, y: 300 });
+    const pointerdown = createPointerEventData("pointerdown", {
+      x: 200,
+      y: 300,
+    });
 
     const resultWhenClosed = tracker.process(pointerdown, { isOpen: false });
     expect(resultWhenClosed).toBeNull();
@@ -185,7 +191,10 @@ describe("StaticTracker", () => {
 
   it("captures pointerenter coordinates for hover-open flows", () => {
     const tracker = new StaticTracker();
-    const pointerenter = createPointerEventData("pointerenter", { x: 140, y: 240 });
+    const pointerenter = createPointerEventData("pointerenter", {
+      x: 140,
+      y: 240,
+    });
 
     expect(tracker.process(pointerenter, { isOpen: false })).toBeNull();
     expect(tracker.getCoordinatesForOpening()).toEqual({ x: 140, y: 240 });
@@ -204,7 +213,10 @@ describe("StaticTracker", () => {
 
   it("clears stored coordinates on close", () => {
     const tracker = new StaticTracker();
-    const pointerdown = createPointerEventData("pointerdown", { x: 200, y: 300 });
+    const pointerdown = createPointerEventData("pointerdown", {
+      x: 200,
+      y: 300,
+    });
 
     tracker.process(pointerdown, { isOpen: false });
     tracker.onClose();

@@ -1,8 +1,8 @@
 import type { Strategy } from "@floating-ui/dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref } from "vue";
-import { type UseHoverOptions, useFloatingContext, useHover } from "@/composables";
 import type { FloatingContext } from "@/composables";
+import { type UseHoverOptions, useFloatingContext, useHover } from "@/composables";
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
 
@@ -78,7 +78,11 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
       y: ref(0),
       isPositioned: ref(true),
       update: vi.fn(),
-      styles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
+      styles: computed(() => ({
+        position: "absolute",
+        top: "0px",
+        left: "0px",
+      })),
     },
   } as unknown as FloatingContext;
 
@@ -98,7 +102,14 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
     activeContexts.delete(ctx);
   };
 
-  const ctx: HoverTestContext = { referenceEl, floatingEl, context, scope, setOpen, cleanup };
+  const ctx: HoverTestContext = {
+    referenceEl,
+    floatingEl,
+    context,
+    scope,
+    setOpen,
+    cleanup,
+  };
   // Register cleanup at creation time, not at the end
   activeContexts.add(ctx);
   return ctx;
@@ -321,7 +332,11 @@ describe("useHover", () => {
             y: ref(0),
             isPositioned: ref(true),
             update: vi.fn(),
-            styles: computed(() => ({ position: "absolute", top: "0px", left: "0px" })),
+            styles: computed(() => ({
+              position: "absolute",
+              top: "0px",
+              left: "0px",
+            })),
           },
         } as unknown as FloatingContext;
 
@@ -534,7 +549,10 @@ describe("useHover", () => {
     });
 
     it("ignores restMs if delay.open is greater than 0", async () => {
-      const ctx = await createHoverContext({ delay: { open: 100 }, restMs: 50 });
+      const ctx = await createHoverContext({
+        delay: { open: 100 },
+        restMs: 50,
+      });
 
       ctx.referenceEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -572,7 +590,10 @@ describe("useHover", () => {
 
       // Touch leave (ignored)
       ctx.referenceEl.dispatchEvent(
-        makePointerEvent("pointerleave", { pointerType: "touch", relatedTarget: document.body }),
+        makePointerEvent("pointerleave", {
+          pointerType: "touch",
+          relatedTarget: document.body,
+        }),
       );
       vi.runAllTimers();
       await nextTick();
@@ -580,7 +601,10 @@ describe("useHover", () => {
 
       // Mouse leave (valid)
       ctx.referenceEl.dispatchEvent(
-        makePointerEvent("pointerleave", { pointerType: "mouse", relatedTarget: document.body }),
+        makePointerEvent("pointerleave", {
+          pointerType: "mouse",
+          relatedTarget: document.body,
+        }),
       );
       await nextTick();
       expect(ctx.context.state.open.value).toBe(false);

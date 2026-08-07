@@ -1,7 +1,7 @@
 import type { ChangelogConfig } from "changelogen";
 
 // Changelogen configuration for VFloat
-export default <Partial<ChangelogConfig>>{
+export default (<Partial<ChangelogConfig>>{
   // Explicitly set the repository (auto-detected from git if omitted)
   repo: "github:sherif414/VFloat",
 
@@ -32,4 +32,4 @@ export default <Partial<ChangelogConfig>>{
     private: false,
     args: [],
   },
-};
+});

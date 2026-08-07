@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it } from "vite-plus/test";
-import { effectScope, ref, nextTick } from "vue";
+import { afterEach, describe, expect, it } from "vitest";
+import { effectScope, nextTick, ref } from "vue";
+import { useFloatingContext } from "@/composables";
 import { useListNavigation } from "@/composables/list-navigation/use-list-navigation";
 import { useTree } from "@/composables/tree/use-tree";
-import { useFloatingContext } from "@/composables";
 
 function dispatchKey(target: EventTarget, key: string) {
   target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
@@ -75,7 +75,14 @@ describe("useListNavigation", () => {
         closeOnTab: options.closeOnTab,
       });
 
-      resultContext = { context, navigation, tree, anchorEl, floatingEl, openRef };
+      resultContext = {
+        context,
+        navigation,
+        tree,
+        anchorEl,
+        floatingEl,
+        openRef,
+      };
     });
 
     return resultContext as {
@@ -161,7 +168,11 @@ describe("useListNavigation", () => {
     const { floatingEl, openRef } = setup();
     openRef.value = true;
 
-    const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    const event = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
     floatingEl.dispatchEvent(event);
     expect(openRef.value).toBe(false);
     expect(event.defaultPrevented).toBe(false);
@@ -188,11 +199,7 @@ describe("useListNavigation", () => {
 
   describe("2D Navigation", () => {
     function setup2D(
-      options: {
-        rtl?: boolean;
-        items?: any[];
-        isItemDisabled?: (item: any) => boolean;
-      } = {},
+      options: { rtl?: boolean; items?: any[]; isItemDisabled?: (item: any) => boolean } = {},
     ) {
       scope = effectScope();
 
@@ -308,7 +315,11 @@ describe("useListNavigation", () => {
           id: "1",
           children: [
             { id: "1-1", disabled: true },
-            { id: "1-2", disabled: true, children: [{ id: "1-2-1", disabled: true }] },
+            {
+              id: "1-2",
+              disabled: true,
+              children: [{ id: "1-2-1", disabled: true }],
+            },
             { id: "1-3", disabled: false },
           ],
         },
@@ -417,7 +428,10 @@ describe("useListNavigation", () => {
   describe("Option: orientation", () => {
     describe("horizontal orientation", () => {
       it("opens on ArrowRight and ArrowLeft when closed", () => {
-        const { anchorEl, openRef, tree } = setup({ orientation: "horizontal", loop: false });
+        const { anchorEl, openRef, tree } = setup({
+          orientation: "horizontal",
+          loop: false,
+        });
 
         dispatchKey(anchorEl, "ArrowRight");
         expect(openRef.value).toBe(true);
@@ -451,7 +465,9 @@ describe("useListNavigation", () => {
       });
 
       it("navigates on ArrowRight/Left and ignores ArrowUp/Down when open", () => {
-        const { floatingEl, openRef, tree } = setup({ orientation: "horizontal" });
+        const { floatingEl, openRef, tree } = setup({
+          orientation: "horizontal",
+        });
         openRef.value = true;
         tree.setActiveValue("1");
 
@@ -554,7 +570,10 @@ describe("useListNavigation", () => {
           getItemId: (item) => item.id,
           isItemDisabled: (item) => item.disabled,
         });
-        useListNavigation(context, { collection: tree.rootBranch, orientation: "vertical" });
+        useListNavigation(context, {
+          collection: tree.rootBranch,
+          orientation: "vertical",
+        });
       });
 
       tree.setActiveValue("1");
@@ -588,7 +607,10 @@ describe("useListNavigation", () => {
           items: itemsRef,
           getItemId: (item) => item.id,
         });
-        useListNavigation(context, { collection: tree.rootBranch, orientation: "vertical" });
+        useListNavigation(context, {
+          collection: tree.rootBranch,
+          orientation: "vertical",
+        });
       });
 
       tree.setActiveValue("2");
@@ -668,7 +690,10 @@ describe("useListNavigation", () => {
           items: [{ id: "1" }, { id: "2" }],
           getItemId: (item) => item.id,
         });
-        useListNavigation(context, { collection: tree.rootBranch, orientation: "vertical" });
+        useListNavigation(context, {
+          collection: tree.rootBranch,
+          orientation: "vertical",
+        });
       });
 
       tree.setActiveValue("1");

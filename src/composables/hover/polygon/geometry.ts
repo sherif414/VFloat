@@ -95,7 +95,12 @@ export function getCursorSpeed(
   lastY: number | null,
   lastCursorTime: number,
   currentTime: number,
-): { speed: number | null; lastX: number; lastY: number; lastCursorTime: number } {
+): {
+  speed: number | null;
+  lastX: number;
+  lastY: number;
+  lastCursorTime: number;
+} {
   const elapsedTime = currentTime - lastCursorTime;
 
   if (lastX === null || lastY === null || elapsedTime === 0) {

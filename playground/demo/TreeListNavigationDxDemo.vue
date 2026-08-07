@@ -1,46 +1,52 @@
 <script setup lang="ts">
 import { flip, offset, shift } from "@floating-ui/dom";
 import { computed, nextTick, ref, watch } from "vue";
-import { useClick, useEscapeKey, useFloating, useListNavigation, useTree } from "../../src";
+import {
+	useClick,
+	useEscapeKey,
+	useFloating,
+	useListNavigation,
+	useTree,
+} from "../../src";
 
 interface MenuItem {
-  id: string;
-  label: string;
-  meta?: string;
-  disabled?: boolean;
-  children?: MenuItem[];
+	id: string;
+	label: string;
+	meta?: string;
+	disabled?: boolean;
+	children?: MenuItem[];
 }
 
 const menuItems: MenuItem[] = [
-  { id: "dashboard", label: "Dashboard", meta: "D" },
-  {
-    id: "workspace",
-    label: "Workspace",
-    children: [
-      { id: "workspace-overview", label: "Overview" },
-      { id: "workspace-members", label: "Members" },
-      { id: "workspace-billing", label: "Billing", disabled: true },
-      { id: "workspace-settings", label: "Settings" },
-    ],
-  },
-  {
-    id: "appearance",
-    label: "Appearance",
-    children: [
-      { id: "theme-light", label: "Light" },
-      { id: "theme-dark", label: "Dark" },
-      { id: "theme-system", label: "System" },
-    ],
-  },
-  { id: "integrations", label: "Integrations", disabled: true },
-  { id: "shortcuts", label: "Keyboard shortcuts", meta: "?" },
+	{ id: "dashboard", label: "Dashboard", meta: "D" },
+	{
+		id: "workspace",
+		label: "Workspace",
+		children: [
+			{ id: "workspace-overview", label: "Overview" },
+			{ id: "workspace-members", label: "Members" },
+			{ id: "workspace-billing", label: "Billing", disabled: true },
+			{ id: "workspace-settings", label: "Settings" },
+		],
+	},
+	{
+		id: "appearance",
+		label: "Appearance",
+		children: [
+			{ id: "theme-light", label: "Light" },
+			{ id: "theme-dark", label: "Dark" },
+			{ id: "theme-system", label: "System" },
+		],
+	},
+	{ id: "integrations", label: "Integrations", disabled: true },
+	{ id: "shortcuts", label: "Keyboard shortcuts", meta: "?" },
 ];
 
 const tree = useTree<MenuItem>({
-  items: menuItems,
-  getItemId: (item) => item.id,
-  getItemChildren: (item) => item.children,
-  isItemDisabled: (item) => item.disabled === true,
+	items: menuItems,
+	getItemId: (item) => item.id,
+	getItemChildren: (item) => item.children,
+	isItemDisabled: (item) => item.disabled === true,
 });
 
 const rootAnchorEl = ref<HTMLElement | null>(null);
@@ -54,135 +60,145 @@ const appearanceAnchorEl = ref<HTMLElement | null>(null);
 const appearanceFloatingEl = ref<HTMLElement | null>(null);
 
 const rootContext = useFloating(rootAnchorEl, rootFloatingEl, {
-  open: rootOpen,
-  placement: "bottom-start",
-  middlewares: [offset(8), flip(), shift({ padding: 12 })],
+	open: rootOpen,
+	placement: "bottom-start",
+	middlewares: [offset(8), flip(), shift({ padding: 12 })],
 });
 
-const workspaceOpen = computed(() => tree.expandedValues.value.has("workspace"));
+const workspaceOpen = computed(() =>
+	tree.expandedValues.value.has("workspace"),
+);
 const workspaceContext = useFloating(workspaceAnchorEl, workspaceFloatingEl, {
-  open: workspaceOpen as any,
-  placement: "right-start",
-  middlewares: [offset(6), flip(), shift({ padding: 12 })],
+	open: workspaceOpen as any,
+	placement: "right-start",
+	middlewares: [offset(6), flip(), shift({ padding: 12 })],
 });
 
-const appearanceOpen = computed(() => tree.expandedValues.value.has("appearance"));
-const appearanceContext = useFloating(appearanceAnchorEl, appearanceFloatingEl, {
-  open: appearanceOpen as any,
-  placement: "right-start",
-  middlewares: [offset(6), flip(), shift({ padding: 12 })],
-});
+const appearanceOpen = computed(() =>
+	tree.expandedValues.value.has("appearance"),
+);
+const appearanceContext = useFloating(
+	appearanceAnchorEl,
+	appearanceFloatingEl,
+	{
+		open: appearanceOpen as any,
+		placement: "right-start",
+		middlewares: [offset(6), flip(), shift({ padding: 12 })],
+	},
+);
 
 const floatingPanels = computed(() => [
-  rootFloatingEl.value,
-  workspaceFloatingEl.value,
-  appearanceFloatingEl.value,
+	rootFloatingEl.value,
+	workspaceFloatingEl.value,
+	appearanceFloatingEl.value,
 ]);
 
 useClick(rootContext, {
-  toggle: true,
-  closeOnOutsideClick: true,
-  ignoreOutsideClick: (target) => {
-    return floatingPanels.value.some((el) => el?.contains(target as Node));
-  },
+	toggle: true,
+	closeOnOutsideClick: true,
+	ignoreOutsideClick: (target) => {
+		return floatingPanels.value.some((el) => el?.contains(target as Node));
+	},
 });
 useEscapeKey(rootContext);
 useListNavigation(rootContext, {
-  collection: tree.rootBranch,
-  loop: true,
-  onEnter: openBranch,
+	collection: tree.rootBranch,
+	loop: true,
+	onEnter: openBranch,
 });
 
 useListNavigation(workspaceContext, {
-  collection: tree.getBranch("workspace")!,
-  enabled: workspaceOpen,
-  loop: true,
-  onExit: closeToParent,
+	collection: tree.getBranch("workspace")!,
+	enabled: workspaceOpen,
+	loop: true,
+	onExit: closeToParent,
 });
 
 useListNavigation(appearanceContext, {
-  collection: tree.getBranch("appearance")!,
-  enabled: appearanceOpen,
-  loop: true,
-  onExit: closeToParent,
+	collection: tree.getBranch("appearance")!,
+	enabled: appearanceOpen,
+	loop: true,
+	onExit: closeToParent,
 });
 
 const activeItem = computed(() => {
-  const activeValue = tree.activeValue.value;
-  return activeValue ? tree.getItem(activeValue) : null;
+	const activeValue = tree.activeValue.value;
+	return activeValue ? tree.getItem(activeValue) : null;
 });
 
 const expandedLabels = computed(() => {
-  return [...tree.expandedValues.value].join(", ") || "none";
+	return [...tree.expandedValues.value].join(", ") || "none";
 });
 
 function setRootItemEl(el: Element | null, item: MenuItem) {
-  const itemEl = el as HTMLElement | null;
+	const itemEl = el as HTMLElement | null;
 
-  if (item.id === "workspace") {
-    workspaceAnchorEl.value = itemEl;
-  } else if (item.id === "appearance") {
-    appearanceAnchorEl.value = itemEl;
-  }
+	if (item.id === "workspace") {
+		workspaceAnchorEl.value = itemEl;
+	} else if (item.id === "appearance") {
+		appearanceAnchorEl.value = itemEl;
+	}
 }
 
 function openBranch(value: string) {
-  if (!tree.hasChildren(value)) return;
+	if (!tree.hasChildren(value)) return;
 
-  tree.expandBranch(value);
-  const branch = tree.getBranch(value);
-  branch?.setFirst();
+	tree.expandBranch(value);
+	const branch = tree.getBranch(value);
+	branch?.setFirst();
 }
 
 function closeToParent(value: string) {
-  const parentValue = tree.getParentValue(value);
-  if (!parentValue) return;
+	const parentValue = tree.getParentValue(value);
+	if (!parentValue) return;
 
-  tree.collapseBranch(parentValue);
-  tree.setActiveValue(parentValue);
+	tree.collapseBranch(parentValue);
+	tree.setActiveValue(parentValue);
 }
 
 function activateItem(item: MenuItem) {
-  if (item.disabled) return;
+	if (item.disabled) return;
 
-  tree.setActiveValue(item.id);
+	tree.setActiveValue(item.id);
 
-  if (item.children) {
-    openBranch(item.id);
-    return;
-  }
+	if (item.children) {
+		openBranch(item.id);
+		return;
+	}
 
-  rootContext.state.setOpen(false, "programmatic");
+	rootContext.state.setOpen(false, "programmatic");
 }
 
 function closeOtherBranches(activeValue: string) {
-  const parentValue = tree.getParentValue(activeValue);
+	const parentValue = tree.getParentValue(activeValue);
 
-  for (const expandedValue of tree.expandedValues.value) {
-    if (expandedValue !== activeValue && expandedValue !== parentValue) {
-      tree.collapseBranch(expandedValue);
-    }
-  }
+	for (const expandedValue of tree.expandedValues.value) {
+		if (expandedValue !== activeValue && expandedValue !== parentValue) {
+			tree.collapseBranch(expandedValue);
+		}
+	}
 }
 
 watch(rootOpen, async (isOpen) => {
-  if (!isOpen) {
-    tree.collapseAll();
-    tree.setActiveValue(null);
-    return;
-  }
+	if (!isOpen) {
+		tree.collapseAll();
+		tree.setActiveValue(null);
+		return;
+	}
 
-  await nextTick();
-  tree.rootBranch.setFirst();
+	await nextTick();
+	tree.rootBranch.setFirst();
 });
 
 watch(tree.activeValue, async (activeValue) => {
-  if (!activeValue) return;
+	if (!activeValue) return;
 
-  closeOtherBranches(activeValue);
-  await nextTick();
+	closeOtherBranches(activeValue);
+	await nextTick();
 
-  document.getElementById(`tree-menu-${activeValue}`)?.focus({ preventScroll: true });
+	document
+		.getElementById(`tree-menu-${activeValue}`)
+		?.focus({ preventScroll: true });
 });
 </script>
 

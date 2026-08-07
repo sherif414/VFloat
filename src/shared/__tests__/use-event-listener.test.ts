@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -116,7 +116,9 @@ describe("useEventListener", () => {
 
     expect(removeSpy).toHaveBeenCalledWith("click", clickListener, true);
 
-    const stopFocus = useEventListener(target, "focusin", focusListener, { capture: true });
+    const stopFocus = useEventListener(target, "focusin", focusListener, {
+      capture: true,
+    });
     await nextTick();
 
     expect(addSpy).toHaveBeenLastCalledWith(

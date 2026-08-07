@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vite-plus/test";
-import { useTree } from "@/composables/tree/use-tree";
+import { describe, expect, it } from "vitest";
 import { nextTick, ref } from "vue";
+import { useTree } from "@/composables/tree/use-tree";
 
 //=======================================================================================
 // Flat List (1D)
@@ -591,7 +591,10 @@ describe("useTree (hardened features & lifecycle)", () => {
 
     // Trigger data refresh/model change
     items.value = [
-      { id: "parent", children: [{ id: "child-1" }, { id: "child-2" }, { id: "child-3" }] },
+      {
+        id: "parent",
+        children: [{ id: "child-1" }, { id: "child-2" }, { id: "child-3" }],
+      },
     ];
     await nextTick();
 

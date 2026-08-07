@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
-import { type UseRoleOptions, type UseRoleReturn, useRole } from "@/composables/role/use-role";
 import type { AnchorElement, FloatingElement } from "@/composables";
 import { useFloatingContext } from "@/composables";
+import { type UseRoleOptions, type UseRoleReturn, useRole } from "@/composables/role/use-role";
 
 type RoleTestContext = {
   anchorEl: HTMLButtonElement;

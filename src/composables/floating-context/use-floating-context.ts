@@ -1,6 +1,6 @@
+import type { Middleware } from "@floating-ui/dom";
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { ref } from "vue";
-import type { Middleware } from "@floating-ui/dom";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 import { closeFloatingDescendants, registerFloatingContext } from "./floating-context-registry";

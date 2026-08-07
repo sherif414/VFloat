@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useFloatingContext, useHover, usePosition } from "v-float";
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);

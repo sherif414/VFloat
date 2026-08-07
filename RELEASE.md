@@ -24,8 +24,8 @@ Start from a clean `main` branch:
 ```powershell
 git checkout main
 git pull --ff-only
-vp install
-vp run release:preflight
+pnpm install
+pnpm run release:preflight
 ```
 
 The preflight fails when:
@@ -41,7 +41,7 @@ The preflight fails when:
 Preview the release before publishing:
 
 ```powershell
-vp run release:dry
+pnpm run release:dry
 ```
 
 The dry run skips GitHub release creation and npm publishing. It still exercises the configured release flow enough to preview the version, changelog, and release commands. Missing credentials are reported as warnings during a dry run.
@@ -51,9 +51,9 @@ The dry run skips GitHub release creation and npm publishing. It still exercises
 Choose the version type manually:
 
 ```powershell
-vp run release:patch
-vp run release:minor
-vp run release:major
+pnpm run release:patch
+pnpm run release:minor
+pnpm run release:major
 ```
 
 Use `patch` for fixes, `minor` for new features on the unstable `0.x` line, and `major` only when intentionally moving to the next major line.

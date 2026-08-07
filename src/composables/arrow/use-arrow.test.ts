@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
+import type { MiddlewareData, Placement } from "@floating-ui/dom";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Ref, ShallowRef } from "vue";
 import { nextTick, ref, shallowRef } from "vue";
-import type { MiddlewareData, Placement } from "@floating-ui/dom";
+import type { AnchorElement, FloatingContext, FloatingElement } from "@/composables";
 import { getFloatingInternals, useArrow, useFloatingContext, usePosition } from "@/composables";
-import type { AnchorElement, FloatingElement, FloatingContext } from "@/composables";
 import type { FloatingPosition } from "@/composables/position";
 
 // ---------------------------------------------------------------------------
@@ -44,10 +44,7 @@ interface MutablePositionStub extends FloatingPosition {
 }
 
 function createPositionStub(
-  overrides: {
-    placement?: Placement;
-    middlewareData?: MiddlewareData;
-  } = {},
+  overrides: { placement?: Placement; middlewareData?: MiddlewareData } = {},
 ): MutablePositionStub {
   const middlewareData = shallowRef<MiddlewareData>(overrides.middlewareData ?? {});
   const placement = ref<Placement>(overrides.placement ?? "bottom");
@@ -206,7 +203,9 @@ describe("useArrow", () => {
 
       expect(arrowX.value).toBe(5);
 
-      position._middlewareData.value = { arrow: { x: 42, y: 84, centerOffset: 0 } };
+      position._middlewareData.value = {
+        arrow: { x: 42, y: 84, centerOffset: 0 },
+      };
       await nextTick();
 
       expect(arrowX.value).toBe(42);
@@ -425,7 +424,9 @@ describe("useArrow", () => {
         const { arrowStyles } = useArrow(context, position);
         expect(arrowStyles.value["inset-inline-start"]).toBe("5px");
 
-        position._middlewareData.value = { arrow: { x: 99, y: 0, centerOffset: 0 } };
+        position._middlewareData.value = {
+          arrow: { x: 99, y: 0, centerOffset: 0 },
+        };
         await nextTick();
 
         expect(arrowStyles.value["inset-inline-start"]).toBe("99px");

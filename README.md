@@ -223,15 +223,15 @@ Set these environment variables before deploying:
 Deploy the docs with:
 
 ```sh
-vp run docs:deploy
+pnpm run docs:deploy
 ```
 
-The script runs `vp run docs:build`, then deploys `docs/.vitepress/dist` with Wrangler. Pass `-- --project <name>` or `-- --branch <name>` to override the defaults.
+The script runs `pnpm run docs:build`, then deploys `docs/.vitepress/dist` with Wrangler. Pass `-- --project <name>` or `-- --branch <name>` to override the defaults.
 
 To verify the local flow without deploying, run:
 
 ```sh
-vp run docs:deploy -- --dry-run
+pnpm run docs:deploy -- --dry-run
 ```
 
 ## Contributing

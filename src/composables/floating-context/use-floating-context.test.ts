@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref, watchEffect } from "vue";
 import { useFloatingContext } from "@/composables";
 import { getFloatingContextFloatingElements } from "@/composables/floating-context/floating-context-registry";
