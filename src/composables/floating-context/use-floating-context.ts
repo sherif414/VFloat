@@ -1,6 +1,7 @@
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { ref } from "vue";
 import type { Middleware } from "@floating-ui/dom";
+import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 import { closeFloatingDescendants, registerFloatingContext } from "./floating-context-registry";
 
@@ -14,9 +15,15 @@ import { closeFloatingDescendants, registerFloatingContext } from "./floating-co
 export function useFloatingContext(options: UseFloatingContextOptions): FloatingContext {
   const { refs, state = {}, parentContext } = options;
   const { anchorEl, floatingEl, arrowEl: arrowElOption } = refs;
-  const { open: openOption, onOpenChange } = state;
+  const { open: openOption, defaultOpen = false, onOpenChange } = state;
   const id = createFloatingContextId();
-  const open = openOption ?? ref(false);
+  const open = useControllableState({
+    value: openOption,
+    initialValue: defaultOpen,
+    onChange: (value) => {
+      if (openOption) openOption.value = value;
+    },
+  });
   const arrowEl = arrowElOption ?? ref<HTMLElement | null>(null);
 
   const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
@@ -155,6 +162,11 @@ export interface UseFloatingContextState {
    * Optional controlled open state.
    */
   open?: Ref<boolean>;
+
+  /**
+   * Initial open state when `open` is not provided.
+   */
+  defaultOpen?: boolean;
 
   /**
    * Called whenever the open state changes through VFloat helpers.

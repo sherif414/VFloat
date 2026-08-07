@@ -4,6 +4,30 @@ import { useFloatingContext } from "@/composables";
 import { getFloatingContextFloatingElements } from "@/composables/floating-context/floating-context-registry";
 
 describe("useFloatingContext", () => {
+  it("uses defaultOpen for uncontrolled state", () => {
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+      state: { defaultOpen: true },
+    });
+
+    expect(context.state.open.value).toBe(true);
+  });
+
+  it("prefers controlled open state over defaultOpen", () => {
+    const context = useFloatingContext({
+      refs: {
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      },
+      state: { open: ref(false), defaultOpen: true },
+    });
+
+    expect(context.state.open.value).toBe(false);
+  });
+
   it("uses controlled open state and forwards reasons and events", () => {
     const open = ref(false);
     const onOpenChange = vi.fn();
