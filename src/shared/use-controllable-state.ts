@@ -29,7 +29,7 @@ export function useControllableState<T>(
   const { value: valueOption, initialValue, onChange } = options;
   const isControlled = valueOption !== undefined;
 
-  const internalValue = ref<T>(initialValue);
+  const internalValue = ref(initialValue);
   const value: WritableComputedRef<T> = computed({
     get: () => (isControlled ? valueOption.value : internalValue.value),
     set: (nextValue) => {
@@ -58,26 +58,43 @@ export function useControllableState<T>(
 
 /**
  * Options for creating a controllable state.
+ *
+ * - When `value` is provided (controlled mode), `initialValue` is optional.
+ * - When `value` is omitted (uncontrolled mode), `initialValue` is required to seed internal state.
  */
-export interface UseControllableStateOptions<T> {
-  /**
-   * Optional external value. When provided, the value is controlled externally and
-   * writes made through the returned ref are reported through `onChange`.
-   */
-  value?: Readonly<Ref<T>>;
+export type UseControllableStateOptions<T> =
+  | {
+      /**
+       * Controlled external value ref.
+       */
+      value: Readonly<Ref<T>>;
 
-  /**
-   * Seed value for the internal state used when no external value is provided.
-   */
-  initialValue: T;
+      /**
+       * Optional seed value (ignored when controlled).
+       */
+      initialValue?: T;
 
-  /**
-   * Invoked with the next value whenever a write through the returned ref would change the
-   * current value. When `value` is provided, the external source is expected to apply
-   * the change.
-   */
-  onChange?: (value: T) => void;
-}
+      /**
+       * Callback invoked when a write through the returned ref occurs.
+       */
+      onChange?: (value: T) => void;
+    }
+  | {
+      /**
+       * Uncontrolled mode has no external ref.
+       */
+      value?: undefined;
+
+      /**
+       * Required seed value for the internal state when uncontrolled.
+       */
+      initialValue: T;
+
+      /**
+       * Callback invoked when the internal state updates.
+       */
+      onChange?: (value: T) => void;
+    };
 
 /**
  * Return value of `useControllableState`.

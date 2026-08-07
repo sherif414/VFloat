@@ -129,4 +129,18 @@ describe("useControllableState", () => {
     value.value = "seed";
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("allows controlled mode without specifying initialValue", () => {
+    const external = ref("external");
+    const onChange = vi.fn();
+    const value = useControllableState({
+      value: external,
+      onChange,
+    });
+
+    expect(value.value).toBe("external");
+
+    value.value = "updated";
+    expect(onChange).toHaveBeenCalledWith("updated");
+  });
 });
