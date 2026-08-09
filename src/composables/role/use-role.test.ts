@@ -73,8 +73,9 @@ function setupRole(options: UseRoleOptions, initialOpen = false): RoleTestContex
   const anchorRef = ref<AnchorElement>(anchorEl);
   const floatingRef = ref<FloatingElement>(floatingEl);
   const context = useFloatingContext({
-    refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-    state: { open: openRef },
+    anchorEl: anchorRef,
+    floatingEl: floatingRef,
+    open: openRef,
   });
   const scope = effectScope();
   activeScopes.push(scope);
@@ -170,11 +171,9 @@ describe("useRole", () => {
 
     const childOpen = ref(false);
     const childContext = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(parent.items[1]),
-        floatingEl: ref<FloatingElement>(childFloatingEl),
-      },
-      state: { open: childOpen },
+      anchorEl: ref<AnchorElement>(parent.items[1]),
+      floatingEl: ref<FloatingElement>(childFloatingEl),
+      open: childOpen,
     });
     const scope = effectScope();
     activeScopes.push(scope);

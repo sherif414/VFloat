@@ -84,7 +84,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const itemsRef = ref<Array<HTMLElement | null>>([]);
 const items = ["Edit", "Duplicate", "Archive"];
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 const tree = useTree({
   items,

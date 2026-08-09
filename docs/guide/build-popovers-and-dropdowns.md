@@ -28,7 +28,7 @@ import { useFloatingContext, usePosition } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -50,7 +50,7 @@ import { useClick, useEscapeKey, useFloatingContext, useOutsideClick, usePositio
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -102,7 +102,7 @@ import { useClick, useEscapeKey, useFloatingContext, useOutsideClick, usePositio
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {

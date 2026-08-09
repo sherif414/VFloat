@@ -25,8 +25,9 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl },
-  state: { defaultOpen: true },
+  anchorEl,
+  floatingEl,
+  defaultOpen: true,
 });
 
 useClick(context);
@@ -49,8 +50,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl },
-  state: { open },
+  anchorEl,
+  floatingEl,
+  open,
 });
 
 useClick(context);

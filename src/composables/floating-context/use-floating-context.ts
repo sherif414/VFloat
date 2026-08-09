@@ -13,9 +13,15 @@ import { closeFloatingDescendants, registerFloatingContext } from "./floating-co
  * Creates the shared floating context used by interaction and positioning composables.
  */
 export function useFloatingContext(options: UseFloatingContextOptions): FloatingContext {
-  const { refs, state = {}, parentContext } = options;
-  const { anchorEl, floatingEl, arrowEl: arrowElOption } = refs;
-  const { open: openOption, defaultOpen = false, onOpenChange } = state;
+  const {
+    anchorEl,
+    floatingEl,
+    arrowEl: arrowElOption,
+    open: openOption,
+    defaultOpen = false,
+    onOpenChange,
+    parentContext,
+  } = options;
   const id = createFloatingContextId();
   const open = useControllableState({
     value: openOption,
@@ -135,9 +141,9 @@ export interface FloatingContext {
 }
 
 /**
- * Element refs owned by the floating context.
+ * Options for creating a floating context.
  */
-export interface UseFloatingContextRefs {
+export interface UseFloatingContextOptions {
   /**
    * Anchor element or virtual element the floating panel is positioned against.
    */
@@ -152,12 +158,7 @@ export interface UseFloatingContextRefs {
    * Optional arrow element used by `useArrow()`.
    */
   arrowEl?: Ref<HTMLElement | null>;
-}
 
-/**
- * Options for configuring context-owned state.
- */
-export interface UseFloatingContextState {
   /**
    * Optional controlled open state.
    */
@@ -172,21 +173,6 @@ export interface UseFloatingContextState {
    * Called whenever the open state changes through VFloat helpers.
    */
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
-}
-
-/**
- * Options for creating a floating context.
- */
-export interface UseFloatingContextOptions {
-  /**
-   * Element refs shared by companion composables.
-   */
-  refs: UseFloatingContextRefs;
-
-  /**
-   * Optional state configuration.
-   */
-  state?: UseFloatingContextState;
 
   /**
    * Optional parent floating context used to coordinate related floating surfaces.

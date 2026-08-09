@@ -75,7 +75,7 @@ const collection = useCollection({
   isValueDisabled: (value) => value === "archive",
 });
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
 useClick(context);

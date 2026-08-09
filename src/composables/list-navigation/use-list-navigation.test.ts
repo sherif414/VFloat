@@ -56,8 +56,9 @@ describe("useListNavigation", () => {
 
     scope.run(() => {
       const context = useFloatingContext({
-        refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-        state: { open: openRef },
+        anchorEl: anchorRef,
+        floatingEl: floatingRef,
+        open: openRef,
       });
 
       tree = useTree({
@@ -227,8 +228,9 @@ describe("useListNavigation", () => {
 
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
 
         tree = useTree({
@@ -558,8 +560,9 @@ describe("useListNavigation", () => {
       let tree: any;
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
         tree = useTree({
           items: [
@@ -600,8 +603,9 @@ describe("useListNavigation", () => {
       let tree: any;
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
         tree = useTree({
           items: itemsRef,
@@ -683,8 +687,9 @@ describe("useListNavigation", () => {
       let tree: any;
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
         tree = useTree({
           items: [{ id: "1" }, { id: "2" }],
@@ -787,8 +792,9 @@ describe("useListNavigation", () => {
       let tree: any;
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
         tree = useTree({
           items,
@@ -894,8 +900,9 @@ describe("useListNavigation", () => {
 
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
         useListNavigation(context, {
           collection: mockCollection,
@@ -936,8 +943,9 @@ describe("useListNavigation", () => {
 
       scope.run(() => {
         const context = useFloatingContext({
-          refs: { anchorEl: anchorRef, floatingEl: floatingRef },
-          state: { open: openRef },
+          anchorEl: anchorRef,
+          floatingEl: floatingRef,
+          open: openRef,
         });
         useListNavigation(context, {
           collection: mockCollection,

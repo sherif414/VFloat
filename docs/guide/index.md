@@ -15,7 +15,7 @@ Every VFloat surface is built from three pieces:
 **Context** — [`useFloatingContext`](/api/use-floating-context) creates a shared object that holds your element refs and open state. Everything else plugs into it.
 
 ```ts
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 ```
 
 **Positioning** — [`usePosition`](/api/use-position) reads those refs and computes where the floating element should go, returning `styles` you bind to the template.

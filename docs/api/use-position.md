@@ -82,7 +82,8 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl },
+  anchorEl,
+  floatingEl,
 });
 const { styles } = usePosition(context, {
   placement: "top",

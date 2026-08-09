@@ -32,7 +32,7 @@ const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "right-start",
 });
@@ -61,7 +61,7 @@ const areaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
 });
@@ -113,7 +113,7 @@ const virtualAnchor = {
 
 const anchorEl = ref(virtualAnchor);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl }, state: { open } });
+const context = useFloatingContext({ anchorEl, floatingEl, open });
 const { styles } = usePosition(context);
 </script>
 ```

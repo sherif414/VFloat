@@ -42,7 +42,7 @@ import { useFloatingContext, usePosition, useHover, offset } from "v-float";
 const anchorEl = useTemplateRef("anchorEl");
 const floatingEl = useTemplateRef("floatingEl");
 
-const context = useFloatingContext(anchorEl, floatingEl);
+const context = useFloatingContext({ anchorEl, floatingEl });
 const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
@@ -78,7 +78,7 @@ import {
 const triggerEl = useTemplateRef("triggerEl");
 const menuEl = useTemplateRef("menuEl");
 
-const context = useFloatingContext(triggerEl, menuEl);
+const context = useFloatingContext({ anchorEl: triggerEl, floatingEl: menuEl });
 const position = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
@@ -112,7 +112,7 @@ const anchorEl = useTemplateRef("anchorEl");
 const tooltipEl = useTemplateRef("tooltipEl");
 const arrowEl = useTemplateRef("arrowEl");
 
-const context = useFloatingContext(anchorEl, tooltipEl);
+const context = useFloatingContext({ anchorEl, floatingEl: tooltipEl, arrowEl });
 const position = usePosition(context, {
   placement: "top",
   middlewares: [offset(8), flip()],

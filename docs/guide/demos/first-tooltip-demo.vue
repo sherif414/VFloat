@@ -5,7 +5,7 @@ import { ref } from "vue";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: {

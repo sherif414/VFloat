@@ -36,7 +36,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl }, state: { open } });
+const context = useFloatingContext({ anchorEl, floatingEl, open });
 const { styles } = usePosition(context, {
   middleware: {
     flip: {

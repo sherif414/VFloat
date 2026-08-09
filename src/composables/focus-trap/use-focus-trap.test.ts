@@ -404,19 +404,15 @@ describe("useFocusTrap", () => {
 
       scope.run(() => {
         const parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(parentAnchorEl),
-            floatingEl: ref(parentFloatingEl),
-          },
-          state: { open: parentOpen },
+          anchorEl: ref(parentAnchorEl),
+          floatingEl: ref(parentFloatingEl),
+          open: parentOpen,
         });
         useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
+          anchorEl: ref(childAnchorEl),
+          floatingEl: ref(childFloatingEl),
           parentContext,
-          state: { open: childOpen },
+          open: childOpen,
         });
         result = useFocusTrap(parentContext, { closeOnFocusOut: true });
       });

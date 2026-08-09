@@ -6,11 +6,9 @@ import { getFloatingContextFloatingElements } from "@/composables/floating-conte
 describe("useFloatingContext", () => {
   it("uses defaultOpen for uncontrolled state", () => {
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { defaultOpen: true },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      defaultOpen: true,
     });
 
     expect(context.state.open.value).toBe(true);
@@ -18,11 +16,10 @@ describe("useFloatingContext", () => {
 
   it("prefers controlled open state over defaultOpen", () => {
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { open: ref(false), defaultOpen: true },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      open: ref(false),
+      defaultOpen: true,
     });
 
     expect(context.state.open.value).toBe(false);
@@ -33,11 +30,10 @@ describe("useFloatingContext", () => {
     const onOpenChange = vi.fn();
     const event = new KeyboardEvent("keydown");
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { open, onOpenChange },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      open,
+      onOpenChange,
     });
 
     context.state.setOpen(true, "keyboard-activate", event);
@@ -49,11 +45,9 @@ describe("useFloatingContext", () => {
   it("falls back to programmatic reasons and ignores duplicate updates", () => {
     const onOpenChange = vi.fn();
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { onOpenChange },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      onOpenChange,
     });
 
     context.state.setOpen(true);
@@ -66,16 +60,12 @@ describe("useFloatingContext", () => {
 
   it("assigns each context a stable symbol id", () => {
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
     });
     const otherContext = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
     });
 
     expect(typeof context.id).toBe("symbol");
@@ -89,36 +79,24 @@ describe("useFloatingContext", () => {
     const childOpen = ref(true);
     const grandchildOpen = ref(true);
     const root = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: {
-        open: rootOpen,
-        onOpenChange: () => calls.push("root"),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      open: rootOpen,
+      onOpenChange: () => calls.push("root"),
     });
     const child = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
       parentContext: root,
-      state: {
-        open: childOpen,
-        onOpenChange: () => calls.push("child"),
-      },
+      open: childOpen,
+      onOpenChange: () => calls.push("child"),
     });
     useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
       parentContext: child,
-      state: {
-        open: grandchildOpen,
-        onOpenChange: () => calls.push("grandchild"),
-      },
+      open: grandchildOpen,
+      onOpenChange: () => calls.push("grandchild"),
     });
 
     root.state.setOpen(false, "outside-pointer");
@@ -133,19 +111,15 @@ describe("useFloatingContext", () => {
     const rootOpen = ref(false);
     const childOpen = ref(false);
     const root = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { open: rootOpen },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      open: rootOpen,
     });
     const child = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
       parentContext: root,
-      state: { open: childOpen },
+      open: childOpen,
     });
 
     child.state.setOpen(true, "programmatic");
@@ -158,19 +132,15 @@ describe("useFloatingContext", () => {
     const rootOpen = ref(true);
     const childOpen = ref(true);
     const root = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { open: rootOpen },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      open: rootOpen,
     });
     useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
       parentContext: root,
-      state: { open: childOpen },
+      open: childOpen,
     });
 
     rootOpen.value = false;
@@ -182,22 +152,18 @@ describe("useFloatingContext", () => {
     const rootOpen = ref(true);
     const childOpen = ref(true);
     const root = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      },
-      state: { open: rootOpen },
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      open: rootOpen,
     });
     const scope = effectScope();
 
     scope.run(() => {
       useFloatingContext({
-        refs: {
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-        },
+        anchorEl: ref(null),
+        floatingEl: ref(null),
         parentContext: root,
-        state: { open: childOpen },
+        open: childOpen,
       });
     });
 
@@ -212,19 +178,15 @@ describe("useFloatingContext", () => {
     const rootFloatingEl = document.createElement("div");
     const childFloatingEl = document.createElement("div");
     const root = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(rootFloatingEl),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(rootFloatingEl),
     });
     const scope = effectScope();
 
     scope.run(() => {
       useFloatingContext({
-        refs: {
-          anchorEl: ref(null),
-          floatingEl: ref(childFloatingEl),
-        },
+        anchorEl: ref(null),
+        floatingEl: ref(childFloatingEl),
         parentContext: root,
       });
     });
@@ -240,10 +202,8 @@ describe("useFloatingContext", () => {
     const rootFloatingEl = document.createElement("div");
     const childFloatingEl = document.createElement("div");
     const root = useFloatingContext({
-      refs: {
-        anchorEl: ref(null),
-        floatingEl: ref(rootFloatingEl),
-      },
+      anchorEl: ref(null),
+      floatingEl: ref(rootFloatingEl),
     });
     const lengths: number[] = [];
     const scope = effectScope();
@@ -254,10 +214,8 @@ describe("useFloatingContext", () => {
       });
 
       useFloatingContext({
-        refs: {
-          anchorEl: ref(null),
-          floatingEl: ref(childFloatingEl),
-        },
+        anchorEl: ref(null),
+        floatingEl: ref(childFloatingEl),
         parentContext: root,
       });
     });

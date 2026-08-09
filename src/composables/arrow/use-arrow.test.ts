@@ -75,10 +75,8 @@ describe("useArrow", () => {
     anchorEl = createElement("button");
     floatingEl = createElement("div");
     context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-      },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
     });
   });
 
@@ -95,11 +93,9 @@ describe("useArrow", () => {
       const arrowEl = context.refs.arrowEl;
       arrowEl.value = createElement("div");
       context = useFloatingContext({
-        refs: {
-          anchorEl: ref<AnchorElement>(anchorEl),
-          floatingEl: ref<FloatingElement>(floatingEl),
-          arrowEl,
-        },
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+        arrowEl,
       });
       const position = usePosition(context);
       useArrow(context, position);

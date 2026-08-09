@@ -29,7 +29,7 @@ import { useFloatingContext, usePosition, useHover } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: { offset: 8 },
@@ -63,7 +63,7 @@ Bind them in the template with `ref="anchorEl"` and `ref="floatingEl"`, and VFlo
 ## The Context Ties Everything Together
 
 ```ts
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 ```
 
 [`useFloatingContext`](/api/use-floating-context) creates a shared `context` object. It holds two things you'll use constantly:

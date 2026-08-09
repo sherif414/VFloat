@@ -14,21 +14,13 @@ function useFloatingContext(options: UseFloatingContextOptions): FloatingContext
 
 ```ts
 interface UseFloatingContextOptions {
-  refs: UseFloatingContextRefs;
-  state?: UseFloatingContextState;
-  parentContext?: FloatingContext | null;
-}
-
-interface UseFloatingContextRefs {
   anchorEl: Ref<AnchorElement>;
   floatingEl: Ref<FloatingElement>;
   arrowEl?: Ref<HTMLElement | null>;
-}
-
-interface UseFloatingContextState {
   open?: Ref<boolean>;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
+  parentContext?: FloatingContext | null;
 }
 
 interface FloatingContext {
@@ -38,6 +30,12 @@ interface FloatingContext {
 }
 
 type FloatingContextId = symbol;
+
+interface FloatingRefs {
+  anchorEl: Ref<AnchorElement>;
+  floatingEl: Ref<FloatingElement>;
+  arrowEl: Ref<HTMLElement | null>;
+}
 
 interface FloatingState {
   open: Readonly<Ref<boolean>>;
@@ -49,13 +47,13 @@ interface FloatingState {
 
 `useFloatingContext` does not compute coordinates, run middlewares, or wire auto-update listeners. Add [`usePosition`](/api/use-position) when a surface needs JavaScript positioning.
 
-- `refs.anchorEl` and `refs.floatingEl` are required.
-- `refs.arrowEl` is optional and used by [`useArrow`](/api/use-arrow).
+- `anchorEl` and `floatingEl` are required options.
+- `arrowEl` is optional and used by [`useArrow`](/api/use-arrow).
 - `context.id` is a stable symbol created with the context and used to coordinate related contexts without comparing context objects by identity.
-- `state.open` defaults to internally managed state initialized from `state.defaultOpen` (or `false` when omitted).
-- Passing `state.open` makes the context use your controlled ref.
-- `state.defaultOpen` only seeds uncontrolled state; it is ignored when `state.open` is provided and is not watched after creation.
-- `state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
+- `open` (in `context.state.open`) defaults to internally managed state initialized from `defaultOpen` (or `false` when omitted).
+- Passing `open` makes the context use your controlled ref.
+- `defaultOpen` only seeds uncontrolled state; it is ignored when `open` option is provided and is not watched after creation.
+- `context.state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
 - Missing reasons fall back to `"programmatic"`.
 - `parentContext` links related floating contexts so outside-click and focus checks can treat descendants as part of the same floating family.
 - Closing a context also closes its descendant contexts from deepest child to nearest child.
@@ -89,7 +87,8 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl },
+  anchorEl,
+  floatingEl,
 });
 
 useEscapeKey(context);

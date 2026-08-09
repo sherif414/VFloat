@@ -34,8 +34,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl },
-  state: { open },
+  anchorEl,
+  floatingEl,
+  open,
 });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
@@ -80,8 +81,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl },
-  state: { open },
+  anchorEl,
+  floatingEl,
+  open,
 });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
@@ -125,8 +127,10 @@ const arrowEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl, arrowEl },
-  state: { open },
+  anchorEl,
+  floatingEl,
+  arrowEl,
+  open,
 });
 const position = usePosition(context, {
   middleware: {

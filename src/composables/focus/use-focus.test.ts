@@ -317,22 +317,16 @@ describe("useFocus", () => {
 
       scope.run(() => {
         const parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(parentAnchorEl),
-            floatingEl: ref(parentFloatingEl),
-          },
-          state: {
-            open: parentOpen,
-            onOpenChange: parentChanges,
-          },
+          anchorEl: ref(parentAnchorEl),
+          floatingEl: ref(parentFloatingEl),
+          open: parentOpen,
+          onOpenChange: parentChanges,
         });
         useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
+          anchorEl: ref(childAnchorEl),
+          floatingEl: ref(childFloatingEl),
           parentContext,
-          state: { open: childOpen },
+          open: childOpen,
         });
         useFocus(parentContext, { requireFocusVisible: false });
       });
@@ -364,19 +358,15 @@ describe("useFocus", () => {
 
       scope.run(() => {
         const parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(parentAnchorEl),
-            floatingEl: ref(parentFloatingEl),
-          },
-          state: { open: parentOpen },
+          anchorEl: ref(parentAnchorEl),
+          floatingEl: ref(parentFloatingEl),
+          open: parentOpen,
         });
         const childContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
+          anchorEl: ref(childAnchorEl),
+          floatingEl: ref(childFloatingEl),
           parentContext,
-          state: { open: childOpen },
+          open: childOpen,
         });
         useFocus(childContext, { requireFocusVisible: false });
       });

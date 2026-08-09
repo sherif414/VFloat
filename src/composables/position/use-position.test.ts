@@ -57,11 +57,9 @@ describe("usePosition", () => {
   it("computes position from context refs without mutating open state", async () => {
     const open = ref(true);
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-      },
-      state: { open },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
+      open,
     });
     const position = usePosition(context, {
       placement: "top",
@@ -80,10 +78,8 @@ describe("usePosition", () => {
     const placement = ref<Placement>("top");
     const middleware = createMiddleware("custom", { ok: true });
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-      },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
     });
     const position = usePosition(context, {
       placement,
@@ -100,10 +96,8 @@ describe("usePosition", () => {
 
   it("creates built-in middleware from declarative options", () => {
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-      },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
     });
     const position = usePosition(context, {
       middleware: {
@@ -124,10 +118,8 @@ describe("usePosition", () => {
   it("appends custom middleware after declarative middleware", () => {
     const middleware = createMiddleware("custom", { ok: true });
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-      },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
     });
     const position = usePosition(context, {
       middleware: {
@@ -147,11 +139,9 @@ describe("usePosition", () => {
     const enabled = ref(false);
     const open = ref(true);
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-      },
-      state: { open },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
+      open,
     });
     const position = usePosition(context, { enabled });
 
@@ -168,11 +158,9 @@ describe("usePosition", () => {
   it("registers arrow middleware through positioning", () => {
     const arrowEl = ref(createElement("div"));
     const context = useFloatingContext({
-      refs: {
-        anchorEl: ref<AnchorElement>(anchorEl),
-        floatingEl: ref<FloatingElement>(floatingEl),
-        arrowEl,
-      },
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
+      arrowEl,
     });
     const position = usePosition(context);
 

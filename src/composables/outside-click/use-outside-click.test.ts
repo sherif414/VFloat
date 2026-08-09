@@ -185,22 +185,16 @@ describe("useOutsideClick", () => {
     scope = effectScope();
     scope.run(() => {
       const parentContext = useFloatingContext({
-        refs: {
-          anchorEl: ref(anchorEl),
-          floatingEl: ref(floatingEl),
-        },
-        state: {
-          open: parentOpen,
-          onOpenChange: onParentOpenChange,
-        },
+        anchorEl: ref(anchorEl),
+        floatingEl: ref(floatingEl),
+        open: parentOpen,
+        onOpenChange: onParentOpenChange,
       });
       useFloatingContext({
-        refs: {
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-        },
+        anchorEl: ref(childAnchorEl),
+        floatingEl: ref(childFloatingEl),
         parentContext,
-        state: { open: childOpen },
+        open: childOpen,
       });
 
       useOutsideClick(parentContext, { event: "click" });
@@ -226,19 +220,15 @@ describe("useOutsideClick", () => {
     scope = effectScope();
     scope.run(() => {
       const parentContext = useFloatingContext({
-        refs: {
-          anchorEl: ref(anchorEl),
-          floatingEl: ref(floatingEl),
-        },
-        state: { open: parentOpen },
+        anchorEl: ref(anchorEl),
+        floatingEl: ref(floatingEl),
+        open: parentOpen,
       });
       const childContext = useFloatingContext({
-        refs: {
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-        },
+        anchorEl: ref(childAnchorEl),
+        floatingEl: ref(childFloatingEl),
         parentContext,
-        state: { open: childOpen },
+        open: childOpen,
       });
 
       useOutsideClick(childContext, { event: "click" });

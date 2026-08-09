@@ -40,7 +40,7 @@ import { useClick, useEscapeKey, useFloatingContext, usePosition } from "v-float
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 useClick(context);
 useEscapeKey(context);
@@ -65,7 +65,7 @@ import { useClick, useFloatingContext, useOutsideClick, usePosition } from "v-fl
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 useClick(context);
 useOutsideClick(context);
@@ -91,7 +91,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const helperEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ refs: { anchorEl, floatingEl } });
+const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 useClick(context);
 useOutsideClick(context, {

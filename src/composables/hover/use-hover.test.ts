@@ -391,19 +391,15 @@ describe("useHover", () => {
 
       scope.run(() => {
         parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(parentAnchorEl),
-            floatingEl: ref(parentFloatingEl),
-          },
-          state: { open: parentOpen },
+          anchorEl: ref(parentAnchorEl),
+          floatingEl: ref(parentFloatingEl),
+          open: parentOpen,
         });
         useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
+          anchorEl: ref(childAnchorEl),
+          floatingEl: ref(childFloatingEl),
           parentContext,
-          state: { open: childOpen },
+          open: childOpen,
         });
 
         useHover(parentContext);
@@ -450,19 +446,15 @@ describe("useHover", () => {
 
       scope.run(() => {
         const parentContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(parentAnchorEl),
-            floatingEl: ref(parentFloatingEl),
-          },
-          state: { open: parentOpen },
+          anchorEl: ref(parentAnchorEl),
+          floatingEl: ref(parentFloatingEl),
+          open: parentOpen,
         });
         childContext = useFloatingContext({
-          refs: {
-            anchorEl: ref(childAnchorEl),
-            floatingEl: ref(childFloatingEl),
-          },
+          anchorEl: ref(childAnchorEl),
+          floatingEl: ref(childFloatingEl),
           parentContext,
-          state: { open: childOpen },
+          open: childOpen,
         });
 
         useHover(childContext);

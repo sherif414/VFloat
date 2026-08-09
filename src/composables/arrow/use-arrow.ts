@@ -31,7 +31,9 @@ import { arrow } from "../middlewares";
  * const arrowEl = ref<HTMLElement | null>(null);
  *
  * const context = useFloatingContext({
- *   refs: { anchorEl, floatingEl, arrowEl },
+ *   anchorEl,
+ *   floatingEl,
+ *   arrowEl,
  * });
  * const position = usePosition(context, { placement: "top" });
  * const { arrowStyles } = useArrow(context, position);

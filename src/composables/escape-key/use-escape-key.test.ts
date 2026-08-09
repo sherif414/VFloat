@@ -297,36 +297,24 @@ describe("useEscapeKey", () => {
       scope = effectScope();
       scope.run(() => {
         const root = useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
-          state: {
-            open: rootOpen,
-            onOpenChange: () => calls.push("root"),
-          },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          open: rootOpen,
+          onOpenChange: () => calls.push("root"),
         });
         const child = useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
           parentContext: root,
-          state: {
-            open: childOpen,
-            onOpenChange: () => calls.push("child"),
-          },
+          open: childOpen,
+          onOpenChange: () => calls.push("child"),
         });
         useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
           parentContext: child,
-          state: {
-            open: grandchildOpen,
-            onOpenChange: () => calls.push("grandchild"),
-          },
+          open: grandchildOpen,
+          onOpenChange: () => calls.push("grandchild"),
         });
 
         useEscapeKey(root);
@@ -352,44 +340,30 @@ describe("useEscapeKey", () => {
       scope = effectScope();
       scope.run(() => {
         const root = useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
-          state: { open: rootOpen },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          open: rootOpen,
         });
         useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
           parentContext: root,
-          state: {
-            open: firstChildOpen,
-            onOpenChange: () => calls.push("first-child"),
-          },
+          open: firstChildOpen,
+          onOpenChange: () => calls.push("first-child"),
         });
         const secondChild = useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
           parentContext: root,
-          state: {
-            open: secondChildOpen,
-            onOpenChange: () => calls.push("second-child"),
-          },
+          open: secondChildOpen,
+          onOpenChange: () => calls.push("second-child"),
         });
         useFloatingContext({
-          refs: {
-            anchorEl: ref(null),
-            floatingEl: ref(null),
-          },
+          anchorEl: ref(null),
+          floatingEl: ref(null),
           parentContext: secondChild,
-          state: {
-            open: secondGrandchildOpen,
-            onOpenChange: () => calls.push("second-grandchild"),
-          },
+          open: secondGrandchildOpen,
+          onOpenChange: () => calls.push("second-grandchild"),
         });
 
         useEscapeKey(root);

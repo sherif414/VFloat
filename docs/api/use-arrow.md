@@ -51,7 +51,9 @@ const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingContext({
-  refs: { anchorEl, floatingEl, arrowEl },
+  anchorEl,
+  floatingEl,
+  arrowEl,
 });
 const position = usePosition(context, {
   placement: "top",
