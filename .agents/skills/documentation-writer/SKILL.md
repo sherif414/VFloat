@@ -18,8 +18,6 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 
 ## Core Workflow
 
-If this skill is invoked from a `.scratch` issue, read `.agents/workflows/afk-issue-loop.md` first. Update that issue's `Work Log` with documentation scope decisions and `Validation Log` with docs build results.
-
 1. Classify the task.
    - Reference page in `docs/api/`
    - Tutorial, how-to, or explanation in `docs/guide/`

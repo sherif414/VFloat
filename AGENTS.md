@@ -157,27 +157,4 @@ This project uses `pnpm` as its package manager alongside standard Vite and Vite
 - [ ] Run `pnpm install` after pulling remote changes and before getting started.
 - [ ] Run `pnpm lint`, `pnpm type-check`, and `pnpm test` to validate changes.
 
-## Agent skills
 
-### AFK workflow
-
-Before creating PRDs/issues, triaging, implementing, reviewing, or preparing commits for `.scratch` work, read `.agents/workflows/afk-issue-loop.md`. Codex may coordinate the loop, but issue files must stay readable by any markdown-capable agent.
-
-Use these workflow skills when relevant:
-
-- `agent-workflow` for coordination and role handoffs.
-- `issue-worker` for implementing exactly one `ready-for-agent` issue.
-- `issue-reviewer` for reviewing one `ready-for-review` issue.
-- `issue-committer` for final validation and commit proposals.
-
-### Issue tracker
-
-Local markdown files under `.scratch/` using the AFK issue contract. See `.agents/issue-tracker.md`.
-
-### Triage labels
-
-Triage roles plus operational workflow statuses. See `.agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context layout (`CONTEXT.md` at repo root). See `.agents/domain.md`.
