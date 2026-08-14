@@ -38,7 +38,7 @@ export function useListNavigation(
     loop: loopOption = false,
     orientation: orientationOption = "vertical",
     rtl: rtlOption = false,
-    openOnArrowKeyDown: openOnArrowKeyDownOption = true,
+    openOnArrowKeyDown: openOnArrowKeyDownOption,
     closeOnTab: closeOnTabOption = true,
     onEnter,
     onExit,
@@ -48,7 +48,11 @@ export function useListNavigation(
   const isLoop = computed(() => toValue(loopOption));
   const orientation = computed(() => toValue(orientationOption));
   const isRtl = computed(() => toValue(rtlOption));
-  const isOpenOnArrowKeyDown = computed(() => toValue(openOnArrowKeyDownOption));
+  const isOpenOnArrowKeyDown = computed(() => {
+    return openOnArrowKeyDownOption !== undefined
+      ? toValue(openOnArrowKeyDownOption)
+      : context.isRoot;
+  });
   const isCloseOnTab = computed(() => toValue(closeOnTabOption));
 
   const cleanupRegistry = createCleanupRegistry();
@@ -136,6 +140,13 @@ export function useListNavigation(
         const activeValue = collection.activeValue.value;
         if (activeValue && !collection.isItemDisabled?.(activeValue) && onExit) {
           onExit(activeValue, e);
+          handled = true;
+        } else if (!context.isRoot) {
+          setOpen(false, "keyboard-exit", e);
+          const anchor = anchorEl.value;
+          if (anchor instanceof HTMLElement) {
+            anchor.focus();
+          }
           handled = true;
         }
         break;
@@ -237,6 +248,7 @@ export interface UseListNavigationOptions {
 
   /**
    * If true, pressing an arrow key when closed opens and sets the active value.
+   * @default context.isRoot (true for root contexts, false for nested submenus)
    */
   openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
 

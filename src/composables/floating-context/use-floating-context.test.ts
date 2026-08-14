@@ -225,4 +225,19 @@ describe("useFloatingContext", () => {
 
     expect(lengths).toEqual([1, 2]);
   });
+
+  it("sets isRoot to true for root contexts and false for nested child contexts", () => {
+    const root = useFloatingContext({
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+    });
+    const child = useFloatingContext({
+      anchorEl: ref(null),
+      floatingEl: ref(null),
+      parentContext: root,
+    });
+
+    expect(root.isRoot).toBe(true);
+    expect(child.isRoot).toBe(false);
+  });
 });

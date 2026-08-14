@@ -27,6 +27,7 @@ interface FloatingContext {
   id: FloatingContextId;
   refs: FloatingRefs;
   state: FloatingState;
+  isRoot: boolean;
 }
 
 type FloatingContextId = symbol;
@@ -55,6 +56,7 @@ interface FloatingState {
 - `defaultOpen` only seeds uncontrolled state; it is ignored when `open` option is provided and is not watched after creation.
 - `context.state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
 - Missing reasons fall back to `"programmatic"`.
+- `context.isRoot` indicates whether this is a top-level floating context (`!parentContext`).
 - `parentContext` links related floating contexts so outside-click and focus checks can treat descendants as part of the same floating family.
 - Closing a context also closes its descendant contexts from deepest child to nearest child.
 - Setting the current open value is a no-op, except setting `false` still closes descendants.
@@ -65,6 +67,7 @@ Open-change reasons use these string values:
 type OpenChangeReason =
   | "anchor-click"
   | "keyboard-activate"
+  | "keyboard-exit"
   | "outside-pointer"
   | "focus"
   | "blur"

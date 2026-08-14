@@ -808,4 +808,145 @@ describe("useListNavigation", () => {
       expect(exitArgs[1] instanceof KeyboardEvent).toBe(true);
     });
   });
+
+  describe("Context-Aware Hierarchy & Smart Defaults", () => {
+    it("defaults openOnArrowKeyDown to false for nested child contexts", () => {
+      scope = effectScope();
+      const parentAnchor = document.createElement("button");
+      const parentFloating = document.createElement("div");
+      const childAnchor = document.createElement("button");
+      const childFloating = document.createElement("div");
+
+      document.body.appendChild(parentAnchor);
+      document.body.appendChild(parentFloating);
+      document.body.appendChild(childAnchor);
+      document.body.appendChild(childFloating);
+      elementsToCleanUp.push(parentAnchor, parentFloating, childAnchor, childFloating);
+
+      const parentOpen = ref(false);
+      const childOpen = ref(false);
+
+      scope.run(() => {
+        const rootContext = useFloatingContext({
+          anchorEl: ref(parentAnchor),
+          floatingEl: ref(parentFloating),
+          open: parentOpen,
+        });
+        const childContext = useFloatingContext({
+          anchorEl: ref(childAnchor),
+          floatingEl: ref(childFloating),
+          open: childOpen,
+          parentContext: rootContext,
+        });
+
+        const rootCollection = useCollection({ values: ["a", "b"] });
+        const childCollection = useCollection({ values: ["1", "2"] });
+
+        // Root uses default openOnArrowKeyDown (which is context.isRoot === true)
+        useListNavigation(rootContext, { collection: rootCollection });
+        // Child uses default openOnArrowKeyDown (which is context.isRoot === false)
+        useListNavigation(childContext, { collection: childCollection });
+      });
+
+      // Pressing ArrowDown on root anchor opens root
+      dispatchKey(parentAnchor, "ArrowDown");
+      expect(parentOpen.value).toBe(true);
+
+      // Pressing ArrowDown on child anchor does NOT open child by default
+      dispatchKey(childAnchor, "ArrowDown");
+      expect(childOpen.value).toBe(false);
+    });
+
+    it("allows explicit openOnArrowKeyDown to override smart default on nested context", () => {
+      scope = effectScope();
+      const parentAnchor = document.createElement("button");
+      const parentFloating = document.createElement("div");
+      const childAnchor = document.createElement("button");
+      const childFloating = document.createElement("div");
+
+      document.body.appendChild(parentAnchor);
+      document.body.appendChild(parentFloating);
+      document.body.appendChild(childAnchor);
+      document.body.appendChild(childFloating);
+      elementsToCleanUp.push(parentAnchor, parentFloating, childAnchor, childFloating);
+
+      const parentOpen = ref(false);
+      const childOpen = ref(false);
+
+      scope.run(() => {
+        const rootContext = useFloatingContext({
+          anchorEl: ref(parentAnchor),
+          floatingEl: ref(parentFloating),
+          open: parentOpen,
+        });
+        const childContext = useFloatingContext({
+          anchorEl: ref(childAnchor),
+          floatingEl: ref(childFloating),
+          open: childOpen,
+          parentContext: rootContext,
+        });
+
+        const childCollection = useCollection({ values: ["1", "2"] });
+        useListNavigation(childContext, {
+          collection: childCollection,
+          openOnArrowKeyDown: true,
+        });
+      });
+
+      dispatchKey(childAnchor, "ArrowDown");
+      expect(childOpen.value).toBe(true);
+    });
+
+    it("automatically closes nested submenu and focuses anchorEl on ArrowLeft when onExit is omitted", () => {
+      scope = effectScope();
+      const parentAnchor = document.createElement("button");
+      const parentFloating = document.createElement("div");
+      const childAnchor = document.createElement("button");
+      const childFloating = document.createElement("div");
+
+      document.body.appendChild(parentAnchor);
+      document.body.appendChild(parentFloating);
+      document.body.appendChild(childAnchor);
+      document.body.appendChild(childFloating);
+      elementsToCleanUp.push(parentAnchor, parentFloating, childAnchor, childFloating);
+
+      const parentOpen = ref(true);
+      const childOpen = ref(true);
+      let childCollection!: ReturnType<typeof useCollection>;
+
+      scope.run(() => {
+        const rootContext = useFloatingContext({
+          anchorEl: ref(parentAnchor),
+          floatingEl: ref(parentFloating),
+          open: parentOpen,
+        });
+        const childContext = useFloatingContext({
+          anchorEl: ref(childAnchor),
+          floatingEl: ref(childFloating),
+          open: childOpen,
+          parentContext: rootContext,
+        });
+
+        childCollection = useCollection({ values: ["pdf", "png"] });
+
+        // Note: No custom onExit passed to child
+        useListNavigation(childContext, {
+          collection: childCollection,
+          orientation: "vertical",
+        });
+      });
+
+      childCollection.setActiveValue("pdf");
+
+      let focused = false;
+      childAnchor.addEventListener("focus", () => {
+        focused = true;
+      });
+
+      dispatchKey(childFloating, "ArrowLeft");
+
+      expect(childOpen.value).toBe(false);
+      expect(focused).toBe(true);
+    });
+  });
 });

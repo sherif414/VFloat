@@ -73,7 +73,7 @@ interface UseListNavigationOptions {
 
   /**
    * If true, pressing an arrow key when closed opens the floating surface and activates the first/last item.
-   * @default true
+   * @default context.isRoot (true for root contexts, false for nested submenus)
    */
   openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
 
@@ -112,9 +112,10 @@ interface UseListNavigationReturn {
 
 `useListNavigation` separates keyboard coordination from active item management:
 
+- **Hierarchy-Aware Smart Defaults:** When attached to a top-level context (`context.isRoot === true`), `openOnArrowKeyDown` defaults to `true` (opening the menu on `ArrowDown`/`ArrowUp`). When attached to a nested child context (`context.isRoot === false`), it automatically defaults to `false` so navigating the parent menu does not inadvertently trigger the submenu.
 - **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc.
 - **Roving & Virtual Focus:** It is compatible with both roving tabindex DOM focus and virtual focus configurations. Simply sync `collection.activeValue` with your elements' focus or `aria-activedescendant` attribute.
-- **Nested Submenu Expansion (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on items with submenus. It fires `onEnter` (e.g., `ArrowRight`) to open a child submenu and `onExit` (e.g., `ArrowLeft`) to close the submenu and return focus to the parent trigger.
+- **Nested Submenu Expansion & Collapse (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on items with submenus. It fires `onEnter` (e.g., `ArrowRight`) to open a child submenu. On `exit` (e.g., `ArrowLeft`), it runs custom `onExit` if provided, or automatically closes the child context and restores DOM focus to `anchorEl` when `!context.isRoot`.
 - **RTL Semantics:** Horizontal arrow keys for list navigation and submenu expansion automatically reverse their meaning when `rtl` is enabled.
 - **Natural Tab Exit:** Pressing `Tab` closes the list to clean up references, but does not prevent natural browser focus movement.
 

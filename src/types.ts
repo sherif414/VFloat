@@ -26,6 +26,7 @@ export interface VirtualElement {
 export type OpenChangeReason =
   | "anchor-click"
   | "keyboard-activate"
+  | "keyboard-exit"
   | "outside-pointer"
   | "focus"
   | "blur"

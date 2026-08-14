@@ -42,6 +42,8 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
     onOpenChange?.(value, reason, event);
   };
 
+  const isRoot = !parentContext;
+
   const context: FloatingContext = {
     id,
     refs: {
@@ -53,6 +55,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
       open,
       setOpen,
     },
+    isRoot,
   };
 
   registerFloatingContext(context, parentContext ?? null);
@@ -138,6 +141,10 @@ export interface FloatingContext {
   id: FloatingContextId;
   refs: FloatingRefs;
   state: FloatingState;
+  /**
+   * Whether this is a top-level floating context without a parentContext.
+   */
+  isRoot: boolean;
 }
 
 /**
