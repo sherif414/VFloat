@@ -4,7 +4,7 @@ description: Coordinates keyboard-driven list navigation in VFloat.
 
 # useListNavigation
 
-`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for one-dimensional lists and hierarchical trees (menus, submenus, listboxes, comboboxes). It coordinates with any reactive collection that satisfies the `NavigableCollection` contract, such as [`useCollection`](/api/use-collection) for flat lists or branches returned by [`useTree`](/api/use-tree).
+`useListNavigation` handles arrow-key, Home, End, and Tab key navigation for lists and floating menus (menus, submenus, listboxes, comboboxes). It coordinates with any reactive collection that satisfies the `NavigableCollection` contract, such as [`useCollection`](/api/use-collection).
 
 ## Type
 
@@ -65,7 +65,7 @@ interface UseListNavigationOptions {
 
   /**
    * Primary navigation orientation.
-   * - "vertical": ArrowUp/Down to navigate; ArrowLeft/Right to collapse/expand branches (trees)
+   * - "vertical": ArrowUp/Down to navigate; ArrowLeft/Right to collapse/expand submenus
    * - "horizontal": ArrowLeft/Right to navigate
    * @default "vertical"
    */
@@ -84,18 +84,18 @@ interface UseListNavigationOptions {
   rtl?: MaybeRefOrGetter<boolean>;
 
   /**
-   * If true, pressing Tab closes the floating list/tree without preventing normal browser page focus movement.
+   * If true, pressing Tab closes the floating list without preventing normal browser page focus movement.
    * @default true
    */
   closeOnTab?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Callback triggered when a branch "enter" intent is detected from an enabled item.
+   * Callback triggered when a branch "enter" intent is detected from an enabled item (e.g. ArrowRight in LTR).
    */
   onEnter?: (activeValue: string, e: KeyboardEvent) => void;
 
   /**
-   * Callback triggered when a branch "exit" intent is detected from an enabled item.
+   * Callback triggered when a branch "exit" intent is detected from an enabled item (e.g. ArrowLeft in LTR).
    */
   onExit?: (activeValue: string, e: KeyboardEvent) => void;
 }
@@ -112,18 +112,18 @@ interface UseListNavigationReturn {
 
 `useListNavigation` separates keyboard coordination from active item management:
 
-- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc. Flat lists can use [`useCollection`](/api/use-collection); nested menus can use [`useTree`](/api/use-tree).
+- **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc.
 - **Roving & Virtual Focus:** It is compatible with both roving tabindex DOM focus and virtual focus configurations. Simply sync `collection.activeValue` with your elements' focus or `aria-activedescendant` attribute.
-- **Nested Branch Expansion (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on branches. It relies on horizontal arrow detection to fire `onEnter` and `onExit` events. In a tree setup, these events are used to expand or collapse submenus, safely shifting the active value to children or returning it to the parent trigger.
-- **RTL Semantics:** Horizontal arrow keys for list navigation and tree branch expansion automatically reverse their meaning when `rtl` is enabled.
-- **Natural Tab Exit:** Pressing `Tab` closes the list tree to clean up references, but does not prevent natural browser focus movement.
+- **Nested Submenu Expansion (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on items with submenus. It fires `onEnter` (e.g., `ArrowRight`) to open a child submenu and `onExit` (e.g., `ArrowLeft`) to close the submenu and return focus to the parent trigger.
+- **RTL Semantics:** Horizontal arrow keys for list navigation and submenu expansion automatically reverse their meaning when `rtl` is enabled.
+- **Natural Tab Exit:** Pressing `Tab` closes the list to clean up references, but does not prevent natural browser focus movement.
 
 ## Example
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useTree, useFloatingContext, usePosition, useListNavigation } from "v-float";
+import { computed, ref } from "vue";
+import { useCollection, useFloatingContext, usePosition, useListNavigation } from "v-float";
 
 interface Option {
   value: string;
@@ -142,13 +142,11 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
-const tree = useTree({
-  items: options,
-  getItemId: (item) => item.value,
-});
+const values = computed(() => options.value.map((item) => item.value));
+const collection = useCollection({ values });
 
 useListNavigation(context, {
-  collection: tree.rootBranch,
+  collection,
   orientation: "vertical",
   loop: true,
 });
@@ -161,12 +159,12 @@ useListNavigation(context, {
 
   <div v-if="context.state.open.value" ref="floatingEl" role="listbox" :style="styles">
     <div
-      v-for="item in tree.flattenedItems.value"
+      v-for="item in options"
       :key="item.value"
       role="option"
-      :aria-selected="tree.activeValue.value === item.value"
-      :class="{ active: tree.activeValue.value === item.value }"
-      @click="tree.setActiveValue(item.value)"
+      :aria-selected="collection.activeValue.value === item.value"
+      :class="{ active: collection.activeValue.value === item.value }"
+      @click="collection.setActiveValue(item.value)"
     >
       {{ item.label }}
     </div>
@@ -176,7 +174,6 @@ useListNavigation(context, {
 
 ## See Also
 
-- [`useTree`](/api/use-tree)
 - [`useCollection`](/api/use-collection)
 - [`useFloatingContext`](/api/use-floating-context)
 - [`useRole`](/api/use-role)

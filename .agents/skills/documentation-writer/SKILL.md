@@ -53,14 +53,14 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 ## Repo Gotchas
 
 - VFloat is inspired by Floating UI but not a fork. Verify behavior in this repo before reusing wording, defaults, or examples.
-- Use project terminology literally: `useFloatingContext`, `usePosition`, `useClick`, `useHover`, `useTree`, `middlewares`, `open`, `context`, and `FloatingContext`.
+- Use project terminology literally: `useFloatingContext`, `usePosition`, `useClick`, `useHover`, `useCollection`, `middlewares`, `open`, `context`, and `FloatingContext`.
 - Examples should import from `v-float`.
 - Use `middlewares` (plural) when referring to the middleware array or the `src/composables/middlewares` module.
 - Prefer `<script setup lang="ts">` for Vue examples.
 - Destructure `styles` directly from the `usePosition` return value: `const { styles } = usePosition(context, ...)`. Bind `styles` (or `styles.value` in non-template contexts) in examples.
 - Do not restate full option interfaces inside guides when the API page already owns that contract.
 - Middleware API pages currently use an older family style in this repo. Preserve that family for focused edits unless the task is to standardize the whole family together.
-- Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloatingContext`, `usePosition`, `useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useEscapeKey`, `useOutsideClick`, `useListNavigation`, `useCollection`, `useTree`, `useClientPoint`, `useRole`, `useArrow`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `arrow`, `safePolygon`, `context`, `middlewares`, `virtual elements`, and `tree coordination`.
+- Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloatingContext`, `usePosition`, `useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useEscapeKey`, `useOutsideClick`, `useListNavigation`, `useCollection`, `useClientPoint`, `useRole`, `useArrow`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `arrow`, `safePolygon`, `context`, `middlewares`, `virtual elements`, and `overlay hierarchy coordination`.
 - If you add or rename a docs page, update `docs/.vitepress/config.mts` and the relevant overview page such as `docs/api/index.md` or `docs/guide/index.md`.
 
 ## Tone

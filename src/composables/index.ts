@@ -13,4 +13,3 @@ export * from "./middlewares";
 export * from "./outside-click/use-outside-click";
 export * from "./position";
 export * from "./role/use-role";
-export * from "./tree";

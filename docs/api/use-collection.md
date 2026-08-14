@@ -4,7 +4,7 @@ description: Create a flat navigable collection over stable string values.
 
 # useCollection
 
-`useCollection` creates a small flat collection manager for keyboard navigation. Use it when your floating surface has one level of string-valued items and does not need the hierarchy features from [`useTree`](/api/use-tree).
+`useCollection` creates a collection manager for keyboard navigation. Use it when your floating surface (menu, submenu, combobox, or dropdown) needs to manage active focus across a list of items.
 
 ## Type
 
@@ -43,7 +43,7 @@ interface UseCollectionReturn {
 - Pass `{ loop: true }` to wrap at the collection boundaries.
 - If the active value disappears from `values` or becomes disabled, it is cleared.
 
-For nested menus, trees, or data where each item needs to carry an object payload, use [`useTree`](/api/use-tree) instead.
+For nested multi-level menus, each menu and submenu level creates its own `useCollection` and coordinates via [`useFloatingContext`](/api/use-floating-context) (`parentContext`).
 
 ## Example
 
@@ -106,5 +106,5 @@ useListNavigation(context, {
 ## See Also
 
 - [`useListNavigation`](/api/use-list-navigation)
-- [`useTree`](/api/use-tree)
+- [`useFloatingContext`](/api/use-floating-context)
 - [Keyboard Navigation](/guide/keyboard-navigation)

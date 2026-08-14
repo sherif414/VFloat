@@ -32,8 +32,7 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 ## Collections
 
-- [`useCollection`](/api/use-collection) - Manages flat string-valued collections for keyboard navigation
-- [`useTree`](/api/use-tree) - Manages and coordinates flat list and hierarchical tree collections
+- [`useCollection`](/api/use-collection) - Manages collections for keyboard navigation
 - [`useListNavigation`](/api/use-list-navigation) - Moves active focus between items in a collection with the keyboard
 
 ## Middleware

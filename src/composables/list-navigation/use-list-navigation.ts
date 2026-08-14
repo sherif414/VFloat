@@ -18,9 +18,9 @@ import { resolveKeyboardIntent } from "./intent";
  *
  * @example
  * ```ts
- * const tree = useTree({ items, getItemId: i => i.id });
+ * const collection = useCollection({ values: ["open", "edit", "delete"] });
  * useListNavigation(context, {
- *   collection: tree.rootBranch,
+ *   collection,
  *   orientation: "vertical",
  *   loop: true
  * });

@@ -8,7 +8,7 @@ Predictable keyboard navigation is a core requirement for accessible floating su
 
 In VFloat, keyboard navigation is split into a clean separation of concerns:
 
-1. **[`useCollection`](/api/use-collection) or [`useTree`](/api/use-tree)** is the data-first reactive manager. `useCollection` covers flat string-valued lists; `useTree` covers item objects and nested branches.
+1. **[`useCollection`](/api/use-collection)** is the data-first reactive manager for item IDs, active selection, and disabled states.
 2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
 3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
 
@@ -22,8 +22,8 @@ In this model, focus actually shifts into the floating list, and arrow keys move
 
 ```vue
 <script setup lang="ts">
-import { ref, watch, nextTick } from "vue";
-import { useFloatingContext, usePosition, useTree, useListNavigation, useRole } from "v-float";
+import { ref, watch, nextTick, computed } from "vue";
+import { useFloatingContext, usePosition, useCollection, useListNavigation, useRole } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -45,32 +45,18 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
-// 1. Manage navigation state
-const tree = useTree({
-  items,
-  getItemId: (item) => item.id,
-  isItemDisabled: (item) => !!item.disabled,
+// 1. Manage collection state
+const itemValues = computed(() => items.value.map((i) => i.id));
+const collection = useCollection({
+  values: itemValues,
+  isValueDisabled: (id) => !!items.value.find((i) => i.id === id)?.disabled,
 });
 
 // 2. Intercept keyboard navigation on elements
 useListNavigation(context, {
-  collection: tree.rootBranch,
+  collection,
   orientation: "vertical",
   loop: true,
-  onEnter(activeValue) {
-    if (!tree.hasChildren(activeValue)) return;
-
-    tree.expandBranch(activeValue);
-    const firstEnabled = tree.getFirstEnabledDescendantValue(activeValue);
-    if (firstEnabled) tree.setActiveValue(firstEnabled);
-  },
-  onExit(activeValue) {
-    const parentValue = tree.getParentValue(activeValue);
-    if (!parentValue) return;
-
-    tree.setActiveValue(parentValue);
-    tree.collapseBranch(parentValue);
-  },
 });
 
 // 3. Keep ARIA roles synchronized
@@ -81,7 +67,7 @@ useRole(context, {
 });
 
 // 4. Focus the active item in the DOM when the selection moves
-watch(tree.activeValue, async (val) => {
+watch(collection.activeValue, async (val) => {
   if (val == null) return;
   await nextTick();
   const index = items.value.findIndex((item) => item.id === val);
@@ -110,9 +96,9 @@ Render item elements with roving `tabindex` and bind dynamic active classes:
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       role="menuitem"
       :aria-disabled="item.disabled"
-      :tabindex="tree.activeValue.value === item.id ? 0 : -1"
-      :class="{ active: tree.activeValue.value === item.id }"
-      @click="tree.setActiveValue(item.id)"
+      :tabindex="collection.activeValue.value === item.id ? 0 : -1"
+      :class="{ active: collection.activeValue.value === item.id }"
+      @click="collection.setActiveValue(item.id)"
     >
       {{ item.label }}
     </li>
@@ -130,8 +116,8 @@ In this model, DOM focus stays inside a text input or combobox container, allowi
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
-import { useFloatingContext, usePosition, useTree, useListNavigation, useRole } from "v-float";
+import { computed, ref } from "vue";
+import { useFloatingContext, usePosition, useCollection, useListNavigation, useRole } from "v-float";
 
 interface SearchOption {
   value: string;
@@ -151,13 +137,11 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
-const tree = useTree({
-  items: options,
-  getItemId: (item) => item.value,
-});
+const values = computed(() => options.value.map((o) => o.value));
+const collection = useCollection({ values });
 
 useListNavigation(context, {
-  collection: tree.rootBranch,
+  collection,
   orientation: "vertical",
   openOnArrowKeyDown: true,
 });
@@ -181,7 +165,7 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
     role="combobox"
     aria-autocomplete="list"
     :aria-expanded="context.state.open.value"
-    :aria-activedescendant="tree.activeValue.value ? `opt-${tree.activeValue.value}` : undefined"
+    :aria-activedescendant="collection.activeValue.value ? `opt-${collection.activeValue.value}` : undefined"
     @focus="context.state.setOpen(true)"
   />
 
@@ -192,9 +176,9 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
       :id="`opt-${item.value}`"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       role="option"
-      :aria-selected="tree.activeValue.value === item.value"
-      :class="{ active: tree.activeValue.value === item.value }"
-      @click="tree.setActiveValue(item.value)"
+      :aria-selected="collection.activeValue.value === item.value"
+      :class="{ active: collection.activeValue.value === item.value }"
+      @click="collection.setActiveValue(item.value)"
     >
       {{ item.label }}
     </li>
@@ -214,17 +198,16 @@ Here are the key events handled automatically by `useListNavigation`:
 | `ArrowUp`    | `"vertical"`        | Selects previous enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects last item.                            |
 | `ArrowRight` | `"horizontal"`      | Selects next enabled item (or previous in RTL).                                                                                         |
 | `ArrowLeft`  | `"horizontal"`      | Selects previous enabled item (or next in RTL).                                                                                         |
-| `ArrowRight` | `"vertical"` (Tree) | Fires `onEnter`; tree setups usually expand the active branch and target the first enabled descendant.                                  |
-| `ArrowLeft`  | `"vertical"` (Tree) | Fires `onExit`; tree setups usually move active value back to the parent item and collapse that branch.                                 |
-| `Home`       | Any                 | Selects the first enabled item in the visible flat list.                                                                                |
-| `End`        | Any                 | Selects the last enabled item in the visible flat list.                                                                                 |
+| `ArrowRight` | `"vertical"` (Menu) | Fires `onEnter`; submenu triggers use this to open the child floating context and target the first enabled child.                       |
+| `ArrowLeft`  | `"vertical"` (Menu) | Fires `onExit`; submenu panels use this to close the child floating context and return focus to the parent trigger.                    |
+| `Home`       | Any                 | Selects the first enabled item in the collection.                                                                                       |
+| `End`        | Any                 | Selects the last enabled item in the collection.                                                                                        |
 | `Tab`        | Any                 | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |
 
 ---
 
 ## 4. Where To Go Next
 
-- Learn how to build highly responsive, multi-level dropdown hierarchies in [Build Nested Menus](/guide/build-nested-menus).
-- Read the [useCollection API](/api/use-collection) reference for flat string-valued lists.
-- Read the [useTree API](/api/use-tree) reference.
+- Learn how to build multi-level menus in [Build Nested Menus](/guide/build-nested-menus).
+- Read the [useCollection API](/api/use-collection) reference.
 - Read the [useListNavigation API](/api/use-list-navigation) reference.

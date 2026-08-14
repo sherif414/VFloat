@@ -72,11 +72,11 @@ ARIA roles are a contract. For example, `role="menu"` should be reserved for des
 import { ref } from "vue";
 import {
   useClick,
+  useCollection,
   useFloatingContext,
   useListNavigation,
   usePosition,
   useRole,
-  useTree,
 } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
@@ -86,10 +86,9 @@ const items = ["Edit", "Duplicate", "Archive"];
 
 const context = useFloatingContext({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
-const tree = useTree({
-  items,
-  getItemId: (item) => item,
-  isItemDisabled: (item) => item === "Archive",
+const collection = useCollection({
+  values: items,
+  isValueDisabled: (item) => item === "Archive",
 });
 
 useClick(context);
@@ -100,7 +99,7 @@ useRole(context, {
   disabledIndices: [2],
 });
 useListNavigation(context, {
-  collection: tree.rootBranch,
+  collection,
   loop: true,
   orientation: "vertical",
 });
@@ -115,8 +114,8 @@ useListNavigation(context, {
       :key="item"
       :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
       type="button"
-      :disabled="tree.isItemDisabled(item)"
-      :class="{ active: tree.activeValue.value === item }"
+      :disabled="collection.isItemDisabled(item)"
+      :class="{ active: collection.activeValue.value === item }"
     >
       {{ item }}
     </button>
@@ -129,7 +128,7 @@ useListNavigation(context, {
 - [`useFloatingContext`](/api/use-floating-context)
 - [`useClick`](/api/use-click)
 - [`useListNavigation`](/api/use-list-navigation)
-- [`useTree`](/api/use-tree)
+- [`useCollection`](/api/use-collection)
 - [Keyboard Navigation](/guide/keyboard-navigation)
 - [Build Nested Menus](/guide/build-nested-menus)
 - [Choosing the Right Pattern](/guide/choosing-the-right-pattern)

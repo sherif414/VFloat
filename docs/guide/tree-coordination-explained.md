@@ -1,60 +1,66 @@
 ---
-description: Understand how VFloat coordinates nested lists, menus, and hierarchical elements.
+description: Understand how VFloat coordinates nested overlays, submenus, and hierarchical floating surfaces.
 ---
 
-# Tree Coordination Explained
+# Overlay Hierarchy Coordination
 
-Coordinating nested and hierarchical floating components (like multi-level submenus or cascading dropdowns) is notoriously difficult. If you try to coordinate them using DOM hierarchies or component boundaries, you quickly run into issues:
+Coordinating nested and hierarchical floating components (like multi-level submenus, dropdowns inside dialogs, or cascading popovers) is notoriously difficult. If you try to coordinate them using DOM parent-child relationships, you quickly run into issues:
 
 - **Teleportation gaps:** Nested floating panels are frequently teleported to `<Teleport to="body">` to avoid CSS overflow clipping. When portals move elements out of their original DOM positions, standard DOM selectors like `.parentNode` or `.contains()` break.
-- **Race conditions:** Managing active indices across multiple nested Vue components often introduces timing synchronization bugs during quick mouse movement or keyboard traversals.
+- **Premature Dismissal:** An outside-click listener on a parent modal or menu will assume a click inside a teleported child overlay was "outside" and close the parent.
+- **Escape Key Collisions:** Pressing `Escape` can trigger all open overlay listeners simultaneously instead of popping the topmost overlay.
 
-VFloat avoids those issues by keeping nested menu state in a data-first tree managed by [`useTree`](/api/use-tree).
+VFloat solves these problems using the **Floating Context Hierarchy** ([`useFloatingContext`](/api/use-floating-context) + `parentContext`).
 
 ---
 
-## The Tree Model
+## The Floating Family Registry
 
-Instead of every nested submenu tracking its own isolated state and communicating through event buses or nested DOM contexts, **the entire menu family is modeled as a single hierarchical data tree**.
+Every floating surface creates a `context`. When an overlay is created inside or anchored to another floating surface, passing `parentContext` registers the child in VFloat's internal context registry:
 
+```ts
+// Parent Floating Surface (e.g., Dialog or Root Menu)
+const rootContext = useFloatingContext({ anchorEl, floatingEl });
+
+// Child Floating Surface (e.g., Select Dropdown or Submenu)
+const childContext = useFloatingContext({
+  anchorEl: triggerEl,
+  floatingEl: childPanelEl,
+  parentContext: rootContext, // 🔗 Establishes the overlay hierarchy
+});
 ```
-           [ root-menu ]  <--- Coordinates activeValue & expandedValues
-          /             \
-    [ edit ]       [ share-branch ] (Expanded)
-                    /             \
-             [ share-email ]    [ share-slack ]
-```
-
-### The State Registry
-
-A single `useTree` instance maintains:
-
-- **`activeValue`:** A single reactive string value referencing the currently active item anywhere in the visible tree hierarchy.
-- **`expandedValues`:** A reactive `Set` containing the IDs of all currently expanded branches.
-- **`flattenedItems`:** A computed array of items representing the linear path of currently visible items (e.g. root items + children of any expanded root items).
 
 ---
 
-## How Composables Collaborate
+## What the Overlay Hierarchy Solves
 
-This single reactive collection coordinates all interactive behaviors:
+### 1. Teleportation-Safe Outside Clicks
+When a user clicks inside a child submenu or select dropdown teleported to `<body>`, the parent's [`useOutsideClick`](/api/use-outside-click) handler checks:
+*"Is this click inside my floating element or any of my registered descendant floating elements?"*
+Because the child is linked via `parentContext`, the click is recognized as internal, preventing unwanted closures.
 
-1. **`useListNavigation`** handles arrow key, Home, End, and Tab events on the anchor and floating elements, then delegates movement to the collection or emits branch enter/exit callbacks.
-2. **`useRole`** applies the semantic role and any item ARIA state you provide through options such as `listRef`, `disabledIndices`, `checkedIndices`, or `selectedIndices`.
-3. **Your Component Template** renders the list elements, applying active visual styling when an item matches `tree.activeValue`.
+### 2. Stacked Escape Key Handling
+When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) locates the deepest open floating context in the family (`getDeepestOpenFloatingContext`). It dismisses only the topmost child overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order.
+
+### 3. Cascading Teardown
+When a parent floating context closes (`setOpen(false)`), VFloat automatically closes all descendant floating contexts in reverse depth order, ensuring no orphaned submenus remain visible.
 
 ---
 
-## Why Data-First Coordination Helps
+## Combining with Collections
 
-- **Teleportation safety:** Because open, collapsed, active, and parent-child state lives in the reactive JavaScript model, teleporting menus to the document body does not break the tree relationship.
-- **Predictable Escapes:** Collapsing or closing a submenu can restore focus to the correct parent opener because `useTree()` keeps parent-child relationships in data through helpers such as `tree.getParentValue()`.
-- **Resilient Keyboard Traversals:** If nested submenus contain disabled items, the tree can query the data structure with `getFirstEnabledDescendantValue()` to target the next usable choice, or stay on the parent opener if all choices are disabled.
+For multi-level menus and lists, each level uses a simple [`useCollection`](/api/use-collection) for its own 1D list of items:
+
+- The root menu navigates root items with `useListNavigation(rootContext, { collection: rootCollection })`.
+- Each submenu navigates its items with `useListNavigation(subContext, { collection: subCollection })`.
+- `ArrowRight` on a submenu item opens the child context and sets active focus to the first item.
+- `ArrowLeft` inside a child submenu closes the child context and restores focus to the parent trigger.
 
 ---
 
 ## Next Steps
 
-- Follow the step-by-step tutorial to [Build Nested Menus](/guide/build-nested-menus).
-- Read the [useTree API Reference](/api/use-tree).
+- Read the tutorial on [Building Nested Menus](/guide/build-nested-menus).
+- Read the [useFloatingContext API Reference](/api/use-floating-context).
+- Read the [useCollection API Reference](/api/use-collection).
 - Read the [useListNavigation API Reference](/api/use-list-navigation).
