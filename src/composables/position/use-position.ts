@@ -203,9 +203,7 @@ export function usePosition(
       middlewares: mergedMiddlewares,
       register: registerMiddleware,
     },
-    updatePosition: update,
   });
-  floatingInternals.patch(context, { updatePosition: update });
 
   return position;
 }

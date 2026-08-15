@@ -76,8 +76,8 @@ function createFloatingContextId(): FloatingContextId {
 //=======================================================================================
 
 /**
- * Internal registry storing non-public capabilities (middleware registries, position updaters)
- * attached to floating contexts or position returns via WeakMap.
+ * Internal registry storing non-public capabilities (middleware registries)
+ * attached to floating position returns via WeakMap.
  *
  * @internal
  */
@@ -92,33 +92,10 @@ export class FloatingInternalsRegistry {
   }
 
   /**
-   * Attaches or merges internal capabilities onto the target object.
+   * Attaches internal capabilities onto the target object.
    */
   set(target: object, internals: FloatingInternals): void {
-    const current = this.store.get(target);
-    this.store.set(target, { ...current, ...internals });
-  }
-
-  /**
-   * Patches a subset of internal capabilities onto the target object.
-   */
-  patch(target: object, patch: Partial<FloatingInternals>): void {
-    const current = this.store.get(target);
-    this.store.set(target, { ...current, ...patch });
-  }
-
-  /**
-   * Deletes internal state for the target object.
-   */
-  delete(target: object): boolean {
-    return this.store.delete(target);
-  }
-
-  /**
-   * Checks whether internal state exists for the target object.
-   */
-  has(target: object): boolean {
-    return this.store.has(target);
+    this.store.set(target, internals);
   }
 }
 
@@ -214,7 +191,7 @@ export interface UseFloatingContextOptions {
 }
 
 /**
- * Internal capabilities attached to a context or position result via a WeakMap.
+ * Internal capabilities attached to a position result via a WeakMap.
  *
  * @internal
  */
@@ -223,5 +200,4 @@ export interface FloatingInternals {
     middlewares: ComputedRef<Middleware[]>;
     register: (middleware: MaybeRefOrGetter<Middleware | null | undefined>) => () => void;
   };
-  updatePosition?: () => Promise<void>;
 }
