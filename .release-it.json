@@ -12,10 +12,10 @@
   },
   "hooks": {
     "before:init": ["node ./scripts/release/before-init.mjs"],
-    "before:bump": ["vp check", "vp test"],
+    "before:bump": ["pnpm run lint", "pnpm run type-check", "pnpm run test", "pnpm run build"],
     "after:bump": [
-      "vp exec changelogen -r ${version} --output CHANGELOG.md",
-      "vp pack",
+      "pnpm exec changelogen -r ${version} --output CHANGELOG.md",
+      "pnpm pack",
       "git add package.json CHANGELOG.md"
     ],
     "after:release": ["echo Successfully released ${name} v${version} to ${repo.repository}."]

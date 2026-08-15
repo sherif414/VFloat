@@ -1,1 +1,1 @@
-vp staged
+pnpm run lint

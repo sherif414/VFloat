@@ -16,7 +16,7 @@ if (args.includes("--dry-run")) {
 
 configureNpmAuth(env);
 
-const result = spawnSync("vp", ["exec", "release-it", ...args], {
+const result = spawnSync("pnpm", ["exec", "release-it", ...args], {
   stdio: "inherit",
   shell: process.platform === "win32",
   env,

@@ -19,7 +19,7 @@ const start = headingMatch.index;
 const rest = changelog.slice(start);
 const nextHeadingMatch = rest
   .slice(headingMatch[0].length)
-  .match(/\n#{1,3} \[?\d+\.\d+\.\d+\]?\b/m);
+  .match(/\n#{1,3} \[?v?\d+\.\d+\.\d+\]?\b/m);
 const end =
   nextHeadingMatch?.index !== undefined
     ? headingMatch[0].length + nextHeadingMatch.index

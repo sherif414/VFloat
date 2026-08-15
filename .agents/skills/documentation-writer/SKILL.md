@@ -48,7 +48,7 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 6. Validate before finishing.
    - Read [references/review-checklist.md](references/review-checklist.md).
    - Compare the draft against the source and adjacent docs.
-   - Run `vp run docs:build`, fix failures, and rerun until it passes.
+   - Run `pnpm run docs:build`, fix failures, and rerun until it passes.
 
 ## Repo Gotchas
 
@@ -107,5 +107,5 @@ Do not force this voice onto compact API reference pages. API pages should stay 
 
 1. Re-read the relevant source and the edited doc side by side.
 2. Check links, headings, VitePress containers, and code block language tags.
-3. Run `vp run docs:build`.
+3. Run `pnpm run docs:build`.
 4. If build or review fails, fix the doc and repeat the loop.
