@@ -8,11 +8,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import {
-  getFloatingContextFloatingElements,
-  isFloatingContextTargetWithin,
-} from "@/composables/floating-context/floating-context-registry";
+import { type FloatingContext, floatingTree } from "@/composables/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 
@@ -105,7 +101,7 @@ export function useFocusTrap(
     deactivateTrap({ returnFocus: false });
 
     const container = floatingEl.value;
-    const containers = getFloatingContextFloatingElements(context);
+    const containers = floatingTree.getFloatingElements(context);
     if (!container || containers.length === 0) {
       if (isDev) {
         console.warn("[useFocusTrap] No floating element available for focus trap");
@@ -138,7 +134,7 @@ export function useFocusTrap(
       fallbackFocus: () => container,
       returnFocusOnDeactivate: shouldReturnFocus.value,
       clickOutsideDeactivates: (event) => {
-        if (isFloatingContextTargetWithin(context, event?.target ?? null)) {
+        if (floatingTree.isTargetWithin(context, event?.target ?? null)) {
           return false;
         }
 
@@ -154,7 +150,7 @@ export function useFocusTrap(
         return true;
       },
       allowOutsideClick: (event) => {
-        if (isFloatingContextTargetWithin(context, event?.target ?? null)) {
+        if (floatingTree.isTargetWithin(context, event?.target ?? null)) {
           return true;
         }
 

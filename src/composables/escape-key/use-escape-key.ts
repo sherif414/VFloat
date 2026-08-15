@@ -1,7 +1,6 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
-import type { FloatingContext } from "@/composables/floating-context";
-import { getDeepestOpenFloatingContext } from "@/composables/floating-context/floating-context-registry";
+import { type FloatingContext, floatingTree } from "@/composables/floating-context";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
@@ -74,7 +73,7 @@ export function useEscapeKey(
       return;
     }
 
-    const targetContext = getDeepestOpenFloatingContext(context);
+    const targetContext = floatingTree.getDeepestOpenContext(context);
     targetContext.state.setOpen(false, "escape-key", event);
   };
 

@@ -3,7 +3,7 @@ import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { ref } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
-import { closeFloatingDescendants, registerFloatingContext } from "./floating-context-registry";
+import { floatingTree } from "./floating-context-tree";
 
 //=======================================================================================
 // 📌 Main
@@ -34,10 +34,10 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
 
   const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
     if (open.value === value) {
-      if (!value) closeFloatingDescendants(context, reason, event);
+      if (!value) floatingTree.closeDescendants(context, reason, event);
       return;
     }
-    if (!value) closeFloatingDescendants(context, reason, event);
+    if (!value) floatingTree.closeDescendants(context, reason, event);
     open.value = value;
     onOpenChange?.(value, reason, event);
   };
@@ -58,7 +58,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
     isRoot,
   };
 
-  registerFloatingContext(context, parentContext ?? null);
+  floatingTree.addNode(context, parentContext ?? null);
 
   return context;
 }

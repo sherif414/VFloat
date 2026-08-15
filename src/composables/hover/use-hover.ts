@@ -1,7 +1,6 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { isFloatingContextTargetWithin } from "@/composables/floating-context/floating-context-registry";
+import { type FloatingContext, floatingTree } from "@/composables/floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
@@ -169,7 +168,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     const { clientX, clientY } = e;
     const relatedTarget = e.relatedTarget as Node | null;
 
-    if (isFloatingContextTargetWithin(context, relatedTarget)) {
+    if (floatingTree.isTargetWithin(context, relatedTarget)) {
       return;
     }
 

@@ -1,6 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { isFloatingContextTargetWithin } from "@/composables/floating-context/floating-context-registry";
+import { type FloatingContext, floatingTree } from "@/composables/floating-context";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isTypeableElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
@@ -161,7 +160,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         return;
       }
 
-      if (isFloatingContextTargetWithin(context, activeEl)) {
+      if (floatingTree.isTargetWithin(context, activeEl)) {
         return;
       }
 
@@ -187,7 +186,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         const target = e.target;
         if (!(target instanceof Element)) return;
 
-        if (isFloatingContextTargetWithin(context, target)) return;
+        if (floatingTree.isTargetWithin(context, target)) return;
 
         if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
 

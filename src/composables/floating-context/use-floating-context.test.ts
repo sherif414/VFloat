@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref, watchEffect } from "vue";
-import { useFloatingContext } from "@/composables";
-import { getFloatingContextFloatingElements } from "@/composables/floating-context/floating-context-registry";
+import { floatingTree, useFloatingContext } from "@/composables/floating-context";
 
 describe("useFloatingContext", () => {
   it("uses defaultOpen for uncontrolled state", () => {
@@ -191,11 +190,11 @@ describe("useFloatingContext", () => {
       });
     });
 
-    expect(getFloatingContextFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
+    expect(floatingTree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
 
     scope.stop();
 
-    expect(getFloatingContextFloatingElements(root)).toEqual([rootFloatingEl]);
+    expect(floatingTree.getFloatingElements(root)).toEqual([rootFloatingEl]);
   });
 
   it("updates descendant floating element helpers when child contexts mount later", async () => {
@@ -210,7 +209,7 @@ describe("useFloatingContext", () => {
 
     scope.run(() => {
       watchEffect(() => {
-        lengths.push(getFloatingContextFloatingElements(root).length);
+        lengths.push(floatingTree.getFloatingElements(root).length);
       });
 
       useFloatingContext({
