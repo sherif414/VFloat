@@ -64,39 +64,65 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
 }
 
 //=======================================================================================
-// 📌 Internals
+// 📌 Helpers
 //=======================================================================================
-
-const floatingInternals = new WeakMap<object, FloatingInternals>();
-
-/**
- * Attaches internal positioning state to a public floating object.
- * @internal
- */
-export function setFloatingInternals(target: object, internals: FloatingInternals) {
-  patchFloatingInternals(target, internals);
-}
-
-/**
- * Reads the internal state previously attached with `setFloatingInternals()`.
- * @internal
- */
-export function getFloatingInternals(target: object) {
-  return floatingInternals.get(target);
-}
-
-/**
- * Updates a subset of the internal state attached to a floating object.
- * @internal
- */
-export function patchFloatingInternals(target: object, patch: Partial<FloatingInternals>) {
-  const current = floatingInternals.get(target);
-  floatingInternals.set(target, { ...current, ...patch });
-}
 
 function createFloatingContextId(): FloatingContextId {
   return Symbol("v-float-context");
 }
+
+//=======================================================================================
+// 📌 Internals
+//=======================================================================================
+
+/**
+ * Internal registry storing non-public capabilities (middleware registries, position updaters)
+ * attached to floating contexts or position returns via WeakMap.
+ *
+ * @internal
+ */
+export class FloatingInternalsRegistry {
+  private readonly store = new WeakMap<object, FloatingInternals>();
+
+  /**
+   * Reads internal state associated with the target.
+   */
+  get(target: object): FloatingInternals | undefined {
+    return this.store.get(target);
+  }
+
+  /**
+   * Attaches or merges internal capabilities onto the target object.
+   */
+  set(target: object, internals: FloatingInternals): void {
+    const current = this.store.get(target);
+    this.store.set(target, { ...current, ...internals });
+  }
+
+  /**
+   * Patches a subset of internal capabilities onto the target object.
+   */
+  patch(target: object, patch: Partial<FloatingInternals>): void {
+    const current = this.store.get(target);
+    this.store.set(target, { ...current, ...patch });
+  }
+
+  /**
+   * Deletes internal state for the target object.
+   */
+  delete(target: object): boolean {
+    return this.store.delete(target);
+  }
+
+  /**
+   * Checks whether internal state exists for the target object.
+   */
+  has(target: object): boolean {
+    return this.store.has(target);
+  }
+}
+
+export const floatingInternals = new FloatingInternalsRegistry();
 
 //=======================================================================================
 // 📌 Types
@@ -189,6 +215,8 @@ export interface UseFloatingContextOptions {
 
 /**
  * Internal capabilities attached to a context or position result via a WeakMap.
+ *
+ * @internal
  */
 export interface FloatingInternals {
   middlewareRegistry?: {

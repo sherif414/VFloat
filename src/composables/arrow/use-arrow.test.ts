@@ -4,7 +4,7 @@ import type { Ref, ShallowRef } from "vue";
 import { nextTick, ref, shallowRef } from "vue";
 import type { AnchorElement, FloatingContext, FloatingElement } from "@/composables";
 import { useArrow, useFloatingContext, usePosition } from "@/composables";
-import { getFloatingInternals } from "@/composables/floating-context/use-floating-context";
+import { floatingInternals } from "@/composables/floating-context/use-floating-context";
 import type { FloatingPosition } from "@/composables/position";
 
 // ---------------------------------------------------------------------------
@@ -125,7 +125,7 @@ describe("useArrow", () => {
 
       useArrow(context, position);
 
-      const internals = getFloatingInternals(position);
+      const internals = floatingInternals.get(position);
       const names = internals?.middlewareRegistry?.middlewares.value.map((m) => m.name);
       expect(names).toContain("arrow");
     });
@@ -135,7 +135,7 @@ describe("useArrow", () => {
 
       useArrow(context, position);
 
-      const internals = getFloatingInternals(position);
+      const internals = floatingInternals.get(position);
       const middlewares = internals?.middlewareRegistry?.middlewares.value ?? [];
       const arrowMiddleware = middlewares.find((m) => m.name === "arrow");
       expect(arrowMiddleware).toBeUndefined();
@@ -147,7 +147,7 @@ describe("useArrow", () => {
 
       useArrow(context, position);
 
-      const internals = getFloatingInternals(position);
+      const internals = floatingInternals.get(position);
       const hasArrow = () =>
         internals?.middlewareRegistry?.middlewares.value.some((m) => m.name === "arrow") ?? false;
 

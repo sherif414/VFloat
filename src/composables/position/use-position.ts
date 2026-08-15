@@ -27,7 +27,7 @@ import {
   watch,
 } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { setFloatingInternals } from "@/composables/floating-context/use-floating-context";
+import { floatingInternals } from "@/composables/floating-context/use-floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
@@ -198,14 +198,14 @@ export function usePosition(
     update,
   };
 
-  setFloatingInternals(position, {
+  floatingInternals.set(position, {
     middlewareRegistry: {
       middlewares: mergedMiddlewares,
       register: registerMiddleware,
     },
     updatePosition: update,
   });
-  setFloatingInternals(context, { updatePosition: update });
+  floatingInternals.patch(context, { updatePosition: update });
 
   return position;
 }

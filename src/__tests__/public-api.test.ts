@@ -36,6 +36,8 @@ describe("Public API Surface", () => {
       "floatingTree",
       "FloatingTree",
       "FloatingTreeNode",
+      "floatingInternals",
+      "FloatingInternalsRegistry",
       "getFloatingInternals",
       "setFloatingInternals",
       "patchFloatingInternals",

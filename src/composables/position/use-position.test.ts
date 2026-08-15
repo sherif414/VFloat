@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
 import { useArrow, useFloatingContext, usePosition } from "@/composables";
-import { getFloatingInternals } from "@/composables/floating-context/use-floating-context";
+import { floatingInternals } from "@/composables/floating-context/use-floating-context";
 
 const elements: HTMLElement[] = [];
 
@@ -110,9 +110,9 @@ describe("usePosition", () => {
     });
 
     expect(
-      getFloatingInternals(position)?.middlewareRegistry?.middlewares.value.map(
-        (middleware) => middleware.name,
-      ),
+      floatingInternals
+        .get(position)
+        ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
     ).toEqual(["offset", "flip", "shift", "size"]);
   });
 
@@ -130,9 +130,9 @@ describe("usePosition", () => {
     });
 
     expect(
-      getFloatingInternals(position)?.middlewareRegistry?.middlewares.value.map(
-        (middleware) => middleware.name,
-      ),
+      floatingInternals
+        .get(position)
+        ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
     ).toEqual(["offset", "custom"]);
   });
 
@@ -169,9 +169,9 @@ describe("usePosition", () => {
 
     expect(context.refs.arrowEl.value).toBe(arrowEl.value);
     expect(
-      getFloatingInternals(position)?.middlewareRegistry?.middlewares.value.some(
-        (middleware) => middleware.name === "arrow",
-      ),
+      floatingInternals
+        .get(position)
+        ?.middlewareRegistry?.middlewares.value.some((middleware) => middleware.name === "arrow"),
     ).toBe(true);
   });
 });

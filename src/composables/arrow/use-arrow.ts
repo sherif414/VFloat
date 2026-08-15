@@ -1,7 +1,7 @@
 import type { Padding } from "@floating-ui/dom";
 import { type ComputedRef, computed, toValue } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { getFloatingInternals } from "@/composables/floating-context/use-floating-context";
+import { floatingInternals } from "@/composables/floating-context/use-floating-context";
 import type { FloatingPosition } from "@/composables/position";
 import { arrow } from "../middlewares";
 
@@ -58,7 +58,7 @@ export function useArrow(
   const { arrowEl } = refs;
   const { offset = "-4px", padding } = options;
 
-  const internals = getFloatingInternals(position);
+  const internals = floatingInternals.get(position);
   internals?.middlewareRegistry?.register(
     computed(() => {
       if (!arrowEl.value) return null;

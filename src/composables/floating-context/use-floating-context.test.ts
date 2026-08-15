@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref, watchEffect } from "vue";
 import { floatingTree } from "./floating-context-tree";
-import { useFloatingContext } from "./use-floating-context";
+import {
+  FloatingInternalsRegistry,
+  floatingInternals,
+  useFloatingContext,
+} from "./use-floating-context";
 
 describe("useFloatingContext", () => {
   it("uses defaultOpen for uncontrolled state", () => {
@@ -239,5 +243,41 @@ describe("useFloatingContext", () => {
 
     expect(root.isRoot).toBe(true);
     expect(child.isRoot).toBe(false);
+  });
+});
+
+describe("FloatingInternalsRegistry", () => {
+  it("attaches, retrieves, and patches internal state on an object target", () => {
+    const registry = new FloatingInternalsRegistry();
+    const target = {};
+    const updateFn = vi.fn().mockResolvedValue(undefined);
+
+    expect(registry.has(target)).toBe(false);
+    expect(registry.get(target)).toBeUndefined();
+
+    registry.set(target, { updatePosition: updateFn });
+    expect(registry.has(target)).toBe(true);
+    expect(registry.get(target)?.updatePosition).toBe(updateFn);
+
+    const updateFn2 = vi.fn().mockResolvedValue(undefined);
+    registry.patch(target, { updatePosition: updateFn2 });
+    expect(registry.get(target)?.updatePosition).toBe(updateFn2);
+  });
+
+  it("deletes internal state for a target", () => {
+    const registry = new FloatingInternalsRegistry();
+    const target = {};
+
+    registry.set(target, { updatePosition: vi.fn() });
+    expect(registry.has(target)).toBe(true);
+
+    expect(registry.delete(target)).toBe(true);
+    expect(registry.has(target)).toBe(false);
+    expect(registry.get(target)).toBeUndefined();
+    expect(registry.delete(target)).toBe(false);
+  });
+
+  it("provides a global singleton instance", () => {
+    expect(floatingInternals).toBeInstanceOf(FloatingInternalsRegistry);
   });
 });
