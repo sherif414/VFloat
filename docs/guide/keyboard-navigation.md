@@ -23,7 +23,13 @@ In this model, focus actually shifts into the floating list, and arrow keys move
 ```vue
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from "vue";
-import { useFloatingContext, usePosition, useCollection, useListNavigation, useRole } from "v-float";
+import {
+  useFloatingContext,
+  usePosition,
+  useCollection,
+  useListNavigation,
+  useRole,
+} from "v-float";
 
 interface MenuItem {
   id: string;
@@ -117,7 +123,13 @@ In this model, DOM focus stays inside a text input or combobox container, allowi
 ```vue
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useFloatingContext, usePosition, useCollection, useListNavigation, useRole } from "v-float";
+import {
+  useFloatingContext,
+  usePosition,
+  useCollection,
+  useListNavigation,
+  useRole,
+} from "v-float";
 
 interface SearchOption {
   value: string;
@@ -165,7 +177,9 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
     role="combobox"
     aria-autocomplete="list"
     :aria-expanded="context.state.open.value"
-    :aria-activedescendant="collection.activeValue.value ? `opt-${collection.activeValue.value}` : undefined"
+    :aria-activedescendant="
+      collection.activeValue.value ? `opt-${collection.activeValue.value}` : undefined
+    "
     @focus="context.state.setOpen(true)"
   />
 
@@ -199,7 +213,7 @@ Here are the key events handled automatically by `useListNavigation`:
 | `ArrowRight` | `"horizontal"`      | Selects next enabled item (or previous in RTL).                                                                                         |
 | `ArrowLeft`  | `"horizontal"`      | Selects previous enabled item (or next in RTL).                                                                                         |
 | `ArrowRight` | `"vertical"` (Menu) | Fires `onEnter`; submenu triggers use this to open the child floating context and target the first enabled child.                       |
-| `ArrowLeft`  | `"vertical"` (Menu) | Fires `onExit`; submenu panels use this to close the child floating context and return focus to the parent trigger.                    |
+| `ArrowLeft`  | `"vertical"` (Menu) | Fires `onExit`; submenu panels use this to close the child floating context and return focus to the parent trigger.                     |
 | `Home`       | Any                 | Selects the first enabled item in the collection.                                                                                       |
 | `End`        | Any                 | Selects the last enabled item in the collection.                                                                                        |
 | `Tab`        | Any                 | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |

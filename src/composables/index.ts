@@ -25,10 +25,7 @@ export type {
 } from "./collection";
 // Collection
 export { useCollection } from "./collection";
-export type {
-  UseEscapeKeyContext,
-  UseEscapeKeyOptions,
-} from "./escape-key/use-escape-key";
+export type { UseEscapeKeyContext, UseEscapeKeyOptions } from "./escape-key/use-escape-key";
 // Escape Key
 export { useEscapeKey } from "./escape-key/use-escape-key";
 export type {
@@ -64,15 +61,7 @@ export type {
 export { useListNavigation } from "./list-navigation/use-list-navigation";
 export type { Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
-export {
-  arrow,
-  autoPlacement,
-  flip,
-  hide,
-  offset,
-  shift,
-  size,
-} from "./middlewares";
+export { arrow, autoPlacement, flip, hide, offset, shift, size } from "./middlewares";
 export type {
   OutsideClickPredicate,
   UseOutsideClickContext,

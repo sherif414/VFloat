@@ -35,14 +35,17 @@ const childContext = useFloatingContext({
 ## What the Overlay Hierarchy Solves
 
 ### 1. Teleportation-Safe Outside Clicks
+
 When a user clicks inside a child submenu or select dropdown teleported to `<body>`, the parent's [`useOutsideClick`](/api/use-outside-click) handler checks:
-*"Is this click inside my floating element or any of my registered descendant floating elements?"*
+_"Is this click inside my floating element or any of my registered descendant floating elements?"_
 Because the child is linked via `parentContext`, the click is recognized as internal, preventing unwanted closures.
 
 ### 2. Stacked Escape Key Handling
+
 When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) locates the deepest open floating context in the family (`getDeepestOpenFloatingContext`). It dismisses only the topmost child overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order.
 
 ### 3. Cascading Teardown
+
 When a parent floating context closes (`setOpen(false)`), VFloat automatically closes all descendant floating contexts in reverse depth order, ensuring no orphaned submenus remain visible.
 
 ---

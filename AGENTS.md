@@ -141,7 +141,7 @@ Only these abbreviations are permitted. Everything else must be spelled out.
 
 # Package Management and Development Toolchain
 
-This project uses `pnpm` as its package manager alongside standard Vite and Vitest.
+This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and `oxfmt`) for linting and formatting, **Vitest** for testing, and **Vite** for dev server and building.
 
 ## pnpm Workflow
 
@@ -149,6 +149,9 @@ This project uses `pnpm` as its package manager alongside standard Vite and Vite
 - Run dev server: `pnpm dev`
 - Run build: `pnpm build`
 - Run linting: `pnpm lint`
+- Fix lint & format: `pnpm lint:fix`
+- Format code: `pnpm format`
+- Check format: `pnpm format:check`
 - Run type checking: `pnpm type-check`
 - Run tests: `pnpm test`
 
@@ -156,5 +159,3 @@ This project uses `pnpm` as its package manager alongside standard Vite and Vite
 
 - [ ] Run `pnpm install` after pulling remote changes and before getting started.
 - [ ] Run `pnpm lint`, `pnpm type-check`, and `pnpm test` to validate changes.
-
-

@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "vue", "vitest"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-explicit-any": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/no-conditional-expect": "warn",
+    "vitest/expect-expect": "warn"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "playground/**",
+    "docs/.vitepress/dist/**",
+    "docs/.vitepress/cache/**"
+  ],
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "node": true
+  }
+}
