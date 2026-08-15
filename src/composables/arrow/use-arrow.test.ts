@@ -125,7 +125,7 @@ describe("useArrow", () => {
 
       useArrow(context, position);
 
-      const internals = floatingInternals.get(position);
+      const internals = floatingInternals.get(context.id);
       const names = internals?.middlewareRegistry?.middlewares.value.map((m) => m.name);
       expect(names).toContain("arrow");
     });
@@ -135,7 +135,7 @@ describe("useArrow", () => {
 
       useArrow(context, position);
 
-      const internals = floatingInternals.get(position);
+      const internals = floatingInternals.get(context.id);
       const middlewares = internals?.middlewareRegistry?.middlewares.value ?? [];
       const arrowMiddleware = middlewares.find((m) => m.name === "arrow");
       expect(arrowMiddleware).toBeUndefined();
@@ -147,7 +147,7 @@ describe("useArrow", () => {
 
       useArrow(context, position);
 
-      const internals = floatingInternals.get(position);
+      const internals = floatingInternals.get(context.id);
       const hasArrow = () =>
         internals?.middlewareRegistry?.middlewares.value.some((m) => m.name === "arrow") ?? false;
 

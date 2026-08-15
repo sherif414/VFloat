@@ -198,7 +198,7 @@ export function usePosition(
     update,
   };
 
-  floatingInternals.set(position, {
+  floatingInternals.set(context.id, {
     middlewareRegistry: {
       middlewares: mergedMiddlewares,
       register: registerMiddleware,

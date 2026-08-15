@@ -100,7 +100,7 @@ describe("usePosition", () => {
       anchorEl: ref<AnchorElement>(anchorEl),
       floatingEl: ref<FloatingElement>(floatingEl),
     });
-    const position = usePosition(context, {
+    usePosition(context, {
       middleware: {
         offset: 8,
         flip: true,
@@ -111,7 +111,7 @@ describe("usePosition", () => {
 
     expect(
       floatingInternals
-        .get(position)
+        .get(context.id)
         ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
     ).toEqual(["offset", "flip", "shift", "size"]);
   });
@@ -122,7 +122,7 @@ describe("usePosition", () => {
       anchorEl: ref<AnchorElement>(anchorEl),
       floatingEl: ref<FloatingElement>(floatingEl),
     });
-    const position = usePosition(context, {
+    usePosition(context, {
       middleware: {
         offset: 8,
         custom: [middleware],
@@ -131,7 +131,7 @@ describe("usePosition", () => {
 
     expect(
       floatingInternals
-        .get(position)
+        .get(context.id)
         ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
     ).toEqual(["offset", "custom"]);
   });
@@ -170,7 +170,7 @@ describe("usePosition", () => {
     expect(context.refs.arrowEl.value).toBe(arrowEl.value);
     expect(
       floatingInternals
-        .get(position)
+        .get(context.id)
         ?.middlewareRegistry?.middlewares.value.some((middleware) => middleware.name === "arrow"),
     ).toBe(true);
   });

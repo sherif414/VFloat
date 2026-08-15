@@ -77,25 +77,25 @@ function createFloatingContextId(): FloatingContextId {
 
 /**
  * Internal registry storing non-public capabilities (middleware registries)
- * attached to floating position returns via WeakMap.
+ * attached to floating contexts via WeakMap.
  *
  * @internal
  */
 export class FloatingInternalsRegistry {
-  private readonly store = new WeakMap<object, FloatingInternals>();
+  private readonly store = new WeakMap<FloatingContextId, FloatingInternals>();
 
   /**
-   * Reads internal state associated with the target.
+   * Reads internal state associated with the floating context identifier.
    */
-  get(target: object): FloatingInternals | undefined {
-    return this.store.get(target);
+  get(id: FloatingContextId): FloatingInternals | undefined {
+    return this.store.get(id);
   }
 
   /**
-   * Attaches internal capabilities onto the target object.
+   * Attaches internal capabilities onto the floating context identifier.
    */
-  set(target: object, internals: FloatingInternals): void {
-    this.store.set(target, internals);
+  set(id: FloatingContextId, internals: FloatingInternals): void {
+    this.store.set(id, internals);
   }
 }
 

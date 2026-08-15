@@ -58,7 +58,7 @@ export function useArrow(
   const { arrowEl } = refs;
   const { offset = "-4px", padding } = options;
 
-  const internals = floatingInternals.get(position);
+  const internals = floatingInternals.get(context.id);
   internals?.middlewareRegistry?.register(
     computed(() => {
       if (!arrowEl.value) return null;

@@ -247,9 +247,9 @@ describe("useFloatingContext", () => {
 });
 
 describe("FloatingInternalsRegistry", () => {
-  it("attaches and retrieves internal state on an object target", () => {
+  it("attaches and retrieves internal state on an object or symbol target", () => {
     const registry = new FloatingInternalsRegistry();
-    const target = {};
+    const target = Symbol("test-target");
     const dummyInternals = {
       middlewareRegistry: {
         middlewares: computed(() => []),
