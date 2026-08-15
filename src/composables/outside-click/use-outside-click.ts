@@ -1,5 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
-import { type FloatingContext, floatingTree } from "@/composables/floating-context";
+import type { FloatingContext } from "@/composables/floating-context";
+import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";

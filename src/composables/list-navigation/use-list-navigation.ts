@@ -294,3 +294,5 @@ export interface UseListNavigationReturn {
    */
   cleanup: () => void;
 }
+
+export type { NavigationOrientation } from "./intent";

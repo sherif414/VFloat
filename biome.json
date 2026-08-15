@@ -9,11 +9,11 @@
     "ignoreUnknown": true,
     "includes": [
       "**",
-      "!**/dist/**",
-      "!**/coverage/**",
-      "!**/playground/**",
-      "!**/docs/.vitepress/dist/**",
-      "!**/docs/.vitepress/cache/**"
+      "!**/dist",
+      "!**/coverage",
+      "!**/playground",
+      "!**/docs/.vitepress/dist",
+      "!**/docs/.vitepress/cache"
     ]
   },
   "formatter": {

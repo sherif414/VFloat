@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref, watchEffect } from "vue";
-import { floatingTree, useFloatingContext } from "@/composables/floating-context";
+import { floatingTree } from "./floating-context-tree";
+import { useFloatingContext } from "./use-floating-context";
 
 describe("useFloatingContext", () => {
   it("uses defaultOpen for uncontrolled state", () => {

@@ -1,7 +1,7 @@
 import type { Padding } from "@floating-ui/dom";
 import { type ComputedRef, computed, toValue } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { getFloatingInternals } from "@/composables/floating-context";
+import { getFloatingInternals } from "@/composables/floating-context/use-floating-context";
 import type { FloatingPosition } from "@/composables/position";
 import { arrow } from "../middlewares";
 

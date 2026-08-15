@@ -1,5 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import { type FloatingContext, floatingTree } from "@/composables/floating-context";
+import type { FloatingContext } from "@/composables/floating-context";
+import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isTypeableElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";

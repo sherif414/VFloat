@@ -27,7 +27,7 @@ import {
   watch,
 } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { setFloatingInternals } from "@/composables/floating-context";
+import { setFloatingInternals } from "@/composables/floating-context/use-floating-context";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================

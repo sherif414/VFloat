@@ -1,2 +1,10 @@
-export * from "./floating-context-tree";
-export * from "./use-floating-context";
+export type {
+  AnchorElement,
+  FloatingContext,
+  FloatingContextId,
+  FloatingElement,
+  FloatingRefs,
+  FloatingState,
+  UseFloatingContextOptions,
+} from "./use-floating-context";
+export { useFloatingContext } from "./use-floating-context";

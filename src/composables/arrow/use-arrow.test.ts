@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Ref, ShallowRef } from "vue";
 import { nextTick, ref, shallowRef } from "vue";
 import type { AnchorElement, FloatingContext, FloatingElement } from "@/composables";
-import { getFloatingInternals, useArrow, useFloatingContext, usePosition } from "@/composables";
+import { useArrow, useFloatingContext, usePosition } from "@/composables";
+import { getFloatingInternals } from "@/composables/floating-context/use-floating-context";
 import type { FloatingPosition } from "@/composables/position";
 
 // ---------------------------------------------------------------------------

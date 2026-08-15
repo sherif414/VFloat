@@ -1,6 +1,7 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import { type FloatingContext, floatingTree } from "@/composables/floating-context";
+import type { FloatingContext } from "@/composables/floating-context";
+import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
@@ -354,3 +355,5 @@ export interface UseHoverOptions {
 interface UseDelayedOpenOptions {
   delay: MaybeRef<number | { open?: number; close?: number }>;
 }
+
+export type { SafePolygonOptions } from "./polygon";

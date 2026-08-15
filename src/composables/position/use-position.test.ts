@@ -2,7 +2,8 @@ import type { Middleware, Placement } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
-import { getFloatingInternals, useArrow, useFloatingContext, usePosition } from "@/composables";
+import { useArrow, useFloatingContext, usePosition } from "@/composables";
+import { getFloatingInternals } from "@/composables/floating-context/use-floating-context";
 
 const elements: HTMLElement[] = [];
 
