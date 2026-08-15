@@ -1,4 +1,4 @@
-import { computed, type MaybeRefOrGetter, type Ref, toValue, watch } from "vue";
+import { computed, type MaybeRefOrGetter, nextTick, type Ref, toValue, watch } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { isTypeableElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
@@ -87,8 +87,22 @@ export function useListNavigation(
 
     if (intent === "previous") {
       collection.setLast();
+      if (collection.activeValue.value === null) {
+        nextTick(() => {
+          if (open.value && collection.activeValue.value === null) {
+            collection.setLast();
+          }
+        });
+      }
     } else {
       collection.setFirst();
+      if (collection.activeValue.value === null) {
+        nextTick(() => {
+          if (open.value && collection.activeValue.value === null) {
+            collection.setFirst();
+          }
+        });
+      }
     }
   };
 

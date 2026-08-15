@@ -948,5 +948,44 @@ describe("useListNavigation", () => {
       expect(childOpen.value).toBe(false);
       expect(focused).toBe(true);
     });
+
+    it("sets collection.activeValue when items register asynchronously upon opening via arrow key", async () => {
+      scope = effectScope();
+      const anchorEl = document.createElement("button");
+      const floatingEl = document.createElement("div");
+      document.body.appendChild(anchorEl);
+      document.body.appendChild(floatingEl);
+      elementsToCleanUp.push(anchorEl, floatingEl);
+
+      const openRef = ref(false);
+      const registeredIds = ref<string[]>([]);
+      let collection!: ReturnType<typeof useCollection>;
+
+      scope.run(() => {
+        const context = useFloatingContext({
+          anchorEl: ref(anchorEl),
+          floatingEl: ref(floatingEl),
+          open: openRef,
+        });
+
+        collection = useCollection({ values: registeredIds });
+
+        useListNavigation(context, {
+          collection,
+          orientation: "vertical",
+        });
+      });
+
+      expect(collection.activeValue.value).toBeNull();
+
+      dispatchKey(anchorEl, "ArrowDown");
+      expect(openRef.value).toBe(true);
+
+      // Simulate child items mounting asynchronously during nextTick
+      registeredIds.value = ["item-1", "item-2"];
+      await nextTick();
+
+      expect(collection.activeValue.value).toBe("item-1");
+    });
   });
 });
