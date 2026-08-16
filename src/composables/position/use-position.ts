@@ -203,6 +203,8 @@ export function usePosition(
       middlewares: mergedMiddlewares,
       register: registerMiddleware,
     },
+    placement,
+    middlewareData,
   });
 
   return position;

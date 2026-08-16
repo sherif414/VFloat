@@ -1,4 +1,4 @@
-import type { Middleware } from "@floating-ui/dom";
+import type { Middleware, MiddlewareData, Placement } from "@floating-ui/dom";
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { ref } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
@@ -200,4 +200,6 @@ export interface FloatingInternals {
     middlewares: ComputedRef<Middleware[]>;
     register: (middleware: MaybeRefOrGetter<Middleware | null | undefined>) => () => void;
   };
+  placement?: Readonly<Ref<Placement>>;
+  middlewareData?: Readonly<Ref<MiddlewareData>>;
 }

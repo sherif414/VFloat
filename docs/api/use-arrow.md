@@ -9,11 +9,12 @@ description: Connects an arrow element to a floating context.
 ## Type
 
 ```ts
-function useArrow(
-  context: FloatingContext,
-  position: FloatingPosition,
-  options?: UseArrowOptions,
-): UseArrowReturn;
+function useArrow(context: UseArrowContext, options?: UseArrowOptions): UseArrowReturn;
+
+interface UseArrowContext {
+  id: FloatingContextId;
+  refs: FloatingContext["refs"];
+}
 
 interface UseArrowOptions {
   offset?: string;
@@ -34,7 +35,7 @@ interface UseArrowReturn {
 - `context.refs.arrowEl` is the arrow element used by the middleware.
 - `offset` defaults to `"-4px"`.
 - `padding` is passed to the arrow middleware.
-- `position.middlewareData.value.arrow` exposes the raw middleware output if you need it.
+- `middlewareData` and `placement` are read from the floating context internals registered by `usePosition()`.
 - The arrow element still needs its own absolute positioning, since `arrowStyles` only supplies inset offsets.
 
 ## Example
@@ -65,7 +66,7 @@ const { styles } = position;
 
 useHover(context);
 
-const { arrowStyles } = useArrow(context, position, {
+const { arrowStyles } = useArrow(context, {
   offset: "-4px",
 });
 </script>

@@ -1,8 +1,11 @@
 import type { Padding } from "@floating-ui/dom";
-import { type ComputedRef, computed, toValue } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingInternals } from "@/composables/floating-context/use-floating-context";
-import type { FloatingPosition } from "@/composables/position";
+import { type ComputedRef, computed, getCurrentInstance, onMounted, toValue } from "vue";
+import type { FloatingContext, FloatingContextId } from "@/composables/floating-context";
+import {
+  floatingInternals,
+  type FloatingInternals,
+} from "@/composables/floating-context/use-floating-context";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { arrow } from "../middlewares";
 
 //=======================================================================================
@@ -16,7 +19,6 @@ import { arrow } from "../middlewares";
  * and returns the reactive styles and offsets needed to render a floating arrow pointing to the anchor.
  *
  * @param context - The shared floating context.
- * @param position - The resolved positioning and layout data.
  * @param options - Configuration options for arrow positioning.
  * @returns An object containing computed coordinates and styles for the arrow.
  *
@@ -36,7 +38,7 @@ import { arrow } from "../middlewares";
  *   arrowEl,
  * });
  * const position = usePosition(context, { placement: "top" });
- * const { arrowStyles } = useArrow(context, position);
+ * const { arrowStyles } = useArrow(context);
  * </script>
  *
  * <template>
@@ -48,34 +50,61 @@ import { arrow } from "../middlewares";
  * </template>
  * ```
  */
-export function useArrow(
-  context: FloatingContext,
-  position: FloatingPosition,
-  options: UseArrowOptions = {},
-): UseArrowReturn {
+export function useArrow(context: UseArrowContext, options: UseArrowOptions = {}): UseArrowReturn {
   const { refs } = context;
-  const { middlewareData, placement } = position;
   const { arrowEl } = refs;
   const { offset = "-4px", padding } = options;
 
-  const internals = floatingInternals.get(context.id);
-  internals?.middlewareRegistry?.register(
-    computed(() => {
-      if (!arrowEl.value) return null;
-      return arrow({ element: arrowEl, padding });
-    }),
-  );
+  // Resolved lazily or on mount in case useArrow is called before usePosition.
+  let internals: FloatingInternals | undefined = floatingInternals.get(context.id);
+  let unregisterArrow: (() => void) | undefined;
 
-  const arrowX = computed(() => middlewareData.value.arrow?.x ?? 0);
-  const arrowY = computed(() => middlewareData.value.arrow?.y ?? 0);
+  function registerArrow() {
+    if (unregisterArrow || !internals?.middlewareRegistry) return;
+    unregisterArrow = internals.middlewareRegistry.register(
+      computed(() => {
+        if (!arrowEl.value) return null;
+        return arrow({ element: arrowEl, padding });
+      }),
+    );
+  }
+
+  function getInternals(): FloatingInternals | undefined {
+    if (!internals) {
+      internals = floatingInternals.get(context.id);
+      if (internals) {
+        registerArrow();
+      }
+    }
+    return internals;
+  }
+
+  registerArrow();
+
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      if (!internals) {
+        getInternals();
+      }
+    });
+  }
+
+  tryOnScopeDispose(() => {
+    unregisterArrow?.();
+  });
+
+  const arrowX = computed(() => getInternals()?.middlewareData?.value.arrow?.x ?? 0);
+  const arrowY = computed(() => getInternals()?.middlewareData?.value.arrow?.y ?? 0);
 
   const arrowStyles = computed(() => {
-    if (!arrowEl.value || !middlewareData.value.arrow) {
+    const activeInternals = getInternals();
+    if (!arrowEl.value || !activeInternals?.middlewareData?.value.arrow) {
       return {};
     }
 
     // The arrow is positioned on the opposite side of the resolved placement.
-    const side = toValue(placement).split("-")[0] as "top" | "bottom" | "left" | "right";
+    const placement = activeInternals.placement ? toValue(activeInternals.placement) : "bottom";
+    const side = placement.split("-")[0] as "top" | "bottom" | "left" | "right";
 
     if (side === "bottom") {
       return {
@@ -114,6 +143,21 @@ export function useArrow(
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Context required by `useArrow`.
+ */
+export interface UseArrowContext {
+  /**
+   * The unique identifier for the floating context.
+   */
+  id: FloatingContextId;
+
+  /**
+   * The reactive refs exposed by the floating context.
+   */
+  refs: FloatingContext["refs"];
+}
 
 /**
  * Computed arrow coordinates and styles returned by `useArrow()`.

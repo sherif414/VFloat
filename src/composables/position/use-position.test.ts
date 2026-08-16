@@ -163,9 +163,9 @@ describe("usePosition", () => {
       floatingEl: ref<FloatingElement>(floatingEl),
       arrowEl,
     });
-    const position = usePosition(context);
+    usePosition(context);
 
-    useArrow(context, position);
+    useArrow(context);
 
     expect(context.refs.arrowEl.value).toBe(arrowEl.value);
     expect(
@@ -173,5 +173,17 @@ describe("usePosition", () => {
         .get(context.id)
         ?.middlewareRegistry?.middlewares.value.some((middleware) => middleware.name === "arrow"),
     ).toBe(true);
+  });
+
+  it("stores placement and middlewareData in floatingInternals", async () => {
+    const context = useFloatingContext({
+      anchorEl: ref<AnchorElement>(anchorEl),
+      floatingEl: ref<FloatingElement>(floatingEl),
+    });
+    const position = usePosition(context, { placement: "top" });
+
+    const internals = floatingInternals.get(context.id);
+    expect(internals?.placement).toBe(position.placement);
+    expect(internals?.middlewareData).toBe(position.middlewareData);
   });
 });

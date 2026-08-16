@@ -120,8 +120,7 @@ const position = usePosition(context, {
 
 useHover(context);
 
-const { arrowStyles } = useArrow(context, position, {
-  element: arrowEl,
+const { arrowStyles } = useArrow(context, {
   offset: "-4px",
 });
 </script>

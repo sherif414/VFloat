@@ -158,4 +158,6 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 ## Review Checklist for Agents
 
 - [ ] Run `pnpm install` after pulling remote changes and before getting started.
+- [ ] Always write targeted regression unit tests whenever fixing a bug, handling an edge case, or addressing an ordering/lifecycle dependency.
+- [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
 - [ ] Run `pnpm lint`, `pnpm type-check`, and `pnpm test` to validate changes.

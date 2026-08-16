@@ -255,6 +255,8 @@ describe("FloatingInternalsRegistry", () => {
         middlewares: computed(() => []),
         register: vi.fn(),
       },
+      placement: ref("bottom" as const),
+      middlewareData: ref({}),
     };
 
     expect(registry.get(target)).toBeUndefined();

@@ -139,7 +139,7 @@ const position = usePosition(context, {
 });
 const { styles } = position;
 
-const { arrowStyles } = useArrow(context, position);
+const { arrowStyles } = useArrow(context);
 </script>
 ```
 
