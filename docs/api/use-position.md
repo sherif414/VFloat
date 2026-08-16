@@ -67,7 +67,8 @@ type FloatingStyles = {
 - `enabled` gates computation and auto-update listeners without tying positioning to open state.
 - `x`, `y`, `placement`, `strategy`, `middlewareData`, and `isPositioned` expose the last computed positioning result.
 - `styles` is the style ref you usually bind to the floating element.
-- Other composables, such as [`useArrow`](/api/use-arrow), can register middleware through the internal registry attached to the returned position object.
+- `update()` manually recalculates the positioning layout when needed.
+- Companion composables such as [`useArrow`](/api/use-arrow) automatically integrate with `usePosition()` when configuring arrow elements on the same floating context.
 
 ## Example
 

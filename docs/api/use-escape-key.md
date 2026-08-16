@@ -31,6 +31,7 @@ interface UseEscapeKeyOptions {
 - `preventDefault` defaults to `false`.
 - `onEscape` replaces the default close behavior when you need custom handling.
 - `ignoreEscapeKey` is a predicate to determine if an escape key press should be ignored, allowing sub-components or child branches to handle the escape event first.
+- When nested floating contexts are linked via `parentContext`, pressing Escape closes the deepest open child context first before closing parent overlays.
 
 ## Example
 

@@ -12,9 +12,9 @@ This page shows both models and when each one makes sense.
 
 ## The Default: Let VFloat Own It
 
-If you call [`useFloatingContext`](/api/use-floating-context) without `state.open`, VFloat creates and owns that state for you.
+If you call [`useFloatingContext`](/api/use-floating-context) without `open`, VFloat creates and owns that state for you.
 
-To start an uncontrolled surface open, pass `state.defaultOpen`. It is an initial value, not a reactive input.
+To start an uncontrolled surface open, pass `defaultOpen`. It is an initial value, not a reactive input.
 
 ```vue
 <script setup lang="ts">
@@ -70,7 +70,7 @@ When using this pattern, VFloat automatically updates the `open` ref when intera
 To update the state programmatically, **always call `context.state.setOpen()`** instead of mutating the `open` ref directly. This guarantees that internal cleanup tasks, such as dismissing nested menus, execute correctly.
 
 > [!IMPORTANT]
-> The `open` ref passed to the state configuration must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.
+> The `open` ref passed to `useFloatingContext` options must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.
 
 > [!NOTE]
 > `onOpenChange` is mainly for side-effects and debugging. Do not use it to synchronize or drive the `open` state.

@@ -108,7 +108,7 @@ provide("MenuLevelContext", { context: rootContext, collection });
       v-if="rootContext.state.open.value"
       ref="contentRef"
       role="menu"
-      :style="rootPosition.styles.value"
+      :style="rootPosition.styles"
     >
       <slot />
     </div>
@@ -215,12 +215,7 @@ provide("MenuLevelContext", { context: subContext, collection, parentLevel });
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="subContext.state.open.value"
-      ref="contentRef"
-      role="menu"
-      :style="position.styles.value"
-    >
+    <div v-if="subContext.state.open.value" ref="contentRef" role="menu" :style="position.styles">
       <slot />
     </div>
   </Teleport>
@@ -232,7 +227,7 @@ provide("MenuLevelContext", { context: subContext, collection, parentLevel });
 ## Edge Cases Solved Automatically
 
 - **Outside Click Safety:** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useOutsideClick`](/api/use-outside-click) inspects all registered descendant floating contexts.
-- **Deepest Escape First:** Pressing `Escape` queries `getDeepestOpenFloatingContext()` and closes only the innermost open submenu.
+- **Deepest Escape First:** Pressing `Escape` automatically dismisses only the innermost open submenu first.
 - **Cascading Teardown:** Closing the root menu automatically tears down all child submenus in reverse depth order.
 - **Safe Triangle:** Moving the cursor diagonally across sibling items to enter the submenu is protected by `useHover({ safePolygon: true })`.
 

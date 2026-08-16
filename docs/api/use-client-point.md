@@ -24,7 +24,6 @@ interface UseClientPointOptions {
 
 interface UseClientPointReturn {
   coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
-  updatePosition: (x: number, y: number) => void;
 }
 ```
 

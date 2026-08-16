@@ -58,7 +58,7 @@ const visibility = computed(() => {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="{ ...styles.value, visibility }">
+  <div v-if="context.state.open.value" ref="floatingEl" :style="[styles, { visibility }]">
     Floating content
   </div>
 </template>

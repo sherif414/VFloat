@@ -74,5 +74,5 @@ description: Positions the arrow so it stays aligned with the reference element.
 
 - See also
   - [useArrow](/api/use-arrow) - Registers and styles the arrow element from the floating context
-  - [useFloatingContext](/api/use-floating-context) - Core positioning composable
+  - [useFloatingContext](/api/use-floating-context) - Creates shared refs and open state
   - [offset](/api/offset) - Adds spacing between the anchor and floating element

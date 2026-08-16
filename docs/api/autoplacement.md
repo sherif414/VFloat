@@ -63,4 +63,4 @@ const { styles } = usePosition(context, {
 - See also
   - [flip](/api/flip) - Keeps a preferred placement and falls back when needed
   - [shift](/api/shift) - Nudges the floating element back into view
-  - [useFloatingContext](/api/use-floating-context) - Core positioning composable
+  - [useFloatingContext](/api/use-floating-context) - Creates shared refs and open state

@@ -43,7 +43,7 @@ const anchorEl = useTemplateRef("anchorEl");
 const floatingEl = useTemplateRef("floatingEl");
 
 const context = useFloatingContext({ anchorEl, floatingEl });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8)],
 });
@@ -54,9 +54,7 @@ useHover(context);
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="position.styles.value">
-    This is a tooltip
-  </div>
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">This is a tooltip</div>
 </template>
 ```
 
@@ -70,6 +68,7 @@ import {
   usePosition,
   useClick,
   useEscapeKey,
+  useOutsideClick,
   offset,
   flip,
   shift,
@@ -79,21 +78,20 @@ const triggerEl = useTemplateRef("triggerEl");
 const menuEl = useTemplateRef("menuEl");
 
 const context = useFloatingContext({ anchorEl: triggerEl, floatingEl: menuEl });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "bottom-start",
   middlewares: [offset(4), flip(), shift({ padding: 8 })],
 });
 
 useClick(context);
-useEscapeKey(context, {
-  onEscape: () => context.state.setOpen(false),
-});
+useOutsideClick(context);
+useEscapeKey(context);
 </script>
 
 <template>
   <button ref="triggerEl">Open Menu</button>
 
-  <div v-if="context.state.open.value" ref="menuEl" :style="position.styles.value">
+  <div v-if="context.state.open.value" ref="menuEl" :style="styles">
     <div>Menu Item 1</div>
     <div>Menu Item 2</div>
     <div>Menu Item 3</div>
@@ -113,7 +111,7 @@ const tooltipEl = useTemplateRef("tooltipEl");
 const arrowEl = useTemplateRef("arrowEl");
 
 const context = useFloatingContext({ anchorEl, floatingEl: tooltipEl, arrowEl });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   placement: "top",
   middlewares: [offset(8), flip()],
 });
@@ -128,12 +126,7 @@ const { arrowStyles } = useArrow(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="context.state.open.value"
-    ref="tooltipEl"
-    :style="position.styles.value"
-    class="tooltip"
-  >
+  <div v-if="context.state.open.value" ref="tooltipEl" :style="styles" class="tooltip">
     This is a tooltip with an arrow
     <div ref="arrowEl" class="arrow" :style="arrowStyles"></div>
   </div>
@@ -164,16 +157,25 @@ const { arrowStyles } = useArrow(context, {
 
 ### Positioning
 
-- `**useFloatingContext**`: Core positioning logic with middleware support
-- `**useArrow**`: Position arrow elements pointing to the anchor
+- `**useFloatingContext**`: Creates shared refs and open state
+- `**usePosition**`: Positions a floating element relative to an anchor with middleware support
+- `**useArrow**`: Positions arrow elements pointing to the anchor
+- `**useClientPoint**`: Positions floating elements at cursor/touch coordinates
 
 ### Interactions
 
-- `**useHover**`: Hover interactions with configurable delays
-- `**useFocus**`: Focus/blur event handling for keyboard navigation
 - `**useClick**`: Click event handling with toggle and dismiss options
-- `**useEscapeKey**`: Close on ESC key press with composition handling
-- `**useClientPoint**`: Position floating elements at cursor/touch coordinates
+- `**useHover**`: Hover interactions with configurable delays and safe polygon
+- `**useFocus**`: Focus/blur event handling for keyboard navigation
+- `**useFocusTrap**`: Keeps keyboard focus inside floating content
+- `**useEscapeKey**`: Closes floating content on Escape key press
+- `**useOutsideClick**`: Closes floating content when clicking outside
+- `**useRole**`: Synchronizes ARIA roles and states for floating surfaces
+
+### Collections
+
+- `**useCollection**`: Manages collections for keyboard navigation
+- `**useListNavigation**`: Coordinates arrow-key, Home, End, and Tab navigation for floating collections
 
 ### Middleware
 
@@ -186,8 +188,6 @@ VFloat ships these positioning middleware helpers:
 - `**autoPlacement**`: Automatically choose the best placement
 - `**size**`: Resize floating element to fit within viewport
 - `**arrow**`: Position arrow elements within the floating surface
-
-**Arrow positioning** is handled by the `[useArrow](/api/use-arrow)` composable, which owns arrow registration for the floating context.
 
 ## Project Status
 

@@ -42,7 +42,7 @@ Because the child is linked via `parentContext`, the click is recognized as inte
 
 ### 2. Stacked Escape Key Handling
 
-When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) locates the deepest open floating context in the family (`getDeepestOpenFloatingContext`). It dismisses only the topmost child overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order.
+When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) inspects the context family and dismisses only the deepest open child overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order.
 
 ### 3. Cascading Teardown
 

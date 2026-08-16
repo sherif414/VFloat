@@ -63,7 +63,7 @@ When a surface needs JavaScript positioning, call `usePosition(context)`. That r
 - `styles`
 - `update`
 
-Most templates only need `styles.value`, but the rest of the data is there when you need deeper control or helpers such as arrows.
+Most templates only need to bind `:style="styles"`, but the rest of the data is there when you need deeper control or helpers such as arrows.
 
 ## The Core Loop
 

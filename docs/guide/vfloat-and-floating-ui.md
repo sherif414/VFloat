@@ -24,8 +24,8 @@ Familiar names do not always mean identical API shape or identical mental model.
 
 VFloat has its own public vocabulary and its own grouping model:
 
-- the public root is centered around `useFloatingContext({ refs, state })`
-- the shared context groups `refs` and `state`
+- the public root is centered around `useFloatingContext({ anchorEl, floatingEl, ... })`
+- the returned context groups `refs` and `state`
 - `usePosition(context)` adds geometry when a surface needs JavaScript positioning
 - interaction composables are designed around the shared context
 - some composition patterns are Vue-specific and intentionally tailored to this library
