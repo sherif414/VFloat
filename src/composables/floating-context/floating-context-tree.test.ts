@@ -230,6 +230,76 @@ describe("FloatingTree & FloatingTreeNode", () => {
       });
     });
 
+    describe("registration edge cases & warnings", () => {
+      it("warns and rejects parent link when parent is not registered (out-of-order registration)", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const tree = new FloatingTree();
+        const parent = createMockContext();
+        const child = createMockContext({ isRoot: false });
+
+        // Register child before parent is in the tree
+        const childNode = tree.addNode(child, parent);
+
+        expect(childNode.parentId).toBeNull();
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("parent node is not registered in the floating tree"),
+        );
+
+        warnSpy.mockRestore();
+      });
+
+      it("warns and prevents self-parenting", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const tree = new FloatingTree();
+        const context = createMockContext();
+
+        const node = tree.addNode(context, context);
+
+        expect(node.parentId).toBeNull();
+        expect(warnSpy).toHaveBeenCalledWith("[FloatingTree] A context cannot be its own parent.");
+
+        warnSpy.mockRestore();
+      });
+
+      it("warns and returns existing node on duplicate registration preserving children", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const tree = new FloatingTree();
+        const parent = createMockContext();
+        const child = createMockContext({ isRoot: false });
+
+        const node1 = tree.addNode(parent);
+        tree.addNode(child, parent);
+        expect(tree.getChildren(parent)).toHaveLength(1);
+
+        // Re-adding the parent context
+        const node2 = tree.addNode(parent);
+
+        expect(node2).toBe(node1);
+        expect(tree.getChildren(parent)).toHaveLength(1);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("is already registered in the floating tree"),
+        );
+
+        warnSpy.mockRestore();
+      });
+
+      it("avoids infinite loop when circular references exist", () => {
+        const tree = new FloatingTree();
+        const nodeA = createMockContext();
+        const nodeB = createMockContext({ isRoot: false });
+
+        tree.addNode(nodeA);
+        tree.addNode(nodeB, nodeA);
+
+        // Simulate an artificial cycle in childIds
+        const bTreeNode = tree.getNode(nodeB.id);
+        bTreeNode?.addChild(nodeA.id);
+
+        expect(() => tree.getDescendants(nodeA)).not.toThrow();
+        expect(() => tree.getDeepestOpenContext(nodeA)).not.toThrow();
+      });
+    });
+
     describe("descendant actions", () => {
       it("closes descendant contexts from innermost child to nearest parent with reason and event", () => {
         const calls: string[] = [];
@@ -254,6 +324,43 @@ describe("FloatingTree & FloatingTreeNode", () => {
         expect(calls).toEqual(["grandchild:outside-pointer", "child:outside-pointer"]);
         expect(grandchild.state.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
         expect(child.state.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
+      });
+    });
+
+    describe("shadow DOM containment", () => {
+      it("detects targets within shadow DOM attached to floating elements and descendants", () => {
+        const shadowHost = document.createElement("div");
+        const shadowRoot = shadowHost.attachShadow({ mode: "open" });
+        const shadowBtn = document.createElement("button");
+        shadowRoot.appendChild(shadowBtn);
+
+        const context = createMockContext();
+        context.refs.floatingEl.value = shadowHost;
+
+        const tree = new FloatingTree();
+        tree.addNode(context, null);
+
+        expect(tree.isTargetWithin(context, shadowBtn)).toBe(true);
+      });
+
+      it("detects targets within shadow DOM attached to descendant context elements", () => {
+        const rootHost = document.createElement("div");
+        const childHost = document.createElement("div");
+        const childShadowRoot = childHost.attachShadow({ mode: "open" });
+        const nestedTarget = document.createElement("span");
+        childShadowRoot.appendChild(nestedTarget);
+
+        const root = createMockContext();
+        root.refs.floatingEl.value = rootHost;
+
+        const child = createMockContext({ isRoot: false });
+        child.refs.floatingEl.value = childHost;
+
+        const tree = new FloatingTree();
+        tree.addNode(root, null);
+        tree.addNode(child, root);
+
+        expect(tree.isTargetWithin(root, nestedTarget)).toBe(true);
       });
     });
   });

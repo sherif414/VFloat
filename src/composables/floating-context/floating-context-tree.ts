@@ -1,20 +1,10 @@
 import { type ShallowRef, shallowRef } from "vue";
+import { getDomPath } from "@/shared/dom";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 import type { FloatingContext, FloatingContextId, FloatingState } from "./use-floating-context";
 
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-/**
- * Minimal shape of a floating context required for DOM containment and family queries.
- *
- * @internal
- */
-export type FloatingContextTarget = Pick<FloatingContext, "refs" | "state"> & {
-  id?: FloatingContextId;
-};
+const isDev = import.meta.env.DEV;
 
 //=======================================================================================
 // 📌 Node Model
@@ -62,13 +52,39 @@ export class FloatingTree {
     context: FloatingContext,
     parentContext: FloatingContext | null = null,
   ): FloatingTreeNode {
-    const node = new FloatingTreeNode(context, parentContext?.id ?? null);
-    this.nodes.set(context.id, node);
-
-    if (parentContext) {
-      const parentNode = this.nodes.get(parentContext.id);
-      parentNode?.addChild(context.id);
+    // Guard against duplicate registration: return existing node to preserve child tree
+    const existingNode = this.nodes.get(context.id);
+    if (existingNode) {
+      if (isDev) {
+        console.warn(
+          `[FloatingTree] Context "${String(context.id)}" is already registered in the floating tree.`,
+        );
+      }
+      return existingNode;
     }
+
+    // Validate parent linkage to prevent out-of-order registration and cycles
+    let resolvedParentId: FloatingContextId | null = null;
+    if (parentContext) {
+      if (parentContext.id === context.id) {
+        if (isDev) {
+          console.warn("[FloatingTree] A context cannot be its own parent.");
+        }
+      } else {
+        const parentNode = this.nodes.get(parentContext.id);
+        if (parentNode) {
+          resolvedParentId = parentContext.id;
+          parentNode.addChild(context.id);
+        } else if (isDev) {
+          console.warn(
+            `[FloatingTree] Cannot register node under parent "${String(parentContext.id)}": parent node is not registered in the floating tree. Ensure parent context is initialized before child context.`,
+          );
+        }
+      }
+    }
+
+    const node = new FloatingTreeNode(context, resolvedParentId);
+    this.nodes.set(context.id, node);
 
     tryOnScopeDispose(() => {
       this.removeNode(context.id);
@@ -121,8 +137,12 @@ export class FloatingTree {
   getDescendants(target: FloatingContext | FloatingContextId): FloatingContext[] {
     const rootId = typeof target === "object" ? target.id : target;
     const descendants: FloatingContext[] = [];
+    const visited = new Set<FloatingContextId>();
 
     const traverse = (currentId: FloatingContextId) => {
+      if (visited.has(currentId)) return;
+      visited.add(currentId);
+
       const node = this.nodes.get(currentId);
       if (!node) return;
 
@@ -169,8 +189,12 @@ export class FloatingTree {
 
     let deepestContext: T | FloatingContext = context;
     let maxDepth = context.state.open.value ? 0 : -1;
+    const visited = new Set<FloatingContextId>();
 
     const traverse = (ctx: FloatingContext, depth: number) => {
+      if (visited.has(ctx.id)) return;
+      visited.add(ctx.id);
+
       if (ctx.state.open.value && depth > maxDepth) {
         maxDepth = depth;
         deepestContext = ctx;
@@ -190,18 +214,31 @@ export class FloatingTree {
 
   /**
    * Checks whether `target` is inside the context's own elements or any descendant's.
+   * Traverses Shadow DOM boundaries via `getDomPath()` to support Web Components.
    */
   isTargetWithin(context: FloatingContextTarget, target: EventTarget | null): boolean {
     if (!(target instanceof Node)) return false;
 
+    const path = getDomPath(target);
     const containsTarget = (ctx: FloatingContextTarget): boolean => {
       const anchorEl = ctx.refs.anchorEl.value;
-      const anchorDom =
-        anchorEl instanceof HTMLElement
-          ? anchorEl
-          : ((anchorEl?.contextElement as HTMLElement | undefined) ?? null);
+      const floatingEl = ctx.refs.floatingEl.value;
 
-      return Boolean(anchorDom?.contains(target) || ctx.refs.floatingEl.value?.contains(target));
+      if (floatingEl && (floatingEl.contains(target) || path.includes(floatingEl))) {
+        return true;
+      }
+
+      if (anchorEl) {
+        if (anchorEl instanceof Element) {
+          if (anchorEl.contains(target) || path.includes(anchorEl)) return true;
+        } else if (anchorEl.contextElement instanceof Element) {
+          if (anchorEl.contextElement.contains(target) || path.includes(anchorEl.contextElement)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     };
 
     if (containsTarget(context)) return true;
@@ -236,3 +273,16 @@ export class FloatingTree {
 //=======================================================================================
 
 export const floatingTree = new FloatingTree();
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Minimal shape of a floating context required for DOM containment and family queries.
+ *
+ * @internal
+ */
+export type FloatingContextTarget = Pick<FloatingContext, "refs" | "state"> & {
+  id?: FloatingContextId;
+};
