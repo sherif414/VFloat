@@ -1,7 +1,4 @@
-import { execSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const requiredBranch = "main";
 const dryRun = process.env.VFLOAT_RELEASE_DRY_RUN === "1";
@@ -37,33 +34,6 @@ if (!githubToken) {
   reportCredentialProblem(
     "Missing GitHub authentication. Please log in with `gh auth login` or set GITHUB_TOKEN / GH_TOKEN.",
   );
-}
-
-const npmEnv = { ...process.env };
-configureNpmAuth(npmEnv);
-
-if (!npmEnv.NODE_AUTH_TOKEN) {
-  if (process.env.VFLOAT_RELEASE_SKIP_NPM_WHOAMI !== "1") {
-    try {
-      execSync("npm whoami --registry=https://registry.npmjs.org/", {
-        stdio: ["ignore", "pipe", "ignore"],
-        env: npmEnv,
-      });
-    } catch {
-      reportCredentialProblem(
-        "Missing npm authentication. Please log in with `npm login` or set NODE_AUTH_TOKEN.",
-      );
-    }
-  }
-} else if (process.env.VFLOAT_RELEASE_SKIP_NPM_WHOAMI !== "1") {
-  try {
-    execSync("npm whoami --registry=https://registry.npmjs.org/", {
-      stdio: "inherit",
-      env: { ...npmEnv, NPM_CONFIG_PROVENANCE: "false" },
-    });
-  } catch {
-    fail("npm whoami failed with configured authentication.");
-  }
 }
 
 console.log("[release:preflight] Local release preflight passed.");
@@ -104,9 +74,10 @@ function read(command, args) {
 }
 
 function run(command, args, options = {}) {
+  const isBinary = ["git", "gh", "node"].includes(command);
   const result = spawnSync(command, args, {
     encoding: "utf8",
-    shell: false,
+    shell: isBinary ? false : process.platform === "win32",
     stdio: options.stdio ?? "inherit",
     env: options.env ?? process.env,
   });
@@ -126,33 +97,4 @@ function run(command, args, options = {}) {
 function fail(message) {
   console.error(`[release:preflight] ${message}`);
   process.exit(1);
-}
-
-function configureNpmAuth(env) {
-  if (!env.NODE_AUTH_TOKEN || env.NPM_CONFIG_USERCONFIG) {
-    return;
-  }
-
-  const dir = mkdtempSync(join(tmpdir(), "vfloat-release-"));
-  const userConfigPath = join(dir, ".npmrc");
-
-  writeFileSync(
-    userConfigPath,
-    [
-      "registry=https://registry.npmjs.org/",
-      "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}",
-      "",
-    ].join("\n"),
-  );
-
-  env.NPM_CONFIG_USERCONFIG = userConfigPath;
-
-  const cleanup = () => {
-    try {
-      rmSync(dir, { recursive: true, force: true });
-    } catch {}
-  };
-  process.on("exit", cleanup);
-  process.on("SIGINT", cleanup);
-  process.on("SIGTERM", cleanup);
 }

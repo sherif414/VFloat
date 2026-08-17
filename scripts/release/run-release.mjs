@@ -1,7 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const env = { ...process.env };
@@ -14,8 +11,6 @@ if (githubToken && !env.GITHUB_TOKEN) {
 if (args.includes("--dry-run")) {
   env.VFLOAT_RELEASE_DRY_RUN = "1";
 }
-
-configureNpmAuth(env);
 
 const result = spawnSync("pnpm", ["exec", "release-it", ...args], {
   stdio: "inherit",
@@ -48,33 +43,4 @@ function getGitHubToken(environment = process.env) {
   }
 
   return null;
-}
-
-function configureNpmAuth(environment) {
-  if (!environment.NODE_AUTH_TOKEN || environment.NPM_CONFIG_USERCONFIG) {
-    return;
-  }
-
-  const dir = mkdtempSync(join(tmpdir(), "vfloat-release-"));
-  const userConfigPath = join(dir, ".npmrc");
-
-  writeFileSync(
-    userConfigPath,
-    [
-      "registry=https://registry.npmjs.org/",
-      "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}",
-      "",
-    ].join("\n"),
-  );
-
-  environment.NPM_CONFIG_USERCONFIG = userConfigPath;
-
-  const cleanup = () => {
-    try {
-      rmSync(dir, { recursive: true, force: true });
-    } catch {}
-  };
-  process.on("exit", cleanup);
-  process.on("SIGINT", cleanup);
-  process.on("SIGTERM", cleanup);
 }

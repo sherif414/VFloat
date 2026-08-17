@@ -1,84 +1,90 @@
 # Release VFloat
 
-VFloat releases are local and zero-configuration. The local release command validates the repo, updates the changelog, creates the release commit and tag, pushes them to GitHub, creates the GitHub Release, publishes `v-float` to npm, and deploys the documentation to Cloudflare Pages.
+VFloat releases are streamlined, local-driven, and zero-configuration. The release command validates the repo, calculates semantic versions, updates the changelog and bundle metrics, creates the release commit and tag, pushes to GitHub, and creates the GitHub Release.
 
-GitHub Actions verifies pushes, pull requests, and release tags. It does not publish releases on normal `main` pushes.
+Publishing to the **npm registry** is executed automatically by **GitHub Actions** via **npm Trusted Publishing (OIDC)** with cryptographic build provenance (`--provenance`).
 
-## Authentication (One-Time Setup)
+---
 
-Release workflows authenticate via standard interactive CLI login sessions stored in your operating system keyring / user configs:
+## 1. Authentication (One-Time Setup)
+
+Local release operations authenticate via the **GitHub CLI (`gh`)**:
 
 ```powershell
-# 1. GitHub CLI login (for release commit, tag push, and GitHub Release)
+# 1. GitHub CLI login (used for tag pushes and GitHub Release creation)
 gh auth login
 
-# 2. npm registry login (for package publishing)
-npm login
-
-# 3. Cloudflare login (for documentation site deployment)
+# 2. Cloudflare login (used for documentation site deployment)
 pnpm exec wrangler login
 ```
 
-_(CI environments can alternatively supply tokens via `GITHUB_TOKEN`, `NODE_AUTH_TOKEN`, `CLOUDFLARE_API_TOKEN`, and `CLOUDFLARE_ACCOUNT_ID`.)_
+_(No `$env:GITHUB_TOKEN` or `$env:NODE_AUTH_TOKEN` environment variables are required)._
 
-## Preflight
+---
 
-Start from a clean `main` branch:
+## 2. npm Trusted Publishing (One-Time npmjs.com Setup)
+
+npm package publishing uses OpenID Connect (OIDC). To configure on npmjs.com:
+
+1. Open [npmjs.com/package/v-float/access](https://www.npmjs.com/package/v-float/access)
+2. Under **Publishing Access** -> **Trusted Publishers**, click **Add Trusted Publisher** -> **GitHub Actions**
+3. Configure:
+   - **GitHub organization / user**: `sherif414`
+   - **Repository**: `VFloat`
+   - **Workflow filename**: `release.yml`
+   - **Environment name**: _(leave blank)_
+
+---
+
+## 3. Preflight & Dry Run
+
+Verify repository readiness before publishing:
 
 ```powershell
-git checkout main
-git pull --ff-only
-pnpm install
+# Preflight health checks (branch, worktree, remote sync, gh auth)
 pnpm run release:preflight
-```
 
-The preflight verifies:
-
-- the current branch is `main`;
-- the worktree has uncommitted changes;
-- local `main` is synchronized with `origin/main`;
-- GitHub authentication is active (`gh auth status`);
-- npm authentication is active (`npm whoami`).
-
-## Dry Run
-
-Preview the release before publishing:
-
-```powershell
+# Dry-run release simulation (previews version bump and changelog without mutating remotes)
 pnpm run release:dry
+
+# Dry-run docs deployment
 pnpm run docs:deploy -- --dry-run
 ```
 
-The dry run skips remote mutations while previewing the version bump, changelog notes, package size metrics, and deployment commands.
+---
 
-## Publish
+## 4. Publish Release
 
-Choose the version increment:
+Execute the target release command:
 
 ```powershell
+# For bug fixes:
 pnpm run release:patch
+
+# For new features & minor updates:
 pnpm run release:minor
+
+# For major milestone releases:
 pnpm run release:major
 ```
 
-Use `patch` for fixes, `minor` for new features or breaking changes on the `0.x` line, and `major` only when intentionally moving to the next major line.
+### What Happens Automatically:
 
-The release pipeline validates lint, type-check, tests, build, and package size (`pnpm run size`) before bumping, then packages the distribution and records the size metrics.
+1. Runs lint, type-check, test suite, and bundle build.
+2. Updates `package.json` version.
+3. Generates release notes in `CHANGELOG.md` via `changelogen`.
+4. Updates `docs/.vitepress/data/package-size.json` with fresh bundle metrics.
+5. Commits `chore: release v<version>` and creates tag `v<version>`.
+6. Pushes commit and tag to `origin/main`.
+7. Creates the GitHub Release with extracted release notes.
+8. Triggers GitHub Actions (`.github/workflows/release.yml`) to publish `v-float@<version>` to npm with `--provenance`.
 
-After publishing finishes, verify:
+---
 
-- `CHANGELOG.md` has the new version section;
-- `docs/.vitepress/data/package-size.json` is updated with the released version;
-- the release commit and `vX.Y.Z` tag are pushed;
-- the GitHub Release exists;
-- npm shows the published `v-float` version.
-
-## Documentation Deployment
+## 5. Documentation Deployment
 
 Deploy the updated documentation site to Cloudflare Pages:
 
 ```powershell
 pnpm run docs:deploy
 ```
-
-The script automatically computes package size bundle metrics, runs `pnpm run docs:build`, and deploys the site to Cloudflare Pages using your active Wrangler session.

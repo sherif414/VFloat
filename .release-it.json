@@ -7,25 +7,19 @@
     "requireCleanWorkingDir": true
   },
   "npm": {
-    "publish": true,
-    "publishPath": "."
+    "publish": false
   },
   "hooks": {
     "before:init": ["node ./scripts/release/before-init.mjs"],
-    "before:bump": [
-      "pnpm run lint",
-      "pnpm run type-check",
-      "pnpm run test",
-      "pnpm run build",
-      "pnpm run size"
-    ],
+    "before:bump": ["pnpm run lint", "pnpm run type-check", "pnpm run test", "pnpm run build"],
     "after:bump": [
       "pnpm exec changelogen -r ${version} --output CHANGELOG.md",
-      "pnpm pack",
-      "pnpm run size",
+      "pnpm run size -- --quiet",
       "git add package.json CHANGELOG.md docs/.vitepress/data/package-size.json"
     ],
-    "after:release": ["echo Successfully released ${name} v${version} to ${repo.repository}."]
+    "after:release": [
+      "echo Successfully released ${name} v${version} to GitHub (npm publication triggered via CI)."
+    ]
   },
   "github": {
     "release": true,
