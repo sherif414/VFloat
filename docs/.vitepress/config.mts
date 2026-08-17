@@ -195,7 +195,7 @@ export default defineConfigWithTheme({
             { text: "useClick", link: "/api/use-click" },
             { text: "useHover", link: "/api/use-hover" },
             { text: "useFocus", link: "/api/use-focus" },
-            { text: "useFocusTrap", link: "/api/use-focus-trap" },
+            { text: "useFocusManager", link: "/api/use-focus-manager" },
             { text: "useEscapeKey", link: "/api/use-escape-key" },
             { text: "useOutsideClick", link: "/api/use-outside-click" },
             { text: "useRole", link: "/api/use-role" },

@@ -17,7 +17,7 @@ A dialog usually needs:
 - focus containment while open
 - clear semantics such as `role="dialog"` and `aria-modal="true"` for modal flows
 
-In VFloat terms, the core stack is usually [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click) or manual open state, [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useFocusTrap`](/api/use-focus-trap).
+In VFloat terms, the core stack is usually [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click) or manual open state, [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useFocusManager`](/api/use-focus-manager).
 
 ## Step 1: Build The Shared Context
 
@@ -47,7 +47,7 @@ import {
   useClick,
   useEscapeKey,
   useFloatingContext,
-  useFocusTrap,
+  useFocusManager,
   useOutsideClick,
   usePosition,
 } from "v-float";
@@ -62,7 +62,7 @@ useClick(context);
 useOutsideClick(context);
 useEscapeKey(context);
 
-useFocusTrap(context, {
+useFocusManager(context, {
   modal: true,
 });
 </script>

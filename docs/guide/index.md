@@ -48,7 +48,7 @@ useOutsideClick(context);
 useEscapeKey(context);
 ```
 
-Add [`useListNavigation`](/api/use-list-navigation) and a [`useCollection`](/api/use-collection) and you're building a keyboard-navigable menu. Add [`useFocusTrap`](/api/use-focus-trap) and you've got a dialog. The context stays the same — you just change which composables plug into it.
+Add [`useListNavigation`](/api/use-list-navigation) and a [`useCollection`](/api/use-collection) and you're building a keyboard-navigable menu. Add [`useFocusManager`](/api/use-focus-manager) and you've got a dialog. The context stays the same — you just change which composables plug into it.
 
 Middlewares work the same way. Start with [`offset`](/api/offset) for spacing. Layer in [`flip`](/api/flip) when the surface should switch sides near a viewport edge, [`shift`](/api/shift) to keep it in view, [`size`](/api/size) to constrain its dimensions, or [`arrow`](/api/arrow) to point it back at the anchor.
 

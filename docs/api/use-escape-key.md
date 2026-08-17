@@ -60,4 +60,4 @@ useEscapeKey(context);
 
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
-- [`useFocusTrap`](/api/use-focus-trap)
+- [`useFocusManager`](/api/use-focus-manager)

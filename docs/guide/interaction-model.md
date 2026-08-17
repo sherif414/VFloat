@@ -21,7 +21,7 @@ Examples:
 - [`useOutsideClick`](/api/use-outside-click) reacts to outside pointer input
 - [`useFocus`](/api/use-focus) reacts to focus and blur
 - [`useEscapeKey`](/api/use-escape-key) reacts to Escape
-- [`useFocusTrap`](/api/use-focus-trap) constrains focus while open
+- [`useFocusManager`](/api/use-focus-manager) orchestrates focus while open
 
 ## One Context, Many Behaviors
 
