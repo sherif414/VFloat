@@ -6,8 +6,9 @@ import { join } from "node:path";
 const args = process.argv.slice(2);
 const env = { ...process.env };
 
-if (!env.GITHUB_TOKEN && env.GH_TOKEN) {
-  env.GITHUB_TOKEN = env.GH_TOKEN;
+const githubToken = getGitHubToken(env);
+if (githubToken && !env.GITHUB_TOKEN) {
+  env.GITHUB_TOKEN = githubToken;
 }
 
 if (args.includes("--dry-run")) {
@@ -29,8 +30,28 @@ if (result.error) {
 
 process.exit(result.status ?? 1);
 
-function configureNpmAuth(env) {
-  if (!env.NODE_AUTH_TOKEN || env.NPM_CONFIG_USERCONFIG) {
+function getGitHubToken(environment = process.env) {
+  if (environment.GITHUB_TOKEN) return environment.GITHUB_TOKEN;
+  if (environment.GH_TOKEN) return environment.GH_TOKEN;
+
+  try {
+    const res = spawnSync("gh", ["auth", "token"], {
+      encoding: "utf8",
+      shell: false,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (res.status === 0 && res.stdout?.trim()) {
+      return res.stdout.trim();
+    }
+  } catch {
+    // gh CLI might not be installed
+  }
+
+  return null;
+}
+
+function configureNpmAuth(environment) {
+  if (!environment.NODE_AUTH_TOKEN || environment.NPM_CONFIG_USERCONFIG) {
     return;
   }
 
@@ -46,5 +67,5 @@ function configureNpmAuth(env) {
     ].join("\n"),
   );
 
-  env.NPM_CONFIG_USERCONFIG = userConfigPath;
+  environment.NPM_CONFIG_USERCONFIG = userConfigPath;
 }

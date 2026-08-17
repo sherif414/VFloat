@@ -32,16 +32,29 @@ if (localSha !== upstreamSha && mergeBase !== upstreamSha) {
   );
 }
 
-const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+const githubToken = getGitHubToken();
 if (!githubToken) {
-  reportCredentialProblem("Missing GITHUB_TOKEN or GH_TOKEN for creating the GitHub Release.");
+  reportCredentialProblem(
+    "Missing GitHub authentication. Please log in with `gh auth login` or set GITHUB_TOKEN / GH_TOKEN.",
+  );
 }
 
 const npmEnv = { ...process.env };
 configureNpmAuth(npmEnv);
 
 if (!npmEnv.NODE_AUTH_TOKEN) {
-  reportCredentialProblem("Missing NODE_AUTH_TOKEN for publishing to npm.");
+  if (process.env.VFLOAT_RELEASE_SKIP_NPM_WHOAMI !== "1") {
+    const whoami = spawnSync("npm", ["whoami", "--registry=https://registry.npmjs.org/"], {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (whoami.status !== 0) {
+      reportCredentialProblem(
+        "Missing npm authentication. Please log in with `npm login` or set NODE_AUTH_TOKEN.",
+      );
+    }
+  }
 } else if (process.env.VFLOAT_RELEASE_SKIP_NPM_WHOAMI !== "1") {
   run("npm", ["whoami", "--registry=https://registry.npmjs.org/"], {
     env: { ...npmEnv, NPM_CONFIG_PROVENANCE: "false" },
@@ -49,6 +62,26 @@ if (!npmEnv.NODE_AUTH_TOKEN) {
 }
 
 console.log("[release:preflight] Local release preflight passed.");
+
+function getGitHubToken(env = process.env) {
+  if (env.GITHUB_TOKEN) return env.GITHUB_TOKEN;
+  if (env.GH_TOKEN) return env.GH_TOKEN;
+
+  try {
+    const result = spawnSync("gh", ["auth", "token"], {
+      encoding: "utf8",
+      shell: false,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (result.status === 0 && result.stdout?.trim()) {
+      return result.stdout.trim();
+    }
+  } catch {
+    // gh CLI might not be installed
+  }
+
+  return null;
+}
 
 function reportCredentialProblem(message) {
   if (dryRun) {

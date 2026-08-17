@@ -30,7 +30,7 @@ Security and confidentiality are absolute requirements. You must operate under a
 - **FORBIDDEN: Environment Variable Dumps**: Never execute commands that inspect, print, or dump environment variables (e.g. `env`, `printenv`, `set`, `Get-ChildItem env:`, `echo $env:...`, `echo %VAR%`).
 - **FORBIDDEN: Requesting Tokens in Chat**: Never ask the user to provide raw API keys, auth tokens, or passwords in chat messages.
 - **Black-Box Execution**: Treat all release and deployment scripts as opaque black boxes. The scripts running in the local Node runtime access needed credentials directly from the host environment without exposing them.
-- **Sanitized Diagnostics Only**: When a credential issue occurs, only read the exit code and high-level failure message from the script (e.g., `Missing GITHUB_TOKEN`), and inform the user to configure the variable in their host environment.
+- **Sanitized Diagnostics Only**: When a credential issue occurs, only read the exit code and high-level failure message from the script (e.g., missing GitHub or npm auth), and inform the user to configure credentials or log in with GitHub CLI (`gh auth login`) / npm (`npm login`).
 
 ---
 

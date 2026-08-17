@@ -4,18 +4,40 @@ VFloat releases are mostly local. The local release command validates the repo, 
 
 GitHub Actions verifies pushes, pull requests, and release tags. It does not publish releases on normal `main` pushes.
 
-## Credentials
+## Authentication & Credentials
 
-Set these environment variables before a real release:
+### GitHub Authentication
+
+GitHub authentication defaults to the **GitHub CLI (`gh`)**. If you are logged in via `gh auth login`, no environment variables are required.
+
+Alternatively, you can provide a token via `$env:GITHUB_TOKEN` (or `$env:GH_TOKEN`):
 
 ```powershell
+gh auth login
+# OR
 $env:GITHUB_TOKEN = "<github-token>"
+```
+
+### npm Authentication
+
+Authenticate with npm via `npm login` or by providing an automation token in `$env:NODE_AUTH_TOKEN`:
+
+```powershell
+npm login
+# OR
 $env:NODE_AUTH_TOKEN = "<npm-token>"
 ```
 
-`GH_TOKEN` also works for the local release scripts. The wrapper copies it to `GITHUB_TOKEN` before running `release-it`.
+The preflight checks `npm whoami` before a real release so invalid credentials fail before version files are modified.
 
-Use an npm automation token for `NODE_AUTH_TOKEN`. The preflight checks `npm whoami` before a real release so a bad token fails before version files are changed.
+### Cloudflare Documentation Deployment
+
+Cloudflare Pages deployment requires Cloudflare credentials:
+
+```powershell
+$env:CLOUDFLARE_API_TOKEN = "<cloudflare-api-token>"
+$env:CLOUDFLARE_ACCOUNT_ID = "<cloudflare-account-id>"
+```
 
 ## Preflight
 
@@ -33,8 +55,8 @@ The preflight fails when:
 - the current branch is not `main`;
 - the worktree has uncommitted changes;
 - local `main` is behind or diverged from `origin/main`;
-- release credentials are missing;
-- npm authentication cannot be verified.
+- GitHub authentication cannot be verified (`gh` CLI or token);
+- npm authentication cannot be verified (`npm login` or token).
 
 ## Dry Run
 
