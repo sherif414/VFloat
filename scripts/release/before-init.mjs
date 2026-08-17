@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,21 +44,26 @@ configureNpmAuth(npmEnv);
 
 if (!npmEnv.NODE_AUTH_TOKEN) {
   if (process.env.VFLOAT_RELEASE_SKIP_NPM_WHOAMI !== "1") {
-    const whoami = spawnSync("npm", ["whoami", "--registry=https://registry.npmjs.org/"], {
-      encoding: "utf8",
-      shell: process.platform === "win32",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    if (whoami.status !== 0) {
+    try {
+      execSync("npm whoami --registry=https://registry.npmjs.org/", {
+        stdio: ["ignore", "pipe", "ignore"],
+        env: npmEnv,
+      });
+    } catch {
       reportCredentialProblem(
         "Missing npm authentication. Please log in with `npm login` or set NODE_AUTH_TOKEN.",
       );
     }
   }
 } else if (process.env.VFLOAT_RELEASE_SKIP_NPM_WHOAMI !== "1") {
-  run("npm", ["whoami", "--registry=https://registry.npmjs.org/"], {
-    env: { ...npmEnv, NPM_CONFIG_PROVENANCE: "false" },
-  });
+  try {
+    execSync("npm whoami --registry=https://registry.npmjs.org/", {
+      stdio: "inherit",
+      env: { ...npmEnv, NPM_CONFIG_PROVENANCE: "false" },
+    });
+  } catch {
+    fail("npm whoami failed with configured authentication.");
+  }
 }
 
 console.log("[release:preflight] Local release preflight passed.");
@@ -99,10 +104,9 @@ function read(command, args) {
 }
 
 function run(command, args, options = {}) {
-  const isBinary = ["git", "gh", "node"].includes(command);
   const result = spawnSync(command, args, {
     encoding: "utf8",
-    shell: isBinary ? false : process.platform === "win32",
+    shell: false,
     stdio: options.stdio ?? "inherit",
     env: options.env ?? process.env,
   });
