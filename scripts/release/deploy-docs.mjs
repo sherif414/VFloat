@@ -27,6 +27,7 @@ if (!options.dryRun && !process.env.CLOUDFLARE_ACCOUNT_ID) {
 }
 
 if (!options.skipBuild) {
+  run("pnpm", ["run", "size"]);
   run("pnpm", ["run", "docs:build"]);
 }
 

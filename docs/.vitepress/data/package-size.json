@@ -1,0 +1,12 @@
+{
+  "version": "0.12.0",
+  "rawBytes": 55479,
+  "rawFormatted": "54.18 kB",
+  "minifiedBytes": 55479,
+  "minifiedFormatted": "54.18 kB",
+  "gzipBytes": 15069,
+  "gzipFormatted": "14.72 kB",
+  "brotliBytes": 13377,
+  "brotliFormatted": "13.06 kB",
+  "measuredAt": "2026-08-17T06:40:32.537Z"
+}

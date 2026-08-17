@@ -31,6 +31,7 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "docs:deploy": "node scripts/release/deploy-docs.mjs",
+    "size": "node scripts/release/measure-size.mjs",
     "release": "node scripts/release/run-release.mjs",
     "release:patch": "node scripts/release/run-release.mjs patch",
     "release:minor": "node scripts/release/run-release.mjs minor",

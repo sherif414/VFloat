@@ -13,7 +13,7 @@ of [@floating-ui/dom](https://floating-ui.com/) with Vue 3 Composition API.
 - **Vue 3 Composables**: Reactive composables designed for the Composition API
 - **Interaction Handling**: Built-in hover, focus, click, and dismiss behaviors
 - **Arrow Positioning**: `useArrow` composable for positioning arrow elements
-- **Lightweight**: Tree-shakable with minimal bundle impact
+- **Lightweight**: Tree-shakable with minimal bundle impact (~14.7 kB min+gzip for the entire suite)
 - **Cross-platform**: Works on desktop, mobile, and touch devices
 - **TypeScript**: Full TypeScript support with comprehensive type definitions
 

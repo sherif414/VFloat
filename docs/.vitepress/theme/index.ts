@@ -7,6 +7,7 @@ import { useData } from "vitepress";
 import DefaultTheme from "vitepress/theme";
 import { defineComponent, h } from "vue";
 import DemoContainer from "./components/demo-container.vue";
+import PackageSizeTable from "./components/package-size-table.vue";
 
 const renderLayout = h as any;
 
@@ -33,5 +34,7 @@ export default {
   Layout,
   enhanceApp({ app }) {
     app.component("demo-container", DemoContainer);
+    app.component("package-size-table", PackageSizeTable);
+    app.component("PackageSizeTable", PackageSizeTable);
   },
 } satisfies Theme;

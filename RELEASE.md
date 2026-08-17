@@ -58,9 +58,22 @@ pnpm run release:major
 
 Use `patch` for fixes, `minor` for new features on the unstable `0.x` line, and `major` only when intentionally moving to the next major line.
 
+The release pipeline validates lint, type-check, tests, build, and package size (`pnpm run size`) before bumping, then packages the distribution and records the size metrics.
+
 After the command finishes, verify:
 
 - `CHANGELOG.md` has the new version section;
+- `docs/.vitepress/data/package-size.json` is updated with the released version;
 - the release commit and `vX.Y.Z` tag are pushed;
 - the GitHub Release exists;
 - npm shows the published `v-float` version.
+
+## Documentation Deployment
+
+Deploy the updated documentation site to Cloudflare Pages:
+
+```powershell
+pnpm run docs:deploy
+```
+
+The script automatically runs `pnpm run size` to compute and embed the latest bundle metrics, runs `pnpm run docs:build`, and deploys the site to Cloudflare Pages.

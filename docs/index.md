@@ -14,5 +14,12 @@ hero:
     - theme: alt
       text: Browse the API
       link: /api/
+features:
+  - title: Precise Positioning
+    details: Pixel-perfect positioning powered by Floating UI algorithms with automatic collision detection, flipping, and shifting.
+  - title: Lightweight & Tree-Shakable
+    details: Minimal bundle footprint (~14.7 kB gzip for the entire library) — import only the composables and middlewares you use.
+  - title: Composable Primitives
+    details: Independent composables for positioning, hover, click, focus trapping, and collections that connect cleanly through shared context.
 footer: false
 ---

@@ -64,6 +64,14 @@ VFloat draws heavily from [Floating UI](https://floating-ui.com). The middleware
 
 But VFloat is its own library with its own API shape. If you're coming from Floating UI, the concepts will transfer — the call sites won't. Follow the VFloat docs rather than copying Floating UI examples directly.
 
+## Package Size & Performance
+
+Floating UI logic should not weigh down your bundle. VFloat is packaged as an ESM library with clean export boundaries and full tree-shaking support. You only ship the composables and middlewares your components actually import.
+
+<package-size-table />
+
+VFloat has zero styling baggage and no heavy runtime dependencies. Beyond Vue 3 and `@floating-ui/dom` for geometric collision math, there is nothing else in the bundle.
+
 ## Where To Go Next
 
 If this is your first time with VFloat, [build a tooltip](/guide/first-tooltip) step by step. It walks through each piece in order.
