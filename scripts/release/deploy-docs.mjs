@@ -18,12 +18,20 @@ const options = {
   skipBuild: args.includes("--skip-build"),
 };
 
-if (!options.dryRun && !process.env.CLOUDFLARE_API_TOKEN) {
-  fail("Missing CLOUDFLARE_API_TOKEN.");
-}
-
-if (!options.dryRun && !process.env.CLOUDFLARE_ACCOUNT_ID) {
-  fail("Missing CLOUDFLARE_ACCOUNT_ID.");
+if (!options.dryRun) {
+  const isTokenAuth = process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!isTokenAuth) {
+    const whoami = spawnSync("pnpm", ["exec", "wrangler", "whoami"], {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (whoami.status !== 0) {
+      fail(
+        "Missing Cloudflare authentication. Please log in with `pnpm exec wrangler login` or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.",
+      );
+    }
+  }
 }
 
 if (!options.skipBuild) {
@@ -89,10 +97,10 @@ Usage:
   pnpm run docs:deploy -- --dry-run
   pnpm run docs:deploy -- --skip-build
 
-Environment:
-  CLOUDFLARE_API_TOKEN          Cloudflare API token with Pages deploy access.
-  CLOUDFLARE_ACCOUNT_ID         Cloudflare account ID.
-  CLOUDFLARE_PAGES_PROJECT_NAME Optional project name. Defaults to "vfloat".
+Authentication:
+  pnpm exec wrangler login      Interactive Cloudflare login (recommended)
+  CLOUDFLARE_API_TOKEN          Cloudflare API token (alternative for CI)
+  CLOUDFLARE_ACCOUNT_ID         Cloudflare account ID (alternative for CI)
 
 Options:
   --project <name>  Cloudflare Pages project name.
