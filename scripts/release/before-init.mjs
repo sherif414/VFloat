@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -99,9 +99,10 @@ function read(command, args) {
 }
 
 function run(command, args, options = {}) {
+  const isBinary = ["git", "gh", "node"].includes(command);
   const result = spawnSync(command, args, {
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: isBinary ? false : process.platform === "win32",
     stdio: options.stdio ?? "inherit",
     env: options.env ?? process.env,
   });
@@ -141,4 +142,13 @@ function configureNpmAuth(env) {
   );
 
   env.NPM_CONFIG_USERCONFIG = userConfigPath;
+
+  const cleanup = () => {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {}
+  };
+  process.on("exit", cleanup);
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
 }

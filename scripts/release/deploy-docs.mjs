@@ -10,10 +10,21 @@ if (args.includes("--help") || args.includes("-h")) {
   process.exit(0);
 }
 
+const rawBranch = getArgValue("--branch") ?? "main";
+const rawProject =
+  getArgValue("--project") ?? process.env.CLOUDFLARE_PAGES_PROJECT_NAME ?? defaultProjectName;
+
+if (!/^[a-zA-Z0-9._-]+$/.test(rawBranch)) {
+  fail(`Invalid branch name format: "${rawBranch}"`);
+}
+
+if (!/^[a-zA-Z0-9._-]+$/.test(rawProject)) {
+  fail(`Invalid project name format: "${rawProject}"`);
+}
+
 const options = {
-  branch: getArgValue("--branch") ?? "main",
-  projectName:
-    getArgValue("--project") ?? process.env.CLOUDFLARE_PAGES_PROJECT_NAME ?? defaultProjectName,
+  branch: rawBranch,
+  projectName: rawProject,
   dryRun: args.includes("--dry-run"),
   skipBuild: args.includes("--skip-build"),
 };
@@ -69,9 +80,10 @@ function getArgValue(name) {
 }
 
 function run(command, commandArgs) {
+  const isBinary = ["git", "gh", "node"].includes(command);
   const result = spawnSync(command, commandArgs, {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: isBinary ? false : process.platform === "win32",
   });
 
   if (result.error) {

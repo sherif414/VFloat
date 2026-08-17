@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,11 +27,15 @@ export function measurePackageSize(options = {}) {
   const { build = false } = options;
 
   if (build || !existsSync(distFile)) {
-    execSync("pnpm run build", {
+    const result = spawnSync("pnpm", ["run", "build"], {
       cwd: rootDir,
       stdio: isQuiet ? "ignore" : "inherit",
       shell: process.platform === "win32",
     });
+
+    if (result.status !== 0) {
+      throw new Error(`Build failed with exit code ${result.status ?? 1}`);
+    }
   }
 
   if (!existsSync(distFile)) {
