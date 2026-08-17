@@ -2,6 +2,84 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.13.0
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.12.0...v0.13.0)
+
+### 🚀 Enhancements
+
+- **floating-context:** Add stable context ids ([a23ac2f](https://github.com/sherif414/VFloat/commit/a23ac2f))
+- **agents:** Add afk issue workflow ([a4a73f1](https://github.com/sherif414/VFloat/commit/a4a73f1))
+- **hover:** ⚠️  Infer safe polygon side from geometry ([c87e0fb](https://github.com/sherif414/VFloat/commit/c87e0fb))
+- **floating-context:** Support defaultOpen option for uncontrolled state ([8f8cd48](https://github.com/sherif414/VFloat/commit/8f8cd48))
+- **shared:** Make initialValue optional in controlled useControllableState ([2607117](https://github.com/sherif414/VFloat/commit/2607117))
+- **floating-context:** Add isRoot property and hierarchy-aware navigation defaults ([0476ef5](https://github.com/sherif414/VFloat/commit/0476ef5))
+- **release:** Add release-manager custom subagent and migrate tooling to pnpm ([ff1bd26](https://github.com/sherif414/VFloat/commit/ff1bd26))
+- **arrow:** ⚠️  Simplify useArrow to only require context ([7e7aceb](https://github.com/sherif414/VFloat/commit/7e7aceb))
+- **focus-manager:** ⚠️  Centralize focus management with native engine and useFocusManager ([4164e70](https://github.com/sherif414/VFloat/commit/4164e70))
+- **docs:** Add package size reporting and release workflow integration ([ce423d9](https://github.com/sherif414/VFloat/commit/ce423d9))
+- **release:** Support GitHub CLI auth and npm login for local releases ([c288098](https://github.com/sherif414/VFloat/commit/c288098))
+- **release:** Simplify docs deployment to use interactive wrangler auth ([af45c4c](https://github.com/sherif414/VFloat/commit/af45c4c))
+- **release:** Harden subprocess execution and credential lifecycle management ([21ab569](https://github.com/sherif414/VFloat/commit/21ab569))
+- **release:** Optimize workflow for npm Trusted Publishing and GitHub CLI ([594ca82](https://github.com/sherif414/VFloat/commit/594ca82))
+
+### 🩹 Fixes
+
+- **position:** Reset isPositioned on close and handle race condition ([9ad2a3e](https://github.com/sherif414/VFloat/commit/9ad2a3e))
+- **client-point:** Clear anchor ref when disabled and not open ([3069355](https://github.com/sherif414/VFloat/commit/3069355))
+- **list-navigation:** Handle asynchronous item registration on menu open ([519ca43](https://github.com/sherif414/VFloat/commit/519ca43))
+- **floating-context:** Prevent invalid tree registrations and support shadow dom ([dc8ae67](https://github.com/sherif414/VFloat/commit/dc8ae67))
+- **release:** Eliminate DEP0190 in release preflight ([ca51a50](https://github.com/sherif414/VFloat/commit/ca51a50))
+
+### 💅 Refactors
+
+- **client-point:** ⚠️  Rename referenceElement to trackingTarget ([caaab36](https://github.com/sherif414/VFloat/commit/caaab36))
+- **client-point:** Simplify virtual anchor tracking ([c3c2f71](https://github.com/sherif414/VFloat/commit/c3c2f71))
+- **floating-context:** Extract context family registry ([1c62b9b](https://github.com/sherif414/VFloat/commit/1c62b9b))
+- **build:** Remove vite-plus and migrate toolchain to standard vite and pnpm ([439ceeb](https://github.com/sherif414/VFloat/commit/439ceeb))
+- **floating-context:** ⚠️  Flatten useFloatingContext options parameter ([b6b9c1d](https://github.com/sherif414/VFloat/commit/b6b9c1d))
+- **agents:** Remove afk issue workflow and scratch files ([7bb70a4](https://github.com/sherif414/VFloat/commit/7bb70a4))
+- **collection:** ⚠️  Remove useTree in favor of floating context hierarchy ([68dbfd4](https://github.com/sherif414/VFloat/commit/68dbfd4))
+- **floating-context:** Replace floating context registry with FloatingTree model ([5aa8ed5](https://github.com/sherif414/VFloat/commit/5aa8ed5))
+- **composables:** Organize public barrel exports and internal module imports ([027d2c4](https://github.com/sherif414/VFloat/commit/027d2c4))
+- **floating-context:** Encapsulate internal state in FloatingInternalsRegistry ([703456b](https://github.com/sherif414/VFloat/commit/703456b))
+- **floating-context:** Purge unused methods from FloatingInternalsRegistry ([6237081](https://github.com/sherif414/VFloat/commit/6237081))
+- **floating-context:** Key FloatingInternalsRegistry by FloatingContextId ([d196e3a](https://github.com/sherif414/VFloat/commit/d196e3a))
+
+### 📖 Documentation
+
+- **homepage:** Remove feature cards. ([d06ca63](https://github.com/sherif414/VFloat/commit/d06ca63))
+- **documentation-writer:** Refine documentation writing guidelines and reference materials ([1c467c9](https://github.com/sherif414/VFloat/commit/1c467c9))
+- **guide:** Fix import errors in control-open-state code snippets ([ebe878f](https://github.com/sherif414/VFloat/commit/ebe878f))
+- **guide:** Update controlled open state explanation and examples ([1fe0126](https://github.com/sherif414/VFloat/commit/1fe0126))
+- **guide:** Clarify mutable ref requirement and writable computed property pattern ([53ef77b](https://github.com/sherif414/VFloat/commit/53ef77b))
+- **guide:** Clarify mutable ref requirement for controlled open state ([f0d209f](https://github.com/sherif414/VFloat/commit/f0d209f))
+- **guide:** Simplify Floating UI comparison wording ([e1c64e9](https://github.com/sherif414/VFloat/commit/e1c64e9))
+- **floating-context:** Document defaultOpen state option ([9c10758](https://github.com/sherif414/VFloat/commit/9c10758))
+- Synchronize API references, guides, and README with recent refactors ([309017d](https://github.com/sherif414/VFloat/commit/309017d))
+- **focus-manager:** Sync documentation with useFocusManager and focus models ([1add4bf](https://github.com/sherif414/VFloat/commit/1add4bf))
+
+### 🏡 Chore
+
+- **scratch:** Clear scratch workspace ([391733b](https://github.com/sherif414/VFloat/commit/391733b))
+- **issues:** Add conditional rendering exploration issue ([25a389d](https://github.com/sherif414/VFloat/commit/25a389d))
+- **tooling:** Standardize on oxc for linting and formatting ([cab886d](https://github.com/sherif414/VFloat/commit/cab886d))
+- **tsconfig:** Align compiler options with ESNext and DOM lib in tsconfig.app ([0c746af](https://github.com/sherif414/VFloat/commit/0c746af))
+- Add .gitattributes to standardize on LF line endings ([3484faa](https://github.com/sherif414/VFloat/commit/3484faa))
+
+#### ⚠️ Breaking Changes
+
+- **hover:** ⚠️  Infer safe polygon side from geometry ([c87e0fb](https://github.com/sherif414/VFloat/commit/c87e0fb))
+- **arrow:** ⚠️  Simplify useArrow to only require context ([7e7aceb](https://github.com/sherif414/VFloat/commit/7e7aceb))
+- **focus-manager:** ⚠️  Centralize focus management with native engine and useFocusManager ([4164e70](https://github.com/sherif414/VFloat/commit/4164e70))
+- **client-point:** ⚠️  Rename referenceElement to trackingTarget ([caaab36](https://github.com/sherif414/VFloat/commit/caaab36))
+- **floating-context:** ⚠️  Flatten useFloatingContext options parameter ([b6b9c1d](https://github.com/sherif414/VFloat/commit/b6b9c1d))
+- **collection:** ⚠️  Remove useTree in favor of floating context hierarchy ([68dbfd4](https://github.com/sherif414/VFloat/commit/68dbfd4))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.12.0
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.10.0...v0.12.0)
