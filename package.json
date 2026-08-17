@@ -42,8 +42,6 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
-    "focus-trap": "^8.0.1",
-    "tabbable": "^6.4.0",
     "vue": "^3.5.31"
   },
   "devDependencies": {

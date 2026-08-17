@@ -53,7 +53,7 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: ["vue", "@floating-ui/dom", "focus-trap", "tabbable"],
+      external: ["vue", "@floating-ui/dom"],
       output: {
         exports: "named",
       },

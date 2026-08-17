@@ -20,7 +20,7 @@ describe("Public API Surface", () => {
       "useEscapeKey",
       "useFloatingContext",
       "useFocus",
-      "useFocusTrap",
+      "useFocusManager",
       "useHover",
       "useListNavigation",
       "useOutsideClick",
