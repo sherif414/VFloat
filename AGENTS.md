@@ -151,9 +151,11 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - Run linting: `pnpm lint`
 - Fix lint & format: `pnpm lint:fix`
 - Format code: `pnpm format`
-- Check format: `pnpm format:check`
 - Run type checking: `pnpm type-check`
-- Run tests: `pnpm test`
+- Run tests (watch): `pnpm test`
+- Run tests (single run): `pnpm run test:run`
+- Run dry-run release simulation: `pnpm run release:dry`
+- Deploy documentation: `pnpm run docs:deploy`
 
 ## Review Checklist for Agents
 
