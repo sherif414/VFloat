@@ -17,6 +17,16 @@ on:
         required: false
         default: false
         type: boolean
+      skip_github_release:
+        description: "Publish to npm without creating a GitHub Release"
+        required: false
+        default: false
+        type: boolean
+      skip_npm:
+        description: "Create GitHub Release and tag without publishing to npm"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: release-pipeline
@@ -84,4 +94,9 @@ jobs:
       - name: Execute Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node ./scripts/release/ci-release.mjs --type=${{ inputs.release_type }} ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          node ./scripts/release/ci-release.mjs \
+            --type=${{ inputs.release_type }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.skip_github_release && '--skip-github-release' || '' }} \
+            ${{ inputs.skip_npm && '--skip-npm' || '' }}
