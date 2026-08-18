@@ -39,37 +39,52 @@ The header is the first line of the commit message and is **REQUIRED**. It **MUS
 
 - Commits **MUST** be prefixed with a `type`.
 - The `type` **SHOULD** be lowercase for consistency, though any casing is technically permissible.
-- The type `feat` **MUST** be used when a commit adds a new feature.
-- The type `fix` **MUST** be used when a commit represents a bug fix.
+- The type `feat` **MUST ONLY** be used when a commit adds a new **library feature** consumable by end-users (e.g. `src/` runtime exports, composables, options, public APIs).
+- The type `fix` **MUST ONLY** be used when a commit represents a bug fix in the **library runtime or public types** that affects consumers.
 - Other types **MAY** be used. **RECOMMENDED** types include:
-  - `build`: Changes that affect the build system or external dependencies.
-  - `chore`: Other changes that don't modify source or test files.
-  - `ci`: Changes to CI configuration files and scripts.
-  - `docs`: Documentation only changes.
-  - `perf`: A code change that improves performance.
-  - `refactor`: A code change that neither fixes a bug nor adds a feature.
+  - `build`: Changes that affect the build system, package bundling, or external dependencies (e.g., `package.json`, `vite.config.ts`).
+  - `chore`: Other changes that don't modify public library source code or tests (e.g., maintenance scripts, internal workflows, AI agent skills/rules).
+  - `ci`: Changes to CI configuration files and automation pipelines (e.g., `.github/workflows/`).
+  - `docs`: Documentation only changes (e.g., `docs/`, `README.md`).
+  - `perf`: A code change that improves performance in the library runtime (`src/`).
+  - `refactor`: A code change in the library runtime (`src/`) that neither fixes a bug nor adds a feature.
   - `revert`: Indicates that a previous commit has been reverted (see Section 8.1).
   - `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc).
-  - `test`: Adding missing tests or correcting existing tests.
+  - `test`: Adding missing tests or correcting existing tests (`*.test.ts`, Vitest configs).
+
+### 4.1.1. Library Features vs. Maintainer / AI Tooling
+
+Automated changelog generators and release tools (such as `changelogen` or `semantic-release`) parse `feat` and `fix` commits to generate public release notes and determine Semantic Version bumps.
+
+- **Library Features (`feat`)**: Changes that add new capabilities to the published npm package consumed by end-users (e.g., `feat(hover): add rest timeout option`, `feat(focus-manager): add trap focus support`).
+- **AI Agent Tooling / Skills / Rules (`chore`)**: Changes to `.agents/`, `.gemini/`, skills, agent prompts, rules, or subagents are internal maintainer tooling and **MUST NEVER** use `feat` or `fix`. Always use `chore(skills)`, `chore(agents)`, or `chore(rules)` (e.g., `chore(skills): add diagnose skill`, `chore(agents): update issue workflow`).
+- **Maintainer Scripts & Release Tooling (`chore` / `ci` / `build`)**: Scripts in `scripts/`, release tools, docs deployment helpers, etc. **MUST NOT** use `feat` (e.g., use `chore(release): automate gh release step`).
 
 ### 4.2. Scope
 
 - A `scope` **MAY** be provided after a type.
-- If provided, the scope **MUST** consist of a noun describing a section of the codebase, surrounded by parentheses.
-- **Example:** `feat(api):` or `fix(parser):`
+- If provided, the scope **MUST** be lowercase kebab-case describing the target module or subsystem.
+- **Canonical Library Scopes (`src/`)**:
+  - `floating-context`, `hover`, `click`, `focus-manager`, `list-navigation`, `arrow`, `dismiss`, `client-point`, `position`, `types`
+- **Canonical Tooling / Maintainer Scopes**:
+  - `skills`, `agents`, `rules`, `release`, `size`, `ci`, `docs`, `deps`, `lint`, `test`, `repo`
+- **Example:** `feat(hover):`, `fix(floating-context):`, `chore(skills):`, `ci(release):`
 
 ### 4.3. Description
 
 - A `description` **MUST** immediately follow the colon and space after the `type`/`scope`.
 - It **MUST** be a short, imperative-mood summary of the code changes.
-- It **SHOULD NOT** be capitalized or end with a period.
-- **Example:** `fix: correct array parsing issue for multi-space strings`
+- It **MUST** start with a lowercase letter (e.g. `add`, `fix`, `prevent`, `simplify`).
+- It **MUST NOT** end with a period (`.`).
+- **Use imperative present tense verbs**: `add`, `fix`, `support`, `prevent`, `update`, `remove`, `simplify`, `refactor`.
+- **DO NOT use past tense or third person**: Never use `added`, `adds`, `fixed`, `fixes`, `updated`, `updates`.
+- **Example:** `fix(client-point): clear anchor ref when disabled and closed`
 
 ### 4.4. Breaking Change Indicator: `!`
 
 - A breaking change **MAY** be indicated in the header by appending a `!` immediately before the required `:`.
 - See Section 6 for full details on handling breaking changes.
-- **Example:** `refactor(auth)!: drop support for JWT tokens`
+- **Example:** `refactor(arrow)!: simplify useArrow to only require context`
 
 ---
 
@@ -156,9 +171,9 @@ Refs: 676104e, a215868
 
 The commit type directly influences automated versioning. The agent **MUST** select the type with the following SemVer impact in mind:
 
-- **`fix`**: A commit of type `fix` **SHOULD** be translated to a **PATCH** release (e.g., 1.0.0 -> 1.0.1).
-- **`feat`**: A commit of type `feat` **SHOULD** be translated to a **MINOR** release (e.g., 1.0.0 -> 1.1.0).
-- **`BREAKING CHANGE`**: A commit with a `!` in the header or a `BREAKING CHANGE:` footer, regardless of type, **MUST** be translated to a **MAJOR** release (e.g., 1.0.0 -> 2.0.0).
+- **`fix`**: A commit of type `fix` **SHOULD** be translated to a **PATCH** release (e.g., 1.0.0 -> 1.0.1 or 0.13.0 -> 0.13.1).
+- **`feat`**: A commit of type `feat` **SHOULD** be translated to a **MINOR** release (e.g., 1.0.0 -> 1.1.0 or 0.13.0 -> 0.14.0).
+- **`BREAKING CHANGE`**: A commit with a `!` in the header or a `BREAKING CHANGE:` footer, regardless of type, translates to a **MAJOR** release in stable versions (e.g., 1.0.0 -> 2.0.0). Note that during the pre-1.0 (`0.x`) phase, the project follows the "infinite minor" pattern where breaking changes increment minor versions until the `1.0.0` milestone.
 
 ## 10. Error Handling
 
@@ -168,39 +183,42 @@ If a commit is generated that does not meet this specification (e.g., using a ty
 
 ## 11. Full Examples
 
-### Example 1: Simple Fix
+### Example 1: Simple Library Fix
 
 ```
-fix: prevent racing condition when updating user cache
+fix(client-point): clear anchor ref when disabled and not open
 ```
 
-### Example 2: Feature with Scope and Body
+### Example 2: Library Feature with Scope and Body
 
 ```
-feat(images): add support for WebP image format
+feat(hover): add safe polygon side inference
 
-This introduces a new image processing library to handle WebP conversion.
-The default output quality is set to 80%, but this can be configured via the new `IMAGE_QUALITY` environment variable.
+Infers the safe polygon exit side directly from bounding geometry when explicit
+side is omitted, preventing unexpected dismissals during diagonal pointer tracking.
 ```
 
 ### Example 3: Breaking Change using `!`
 
 ```
-refactor(config)!: migrate configuration from XML to YAML
+refactor(arrow)!: simplify useArrow to only require context
 
-The application no longer supports `config.xml`. All configuration must now be placed in `config.yaml`. The schema for the new configuration is detailed in the updated documentation.
+Removes the standalone element option in favor of extracting arrowEl directly from
+floating context refs.
 ```
 
 ### Example 4: Commit with Body and Footers (including Breaking Change)
 
 ```
-chore: update build process to new linter
+refactor(focus-manager)!: centralize focus management with native engine
 
-The previous linter (OldLinter) has been deprecated and is replaced by NewLinter for better performance and more comprehensive rules.
+BREAKING CHANGE: Standalone trap focus options have been replaced by the unified useFocusManager composable API.
+```
 
-This also involved updating the CI pipeline configuration.
+### Example 5: Maintainer / AI Agent Skill or Workflow (Never use `feat`)
 
-Reviewed-by: Jane Doe <jane.doe@example.com>
-Fixes: #432
-BREAKING CHANGE: The `.oldlinterrc` configuration file is no longer supported. All custom rules must be migrated to the `.newlinter.json` format.
+```
+chore(skills): add diagnose skill for bug reproduction workflows
+
+Adds the diagnose skill instructions and harness guidance under .agents/skills/diagnose.
 ```

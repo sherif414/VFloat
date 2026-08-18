@@ -6,11 +6,8 @@
 
 ## Commit Messages
 
-- Follow Conventional Commits for all Git commit messages.
-- Use lowercase commit types such as `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `ci`, `build`, `perf`, `style`, and `revert`.
-- Keep the header in the form `type(scope)!: description`.
-- Treat `0.x` as an unstable pre-1.0 line and use the "infinite minor" pattern for ongoing API evolution.
-- Use `fix` for patches, `feat` for new features, and `1.0.0` as the point where breaking changes should become major releases.
+- All commit messages **MUST** adhere to the Conventional Commits specification defined in [.agents/rules/commit-message.md](.agents/rules/commit-message.md).
+- Follow [.agents/rules/commit-message.md](.agents/rules/commit-message.md) as the single source of truth for commit types, scopes, SemVer mapping, and the distinction between user-facing library features (`feat`/`fix`) and maintainer/AI tooling (`chore`).
 
 ## Naming Conventions
 
