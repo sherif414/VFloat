@@ -1,41 +1,26 @@
-name: Release & Publish
+name: CI Quality Gate
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Semantic release bump type"
-        required: true
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      dry_run:
-        description: "Dry-run simulation (no git push, GitHub release, or npm publish)"
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
-  group: release-pipeline
-  cancel-in-progress: false
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  release:
-    name: Release to GitHub & npm
+  verify:
+    name: Verify & Test
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
-      id-token: write
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -45,7 +30,6 @@ jobs:
         with:
           node-version: 22.x
           cache: pnpm
-          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -81,7 +65,5 @@ jobs:
       - name: Build package
         run: pnpm run build
 
-      - name: Execute Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node ./scripts/release/ci-release.mjs --type=${{ inputs.release_type }} ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Build documentation
+        run: pnpm run docs:build
