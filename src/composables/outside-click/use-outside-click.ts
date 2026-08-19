@@ -116,9 +116,12 @@ export function useOutsideClick(
     clearDragResetTimeout();
   });
 
-  useEventListener(() => (isEnabled.value ? document : null), eventOption, onDocumentClick, {
-    capture: toValue(captureOption),
-  });
+  useEventListener(
+    () => (isEnabled.value && typeof document !== "undefined" ? document : null),
+    eventOption,
+    onDocumentClick,
+    { capture: toValue(captureOption) },
+  );
 
   useEventListener(
     () => (isEnabled.value && toValue(ignoreDragOption) ? floatingEl.value : null),

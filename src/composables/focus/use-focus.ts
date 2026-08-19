@@ -2,7 +2,8 @@ import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEf
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
-import { isTypeableElement } from "@/shared/dom";
+import { isHTMLElement, isTypeableElement } from "@/shared/dom";
+import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -43,13 +44,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
    * to reference the actual DOM element for positioning calculations.
    */
   const anchorEl = computed(() => {
-    if (!anchorElOption.value) return null;
-    if (anchorElOption.value instanceof HTMLElement) {
-      return anchorElOption.value;
-    }
-
-    const contextElement = anchorElOption.value.contextElement;
-    return contextElement instanceof HTMLElement ? contextElement : null;
+    return getAnchorElement(anchorElOption.value);
   });
   const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? globalDocument);
   const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
@@ -202,7 +197,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     watchPostEffect(() => {
       if (!isEnabled.value) return;
       const el = anchorEl.value;
-      if (!el || !(el instanceof HTMLElement)) return;
+      if (!isHTMLElement(el)) return;
 
       el.addEventListener("focus", onFocus);
       el.addEventListener("blur", onBlur);

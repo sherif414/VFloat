@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import { isHTMLElement } from "@/shared/dom";
 import type { VirtualElement } from "@/types";
 
 //=======================================================================================
@@ -13,11 +14,11 @@ export function getAnchorElement(anchor: AnchorDomElement): HTMLElement | null {
     return null;
   }
 
-  if (anchor instanceof HTMLElement) {
+  if (isHTMLElement(anchor)) {
     return anchor;
   }
 
-  return anchor.contextElement instanceof HTMLElement ? anchor.contextElement : null;
+  return isHTMLElement(anchor.contextElement) ? anchor.contextElement : null;
 }
 
 /**

@@ -12,10 +12,17 @@ export function isFunction(value: unknown): value is (...args: unknown[]) => unk
 }
 
 /**
- * Returns true for real HTML elements and false for SVG or non-element nodes.
+ * Returns true for real HTML elements and false for SVG, non-element nodes, or non-DOM environments.
  */
 export function isHTMLElement(value: unknown): value is HTMLElement {
-  return value instanceof Element && value instanceof HTMLElement;
+  return typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+}
+
+/**
+ * Returns true for real DOM elements and false for non-element nodes or non-DOM environments.
+ */
+export function isElement(value: unknown): value is Element {
+  return typeof Element !== "undefined" && value instanceof Element;
 }
 
 /**
@@ -31,10 +38,10 @@ export function isMouseLikePointerType(pointerType: string | undefined, strict?:
  * Returns true when text input handling should be left to the browser.
  */
 export function isTypeableElement(element: Element | null): boolean {
-  if (!element || !(element instanceof HTMLElement)) return false;
+  if (!isHTMLElement(element)) return false;
   return (
-    element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement ||
+    (typeof HTMLInputElement !== "undefined" && element instanceof HTMLInputElement) ||
+    (typeof HTMLTextAreaElement !== "undefined" && element instanceof HTMLTextAreaElement) ||
     (element.isContentEditable && element.contentEditable !== "false")
   );
 }
@@ -44,7 +51,7 @@ export function isTypeableElement(element: Element | null): boolean {
  */
 export function isButtonTarget(event: KeyboardEvent): boolean {
   const target = event.target;
-  if (!(target instanceof HTMLElement)) return false;
+  if (!isHTMLElement(target)) return false;
   return (
     target.tagName === "BUTTON" ||
     (target.tagName === "INPUT" && target.getAttribute("type") === "button") ||
@@ -142,11 +149,11 @@ export function clearTimeoutIfSet(timeoutId: number): void {
  * Matches either a real element or a virtual anchor's context element against a composed path.
  */
 export function isElementInEventPath(element: unknown, path: EventTarget[]): boolean {
-  if (element instanceof Element) {
+  if (isElement(element)) {
     return path.includes(element);
   }
 
-  if (isVirtualElement(element) && element.contextElement instanceof Element) {
+  if (isVirtualElement(element) && isElement(element.contextElement)) {
     return path.includes(element.contextElement);
   }
 
@@ -162,7 +169,7 @@ export function getDomPath(node: Node | null): EventTarget[] {
 
   while (current) {
     path.push(current);
-    if (current instanceof ShadowRoot) {
+    if (typeof ShadowRoot !== "undefined" && current instanceof ShadowRoot) {
       current = current.host;
     } else {
       current = current.parentNode;

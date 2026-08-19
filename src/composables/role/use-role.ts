@@ -4,9 +4,11 @@ import {
   onWatcherCleanup,
   type Ref,
   toValue,
+  useId,
   watchPostEffect,
 } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
+import { isHTMLElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
@@ -36,6 +38,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
     selectedIndices: selectedIndicesOption,
   } = options;
 
+  const autoId = useId();
   const isEnabled = computed(() => toValue(enabledOption));
   const shouldControlPopup = computed(() => toValue(controlsOption));
   const cleanupRegistry = createCleanupRegistry();
@@ -86,7 +89,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
         managedAttributes,
         anchorEl,
         "aria-describedby",
-        ensureElementId(floatingEl, "tooltip"),
+        ensureElementId(floatingEl, "tooltip", autoId),
       );
     }
 
@@ -99,7 +102,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
           managedAttributes,
           anchorEl,
           "aria-controls",
-          ensureElementId(floatingEl, role),
+          ensureElementId(floatingEl, role, autoId),
         );
       }
     }
@@ -155,19 +158,12 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
 // 📌 Helpers
 //=======================================================================================
 
-let roleIdCounter = 0;
-
-function createRoleId(prefix: string) {
-  roleIdCounter += 1;
-  return `vfloat-${prefix}-${roleIdCounter}`;
-}
-
 function getAnchorEl(anchorEl: FloatingContext["refs"]["anchorEl"]["value"]) {
-  if (anchorEl instanceof HTMLElement) {
+  if (isHTMLElement(anchorEl)) {
     return anchorEl;
   }
 
-  if (anchorEl?.contextElement instanceof HTMLElement) {
+  if (isHTMLElement(anchorEl?.contextElement)) {
     return anchorEl.contextElement;
   }
 
@@ -220,9 +216,9 @@ function matchesIndex(index: number, matcher?: Array<number> | ((index: number) 
   return Array.isArray(matcher) ? matcher.includes(index) : matcher(index);
 }
 
-function ensureElementId(el: HTMLElement, prefix: string) {
+function ensureElementId(el: HTMLElement, prefix: string, autoId: string) {
   if (!el.id) {
-    el.id = createRoleId(prefix);
+    el.id = `vfloat-${prefix}-${autoId}`;
   }
 
   return el.id;

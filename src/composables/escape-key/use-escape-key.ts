@@ -79,7 +79,12 @@ export function useEscapeKey(
   };
 
   // Event listener setup
-  useEventListener(document, "keydown", handleEscape, capture);
+  useEventListener(
+    () => (typeof document !== "undefined" ? document : null),
+    "keydown",
+    handleEscape,
+    capture,
+  );
 }
 
 //=======================================================================================

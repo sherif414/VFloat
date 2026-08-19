@@ -1,6 +1,11 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { isButtonTarget, isMouseLikePointerType, isSpaceIgnored } from "@/shared/dom";
+import {
+  isButtonTarget,
+  isHTMLElement,
+  isMouseLikePointerType,
+  isSpaceIgnored,
+} from "@/shared/dom";
 import type { OpenChangeReason } from "@/types";
 
 type PointerType = "mouse" | "touch" | "pen";
@@ -49,7 +54,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 
   const anchorEl = computed(() => {
     const el = refs.anchorEl.value;
-    if (el instanceof HTMLElement) return el;
+    if (isHTMLElement(el)) return el;
     return null;
   });
 

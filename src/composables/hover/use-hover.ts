@@ -2,6 +2,7 @@ import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
@@ -23,7 +24,7 @@ import { type SafePolygonOptions, safePolygon } from "./polygon";
  * useHover(context, {
  *   delay: { open: 100, close: 300 },
  *   restMs: 150
- * })
+ * });
  * ```
  */
 export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
@@ -41,9 +42,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
   const enabled = computed(() => toValue(enabledOption));
   const restMs = computed(() => toValue(restMsOption));
   const anchorDomEl = computed(() => {
-    const el = anchorEl.value;
-    if (!el || el instanceof HTMLElement) return el;
-    return (el.contextElement as HTMLElement) ?? null;
+    return getAnchorElement(anchorEl.value);
   });
 
   const { hide, show, showDelay, clearTimeouts } = useDelayedOpen(

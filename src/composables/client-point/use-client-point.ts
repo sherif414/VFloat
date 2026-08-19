@@ -39,7 +39,7 @@ import { VirtualElementFactory } from "./virtual-element-factory";
  */
 export function useClientPoint(
   context: UseClientPointContext,
-  options: UseClientPointOptions,
+  options: UseClientPointOptions = {},
 ): UseClientPointReturn {
   const {
     trackingAreaEl: trackingAreaElOption,

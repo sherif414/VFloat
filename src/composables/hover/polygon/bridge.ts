@@ -178,7 +178,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
           lastCursorTime = speedResult.lastCursorTime;
 
           if (speedResult.speed !== null && speedResult.speed < 0.1) {
-            timeoutId = window.setTimeout(close, 40);
+            timeoutId = setTimeout(close, 40) as unknown as number;
           }
         }
 

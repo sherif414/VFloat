@@ -45,6 +45,7 @@
     "format": "oxfmt --write .",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:ssr": "vitest run --browser.enabled=false --environment node src/__tests__/ssr.test.ts",
     "test:coverage": "vitest run --coverage",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",

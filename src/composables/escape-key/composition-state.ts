@@ -44,13 +44,21 @@ function getSharedCompositionState(): CompositionState {
   const isComposing = ref(false);
 
   scope.run(() => {
-    useEventListener(document, "compositionstart", () => {
-      isComposing.value = true;
-    });
+    useEventListener(
+      () => (typeof document !== "undefined" ? document : null),
+      "compositionstart",
+      () => {
+        isComposing.value = true;
+      },
+    );
 
-    useEventListener(document, "compositionend", () => {
-      isComposing.value = false;
-    });
+    useEventListener(
+      () => (typeof document !== "undefined" ? document : null),
+      "compositionend",
+      () => {
+        isComposing.value = false;
+      },
+    );
   });
 
   sharedCompositionState = {

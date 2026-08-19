@@ -11,6 +11,8 @@ import {
 } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import { isHTMLElement } from "@/shared/dom";
+import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import type { OpenChangeReason } from "@/types";
@@ -98,12 +100,7 @@ export function useFocusManager(
   }
 
   function getAnchorElement(): HTMLElement | null {
-    const raw = anchorElOption.value;
-    if (raw instanceof HTMLElement) return raw;
-    if (raw && "contextElement" in raw && raw.contextElement instanceof HTMLElement) {
-      return raw.contextElement;
-    }
-    return null;
+    return resolveAnchorElement(anchorElOption.value);
   }
 
   function getFloatingElement(): HTMLElement | null {
@@ -263,13 +260,13 @@ export function useFocusManager(
     let targetElement: HTMLElement | null = null;
 
     const customReturn = toValue(returnFocusOption);
-    if (customReturn instanceof HTMLElement && customReturn.isConnected) {
+    if (isHTMLElement(customReturn) && customReturn.isConnected) {
       targetElement = customReturn;
     } else if (
       customReturn &&
       typeof customReturn === "object" &&
       "value" in customReturn &&
-      customReturn.value instanceof HTMLElement &&
+      isHTMLElement(customReturn.value) &&
       customReturn.value.isConnected
     ) {
       targetElement = customReturn.value;
@@ -348,8 +345,8 @@ export function useFocusManager(
 
     try {
       // Save previously focused element before applying initial focus
-      const activeEl = document.activeElement;
-      if (activeEl instanceof HTMLElement && !floating.contains(activeEl)) {
+      const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+      if (isHTMLElement(activeEl) && !floating.contains(activeEl)) {
         previouslyActiveElement = activeEl;
       }
 

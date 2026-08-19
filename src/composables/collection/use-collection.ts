@@ -18,8 +18,8 @@ import { computed, type MaybeRefOrGetter, type Ref, ref, toValue, watch } from "
  * });
  * ```
  */
-export function useCollection(options: UseCollectionOptions): UseCollectionReturn {
-  const { values: valuesOption, isValueDisabled: isValueDisabledOption } = options;
+export function useCollection(options: UseCollectionOptions = { values: [] }): UseCollectionReturn {
+  const { values: valuesOption = [], isValueDisabled: isValueDisabledOption } = options;
 
   const activeValue = ref<string | null>(null);
   const values = computed(() => toValue(valuesOption));

@@ -52,6 +52,11 @@ export class FloatingTree {
     context: FloatingContext,
     parentContext: FloatingContext | null = null,
   ): FloatingTreeNode {
+    // In SSR, avoid populating the process-level tree to prevent memory leaks across concurrent requests
+    if (typeof window === "undefined") {
+      return new FloatingTreeNode(context, null);
+    }
+
     // Guard against duplicate registration: return existing node to preserve child tree
     const existingNode = this.nodes.get(context.id);
     if (existingNode) {

@@ -1,6 +1,7 @@
 import { computed, type MaybeRefOrGetter, nextTick, type Ref, toValue, watch } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { isTypeableElement } from "@/shared/dom";
+import { isHTMLElement, isTypeableElement } from "@/shared/dom";
+import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import { resolveKeyboardIntent } from "./intent";
@@ -58,12 +59,7 @@ export function useListNavigation(
   const cleanupRegistry = createCleanupRegistry();
 
   const anchorEl = computed(() => {
-    const el = refs.anchorEl.value;
-    if (el instanceof HTMLElement) return el;
-    if (el && "contextElement" in el && el.contextElement instanceof HTMLElement) {
-      return el.contextElement;
-    }
-    return null;
+    return getAnchorElement(refs.anchorEl.value);
   });
 
   const floatingEl = computed(() => refs.floatingEl.value);
@@ -158,7 +154,7 @@ export function useListNavigation(
         } else if (!context.isRoot) {
           setOpen(false, "keyboard-exit", e);
           const anchor = anchorEl.value;
-          if (anchor instanceof HTMLElement) {
+          if (isHTMLElement(anchor)) {
             anchor.focus();
           }
           handled = true;
