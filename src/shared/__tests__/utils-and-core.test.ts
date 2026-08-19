@@ -14,7 +14,7 @@ import {
   isTypeableElement,
   isVirtualElement,
 } from "@/shared/dom";
-import { createRefSetter, getAnchorElement } from "@/shared/elements";
+import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import type { VirtualElement } from "@/types";
@@ -224,9 +224,6 @@ describe("utils and core helpers", () => {
     expect(context.state.open).toBe(open);
     expect(position.update).toBe(update);
 
-    const setterTarget = ref<HTMLElement | null>(null);
-    createRefSetter(setterTarget)(anchorEl.value);
-    expect(setterTarget.value).toBe(anchorEl.value);
     expect(getAnchorElement(anchorEl.value)).toBe(anchorEl.value);
     expect(
       getAnchorElement({

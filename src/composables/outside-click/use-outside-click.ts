@@ -2,6 +2,7 @@ import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
+import { getDocument } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -116,12 +117,9 @@ export function useOutsideClick(
     clearDragResetTimeout();
   });
 
-  useEventListener(
-    () => (isEnabled.value && typeof document !== "undefined" ? document : null),
-    eventOption,
-    onDocumentClick,
-    { capture: toValue(captureOption) },
-  );
+  useEventListener(() => (isEnabled.value ? getDocument() : null), eventOption, onDocumentClick, {
+    capture: toValue(captureOption),
+  });
 
   useEventListener(
     () => (isEnabled.value && toValue(ignoreDragOption) ? floatingEl.value : null),

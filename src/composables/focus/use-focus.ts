@@ -4,6 +4,7 @@ import { floatingTree } from "@/composables/floating-context/floating-context-tr
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
+import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -35,8 +36,8 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     requireFocusVisible: requireFocusVisibleOption = true,
     ignoreFocusOut: ignoreFocusOutOption,
   } = options;
-  const globalDocument = typeof document !== "undefined" ? document : null;
-  const globalWindow = typeof window !== "undefined" ? window : null;
+  const globalDocument = getDocument();
+  const globalWindow = getWindow();
 
   /**
    * Computed anchor element that handles both HTMLElement and virtual element references.

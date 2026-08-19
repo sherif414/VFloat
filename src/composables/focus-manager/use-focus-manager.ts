@@ -13,6 +13,7 @@ import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { isHTMLElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
+import { getDocument } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import type { OpenChangeReason } from "@/types";
@@ -345,7 +346,7 @@ export function useFocusManager(
 
     try {
       // Save previously focused element before applying initial focus
-      const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+      const activeEl = getDocument()?.activeElement ?? null;
       if (isHTMLElement(activeEl) && !floating.contains(activeEl)) {
         previouslyActiveElement = activeEl;
       }

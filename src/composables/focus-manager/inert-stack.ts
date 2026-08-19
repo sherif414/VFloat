@@ -1,3 +1,5 @@
+import { isServer } from "@/shared/env";
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -20,7 +22,7 @@ export function isolateOutsideElements(
   allowedElements: HTMLElement[],
   preferInert = true,
 ): InertIsolationHandle {
-  if (typeof document === "undefined" || allowedElements.length === 0) {
+  if (isServer || allowedElements.length === 0) {
     return { restore: () => {} };
   }
 

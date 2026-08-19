@@ -1,5 +1,5 @@
 //=======================================================================================
-// 📌 Environment Flags
+// 📌 Environment Flags & Accessors
 //=======================================================================================
 
 /**
@@ -13,11 +13,15 @@ export const isClient = typeof window !== "undefined" && typeof document !== "un
 export const isServer = !isClient;
 
 /**
- * Indicates whether the Navigator API is available in the current environment.
+ * Returns the global Document instance if available, or null in SSR / non-DOM environments.
  */
-export const hasNavigator = typeof navigator !== "undefined";
+export function getDocument(): Document | null {
+  return typeof document !== "undefined" ? document : null;
+}
 
 /**
- * Indicates whether the Performance API is available in the current environment.
+ * Returns the global Window instance if available, or null in SSR / non-DOM environments.
  */
-export const hasPerformance = typeof performance !== "undefined";
+export function getWindow(): Window | null {
+  return typeof window !== "undefined" ? window : null;
+}

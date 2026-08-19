@@ -1,4 +1,5 @@
 import { readonly, ref } from "vue";
+import { isClient } from "@/shared/env";
 
 //=======================================================================================
 // 📌 Main
@@ -15,7 +16,7 @@ export const isUsingKeyboard = readonly(mutableRef);
 // 📌 Helpers
 //=======================================================================================
 
-if (typeof window !== "undefined") {
+if (isClient) {
   const options = { capture: true };
 
   function switchToKeyboard() {

@@ -28,6 +28,7 @@ import {
 } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingInternals } from "@/composables/floating-context/use-floating-context";
+import { isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 
 //=======================================================================================
@@ -220,7 +221,7 @@ function roundByDPR(el: HTMLElement, value: number) {
 }
 
 function getDPR(el: HTMLElement) {
-  if (typeof window === "undefined") return 1;
+  if (isServer) return 1;
   const win = el.ownerDocument.defaultView || window;
   return win.devicePixelRatio || 1;
 }

@@ -1,4 +1,5 @@
 import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue";
+import { getDocument } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
@@ -45,7 +46,7 @@ function getSharedCompositionState(): CompositionState {
 
   scope.run(() => {
     useEventListener(
-      () => (typeof document !== "undefined" ? document : null),
+      () => getDocument(),
       "compositionstart",
       () => {
         isComposing.value = true;
@@ -53,7 +54,7 @@ function getSharedCompositionState(): CompositionState {
     );
 
     useEventListener(
-      () => (typeof document !== "undefined" ? document : null),
+      () => getDocument(),
       "compositionend",
       () => {
         isComposing.value = false;

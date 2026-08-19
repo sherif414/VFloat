@@ -1,3 +1,5 @@
+import { isServer } from "@/shared/env";
+
 //=======================================================================================
 // 📌 Constants
 //=======================================================================================
@@ -21,7 +23,7 @@ export function createFocusGuards(
   floatingEl: HTMLElement,
   onFocus: (type: FocusGuardType, event: FocusEvent) => void,
 ): FocusGuardHandles {
-  if (typeof document === "undefined" || !floatingEl) {
+  if (isServer || !floatingEl) {
     return {
       startGuard: null,
       endGuard: null,

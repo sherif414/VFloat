@@ -1,3 +1,5 @@
+import { getWindow } from "@/shared/env";
+
 //=======================================================================================
 // 📌 Constants & Selectors
 //=======================================================================================
@@ -138,8 +140,9 @@ export function isElementVisible(el: HTMLElement): boolean {
     return false;
   }
 
-  if (typeof window !== "undefined") {
-    const style = window.getComputedStyle(el);
+  const win = getWindow();
+  if (win) {
+    const style = win.getComputedStyle(el);
     if (style.display === "none" || style.visibility === "hidden") {
       return false;
     }

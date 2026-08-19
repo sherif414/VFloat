@@ -2,6 +2,7 @@ import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import { getDocument } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
@@ -79,12 +80,7 @@ export function useEscapeKey(
   };
 
   // Event listener setup
-  useEventListener(
-    () => (typeof document !== "undefined" ? document : null),
-    "keydown",
-    handleEscape,
-    capture,
-  );
+  useEventListener(() => getDocument(), "keydown", handleEscape, capture);
 }
 
 //=======================================================================================

@@ -1,5 +1,6 @@
 import { type ShallowRef, shallowRef } from "vue";
 import { getDomPath } from "@/shared/dom";
+import { isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 import type { FloatingContext, FloatingContextId, FloatingState } from "./use-floating-context";
@@ -53,7 +54,7 @@ export class FloatingTree {
     parentContext: FloatingContext | null = null,
   ): FloatingTreeNode {
     // In SSR, avoid populating the process-level tree to prevent memory leaks across concurrent requests
-    if (typeof window === "undefined") {
+    if (isServer) {
       return new FloatingTreeNode(context, null);
     }
 

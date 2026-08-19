@@ -1,6 +1,5 @@
-import type { Ref } from "vue";
 import { isHTMLElement } from "@/shared/dom";
-import type { VirtualElement } from "@/types";
+import type { AnchorElement } from "@/composables/floating-context/use-floating-context";
 
 //=======================================================================================
 // 📌 Main
@@ -9,7 +8,7 @@ import type { VirtualElement } from "@/types";
 /**
  * Resolves the real DOM element behind either a DOM anchor or a virtual anchor.
  */
-export function getAnchorElement(anchor: AnchorDomElement): HTMLElement | null {
+export function getAnchorElement(anchor: AnchorElement): HTMLElement | null {
   if (!anchor) {
     return null;
   }
@@ -20,26 +19,3 @@ export function getAnchorElement(anchor: AnchorDomElement): HTMLElement | null {
 
   return isHTMLElement(anchor.contextElement) ? anchor.contextElement : null;
 }
-
-/**
- * Creates a stable setter function for a Vue ref so refs can be wired through callbacks.
- */
-export function createRefSetter<T>(target: Ref<T>) {
-  return (value: T) => {
-    target.value = value;
-  };
-}
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-/**
- * Accepts either a real anchor element or a virtual anchor produced by pointer tracking.
- */
-export type AnchorDomElement = HTMLElement | VirtualElement | null;
-
-/**
- * Floating elements are always real DOM elements when mounted.
- */
-export type FloatingDomElement = HTMLElement | null;
