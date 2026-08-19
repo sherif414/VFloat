@@ -1,2 +1,9 @@
 allowBuilds:
   esbuild: true
+  sharp: true
+  workerd: true
+
+peerDependencyRules:
+  ignoreMissing:
+    - react
+    - react-dom
