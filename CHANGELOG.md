@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.13.1
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.13.0...v0.13.1)
+
+### 🚀 Enhancements
+
+- **release:** Make release pipeline fail-safe with atomic npm verification and rollback ([3cd083a](https://github.com/sherif414/VFloat/commit/3cd083a))
+- **skills:** Add vfloat-test-standards skill ([59a1491](https://github.com/sherif414/VFloat/commit/59a1491))
+
+### 🩹 Fixes
+
+- **ci:** Omit registry-url from setup-node for tokenless OIDC npm publishing ([ba81fbb](https://github.com/sherif414/VFloat/commit/ba81fbb))
+- **focus-manager:** Clean up focus guard event listeners on removal ([b538924](https://github.com/sherif414/VFloat/commit/b538924))
+
+### 📖 Documentation
+
+- Remove explicit sourcemap config from vitepress build ([4dc46a2](https://github.com/sherif414/VFloat/commit/4dc46a2))
+
+### 📦 Build
+
+- **deps:** Move vue to peerDependencies and devDependencies ([98051ee](https://github.com/sherif414/VFloat/commit/98051ee))
+
+### 🏡 Chore
+
+- **scripts:** Streamline package.json scripts and add test:run ([58d29e6](https://github.com/sherif414/VFloat/commit/58d29e6))
+- Remove obsolete release-manager custom agent ([464cdb7](https://github.com/sherif414/VFloat/commit/464cdb7))
+- **rules:** Clarify commit guidelines and consolidate single source of truth ([b1ffbcb](https://github.com/sherif414/VFloat/commit/b1ffbcb))
+
+### ✅ Tests
+
+- Align test suite with testing standards and add missing unit tests ([179b55c](https://github.com/sherif414/VFloat/commit/179b55c))
+
+### 🤖 CI
+
+- **release:** Automate release and docs workflows on github actions ([97350be](https://github.com/sherif414/VFloat/commit/97350be))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.13.0
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.12.0...v0.13.0)
