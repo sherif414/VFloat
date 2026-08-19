@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
 import { useFloatingContext } from "@/composables";
@@ -108,6 +108,8 @@ describe("useRole", () => {
 
     activeScopes.length = 0;
     clearTrackedElements();
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("syncs menu trigger, floating, and item roles", async () => {
@@ -162,6 +164,30 @@ describe("useRole", () => {
     expect(ctx.floatingEl.getAttribute("role")).toBe("listbox");
     expect(ctx.items[0].getAttribute("role")).toBe("option");
     expect(ctx.items[2].getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("syncs tree and grid roles with items", async () => {
+    const treeCtx = setupRole({
+      role: "tree",
+      selectedIndices: [1],
+    });
+
+    await flushRole();
+
+    expect(treeCtx.floatingEl.getAttribute("role")).toBe("tree");
+    expect(treeCtx.items[0].getAttribute("role")).toBe("treeitem");
+    expect(treeCtx.items[1].getAttribute("aria-selected")).toBe("true");
+
+    const gridCtx = setupRole({
+      role: "grid",
+      selectedIndices: [0],
+    });
+
+    await flushRole();
+
+    expect(gridCtx.floatingEl.getAttribute("role")).toBe("grid");
+    expect(gridCtx.items[0].getAttribute("role")).toBe("gridcell");
+    expect(gridCtx.items[0].getAttribute("aria-selected")).toBe("true");
   });
 
   it("lets child menu contexts manage submenu trigger relationships", async () => {

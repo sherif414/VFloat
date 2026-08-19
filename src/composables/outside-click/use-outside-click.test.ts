@@ -10,20 +10,20 @@ import {
   useOutsideClick,
 } from "@/composables";
 
-const elementsToCleanUp: HTMLElement[] = [];
+const trackedElements: HTMLElement[] = [];
 
-function trackElement(el: HTMLElement): HTMLElement {
-  elementsToCleanUp.push(el);
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
   return el;
 }
 
 function clearTrackedElements() {
-  for (const el of elementsToCleanUp) {
+  for (const el of [...trackedElements].reverse()) {
     if (el.isConnected) {
-      document.body.removeChild(el);
+      el.remove();
     }
   }
-  elementsToCleanUp.length = 0;
+  trackedElements.length = 0;
 }
 
 function createOutsideElement(id = "outside"): HTMLElement {
@@ -91,6 +91,7 @@ describe("useOutsideClick", () => {
     scope?.stop();
     clearTrackedElements();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("closes on outside click by default", async () => {
@@ -98,6 +99,20 @@ describe("useOutsideClick", () => {
     initOutsideClick({ event: "click" });
 
     await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(setOpenMock).toHaveBeenCalledTimes(1);
+    expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "outside-pointer", expect.any(Event));
+    expect(context.state.open.value).toBe(false);
+  });
+
+  it("closes on outside pointerdown when configured", async () => {
+    const outsideEl = createOutsideElement();
+    initOutsideClick({ event: "pointerdown" });
+
+    outsideEl.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" }),
+    );
     await nextTick();
 
     expect(setOpenMock).toHaveBeenCalledTimes(1);

@@ -2,14 +2,31 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import { useEventListener } from "@/shared/use-event-listener";
 
+const trackedElements: HTMLElement[] = [];
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+  trackedElements.length = 0;
+}
+
 describe("useEventListener", () => {
   afterEach(() => {
-    document.body.innerHTML = "";
-    vi.restoreAllMocks();
+    clearTrackedElements();
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("attaches listeners and removes them when stopped", async () => {
-    const target = document.createElement("button");
+    const target = trackElement(document.createElement("button"));
     const listener = vi.fn();
     document.body.appendChild(target);
 
@@ -25,8 +42,8 @@ describe("useEventListener", () => {
   });
 
   it("supports null targets and retargets when the element changes", async () => {
-    const firstTarget = document.createElement("button");
-    const secondTarget = document.createElement("button");
+    const firstTarget = trackElement(document.createElement("button"));
+    const secondTarget = trackElement(document.createElement("button"));
     const target = ref<HTMLElement | null>(null);
     const listener = vi.fn();
 
@@ -55,7 +72,7 @@ describe("useEventListener", () => {
   });
 
   it("rebinds when the event name changes", async () => {
-    const target = document.createElement("button");
+    const target = trackElement(document.createElement("button"));
     const eventName = ref("click");
     const listener = vi.fn();
 
@@ -78,7 +95,7 @@ describe("useEventListener", () => {
   });
 
   it("cleans up listeners when the parent effect scope stops", async () => {
-    const target = document.createElement("button");
+    const target = trackElement(document.createElement("button"));
     const listener = vi.fn();
     const scope = effectScope();
 
@@ -99,7 +116,7 @@ describe("useEventListener", () => {
   });
 
   it("forwards boolean and object listener options", async () => {
-    const target = document.createElement("button");
+    const target = trackElement(document.createElement("button"));
     const clickListener = vi.fn();
     const focusListener = vi.fn();
     const addSpy = vi.spyOn(target, "addEventListener");

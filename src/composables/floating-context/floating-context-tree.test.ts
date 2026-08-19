@@ -1,7 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
-import { FloatingTree, FloatingTreeNode, floatingTree } from "./floating-context-tree";
+import { FloatingTree, FloatingTreeNode } from "./floating-context-tree";
 import type { FloatingContext } from "./use-floating-context";
+
+const trackedElements: HTMLElement[] = [];
+let scope: ReturnType<typeof effectScope> | undefined;
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+  trackedElements.length = 0;
+}
 
 function createMockContext(
   overrides: Partial<FloatingContext> & { open?: boolean } = {},
@@ -28,6 +45,18 @@ function createMockContext(
 }
 
 describe("FloatingTree & FloatingTreeNode", () => {
+  beforeEach(() => {
+    scope = effectScope();
+  });
+
+  afterEach(() => {
+    scope?.stop();
+    scope = undefined;
+    clearTrackedElements();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
   describe("FloatingTreeNode", () => {
     it("adds and removes child IDs reactively", () => {
       const context = createMockContext();
@@ -39,7 +68,6 @@ describe("FloatingTree & FloatingTreeNode", () => {
       node.addChild(childId);
       expect(node.childIds.value.has(childId)).toBe(true);
 
-      // Duplicate addition should be no-op
       node.addChild(childId);
       expect(node.childIds.value.size).toBe(1);
 
@@ -85,15 +113,15 @@ describe("FloatingTree & FloatingTreeNode", () => {
       const parent = createMockContext();
       tree.addNode(parent);
 
-      const scope = effectScope();
-      scope.run(() => {
+      const localScope = effectScope();
+      localScope.run(() => {
         const child = createMockContext({ isRoot: false });
         tree.addNode(child, parent);
       });
 
       expect(tree.getChildren(parent)).toHaveLength(1);
 
-      scope.stop();
+      localScope.stop();
 
       expect(tree.getChildren(parent)).toHaveLength(0);
     });
@@ -114,67 +142,74 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
     describe("deepest open traversal", () => {
       it("returns root context when no descendants are open", () => {
+        const tree = new FloatingTree();
         const root = createMockContext();
         const child = createMockContext({ isRoot: false });
 
-        floatingTree.addNode(root, null);
-        floatingTree.addNode(child, root);
+        tree.addNode(root, null);
+        tree.addNode(child, root);
 
-        expect(floatingTree.getDeepestOpenContext(root)).toBe(root);
+        expect(tree.getDeepestOpenContext(root)).toBe(root);
       });
 
       it("returns deepest open descendant in a chain", () => {
+        const tree = new FloatingTree();
         const root = createMockContext({ open: true });
         const child = createMockContext({ isRoot: false, open: true });
         const grandchild = createMockContext({ isRoot: false, open: true });
 
-        floatingTree.addNode(root, null);
-        floatingTree.addNode(child, root);
-        floatingTree.addNode(grandchild, child);
+        tree.addNode(root, null);
+        tree.addNode(child, root);
+        tree.addNode(grandchild, child);
 
-        expect(floatingTree.getDeepestOpenContext(root)).toBe(grandchild);
+        expect(tree.getDeepestOpenContext(root)).toBe(grandchild);
       });
 
       it("finds deepest open context across multiple branches", () => {
+        const tree = new FloatingTree();
         const root = createMockContext();
         const branchA1 = createMockContext({ isRoot: false, open: true });
         const branchB1 = createMockContext({ isRoot: false, open: true });
         const branchB2 = createMockContext({ isRoot: false, open: true });
 
-        floatingTree.addNode(root, null);
-        floatingTree.addNode(branchA1, root);
-        floatingTree.addNode(branchB1, root);
-        floatingTree.addNode(branchB2, branchB1);
+        tree.addNode(root, null);
+        tree.addNode(branchA1, root);
+        tree.addNode(branchB1, root);
+        tree.addNode(branchB2, branchB1);
 
-        expect(floatingTree.getDeepestOpenContext(root)).toBe(branchB2);
+        expect(tree.getDeepestOpenContext(root)).toBe(branchB2);
       });
     });
 
     describe("dom containment and element queries", () => {
       it("identifies targets within anchor and floating elements", () => {
-        const anchorEl = document.createElement("button");
-        const floatingEl = document.createElement("div");
-        const childEl = document.createElement("span");
+        const tree = new FloatingTree();
+        const anchorEl = trackElement(document.createElement("button"));
+        const floatingEl = trackElement(document.createElement("div"));
+        const childEl = trackElement(document.createElement("span"));
         anchorEl.appendChild(childEl);
 
         const context = createMockContext();
         context.refs.anchorEl.value = anchorEl;
         context.refs.floatingEl.value = floatingEl;
 
-        floatingTree.addNode(context, null);
+        tree.addNode(context, null);
 
-        expect(floatingTree.isTargetWithin(context, childEl)).toBe(true);
-        expect(floatingTree.isTargetWithin(context, anchorEl)).toBe(true);
-        expect(floatingTree.isTargetWithin(context, floatingEl)).toBe(true);
-        expect(floatingTree.isTargetWithin(context, document.createElement("div"))).toBe(false);
-        expect(floatingTree.isTargetWithin(context, null)).toBe(false);
+        expect(tree.isTargetWithin(context, childEl)).toBe(true);
+        expect(tree.isTargetWithin(context, anchorEl)).toBe(true);
+        expect(tree.isTargetWithin(context, floatingEl)).toBe(true);
+        expect(tree.isTargetWithin(context, trackElement(document.createElement("div")))).toBe(
+          false,
+        );
+        expect(tree.isTargetWithin(context, null)).toBe(false);
       });
 
       it("identifies targets within descendant context elements", () => {
-        const rootAnchor = document.createElement("button");
-        const rootFloating = document.createElement("div");
-        const childAnchor = document.createElement("button");
-        const childFloating = document.createElement("div");
+        const tree = new FloatingTree();
+        const rootAnchor = trackElement(document.createElement("button"));
+        const rootFloating = trackElement(document.createElement("div"));
+        const childAnchor = trackElement(document.createElement("button"));
+        const childFloating = trackElement(document.createElement("div"));
 
         const root = createMockContext();
         root.refs.anchorEl.value = rootAnchor;
@@ -184,16 +219,17 @@ describe("FloatingTree & FloatingTreeNode", () => {
         child.refs.anchorEl.value = childAnchor;
         child.refs.floatingEl.value = childFloating;
 
-        floatingTree.addNode(root, null);
-        floatingTree.addNode(child, root);
+        tree.addNode(root, null);
+        tree.addNode(child, root);
 
-        expect(floatingTree.isTargetWithin(root, childAnchor)).toBe(true);
-        expect(floatingTree.isTargetWithin(root, childFloating)).toBe(true);
+        expect(tree.isTargetWithin(root, childAnchor)).toBe(true);
+        expect(tree.isTargetWithin(root, childFloating)).toBe(true);
       });
 
       it("handles virtual element anchors with and without contextElement", () => {
-        const hostEl = document.createElement("div");
-        const targetEl = document.createElement("span");
+        const tree = new FloatingTree();
+        const hostEl = trackElement(document.createElement("div"));
+        const targetEl = trackElement(document.createElement("span"));
         hostEl.appendChild(targetEl);
 
         const context = createMockContext();
@@ -202,20 +238,21 @@ describe("FloatingTree & FloatingTreeNode", () => {
           contextElement: hostEl,
         };
 
-        floatingTree.addNode(context, null);
+        tree.addNode(context, null);
 
-        expect(floatingTree.isTargetWithin(context, targetEl)).toBe(true);
+        expect(tree.isTargetWithin(context, targetEl)).toBe(true);
 
         context.refs.anchorEl.value = {
           getBoundingClientRect: () => hostEl.getBoundingClientRect(),
         };
 
-        expect(floatingTree.isTargetWithin(context, targetEl)).toBe(false);
+        expect(tree.isTargetWithin(context, targetEl)).toBe(false);
       });
 
       it("collects mounted floating elements across hierarchy", () => {
-        const rootFloatingEl = document.createElement("div");
-        const childFloatingEl = document.createElement("div");
+        const tree = new FloatingTree();
+        const rootFloatingEl = trackElement(document.createElement("div"));
+        const childFloatingEl = trackElement(document.createElement("div"));
 
         const root = createMockContext();
         root.refs.floatingEl.value = rootFloatingEl;
@@ -223,10 +260,10 @@ describe("FloatingTree & FloatingTreeNode", () => {
         const child = createMockContext({ isRoot: false });
         child.refs.floatingEl.value = childFloatingEl;
 
-        floatingTree.addNode(root, null);
-        floatingTree.addNode(child, root);
+        tree.addNode(root, null);
+        tree.addNode(child, root);
 
-        expect(floatingTree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
+        expect(tree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
       });
     });
 
@@ -237,7 +274,6 @@ describe("FloatingTree & FloatingTreeNode", () => {
         const parent = createMockContext();
         const child = createMockContext({ isRoot: false });
 
-        // Register child before parent is in the tree
         const childNode = tree.addNode(child, parent);
 
         expect(childNode.parentId).toBeNull();
@@ -271,7 +307,6 @@ describe("FloatingTree & FloatingTreeNode", () => {
         tree.addNode(child, parent);
         expect(tree.getChildren(parent)).toHaveLength(1);
 
-        // Re-adding the parent context
         const node2 = tree.addNode(parent);
 
         expect(node2).toBe(node1);
@@ -291,7 +326,6 @@ describe("FloatingTree & FloatingTreeNode", () => {
         tree.addNode(nodeA);
         tree.addNode(nodeB, nodeA);
 
-        // Simulate an artificial cycle in childIds
         const bTreeNode = tree.getNode(nodeB.id);
         bTreeNode?.addChild(nodeA.id);
 
@@ -302,6 +336,7 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
     describe("descendant actions", () => {
       it("closes descendant contexts from innermost child to nearest parent with reason and event", () => {
+        const tree = new FloatingTree();
         const calls: string[] = [];
         const root = createMockContext();
         const child = createMockContext({ isRoot: false });
@@ -314,12 +349,12 @@ describe("FloatingTree & FloatingTreeNode", () => {
           calls.push(`grandchild:${reason}`);
         });
 
-        floatingTree.addNode(root, null);
-        floatingTree.addNode(child, root);
-        floatingTree.addNode(grandchild, child);
+        tree.addNode(root, null);
+        tree.addNode(child, root);
+        tree.addNode(grandchild, child);
 
         const event = new MouseEvent("pointerdown");
-        floatingTree.closeDescendants(root, "outside-pointer", event);
+        tree.closeDescendants(root, "outside-pointer", event);
 
         expect(calls).toEqual(["grandchild:outside-pointer", "child:outside-pointer"]);
         expect(grandchild.state.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
@@ -329,7 +364,7 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
     describe("shadow DOM containment", () => {
       it("detects targets within shadow DOM attached to floating elements and descendants", () => {
-        const shadowHost = document.createElement("div");
+        const shadowHost = trackElement(document.createElement("div"));
         const shadowRoot = shadowHost.attachShadow({ mode: "open" });
         const shadowBtn = document.createElement("button");
         shadowRoot.appendChild(shadowBtn);
@@ -344,8 +379,8 @@ describe("FloatingTree & FloatingTreeNode", () => {
       });
 
       it("detects targets within shadow DOM attached to descendant context elements", () => {
-        const rootHost = document.createElement("div");
-        const childHost = document.createElement("div");
+        const rootHost = trackElement(document.createElement("div"));
+        const childHost = trackElement(document.createElement("div"));
         const childShadowRoot = childHost.attachShadow({ mode: "open" });
         const nestedTarget = document.createElement("span");
         childShadowRoot.appendChild(nestedTarget);

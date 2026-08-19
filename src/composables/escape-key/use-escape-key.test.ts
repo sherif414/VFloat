@@ -2,9 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import { type UseEscapeKeyContext, useEscapeKey, useFloatingContext } from "@/composables";
 
-const createdElements: HTMLElement[] = [];
-
-// Test utilities
 function createMockFloatingContext(): UseEscapeKeyContext {
   const open = ref(false);
   const setOpen = vi.fn((value: boolean) => {
@@ -25,18 +22,12 @@ describe("useEscapeKey", () => {
   afterEach(() => {
     scope?.stop();
     scope = undefined;
-
-    for (const element of createdElements) {
-      element.remove();
-    }
-    createdElements.length = 0;
-
-    vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   describe("FloatingContext behavior", () => {
-    it("should close floating element on escape key press", async () => {
+    it("closes floating element on escape key press", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -55,7 +46,7 @@ describe("useEscapeKey", () => {
       );
     });
 
-    it("should not trigger when floating element is already closed", async () => {
+    it("does not trigger when floating element is already closed", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(false);
       (context.state.setOpen as any).mockClear();
@@ -70,7 +61,7 @@ describe("useEscapeKey", () => {
       expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
-    it("should respect enabled option", async () => {
+    it("respects enabled option", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -85,7 +76,7 @@ describe("useEscapeKey", () => {
       expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
-    it("should respect defaultPrevented from another handler", async () => {
+    it("respects defaultPrevented from another handler", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -110,7 +101,7 @@ describe("useEscapeKey", () => {
       expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
-    it("should use custom onEscape handler when provided", async () => {
+    it("uses custom onEscape handler when provided", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -129,7 +120,7 @@ describe("useEscapeKey", () => {
       expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
-    it("should ignore non-escape keys", async () => {
+    it("ignores non-escape keys", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -153,7 +144,7 @@ describe("useEscapeKey", () => {
   });
 
   describe("Composition event handling", () => {
-    it("should ignore escape during composition", async () => {
+    it("ignores escape during composition", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -163,16 +154,13 @@ describe("useEscapeKey", () => {
         useEscapeKey(context);
       });
 
-      // Start composition
       document.dispatchEvent(new CompositionEvent("compositionstart"));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
       expect(context.state.setOpen).not.toHaveBeenCalled();
 
-      // End composition
       document.dispatchEvent(new CompositionEvent("compositionend"));
 
-      // Now escape should work
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
       expect(context.state.setOpen).toHaveBeenCalledWith(
@@ -184,7 +172,7 @@ describe("useEscapeKey", () => {
   });
 
   describe("Options handling", () => {
-    it("should respect reactive enabled option", async () => {
+    it("respects reactive enabled option", async () => {
       const context = createMockFloatingContext();
       const enabled = ref(true);
       context.state.setOpen(true);
@@ -195,7 +183,6 @@ describe("useEscapeKey", () => {
         useEscapeKey(context, { enabled });
       });
 
-      // Initially enabled
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       expect(context.state.setOpen).toHaveBeenCalledWith(
         false,
@@ -206,12 +193,11 @@ describe("useEscapeKey", () => {
       vi.clearAllMocks();
       enabled.value = false;
 
-      // Now disabled
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       expect(context.state.setOpen).not.toHaveBeenCalled();
     });
 
-    it("should handle capture option", async () => {
+    it("handles capture option", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -230,7 +216,7 @@ describe("useEscapeKey", () => {
       );
     });
 
-    it("should prevent default when preventDefault is enabled", async () => {
+    it("prevents default when preventDefault is enabled", async () => {
       const context = createMockFloatingContext();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -256,7 +242,7 @@ describe("useEscapeKey", () => {
       );
     });
 
-    it("should share a single composition listener across multiple consumers", async () => {
+    it("shares a single composition listener across multiple consumers", async () => {
       const contextA = createMockFloatingContext();
       const contextB = createMockFloatingContext();
       contextA.state.setOpen(true);

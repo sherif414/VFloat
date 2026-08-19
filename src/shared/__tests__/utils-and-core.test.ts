@@ -21,6 +21,21 @@ import type { VirtualElement } from "@/types";
 
 const originalPlatform = navigator.platform;
 const originalUserAgent = navigator.userAgent;
+const trackedElements: HTMLElement[] = [];
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+  trackedElements.length = 0;
+}
 
 afterEach(() => {
   Object.defineProperty(window.navigator, "platform", {
@@ -31,7 +46,9 @@ afterEach(() => {
     configurable: true,
     value: originalUserAgent,
   });
-  vi.restoreAllMocks();
+  clearTrackedElements();
+  vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("utils and core helpers", () => {
@@ -45,10 +62,10 @@ describe("utils and core helpers", () => {
       value: "Mozilla/5.0 Version/17.0 Safari/605.1.15",
     });
 
-    const input = document.createElement("input");
-    const textarea = document.createElement("textarea");
-    const button = document.createElement("button");
-    const div = document.createElement("div");
+    const input = trackElement(document.createElement("input"));
+    const textarea = trackElement(document.createElement("textarea"));
+    const button = trackElement(document.createElement("button"));
+    const div = trackElement(document.createElement("div"));
     div.setAttribute("role", "button");
     div.contentEditable = "true";
 
@@ -88,9 +105,9 @@ describe("utils and core helpers", () => {
   });
 
   it("covers DOM path and containment helpers", () => {
-    const container = document.createElement("div");
-    const child = document.createElement("button");
-    const shadowHost = document.createElement("div");
+    const container = trackElement(document.createElement("div"));
+    const child = trackElement(document.createElement("button"));
+    const shadowHost = trackElement(document.createElement("div"));
     const shadowRoot = shadowHost.attachShadow({ mode: "open" });
     const shadowChild = document.createElement("span");
     shadowRoot.appendChild(shadowChild);

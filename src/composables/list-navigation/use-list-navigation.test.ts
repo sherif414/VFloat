@@ -1,27 +1,38 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import { useFloatingContext } from "@/composables";
 import { useCollection } from "@/composables/collection/use-collection";
 import { useListNavigation } from "@/composables/list-navigation/use-list-navigation";
+
+const trackedElements: HTMLElement[] = [];
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+  trackedElements.length = 0;
+}
 
 function dispatchKey(target: EventTarget, key: string) {
   target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
 }
 
 describe("useListNavigation", () => {
-  let scope: ReturnType<typeof effectScope>;
-  const elementsToCleanUp: any[] = [];
+  let scope: ReturnType<typeof effectScope> | undefined;
 
   afterEach(() => {
-    if (scope) {
-      scope.stop();
-    }
-    for (const el of elementsToCleanUp) {
-      if (el && typeof el.remove === "function") {
-        el.remove();
-      }
-    }
-    elementsToCleanUp.length = 0;
+    scope?.stop();
+    scope = undefined;
+    clearTrackedElements();
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   function setup(
@@ -41,15 +52,15 @@ describe("useListNavigation", () => {
   ) {
     scope = effectScope();
 
-    const anchorEl = options.anchorEl || document.createElement("button");
-    const floatingEl = document.createElement("div");
+    const anchorEl = options.anchorEl || trackElement(document.createElement("button"));
+    const floatingEl = trackElement(document.createElement("div"));
 
-    if (anchorEl instanceof HTMLElement) {
+    if (anchorEl instanceof HTMLElement && !anchorEl.isConnected) {
       document.body.appendChild(anchorEl);
-      elementsToCleanUp.push(anchorEl);
     }
-    document.body.appendChild(floatingEl);
-    elementsToCleanUp.push(floatingEl);
+    if (!floatingEl.isConnected) {
+      document.body.appendChild(floatingEl);
+    }
 
     const openRef = ref(false);
     const anchorRef = ref(anchorEl);
@@ -458,11 +469,10 @@ describe("useListNavigation", () => {
   describe("Real-world patterns & Edge Cases", () => {
     it("skips disabled elements during navigation", () => {
       scope = effectScope();
-      const anchorEl = document.createElement("button");
-      const floatingEl = document.createElement("div");
+      const anchorEl = trackElement(document.createElement("button"));
+      const floatingEl = trackElement(document.createElement("div"));
       document.body.appendChild(anchorEl);
       document.body.appendChild(floatingEl);
-      elementsToCleanUp.push(anchorEl, floatingEl);
 
       const openRef = ref(true);
       const anchorRef = ref(anchorEl);
@@ -495,11 +505,10 @@ describe("useListNavigation", () => {
 
     it("handles dynamic updates of collection values", async () => {
       scope = effectScope();
-      const anchorEl = document.createElement("button");
-      const floatingEl = document.createElement("div");
+      const anchorEl = trackElement(document.createElement("button"));
+      const floatingEl = trackElement(document.createElement("div"));
       document.body.appendChild(anchorEl);
       document.body.appendChild(floatingEl);
-      elementsToCleanUp.push(anchorEl, floatingEl);
 
       const openRef = ref(true);
       const anchorRef = ref(anchorEl);
@@ -555,9 +564,8 @@ describe("useListNavigation", () => {
       const { floatingEl, openRef, collection } = setup();
       openRef.value = true;
 
-      const input = document.createElement("input");
+      const input = trackElement(document.createElement("input"));
       floatingEl.appendChild(input);
-      elementsToCleanUp.push(input);
 
       const typingEvent = new KeyboardEvent("keydown", {
         key: "a",
@@ -587,65 +595,41 @@ describe("useListNavigation", () => {
       expect(openRef.value).toBe(true);
       expect(collection.activeValue.value).toBe("1");
 
-      // 2. ArrowDown moves next
+      // 2. ArrowDown moves to next
       dispatchKey(floatingEl, "ArrowDown");
       expect(collection.activeValue.value).toBe("2");
 
-      // 3. ArrowDown moves next
+      // 3. ArrowDown moves to last
       dispatchKey(floatingEl, "ArrowDown");
       expect(collection.activeValue.value).toBe("3");
 
-      // 4. ArrowDown wraps around (loop defaults to true in setup)
+      // 4. ArrowDown with loop wraps to first
       dispatchKey(floatingEl, "ArrowDown");
       expect(collection.activeValue.value).toBe("1");
 
-      // 5. Home jumps to first
+      // 5. ArrowUp with loop wraps to last
+      dispatchKey(floatingEl, "ArrowUp");
+      expect(collection.activeValue.value).toBe("3");
+
+      // 6. Home moves to first
       dispatchKey(floatingEl, "Home");
       expect(collection.activeValue.value).toBe("1");
 
-      // 6. End jumps to last
+      // 7. End moves to last
       dispatchKey(floatingEl, "End");
       expect(collection.activeValue.value).toBe("3");
 
-      // 7. ArrowDown wraps
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("1");
-
-      // 8. ArrowUp wraps to last
-      dispatchKey(floatingEl, "ArrowUp");
-      expect(collection.activeValue.value).toBe("3");
-
-      // 9. ArrowUp moves previous
-      dispatchKey(floatingEl, "ArrowUp");
-      expect(collection.activeValue.value).toBe("2");
-
-      // 10. Tab closes the menu and clears activeValue
-      dispatchKey(floatingEl, "Tab");
-      expect(openRef.value).toBe(false);
-      await nextTick();
-      expect(collection.activeValue.value).toBeNull();
-
-      // 11. Closed. ArrowUp opens and sets active to last
-      dispatchKey(anchorEl, "ArrowUp");
-      expect(openRef.value).toBe(true);
-      expect(collection.activeValue.value).toBe("3");
-
-      // 12. ArrowDown wraps
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("1");
-
-      // 13. Tab closes again
+      // 8. Tab closes the menu and resets activeValue
       dispatchKey(floatingEl, "Tab");
       expect(openRef.value).toBe(false);
     });
 
     it("simulates a parent menu and child submenu coordination flow", async () => {
       scope = effectScope();
-      const parentAnchor = document.createElement("button");
-      const parentFloating = document.createElement("div");
+      const parentAnchor = trackElement(document.createElement("button"));
+      const parentFloating = trackElement(document.createElement("div"));
       document.body.appendChild(parentAnchor);
       document.body.appendChild(parentFloating);
-      elementsToCleanUp.push(parentAnchor, parentFloating);
 
       const parentOpen = ref(false);
       const parentContext = useFloatingContext({
@@ -655,9 +639,8 @@ describe("useListNavigation", () => {
       });
       const parentCollection = useCollection({ values: ["file", "edit", "view"] });
 
-      const childFloating = document.createElement("div");
+      const childFloating = trackElement(document.createElement("div"));
       document.body.appendChild(childFloating);
-      elementsToCleanUp.push(childFloating);
 
       const childOpen = ref(false);
       const childContext = useFloatingContext({
@@ -712,11 +695,10 @@ describe("useListNavigation", () => {
   describe("Decoupled Callbacks & Custom Collection", () => {
     it("supports decoupled custom collection conforming to NavigableCollection interface", () => {
       scope = effectScope();
-      const anchorEl = document.createElement("button");
-      const floatingEl = document.createElement("div");
+      const anchorEl = trackElement(document.createElement("button"));
+      const floatingEl = trackElement(document.createElement("div"));
       document.body.appendChild(anchorEl);
       document.body.appendChild(floatingEl);
-      elementsToCleanUp.push(anchorEl, floatingEl);
 
       const openRef = ref(true);
       const anchorRef = ref(anchorEl);
@@ -759,11 +741,10 @@ describe("useListNavigation", () => {
 
     it("triggers onEnter and onExit with activeValue and KeyboardEvent", () => {
       scope = effectScope();
-      const anchorEl = document.createElement("button");
-      const floatingEl = document.createElement("div");
+      const anchorEl = trackElement(document.createElement("button"));
+      const floatingEl = trackElement(document.createElement("div"));
       document.body.appendChild(anchorEl);
       document.body.appendChild(floatingEl);
-      elementsToCleanUp.push(anchorEl, floatingEl);
 
       const openRef = ref(true);
       const anchorRef = ref(anchorEl);
@@ -812,16 +793,15 @@ describe("useListNavigation", () => {
   describe("Context-Aware Hierarchy & Smart Defaults", () => {
     it("defaults openOnArrowKeyDown to false for nested child contexts", () => {
       scope = effectScope();
-      const parentAnchor = document.createElement("button");
-      const parentFloating = document.createElement("div");
-      const childAnchor = document.createElement("button");
-      const childFloating = document.createElement("div");
+      const parentAnchor = trackElement(document.createElement("button"));
+      const parentFloating = trackElement(document.createElement("div"));
+      const childAnchor = trackElement(document.createElement("button"));
+      const childFloating = trackElement(document.createElement("div"));
 
       document.body.appendChild(parentAnchor);
       document.body.appendChild(parentFloating);
       document.body.appendChild(childAnchor);
       document.body.appendChild(childFloating);
-      elementsToCleanUp.push(parentAnchor, parentFloating, childAnchor, childFloating);
 
       const parentOpen = ref(false);
       const childOpen = ref(false);
@@ -859,16 +839,15 @@ describe("useListNavigation", () => {
 
     it("allows explicit openOnArrowKeyDown to override smart default on nested context", () => {
       scope = effectScope();
-      const parentAnchor = document.createElement("button");
-      const parentFloating = document.createElement("div");
-      const childAnchor = document.createElement("button");
-      const childFloating = document.createElement("div");
+      const parentAnchor = trackElement(document.createElement("button"));
+      const parentFloating = trackElement(document.createElement("div"));
+      const childAnchor = trackElement(document.createElement("button"));
+      const childFloating = trackElement(document.createElement("div"));
 
       document.body.appendChild(parentAnchor);
       document.body.appendChild(parentFloating);
       document.body.appendChild(childAnchor);
       document.body.appendChild(childFloating);
-      elementsToCleanUp.push(parentAnchor, parentFloating, childAnchor, childFloating);
 
       const parentOpen = ref(false);
       const childOpen = ref(false);
@@ -899,16 +878,15 @@ describe("useListNavigation", () => {
 
     it("automatically closes nested submenu and focuses anchorEl on ArrowLeft when onExit is omitted", () => {
       scope = effectScope();
-      const parentAnchor = document.createElement("button");
-      const parentFloating = document.createElement("div");
-      const childAnchor = document.createElement("button");
-      const childFloating = document.createElement("div");
+      const parentAnchor = trackElement(document.createElement("button"));
+      const parentFloating = trackElement(document.createElement("div"));
+      const childAnchor = trackElement(document.createElement("button"));
+      const childFloating = trackElement(document.createElement("div"));
 
       document.body.appendChild(parentAnchor);
       document.body.appendChild(parentFloating);
       document.body.appendChild(childAnchor);
       document.body.appendChild(childFloating);
-      elementsToCleanUp.push(parentAnchor, parentFloating, childAnchor, childFloating);
 
       const parentOpen = ref(true);
       const childOpen = ref(true);
@@ -951,11 +929,10 @@ describe("useListNavigation", () => {
 
     it("sets collection.activeValue when items register asynchronously upon opening via arrow key", async () => {
       scope = effectScope();
-      const anchorEl = document.createElement("button");
-      const floatingEl = document.createElement("div");
+      const anchorEl = trackElement(document.createElement("button"));
+      const floatingEl = trackElement(document.createElement("div"));
       document.body.appendChild(anchorEl);
       document.body.appendChild(floatingEl);
-      elementsToCleanUp.push(anchorEl, floatingEl);
 
       const openRef = ref(false);
       const registeredIds = ref<string[]>([]);

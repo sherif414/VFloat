@@ -10,7 +10,6 @@ describe("resolveKeyboardIntent", () => {
     expect(resolveKeyboardIntent(createEvent("ArrowDown", { ctrlKey: true }))).toBeNull();
     expect(resolveKeyboardIntent(createEvent("ArrowDown", { metaKey: true }))).toBeNull();
     expect(resolveKeyboardIntent(createEvent("ArrowDown", { altKey: true }))).toBeNull();
-    // Shift is allowed (e.g. Shift+Tab, though Tab returns "close" here regardless)
     expect(resolveKeyboardIntent(createEvent("ArrowDown", { shiftKey: true }))).toBe("next");
   });
 
@@ -20,6 +19,12 @@ describe("resolveKeyboardIntent", () => {
     expect(resolveKeyboardIntent(createEvent("Tab"))).toBe("close");
     expect(resolveKeyboardIntent(createEvent("Enter"))).toBe("activate");
     expect(resolveKeyboardIntent(createEvent(" "))).toBe("activate");
+  });
+
+  it("returns null for unhandled keys", () => {
+    expect(resolveKeyboardIntent(createEvent("Escape"))).toBeNull();
+    expect(resolveKeyboardIntent(createEvent("a"))).toBeNull();
+    expect(resolveKeyboardIntent(createEvent("F1"))).toBeNull();
   });
 
   describe("vertical orientation", () => {
@@ -58,6 +63,10 @@ describe("resolveKeyboardIntent", () => {
 
     it("resolves ArrowDown as enter", () => {
       expect(resolveKeyboardIntent(createEvent("ArrowDown"), opts)).toBe("enter");
+    });
+
+    it("returns null for ArrowUp in horizontal orientation", () => {
+      expect(resolveKeyboardIntent(createEvent("ArrowUp"), opts)).toBeNull();
     });
   });
 });

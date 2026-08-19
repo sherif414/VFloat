@@ -4,21 +4,20 @@ import { effectScope, nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
 import { type UseClickContext, type UseClickOptions, useClick } from "@/composables";
 
-// Track elements created during tests for cleanup
-const elementsToCleanUp: HTMLElement[] = [];
+const trackedElements: HTMLElement[] = [];
 
-function trackElement(el: HTMLElement): HTMLElement {
-  elementsToCleanUp.push(el);
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
   return el;
 }
 
 function clearTrackedElements() {
-  for (const el of elementsToCleanUp) {
+  for (const el of [...trackedElements].reverse()) {
     if (el.isConnected) {
-      document.body.removeChild(el);
+      el.remove();
     }
   }
-  elementsToCleanUp.length = 0;
+  trackedElements.length = 0;
 }
 
 describe("useClick", () => {
@@ -30,7 +29,7 @@ describe("useClick", () => {
 
   const createElements = () => {
     anchorEl = trackElement(document.createElement("button"));
-    anchorEl.id = "reference";
+    anchorEl.id = "anchor";
     anchorEl.textContent = "Trigger";
     document.body.appendChild(anchorEl);
 
@@ -67,6 +66,7 @@ describe("useClick", () => {
     scope?.stop();
     clearTrackedElements();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   const initClick = (options?: UseClickOptions) => {
@@ -85,13 +85,13 @@ describe("useClick", () => {
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(true);
 
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(false);
     });
 
@@ -100,23 +100,20 @@ describe("useClick", () => {
       await nextTick();
       expect(context.state.open.value).toBe(false);
 
-      // First click should open
       await userEvent.click(anchorEl);
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(true);
 
-      // Second click should NOT close (toggle behavior disabled)
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1); // Still only called once
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(context.state.open.value).toBe(true);
 
-      // Third click should also NOT close
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1); // Still only called once
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(context.state.open.value).toBe(true);
     });
   });
@@ -147,7 +144,7 @@ describe("useClick", () => {
       await nextTick();
 
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(true);
       setOpenMock.mockClear();
 
@@ -160,8 +157,35 @@ describe("useClick", () => {
       );
       await nextTick();
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(false);
+    });
+
+    it("tracks pointerType on pointerdown when handling mousedown event", async () => {
+      initClick({ event: "mousedown", toggle: true });
+      expect(context.state.open.value).toBe(false);
+
+      await nextTick();
+      anchorEl.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          pointerType: "mouse",
+        }),
+      );
+      anchorEl.dispatchEvent(
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+        }),
+      );
+      await nextTick();
+
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
+      expect(context.state.open.value).toBe(true);
     });
   });
 
@@ -190,12 +214,12 @@ describe("useClick", () => {
 
       await userEvent.keyboard("{Enter}");
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(true);
 
       await userEvent.keyboard("{Enter}");
       expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(false);
     });
 
@@ -208,23 +232,21 @@ describe("useClick", () => {
 
       await userEvent.keyboard(" ");
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
       expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(false);
     });
 
     it("does not trigger on Space key press if ignoreKeyboard is true", async () => {
-      // Create a non-focusable div to test ignoreKeyboard on space
       const nonFocusableEl = trackElement(document.createElement("div"));
-      nonFocusableEl.id = "reference";
+      nonFocusableEl.id = "non-focusable";
       nonFocusableEl.textContent = "Trigger";
       document.body.appendChild(nonFocusableEl);
 
-      // Update context to use the new element
       context.refs.anchorEl.value = nonFocusableEl;
 
       initClick({ ignoreKeyboard: true });
@@ -235,7 +257,6 @@ describe("useClick", () => {
 
       expect(setOpenMock).not.toHaveBeenCalled();
       expect(context.state.open.value).toBe(false);
-      // nonFocusableEl is tracked and will be cleaned up in afterEach
     });
 
     it("does not trigger on Enter key press if ignoreKeyboard is true", async () => {
@@ -266,7 +287,7 @@ describe("useClick", () => {
 
       await userEvent.click(anchorEl);
       expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, expect.any(String), expect.any(Object));
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(context.state.open.value).toBe(true);
     });
 

@@ -52,6 +52,7 @@ describe("polygon geometry", () => {
 
     expect(trough).toHaveLength(4);
     expect(isPointInPolygon([100, 105], trough)).toBe(true);
+    expect(isPointInPolygon([0, 0], trough)).toBe(false);
   });
 
   it("builds a safe polygon for the active side", () => {
@@ -70,11 +71,33 @@ describe("polygon geometry", () => {
     expect(polygon.some(([x]) => x === 75 || x === 225)).toBe(true);
   });
 
+  it("handles polygon raycasting for outside and boundary points", () => {
+    const polygon: Array<[number, number]> = [
+      [0, 0],
+      [100, 0],
+      [100, 100],
+      [0, 100],
+    ];
+
+    expect(isPointInPolygon([50, 50], polygon)).toBe(true);
+    expect(isPointInPolygon([150, 50], polygon)).toBe(false);
+    expect(isPointInPolygon([50, 150], polygon)).toBe(false);
+    expect(isPointInPolygon([-10, -10], polygon)).toBe(false);
+  });
+
   it("computes cursor speed from successive points", () => {
     const speed = getCursorSpeed(20, 10, 10, 10, 1000, 1020);
 
     expect(speed.speed).toBe(0.5);
     expect(speed.lastX).toBe(20);
     expect(speed.lastCursorTime).toBe(1020);
+  });
+
+  it("returns null cursor speed when elapsed time is zero or previous sample is missing", () => {
+    const zeroElapsed = getCursorSpeed(20, 10, 10, 10, 1000, 1000);
+    expect(zeroElapsed.speed).toBeNull();
+
+    const missingPrevious = getCursorSpeed(20, 10, null, null, 1000, 1020);
+    expect(missingPrevious.speed).toBeNull();
   });
 });

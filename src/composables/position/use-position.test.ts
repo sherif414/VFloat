@@ -1,14 +1,29 @@
 import type { Middleware, Placement } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
+import { effectScope, nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
 import { useArrow, useFloatingContext, usePosition } from "@/composables";
 import { floatingInternals } from "@/composables/floating-context/use-floating-context";
 
-const elements: HTMLElement[] = [];
+const trackedElements: HTMLElement[] = [];
+let scope: ReturnType<typeof effectScope> | undefined;
+
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+function clearTrackedElements() {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+  trackedElements.length = 0;
+}
 
 function createElement(tagName: string, rect: Partial<DOMRect> = {}) {
-  const el = document.createElement(tagName);
+  const el = trackElement(document.createElement(tagName));
   el.getBoundingClientRect = () =>
     ({
       x: 0,
@@ -23,7 +38,6 @@ function createElement(tagName: string, rect: Partial<DOMRect> = {}) {
       ...rect,
     }) as DOMRect;
   document.body.appendChild(el);
-  elements.push(el);
   return el;
 }
 
@@ -39,6 +53,7 @@ describe("usePosition", () => {
   let floatingEl: HTMLElement;
 
   beforeEach(() => {
+    scope = effectScope();
     anchorEl = createElement("button", {
       x: 10,
       y: 20,
@@ -51,20 +66,28 @@ describe("usePosition", () => {
   });
 
   afterEach(() => {
-    for (const el of elements.splice(0)) el.remove();
-    vi.restoreAllMocks();
+    scope?.stop();
+    scope = undefined;
+    clearTrackedElements();
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("computes position from context refs without mutating open state", async () => {
+    let position!: ReturnType<typeof usePosition>;
+    let context!: ReturnType<typeof useFloatingContext>;
     const open = ref(true);
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
-      open,
-    });
-    const position = usePosition(context, {
-      placement: "top",
-      strategy: "fixed",
+
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+        open,
+      });
+      position = usePosition(context, {
+        placement: "top",
+        strategy: "fixed",
+      });
     });
 
     await position.update();
@@ -78,13 +101,17 @@ describe("usePosition", () => {
   it("reacts to positioning options and middleware data", async () => {
     const placement = ref<Placement>("top");
     const middleware = createMiddleware("custom", { ok: true });
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
-    });
-    const position = usePosition(context, {
-      placement,
-      middlewares: [middleware],
+    let position!: ReturnType<typeof usePosition>;
+
+    scope?.run(() => {
+      const context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      });
+      position = usePosition(context, {
+        placement,
+        middlewares: [middleware],
+      });
     });
 
     await position.update();
@@ -96,17 +123,21 @@ describe("usePosition", () => {
   });
 
   it("creates built-in middleware from declarative options", () => {
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
-    });
-    usePosition(context, {
-      middleware: {
-        offset: 8,
-        flip: true,
-        shift: { padding: 8 },
-        matchWidth: true,
-      },
+    let context!: ReturnType<typeof useFloatingContext>;
+
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      });
+      usePosition(context, {
+        middleware: {
+          offset: 8,
+          flip: true,
+          shift: { padding: 8 },
+          matchWidth: true,
+        },
+      });
     });
 
     expect(
@@ -118,15 +149,19 @@ describe("usePosition", () => {
 
   it("appends custom middleware after declarative middleware", () => {
     const middleware = createMiddleware("custom", { ok: true });
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
-    });
-    usePosition(context, {
-      middleware: {
-        offset: 8,
-        custom: [middleware],
-      },
+    let context!: ReturnType<typeof useFloatingContext>;
+
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      });
+      usePosition(context, {
+        middleware: {
+          offset: 8,
+          custom: [middleware],
+        },
+      });
     });
 
     expect(
@@ -139,12 +174,16 @@ describe("usePosition", () => {
   it("gates computation when disabled", async () => {
     const enabled = ref(false);
     const open = ref(true);
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
-      open,
+    let position!: ReturnType<typeof usePosition>;
+
+    scope?.run(() => {
+      const context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+        open,
+      });
+      position = usePosition(context, { enabled });
     });
-    const position = usePosition(context, { enabled });
 
     await position.update();
     expect(position.isPositioned.value).toBe(false);
@@ -158,14 +197,17 @@ describe("usePosition", () => {
 
   it("registers arrow middleware through positioning", () => {
     const arrowEl = ref(createElement("div"));
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
-      arrowEl,
-    });
-    usePosition(context);
+    let context!: ReturnType<typeof useFloatingContext>;
 
-    useArrow(context);
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+        arrowEl,
+      });
+      usePosition(context);
+      useArrow(context);
+    });
 
     expect(context.refs.arrowEl.value).toBe(arrowEl.value);
     expect(
@@ -176,11 +218,16 @@ describe("usePosition", () => {
   });
 
   it("stores placement and middlewareData in floatingInternals", async () => {
-    const context = useFloatingContext({
-      anchorEl: ref<AnchorElement>(anchorEl),
-      floatingEl: ref<FloatingElement>(floatingEl),
+    let position!: ReturnType<typeof usePosition>;
+    let context!: ReturnType<typeof useFloatingContext>;
+
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref<AnchorElement>(anchorEl),
+        floatingEl: ref<FloatingElement>(floatingEl),
+      });
+      position = usePosition(context, { placement: "top" });
     });
-    const position = usePosition(context, { placement: "top" });
 
     const internals = floatingInternals.get(context.id);
     expect(internals?.placement).toBe(position.placement);

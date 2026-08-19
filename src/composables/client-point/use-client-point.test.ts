@@ -10,22 +10,20 @@ import { isVirtualElement } from "@/shared/dom";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
 import { VirtualElementFactory } from "./virtual-element-factory";
 
-// Track elements created during tests for cleanup
-const elementsToCleanUp: HTMLElement[] = [];
+const trackedElements: HTMLElement[] = [];
 
-function trackElement(el: HTMLElement): HTMLElement {
-  elementsToCleanUp.push(el);
+function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
   return el;
 }
 
 function clearTrackedElements() {
-  for (const el of elementsToCleanUp) {
+  for (const el of [...trackedElements].reverse()) {
     if (el.isConnected) {
       el.remove();
     }
   }
-
-  elementsToCleanUp.length = 0;
+  trackedElements.length = 0;
 }
 
 function createRect({
@@ -249,7 +247,8 @@ describe("useClientPoint", () => {
   afterEach(() => {
     harness.scope?.stop();
     clearTrackedElements();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   describe("basic functionality", () => {

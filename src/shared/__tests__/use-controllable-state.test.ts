@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 
 describe("useControllableState", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
   it("uses the initial value when uncontrolled and updates internal state on write", () => {
     const onChange = vi.fn();
     const value = useControllableState({ initialValue: "seed", onChange });
