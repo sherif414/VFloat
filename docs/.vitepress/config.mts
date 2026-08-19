@@ -44,10 +44,7 @@ export default defineConfigWithTheme({
         "v-float": fileURLToPath(new URL("../../src/index.ts", import.meta.url)),
       },
     },
-    build: {
-      sourcemap: true,
-      minify: false,
-    },
+
     ssr: {
       ...vueThemeConfig.vite?.ssr,
       noExternal: vueThemeDeps,
