@@ -1,4 +1,11 @@
 //=======================================================================================
+// 📌 Constants
+//=======================================================================================
+
+const FOCUS_GUARD_STYLES =
+  "position:fixed;opacity:0;pointer-events:none;outline:none;top:0;left:0;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;";
+
+//=======================================================================================
 // 📌 Main
 //=======================================================================================
 
@@ -14,18 +21,19 @@ export function createFocusGuards(
   floatingEl: HTMLElement,
   onFocus: (type: FocusGuardType, event: FocusEvent) => void,
 ): FocusGuardHandles {
+  if (typeof document === "undefined" || !floatingEl) {
+    return {
+      startGuard: null,
+      endGuard: null,
+      remove: () => {},
+    };
+  }
+
   const start = createGuardElement("start", (e) => onFocus("start", e));
   const end = createGuardElement("end", (e) => onFocus("end", e));
 
-  const parent = floatingEl.parentNode;
-  if (parent) {
-    parent.insertBefore(start.el, floatingEl);
-    if (floatingEl.nextSibling) {
-      parent.insertBefore(end.el, floatingEl.nextSibling);
-    } else {
-      parent.appendChild(end.el);
-    }
-  }
+  floatingEl.before(start.el);
+  floatingEl.after(end.el);
 
   const remove = () => {
     start.cleanup();
@@ -56,22 +64,7 @@ function createGuardElement(
   guard.setAttribute("tabindex", "0");
   guard.setAttribute("aria-hidden", "true");
   guard.setAttribute("data-vfloat-focus-guard", type);
-
-  // Style off-screen, invisible, but technically focusable by the browser
-  guard.style.position = "fixed";
-  guard.style.opacity = "0";
-  guard.style.pointerEvents = "none";
-  guard.style.outline = "none";
-  guard.style.top = "0";
-  guard.style.left = "0";
-  guard.style.width = "1px";
-  guard.style.height = "1px";
-  guard.style.padding = "0";
-  guard.style.margin = "-1px";
-  guard.style.overflow = "hidden";
-  guard.style.clip = "rect(0, 0, 0, 0)";
-  guard.style.whiteSpace = "nowrap";
-  guard.style.border = "0";
+  guard.style.cssText = FOCUS_GUARD_STYLES;
 
   guard.addEventListener("focus", onFocus);
 
@@ -91,8 +84,8 @@ function createGuardElement(
 //=======================================================================================
 
 export interface FocusGuardHandles {
-  startGuard: HTMLElement;
-  endGuard: HTMLElement;
+  startGuard: HTMLElement | null;
+  endGuard: HTMLElement | null;
   remove: () => void;
 }
 
