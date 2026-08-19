@@ -1,12 +1,12 @@
 {
   "version": "0.13.1",
-  "rawBytes": 55604,
-  "rawFormatted": "54.30 kB",
-  "minifiedBytes": 55604,
-  "minifiedFormatted": "54.30 kB",
-  "gzipBytes": 15095,
-  "gzipFormatted": "14.74 kB",
-  "brotliBytes": 13392,
-  "brotliFormatted": "13.08 kB",
-  "measuredAt": "2026-08-19T04:36:46.019Z"
+  "rawBytes": 55237,
+  "rawFormatted": "53.94 kB",
+  "minifiedBytes": 55237,
+  "minifiedFormatted": "53.94 kB",
+  "gzipBytes": 15053,
+  "gzipFormatted": "14.70 kB",
+  "brotliBytes": 13358,
+  "brotliFormatted": "13.04 kB",
+  "measuredAt": "2026-08-19T05:44:16.698Z"
 }

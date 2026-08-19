@@ -15,6 +15,55 @@ All notable changes to this project will be documented in this file. See [conven
 
 - **ci:** Omit registry-url from setup-node for tokenless OIDC npm publishing ([ba81fbb](https://github.com/sherif414/VFloat/commit/ba81fbb))
 - **focus-manager:** Clean up focus guard event listeners on removal ([b538924](https://github.com/sherif414/VFloat/commit/b538924))
+- **ssr:** Harden composables and shared utilities for node ssr compatibility ([1f14627](https://github.com/sherif414/VFloat/commit/1f14627))
+
+### 💅 Refactors
+
+- **focus-manager:** Modernize focus guard insertion and add ssr guard ([ccdcf34](https://github.com/sherif414/VFloat/commit/ccdcf34))
+
+### 📖 Documentation
+
+- Remove explicit sourcemap config from vitepress build ([4dc46a2](https://github.com/sherif414/VFloat/commit/4dc46a2))
+
+### 📦 Build
+
+- **deps:** Move vue to peerDependencies and devDependencies ([98051ee](https://github.com/sherif414/VFloat/commit/98051ee))
+
+### 🏡 Chore
+
+- **scripts:** Streamline package.json scripts and add test:run ([58d29e6](https://github.com/sherif414/VFloat/commit/58d29e6))
+- Remove obsolete release-manager custom agent ([464cdb7](https://github.com/sherif414/VFloat/commit/464cdb7))
+- **rules:** Clarify commit guidelines and consolidate single source of truth ([b1ffbcb](https://github.com/sherif414/VFloat/commit/b1ffbcb))
+- Release v0.13.1 ([f6edb9f](https://github.com/sherif414/VFloat/commit/f6edb9f))
+- **agents:** Add modern api and dependency standards ([dfb7d2d](https://github.com/sherif414/VFloat/commit/dfb7d2d))
+
+### ✅ Tests
+
+- Align test suite with testing standards and add missing unit tests ([179b55c](https://github.com/sherif414/VFloat/commit/179b55c))
+
+### 🤖 CI
+
+- **release:** Automate release and docs workflows on github actions ([97350be](https://github.com/sherif414/VFloat/commit/97350be))
+- **release:** Update npm for oidc trusted publishing and add package metadata ([3a866d2](https://github.com/sherif414/VFloat/commit/3a866d2))
+- **workflows:** Update github actions to latest major versions ([c2482eb](https://github.com/sherif414/VFloat/commit/c2482eb))
+
+### ❤️ Contributors
+
+- Shareef
+
+## v0.13.1
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.13.0...v0.13.1)
+
+### 🚀 Enhancements
+
+- **release:** Make release pipeline fail-safe with atomic npm verification and rollback ([3cd083a](https://github.com/sherif414/VFloat/commit/3cd083a))
+- **skills:** Add vfloat-test-standards skill ([59a1491](https://github.com/sherif414/VFloat/commit/59a1491))
+
+### 🩹 Fixes
+
+- **ci:** Omit registry-url from setup-node for tokenless OIDC npm publishing ([ba81fbb](https://github.com/sherif414/VFloat/commit/ba81fbb))
+- **focus-manager:** Clean up focus guard event listeners on removal ([b538924](https://github.com/sherif414/VFloat/commit/b538924))
 
 ### 📖 Documentation
 
