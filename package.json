@@ -37,8 +37,7 @@
     "changelog:preview": "changelogen --no-output"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.7.6",
-    "vue": "^3.5.31"
+    "@floating-ui/dom": "^1.7.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -67,8 +66,12 @@
     "vitepress-plugin-demo": "^0.8.1",
     "vitest": "^3.2.7",
     "vitest-browser-vue": "^2.1.0",
+    "vue": "^3.5.31",
     "vue-tsc": "^3.2.6",
     "wrangler": "^4.95.0"
+  },
+  "peerDependencies": {
+    "vue": ">=3.5.0"
   },
   "packageManager": "pnpm@10.33.0",
   "pnpm": {
