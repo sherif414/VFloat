@@ -136,6 +136,28 @@ Only these abbreviations are permitted. Everything else must be spelled out.
 - Add code comments when they explain why something exists, tradeoffs, non-obvious control flow, edge cases, or coordination between moving parts.
 - Do not add comments that only restate what the code already says.
 
+## Modern API & Dependency Standards
+
+- **Runtime & Language Baseline:** Target ECMAScript 2024+, TypeScript 5.9+, Node.js 22+, and Vue 3.5+.
+- **Native Platform First:** Always prefer built-in Web APIs, standard DOM methods, and modern ECMAScript features over third-party utility packages.
+  - Use `structuredClone()` instead of custom cloning libraries (`lodash.clonedeep`, `clone-deep`).
+  - Use `crypto.randomUUID()` instead of external UUID libraries (`uuid`, `nanoid`).
+  - Use `Object.groupBy()` or `Map.groupBy()` instead of `lodash.groupBy`.
+  - Use `Promise.withResolvers()` instead of manual Deferred wrappers.
+  - Use `AbortSignal.timeout()` and `AbortController` for timeout and cancellation handling.
+  - Use modern Array methods (`Array.prototype.at()`, `findLast()`, `toReversed()`, `toSorted()`, `toSpliced()`).
+  - Use `queueMicrotask()` over `Promise.resolve().then(...)` or `setTimeout(..., 0)` when scheduling microtasks.
+  - Use native `node:fs/promises`, `node:path`, `node:util` in scripts without extra helper libraries.
+- **Modern Vue 3.5+ Reactivity Idioms:**
+  - Always use `toValue()` from Vue to unwrap refs, getters, and plain values. Do not use legacy manual unwrappers or deprecated patterns.
+  - Use `shallowRef()` for DOM element references (`anchorEl`, `floatingEl`, `arrowEl`) to avoid unnecessary deep reactivity proxying.
+  - Use `effectScope()` and `getCurrentScope()` to encapsulate and dispose composable side effects.
+  - Use `useTemplateRef()` when binding template element references in Vue components.
+- **Dependency Guard:**
+  - **NEVER** install or suggest legacy/outdated utility packages (e.g., `lodash`, `underscore`, `axios`, `moment`, `deepmerge`, `vue-demi`, `rimraf`).
+  - Always inspect `package.json` before assuming any dependency exists.
+  - Do not introduce new dependencies without confirming that no standard browser or Node 22+ API exists to solve the problem.
+
 # Package Management and Development Toolchain
 
 This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and `oxfmt`) for linting and formatting, **Vitest** for testing, and **Vite** for dev server and building.
