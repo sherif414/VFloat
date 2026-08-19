@@ -64,4 +64,29 @@ describe("createFocusGuards", () => {
 
     remove();
   });
+
+  it("cleans up event listeners when remove is called", () => {
+    const onFocus = vi.fn();
+    const { startGuard, endGuard, remove } = createFocusGuards(floatingEl, onFocus);
+
+    remove();
+
+    // Event listeners should be detached, so dispatching focus now must not trigger onFocus
+    startGuard.dispatchEvent(new FocusEvent("focus"));
+    endGuard.dispatchEvent(new FocusEvent("focus"));
+    expect(onFocus).not.toHaveBeenCalled();
+  });
+
+  it("handles removal gracefully when floating element has no parent", () => {
+    const detachedFloatingEl = document.createElement("div");
+    const onFocus = vi.fn();
+    const { startGuard, endGuard, remove } = createFocusGuards(detachedFloatingEl, onFocus);
+
+    expect(startGuard.isConnected).toBe(false);
+    expect(endGuard.isConnected).toBe(false);
+
+    expect(() => {
+      remove();
+    }).not.toThrow();
+  });
 });

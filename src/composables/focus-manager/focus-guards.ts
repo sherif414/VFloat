@@ -2,14 +2,6 @@
 // 📌 Main
 //=======================================================================================
 
-export interface FocusGuardHandles {
-  startGuard: HTMLElement;
-  endGuard: HTMLElement;
-  remove: () => void;
-}
-
-export type FocusGuardType = "start" | "end";
-
 /**
  * Injects invisible, offscreen focus sentinel elements before and after the floating element
  * to intercept Tab and Shift+Tab at the boundaries of portaled containers.
@@ -22,27 +14,27 @@ export function createFocusGuards(
   floatingEl: HTMLElement,
   onFocus: (type: FocusGuardType, event: FocusEvent) => void,
 ): FocusGuardHandles {
-  const startGuard = createGuardElement("start", (e) => onFocus("start", e));
-  const endGuard = createGuardElement("end", (e) => onFocus("end", e));
+  const start = createGuardElement("start", (e) => onFocus("start", e));
+  const end = createGuardElement("end", (e) => onFocus("end", e));
 
   const parent = floatingEl.parentNode;
   if (parent) {
-    parent.insertBefore(startGuard, floatingEl);
+    parent.insertBefore(start.el, floatingEl);
     if (floatingEl.nextSibling) {
-      parent.insertBefore(endGuard, floatingEl.nextSibling);
+      parent.insertBefore(end.el, floatingEl.nextSibling);
     } else {
-      parent.appendChild(endGuard);
+      parent.appendChild(end.el);
     }
   }
 
   const remove = () => {
-    startGuard.remove();
-    endGuard.remove();
+    start.cleanup();
+    end.cleanup();
   };
 
   return {
-    startGuard,
-    endGuard,
+    startGuard: start.el,
+    endGuard: end.el,
     remove,
   };
 }
@@ -51,10 +43,15 @@ export function createFocusGuards(
 // 📌 Helpers
 //=======================================================================================
 
+interface GuardElementHandle {
+  el: HTMLSpanElement;
+  cleanup: () => void;
+}
+
 function createGuardElement(
   type: FocusGuardType,
   onFocus: (e: FocusEvent) => void,
-): HTMLSpanElement {
+): GuardElementHandle {
   const guard = document.createElement("span");
   guard.setAttribute("tabindex", "0");
   guard.setAttribute("aria-hidden", "true");
@@ -78,5 +75,25 @@ function createGuardElement(
 
   guard.addEventListener("focus", onFocus);
 
-  return guard;
+  const cleanup = () => {
+    guard.removeEventListener("focus", onFocus);
+    guard.remove();
+  };
+
+  return {
+    el: guard,
+    cleanup,
+  };
 }
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+export interface FocusGuardHandles {
+  startGuard: HTMLElement;
+  endGuard: HTMLElement;
+  remove: () => void;
+}
+
+export type FocusGuardType = "start" | "end";
