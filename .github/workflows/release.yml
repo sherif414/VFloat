@@ -56,6 +56,9 @@ jobs:
           node-version: 22.x
           cache: pnpm
 
+      - name: Update npm to latest for Trusted Publishing (OIDC)
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
