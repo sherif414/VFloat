@@ -13,3 +13,31 @@
 .VPHomeHero .actions {
   justify-content: center;
 }
+
+.home-showcase-section,
+.home-size-section {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 1rem;
+}
+
+.home-showcase-heading {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.home-showcase-heading h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--vp-c-text-1);
+}
+
+.home-showcase-heading p {
+  margin: 0 auto;
+  max-width: 620px;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+}
