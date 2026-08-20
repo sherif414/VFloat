@@ -10,7 +10,7 @@
     "docs/**/*.vue",
     "docs/**/*.md"
   ],
-  "exclude": ["src/**/__tests__/*"],
+  "exclude": ["src/**/__tests__/*", "src/**/*.test.ts", "docs/**/*.test.ts"],
   "vueCompilerOptions": {
     "vitePressExtensions": [".md"]
   },
