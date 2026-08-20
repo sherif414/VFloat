@@ -1,6 +1,6 @@
 import { type ShallowRef, shallowRef } from "vue";
 import { getDomPath } from "@/shared/dom";
-import { isServer } from "@/shared/env";
+import { getDocument, isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
 import type { FloatingContext, FloatingContextId, FloatingState } from "./use-floating-context";
@@ -237,7 +237,11 @@ export class FloatingTree {
       if (anchorEl) {
         if (anchorEl instanceof Element) {
           if (anchorEl.contains(target) || path.includes(anchorEl)) return true;
-        } else if (anchorEl.contextElement instanceof Element) {
+        } else if (
+          anchorEl.contextElement instanceof Element &&
+          anchorEl.contextElement !== getDocument()?.documentElement &&
+          anchorEl.contextElement !== getDocument()?.body
+        ) {
           if (anchorEl.contextElement.contains(target) || path.includes(anchorEl.contextElement)) {
             return true;
           }

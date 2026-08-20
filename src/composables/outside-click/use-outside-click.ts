@@ -72,6 +72,7 @@ export function useOutsideClick(
       toValue(ignoreScrollbarOption) &&
       isHTMLElement(target) &&
       floatingEl.value &&
+      (floatingEl.value.contains(target) || floatingTree.isTargetWithin(context, target)) &&
       isClickOnScrollbar(event, target)
     ) {
       return;
