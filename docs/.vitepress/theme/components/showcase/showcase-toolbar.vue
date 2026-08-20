@@ -103,13 +103,6 @@ watch(selectContext.state.open, (isOpen) => {
   }
 });
 
-watch(
-  () => props.activePreset,
-  () => {
-    selectContext.state.setOpen(false);
-  },
-);
-
 function onOptionSelect(val: Placement) {
   emit("update:placement", val);
   selectContext.state.setOpen(false);
