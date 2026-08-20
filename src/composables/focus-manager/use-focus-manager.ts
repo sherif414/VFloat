@@ -411,7 +411,7 @@ export function useFocusManager(
     }
   }
 
-  function deactivate(reason: OpenChangeReason = "programmatic", returnFocus = true) {
+  function deactivate(reason?: OpenChangeReason, returnFocus = true) {
     cleanupGuards();
     cleanupIsolation();
     clearBlurTimeout();
@@ -423,7 +423,7 @@ export function useFocusManager(
       previouslyActiveElement = null;
     }
 
-    if (open.value && reason === "programmatic") {
+    if (reason && open.value) {
       setOpen(false, reason);
     }
   }
@@ -439,12 +439,14 @@ export function useFocusManager(
       void shouldReturnFocus.value;
       void shouldPreventScroll.value;
 
-      if (isEnabled.value && open.value && floatingElOption.value) {
-        nextTick(() => {
-          activate();
-        });
+      if (isEnabled.value && open.value) {
+        if (floatingElOption.value) {
+          nextTick(() => {
+            activate();
+          });
+        }
       } else {
-        deactivate("programmatic", shouldReturnFocus.value);
+        deactivate(undefined, shouldReturnFocus.value);
       }
 
       onWatcherCleanup(() => {

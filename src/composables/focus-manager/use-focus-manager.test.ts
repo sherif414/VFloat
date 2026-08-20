@@ -503,16 +503,21 @@ describe("useFocusManager", () => {
       expect(ctx.context.state.open.value).toBe(false);
     });
 
-    it("handles missing floating element gracefully", async () => {
+    it("handles missing floating element gracefully without closing open state prematurely", async () => {
       const ctx = setupFocusManager();
       ctx.context.refs.floatingEl.value = null;
 
-      expect(() => {
-        ctx.context.state.setOpen(true);
-      }).not.toThrow();
-
+      ctx.context.state.setOpen(true);
       await flushFocus();
+
+      expect(ctx.context.state.open.value).toBe(true);
       expect(ctx.result.isActive.value).toBe(false);
+
+      // Now mount the floating element
+      ctx.context.refs.floatingEl.value = ctx.floatingEl;
+      await flushFocus();
+
+      expect(ctx.result.isActive.value).toBe(true);
     });
   });
 });
