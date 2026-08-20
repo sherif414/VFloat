@@ -8,7 +8,7 @@ import {
 } from "@/composables/client-point/use-client-point";
 import { isVirtualElement } from "@/shared/dom";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
-import { VirtualElementFactory } from "./virtual-element-factory";
+import { createVirtualElement } from "./virtual-element-factory";
 
 const trackedElements: HTMLElement[] = [];
 
@@ -105,7 +105,7 @@ function createClientPointHarness(): ClientPointHarness {
   };
 }
 
-describe("VirtualElementFactory", () => {
+describe("createVirtualElement", () => {
   it("creates a virtual element using provided coordinates", () => {
     const reference = document.createElement("div");
     const referenceRect = createRect({ x: 10, y: 20, width: 120, height: 40 });
@@ -113,8 +113,7 @@ describe("VirtualElementFactory", () => {
       .spyOn(reference, "getBoundingClientRect")
       .mockReturnValue(referenceRect);
 
-    const factory = new VirtualElementFactory();
-    const virtualElement = factory.create({
+    const virtualElement = createVirtualElement({
       coordinates: { x: 150, y: 260 },
       trackingTarget: reference,
     });
@@ -132,8 +131,7 @@ describe("VirtualElementFactory", () => {
     const referenceRect = createRect({ x: 5, y: 15, width: 200, height: 80 });
     vi.spyOn(reference, "getBoundingClientRect").mockReturnValue(referenceRect);
 
-    const factory = new VirtualElementFactory();
-    const virtualElement = factory.create({
+    const virtualElement = createVirtualElement({
       coordinates: { x: null, y: 220 },
       baselineCoordinates: { x: 120, y: null },
       trackingTarget: reference,

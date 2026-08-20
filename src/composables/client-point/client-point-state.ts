@@ -20,6 +20,8 @@ export function createClientPointState(options: ClientPointStateOptions): Client
     y: sanitizeCoordinate(toValue(yOption)),
   }));
 
+  // Controlled mode requires both external coordinates to be non-null.
+  // Providing only one axis does not activate controlled mode.
   const isControlled = computed(
     () => externalCoordinates.value.x !== null && externalCoordinates.value.y !== null,
   );
@@ -48,7 +50,7 @@ export function createClientPointState(options: ClientPointStateOptions): Client
       return;
     }
 
-    internalCoordinates.value = DEFAULT_COORDINATES;
+    internalCoordinates.value = { x: null, y: null };
   }
 
   function captureInitialCoordinates(coordinates: Coordinates | null): void {

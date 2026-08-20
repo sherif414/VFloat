@@ -4,7 +4,7 @@ import { getDocument } from "@/shared/env";
 import { createClientPointState } from "./client-point-state";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
 import type { PointerEventData, TrackingMode } from "./types";
-import { VirtualElementFactory } from "./virtual-element-factory";
+import { createVirtualElement } from "./virtual-element-factory";
 
 //=======================================================================================
 // 📌 Main
@@ -72,21 +72,25 @@ export function useClientPoint(
     state.clearInitialCoordinates();
   }
 
-  watch(open, (isOpen) => {
-    if (state.isControlled.value) return;
-    if (!isOpen) {
-      clearTrackingSession();
-      return;
-    }
-    if (!isEnabled.value) return;
-    state.captureInitialCoordinates(trackingStrategy.getCoordinatesForOpening());
-  });
+  // immediate: true ensures that if open is already true when the composable
+  // is created (e.g. late initialization), the initial capture still runs.
+  watch(
+    open,
+    (isOpen) => {
+      if (state.isControlled.value) return;
+      if (!isOpen) {
+        clearTrackingSession();
+        return;
+      }
+      if (!isEnabled.value) return;
+      state.captureInitialCoordinates(trackingStrategy.getCoordinatesForOpening());
+    },
+    { immediate: true },
+  );
 
   //=====================================================================================
   // Wiring
   //=====================================================================================
-
-  const virtualElementFactory = new VirtualElementFactory();
 
   watchEffect(() => {
     if (!isEnabled.value) {
@@ -96,7 +100,7 @@ export function useClientPoint(
       return;
     }
 
-    context.refs.anchorEl.value = virtualElementFactory.create({
+    context.refs.anchorEl.value = createVirtualElement({
       coordinates: state.coordinates.value,
       trackingTarget: trackingAreaEl.value,
       baselineCoordinates: state.initialCoordinates.value,
@@ -178,11 +182,21 @@ export interface UseClientPointOptions {
 
   /**
    * Optional externally controlled x coordinate.
+   *
+   * When both `x` and `y` resolve to non-null numbers, the composable enters
+   * controlled mode: pointer event tracking is disabled and coordinates are
+   * driven entirely by these external values. Providing only one axis has no
+   * effect — both must be non-null to activate controlled mode.
    */
   x?: MaybeRefOrGetter<number | null>;
 
   /**
    * Optional externally controlled y coordinate.
+   *
+   * When both `x` and `y` resolve to non-null numbers, the composable enters
+   * controlled mode: pointer event tracking is disabled and coordinates are
+   * driven entirely by these external values. Providing only one axis has no
+   * effect — both must be non-null to activate controlled mode.
    */
   y?: MaybeRefOrGetter<number | null>;
 

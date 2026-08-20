@@ -14,121 +14,122 @@ type VirtualElementConfig = {
 //=======================================================================================
 
 /**
- * Factory for creating virtual elements from pointer coordinates.
+ * Creates a virtual element from pointer coordinates.
  *
- * Virtual elements are used to position floating components relative to the cursor
- * rather than a static DOM anchor. This factory manages coordinate fallback,
+ * Virtual elements position floating components relative to the cursor
+ * rather than a static DOM anchor. This function manages coordinate fallback,
  * baseline coordinates, and custom context elements.
  *
  * @example Creating a virtual element
  * ```ts
- * const factory = new VirtualElementFactory();
- * const virtualEl = factory.create({
+ * const virtualEl = createVirtualElement({
  *   coordinates: { x: 100, y: 150 },
  *   trackingTarget: triggerEl.value,
  * });
  * ```
  */
-export class VirtualElementFactory {
-  create(options: VirtualElementFactoryOptions): VirtualElement {
-    const config: VirtualElementConfig = {
-      coordinates: options.coordinates,
-      trackingTarget: options.trackingTarget ?? null,
-      baselineCoordinates: options.baselineCoordinates ?? null,
-    };
+export function createVirtualElement(options: VirtualElementFactoryOptions): VirtualElement {
+  const config: VirtualElementConfig = {
+    coordinates: options.coordinates,
+    trackingTarget: options.trackingTarget ?? null,
+    baselineCoordinates: options.baselineCoordinates ?? null,
+  };
 
-    return {
-      contextElement: config.trackingTarget ?? undefined,
-      getBoundingClientRect: () => this.resolveBoundingRect(config),
-    };
-  }
+  return {
+    contextElement: config.trackingTarget ?? undefined,
+    getBoundingClientRect: () => resolveBoundingRect(config),
+  };
+}
 
-  private resolveBoundingRect(config: VirtualElementConfig): DOMRect {
-    const referenceRect = this.getReferenceRect(config.trackingTarget);
-    const position = this.resolvePosition(config, referenceRect);
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
-    return this.createDOMRect({
-      x: position.x,
-      y: position.y,
-      width: 0,
-      height: 0,
-    });
-  }
+function resolveBoundingRect(config: VirtualElementConfig): DOMRect {
+  const referenceRect = getReferenceRect(config.trackingTarget);
+  const position = resolvePosition(config, referenceRect);
 
-  private getReferenceRect(element: HTMLElement | null): DOMRect {
-    if (element) {
-      try {
-        return element.getBoundingClientRect();
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.warn("VirtualElementFactory: Failed to get element bounds", {
-            element,
-            error,
-          });
-        }
+  return createDOMRect({
+    x: position.x,
+    y: position.y,
+    width: 0,
+    height: 0,
+  });
+}
+
+function getReferenceRect(element: HTMLElement | null): DOMRect {
+  if (element) {
+    try {
+      return element.getBoundingClientRect();
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn("createVirtualElement: Failed to get element bounds", {
+          element,
+          error,
+        });
       }
     }
-
-    return this.createDOMRect({
-      x: DEFAULT_COORDINATES.x,
-      y: DEFAULT_COORDINATES.y,
-      width: 0,
-      height: 0,
-    });
   }
 
-  private resolvePosition(
-    config: VirtualElementConfig,
-    referenceRect: DOMRect,
-  ): { x: number; y: number } {
-    return {
-      x: this.resolveCoordinate({
-        current: config.coordinates.x,
-        baseline: config.baselineCoordinates?.x ?? null,
-        fallback: referenceRect.x,
-      }),
-      y: this.resolveCoordinate({
-        current: config.coordinates.y,
-        baseline: config.baselineCoordinates?.y ?? null,
-        fallback: referenceRect.y,
-      }),
-    };
+  return createDOMRect({
+    x: DEFAULT_COORDINATES.x,
+    y: DEFAULT_COORDINATES.y,
+    width: 0,
+    height: 0,
+  });
+}
+
+function resolvePosition(
+  config: VirtualElementConfig,
+  referenceRect: DOMRect,
+): { x: number; y: number } {
+  return {
+    x: resolveCoordinate({
+      current: config.coordinates.x,
+      baseline: config.baselineCoordinates?.x ?? null,
+      fallback: referenceRect.x,
+    }),
+    y: resolveCoordinate({
+      current: config.coordinates.y,
+      baseline: config.baselineCoordinates?.y ?? null,
+      fallback: referenceRect.y,
+    }),
+  };
+}
+
+function resolveCoordinate(sources: {
+  current: number | null;
+  baseline: number | null;
+  fallback: number;
+}): number {
+  const { current, baseline, fallback } = sources;
+
+  if (current !== null) {
+    return current;
   }
 
-  private resolveCoordinate(sources: {
-    current: number | null;
-    baseline: number | null;
-    fallback: number;
-  }): number {
-    const { current, baseline, fallback } = sources;
-
-    if (current !== null) {
-      return current;
-    }
-
-    if (baseline !== null) {
-      return baseline;
-    }
-
-    // Fall back to the reference element so missing coordinates still produce a stable rect.
-    return fallback;
+  if (baseline !== null) {
+    return baseline;
   }
 
-  private createDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
-    const { x, y, width, height } = rect;
-    const safeWidth = Math.max(0, width);
-    const safeHeight = Math.max(0, height);
+  // Fall back to the reference element so missing coordinates still produce a stable rect.
+  return fallback;
+}
 
-    return {
-      x,
-      y,
-      width: safeWidth,
-      height: safeHeight,
-      top: y,
-      right: x + safeWidth,
-      bottom: y + safeHeight,
-      left: x,
-      toJSON: () => ({ x, y, width: safeWidth, height: safeHeight }),
-    } as DOMRect;
-  }
+function createDOMRect(rect: { x: number; y: number; width: number; height: number }): DOMRect {
+  const { x, y, width, height } = rect;
+  const safeWidth = Math.max(0, width);
+  const safeHeight = Math.max(0, height);
+
+  return {
+    x,
+    y,
+    width: safeWidth,
+    height: safeHeight,
+    top: y,
+    right: x + safeWidth,
+    bottom: y + safeHeight,
+    left: x,
+    toJSON: () => ({ x, y, width: safeWidth, height: safeHeight }),
+  } as DOMRect;
 }
