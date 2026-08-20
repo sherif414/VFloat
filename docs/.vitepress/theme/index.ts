@@ -27,16 +27,7 @@ const Layout = defineComponent({
           ...(frontmatter.value.layout === "home"
             ? {
                 "home-hero-after": () =>
-                  h("div", { class: "home-showcase-section" }, [
-                    h("div", { class: "home-showcase-heading" }, [
-                      h("h2", "Interactive Capabilities Showcase"),
-                      h(
-                        "p",
-                        "Test collision handling, auto-flipping, dynamic shifting, and keyboard-driven navigation across common floating UI patterns.",
-                      ),
-                    ]),
-                    h(HomeShowcase),
-                  ]),
+                  h("div", { class: "home-showcase-section" }, [h(HomeShowcase)]),
               }
             : {}),
         } as any,

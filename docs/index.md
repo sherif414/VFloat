@@ -23,12 +23,3 @@ features:
     details: Independent composables for positioning, hover, click, focus trapping, and collections that connect cleanly through shared context.
 footer: false
 ---
-
-<div class="home-size-section">
-  <div class="home-showcase-heading">
-    <h2>Lightweight & Tree-Shakable</h2>
-    <p>Fine-grained composables and middlewares ensure you only ship the code your application needs.</p>
-  </div>
-
-  <package-size-table />
-</div>

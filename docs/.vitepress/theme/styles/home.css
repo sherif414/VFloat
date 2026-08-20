@@ -14,30 +14,46 @@
   justify-content: center;
 }
 
-.home-showcase-section,
-.home-size-section {
+.home-showcase-section {
   max-width: 1152px;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 1rem;
+  padding: 1.5rem 1.5rem 0.5rem;
 }
 
-.home-showcase-heading {
-  text-align: center;
-  margin-bottom: 1.5rem;
+/* ============================================================================
+   Floating Arrow Styles
+   ============================================================================ */
+.floating-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--vp-c-bg-elv, #fff);
+  transform: rotate(45deg);
+  pointer-events: none;
+  border: 0 solid var(--vp-c-divider);
+  z-index: 1;
 }
 
-.home-showcase-heading h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.85rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--vp-c-text-1);
+:root.dark .floating-arrow {
+  background: #1e1e22;
 }
 
-.home-showcase-heading p {
-  margin: 0 auto;
-  max-width: 620px;
-  font-size: 1.05rem;
-  line-height: 1.5;
-  color: var(--vp-c-text-2);
+.floating-arrow--top {
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.floating-arrow--bottom {
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.floating-arrow--left {
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.floating-arrow--right {
+  border-bottom-width: 1px;
+  border-left-width: 1px;
 }
