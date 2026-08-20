@@ -41,10 +41,23 @@ function updateIndicator() {
   };
 }
 
+function scrollActiveTabIntoView() {
+  const currentBtn = tabButtonRefs.value[props.modelValue];
+  if (!currentBtn) return;
+  currentBtn.scrollIntoView({
+    behavior: "smooth",
+    inline: "nearest",
+    block: "nearest",
+  });
+}
+
 watch(
   () => props.modelValue,
   () => {
-    void nextTick(updateIndicator);
+    void nextTick(() => {
+      updateIndicator();
+      scrollActiveTabIntoView();
+    });
   },
 );
 
@@ -178,6 +191,13 @@ function onSelectView(mode: ViewMode) {
   gap: 0.25rem;
   padding: 2px;
   border-radius: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.preset-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .preset-tab-indicator {
@@ -187,8 +207,8 @@ function onSelectView(mode: ViewMode) {
   height: calc(100% - 4px);
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
-  background: var(--vp-c-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background: var(--vp-c-bg-elv);
+  box-shadow: var(--vp-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.08));
   pointer-events: none;
   z-index: 1;
   opacity: 0;
@@ -215,6 +235,9 @@ function onSelectView(mode: ViewMode) {
   font-weight: 500;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  touch-action: manipulation;
   transition: color 0.18s ease;
 }
 
@@ -223,7 +246,8 @@ function onSelectView(mode: ViewMode) {
 }
 
 .preset-tab.is-active {
-  color: var(--vp-c-text-1);
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
 
 /* ============================================================================
@@ -233,7 +257,7 @@ function onSelectView(mode: ViewMode) {
   position: relative;
   display: flex;
   width: 172px;
-  background: var(--vp-c-bg-elv, rgba(125, 125, 125, 0.08));
+  background: var(--vp-c-bg-alt);
   padding: 2px;
   border-radius: 6px;
   border: 1px solid var(--vp-c-divider);
@@ -248,8 +272,8 @@ function onSelectView(mode: ViewMode) {
   height: calc(100% - 4px);
   border-radius: 4px;
   border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--vp-c-bg-elv);
+  box-shadow: var(--vp-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.08));
   pointer-events: none;
   z-index: 1;
   transform: translateX(0);
@@ -278,6 +302,7 @@ function onSelectView(mode: ViewMode) {
   font-weight: 500;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
   transition: color 0.18s ease;
 }
 
@@ -286,7 +311,7 @@ function onSelectView(mode: ViewMode) {
 }
 
 .view-switch__btn.is-active {
-  color: var(--vp-c-text-1);
+  color: var(--vp-c-brand-1);
   font-weight: 600;
 }
 
@@ -305,65 +330,19 @@ function onSelectView(mode: ViewMode) {
   .showcase-header {
     flex-direction: column;
     align-items: stretch;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
   }
 
-  .preset-nav {
-    overflow-x: auto;
+  .view-switch {
+    width: 100%;
+    max-width: 280px;
+    align-self: center;
   }
-}
 
-/* ============================================================================
-   Dark Mode Precision Theming
-   ============================================================================ */
-:root.dark .showcase-header {
-  background: #18181b;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-:root.dark .preset-tab-indicator {
-  background: #27272b;
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-:root.dark .preset-tab {
-  color: rgba(255, 255, 255, 0.65);
-}
-
-:root.dark .preset-tab:hover {
-  color: #ffffff;
-}
-
-:root.dark .preset-tab.is-active {
-  color: #ffffff;
-  font-weight: 550;
-}
-
-:root.dark .view-switch {
-  background: #111113;
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-:root.dark .view-switch-indicator {
-  background: #27272b;
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-:root.dark .view-switch__btn {
-  color: rgba(255, 255, 255, 0.65);
-}
-
-:root.dark .view-switch__btn:hover {
-  color: #ffffff;
-}
-
-:root.dark .view-switch__btn.is-active {
-  color: #ffffff;
-  font-weight: 600;
+  .preset-tab {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+  }
 }
 </style>

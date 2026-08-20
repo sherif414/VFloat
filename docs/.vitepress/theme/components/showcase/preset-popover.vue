@@ -203,7 +203,7 @@ defineExpose({
   font-size: 0.88rem;
   font-weight: 500;
   cursor: grab;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--vp-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.05));
   user-select: none;
   transition:
     border-color 0.15s ease,
@@ -211,17 +211,22 @@ defineExpose({
 }
 
 .anchor-btn:hover {
-  border-color: var(--vp-c-text-3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.anchor-btn:hover .anchor-btn__drag-icon {
+  color: var(--vp-c-brand-1);
 }
 
 .anchor-btn.is-active {
-  border-color: var(--vp-c-brand-1, #3eaf7c);
+  border-color: var(--vp-c-brand-1);
 }
 
 .anchor-btn.is-dragging {
   cursor: grabbing;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
 .anchor-btn__drag-icon {
@@ -235,18 +240,15 @@ defineExpose({
   left: 0;
   z-index: 20;
   border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv, #fff);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
   border-radius: 8px;
-}
-
-:root.dark .floating-panel {
-  background: #1e1e22;
 }
 
 .panel-popover {
   width: 260px;
+  max-width: calc(100% - 16px);
   padding: 0.85rem;
   border-radius: 10px;
 }
@@ -271,10 +273,12 @@ defineExpose({
   cursor: pointer;
   padding: 0.15rem 0.3rem;
   border-radius: 4px;
+  touch-action: manipulation;
 }
 
 .popover-close-btn:hover {
   color: var(--vp-c-text-1);
+  background: var(--vp-c-bg-soft);
 }
 
 .popover-description {
@@ -297,22 +301,24 @@ defineExpose({
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
+  touch-action: manipulation;
   transition: all 0.12s ease;
 }
 
 .action-btn--primary {
   border: none;
-  background: var(--vp-c-text-1);
-  color: var(--vp-c-bg);
+  background: var(--vp-c-brand-1);
+  color: var(--vp-c-white, #ffffff);
 }
 
 .action-btn--primary:hover {
-  opacity: 0.9;
+  background: var(--vp-c-brand-2, var(--vp-c-brand-1));
+  opacity: 0.95;
 }
 
 .action-btn--secondary {
   border: 1px solid var(--vp-c-divider);
-  background: transparent;
+  background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
 }
 

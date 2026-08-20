@@ -229,7 +229,7 @@ onMounted(() => {
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   background: var(--vp-c-bg);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--vp-shadow-2, 0 4px 20px rgba(0, 0, 0, 0.04));
   overflow: hidden;
   font-family: var(--vp-font-family-base, sans-serif);
 }
@@ -247,23 +247,23 @@ onMounted(() => {
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: var(--vp-c-bg-alt, #fafafb);
-}
-
-:root.dark .sandbox {
-  background: #141416;
+  background: var(--vp-c-bg-alt);
 }
 
 .sandbox-caption {
   position: absolute;
-  bottom: 0.85rem;
+  bottom: 0.75rem;
   left: 50%;
   transform: translateX(-50%);
+  width: calc(100% - 1.5rem);
+  max-width: 440px;
   pointer-events: none;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  line-height: 1.35;
   color: var(--vp-c-text-3);
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
+  text-wrap: balance;
 }
 
 .sandbox-caption kbd {
@@ -274,6 +274,7 @@ onMounted(() => {
   background: var(--vp-c-bg);
   border: 1px solid var(--vp-c-divider);
   border-radius: 3px;
+  color: var(--vp-c-text-2);
 }
 
 .reset-position-btn {
@@ -284,16 +285,45 @@ onMounted(() => {
   padding: 0.25rem 0.55rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
-  background: var(--vp-c-bg);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-2);
   font: inherit;
   font-size: 0.75rem;
   cursor: pointer;
+  touch-action: manipulation;
   transition: all 0.15s ease;
 }
 
 .reset-position-btn:hover {
   color: var(--vp-c-text-1);
-  border-color: var(--vp-c-text-2);
+  border-color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-soft);
+}
+
+@media (max-width: 640px) {
+  .showcase-card {
+    margin: 1rem 0 1.5rem;
+    border-radius: 10px;
+  }
+
+  .showcase-body {
+    min-height: 320px;
+  }
+
+  .sandbox {
+    height: 320px;
+  }
+
+  .reset-position-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.72rem;
+  }
+
+  .sandbox-caption {
+    bottom: 0.5rem;
+    font-size: 0.72rem;
+  }
 }
 </style>

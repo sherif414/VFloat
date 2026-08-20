@@ -10,14 +10,30 @@
   text-align: center;
 }
 
+.VPHomeHero .text {
+  text-wrap: balance;
+}
+
+.VPHomeHero .tagline {
+  text-wrap: balance;
+}
+
 .VPHomeHero .actions {
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .home-showcase-section {
   max-width: 1152px;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .home-showcase-section {
+    padding: 0.75rem 0.75rem 0.25rem;
+  }
 }
 
 /* ============================================================================
@@ -27,15 +43,11 @@
   position: absolute;
   width: 10px;
   height: 10px;
-  background: var(--vp-c-bg-elv, #fff);
+  background: var(--vp-c-bg-elv);
   transform: rotate(45deg);
   pointer-events: none;
   border: 0 solid var(--vp-c-divider);
   z-index: 1;
-}
-
-:root.dark .floating-arrow {
-  background: #1e1e22;
 }
 
 .floating-arrow--top {

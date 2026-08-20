@@ -157,7 +157,7 @@ defineExpose({
   font-size: 0.88rem;
   font-weight: 500;
   cursor: grab;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--vp-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.05));
   user-select: none;
   transition:
     border-color 0.15s ease,
@@ -165,13 +165,18 @@ defineExpose({
 }
 
 .anchor-btn:hover {
-  border-color: var(--vp-c-text-3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.anchor-btn:hover .anchor-btn__drag-icon {
+  color: var(--vp-c-brand-1);
 }
 
 .anchor-btn.is-dragging {
   cursor: grabbing;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
 .anchor-btn__drag-icon {
@@ -185,20 +190,17 @@ defineExpose({
   left: 0;
   z-index: 20;
   border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv, #fff);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
   border-radius: 8px;
-}
-
-:root.dark .floating-panel {
-  background: #1e1e22;
 }
 
 .panel-tooltip {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  max-width: calc(100% - 16px);
   padding: 0.4rem 0.65rem;
   font-size: 0.82rem;
   font-weight: 500;

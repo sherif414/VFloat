@@ -220,7 +220,7 @@ defineExpose({
   font-size: 0.88rem;
   font-weight: 500;
   cursor: grab;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--vp-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.05));
   user-select: none;
   transition:
     border-color 0.15s ease,
@@ -228,17 +228,22 @@ defineExpose({
 }
 
 .anchor-btn:hover {
-  border-color: var(--vp-c-text-3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.anchor-btn:hover .anchor-btn__drag-icon {
+  color: var(--vp-c-brand-1);
 }
 
 .anchor-btn.is-active {
-  border-color: var(--vp-c-brand-1, #3eaf7c);
+  border-color: var(--vp-c-brand-1);
 }
 
 .anchor-btn.is-dragging {
   cursor: grabbing;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
 .anchor-btn__drag-icon {
@@ -257,18 +262,15 @@ defineExpose({
   left: 0;
   z-index: 20;
   border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv, #fff);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
   border-radius: 8px;
-}
-
-:root.dark .floating-panel {
-  background: #1e1e22;
 }
 
 .panel-menu {
   width: 180px;
+  max-width: calc(100% - 16px);
   padding: 0.3rem;
   border-radius: 8px;
   outline: none;
@@ -283,21 +285,24 @@ defineExpose({
   font-size: 0.8rem;
   color: var(--vp-c-text-1);
   cursor: pointer;
+  touch-action: manipulation;
   transition: background-color 0.1s ease;
 }
 
 .menu-item:hover,
 .menu-item.is-active {
   background: var(--vp-c-bg-soft);
+  color: var(--vp-c-brand-1);
 }
 
 .menu-item.is-danger {
-  color: #e5484d;
+  color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
 }
 
 .menu-item.is-danger:hover,
 .menu-item.is-danger.is-active {
-  background: rgba(229, 72, 77, 0.08);
+  background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.1)));
+  color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
 }
 
 .menu-item__shortcut {

@@ -314,7 +314,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0.75rem 1.25rem;
   padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg);
@@ -347,6 +347,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   font-weight: 500;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
   transition: all 0.15s ease;
 }
 
@@ -356,7 +357,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
 
 .control-select-btn.is-open {
   border-color: var(--vp-c-brand-1);
-  box-shadow: 0 0 0 2px rgba(62, 175, 124, 0.2);
+  box-shadow: 0 0 0 2px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.2));
 }
 
 .control-select-btn__chevron {
@@ -374,16 +375,15 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   position: fixed;
   z-index: 1000;
   min-width: 130px;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
   padding: 0.25rem;
-  background: var(--vp-c-bg-elv, #ffffff);
+  background: var(--vp-c-bg-elv);
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--vp-shadow-3, 0 8px 24px rgba(0, 0, 0, 0.12));
   outline: none;
-}
-
-:root.dark .control-select-dropdown {
-  background: #1e1e22;
 }
 
 .control-select-option {
@@ -397,6 +397,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   font-weight: 500;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
   transition:
     background 0.1s ease,
     color 0.1s ease;
@@ -436,6 +437,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
+  touch-action: manipulation;
   transition: all 0.12s ease;
 }
 
@@ -458,7 +460,8 @@ function onDropdownKeyDown(e: KeyboardEvent) {
 .control-unit--toggles {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.85rem;
 }
 
 .custom-toggle {
@@ -468,6 +471,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   gap: 0.38rem;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--vp-c-text-2);
@@ -513,14 +517,15 @@ function onDropdownKeyDown(e: KeyboardEvent) {
 }
 
 .custom-toggle__input:checked + .custom-toggle__box {
-  background: var(--vp-c-brand-1, #3eaf7c);
-  border-color: var(--vp-c-brand-1, #3eaf7c);
+  background: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 1px 4px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.3));
 }
 
 .custom-toggle__check {
   width: 10px;
   height: 10px;
-  color: #ffffff;
+  color: var(--vp-c-white, #ffffff);
   opacity: 0;
   transform: scale(0.5);
   transition:
@@ -537,30 +542,6 @@ function onDropdownKeyDown(e: KeyboardEvent) {
   line-height: 1;
 }
 
-/* Dark mode custom toggle */
-:root.dark .custom-toggle {
-  color: rgba(255, 255, 255, 0.65);
-}
-
-:root.dark .custom-toggle:hover {
-  color: #ffffff;
-}
-
-:root.dark .custom-toggle__box {
-  background: #202024;
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-:root.dark .custom-toggle:hover .custom-toggle__box {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-:root.dark .custom-toggle__input:checked + .custom-toggle__box {
-  background: #3eaf7c;
-  border-color: #3eaf7c;
-  box-shadow: 0 1px 4px rgba(62, 175, 124, 0.3);
-}
-
 .control-unit--status {
   margin-left: auto;
 }
@@ -572,7 +553,7 @@ function onDropdownKeyDown(e: KeyboardEvent) {
 }
 
 .placement-badge code {
-  color: var(--vp-c-text-1);
+  color: var(--vp-c-brand-1);
   font-weight: 600;
   background: var(--vp-c-bg-soft);
   padding: 0.15rem 0.35rem;
@@ -582,13 +563,14 @@ function onDropdownKeyDown(e: KeyboardEvent) {
 
 @media (max-width: 768px) {
   .showcase-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    gap: 0.65rem 0.85rem;
   }
 
   .control-unit--status {
+    width: 100%;
     margin-left: 0;
+    justify-content: flex-start;
   }
 }
 </style>

@@ -124,6 +124,7 @@ defineExpose({
   position: absolute;
   inset: 0;
   cursor: crosshair;
+  touch-action: none;
 }
 
 .floating-panel {
@@ -132,14 +133,10 @@ defineExpose({
   left: 0;
   z-index: 20;
   border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv, #fff);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
   border-radius: 8px;
-}
-
-:root.dark .floating-panel {
-  background: #1e1e22;
 }
 
 .panel-cursor {
@@ -157,7 +154,8 @@ defineExpose({
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #3eaf7c;
+  background: var(--vp-c-brand-1);
+  box-shadow: 0 0 6px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.4));
 }
 
 .panel-cursor__coords {
