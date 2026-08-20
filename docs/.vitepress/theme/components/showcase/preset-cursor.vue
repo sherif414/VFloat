@@ -105,10 +105,6 @@ defineExpose({
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
   >
-    <div class="cursor-zone__prompt">
-      <span>Move pointer within this canvas</span>
-    </div>
-
     <div
       v-if="context.state.open.value && coordinates.x !== null"
       ref="floatingEl"
@@ -127,15 +123,7 @@ defineExpose({
 .cursor-zone {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
   cursor: crosshair;
-}
-
-.cursor-zone__prompt {
-  color: var(--vp-c-text-3);
-  font-size: 0.8rem;
-  pointer-events: none;
 }
 
 .floating-panel {
