@@ -1,5 +1,5 @@
 import type { Coords } from "@floating-ui/dom";
-import { computed, type MaybeRef, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { floatingTree } from "@/composables/floating-context/floating-context-tree";
 import { getAnchorElement } from "@/shared/elements";
@@ -309,7 +309,7 @@ export interface UseHoverOptions {
    * Whether hover event listeners are enabled.
    * @default true
    */
-  enabled?: MaybeRef<boolean>;
+  enabled?: MaybeRefOrGetter<boolean>;
 
   /**
    * Delay in milliseconds before showing/hiding the floating element.
@@ -317,7 +317,7 @@ export interface UseHoverOptions {
    * specifying different delays.
    * @default 0
    */
-  delay?: MaybeRef<number | { open?: number; close?: number }>;
+  delay?: MaybeRefOrGetter<number | { open?: number; close?: number }>;
 
   /**
    * Time in milliseconds the pointer must rest within the reference
@@ -325,13 +325,13 @@ export interface UseHoverOptions {
    * this option is ignored if an open delay is specified.
    * @default 0
    */
-  restMs?: MaybeRef<number>;
+  restMs?: MaybeRefOrGetter<number>;
 
   /**
    * Whether hover events should only trigger for mouse like pointers (mouse, pen ,stylus ..etc).
    * @default false
    */
-  mouseOnly?: MaybeRef<boolean>;
+  mouseOnly?: MaybeRefOrGetter<boolean>;
 
   /**
    * Enable floating-ui style safe polygon algorithm that keeps the
@@ -341,7 +341,7 @@ export interface UseHoverOptions {
    * – `false | undefined` → disabled (current behaviour)
    * – `SafePolygonOptions` → enabled with custom buffer
    */
-  safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
+  safePolygon?: MaybeRefOrGetter<boolean | SafePolygonOptions>;
 
   /**
    * Predicate to determine if a pointer leave should be ignored (e.g. to keep parent open when hovering a child branch).
@@ -352,7 +352,7 @@ export interface UseHoverOptions {
 }
 
 interface UseDelayedOpenOptions {
-  delay: MaybeRef<number | { open?: number; close?: number }>;
+  delay: MaybeRefOrGetter<number | { open?: number; close?: number }>;
 }
 
 export type { SafePolygonOptions } from "./polygon";
