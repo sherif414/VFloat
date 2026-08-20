@@ -8,9 +8,19 @@
     "playground/**/*.ts",
     "docs/**/*.ts",
     "docs/**/*.vue",
-    "docs/**/*.md"
+    "docs/**/*.md",
+    "docs/.vitepress/**/*.ts",
+    "docs/.vitepress/**/*.mts",
+    "docs/.vitepress/**/*.vue",
+    "docs/.vitepress/**/*.d.ts"
   ],
-  "exclude": ["src/**/__tests__/*", "src/**/*.test.ts", "docs/**/*.test.ts"],
+  "exclude": [
+    "src/**/__tests__/*",
+    "src/**/*.test.ts",
+    "docs/**/*.test.ts",
+    "docs/.vitepress/dist/**",
+    "docs/.vitepress/cache/**"
+  ],
   "vueCompilerOptions": {
     "vitePressExtensions": [".md"]
   },
@@ -19,10 +29,13 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
 
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "v-float": ["./src/index.ts"]
     }
   }
 }

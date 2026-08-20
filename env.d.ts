@@ -6,3 +6,4 @@ declare module "*.vue" {
 }
 
 declare module "*.css";
+declare module "body-scroll-lock";
