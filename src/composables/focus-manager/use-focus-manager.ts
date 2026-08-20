@@ -220,6 +220,35 @@ export function useFocusManager(
   // Initial & Return Focus
   //=====================================================================================
 
+  let isPointerDownOutside = false;
+  let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  function onDocumentPointerDownTracker(event: PointerEvent | MouseEvent) {
+    if (!isEnabled.value || !open.value) return;
+
+    const target = event.target as Node | null;
+    if (!target) return;
+
+    // If the interaction is outside this floating tree, prevent focus hijacking
+    if (!floatingTree.isTargetWithin(context, target)) {
+      isPointerDownOutside = true;
+      if (pointerDownOutsideTimeoutId) clearTimeout(pointerDownOutsideTimeoutId);
+      pointerDownOutsideTimeoutId = setTimeout(() => {
+        isPointerDownOutside = false;
+      }, 100);
+    }
+  }
+
+  // Always track pointer down events when open to handle returnFocus correctly
+  cleanupRegistry.add(
+    useEventListener(
+      () => (isEnabled.value && open.value ? getDocument() : null),
+      "pointerdown",
+      onDocumentPointerDownTracker,
+      { capture: true },
+    ),
+  );
+
   function applyInitialFocus(floating: HTMLElement) {
     const rawTarget = toValue(initialFocusOption);
     if (rawTarget === false) {
@@ -254,6 +283,19 @@ export function useFocusManager(
 
   function restoreFocus() {
     if (!shouldReturnFocus.value) {
+      previouslyActiveElement = null;
+      return;
+    }
+
+    const activeEl = getDocument()?.activeElement ?? null;
+    const isFocusOnBody = activeEl === getDocument()?.body;
+    const isFocusInside = activeEl ? floatingTree.isTargetWithin(context, activeEl) : false;
+
+    // If focus has naturally moved to an outside element, don't steal it back.
+    const focusMovedOutside = activeEl && !isFocusOnBody && !isFocusInside;
+
+    // If a pointer down is actively happening on an outside element, don't hijack focus.
+    if (focusMovedOutside || isPointerDownOutside) {
       previouslyActiveElement = null;
       return;
     }

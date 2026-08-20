@@ -308,6 +308,46 @@ describe("useFocusManager", () => {
 
       expect(document.activeElement).not.toBe(previousFocus);
     });
+
+    it("does not hijack focus when focus naturally moves to an outside element", async () => {
+      const ctx = setupFocusManager({ returnFocus: true });
+      appendButton(ctx.floatingEl, "btn");
+
+      await openManager(ctx);
+
+      // Simulate focus moving outside naturally (e.g., via Tab or manual focus)
+      const outsideFocus = createOutsideElement("natural-outside");
+      outsideFocus.focus();
+
+      // Close the floating element
+      ctx.context.state.setOpen(false);
+      await flushFocus();
+
+      // Focus should remain on the outside element, not restored to anchor
+      expect(document.activeElement).toBe(outsideFocus);
+    });
+
+    it("does not hijack focus when an outside pointerdown interaction is detected", async () => {
+      const previousFocus = createOutsideElement("prev");
+      previousFocus.focus();
+
+      const ctx = setupFocusManager({ returnFocus: true });
+      appendButton(ctx.floatingEl, "btn");
+
+      await openManager(ctx);
+
+      const outsideButton = createOutsideElement("outside-button");
+
+      // Simulate pointerdown on the outside button
+      outsideButton.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+
+      // Suppose the outside component or useOutsideClick closes the floating element synchronously
+      ctx.context.state.setOpen(false, "outside-pointer", new Event("pointerdown"));
+      await flushFocus();
+
+      // Focus should NOT be pulled back to `prev` because of the outside pointerdown interaction
+      expect(document.activeElement).not.toBe(previousFocus);
+    });
   });
 
   describe("non-modal & dismissal behavior", () => {
