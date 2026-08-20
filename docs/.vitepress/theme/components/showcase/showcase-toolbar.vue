@@ -138,7 +138,6 @@ function onDropdownKeyDown(e: KeyboardEvent) {
         :class="{ 'is-open': selectContext.state.open.value }"
         aria-haspopup="listbox"
         :aria-expanded="selectContext.state.open.value"
-        @keydown.space.prevent="selectContext.state.setOpen(true)"
       >
         <span>{{ currentPlacementLabel }}</span>
         <svg
