@@ -31,8 +31,17 @@ export function createFocusGuards(
     };
   }
 
-  const start = createGuardElement("start", (e) => onFocus("start", e));
-  const end = createGuardElement("end", (e) => onFocus("end", e));
+  const doc = floatingEl.ownerDocument ?? (typeof document !== "undefined" ? document : null);
+  if (!doc) {
+    return {
+      startGuard: null,
+      endGuard: null,
+      remove: () => {},
+    };
+  }
+
+  const start = createGuardElement(doc, "start", (e) => onFocus("start", e));
+  const end = createGuardElement(doc, "end", (e) => onFocus("end", e));
 
   floatingEl.before(start.el);
   floatingEl.after(end.el);
@@ -59,10 +68,11 @@ interface GuardElementHandle {
 }
 
 function createGuardElement(
+  doc: Document,
   type: FocusGuardType,
   onFocus: (e: FocusEvent) => void,
 ): GuardElementHandle {
-  const guard = document.createElement("span");
+  const guard = doc.createElement("span");
   guard.setAttribute("tabindex", "0");
   guard.setAttribute("aria-hidden", "true");
   guard.setAttribute("data-vfloat-focus-guard", type);

@@ -1,3 +1,4 @@
+import { isHTMLElement } from "@/shared/dom";
 import { isServer } from "@/shared/env";
 
 //=======================================================================================
@@ -41,7 +42,9 @@ export function isolateOutsideElements(
     }
   }
 
-  const body = document.body;
+  const firstConnected = allowedElements.find((el) => el.isConnected);
+  const doc = firstConnected?.ownerDocument ?? (typeof document !== "undefined" ? document : null);
+  const body = doc?.body;
   if (!body) {
     return { restore: () => {} };
   }
@@ -49,7 +52,7 @@ export function isolateOutsideElements(
   function traverse(parent: HTMLElement) {
     for (let i = 0; i < parent.children.length; i++) {
       const child = parent.children[i];
-      if (!(child instanceof HTMLElement)) continue;
+      if (!isHTMLElement(child)) continue;
       if (child.tagName === "SCRIPT" || child.tagName === "STYLE") continue;
       if (child.hasAttribute("data-vfloat-focus-guard")) continue;
 

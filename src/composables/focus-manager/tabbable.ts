@@ -1,3 +1,4 @@
+import { isHTMLElement } from "@/shared/dom";
 import { getWindow } from "@/shared/env";
 
 //=======================================================================================
@@ -43,8 +44,12 @@ export function getTabbableElements(container: HTMLElement | HTMLElement[]): HTM
       if (!isElementFocusable(el)) continue;
       if (el.tabIndex < 0) continue;
 
-      if (el instanceof HTMLInputElement && el.type === "radio") {
-        if (!isRadioTabbable(el)) continue;
+      if (
+        isHTMLElement(el) &&
+        el.tagName === "INPUT" &&
+        (el as HTMLInputElement).type === "radio"
+      ) {
+        if (!isRadioTabbable(el as HTMLInputElement)) continue;
       }
 
       if (el.tabIndex > 0) {
@@ -107,8 +112,12 @@ export function isElementTabbable(el: Element | null): boolean {
   if (!isElementFocusable(el)) return false;
   const htmlEl = el as HTMLElement;
   if (htmlEl.tabIndex < 0) return false;
-  if (htmlEl instanceof HTMLInputElement && htmlEl.type === "radio") {
-    return isRadioTabbable(htmlEl);
+  if (
+    isHTMLElement(htmlEl) &&
+    htmlEl.tagName === "INPUT" &&
+    (htmlEl as HTMLInputElement).type === "radio"
+  ) {
+    return isRadioTabbable(htmlEl as HTMLInputElement);
   }
   return true;
 }
@@ -117,7 +126,7 @@ export function isElementTabbable(el: Element | null): boolean {
  * Checks if a given element is focusable (either programmatically or via keyboard).
  */
 export function isElementFocusable(el: Element | null): boolean {
-  if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+  if (!isHTMLElement(el) || !el.isConnected) return false;
   if (isElementInert(el)) return false;
   if (!el.matches(CANDIDATE_SELECTOR)) return false;
   if (!isElementVisible(el)) return false;
@@ -140,7 +149,7 @@ export function isElementVisible(el: HTMLElement): boolean {
     return false;
   }
 
-  const win = getWindow();
+  const win = el.ownerDocument.defaultView ?? getWindow(el);
   if (win) {
     const style = win.getComputedStyle(el);
     if (style.display === "none" || style.visibility === "hidden") {
@@ -164,8 +173,10 @@ function isRadioTabbable(radio: HTMLInputElement): boolean {
   if (!radio.name) return true;
 
   const root: HTMLElement | Document = radio.form ?? radio.ownerDocument;
+  const win = radio.ownerDocument.defaultView ?? getWindow(radio);
+  const CSSObj = win?.CSS ?? (typeof CSS !== "undefined" ? CSS : undefined);
   const escapedName =
-    typeof CSS !== "undefined" && CSS.escape ? CSS.escape(radio.name) : radio.name;
+    typeof CSSObj !== "undefined" && CSSObj.escape ? CSSObj.escape(radio.name) : radio.name;
   const radioGroup = Array.from(
     root.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="${escapedName}"]`),
   ).filter((r) => isElementFocusable(r) && r.tabIndex >= 0);

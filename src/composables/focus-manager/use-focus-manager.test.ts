@@ -555,4 +555,58 @@ describe("useFocusManager", () => {
       expect(ctx.result.isActive.value).toBe(true);
     });
   });
+
+  describe("cross-realm iframe support", () => {
+    it("manages focus and guards inside an iframe document", async () => {
+      const iframe = trackElement(document.createElement("iframe"));
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument!;
+      const anchorEl = trackElement(iframeDoc.createElement("button"));
+      anchorEl.id = "iframe-anchor";
+      iframeDoc.body.appendChild(anchorEl);
+
+      const floatingEl = trackElement(iframeDoc.createElement("div"));
+      floatingEl.id = "iframe-floating";
+      iframeDoc.body.appendChild(floatingEl);
+
+      const button = trackElement(iframeDoc.createElement("button"));
+      button.id = "iframe-btn";
+      floatingEl.appendChild(button);
+
+      const open = ref(false);
+      const setOpen = vi.fn((val: boolean) => {
+        open.value = val;
+      });
+
+      const context: UseFocusManagerContext = {
+        refs: {
+          anchorEl: ref(anchorEl),
+          floatingEl: ref(floatingEl),
+          arrowEl: ref(null),
+        },
+        state: {
+          open,
+          setOpen,
+        },
+      };
+
+      const scope = effectScope();
+      activeScopes.push(scope);
+
+      scope.run(() => {
+        useFocusManager(context, { modal: true, guards: true });
+      });
+
+      open.value = true;
+      await flushFocus();
+
+      const startGuard = iframeDoc.querySelector('[data-vfloat-focus-guard="start"]');
+      const endGuard = iframeDoc.querySelector('[data-vfloat-focus-guard="end"]');
+
+      expect(startGuard).toBeTruthy();
+      expect(endGuard).toBeTruthy();
+      expect(iframeDoc.activeElement).toBe(button);
+    });
+  });
 });

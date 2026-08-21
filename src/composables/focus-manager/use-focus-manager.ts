@@ -108,6 +108,11 @@ export function useFocusManager(
     return floatingElOption.value;
   }
 
+  function getTargetDocument(): Document | null {
+    const el = getFloatingElement() ?? getAnchorElement();
+    return el?.ownerDocument ?? getDocument();
+  }
+
   //=====================================================================================
   // Focus Trapping & Keydown Navigation
   //=====================================================================================
@@ -140,7 +145,8 @@ export function useFocusManager(
 
     const firstTabbable = tabbables[0];
     const lastTabbable = tabbables[tabbables.length - 1];
-    const currentActive = document.activeElement;
+    const doc = floating.ownerDocument ?? getDocument();
+    const currentActive = doc?.activeElement;
 
     if (event.shiftKey) {
       // Shift+Tab on first element wraps to last element
@@ -282,7 +288,7 @@ export function useFocusManager(
   // Always track pointer down events when open to handle returnFocus correctly
   cleanupRegistry.add(
     useEventListener(
-      () => (isEnabled.value && open.value ? getDocument() : null),
+      () => (isEnabled.value && open.value ? getTargetDocument() : null),
       "pointerdown",
       onDocumentPointerDownTracker,
       { capture: true },
@@ -327,8 +333,9 @@ export function useFocusManager(
       return;
     }
 
-    const activeEl = getDocument()?.activeElement ?? null;
-    const isFocusOnBody = activeEl === getDocument()?.body;
+    const doc = getTargetDocument();
+    const activeEl = doc?.activeElement ?? null;
+    const isFocusOnBody = activeEl === doc?.body;
     const isFocusInside = activeEl ? floatingTree.isTargetWithin(context, activeEl) : false;
 
     // If focus has naturally moved to an outside element, don't steal it back.
@@ -431,7 +438,7 @@ export function useFocusManager(
 
     try {
       // Save previously focused element before applying initial focus
-      const activeEl = getDocument()?.activeElement ?? null;
+      const activeEl = (floating.ownerDocument ?? getDocument())?.activeElement ?? null;
       if (isHTMLElement(activeEl) && !floating.contains(activeEl)) {
         previouslyActiveElement = activeEl;
       }
@@ -521,7 +528,8 @@ export function useFocusManager(
   // Document focus and pointer listeners for non-modal dismissal
   cleanupRegistry.add(
     useEventListener(
-      () => (isEnabled.value && open.value && shouldCloseOnFocusOut.value ? document : null),
+      () =>
+        isEnabled.value && open.value && shouldCloseOnFocusOut.value ? getTargetDocument() : null,
       "focusin",
       onDocumentFocusIn,
       { capture: true },
@@ -530,7 +538,8 @@ export function useFocusManager(
 
   cleanupRegistry.add(
     useEventListener(
-      () => (isEnabled.value && open.value && shouldCloseOnFocusOut.value ? document : null),
+      () =>
+        isEnabled.value && open.value && shouldCloseOnFocusOut.value ? getTargetDocument() : null,
       "pointerdown",
       onDocumentPointerDown,
       { capture: true },
