@@ -313,10 +313,13 @@ export function useFocusManager(
       customReturn.value.isConnected
     ) {
       targetElement = customReturn.value;
-    } else if (previouslyActiveElement && previouslyActiveElement.isConnected) {
-      targetElement = previouslyActiveElement;
     } else {
-      targetElement = getAnchorElement();
+      const anchor = getAnchorElement();
+      if (anchor && anchor.isConnected) {
+        targetElement = anchor;
+      } else if (previouslyActiveElement && previouslyActiveElement.isConnected) {
+        targetElement = previouslyActiveElement;
+      }
     }
 
     previouslyActiveElement = null;

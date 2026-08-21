@@ -267,11 +267,29 @@ describe("useFocusManager", () => {
   });
 
   describe("return focus", () => {
-    it("returns focus to the previously focused element on close", async () => {
+    it("returns focus to the anchor trigger element on close", async () => {
       const previousFocus = createOutsideElement("prev");
       previousFocus.focus();
 
       const ctx = setupFocusManager({ returnFocus: true });
+      appendButton(ctx.floatingEl, "btn");
+
+      await openManager(ctx);
+      expect(document.activeElement).not.toBe(ctx.anchorEl);
+
+      ctx.context.state.setOpen(false);
+      await flushFocus();
+
+      expect(document.activeElement).toBe(ctx.anchorEl);
+    });
+
+    it("falls back to previously active element when anchor is unavailable", async () => {
+      const previousFocus = createOutsideElement("prev");
+      previousFocus.focus();
+
+      const ctx = setupFocusManager({ returnFocus: true });
+      ctx.anchorEl.remove();
+      ctx.context.refs.anchorEl.value = null;
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
