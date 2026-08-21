@@ -265,6 +265,32 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
         expect(tree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
       });
+
+      it("recognizes focus guard elements adjacent to floating elements as within context", () => {
+        const tree = new FloatingTree();
+        const container = trackElement(document.createElement("div"));
+        const startGuard = document.createElement("span");
+        startGuard.setAttribute("data-vfloat-focus-guard", "start");
+        const floatingEl = document.createElement("div");
+        const endGuard = document.createElement("span");
+        endGuard.setAttribute("data-vfloat-focus-guard", "end");
+        const unrelatedGuard = document.createElement("span");
+        unrelatedGuard.setAttribute("data-vfloat-focus-guard", "start");
+
+        container.appendChild(startGuard);
+        container.appendChild(floatingEl);
+        container.appendChild(endGuard);
+        container.appendChild(unrelatedGuard);
+        document.body.appendChild(container);
+
+        const context = createMockContext();
+        context.refs.floatingEl.value = floatingEl;
+        tree.addNode(context, null);
+
+        expect(tree.isTargetWithin(context, startGuard)).toBe(true);
+        expect(tree.isTargetWithin(context, endGuard)).toBe(true);
+        expect(tree.isTargetWithin(context, unrelatedGuard)).toBe(false);
+      });
     });
 
     describe("registration edge cases & warnings", () => {

@@ -230,8 +230,17 @@ export class FloatingTree {
       const anchorEl = ctx.refs.anchorEl.value;
       const floatingEl = ctx.refs.floatingEl.value;
 
-      if (floatingEl && (floatingEl.contains(target) || path.includes(floatingEl))) {
-        return true;
+      if (floatingEl) {
+        if (floatingEl.contains(target) || path.includes(floatingEl)) {
+          return true;
+        }
+        if (
+          target instanceof Element &&
+          target.hasAttribute("data-vfloat-focus-guard") &&
+          (target.nextElementSibling === floatingEl || target.previousElementSibling === floatingEl)
+        ) {
+          return true;
+        }
       }
 
       if (anchorEl) {
