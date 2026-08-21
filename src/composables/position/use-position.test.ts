@@ -132,6 +132,7 @@ describe("usePosition", () => {
       });
       usePosition(context, {
         middleware: {
+          inline: true,
           offset: 8,
           flip: true,
           shift: { padding: 8 },
@@ -144,7 +145,7 @@ describe("usePosition", () => {
       floatingInternals
         .get(context.id)
         ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
-    ).toEqual(["offset", "flip", "shift", "size"]);
+    ).toEqual(["inline", "offset", "flip", "shift", "size"]);
   });
 
   it("appends custom middleware after declarative middleware", () => {

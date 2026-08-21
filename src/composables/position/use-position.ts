@@ -1,6 +1,7 @@
 import type {
   AutoUpdateOptions,
   FlipOptions,
+  InlineOptions,
   Middleware,
   MiddlewareData,
   OffsetOptions,
@@ -12,6 +13,7 @@ import {
   computePosition,
   flip,
   autoUpdate as floatingUIAutoUpdate,
+  inline,
   offset,
   shift,
   size,
@@ -238,6 +240,10 @@ function getSemanticMiddleware(options: UsePositionMiddlewareOptions | undefined
 
   const middlewares: Middleware[] = [];
 
+  if (options.inline !== undefined && options.inline !== false) {
+    middlewares.push(inline(options.inline === true ? undefined : options.inline));
+  }
+
   if (options.offset !== undefined && options.offset !== false) {
     middlewares.push(offset(options.offset === true ? undefined : options.offset));
   }
@@ -308,6 +314,11 @@ export interface FloatingMiddlewareRegistry {
  * Declarative middleware options for common positioning behavior.
  */
 export interface UsePositionMiddlewareOptions {
+  /**
+   * Whether to position relative to individual client rects for multi-line inline elements.
+   */
+  inline?: true | false | InlineOptions;
+
   /**
    * Space between the anchor and floating element.
    */

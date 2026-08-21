@@ -9,17 +9,17 @@ export type AnyFn<T extends unknown[] = unknown[], U = unknown> = (...args: T) =
 export type Fn = () => void;
 
 /**
- * Minimal VirtualElement interface compatible with Floating UI expectations.
+ * Minimal VirtualElement interface for custom positioning targets.
  * Provides a bounding client rect and an optional context element for layout.
  */
 export interface VirtualElement {
   getBoundingClientRect: () => DOMRect;
   /**
-   * Optional context element used by Floating UI to resolve layout metrics.
+   * Optional context element used to resolve layout metrics.
    */
   contextElement?: Element;
   /**
-   * Optional client rect list used by Floating UI inline() middleware.
+   * Optional client rect list used by inline() middleware.
    */
   getClientRects?: () => DOMRectList | Array<DOMRect>;
 }

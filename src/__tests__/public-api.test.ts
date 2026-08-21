@@ -10,6 +10,7 @@ describe("Public API Surface", () => {
       "autoPlacement",
       "flip",
       "hide",
+      "inline",
       "offset",
       "shift",
       "size",

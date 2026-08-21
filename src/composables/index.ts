@@ -59,9 +59,9 @@ export type {
 } from "./list-navigation/use-list-navigation";
 // List Navigation
 export { useListNavigation } from "./list-navigation/use-list-navigation";
-export type { Middleware, Placement, Strategy } from "./middlewares";
+export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
-export { arrow, autoPlacement, flip, hide, offset, shift, size } from "./middlewares";
+export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";
 export type {
   OutsideClickPredicate,
   UseOutsideClickContext,
