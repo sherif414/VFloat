@@ -38,6 +38,7 @@ export function createVirtualElement(options: VirtualElementFactoryOptions): Vir
   return {
     contextElement: config.trackingTarget ?? undefined,
     getBoundingClientRect: () => resolveBoundingRect(config),
+    getClientRects: () => [resolveBoundingRect(config)],
   };
 }
 

@@ -18,6 +18,10 @@ export interface VirtualElement {
    * Optional context element used by Floating UI to resolve layout metrics.
    */
   contextElement?: Element;
+  /**
+   * Optional client rect list used by Floating UI inline() middleware.
+   */
+  getClientRects?: () => DOMRectList | Array<DOMRect>;
 }
 
 /**

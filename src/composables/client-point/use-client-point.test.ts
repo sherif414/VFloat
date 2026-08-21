@@ -754,5 +754,19 @@ describe("useClientPoint", () => {
 
       expect(coordinates.value).toEqual({ x: null, y: null });
     });
+
+    it("provides getClientRects on the created VirtualElement", () => {
+      const virtualEl = createVirtualElement({
+        coordinates: { x: 150, y: 250 },
+        trackingTarget: null,
+      });
+
+      expect(typeof virtualEl.getClientRects).toBe("function");
+      const rects = virtualEl.getClientRects?.();
+      expect(Array.isArray(rects)).toBe(true);
+      expect(rects).toHaveLength(1);
+      expect(rects?.[0].x).toBe(150);
+      expect(rects?.[0].y).toBe(250);
+    });
   });
 });
