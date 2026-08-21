@@ -46,6 +46,7 @@ describe("useListNavigation", () => {
       anchorEl?: any;
       values?: any;
       isValueDisabled?: (val: string) => boolean;
+      onActivate?: (val: string, e: KeyboardEvent) => void;
       onEnter?: (val: string, e: KeyboardEvent) => void;
       onExit?: (val: string, e: KeyboardEvent) => void;
     } = {},
@@ -89,6 +90,7 @@ describe("useListNavigation", () => {
         openOnArrowKeyDown: options.openOnArrowKeyDown,
         rtl: options.rtl,
         closeOnTab: options.closeOnTab,
+        onActivate: options.onActivate,
         onEnter: options.onEnter,
         onExit: options.onExit,
       });
@@ -155,6 +157,30 @@ describe("useListNavigation", () => {
     expect(collection.activeValue.value).toBe("1");
   });
 
+  it("navigates next on ArrowDown when focused on anchor element while open", () => {
+    const { anchorEl, openRef, collection } = setup();
+    openRef.value = true;
+    collection.setActiveValue("1");
+
+    dispatchKey(anchorEl, "ArrowDown");
+    expect(collection.activeValue.value).toBe("2");
+
+    dispatchKey(anchorEl, "ArrowDown");
+    expect(collection.activeValue.value).toBe("3");
+  });
+
+  it("navigates previous on ArrowUp when focused on anchor element while open", () => {
+    const { anchorEl, openRef, collection } = setup();
+    openRef.value = true;
+    collection.setActiveValue("3");
+
+    dispatchKey(anchorEl, "ArrowUp");
+    expect(collection.activeValue.value).toBe("2");
+
+    dispatchKey(anchorEl, "ArrowUp");
+    expect(collection.activeValue.value).toBe("1");
+  });
+
   it("navigates to first on Home", () => {
     const { floatingEl, openRef, collection } = setup();
     openRef.value = true;
@@ -215,7 +241,56 @@ describe("useListNavigation", () => {
     expect(collection.activeValue.value).toBeNull();
   });
 
-  describe("Submenu & Intent Navigation (onEnter / onExit)", () => {
+  describe("Activation & Submenu Navigation (onActivate / onEnter / onExit)", () => {
+    it("calls onActivate with activeValue when Enter is pressed on anchor while open", () => {
+      let activatedValue = "";
+      let activatedEvent: KeyboardEvent | null = null;
+      const { anchorEl, openRef, collection } = setup({
+        onActivate: (val, e) => {
+          activatedValue = val;
+          activatedEvent = e;
+        },
+      });
+      openRef.value = true;
+      collection.setActiveValue("2");
+
+      dispatchKey(anchorEl, "Enter");
+
+      expect(activatedValue).toBe("2");
+      expect(activatedEvent).toBeInstanceOf(KeyboardEvent);
+    });
+
+    it("calls onActivate with activeValue when Space is pressed on floatingEl while open", () => {
+      let activatedValue = "";
+      const { floatingEl, openRef, collection } = setup({
+        onActivate: (val) => {
+          activatedValue = val;
+        },
+      });
+      openRef.value = true;
+      collection.setActiveValue("3");
+
+      dispatchKey(floatingEl, " ");
+
+      expect(activatedValue).toBe("3");
+    });
+
+    it("does not call onActivate when active item is disabled", () => {
+      let activatedValue = "";
+      const { anchorEl, openRef, collection } = setup({
+        isValueDisabled: (val) => val === "2",
+        onActivate: (val) => {
+          activatedValue = val;
+        },
+      });
+      openRef.value = true;
+      collection.setActiveValue("2");
+
+      dispatchKey(anchorEl, "Enter");
+
+      expect(activatedValue).toBe("");
+    });
+
     it("calls onEnter with activeValue on ArrowRight in LTR vertical list", () => {
       let enteredValue = "";
       let enteredEvent: KeyboardEvent | null = null;

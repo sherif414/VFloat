@@ -43,6 +43,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "v-float": fileURLToPath(new URL("./src/index.ts", import.meta.url)),
     },
   },
   build: {

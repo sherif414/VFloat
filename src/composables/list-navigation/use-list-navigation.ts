@@ -1,4 +1,12 @@
-import { computed, type MaybeRefOrGetter, nextTick, type Ref, toValue, watch } from "vue";
+import {
+  computed,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+  nextTick,
+  type Ref,
+  toValue,
+  watch,
+} from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
@@ -41,6 +49,7 @@ export function useListNavigation(
     rtl: rtlOption = false,
     openOnArrowKeyDown: openOnArrowKeyDownOption,
     closeOnTab: closeOnTabOption = true,
+    onActivate,
     onEnter,
     onExit,
   } = options;
@@ -64,59 +73,13 @@ export function useListNavigation(
 
   const floatingEl = computed(() => refs.floatingEl.value);
 
-  const onAnchorKeyDown = (e: KeyboardEvent) => {
-    if (e.defaultPrevented || !isEnabled.value) return;
-
-    const target = e.target as Element | null;
-    if (target && isTypeableElement(target) && target !== anchorEl.value) return;
-
-    const intent = resolveKeyboardIntent(e, {
-      orientation: orientation.value,
-      rtl: isRtl.value,
-    });
-
-    if (intent !== "next" && intent !== "previous") return;
-    if (open.value || !isOpenOnArrowKeyDown.value) return;
-
-    e.preventDefault();
-    setOpen(true, "keyboard-activate", e);
-
-    if (intent === "previous") {
-      collection.setLast();
-      if (collection.activeValue.value === null) {
-        nextTick(() => {
-          if (open.value && collection.activeValue.value === null) {
-            collection.setLast();
-          }
-        });
-      }
-    } else {
-      collection.setFirst();
-      if (collection.activeValue.value === null) {
-        nextTick(() => {
-          if (open.value && collection.activeValue.value === null) {
-            collection.setFirst();
-          }
-        });
-      }
-    }
-  };
-
-  const onFloatingKeyDown = (e: KeyboardEvent) => {
-    if (e.defaultPrevented || !isEnabled.value) return;
-    if (!open.value) return;
-
-    const intent = resolveKeyboardIntent(e, {
-      orientation: orientation.value,
-      rtl: isRtl.value,
-    });
-
+  const navigateByIntent = (intent: ReturnType<typeof resolveKeyboardIntent>, e: KeyboardEvent) => {
     if (intent === "close" && e.key === "Tab" && isCloseOnTab.value) {
       setOpen(false, "tab-key", e);
       return;
     }
 
-    if (!intent || intent === "activate" || intent === "close") return;
+    if (!intent || intent === "close") return;
 
     let handled = false;
     const navOptions = { loop: isLoop.value };
@@ -138,6 +101,14 @@ export function useListNavigation(
         collection.setPrevious(navOptions);
         handled = true;
         break;
+      case "activate": {
+        const activeValue = collection.activeValue.value;
+        if (activeValue && !collection.isItemDisabled?.(activeValue) && onActivate) {
+          onActivate(activeValue, e);
+          handled = true;
+        }
+        break;
+      }
       case "enter": {
         const activeValue = collection.activeValue.value;
         if (activeValue && !collection.isItemDisabled?.(activeValue) && onEnter) {
@@ -166,6 +137,64 @@ export function useListNavigation(
     if (handled) {
       e.preventDefault();
     }
+  };
+
+  const onAnchorKeyDown = (e: KeyboardEvent) => {
+    if (e.defaultPrevented || !isEnabled.value) return;
+
+    const target = e.target as Element | null;
+    if (target && isTypeableElement(target) && target !== anchorEl.value) return;
+
+    const intent = resolveKeyboardIntent(e, {
+      orientation: orientation.value,
+      rtl: isRtl.value,
+    });
+
+    if (!intent) return;
+
+    if (!open.value) {
+      if ((intent === "next" || intent === "previous") && isOpenOnArrowKeyDown.value) {
+        e.preventDefault();
+        setOpen(true, "keyboard-activate", e);
+
+        if (intent === "previous") {
+          collection.setLast();
+          if (collection.activeValue.value === null) {
+            nextTick(() => {
+              if (open.value && collection.activeValue.value === null) {
+                collection.setLast();
+              }
+            });
+          }
+        } else {
+          collection.setFirst();
+          if (collection.activeValue.value === null) {
+            nextTick(() => {
+              if (open.value && collection.activeValue.value === null) {
+                collection.setFirst();
+              }
+            });
+          }
+        }
+      }
+      return;
+    }
+
+    navigateByIntent(intent, e);
+  };
+
+  const onFloatingKeyDown = (e: KeyboardEvent) => {
+    if (e.defaultPrevented || !isEnabled.value) return;
+    if (!open.value) return;
+
+    const intent = resolveKeyboardIntent(e, {
+      orientation: orientation.value,
+      rtl: isRtl.value,
+    });
+
+    if (!intent) return;
+
+    navigateByIntent(intent, e);
   };
 
   cleanupRegistry.add(
@@ -231,6 +260,14 @@ export interface NavigableCollection {
    * Check if a specific value is disabled.
    */
   isItemDisabled?: (value: string) => boolean;
+  /**
+   * Optional ordered list of all collection values.
+   */
+  values?: ComputedRef<readonly string[]> | Ref<readonly string[]> | readonly string[];
+  /**
+   * Optional ordered list of enabled (non-disabled) collection values.
+   */
+  enabledValues?: ComputedRef<readonly string[]> | Ref<readonly string[]> | readonly string[];
 }
 
 export interface UseListNavigationOptions {
@@ -272,6 +309,11 @@ export interface UseListNavigationOptions {
    * @default true
    */
   closeOnTab?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Callback triggered when an item is activated with Enter or Space.
+   */
+  onActivate?: (activeValue: string, e: KeyboardEvent) => void;
 
   /**
    * Callback triggered when a branch "enter" intent is detected from an enabled item (e.g. ArrowRight in LTR).

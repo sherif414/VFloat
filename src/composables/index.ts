@@ -86,3 +86,11 @@ export type {
 } from "./role/use-role";
 // Role
 export { useRole } from "./role/use-role";
+export type {
+  TypeaheadFindMatchFn,
+  UseTypeaheadContext,
+  UseTypeaheadOptions,
+  UseTypeaheadReturn,
+} from "./typeahead";
+// Typeahead
+export { useTypeahead } from "./typeahead";

@@ -203,6 +203,7 @@ export default defineConfigWithTheme({
           items: [
             { text: "useCollection", link: "/api/use-collection" },
             { text: "useListNavigation", link: "/api/use-list-navigation" },
+            { text: "useTypeahead", link: "/api/use-typeahead" },
           ],
         },
         {

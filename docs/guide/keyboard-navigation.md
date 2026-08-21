@@ -10,7 +10,8 @@ In VFloat, keyboard navigation is split into a clean separation of concerns:
 
 1. **[`useCollection`](/api/use-collection)** is the data-first reactive manager for item IDs, active selection, and disabled states.
 2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
-3. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
+3. **[`useTypeahead`](/api/use-typeahead)** handles character-based search and jumping, buffering keystrokes and cycling through matching collection items.
+4. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
 
 ---
 
@@ -225,3 +226,4 @@ Here are the key events handled automatically by `useListNavigation`:
 - Learn how to build multi-level menus in [Build Nested Menus](/guide/build-nested-menus).
 - Read the [useCollection API](/api/use-collection) reference.
 - Read the [useListNavigation API](/api/use-list-navigation) reference.
+- Read the [useTypeahead API](/api/use-typeahead) reference.

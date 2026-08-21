@@ -90,6 +90,11 @@ interface UseListNavigationOptions {
   closeOnTab?: MaybeRefOrGetter<boolean>;
 
   /**
+   * Callback triggered when an item is activated with Enter or Space.
+   */
+  onActivate?: (activeValue: string, e: KeyboardEvent) => void;
+
+  /**
    * Callback triggered when a branch "enter" intent is detected from an enabled item (e.g. ArrowRight in LTR).
    */
   onEnter?: (activeValue: string, e: KeyboardEvent) => void;

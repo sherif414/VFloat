@@ -27,6 +27,7 @@ describe("Public API Surface", () => {
       "useOutsideClick",
       "usePosition",
       "useRole",
+      "useTypeahead",
     ].sort();
 
     expect(exportedKeys).toEqual(expectedKeys);

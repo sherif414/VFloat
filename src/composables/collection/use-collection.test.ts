@@ -120,4 +120,22 @@ describe("useCollection", () => {
 
     expect(collection.activeValue.value).toBe(null);
   });
+
+  it("exposes reactive values and enabledValues lists", () => {
+    const values = ref(["open", "rename", "delete"]);
+    let collection!: ReturnType<typeof useCollection>;
+    scope?.run(() => {
+      collection = useCollection({
+        values,
+        isValueDisabled: (val) => val === "delete",
+      });
+    });
+
+    expect(collection.values.value).toEqual(["open", "rename", "delete"]);
+    expect(collection.enabledValues.value).toEqual(["open", "rename"]);
+
+    values.value = ["open", "delete"];
+    expect(collection.values.value).toEqual(["open", "delete"]);
+    expect(collection.enabledValues.value).toEqual(["open"]);
+  });
 });

@@ -34,6 +34,7 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 - [`useCollection`](/api/use-collection) - Manages collections for keyboard navigation
 - [`useListNavigation`](/api/use-list-navigation) - Moves active focus between items in a collection with the keyboard
+- [`useTypeahead`](/api/use-typeahead) - Coordinates keyboard typeahead search and jumping across items
 
 ## Middleware
 

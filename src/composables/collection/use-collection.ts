@@ -1,4 +1,12 @@
-import { computed, type MaybeRefOrGetter, type Ref, ref, toValue, watch } from "vue";
+import {
+  computed,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+  type Ref,
+  ref,
+  toValue,
+  watch,
+} from "vue";
 
 //=======================================================================================
 // 📌 Main
@@ -88,6 +96,8 @@ export function useCollection(options: UseCollectionOptions = { values: [] }): U
   );
 
   return {
+    values,
+    enabledValues,
     activeValue,
     setActiveValue,
     setNext,
@@ -122,6 +132,16 @@ export interface CollectionNavigationOptions {
 }
 
 export interface UseCollectionReturn {
+  /**
+   * The reactive list of all values in the collection.
+   */
+  values: ComputedRef<readonly string[]>;
+
+  /**
+   * The reactive list of enabled (non-disabled) values in the collection.
+   */
+  enabledValues: ComputedRef<readonly string[]>;
+
   /**
    * The currently active value.
    */
