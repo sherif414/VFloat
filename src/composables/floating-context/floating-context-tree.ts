@@ -1,5 +1,5 @@
 import { type ShallowRef, shallowRef } from "vue";
-import { getDomPath } from "@/shared/dom";
+import { getDomPath, isElement, isNode } from "@/shared/dom";
 import { getDocument, isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
@@ -223,7 +223,7 @@ export class FloatingTree {
    * Traverses Shadow DOM boundaries via `getDomPath()` to support Web Components.
    */
   isTargetWithin(context: FloatingContextTarget, target: EventTarget | null): boolean {
-    if (!(target instanceof Node)) return false;
+    if (!isNode(target)) return false;
 
     const path = getDomPath(target);
     const containsTarget = (ctx: FloatingContextTarget): boolean => {
@@ -235,7 +235,7 @@ export class FloatingTree {
           return true;
         }
         if (
-          target instanceof Element &&
+          isElement(target) &&
           target.hasAttribute("data-vfloat-focus-guard") &&
           (target.nextElementSibling === floatingEl || target.previousElementSibling === floatingEl)
         ) {
@@ -244,10 +244,10 @@ export class FloatingTree {
       }
 
       if (anchorEl) {
-        if (anchorEl instanceof Element) {
+        if (isElement(anchorEl)) {
           if (anchorEl.contains(target) || path.includes(anchorEl)) return true;
         } else if (
-          anchorEl.contextElement instanceof Element &&
+          isElement(anchorEl.contextElement) &&
           anchorEl.contextElement !== getDocument()?.documentElement &&
           anchorEl.contextElement !== getDocument()?.body
         ) {

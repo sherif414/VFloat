@@ -20,8 +20,19 @@ export function getDocument(): Document | null {
 }
 
 /**
- * Returns the global Window instance if available, or null in SSR / non-DOM environments.
+ * Returns the Window instance for the given node/document or the global Window instance in browser environments.
  */
-export function getWindow(): Window | null {
+export function getWindow(node?: unknown): (Window & typeof globalThis) | null {
+  if (node && typeof node === "object") {
+    if ("ownerDocument" in node && (node as Node).ownerDocument?.defaultView) {
+      return (node as Node).ownerDocument!.defaultView!;
+    }
+    if ("defaultView" in node && (node as Document).defaultView) {
+      return (node as Document).defaultView!;
+    }
+    if ("window" in node && (node as Window).window === node) {
+      return node as Window & typeof globalThis;
+    }
+  }
   return typeof window !== "undefined" ? window : null;
 }

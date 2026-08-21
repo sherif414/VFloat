@@ -5,12 +5,15 @@ import {
   getDomPath,
   isButtonTarget,
   isClickOnScrollbar,
+  isElement,
   isElementInEventPath,
   isEventTargetWithin,
   isFunction,
   isHTMLElement,
   isLinkTarget,
   isMouseLikePointerType,
+  isNode,
+  isShadowRoot,
   isSpaceIgnored,
   isTypeableElement,
   isVirtualElement,
@@ -168,6 +171,8 @@ describe("utils and core helpers", () => {
     const domPath = getDomPath(shadowChild);
     expect(domPath).toContain(shadowRoot);
     expect(domPath).toContain(shadowHost);
+    expect(isShadowRoot(shadowRoot)).toBe(true);
+    expect(isShadowRoot(container)).toBe(false);
 
     container.remove();
     shadowHost.remove();
@@ -258,5 +263,31 @@ describe("utils and core helpers", () => {
       }),
     ).toBe(anchorEl.value);
     expect(getAnchorElement(null)).toBeNull();
+  });
+
+  it("supports cross-realm elements from iframes", () => {
+    const iframe = trackElement(document.createElement("iframe"));
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument!;
+    const iframeDiv = iframeDoc.createElement("div");
+    const iframeBtn = iframeDoc.createElement("button");
+    const iframeInput = iframeDoc.createElement("input");
+    const iframeText = iframeDoc.createTextNode("test");
+
+    expect(isNode(iframeText)).toBe(true);
+    expect(isNode(iframeDiv)).toBe(true);
+    expect(isElement(iframeDiv)).toBe(true);
+    expect(isHTMLElement(iframeDiv)).toBe(true);
+    expect(isHTMLElement(iframeBtn)).toBe(true);
+    expect(isHTMLElement(iframeInput)).toBe(true);
+    expect(isTypeableElement(iframeInput)).toBe(true);
+    expect(getAnchorElement(iframeBtn)).toBe(iframeBtn);
+    expect(
+      getAnchorElement({
+        contextElement: iframeBtn,
+        getBoundingClientRect: () => iframeBtn.getBoundingClientRect(),
+      }),
+    ).toBe(iframeBtn);
   });
 });

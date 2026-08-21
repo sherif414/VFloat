@@ -1,3 +1,4 @@
+import { getWindow } from "@/shared/env";
 import type { VirtualElement } from "@/types";
 
 //=======================================================================================
@@ -12,17 +13,39 @@ export function isFunction(value: unknown): value is (...args: unknown[]) => unk
 }
 
 /**
- * Returns true for real HTML elements and false for SVG, non-element nodes, or non-DOM environments.
+ * Returns true for real DOM nodes and false for non-DOM environments across window realms.
  */
-export function isHTMLElement(value: unknown): value is HTMLElement {
-  return typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+export function isNode(value: unknown): value is Node {
+  if (!value || typeof value !== "object") return false;
+  const win = getWindow(value);
+  return typeof win?.Node !== "undefined" && value instanceof win.Node;
 }
 
 /**
- * Returns true for real DOM elements and false for non-element nodes or non-DOM environments.
+ * Returns true for real HTML elements and false for SVG, non-element nodes, or non-DOM environments across window realms.
+ */
+export function isHTMLElement(value: unknown): value is HTMLElement {
+  if (!value || typeof value !== "object") return false;
+  const win = getWindow(value);
+  return typeof win?.HTMLElement !== "undefined" && value instanceof win.HTMLElement;
+}
+
+/**
+ * Returns true for real DOM elements and false for non-element nodes or non-DOM environments across window realms.
  */
 export function isElement(value: unknown): value is Element {
-  return typeof Element !== "undefined" && value instanceof Element;
+  if (!value || typeof value !== "object") return false;
+  const win = getWindow(value);
+  return typeof win?.Element !== "undefined" && value instanceof win.Element;
+}
+
+/**
+ * Returns true for ShadowRoot instances across window realms.
+ */
+export function isShadowRoot(value: unknown): value is ShadowRoot {
+  if (!value || typeof value !== "object") return false;
+  const win = getWindow(value);
+  return typeof win?.ShadowRoot !== "undefined" && value instanceof win.ShadowRoot;
 }
 
 /**
@@ -52,11 +75,13 @@ const NON_TYPEABLE_INPUT_TYPES = new Set([
  */
 export function isTypeableElement(element: Element | null): boolean {
   if (!isHTMLElement(element)) return false;
-  if (typeof HTMLInputElement !== "undefined" && element instanceof HTMLInputElement) {
+  const win = getWindow(element);
+  if (typeof win?.HTMLInputElement !== "undefined" && element instanceof win.HTMLInputElement) {
     return !NON_TYPEABLE_INPUT_TYPES.has(element.type);
   }
   return (
-    (typeof HTMLTextAreaElement !== "undefined" && element instanceof HTMLTextAreaElement) ||
+    (typeof win?.HTMLTextAreaElement !== "undefined" &&
+      element instanceof win.HTMLTextAreaElement) ||
     (element.isContentEditable && element.contentEditable !== "false")
   );
 }
@@ -194,7 +219,7 @@ export function getDomPath(node: Node | null): EventTarget[] {
 
   while (current) {
     path.push(current);
-    if (typeof ShadowRoot !== "undefined" && current instanceof ShadowRoot) {
+    if (isShadowRoot(current)) {
       current = current.host;
     } else {
       current = current.parentNode;
