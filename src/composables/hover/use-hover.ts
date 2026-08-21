@@ -47,7 +47,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
 
   const { hide, show, showDelay, clearTimeouts } = useDelayedOpen(
     (event?: Event) => {
-      if (!open.value) {
+      if (!open.value && anchorDomEl.value?.isConnected) {
         setOpen(true, "hover", event);
       }
     },
@@ -105,6 +105,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     el.addEventListener("pointerleave", onPointerLeave);
 
     onWatcherCleanup(() => {
+      clearTimeout(restTimeoutId);
       el.removeEventListener("pointerenter", onPointerEnter);
       el.removeEventListener("pointermove", onPointerMove);
       el.removeEventListener("pointerleave", onPointerLeave);
@@ -227,6 +228,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     el.addEventListener("pointerleave", onPointerLeaveHandler);
 
     onWatcherCleanup(() => {
+      clearTimeouts();
       el.removeEventListener("pointerenter", onAnchorPointerEnter);
       el.removeEventListener("pointerleave", onPointerLeaveHandler);
     });

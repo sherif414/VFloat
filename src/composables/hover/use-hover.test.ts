@@ -710,5 +710,23 @@ describe("useHover", () => {
       await nextTick();
       expect(ctx.context.state.open.value).toBe(true);
     });
+
+    it("cancels scheduled open when anchor element is removed from DOM during open delay", async () => {
+      const ctx = await createHoverContext({ delay: { open: 100 } });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      vi.advanceTimersByTime(50);
+      expect(ctx.context.state.open.value).toBe(false);
+
+      // Unmount anchor element before delay expires
+      ctx.anchorEl.remove();
+      await nextTick();
+
+      vi.advanceTimersByTime(60);
+      await nextTick();
+
+      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.setOpen).not.toHaveBeenCalledWith(true, "hover", expect.anything());
+    });
   });
 });
