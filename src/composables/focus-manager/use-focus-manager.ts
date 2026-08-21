@@ -157,6 +157,46 @@ export function useFocusManager(
     }
   }
 
+  function onFloatingFocusOut(event: FocusEvent) {
+    if (!isEnabled.value || !open.value || !isModal.value) return;
+
+    const floating = getFloatingElement();
+    if (!floating) return;
+
+    const relatedTarget = event.relatedTarget as Node | null;
+    if (relatedTarget && floatingTree.isTargetWithin(context, relatedTarget)) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      if (!isEnabled.value || !open.value || !isModal.value) return;
+
+      const currentFloating = getFloatingElement();
+      if (!currentFloating) return;
+
+      const doc = currentFloating.ownerDocument ?? getDocument();
+      const currentActive = doc?.activeElement;
+
+      if (
+        currentActive === doc?.body ||
+        !currentActive ||
+        !floatingTree.isTargetWithin(context, currentActive)
+      ) {
+        if (isPointerDownOutside) return;
+
+        const firstTabbable = getFirstTabbableElement(currentFloating);
+        if (firstTabbable) {
+          firstTabbable.focus({ preventScroll: shouldPreventScroll.value });
+        } else {
+          if (!currentFloating.hasAttribute("tabindex")) {
+            currentFloating.setAttribute("tabindex", "-1");
+          }
+          currentFloating.focus({ preventScroll: shouldPreventScroll.value });
+        }
+      }
+    });
+  }
+
   //=====================================================================================
   // Focus Guards (Sentinels)
   //=====================================================================================
@@ -466,6 +506,15 @@ export function useFocusManager(
       () => (isEnabled.value && open.value ? getFloatingElement() : null),
       "keydown",
       onFloatingKeyDown,
+    ),
+  );
+
+  // Focusout listener on floating element to recover focus if active child is removed in modal
+  cleanupRegistry.add(
+    useEventListener(
+      () => (isEnabled.value && open.value && isModal.value ? getFloatingElement() : null),
+      "focusout",
+      onFloatingFocusOut,
     ),
   );
 

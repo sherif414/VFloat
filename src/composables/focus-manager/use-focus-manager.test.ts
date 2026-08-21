@@ -230,6 +230,23 @@ describe("useFocusManager", () => {
 
       expect(document.activeElement).toBe(last);
     });
+
+    it("recovers focus to first tabbable child when active child element is removed from DOM in modal", async () => {
+      const ctx = setupFocusManager({ modal: true });
+      const first = appendButton(ctx.floatingEl, "first");
+      const nextBtn = appendButton(ctx.floatingEl, "next");
+
+      await openManager(ctx);
+      nextBtn.focus();
+      expect(document.activeElement).toBe(nextBtn);
+
+      // Simulate child element removal (e.g. advancing step in wizard or removing list item)
+      nextBtn.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
+      nextBtn.remove();
+      await flushFocus();
+
+      expect(document.activeElement).toBe(first);
+    });
   });
 
   describe("focus guards", () => {
