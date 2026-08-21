@@ -1,4 +1,11 @@
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+import {
+  computed,
+  type MaybeRefOrGetter,
+  onWatcherCleanup,
+  toValue,
+  watch,
+  watchPostEffect,
+} from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import {
   isButtonTarget,
@@ -35,6 +42,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     enabled: enabledOption = true,
     event: eventOption = "click",
     toggle: toggleOption = true,
+    stickIfOpen: stickIfOpenOption = false,
     ignoreMouse: ignoreMouseOption = false,
     ignoreKeyboard: ignoreKeyboardOption = false,
     ignoreTouch: ignoreTouchOption = false,
@@ -50,6 +58,14 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     didKeyDown: false,
   };
 
+  let isOpenedByClick = false;
+
+  watch(open, (isOpen) => {
+    if (!isOpen) {
+      isOpenedByClick = false;
+    }
+  });
+
   const isEnabled = computed(() => toValue(enabledOption));
 
   const anchorEl = computed(() => {
@@ -63,12 +79,27 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   //=====================================================================================
 
   function onOpenChange(reason: OpenChangeReason, event: Event) {
+    const isStickIfOpen = toValue(stickIfOpenOption);
+    const isToggle = toValue(toggleOption);
+    const lastReason = context.state.lastOpenReason?.value;
+
     if (open.value) {
+      const isAlreadyClicked =
+        isOpenedByClick || lastReason === "anchor-click" || lastReason === "keyboard-activate";
+
+      if (isStickIfOpen && !isAlreadyClicked) {
+        isOpenedByClick = true;
+        setOpen(true, reason, event);
+        return;
+      }
+
       // When `toggle` is enabled, anchor clicks toggle open/closed.
-      if (toValue(toggleOption)) {
+      if (isToggle) {
+        isOpenedByClick = false;
         setOpen(false, reason, event);
       }
     } else {
+      isOpenedByClick = true;
       setOpen(true, reason, event);
     }
   }
@@ -232,6 +263,13 @@ export interface UseClickOptions {
    * @default true
    */
   toggle?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether to keep the floating element open upon the first click if it
+   * was initially opened by another interaction (e.g. hover or focus).
+   * @default false
+   */
+  stickIfOpen?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to ignore the logic for mouse input.

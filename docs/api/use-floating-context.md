@@ -41,6 +41,8 @@ interface FloatingRefs {
 interface FloatingState {
   open: Readonly<Ref<boolean>>;
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
+  lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
+  lastOpenEvent?: Readonly<Ref<Event | null>>;
 }
 ```
 
@@ -55,6 +57,8 @@ interface FloatingState {
 - Passing `open` makes the context use your controlled ref.
 - `defaultOpen` only seeds uncontrolled state; it is ignored when `open` option is provided and is not watched after creation.
 - `context.state.setOpen(open, reason?, event?)` forwards the reason and source event to `onOpenChange`.
+- `context.state.lastOpenReason` tracks the reason of the most recent open transition or reaffirmation (`null` when closed).
+- `context.state.lastOpenEvent` holds the source event of the most recent open transition or reaffirmation (`null` when closed).
 - Missing reasons fall back to `"programmatic"`.
 - `context.isRoot` indicates whether this is a top-level floating context (`!parentContext`).
 - `parentContext` links related floating contexts so outside-click and focus checks can treat descendants as part of the same floating family.

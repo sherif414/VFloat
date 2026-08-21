@@ -1,8 +1,14 @@
 import { userEvent } from "@vitest/browser/context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { effectScope, nextTick, ref } from "vue";
+import { effectScope, nextTick, ref, type Ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
-import { type UseClickContext, type UseClickOptions, useClick } from "@/composables";
+import {
+  type UseClickContext,
+  type UseClickOptions,
+  useClick,
+  useFloatingContext,
+  useHover,
+} from "@/composables";
 
 const trackedElements: HTMLElement[] = [];
 
@@ -24,6 +30,7 @@ describe("useClick", () => {
   let context: UseClickContext;
   let anchorEl: HTMLElement;
   let floatingEl: HTMLElement;
+  let openRef: Ref<boolean>;
   let scope: ReturnType<typeof effectScope>;
   let setOpenMock: ReturnType<typeof vi.fn>;
 
@@ -38,7 +45,7 @@ describe("useClick", () => {
     floatingEl.textContent = "Floating";
     document.body.appendChild(floatingEl);
 
-    const openRef = ref(false);
+    openRef = ref(false);
     setOpenMock = vi.fn((open: boolean) => {
       openRef.value = open;
     });
@@ -306,6 +313,138 @@ describe("useClick", () => {
       await userEvent.click(anchorEl);
       expect(setOpenMock).not.toHaveBeenCalled();
       expect(context.state.open.value).toBe(true);
+    });
+  });
+
+  describe("stickIfOpen behavior", () => {
+    it("closes open element on click by default when stickIfOpen is false", async () => {
+      initClick({ stickIfOpen: false, toggle: true });
+      openRef.value = true;
+      await nextTick();
+
+      await userEvent.click(anchorEl);
+      await nextTick();
+
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenCalledWith(false, "anchor-click", expect.any(Object));
+      expect(context.state.open.value).toBe(false);
+    });
+
+    it("keeps open element open (pins it) on first click when stickIfOpen is true", async () => {
+      initClick({ stickIfOpen: true, toggle: true });
+      openRef.value = true;
+      await nextTick();
+
+      // First click: pins the already-open overlay without closing it
+      await userEvent.click(anchorEl);
+      await nextTick();
+
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
+      expect(context.state.open.value).toBe(true);
+
+      // Second click: toggles it closed
+      await userEvent.click(anchorEl);
+      await nextTick();
+
+      expect(setOpenMock).toHaveBeenCalledTimes(2);
+      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
+      expect(context.state.open.value).toBe(false);
+    });
+
+    it("keeps open element open across multiple clicks when stickIfOpen is true and toggle is false", async () => {
+      initClick({ stickIfOpen: true, toggle: false });
+      openRef.value = true;
+      await nextTick();
+
+      await userEvent.click(anchorEl);
+      await nextTick();
+      expect(context.state.open.value).toBe(true);
+
+      await userEvent.click(anchorEl);
+      await nextTick();
+      expect(context.state.open.value).toBe(true);
+    });
+  });
+
+  describe("combined hover and click pinning integration", () => {
+    it("pins hover overlay on click so pointer leave does not close it", async () => {
+      const parentScope = effectScope();
+      scope = parentScope;
+
+      let floatingContext!: ReturnType<typeof useFloatingContext>;
+      parentScope.run(() => {
+        floatingContext = useFloatingContext({
+          anchorEl: ref(anchorEl),
+          floatingEl: ref(floatingEl),
+        });
+        useHover(floatingContext);
+        useClick(floatingContext, { stickIfOpen: true });
+      });
+
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(false);
+
+      // 1. Pointer enters anchor -> opened via hover
+      anchorEl.dispatchEvent(
+        new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }),
+      );
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(true);
+      expect(floatingContext.state.lastOpenReason?.value).toBe("hover");
+
+      // 2. User clicks anchor -> pins open via stickIfOpen
+      await userEvent.click(anchorEl);
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(true);
+      expect(floatingContext.state.lastOpenReason?.value).toBe("anchor-click");
+
+      // 3. Pointer leaves anchor -> stays open because it is pinned
+      anchorEl.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" }),
+      );
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(true);
+
+      // 4. Second click on anchor -> closes overlay
+      await userEvent.click(anchorEl);
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(false);
+      expect(floatingContext.state.lastOpenReason?.value).toBeNull();
+    });
+
+    it("unpinned hover overlay closes normally on pointer leave without click", async () => {
+      const parentScope = effectScope();
+      scope = parentScope;
+
+      let floatingContext!: ReturnType<typeof useFloatingContext>;
+      parentScope.run(() => {
+        floatingContext = useFloatingContext({
+          anchorEl: ref(anchorEl),
+          floatingEl: ref(floatingEl),
+        });
+        useHover(floatingContext);
+        useClick(floatingContext, { stickIfOpen: true });
+      });
+
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(false);
+
+      // Pointer enters anchor -> opens via hover
+      anchorEl.dispatchEvent(
+        new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }),
+      );
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(true);
+      expect(floatingContext.state.lastOpenReason?.value).toBe("hover");
+
+      // Pointer leaves without clicking -> closes via hover
+      anchorEl.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" }),
+      );
+      await nextTick();
+      expect(floatingContext.state.open.value).toBe(false);
+      expect(floatingContext.state.lastOpenReason?.value).toBeNull();
     });
   });
 });

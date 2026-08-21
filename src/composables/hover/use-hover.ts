@@ -176,6 +176,10 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
       return;
     }
 
+    if (context.state.lastOpenReason?.value && context.state.lastOpenReason.value !== "hover") {
+      return;
+    }
+
     if (isSafePolygonEnabled.value) {
       setTimeout(() => {
         clearPolygon();

@@ -105,6 +105,61 @@ describe("useFloatingContext", () => {
     expect(onOpenChange).toHaveBeenCalledWith(true, "programmatic", undefined);
   });
 
+  it("tracks lastOpenReason and lastOpenEvent when opened and resets on close", async () => {
+    let context!: ReturnType<typeof useFloatingContext>;
+    const dummyEvent = new MouseEvent("click");
+
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      });
+    });
+
+    expect(context.state.lastOpenReason?.value).toBeNull();
+    expect(context.state.lastOpenEvent?.value).toBeNull();
+
+    context.state.setOpen(true, "hover", dummyEvent);
+    expect(context.state.open.value).toBe(true);
+    expect(context.state.lastOpenReason?.value).toBe("hover");
+    expect(context.state.lastOpenEvent?.value).toBe(dummyEvent);
+
+    // Reaffirming open state with another reason updates lastOpenReason / lastOpenEvent
+    const clickEvent = new MouseEvent("click");
+    context.state.setOpen(true, "anchor-click", clickEvent);
+    expect(context.state.open.value).toBe(true);
+    expect(context.state.lastOpenReason?.value).toBe("anchor-click");
+    expect(context.state.lastOpenEvent?.value).toBe(clickEvent);
+
+    // Closing resets lastOpenReason and lastOpenEvent to null
+    context.state.setOpen(false, "escape-key");
+    expect(context.state.open.value).toBe(false);
+    expect(context.state.lastOpenReason?.value).toBeNull();
+    expect(context.state.lastOpenEvent?.value).toBeNull();
+  });
+
+  it("resets lastOpenReason and lastOpenEvent when controlled open ref changes to false", async () => {
+    const openRef = ref(true);
+    let context!: ReturnType<typeof useFloatingContext>;
+
+    scope?.run(() => {
+      context = useFloatingContext({
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+        open: openRef,
+      });
+    });
+
+    context.state.setOpen(true, "hover");
+    expect(context.state.lastOpenReason?.value).toBe("hover");
+
+    openRef.value = false;
+    await nextTick();
+
+    expect(context.state.lastOpenReason?.value).toBeNull();
+    expect(context.state.lastOpenEvent?.value).toBeNull();
+  });
+
   it("assigns each context a stable symbol id", () => {
     let context!: ReturnType<typeof useFloatingContext>;
     let otherContext!: ReturnType<typeof useFloatingContext>;

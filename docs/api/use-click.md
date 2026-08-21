@@ -17,6 +17,7 @@ interface UseClickOptions {
   enabled?: MaybeRefOrGetter<boolean>;
   event?: MaybeRefOrGetter<"click" | "mousedown">;
   toggle?: MaybeRefOrGetter<boolean>;
+  stickIfOpen?: MaybeRefOrGetter<boolean>;
   ignoreMouse?: MaybeRefOrGetter<boolean>;
   ignoreKeyboard?: MaybeRefOrGetter<boolean>;
   ignoreTouch?: MaybeRefOrGetter<boolean>;
@@ -29,6 +30,7 @@ interface UseClickOptions {
 
 - `event` controls which mouse event toggles the trigger. It defaults to `"click"`.
 - `toggle` defaults to `true`.
+- `stickIfOpen` controls whether clicking the anchor keeps an already-open floating element open (pins it) when opened by another trigger like `useHover` or `useFocus`. It defaults to `false`. When set to `true`, the first click pins the element open (transitioning its reason to `"anchor-click"` and preventing hover dismissal on pointer leave), while subsequent clicks toggle it closed.
 
 ## Example
 
@@ -106,6 +108,34 @@ useOutsideClick(context, {
 
   <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
   <div ref="helperEl">Helper content</div>
+</template>
+```
+
+### Pin Hover Previews on Click
+
+Use `stickIfOpen: true` when combining `useHover` and `useClick` so clicking the trigger locks the preview open for interaction rather than closing it.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useClick, useFloatingContext, useHover, useOutsideClick, usePosition } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const context = useFloatingContext({ anchorEl, floatingEl });
+const { styles } = usePosition(context);
+
+// Hover opens preview; click pins it open
+useHover(context);
+useClick(context, { stickIfOpen: true });
+useOutsideClick(context);
+</script>
+
+<template>
+  <button ref="anchorEl">Hover or click to pin</button>
+
+  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Interactive content</div>
 </template>
 ```
 

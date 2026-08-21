@@ -1,6 +1,6 @@
 import type { Middleware, MiddlewareData, Placement } from "@floating-ui/dom";
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 import { floatingTree } from "./floating-context-tree";
@@ -31,16 +31,39 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
     },
   });
   const arrowEl = arrowElOption ?? ref<HTMLElement | null>(null);
+  const lastOpenReason = ref<OpenChangeReason | null>(null);
+  const lastOpenEvent = ref<Event | null>(null);
 
   const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
     if (open.value === value) {
-      if (!value) floatingTree.closeDescendants(context, reason, event);
+      if (!value) {
+        lastOpenReason.value = null;
+        lastOpenEvent.value = null;
+        floatingTree.closeDescendants(context, reason, event);
+      } else {
+        lastOpenReason.value = reason;
+        lastOpenEvent.value = event ?? null;
+      }
       return;
     }
-    if (!value) floatingTree.closeDescendants(context, reason, event);
+    if (!value) {
+      lastOpenReason.value = null;
+      lastOpenEvent.value = null;
+      floatingTree.closeDescendants(context, reason, event);
+    } else {
+      lastOpenReason.value = reason;
+      lastOpenEvent.value = event ?? null;
+    }
     open.value = value;
     onOpenChange?.(value, reason, event);
   };
+
+  watch(open, (isOpen) => {
+    if (!isOpen) {
+      lastOpenReason.value = null;
+      lastOpenEvent.value = null;
+    }
+  });
 
   const isRoot = !parentContext;
 
@@ -54,6 +77,8 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
     state: {
       open,
       setOpen,
+      lastOpenReason,
+      lastOpenEvent,
     },
     isRoot,
   };
@@ -135,6 +160,16 @@ export interface FloatingRefs {
 export interface FloatingState {
   open: Readonly<Ref<boolean>>;
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
+  /**
+   * The reason for the most recent open state transition or reaffirmation.
+   * Null when closed.
+   */
+  lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
+  /**
+   * The DOM/synthetic event associated with the most recent open state transition or reaffirmation.
+   * Null when closed.
+   */
+  lastOpenEvent?: Readonly<Ref<Event | null>>;
 }
 
 /**
