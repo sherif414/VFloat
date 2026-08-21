@@ -10,8 +10,10 @@ import type { FloatingContext } from "@/composables/floating-context";
 import {
   isButtonTarget,
   isHTMLElement,
+  isLinkTarget,
   isMouseLikePointerType,
   isSpaceIgnored,
+  isTypeableElement,
 } from "@/shared/dom";
 import type { OpenChangeReason } from "@/types";
 
@@ -151,20 +153,28 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   function onKeyDown(e: KeyboardEvent) {
     interactionState.pointerType = undefined;
 
-    if (e.defaultPrevented || toValue(ignoreKeyboardOption) || isButtonTarget(e)) {
+    if (e.defaultPrevented || toValue(ignoreKeyboardOption)) {
       return;
     }
 
     const el = anchorEl.value;
     if (!el) return;
 
-    if (e.key === " " && !isSpaceIgnored(el)) {
+    if (e.key === " ") {
+      if (isButtonTarget(e) || isSpaceIgnored(el)) {
+        return;
+      }
+
       // Prevent scrolling
       e.preventDefault();
       interactionState.didKeyDown = true;
     }
 
     if (e.key === "Enter") {
+      if (isButtonTarget(e) || isLinkTarget(e) || isTypeableElement(el)) {
+        return;
+      }
+
       onOpenChange("keyboard-activate", e);
     }
   }

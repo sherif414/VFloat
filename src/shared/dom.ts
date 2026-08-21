@@ -34,29 +34,54 @@ export function isMouseLikePointerType(pointerType: string | undefined, strict?:
   return strict ? isMouse : isMouse || pointerType === "pen";
 }
 
+const NON_TYPEABLE_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "hidden",
+  "image",
+  "radio",
+  "range",
+  "reset",
+  "submit",
+]);
+
 /**
  * Returns true when text input handling should be left to the browser.
  */
 export function isTypeableElement(element: Element | null): boolean {
   if (!isHTMLElement(element)) return false;
+  if (typeof HTMLInputElement !== "undefined" && element instanceof HTMLInputElement) {
+    return !NON_TYPEABLE_INPUT_TYPES.has(element.type);
+  }
   return (
-    (typeof HTMLInputElement !== "undefined" && element instanceof HTMLInputElement) ||
     (typeof HTMLTextAreaElement !== "undefined" && element instanceof HTMLTextAreaElement) ||
     (element.isContentEditable && element.contentEditable !== "false")
   );
 }
 
 /**
- * Recognizes button-like keyboard targets so Space/Enter handling stays consistent.
+ * Recognizes native button elements that natively dispatch synthetic click events on Space/Enter.
  */
 export function isButtonTarget(event: KeyboardEvent): boolean {
   const target = event.target;
   if (!isHTMLElement(target)) return false;
   return (
     target.tagName === "BUTTON" ||
-    (target.tagName === "INPUT" && target.getAttribute("type") === "button") ||
-    target.getAttribute("role") === "button"
+    (target.tagName === "INPUT" &&
+      ["button", "submit", "reset", "image"].includes((target as HTMLInputElement).type)) ||
+    target.tagName === "SUMMARY"
   );
+}
+
+/**
+ * Recognizes native link elements that natively dispatch synthetic click events on Enter.
+ */
+export function isLinkTarget(event: KeyboardEvent): boolean {
+  const target = event.target;
+  if (!isHTMLElement(target)) return false;
+  return target.tagName === "A" && target.hasAttribute("href");
 }
 
 /**

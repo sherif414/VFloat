@@ -9,6 +9,7 @@ import {
   isEventTargetWithin,
   isFunction,
   isHTMLElement,
+  isLinkTarget,
   isMouseLikePointerType,
   isSpaceIgnored,
   isTypeableElement,
@@ -63,8 +64,16 @@ describe("utils and core helpers", () => {
     });
 
     const input = trackElement(document.createElement("input"));
+    const buttonInput = trackElement(document.createElement("input"));
+    buttonInput.type = "button";
+    const submitInput = trackElement(document.createElement("input"));
+    submitInput.type = "submit";
     const textarea = trackElement(document.createElement("textarea"));
     const button = trackElement(document.createElement("button"));
+    const summary = trackElement(document.createElement("summary"));
+    const linkWithHref = trackElement(document.createElement("a"));
+    linkWithHref.href = "#";
+    const linkWithoutHref = trackElement(document.createElement("a"));
     const div = trackElement(document.createElement("div"));
     div.setAttribute("role", "button");
     div.contentEditable = "true";
@@ -81,6 +90,8 @@ describe("utils and core helpers", () => {
     expect(isMouseLikePointerType("pen", true)).toBe(false);
     expect(isMouseLikePointerType(undefined)).toBe(false);
     expect(isTypeableElement(input)).toBe(true);
+    expect(isTypeableElement(buttonInput)).toBe(false);
+    expect(isTypeableElement(submitInput)).toBe(false);
     expect(isTypeableElement(textarea)).toBe(true);
     expect(isTypeableElement(div)).toBe(true);
     expect(isTypeableElement(button)).toBe(false);
@@ -92,14 +103,29 @@ describe("utils and core helpers", () => {
       ),
     ).toBe(false);
 
-    const clickTarget = new KeyboardEvent("keydown");
-    Object.defineProperty(clickTarget, "target", {
-      configurable: true,
-      value: button,
-    });
-    expect(isButtonTarget(clickTarget)).toBe(true);
+    const makeKeyTarget = (el: HTMLElement) => {
+      const event = new KeyboardEvent("keydown");
+      Object.defineProperty(event, "target", {
+        configurable: true,
+        value: el,
+      });
+      return event;
+    };
+
+    expect(isButtonTarget(makeKeyTarget(button))).toBe(true);
+    expect(isButtonTarget(makeKeyTarget(buttonInput))).toBe(true);
+    expect(isButtonTarget(makeKeyTarget(submitInput))).toBe(true);
+    expect(isButtonTarget(makeKeyTarget(summary))).toBe(true);
+    expect(isButtonTarget(makeKeyTarget(div))).toBe(false);
+    expect(isButtonTarget(makeKeyTarget(linkWithHref))).toBe(false);
+
+    expect(isLinkTarget(makeKeyTarget(linkWithHref))).toBe(true);
+    expect(isLinkTarget(makeKeyTarget(linkWithoutHref))).toBe(false);
+    expect(isLinkTarget(makeKeyTarget(button))).toBe(false);
+
     expect(isSpaceIgnored(input)).toBe(true);
     expect(isSpaceIgnored(button)).toBe(false);
+    expect(isSpaceIgnored(buttonInput)).toBe(false);
     expect(isVirtualElement({ contextElement: button })).toBe(true);
     expect(isVirtualElement(null)).toBe(false);
   });

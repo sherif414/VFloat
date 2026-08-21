@@ -447,4 +447,122 @@ describe("useClick", () => {
       expect(floatingContext.state.lastOpenReason?.value).toBeNull();
     });
   });
+
+  describe("element types support", () => {
+    it("handles div with role='button' on Enter and Space", async () => {
+      const roleButton = trackElement(document.createElement("div"));
+      roleButton.tabIndex = 0;
+      roleButton.setAttribute("role", "button");
+      roleButton.textContent = "Custom Button";
+      document.body.appendChild(roleButton);
+      context.refs.anchorEl.value = roleButton;
+
+      initClick();
+      roleButton.focus();
+
+      await userEvent.keyboard("{Enter}");
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "keyboard-activate", expect.any(Object));
+      expect(context.state.open.value).toBe(true);
+
+      await userEvent.keyboard(" ");
+      expect(setOpenMock).toHaveBeenCalledTimes(2);
+      expect(setOpenMock).toHaveBeenNthCalledWith(
+        2,
+        false,
+        "keyboard-activate",
+        expect.any(Object),
+      );
+      expect(context.state.open.value).toBe(false);
+    });
+
+    it("handles <a href='...'> without double-triggering on Enter", async () => {
+      const link = trackElement(document.createElement("a"));
+      link.href = "#";
+      link.textContent = "Link";
+      document.body.appendChild(link);
+      context.refs.anchorEl.value = link;
+
+      initClick();
+      link.focus();
+
+      await userEvent.keyboard("{Enter}");
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
+      expect(context.state.open.value).toBe(true);
+
+      await userEvent.keyboard(" ");
+      expect(setOpenMock).toHaveBeenCalledTimes(2);
+      expect(setOpenMock).toHaveBeenNthCalledWith(
+        2,
+        false,
+        "keyboard-activate",
+        expect.any(Object),
+      );
+      expect(context.state.open.value).toBe(false);
+    });
+
+    it("handles <a> without href on Enter and Space", async () => {
+      const link = trackElement(document.createElement("a"));
+      link.tabIndex = 0;
+      link.textContent = "Link without href";
+      document.body.appendChild(link);
+      context.refs.anchorEl.value = link;
+
+      initClick();
+      link.focus();
+
+      await userEvent.keyboard("{Enter}");
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "keyboard-activate", expect.any(Object));
+      expect(context.state.open.value).toBe(true);
+
+      await userEvent.keyboard(" ");
+      expect(setOpenMock).toHaveBeenCalledTimes(2);
+      expect(setOpenMock).toHaveBeenNthCalledWith(
+        2,
+        false,
+        "keyboard-activate",
+        expect.any(Object),
+      );
+      expect(context.state.open.value).toBe(false);
+    });
+
+    it("does not toggle on Space or Enter when anchor is a typeable text input or textarea", async () => {
+      const textInput = trackElement(document.createElement("input"));
+      textInput.type = "text";
+      document.body.appendChild(textInput);
+      context.refs.anchorEl.value = textInput;
+
+      initClick();
+      textInput.focus();
+
+      await userEvent.keyboard("hello world");
+      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(context.state.open.value).toBe(false);
+
+      await userEvent.keyboard("{Enter}");
+      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(context.state.open.value).toBe(false);
+    });
+
+    it("handles input[type='button'] on Space and Enter", async () => {
+      const buttonInput = trackElement(document.createElement("input"));
+      buttonInput.type = "button";
+      buttonInput.value = "Click me";
+      document.body.appendChild(buttonInput);
+      context.refs.anchorEl.value = buttonInput;
+
+      initClick();
+      buttonInput.focus();
+
+      await userEvent.keyboard("{Enter}");
+      expect(setOpenMock).toHaveBeenCalledTimes(1);
+      expect(context.state.open.value).toBe(true);
+
+      await userEvent.keyboard(" ");
+      expect(setOpenMock).toHaveBeenCalledTimes(2);
+      expect(context.state.open.value).toBe(false);
+    });
+  });
 });
