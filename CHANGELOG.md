@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.13.2
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.13.1...v0.13.2)
+
+### 🩹 Fixes
+
+- **hover:** Accept MaybeRefOrGetter across UseHoverOptions ([963a680](https://github.com/sherif414/VFloat/commit/963a680))
+- **focus-manager:** Prevent focus restoration hijacking during outside pointer interactions ([455a4e1](https://github.com/sherif414/VFloat/commit/455a4e1))
+- **focus-manager:** Preserve open state before floating element mounts ([708fae1](https://github.com/sherif414/VFloat/commit/708fae1))
+- **floating-context:** Prevent documentElement virtual anchor from capturing outside clicks ([4bfc474](https://github.com/sherif414/VFloat/commit/4bfc474))
+- **client-point:** Capture initial coordinates on mount and simplify factory ([d0235dc](https://github.com/sherif414/VFloat/commit/d0235dc))
+
+### 💅 Refactors
+
+- **shared:** Clean up dead utilities and consolidate ssr environment helpers ([1baf850](https://github.com/sherif414/VFloat/commit/1baf850))
+- **showcase:** Remove activePreset watcher in favor of native outside click ([1f0453d](https://github.com/sherif414/VFloat/commit/1f0453d))
+
+### 📖 Documentation
+
+- **guide:** Refactor introduction guide and compact package size component ([b11e968](https://github.com/sherif414/VFloat/commit/b11e968))
+- Add interactive capability showcase to homepage ([56adabb](https://github.com/sherif414/VFloat/commit/56adabb))
+- **showcase:** Align toolbar dropdown keyboard and focus interactions ([719646a](https://github.com/sherif414/VFloat/commit/719646a))
+- **showcase:** Remove duplicate canvas prompt text in virtual anchor preset ([531557a](https://github.com/sherif414/VFloat/commit/531557a))
+- **showcase:** Add syntax highlighting for code panel ([3cdd17f](https://github.com/sherif414/VFloat/commit/3cdd17f))
+- **showcase:** Refine mobile responsiveness and theme styling ([e782585](https://github.com/sherif414/VFloat/commit/e782585))
+
+### 📦 Build
+
+- **config:** Typecheck vite config using vitest types ([c03daa5](https://github.com/sherif414/VFloat/commit/c03daa5))
+- **tsconfig:** Include tests, docs, and config in type-check ([47e084e](https://github.com/sherif414/VFloat/commit/47e084e))
+- **tsconfig:** Typecheck vitepress theme components and configs ([e09dea0](https://github.com/sherif414/VFloat/commit/e09dea0))
+
+### 🏡 Chore
+
+- **agents:** Replace AGENTS.md with GEMINI.md ([83083f2](https://github.com/sherif414/VFloat/commit/83083f2))
+
+### ✅ Tests
+
+- **ssr:** Pass collection to useListNavigation instead of legacy list option ([52c1dd3](https://github.com/sherif414/VFloat/commit/52c1dd3))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.13.1
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.13.0...v0.13.1)
