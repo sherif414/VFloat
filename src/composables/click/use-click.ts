@@ -202,10 +202,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     if (isMouseLikePointerType(type, true) && toValue(ignoreMouseOption)) {
       return true;
     }
-    if (type === "touch" && toValue(ignoreTouchOption)) {
-      return true;
-    }
-    return false;
+    return type === "touch" && toValue(ignoreTouchOption);
   }
 
   //=====================================================================================
