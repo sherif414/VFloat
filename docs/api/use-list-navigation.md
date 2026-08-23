@@ -79,7 +79,8 @@ interface UseListNavigationOptions {
 
   /**
    * Right-to-left layout flag affecting horizontal arrow semantics.
-   * @default false
+   * When omitted, direction is automatically inferred from the DOM context.
+   * @default inferred from DOM context (false if LTR)
    */
   rtl?: MaybeRefOrGetter<boolean>;
 
@@ -121,7 +122,7 @@ interface UseListNavigationReturn {
 - **Collection Delegation:** Rather than managing DOM references, it registers listeners on the anchor and floating elements and maps key combinations to `collection.setNext()`, `collection.setFirst()`, `collection.setPrevious()`, etc.
 - **Roving & Virtual Focus:** It is compatible with both roving tabindex DOM focus and virtual focus configurations. Simply sync `collection.activeValue` with your elements' focus or `aria-activedescendant` attribute.
 - **Nested Submenu Expansion & Collapse (2D):** In vertical orientation, horizontal arrow keys signal enter/exit intent on items with submenus. It fires `onEnter` (e.g., `ArrowRight`) to open a child submenu. On `exit` (e.g., `ArrowLeft`), it runs custom `onExit` if provided, or automatically closes the child context and restores DOM focus to `anchorEl` when `!context.isRoot`.
-- **RTL Semantics:** Horizontal arrow keys for list navigation and submenu expansion automatically reverse their meaning when `rtl` is enabled.
+- **Automatic RTL Semantics:** Horizontal arrow keys for list navigation and submenu expansion automatically reverse their meaning in RTL layouts. Direction is inferred automatically from the nearest `[dir]` DOM ancestor (or `document.documentElement`), or can be overridden explicitly with the `rtl` option.
 - **Natural Tab Exit:** Pressing `Tab` closes the list to clean up references, but does not prevent natural browser focus movement.
 
 ## Example

@@ -13,6 +13,7 @@ import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import { resolveKeyboardIntent } from "./intent";
+import { useRtl } from "./use-rtl";
 
 //=======================================================================================
 // 📌 Main
@@ -46,7 +47,7 @@ export function useListNavigation(
     enabled: enabledOption = true,
     loop: loopOption = false,
     orientation: orientationOption = "vertical",
-    rtl: rtlOption = false,
+    rtl: rtlOption,
     openOnArrowKeyDown: openOnArrowKeyDownOption,
     closeOnTab: closeOnTabOption = true,
     onActivate,
@@ -54,10 +55,16 @@ export function useListNavigation(
     onExit,
   } = options;
 
+  const anchorEl = computed(() => {
+    return getAnchorElement(refs.anchorEl.value);
+  });
+
+  const floatingEl = computed(() => refs.floatingEl.value);
+
   const isEnabled = computed(() => toValue(enabledOption));
   const isLoop = computed(() => toValue(loopOption));
   const orientation = computed(() => toValue(orientationOption));
-  const isRtl = computed(() => toValue(rtlOption));
+  const isRtl = useRtl(() => anchorEl.value ?? floatingEl.value, { rtl: rtlOption });
   const isOpenOnArrowKeyDown = computed(() => {
     return openOnArrowKeyDownOption !== undefined
       ? toValue(openOnArrowKeyDownOption)
@@ -66,12 +73,6 @@ export function useListNavigation(
   const isCloseOnTab = computed(() => toValue(closeOnTabOption));
 
   const cleanupRegistry = createCleanupRegistry();
-
-  const anchorEl = computed(() => {
-    return getAnchorElement(refs.anchorEl.value);
-  });
-
-  const floatingEl = computed(() => refs.floatingEl.value);
 
   const navigateByIntent = (intent: ReturnType<typeof resolveKeyboardIntent>, e: KeyboardEvent) => {
     if (intent === "close" && e.key === "Tab" && isCloseOnTab.value) {

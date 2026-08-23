@@ -349,6 +349,34 @@ describe("useListNavigation", () => {
       expect(exitedValue).toBe("1");
     });
 
+    it("automatically infers RTL from DOM context when rtl option is omitted", () => {
+      let enteredValue = "";
+      let exitedValue = "";
+      const containerEl = trackElement(document.createElement("div"));
+      containerEl.setAttribute("dir", "rtl");
+      const anchorEl = trackElement(document.createElement("button"));
+      containerEl.appendChild(anchorEl);
+      document.body.appendChild(containerEl);
+
+      const { floatingEl, openRef, collection } = setup({
+        anchorEl,
+        onEnter: (val) => {
+          enteredValue = val;
+        },
+        onExit: (val) => {
+          exitedValue = val;
+        },
+      });
+      openRef.value = true;
+      collection.setActiveValue("1");
+
+      dispatchKey(floatingEl, "ArrowLeft");
+      expect(enteredValue).toBe("1");
+
+      dispatchKey(floatingEl, "ArrowRight");
+      expect(exitedValue).toBe("1");
+    });
+
     it("does not call onEnter / onExit when item is disabled", () => {
       let entered = false;
       let exited = false;

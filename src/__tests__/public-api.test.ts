@@ -47,6 +47,7 @@ describe("Public API Surface", () => {
       "isUsingKeyboard",
       "resolveKeyboardIntent",
       "useActiveDescendant",
+      "useRtl",
     ];
 
     for (const key of forbidden) {
