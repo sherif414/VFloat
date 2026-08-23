@@ -316,7 +316,7 @@ describe("useListNavigation", () => {
       });
     });
 
-    it("delegates click events from list item elements", () => {
+    it("delegates click events from list item elements via itemEls", () => {
       scope.run(() => {
         const items = ref(["A", "B", "C"]);
         const containerEl = trackElement(document.createElement("ul"));
@@ -329,7 +329,11 @@ describe("useListNavigation", () => {
         document.body.appendChild(containerEl);
 
         const onSelect = vi.fn();
-        const nav = useListNavigation(items, { containerEl, onSelect });
+        const nav = useListNavigation(items, {
+          containerEl,
+          itemEls: [li0, li1, li2],
+          onSelect,
+        });
 
         li2.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
@@ -347,12 +351,41 @@ describe("useListNavigation", () => {
         document.body.appendChild(containerEl);
 
         const onSelect = vi.fn();
-        const nav = useListNavigation(items, { containerEl, onSelect });
+        const nav = useListNavigation(items, {
+          containerEl,
+          itemEls: [li0],
+          onSelect,
+        });
 
         li0.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
         expect(nav.activeIndex.value).toBe(-1);
         expect(onSelect).not.toHaveBeenCalled();
+      });
+    });
+
+    it("supports virtual list delegation and navigation via registerItemElement", () => {
+      scope.run(() => {
+        const items = ref(Array.from({ length: 1000 }, (_, i) => `Item ${i}`));
+        const containerEl = trackElement(document.createElement("div"));
+        document.body.appendChild(containerEl);
+
+        const onSelect = vi.fn();
+        const nav = useListNavigation(items, { containerEl, onSelect });
+
+        // Virtualizer renders slice [500, 501, 502]
+        const v500 = trackElement(document.createElement("div"));
+        const v501 = trackElement(document.createElement("div"));
+        containerEl.appendChild(v500);
+        containerEl.appendChild(v501);
+
+        nav.registerItemElement(v500, 500);
+        nav.registerItemElement(v501, 501);
+
+        // Click on virtual item 501
+        v501.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        expect(nav.activeIndex.value).toBe(501);
+        expect(onSelect).toHaveBeenCalledWith("Item 501", 501, expect.any(MouseEvent));
       });
     });
 
@@ -391,6 +424,7 @@ describe("useListNavigation", () => {
 
         const nav = useListNavigation(items, {
           containerEl,
+          itemEls: [li0, li1],
           focusOnHover: true,
         });
 
@@ -411,6 +445,7 @@ describe("useListNavigation", () => {
 
         const nav = useListNavigation(items, {
           containerEl,
+          itemEls: [li0, li1],
           focusOnHover: false,
         });
 
@@ -451,7 +486,7 @@ describe("useListNavigation", () => {
       });
     });
 
-    it("supports custom item accessors and hybrid resolution", () => {
+    it("supports custom item accessors", () => {
       scope.run(() => {
         interface CustomItem {
           code: string;

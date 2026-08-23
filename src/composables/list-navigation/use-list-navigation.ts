@@ -37,28 +37,30 @@ function generateId(): string {
  * Coordinates keyboard navigation, focus movement, typeahead matching, and DOM scroll alignment
  * for linear list widgets such as menus, listboxes, select dropdowns, and comboboxes.
  *
- * Supports hybrid element resolution (automatic DOM queries, `itemEls` array, or `registerItemElement`)
- * and event delegation on the container element.
+ * Supports both standard lists (via `itemEls` array) and virtualized lists (via `registerItemElement` map),
+ * with clean event delegation on `containerEl`.
  *
  * Supports two focus strategies:
  * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active item, `-1` on others) and calls `.focus()`.
  * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `.scrollIntoView()`.
  *
  * @param items - Reactive collection or getter of items (objects or strings).
- * @param options - Configuration options for container element ref, item resolution, strategy, orientation, and callbacks.
+ * @param options - Configuration options for container element ref, item elements, strategy, orientation, and callbacks.
  * @returns State, navigation controls, and element registration helpers.
  *
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { ref, useTemplateRef } from "vue";
+ * import { ref, shallowRef, useTemplateRef } from "vue";
  * import { useListNavigation } from "v-float";
  *
  * const items = ref(["Apple", "Banana", "Cherry"]);
  * const containerEl = useTemplateRef<HTMLElement>("containerEl");
+ * const itemEls = shallowRef<HTMLElement[]>([]);
  *
  * const { activeIndex } = useListNavigation(items, {
  *   containerEl,
+ *   itemEls,
  *   strategy: "roving",
  *   loop: true,
  *   onSelect: (item) => console.log("Selected:", item),
@@ -70,6 +72,7 @@ function generateId(): string {
  *     <li
  *       v-for="(item, index) in items"
  *       :key="item"
+ *       ref="itemEls"
  *       role="option"
  *       :class="{ active: activeIndex === index }"
  *     >
@@ -86,8 +89,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
   const {
     containerEl: containerElOption,
     itemEls: itemElsOption,
-    itemSelector,
-    containerSelector,
     strategy: strategyOption = "roving",
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
@@ -130,8 +131,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
 
   const focusController = createFocusStrategyController(() => containerEl.value, {
     getItemEls: () => toValue(itemElsOption),
-    itemSelector,
-    containerSelector,
   });
 
   const typeaheadController = createTypeahead({

@@ -4,7 +4,7 @@ description: Coordinates keyboard-driven list navigation, focus movement, typeah
 
 # useListNavigation
 
-`useListNavigation` is a headless composable that coordinates keyboard navigation, focus management (roving tabindex vs `aria-activedescendant`), typeahead search, and DOM scroll alignment for linear list widgets such as listboxes, dropdown menus, select lists, comboboxes, and tabs.
+`useListNavigation` is a headless composable that coordinates keyboard navigation, focus management (roving tabindex vs `aria-activedescendant`), typeahead search, and DOM scroll alignment for linear list widgets such as listboxes, dropdown menus, select lists, comboboxes, virtual lists, and tabs.
 
 ## Type
 
@@ -34,16 +34,9 @@ interface UseListNavigationOptions<T = ListNavigationItem | string> {
 
   /**
    * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
-   * When omitted, items are resolved via `registerItemElement` or queried from `containerEl`.
+   * When using virtual lists, use `registerItemElement` instead.
    */
   itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
-
-  /**
-   * CSS selector used to query item elements inside `containerEl` when neither `itemEls`
-   * nor `registerItemElement` are explicitly provided.
-   * @default '[role="option"], [role="menuitem"], [role="tab"], [data-vfloat-item], li'
-   */
-  itemSelector?: string;
 
   /**
    * Focus management strategy:
@@ -167,7 +160,7 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
 
   /**
    * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).
-   * Primarily used for virtualized lists (e.g. `@tanstack/vue-virtual`).
+   * Used for virtualized lists (e.g. `@tanstack/vue-virtual`) or dynamic item rendering.
    */
   registerItemElement: (el: HTMLElement | null, index: number) => void;
 
@@ -180,15 +173,14 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
 
 ## Details
 
-### Hybrid Element Resolution & Event Delegation
+### Item Element Resolution & Event Delegation
 
-`useListNavigation` uses a hybrid resolution pipeline to discover and interact with list items:
+`useListNavigation` supports both standard lists and virtualized lists:
 
-1. **Zero-Config Default (DOM Query):** If only `containerEl` is passed, `useListNavigation` automatically resolves item elements matching standard roles (`[role="option"]`, `[role="menuitem"]`, `[role="tab"]`, `[data-vfloat-item]`, or `li`).
-2. **Template Ref Array (`itemEls`):** You can pass an array ref (`ref="itemEls"` in `v-for`) for direct $O(1)$ indexing without registering individual items.
-3. **Registration Callback (`registerItemElement`):** For virtualized lists (e.g. `@tanstack/vue-virtual`), pass `:ref="el => registerItemElement(el, index)"` to map virtual slice indices to real item indices.
+1. **Standard Lists (`itemEls`):** Pass `ref="itemEls"` in `v-for`. The composable uses the array of elements to manage focus and event delegation.
+2. **Virtual Lists (`registerItemElement`):** For virtualized lists (e.g. `@tanstack/vue-virtual`), pass `:ref="el => registerItemElement(el, index)"` on each virtual row. The composable tracks mounted slice elements and automatically handles focus and event delegation for the active slice.
 
-Clicks and hover pointer moves are **delegated on `containerEl`**, requiring zero event listeners on individual list items.
+Clicks and hover pointer moves are **delegated on `containerEl`**, automatically resolving the item index from the target DOM element.
 
 ### Focus Strategies
 
@@ -212,11 +204,11 @@ Typing printable characters matches item labels:
 
 ## Examples
 
-### Pattern 1: Standalone / Floating Listbox (Zero Item Refs)
+### Pattern 1: Standard Listbox (Template Ref Array)
 
 ```vue
 <script setup lang="ts">
-import { ref, useTemplateRef } from "vue";
+import { ref, shallowRef, useTemplateRef } from "vue";
 import { useListNavigation } from "v-float";
 
 const cities = ref([
@@ -227,9 +219,11 @@ const cities = ref([
 ]);
 
 const containerEl = useTemplateRef<HTMLElement>("containerEl");
+const itemEls = shallowRef<HTMLElement[]>([]);
 
 const { activeIndex } = useListNavigation(cities, {
   containerEl,
+  itemEls,
   strategy: "roving",
   loop: true,
   onSelect: (item) => console.log("Selected:", item.label),
@@ -241,6 +235,7 @@ const { activeIndex } = useListNavigation(cities, {
     <li
       v-for="(city, index) in cities"
       :key="city.id"
+      ref="itemEls"
       role="option"
       :tabindex="activeIndex === index ? 0 : -1"
       :aria-disabled="city.disabled"
@@ -256,16 +251,80 @@ const { activeIndex } = useListNavigation(cities, {
 </template>
 ```
 
-### Pattern 2: Autocomplete Combobox (Active Descendant)
+### Pattern 2: Virtualized List (`@tanstack/vue-virtual`)
 
 ```vue
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue";
+import { computed, ref, useTemplateRef, watch } from "vue";
+import { useVirtualizer } from "@tanstack/vue-virtual";
+import { useListNavigation } from "v-float";
+
+const items = ref(Array.from({ length: 10000 }, (_, i) => ({ id: `id-${i}`, label: `Item ${i}` })));
+const containerEl = useTemplateRef<HTMLElement>("containerEl");
+
+const virtualizer = useVirtualizer(
+  computed(() => ({
+    count: items.value.length,
+    getScrollElement: () => containerEl.value,
+    estimateSize: () => 36,
+    overscan: 5,
+  })),
+);
+
+const { activeIndex, registerItemElement } = useListNavigation(items, {
+  containerEl,
+  strategy: "roving",
+  loop: true,
+  onSelect: (item) => console.log("Selected:", item.label),
+});
+
+// Automatically scroll virtual list on keyboard navigation
+watch(activeIndex, (idx) => {
+  if (idx >= 0) {
+    virtualizer.value.scrollToIndex(idx, { align: "auto" });
+  }
+});
+</script>
+
+<template>
+  <div ref="containerEl" role="listbox" class="virtual-list-container">
+    <div
+      :style="{ height: `${virtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }"
+    >
+      <div
+        v-for="virtualRow in virtualizer.getVirtualItems()"
+        :key="virtualRow.index"
+        :ref="(el) => registerItemElement(el as HTMLElement, virtualRow.index)"
+        role="option"
+        :tabindex="activeIndex === virtualRow.index ? 0 : -1"
+        :style="{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          transform: `translateY(${virtualRow.start}px)`,
+        }"
+        class="virtual-list-item"
+        :class="{ 'is-active': activeIndex === virtualRow.index }"
+      >
+        {{ items[virtualRow.index].label }}
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+### Pattern 3: Autocomplete Combobox (Active Descendant)
+
+```vue
+<script setup lang="ts">
+import { computed, ref, shallowRef, useTemplateRef } from "vue";
 import { useListNavigation } from "v-float";
 
 const query = ref("");
 const isOpen = ref(false);
 const inputEl = useTemplateRef<HTMLInputElement>("inputEl");
+const itemEls = shallowRef<HTMLElement[]>([]);
 
 const allCities = [
   { id: "city-cai", label: "Cairo" },
@@ -280,6 +339,7 @@ const filteredCities = computed(() =>
 
 const { activeIndex } = useListNavigation(filteredCities, {
   containerEl: inputEl,
+  itemEls,
   strategy: "activedescendant",
   onSelect: (item) => {
     query.value = item.label;
@@ -311,6 +371,7 @@ const { activeIndex } = useListNavigation(filteredCities, {
       <li
         v-for="(city, index) in filteredCities"
         :key="city.id"
+        ref="itemEls"
         role="option"
         class="combobox-option"
         :class="{ 'is-active': activeIndex === index }"

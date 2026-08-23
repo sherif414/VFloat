@@ -39,23 +39,9 @@ export interface UseListNavigationOptions<T = ListNavigationItem | string> {
 
   /**
    * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
-   * When omitted, items are resolved via `registerItemElement` or queried from `containerEl`.
+   * When using virtual lists, use `registerItemElement` instead.
    */
   itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
-
-  /**
-   * CSS selector used to query item elements inside `containerEl` when neither `itemEls`
-   * nor `registerItemElement` are explicitly provided.
-   * @default '[role="option"], [role="menuitem"], [role="tab"], [data-vfloat-item], li'
-   */
-  itemSelector?: string;
-
-  /**
-   * CSS selector identifying nested container boundaries (menus, submenus, listboxes).
-   * Used to prevent parent menu queries and delegated events from penetrating into child submenus.
-   * @default '[role="menu"], [role="listbox"], [role="tablist"], [data-vfloat-container]'
-   */
-  containerSelector?: string;
 
   /**
    * Focus management strategy:
@@ -182,7 +168,7 @@ export interface UseListNavigationReturn<T = ListNavigationItem | string> {
 
   /**
    * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).
-   * Primarily used for virtualized lists (e.g. `@tanstack/vue-virtual`).
+   * Used for virtualized lists (e.g. `@tanstack/vue-virtual`) or dynamic item rendering.
    */
   registerItemElement: (el: HTMLElement | null, index: number) => void;
 
