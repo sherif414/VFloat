@@ -4,6 +4,12 @@ import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
 import dts from "vite-plugin-dts";
 import vueDevtools from "vite-plugin-vue-devtools";
+import { playwright } from "@vitest/browser-playwright";
+
+const isDebugging =
+  process.execArgv.some((arg) => arg.includes("--inspect")) ||
+  Boolean(process.env.VSCODE_INSPECTOR_OPTIONS) ||
+  Boolean(process.env.INSPECT);
 
 export default defineConfig({
   test: {
@@ -11,7 +17,12 @@ export default defineConfig({
       enabled: true,
       headless: true,
       screenshotFailures: false,
-      provider: "playwright",
+      provider: playwright({
+        launchOptions: {
+          // Open CDP port for VS Code Chrome debugger
+          args: isDebugging ? ["--remote-debugging-port=9222", "--start-minimized"] : [],
+        },
+      }),
       instances: [{ browser: "chromium" }],
     },
     silent: "passed-only",
