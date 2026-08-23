@@ -378,10 +378,9 @@ export function useListNavigation<T = ListNavigationItem | string>(
   //=====================================================================================
 
   function getItemProps(item: T, index: number): ItemProps {
-    const strat = strategy.value;
     const isDisabled = resolveItemDisabled(item, index);
     const itemId = resolveItemId(item, index);
-    const itemTabindex = resolveItemTabindex(index, activeIndex.value, strat);
+    const itemTabindex = resolveItemTabindex(index, activeIndex.value, strategy.value);
 
     return {
       id: itemId,
@@ -416,10 +415,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
     cleanup: cleanupRegistry.cleanup,
   };
 }
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
 
 //=======================================================================================
 // 📌 Types
