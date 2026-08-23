@@ -27,9 +27,23 @@ interface ListNavigationItem {
 interface UseListNavigationOptions<T = ListNavigationItem | string> {
   /**
    * Ref or getter pointing to the container or input DOM element.
-   * Event listeners and ARIA attributes will be attached directly to this element.
+   * Event listeners (keyboard, click delegation, hover delegation) and ARIA attributes
+   * are attached directly to this element.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
+
+  /**
+   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
+   * When omitted, items are resolved via `registerItemElement` or queried from `containerEl`.
+   */
+  itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
+
+  /**
+   * CSS selector used to query item elements inside `containerEl` when neither `itemEls`
+   * nor `registerItemElement` are explicitly provided.
+   * @default '[role="option"], [role="menuitem"], [role="tab"], [data-vfloat-item], li'
+   */
+  itemSelector?: string;
 
   /**
    * Focus management strategy:
@@ -66,7 +80,7 @@ interface UseListNavigationOptions<T = ListNavigationItem | string> {
   typeaheadTimeout?: MaybeRefOrGetter<number>;
 
   /**
-   * Whether moving the pointer over an item activates it.
+   * Whether moving the pointer over an item activates it via event delegation.
    * @default true
    */
   focusOnHover?: MaybeRefOrGetter<boolean>;
@@ -115,14 +129,6 @@ interface UseListNavigationOptions<T = ListNavigationItem | string> {
   onActiveChange?: (item: T | undefined, index: number) => void;
 }
 
-interface ItemProps {
-  id: string;
-  tabindex: number;
-  "aria-disabled"?: boolean;
-  onClick: (event: MouseEvent) => void;
-  onPointermove: (event: PointerEvent) => void;
-}
-
 interface UseListNavigationReturn<T = ListNavigationItem | string> {
   /**
    * Currently active item index (-1 if none is active).
@@ -160,12 +166,8 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
   last: () => void;
 
   /**
-   * Bindings generator for each list item (`v-bind="getItemProps(item, index)"`).
-   */
-  getItemProps: (item: T, index: number) => ItemProps;
-
-  /**
    * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).
+   * Primarily used for virtualized lists (e.g. `@tanstack/vue-virtual`).
    */
   registerItemElement: (el: HTMLElement | null, index: number) => void;
 
@@ -177,6 +179,16 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
 ```
 
 ## Details
+
+### Hybrid Element Resolution & Event Delegation
+
+`useListNavigation` uses a hybrid resolution pipeline to discover and interact with list items:
+
+1. **Zero-Config Default (DOM Query):** If only `containerEl` is passed, `useListNavigation` automatically resolves item elements matching standard roles (`[role="option"]`, `[role="menuitem"]`, `[role="tab"]`, `[data-vfloat-item]`, or `li`).
+2. **Template Ref Array (`itemEls`):** You can pass an array ref (`ref="itemEls"` in `v-for`) for direct $O(1)$ indexing without registering individual items.
+3. **Registration Callback (`registerItemElement`):** For virtualized lists (e.g. `@tanstack/vue-virtual`), pass `:ref="el => registerItemElement(el, index)"` to map virtual slice indices to real item indices.
+
+Clicks and hover pointer moves are **delegated on `containerEl`**, requiring zero event listeners on individual list items.
 
 ### Focus Strategies
 
@@ -200,7 +212,7 @@ Typing printable characters matches item labels:
 
 ## Examples
 
-### Pattern 1: Standalone / Floating Listbox (Roving Tabindex)
+### Pattern 1: Standalone / Floating Listbox (Zero Item Refs)
 
 ```vue
 <script setup lang="ts">
@@ -216,7 +228,7 @@ const cities = ref([
 
 const containerEl = useTemplateRef<HTMLElement>("containerEl");
 
-const { getItemProps, registerItemElement, activeIndex } = useListNavigation(cities, {
+const { activeIndex } = useListNavigation(cities, {
   containerEl,
   strategy: "roving",
   loop: true,
@@ -225,12 +237,13 @@ const { getItemProps, registerItemElement, activeIndex } = useListNavigation(cit
 </script>
 
 <template>
-  <ul ref="containerEl" class="listbox">
+  <ul ref="containerEl" role="listbox" class="listbox">
     <li
       v-for="(city, index) in cities"
       :key="city.id"
-      :ref="(el) => registerItemElement(el as HTMLElement, index)"
-      v-bind="getItemProps(city, index)"
+      role="option"
+      :tabindex="activeIndex === index ? 0 : -1"
+      :aria-disabled="city.disabled"
       class="listbox-option"
       :class="{
         'is-active': activeIndex === index,
@@ -265,7 +278,7 @@ const filteredCities = computed(() =>
   allCities.filter((city) => city.label.toLowerCase().includes(query.value.toLowerCase())),
 );
 
-const { getItemProps, registerItemElement, activeIndex } = useListNavigation(filteredCities, {
+const { activeIndex } = useListNavigation(filteredCities, {
   containerEl: inputEl,
   strategy: "activedescendant",
   onSelect: (item) => {
@@ -298,8 +311,7 @@ const { getItemProps, registerItemElement, activeIndex } = useListNavigation(fil
       <li
         v-for="(city, index) in filteredCities"
         :key="city.id"
-        :ref="(el) => registerItemElement(el as HTMLElement, index)"
-        v-bind="getItemProps(city, index)"
+        role="option"
         class="combobox-option"
         :class="{ 'is-active': activeIndex === index }"
       >

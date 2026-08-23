@@ -54,7 +54,6 @@ export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 export { useHover } from "./hover/use-hover";
 export type {
   FocusStrategy,
-  ItemProps,
   ListNavigationItem,
   NavigationOrientation,
   UseListNavigationOptions,

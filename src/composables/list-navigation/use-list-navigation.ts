@@ -10,12 +10,11 @@ import {
 } from "vue";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
-import { createFocusStrategyController, resolveItemTabindex } from "./focus-strategies";
+import { createFocusStrategyController } from "./focus-strategies";
 import { resolveKeyboardIntent } from "./intent";
 import { useRtl } from "./rtl";
 import { createTypeahead } from "./typeahead";
 import type {
-  ItemProps,
   ListNavigationItem,
   UseListNavigationOptions,
   UseListNavigationReturn,
@@ -38,13 +37,16 @@ function generateId(): string {
  * Coordinates keyboard navigation, focus movement, typeahead matching, and DOM scroll alignment
  * for linear list widgets such as menus, listboxes, select dropdowns, and comboboxes.
  *
+ * Supports hybrid element resolution (automatic DOM queries, `itemEls` array, or `registerItemElement`)
+ * and event delegation on the container element.
+ *
  * Supports two focus strategies:
  * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active item, `-1` on others) and calls `.focus()`.
  * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `.scrollIntoView()`.
  *
  * @param items - Reactive collection or getter of items (objects or strings).
- * @param options - Configuration options for container element ref, strategy, orientation, looping, typeahead, and callbacks.
- * @returns State, item props generator, element registration helpers, and navigation methods.
+ * @param options - Configuration options for container element ref, item resolution, strategy, orientation, and callbacks.
+ * @returns State, navigation controls, and element registration helpers.
  *
  * @example
  * ```vue
@@ -55,7 +57,7 @@ function generateId(): string {
  * const items = ref(["Apple", "Banana", "Cherry"]);
  * const containerEl = useTemplateRef<HTMLElement>("containerEl");
  *
- * const { activeIndex, setActiveIndex, getItemProps, registerItemElement } = useListNavigation(items, {
+ * const { activeIndex } = useListNavigation(items, {
  *   containerEl,
  *   strategy: "roving",
  *   loop: true,
@@ -64,12 +66,11 @@ function generateId(): string {
  * </script>
  *
  * <template>
- *   <ul ref="containerEl">
+ *   <ul ref="containerEl" role="listbox">
  *     <li
  *       v-for="(item, index) in items"
  *       :key="item"
- *       :ref="el => registerItemElement(el as HTMLElement, index)"
- *       v-bind="getItemProps(item, index)"
+ *       role="option"
  *       :class="{ active: activeIndex === index }"
  *     >
  *       {{ item }}
@@ -84,6 +85,8 @@ export function useListNavigation<T = ListNavigationItem | string>(
 ): UseListNavigationReturn<T> {
   const {
     containerEl: containerElOption,
+    itemEls: itemElsOption,
+    itemSelector,
     strategy: strategyOption = "roving",
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
@@ -124,7 +127,11 @@ export function useListNavigation<T = ListNavigationItem | string>(
     return idx >= 0 && idx < itemsList.value.length ? itemsList.value[idx] : undefined;
   });
 
-  const focusController = createFocusStrategyController(() => containerEl.value);
+  const focusController = createFocusStrategyController(() => containerEl.value, {
+    getItemEls: () => toValue(itemElsOption),
+    itemSelector,
+  });
+
   const typeaheadController = createTypeahead({
     timeout: typeaheadTimeout,
     enabled: isTypeahead,
@@ -277,7 +284,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
   }
 
   //=====================================================================================
-  // Event Handlers & Wiring
+  // Event Handlers & Delegation
   //=====================================================================================
 
   function onKeydown(e: KeyboardEvent): void {
@@ -341,13 +348,66 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
   }
 
+  function onClick(e: MouseEvent): void {
+    if (!isEnabled.value || e.defaultPrevented) {
+      return;
+    }
+
+    const target = e.target as HTMLElement | null;
+    const index = focusController.findItemIndex(target);
+
+    if (index === null || index < 0 || index >= itemsList.value.length) {
+      return;
+    }
+
+    const item = itemsList.value[index];
+    if (resolveItemDisabled(item, index)) {
+      return;
+    }
+
+    setActiveIndex(index, e);
+    onSelect?.(item, index, e);
+  }
+
+  function onPointermove(e: PointerEvent): void {
+    if (!isEnabled.value || !isFocusOnHover.value) {
+      return;
+    }
+
+    const target = e.target as HTMLElement | null;
+    const index = focusController.findItemIndex(target);
+
+    if (index === null || index < 0 || index >= itemsList.value.length) {
+      return;
+    }
+
+    const item = itemsList.value[index];
+    if (resolveItemDisabled(item, index)) {
+      return;
+    }
+
+    if (activeIndex.value !== index) {
+      setActiveIndex(index, e);
+    }
+  }
+
   function onBlur(): void {
     typeaheadController.reset();
   }
 
-  // Attach keydown and blur listeners to container element
+  // Attach keydown, click delegation, pointermove delegation, and blur listeners to container
   cleanupRegistry.add(
     useEventListener(() => (isEnabled.value ? containerEl.value : null), "keydown", onKeydown),
+  );
+  cleanupRegistry.add(
+    useEventListener(() => (isEnabled.value ? containerEl.value : null), "click", onClick),
+  );
+  cleanupRegistry.add(
+    useEventListener(
+      () => (isEnabled.value && isFocusOnHover.value ? containerEl.value : null),
+      "pointermove",
+      onPointermove,
+    ),
   );
   cleanupRegistry.add(
     useEventListener(() => (isEnabled.value ? containerEl.value : null), "blur", onBlur),
@@ -373,33 +433,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
   });
 
-  //=====================================================================================
-  // Props Builders
-  //=====================================================================================
-
-  function getItemProps(item: T, index: number): ItemProps {
-    const isDisabled = resolveItemDisabled(item, index);
-    const itemId = resolveItemId(item, index);
-    const itemTabindex = resolveItemTabindex(index, activeIndex.value, strategy.value);
-
-    return {
-      id: itemId,
-      tabindex: itemTabindex,
-      "aria-disabled": isDisabled ? true : undefined,
-      onClick(e: MouseEvent) {
-        if (!isEnabled.value || isDisabled) return;
-        setActiveIndex(index, e);
-        onSelect?.(item, index, e);
-      },
-      onPointermove(e: PointerEvent) {
-        if (!isEnabled.value || isDisabled || !isFocusOnHover.value) return;
-        if (activeIndex.value !== index) {
-          setActiveIndex(index, e);
-        }
-      },
-    };
-  }
-
   tryOnScopeDispose(cleanupRegistry.cleanup);
 
   return {
@@ -410,11 +443,14 @@ export function useListNavigation<T = ListNavigationItem | string>(
     prev,
     first,
     last,
-    getItemProps,
     registerItemElement: focusController.registerItemElement,
     cleanup: cleanupRegistry.cleanup,
   };
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 //=======================================================================================
 // 📌 Types

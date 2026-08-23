@@ -32,9 +32,23 @@ export interface ListNavigationItem {
 export interface UseListNavigationOptions<T = ListNavigationItem | string> {
   /**
    * Ref or getter pointing to the container or input DOM element.
-   * Event listeners and ARIA attributes will be attached directly to this element.
+   * Event listeners (keyboard, click delegation, hover delegation) and ARIA attributes
+   * are attached directly to this element.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
+
+  /**
+   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
+   * When omitted, items are resolved via `registerItemElement` or queried from `containerEl`.
+   */
+  itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
+
+  /**
+   * CSS selector used to query item elements inside `containerEl` when neither `itemEls`
+   * nor `registerItemElement` are explicitly provided.
+   * @default '[role="option"], [role="menuitem"], [role="tab"], [data-vfloat-item], li'
+   */
+  itemSelector?: string;
 
   /**
    * Focus management strategy:
@@ -71,7 +85,7 @@ export interface UseListNavigationOptions<T = ListNavigationItem | string> {
   typeaheadTimeout?: MaybeRefOrGetter<number>;
 
   /**
-   * Whether moving the pointer over an item activates it.
+   * Whether moving the pointer over an item activates it via event delegation.
    * @default true
    */
   focusOnHover?: MaybeRefOrGetter<boolean>;
@@ -121,17 +135,6 @@ export interface UseListNavigationOptions<T = ListNavigationItem | string> {
 }
 
 /**
- * Attributes and event handlers to spread onto each list item element.
- */
-export interface ItemProps {
-  id: string;
-  tabindex: number;
-  "aria-disabled"?: boolean;
-  onClick: (event: MouseEvent) => void;
-  onPointermove: (event: PointerEvent) => void;
-}
-
-/**
  * Return shape for `useListNavigation`.
  */
 export interface UseListNavigationReturn<T = ListNavigationItem | string> {
@@ -171,12 +174,8 @@ export interface UseListNavigationReturn<T = ListNavigationItem | string> {
   last: () => void;
 
   /**
-   * Bindings generator for each list item (`v-bind="getItemProps(item, index)"`).
-   */
-  getItemProps: (item: T, index: number) => ItemProps;
-
-  /**
    * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).
+   * Primarily used for virtualized lists (e.g. `@tanstack/vue-virtual`).
    */
   registerItemElement: (el: HTMLElement | null, index: number) => void;
 

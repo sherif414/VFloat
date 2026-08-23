@@ -67,4 +67,48 @@ describe("focus-strategies", () => {
     controller.syncFocus(-1, "activedescendant");
     expect(container.hasAttribute("aria-activedescendant")).toBe(false);
   });
+
+  it("resolves item element via hybrid lookup (registerMap -> itemEls -> querySelectorAll)", () => {
+    const container = document.createElement("ul");
+    const li0 = document.createElement("li");
+    const li1 = document.createElement("li");
+    container.appendChild(li0);
+    container.appendChild(li1);
+
+    const itemEls = ref<HTMLElement[]>([li0, li1]);
+    const controller = createFocusStrategyController(() => container, {
+      getItemEls: () => itemEls.value,
+    });
+
+    // Resolves from itemEls
+    expect(controller.getItemElement(1)).toBe(li1);
+
+    // Overridden by explicit registerItemElement
+    const customLi = document.createElement("li");
+    controller.registerItemElement(customLi, 1);
+    expect(controller.getItemElement(1)).toBe(customLi);
+
+    // Fallback to querySelectorAll when itemEls is empty
+    itemEls.value = [];
+    controller.registerItemElement(null, 1);
+    expect(controller.getItemElement(0)).toBe(li0);
+    expect(controller.getItemElement(1)).toBe(li1);
+  });
+
+  it("finds item index via findItemIndex for nested target clicks", () => {
+    const container = document.createElement("ul");
+    const li0 = document.createElement("li");
+    const spanInsideLi0 = document.createElement("span");
+    li0.appendChild(spanInsideLi0);
+
+    const li1 = document.createElement("li");
+    container.appendChild(li0);
+    container.appendChild(li1);
+
+    const controller = createFocusStrategyController(() => container);
+
+    expect(controller.findItemIndex(spanInsideLi0)).toBe(0);
+    expect(controller.findItemIndex(li1)).toBe(1);
+    expect(controller.findItemIndex(document.createElement("div"))).toBeNull();
+  });
 });
