@@ -1,26 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
-import { createFocusStrategyController, resolveItemTabindex } from "./focus-strategies";
+import { createFocusStrategyController, getItemTabindex } from "./focus-strategies";
 
 describe("focus-strategies", () => {
   it("resolves correct item tabindex for roving strategy", () => {
-    expect(resolveItemTabindex(0, 0, "roving")).toBe(0);
-    expect(resolveItemTabindex(1, 0, "roving")).toBe(-1);
-    expect(resolveItemTabindex(2, 0, "roving")).toBe(-1);
+    expect(getItemTabindex(0, 0, "roving")).toBe(0);
+    expect(getItemTabindex(1, 0, "roving")).toBe(-1);
+    expect(getItemTabindex(2, 0, "roving")).toBe(-1);
 
-    expect(resolveItemTabindex(0, 1, "roving")).toBe(-1);
-    expect(resolveItemTabindex(1, 1, "roving")).toBe(0);
-    expect(resolveItemTabindex(2, 1, "roving")).toBe(-1);
+    expect(getItemTabindex(0, 1, "roving")).toBe(-1);
+    expect(getItemTabindex(1, 1, "roving")).toBe(0);
+    expect(getItemTabindex(2, 1, "roving")).toBe(-1);
 
     // Initial state when no active index is set (-1)
-    expect(resolveItemTabindex(0, -1, "roving")).toBe(0);
-    expect(resolveItemTabindex(1, -1, "roving")).toBe(-1);
+    expect(getItemTabindex(0, -1, "roving")).toBe(0);
+    expect(getItemTabindex(1, -1, "roving")).toBe(-1);
   });
 
   it("resolves correct item tabindex for activedescendant strategy", () => {
-    expect(resolveItemTabindex(0, 0, "activedescendant")).toBe(-1);
-    expect(resolveItemTabindex(1, 0, "activedescendant")).toBe(-1);
-    expect(resolveItemTabindex(0, -1, "activedescendant")).toBe(-1);
+    expect(getItemTabindex(0, 0, "activedescendant")).toBe(-1);
+    expect(getItemTabindex(1, 0, "activedescendant")).toBe(-1);
+    expect(getItemTabindex(0, -1, "activedescendant")).toBe(-1);
   });
 
   it("calls .focus() on item element for roving strategy", () => {

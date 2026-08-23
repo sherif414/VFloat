@@ -142,10 +142,10 @@ export function useListNavigation<T = ListNavigationItem | string>(
   cleanupRegistry.add(focusController.clearElements);
 
   //=====================================================================================
-  // Item Resolvers
+  // Item Accessors
   //=====================================================================================
 
-  function resolveItemId(item: T, index: number): string {
+  function getItemId(item: T, index: number): string {
     if (getItemIdOption) {
       return getItemIdOption(item, index);
     }
@@ -155,7 +155,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
     return `vfloat-item-${autoIdPrefix}-${index}`;
   }
 
-  function resolveItemLabel(item: T, index: number): string {
+  function getItemLabel(item: T, index: number): string {
     if (getItemLabelOption) {
       return getItemLabelOption(item, index);
     }
@@ -173,7 +173,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
     return String(item ?? "");
   }
 
-  function resolveItemDisabled(item: T, index: number): boolean {
+  function isItemDisabled(item: T, index: number): boolean {
     if (isItemDisabledOption) {
       return Boolean(isItemDisabledOption(item, index));
     }
@@ -194,7 +194,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
       return;
     }
 
-    if (index >= 0 && resolveItemDisabled(list[index], index)) {
+    if (index >= 0 && isItemDisabled(list[index], index)) {
       return;
     }
 
@@ -211,7 +211,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
       }
     }
 
-    const activeId = currentItem !== undefined ? resolveItemId(currentItem, index) : null;
+    const activeId = currentItem !== undefined ? getItemId(currentItem, index) : null;
     focusController.syncFocus(index, strategy.value, activeId);
   }
 
@@ -233,7 +233,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
         current = count - 1;
       }
 
-      if (!resolveItemDisabled(list[current], current)) {
+      if (!isItemDisabled(list[current], current)) {
         return current;
       }
     }
@@ -266,7 +266,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
   function first(event?: Event): void {
     const list = itemsList.value;
     for (let i = 0; i < list.length; i++) {
-      if (!resolveItemDisabled(list[i], i)) {
+      if (!isItemDisabled(list[i], i)) {
         setActiveIndex(i, event);
         return;
       }
@@ -276,7 +276,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
   function last(event?: Event): void {
     const list = itemsList.value;
     for (let i = list.length - 1; i >= 0; i--) {
-      if (!resolveItemDisabled(list[i], i)) {
+      if (!isItemDisabled(list[i], i)) {
         setActiveIndex(i, event);
         return;
       }
@@ -326,7 +326,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
       const list = itemsList.value;
       if (idx >= 0 && idx < list.length) {
         const item = list[idx];
-        if (!resolveItemDisabled(item, idx)) {
+        if (!isItemDisabled(item, idx)) {
           e.preventDefault();
           onSelect?.(item, idx, e);
         }
@@ -338,8 +338,8 @@ export function useListNavigation<T = ListNavigationItem | string>(
     const matchedIndex = typeaheadController.handleKey(e, {
       items: itemsList.value,
       activeIndex: activeIndex.value,
-      isItemDisabled: resolveItemDisabled,
-      getItemLabel: resolveItemLabel,
+      isItemDisabled,
+      getItemLabel,
     });
 
     if (matchedIndex !== null) {
@@ -361,7 +361,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
 
     const item = itemsList.value[index];
-    if (resolveItemDisabled(item, index)) {
+    if (isItemDisabled(item, index)) {
       return;
     }
 
@@ -382,7 +382,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
 
     const item = itemsList.value[index];
-    if (resolveItemDisabled(item, index)) {
+    if (isItemDisabled(item, index)) {
       return;
     }
 

@@ -147,7 +147,7 @@ export function createFocusStrategyController(
 /**
  * Resolves the tabindex for a list item based on the active strategy and active index.
  */
-export function resolveItemTabindex(
+export function getItemTabindex(
   index: number,
   activeIndex: number,
   strategy: FocusStrategy,
