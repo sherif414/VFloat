@@ -8,11 +8,11 @@ import {
   watch,
 } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
-import { isHTMLElement, isTypeableElement } from "@/shared/dom";
+import { isHTMLElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
-import { resolveKeyboardIntent } from "./intent";
+import { type NavigationIntent, resolveKeyboardIntent } from "./intent";
 import { useRtl } from "./use-rtl";
 
 //=======================================================================================
@@ -55,6 +55,10 @@ export function useListNavigation(
     onExit,
   } = options;
 
+  //=====================================================================================
+  // Derived State & Setup
+  //=====================================================================================
+
   const anchorEl = computed(() => {
     return getAnchorElement(refs.anchorEl.value);
   });
@@ -74,7 +78,11 @@ export function useListNavigation(
 
   const cleanupRegistry = createCleanupRegistry();
 
-  const navigateByIntent = (intent: ReturnType<typeof resolveKeyboardIntent>, e: KeyboardEvent) => {
+  //=====================================================================================
+  // Navigation Handler
+  //=====================================================================================
+
+  function navigateByIntent(intent: NavigationIntent | null, e: KeyboardEvent) {
     if (intent === "close" && e.key === "Tab" && isCloseOnTab.value) {
       setOpen(false, "tab-key", e);
       return;
@@ -86,14 +94,6 @@ export function useListNavigation(
     const navOptions = { loop: isLoop.value };
 
     switch (intent) {
-      case "first":
-        collection.setFirst();
-        handled = true;
-        break;
-      case "last":
-        collection.setLast();
-        handled = true;
-        break;
       case "next":
         collection.setNext(navOptions);
         handled = true;
@@ -102,49 +102,40 @@ export function useListNavigation(
         collection.setPrevious(navOptions);
         handled = true;
         break;
-      case "activate": {
-        const activeValue = collection.activeValue.value;
-        if (activeValue && !collection.isItemDisabled?.(activeValue) && onActivate) {
-          onActivate(activeValue, e);
+      case "first":
+        collection.setFirst();
+        handled = true;
+        break;
+      case "last":
+        collection.setLast();
+        handled = true;
+        break;
+      case "activate":
+        handled = dispatchItemAction(collection, onActivate, e);
+        break;
+      case "enter":
+        handled = dispatchItemAction(collection, onEnter, e);
+        break;
+      case "exit":
+        handled = dispatchItemAction(collection, onExit, e);
+        if (!handled && !context.isRoot) {
+          closeSubmenuAndFocusAnchor(context, anchorEl.value, e);
           handled = true;
         }
         break;
-      }
-      case "enter": {
-        const activeValue = collection.activeValue.value;
-        if (activeValue && !collection.isItemDisabled?.(activeValue) && onEnter) {
-          onEnter(activeValue, e);
-          handled = true;
-        }
-        break;
-      }
-      case "exit": {
-        const activeValue = collection.activeValue.value;
-        if (activeValue && !collection.isItemDisabled?.(activeValue) && onExit) {
-          onExit(activeValue, e);
-          handled = true;
-        } else if (!context.isRoot) {
-          setOpen(false, "keyboard-exit", e);
-          const anchor = anchorEl.value;
-          if (isHTMLElement(anchor)) {
-            anchor.focus();
-          }
-          handled = true;
-        }
-        break;
-      }
     }
 
     if (handled) {
       e.preventDefault();
     }
-  };
+  }
 
-  const onAnchorKeyDown = (e: KeyboardEvent) => {
+  //=====================================================================================
+  // Event Handlers
+  //=====================================================================================
+
+  function onAnchorKeyDown(e: KeyboardEvent) {
     if (e.defaultPrevented || !isEnabled.value) return;
-
-    const target = e.target as Element | null;
-    if (target && isTypeableElement(target) && target !== anchorEl.value) return;
 
     const intent = resolveKeyboardIntent(e, {
       orientation: orientation.value,
@@ -157,34 +148,15 @@ export function useListNavigation(
       if ((intent === "next" || intent === "previous") && isOpenOnArrowKeyDown.value) {
         e.preventDefault();
         setOpen(true, "keyboard-activate", e);
-
-        if (intent === "previous") {
-          collection.setLast();
-          if (collection.activeValue.value === null) {
-            nextTick(() => {
-              if (open.value && collection.activeValue.value === null) {
-                collection.setLast();
-              }
-            });
-          }
-        } else {
-          collection.setFirst();
-          if (collection.activeValue.value === null) {
-            nextTick(() => {
-              if (open.value && collection.activeValue.value === null) {
-                collection.setFirst();
-              }
-            });
-          }
-        }
+        setInitialItemOnOpen(collection, intent, open);
       }
       return;
     }
 
     navigateByIntent(intent, e);
-  };
+  }
 
-  const onFloatingKeyDown = (e: KeyboardEvent) => {
+  function onFloatingKeyDown(e: KeyboardEvent) {
     if (e.defaultPrevented || !isEnabled.value) return;
     if (!open.value) return;
 
@@ -196,7 +168,11 @@ export function useListNavigation(
     if (!intent) return;
 
     navigateByIntent(intent, e);
-  };
+  }
+
+  //=====================================================================================
+  // Wiring & State Watchers
+  //=====================================================================================
 
   cleanupRegistry.add(
     useEventListener(() => (isEnabled.value ? anchorEl.value : null), "keydown", onAnchorKeyDown),
@@ -226,6 +202,61 @@ export function useListNavigation(
   tryOnScopeDispose(cleanupRegistry.cleanup);
 
   return { cleanup: cleanupRegistry.cleanup };
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+/**
+ * Sets the initial active item when opening via arrow keys, retrying on next tick if items mount asynchronously.
+ */
+function setInitialItemOnOpen(
+  collection: NavigableCollection,
+  intent: "next" | "previous",
+  open: Ref<boolean>,
+): void {
+  const selectItem =
+    intent === "previous" ? () => collection.setLast() : () => collection.setFirst();
+
+  selectItem();
+  if (collection.activeValue.value === null) {
+    nextTick(() => {
+      if (open.value && collection.activeValue.value === null) {
+        selectItem();
+      }
+    });
+  }
+}
+
+/**
+ * Invokes an item callback for the active collection item if it exists and is enabled.
+ */
+function dispatchItemAction(
+  collection: NavigableCollection,
+  callback: ((activeValue: string, e: KeyboardEvent) => void) | undefined,
+  e: KeyboardEvent,
+): boolean {
+  const activeValue = collection.activeValue.value;
+  if (!activeValue || collection.isItemDisabled?.(activeValue) || !callback) {
+    return false;
+  }
+  callback(activeValue, e);
+  return true;
+}
+
+/**
+ * Closes a nested submenu context and returns focus to its anchor element.
+ */
+function closeSubmenuAndFocusAnchor(
+  context: FloatingContext,
+  anchorEl: Element | null,
+  e: KeyboardEvent,
+): void {
+  context.state.setOpen(false, "keyboard-exit", e);
+  if (isHTMLElement(anchorEl)) {
+    anchorEl.focus();
+  }
 }
 
 //=======================================================================================

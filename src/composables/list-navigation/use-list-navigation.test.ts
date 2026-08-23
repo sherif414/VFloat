@@ -556,16 +556,19 @@ describe("useListNavigation", () => {
   });
 
   describe("Typeable Targets Handling", () => {
-    it("ignores arrow keydowns if target is typeable element inside the anchor", () => {
-      const anchorEl = document.createElement("div");
+    it("handles arrow keydowns when target is a typeable element inside the anchor", () => {
+      const anchorEl = trackElement(document.createElement("div"));
       const inputEl = document.createElement("input");
       inputEl.type = "text";
       anchorEl.appendChild(inputEl);
 
-      const { openRef } = setup({ anchorEl });
+      const { openRef, collection } = setup({ anchorEl });
 
-      inputEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
-      expect(openRef.value).toBe(false);
+      inputEl.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
+      );
+      expect(openRef.value).toBe(true);
+      expect(collection.activeValue.value).toBe("1");
     });
   });
 
