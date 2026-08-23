@@ -20,7 +20,7 @@ export default defineConfig({
       provider: playwright({
         launchOptions: {
           // Open CDP port for VS Code Chrome debugger
-          args: isDebugging ? ["--remote-debugging-port=9222", "--start-minimized"] : [],
+          args: isDebugging ? ["--remote-debugging-port=9222"] : [],
         },
       }),
       instances: [{ browser: "chromium" }],
@@ -49,7 +49,7 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     dts({ tsconfigPath: "./tsconfig.build.json", outDir: "dist", rollupTypes: true }),
-    vueDevtools(),
+    !process.env.VITEST && vueDevtools(),
   ],
   resolve: {
     alias: {
