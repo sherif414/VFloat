@@ -51,6 +51,13 @@ export interface UseListNavigationOptions<T = ListNavigationItem | string> {
   itemSelector?: string;
 
   /**
+   * CSS selector identifying nested container boundaries (menus, submenus, listboxes).
+   * Used to prevent parent menu queries and delegated events from penetrating into child submenus.
+   * @default '[role="menu"], [role="listbox"], [role="tablist"], [data-vfloat-container]'
+   */
+  containerSelector?: string;
+
+  /**
    * Focus management strategy:
    * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active, `-1` on inactive) and calls `el.focus()`.
    * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `el.scrollIntoView()`.

@@ -87,6 +87,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
     containerEl: containerElOption,
     itemEls: itemElsOption,
     itemSelector,
+    containerSelector,
     strategy: strategyOption = "roving",
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
@@ -130,6 +131,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
   const focusController = createFocusStrategyController(() => containerEl.value, {
     getItemEls: () => toValue(itemElsOption),
     itemSelector,
+    containerSelector,
   });
 
   const typeaheadController = createTypeahead({

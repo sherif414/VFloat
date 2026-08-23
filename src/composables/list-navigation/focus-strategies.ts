@@ -3,27 +3,35 @@ import type { FocusStrategy } from "./types";
 export const DEFAULT_ITEM_SELECTOR =
   '[role="option"], [role="menuitem"], [role="tab"], [data-vfloat-item], li';
 
+export const DEFAULT_CONTAINER_SELECTOR =
+  '[role="menu"], [role="listbox"], [role="tablist"], [data-vfloat-container]';
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
 /**
- * Creates a hybrid item DOM element resolver and focus/scroll synchronization controller.
+ * Creates a hybrid item DOM element resolver and focus/scroll synchronization controller
+ * with nested submenu/container boundary isolation.
  *
  * Lookup Priority:
  * 1. Explicitly registered item elements (`registerItemElement`)
  * 2. Item elements array (`itemEls`)
- * 3. Automatic DOM query inside `containerEl` using `itemSelector`
+ * 3. Automatic DOM query inside `containerEl` filtered to direct (non-nested) items
  *
  * @param getContainerEl - Accessor function returning the container DOM element.
- * @param options - Configuration for element resolution.
+ * @param options - Configuration for element resolution and container boundary selectors.
  * @returns Element resolver, event delegation index finder, and focus synchronizer.
  */
 export function createFocusStrategyController(
   getContainerEl: () => HTMLElement | null,
   options: FocusStrategyControllerOptions = {},
 ): FocusStrategyController {
-  const { getItemEls, itemSelector = DEFAULT_ITEM_SELECTOR } = options;
+  const {
+    getItemEls,
+    itemSelector = DEFAULT_ITEM_SELECTOR,
+    containerSelector = DEFAULT_CONTAINER_SELECTOR,
+  } = options;
   const itemElements = new Map<number, HTMLElement>();
 
   function registerItemElement(el: HTMLElement | null, index: number): void {
@@ -48,9 +56,12 @@ export function createFocusStrategyController(
 
     const container = getContainerEl();
     if (container) {
-      const queried = container.querySelectorAll<HTMLElement>(itemSelector);
-      if (queried && queried[index]) {
-        return queried[index];
+      const directItems = Array.from(container.querySelectorAll<HTMLElement>(itemSelector)).filter(
+        (el) => isDirectChildOfContainer(el, container, containerSelector),
+      );
+
+      if (directItems[index]) {
+        return directItems[index];
       }
     }
 
@@ -80,13 +91,20 @@ export function createFocusStrategyController(
       }
     }
 
-    // 3. Fallback to DOM closest query inside container
+    // 3. Fallback to DOM closest query inside container with boundary check
     const container = getContainerEl();
     if (container) {
       const itemEl = target.closest<HTMLElement>(itemSelector);
-      if (itemEl && container.contains(itemEl)) {
-        const queried = Array.from(container.querySelectorAll<HTMLElement>(itemSelector));
-        const idx = queried.indexOf(itemEl);
+      if (
+        itemEl &&
+        container.contains(itemEl) &&
+        isDirectChildOfContainer(itemEl, container, containerSelector)
+      ) {
+        const directItems = Array.from(
+          container.querySelectorAll<HTMLElement>(itemSelector),
+        ).filter((el) => isDirectChildOfContainer(el, container, containerSelector));
+
+        const idx = directItems.indexOf(itemEl);
         if (idx !== -1) {
           return idx;
         }
@@ -145,6 +163,25 @@ export function createFocusStrategyController(
 //=======================================================================================
 
 /**
+ * Checks if a candidate element belongs directly to the specified container
+ * without an intervening nested menu or list container in its parent chain.
+ */
+export function isDirectChildOfContainer(
+  el: HTMLElement,
+  container: HTMLElement,
+  containerSelector: string = DEFAULT_CONTAINER_SELECTOR,
+): boolean {
+  let current: HTMLElement | null = el.parentElement;
+  while (current && current !== container) {
+    if (typeof current.matches === "function" && current.matches(containerSelector)) {
+      return false;
+    }
+    current = current.parentElement;
+  }
+  return current === container;
+}
+
+/**
  * Resolves the tabindex for a list item based on the active strategy and active index.
  */
 export function getItemTabindex(
@@ -174,6 +211,11 @@ export interface FocusStrategyControllerOptions {
    * Selector for querying items in the container element.
    */
   itemSelector?: string;
+
+  /**
+   * Selector identifying nested container boundaries (menus, submenus, listboxes).
+   */
+  containerSelector?: string;
 }
 
 export interface FocusStrategyController {
