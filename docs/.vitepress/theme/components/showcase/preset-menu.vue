@@ -102,6 +102,7 @@ useFocusManager(context, {
 });
 
 const { activeIndex, setActiveIndex } = useListNavigation(menuItems, {
+  containerEl: floatingEl,
   loop: true,
   enabled: () => props.isActive,
   onSelect: () => {

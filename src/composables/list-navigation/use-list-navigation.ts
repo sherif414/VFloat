@@ -3,23 +3,18 @@ import {
   getCurrentInstance,
   type MaybeRefOrGetter,
   ref,
-  shallowRef,
   toValue,
   useId,
   watch,
+  watchPostEffect,
 } from "vue";
-import { isHTMLElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
-import {
-  createFocusStrategyController,
-  resolveContainerTabindex,
-  resolveItemTabindex,
-} from "./focus-strategies";
+import { useEventListener } from "@/shared/use-event-listener";
+import { createFocusStrategyController, resolveItemTabindex } from "./focus-strategies";
 import { resolveKeyboardIntent } from "./intent";
 import { useRtl } from "./rtl";
 import { createTypeahead } from "./typeahead";
 import type {
-  ContainerProps,
   ItemProps,
   ListNavigationItem,
   UseListNavigationOptions,
@@ -48,17 +43,20 @@ function generateId(): string {
  * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `.scrollIntoView()`.
  *
  * @param items - Reactive collection or getter of items (objects or strings).
- * @param options - Configuration options for strategy, orientation, looping, typeahead, and callbacks.
- * @returns State, props generators, element registration helpers, and navigation methods.
+ * @param options - Configuration options for container element ref, strategy, orientation, looping, typeahead, and callbacks.
+ * @returns State, item props generator, element registration helpers, and navigation methods.
  *
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { ref } from "vue";
+ * import { ref, useTemplateRef } from "vue";
  * import { useListNavigation } from "v-float";
  *
  * const items = ref(["Apple", "Banana", "Cherry"]);
- * const { containerProps, getItemProps, registerItemElement, activeIndex } = useListNavigation(items, {
+ * const containerEl = useTemplateRef<HTMLElement>("containerEl");
+ *
+ * const { activeIndex, setActiveIndex, getItemProps, registerItemElement } = useListNavigation(items, {
+ *   containerEl,
  *   strategy: "roving",
  *   loop: true,
  *   onSelect: (item) => console.log("Selected:", item),
@@ -66,7 +64,7 @@ function generateId(): string {
  * </script>
  *
  * <template>
- *   <ul v-bind="containerProps">
+ *   <ul ref="containerEl">
  *     <li
  *       v-for="(item, index) in items"
  *       :key="item"
@@ -85,6 +83,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
   options: UseListNavigationOptions<T> = {},
 ): UseListNavigationReturn<T> {
   const {
+    containerEl: containerElOption,
     strategy: strategyOption = "roving",
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
@@ -106,6 +105,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
   //=====================================================================================
 
   const itemsList = computed<readonly T[]>(() => toValue(items) ?? []);
+  const containerEl = computed(() => toValue(containerElOption) ?? null);
   const strategy = computed(() => toValue(strategyOption));
   const orientation = computed(() => toValue(orientationOption));
   const isLoop = computed(() => toValue(loopOption));
@@ -115,7 +115,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
   const isSelectOnFocus = computed(() => toValue(selectOnFocusOption));
   const isEnabled = computed(() => toValue(enabledOption));
 
-  const containerEl = shallowRef<HTMLElement | null>(null);
   const isRtl = useRtl(containerEl, { rtl: rtlOption });
   const autoIdPrefix = generateId();
 
@@ -125,7 +124,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
     return idx >= 0 && idx < itemsList.value.length ? itemsList.value[idx] : undefined;
   });
 
-  const focusController = createFocusStrategyController(containerEl);
+  const focusController = createFocusStrategyController(() => containerEl.value);
   const typeaheadController = createTypeahead({
     timeout: typeaheadTimeout,
     enabled: isTypeahead,
@@ -143,8 +142,8 @@ export function useListNavigation<T = ListNavigationItem | string>(
     if (getItemIdOption) {
       return getItemIdOption(item, index);
     }
-    if (item && typeof item === "object" && "id" in item && item.id) {
-      return String(item.id);
+    if (item && typeof item === "object" && "id" in item && (item as any).id) {
+      return String((item as any).id);
     }
     return `vfloat-item-${autoIdPrefix}-${index}`;
   }
@@ -286,11 +285,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
       return;
     }
 
-    // Auto-capture container element if not already assigned
-    if (!containerEl.value && isHTMLElement(e.currentTarget)) {
-      containerEl.value = e.currentTarget;
-    }
-
     const intent = resolveKeyboardIntent(e, {
       orientation: orientation.value,
       rtl: isRtl.value,
@@ -347,15 +341,30 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
   }
 
-  function onFocus(e: FocusEvent): void {
-    if (!containerEl.value && isHTMLElement(e.currentTarget)) {
-      containerEl.value = e.currentTarget;
-    }
-  }
-
   function onBlur(): void {
     typeaheadController.reset();
   }
+
+  // Attach keydown and blur listeners to container element
+  cleanupRegistry.add(
+    useEventListener(() => (isEnabled.value ? containerEl.value : null), "keydown", onKeydown),
+  );
+  cleanupRegistry.add(
+    useEventListener(() => (isEnabled.value ? containerEl.value : null), "blur", onBlur),
+  );
+
+  // Synchronize activedescendant attributes when containerEl and activeItem change
+  watchPostEffect(() => {
+    const el = containerEl.value;
+    if (!el || !isEnabled.value) return;
+
+    if (strategy.value === "activedescendant") {
+      if (!el.hasAttribute("tabindex") && el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") {
+        el.setAttribute("tabindex", "0");
+      }
+      el.setAttribute("aria-orientation", orientation.value);
+    }
+  });
 
   // Clamps active index when items list shrinks
   watch(
@@ -371,24 +380,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
   //=====================================================================================
   // Props Builders
   //=====================================================================================
-
-  const containerProps = computed<ContainerProps>(() => {
-    const strat = strategy.value;
-    const currentActiveItem = activeItem.value;
-    const activeId =
-      strat === "activedescendant" && currentActiveItem !== undefined
-        ? resolveItemId(currentActiveItem, activeIndex.value)
-        : undefined;
-
-    return {
-      tabindex: resolveContainerTabindex(strat),
-      "aria-activedescendant": activeId,
-      "aria-orientation": orientation.value,
-      onKeydown,
-      onFocus,
-      onBlur,
-    };
-  });
 
   function getItemProps(item: T, index: number): ItemProps {
     const strat = strategy.value;
@@ -424,13 +415,15 @@ export function useListNavigation<T = ListNavigationItem | string>(
     prev,
     first,
     last,
-    containerProps,
     getItemProps,
-    containerEl,
     registerItemElement: focusController.registerItemElement,
     cleanup: cleanupRegistry.cleanup,
   };
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 //=======================================================================================
 // 📌 Types

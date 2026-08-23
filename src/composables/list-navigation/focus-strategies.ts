@@ -1,4 +1,3 @@
-import type { Ref } from "vue";
 import type { FocusStrategy } from "./types";
 
 //=======================================================================================
@@ -8,11 +7,11 @@ import type { FocusStrategy } from "./types";
 /**
  * Creates an item DOM element registry and focus/scroll synchronization controller.
  *
- * @param containerEl - Ref holding the container or combobox input element.
+ * @param getContainerEl - Accessor function returning the container or combobox input element.
  * @returns Element registry methods and strategy-specific focus synchronizer.
  */
 export function createFocusStrategyController(
-  containerEl: Ref<HTMLElement | null>,
+  getContainerEl: () => HTMLElement | null,
 ): FocusStrategyController {
   const itemElements = new Map<number, HTMLElement>();
 
@@ -33,7 +32,7 @@ export function createFocusStrategyController(
   }
 
   function syncFocus(index: number, strategy: FocusStrategy, activeId?: string | null): void {
-    const container = containerEl.value;
+    const container = getContainerEl();
 
     if (index < 0) {
       if (strategy === "activedescendant" && container) {
@@ -91,13 +90,6 @@ export function resolveItemTabindex(
   // If no item is active (activeIndex === -1), index 0 is focusable as entry point.
   const targetIndex = activeIndex >= 0 ? activeIndex : 0;
   return index === targetIndex ? 0 : -1;
-}
-
-/**
- * Resolves the tabindex for the container element based on strategy.
- */
-export function resolveContainerTabindex(strategy: FocusStrategy): number {
-  return strategy === "activedescendant" ? 0 : -1;
 }
 
 //=======================================================================================

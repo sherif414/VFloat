@@ -80,7 +80,8 @@ useFocusManager(selectContext, {
   guards: false,
 });
 
-const { activeIndex, setActiveIndex, containerProps } = useListNavigation(placements, {
+const { activeIndex, setActiveIndex } = useListNavigation(placements, {
+  containerEl: selectFloatingEl,
   loop: true,
   getItemId: (p) => p.value,
   getItemLabel: (p) => p.label,
@@ -144,7 +145,6 @@ function onOptionSelect(val: Placement) {
           role="listbox"
           class="control-select-dropdown"
           :style="selectPosition.styles.value"
-          v-bind="containerProps"
         >
           <div
             v-for="(item, index) in placements"

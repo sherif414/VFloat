@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
-import {
-  createFocusStrategyController,
-  resolveContainerTabindex,
-  resolveItemTabindex,
-} from "./focus-strategies";
+import { createFocusStrategyController, resolveItemTabindex } from "./focus-strategies";
 
 describe("focus-strategies", () => {
   it("resolves correct item tabindex for roving strategy", () => {
@@ -27,14 +23,9 @@ describe("focus-strategies", () => {
     expect(resolveItemTabindex(0, -1, "activedescendant")).toBe(-1);
   });
 
-  it("resolves container tabindex", () => {
-    expect(resolveContainerTabindex("roving")).toBe(-1);
-    expect(resolveContainerTabindex("activedescendant")).toBe(0);
-  });
-
   it("calls .focus() on item element for roving strategy", () => {
     const containerEl = ref<HTMLElement | null>(document.createElement("div"));
-    const controller = createFocusStrategyController(containerEl);
+    const controller = createFocusStrategyController(() => containerEl.value);
 
     const item0 = document.createElement("div");
     const item1 = document.createElement("div");
@@ -50,7 +41,7 @@ describe("focus-strategies", () => {
   it("sets aria-activedescendant and calls scrollIntoView for activedescendant strategy", () => {
     const container = document.createElement("input");
     const containerEl = ref<HTMLElement | null>(container);
-    const controller = createFocusStrategyController(containerEl);
+    const controller = createFocusStrategyController(() => containerEl.value);
 
     const item1 = document.createElement("div");
     item1.id = "item-1";
@@ -71,7 +62,7 @@ describe("focus-strategies", () => {
     const container = document.createElement("input");
     container.setAttribute("aria-activedescendant", "item-1");
     const containerEl = ref<HTMLElement | null>(container);
-    const controller = createFocusStrategyController(containerEl);
+    const controller = createFocusStrategyController(() => containerEl.value);
 
     controller.syncFocus(-1, "activedescendant");
     expect(container.hasAttribute("aria-activedescendant")).toBe(false);

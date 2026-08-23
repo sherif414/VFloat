@@ -31,6 +31,12 @@ export interface ListNavigationItem {
  */
 export interface UseListNavigationOptions<T = ListNavigationItem | string> {
   /**
+   * Ref or getter pointing to the container or input DOM element.
+   * Event listeners and ARIA attributes will be attached directly to this element.
+   */
+  containerEl?: MaybeRefOrGetter<HTMLElement | null>;
+
+  /**
    * Focus management strategy:
    * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active, `-1` on inactive) and calls `el.focus()`.
    * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `el.scrollIntoView()`.
@@ -126,18 +132,6 @@ export interface ItemProps {
 }
 
 /**
- * Attributes and event handlers to spread onto the container or combobox input element.
- */
-export interface ContainerProps {
-  tabindex: number;
-  "aria-activedescendant"?: string;
-  "aria-orientation"?: "vertical" | "horizontal";
-  onKeydown: (event: KeyboardEvent) => void;
-  onFocus: (event: FocusEvent) => void;
-  onBlur: (event: FocusEvent) => void;
-}
-
-/**
  * Return shape for `useListNavigation`.
  */
 export interface UseListNavigationReturn<T = ListNavigationItem | string> {
@@ -177,19 +171,9 @@ export interface UseListNavigationReturn<T = ListNavigationItem | string> {
   last: () => void;
 
   /**
-   * Reactive bindings to spread onto the container or combobox input element (`v-bind="containerProps"`).
-   */
-  containerProps: ComputedRef<ContainerProps>;
-
-  /**
    * Bindings generator for each list item (`v-bind="getItemProps(item, index)"`).
    */
   getItemProps: (item: T, index: number) => ItemProps;
-
-  /**
-   * Ref to register or track the container DOM element.
-   */
-  containerEl: Ref<HTMLElement | null>;
 
   /**
    * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).

@@ -74,7 +74,13 @@ describe("useListNavigation", () => {
           { id: "opt-3", label: "Three" },
         ]);
 
-        const nav = useListNavigation(items, { strategy: "roving" });
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
+
+        const nav = useListNavigation(items, {
+          containerEl,
+          strategy: "roving",
+        });
 
         const itemEl0 = trackElement(document.createElement("li"));
         const itemEl1 = trackElement(document.createElement("li"));
@@ -92,7 +98,6 @@ describe("useListNavigation", () => {
 
         expect(nav.getItemProps(items.value[0], 0).tabindex).toBe(0);
         expect(nav.getItemProps(items.value[1], 1).tabindex).toBe(-1);
-        expect(nav.containerProps.value.tabindex).toBe(-1);
 
         nav.setActiveIndex(1);
         await nextTick();
@@ -112,13 +117,13 @@ describe("useListNavigation", () => {
           { id: "city-ale", label: "Alexandria" },
         ]);
 
-        const containerEl = trackElement(document.createElement("input"));
+        const containerEl = trackElement(document.createElement("div"));
         document.body.appendChild(containerEl);
 
         const nav = useListNavigation(items, {
+          containerEl,
           strategy: "activedescendant",
         });
-        nav.containerEl.value = containerEl;
 
         const itemEl0 = trackElement(document.createElement("li"));
         itemEl0.id = "city-cai";
@@ -134,14 +139,17 @@ describe("useListNavigation", () => {
         nav.registerItemElement(itemEl0, 0);
         nav.registerItemElement(itemEl1, 1);
 
-        expect(nav.containerProps.value.tabindex).toBe(0);
+        await nextTick();
+
+        expect(containerEl.getAttribute("tabindex")).toBe("0");
+        expect(containerEl.getAttribute("aria-orientation")).toBe("vertical");
         expect(nav.getItemProps(items.value[0], 0).tabindex).toBe(-1);
-        expect(nav.containerProps.value["aria-activedescendant"]).toBeUndefined();
+        expect(containerEl.hasAttribute("aria-activedescendant")).toBe(false);
 
         nav.setActiveIndex(1);
         await nextTick();
 
-        expect(nav.containerProps.value["aria-activedescendant"]).toBe("city-ale");
+        expect(containerEl.getAttribute("aria-activedescendant")).toBe("city-ale");
         expect(itemEl1.scrollIntoView).toHaveBeenCalledWith({
           block: "nearest",
           inline: "nearest",
@@ -154,21 +162,24 @@ describe("useListNavigation", () => {
     it("navigates with ArrowDown and ArrowUp in vertical orientation", () => {
       scope.run(() => {
         const items = ref(["A", "B", "C"]);
-        const nav = useListNavigation(items, { orientation: "vertical" });
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
 
-        const container = trackElement(document.createElement("ul"));
-        document.body.appendChild(container);
+        const nav = useListNavigation(items, {
+          containerEl,
+          orientation: "vertical",
+        });
 
         // ArrowDown -> index 0
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
         expect(nav.activeIndex.value).toBe(0);
 
         // ArrowDown -> index 1
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
         expect(nav.activeIndex.value).toBe(1);
 
         // ArrowUp -> index 0
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
         expect(nav.activeIndex.value).toBe(0);
       });
     });
@@ -176,15 +187,21 @@ describe("useListNavigation", () => {
     it("navigates with ArrowRight and ArrowLeft in horizontal orientation", () => {
       scope.run(() => {
         const items = ref(["A", "B", "C"]);
-        const nav = useListNavigation(items, { orientation: "horizontal" });
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
 
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        const nav = useListNavigation(items, {
+          containerEl,
+          orientation: "horizontal",
+        });
+
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         expect(nav.activeIndex.value).toBe(0);
 
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         expect(nav.activeIndex.value).toBe(1);
 
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         expect(nav.activeIndex.value).toBe(0);
       });
     });
@@ -192,20 +209,24 @@ describe("useListNavigation", () => {
     it("inverts horizontal arrow navigation in RTL", () => {
       scope.run(() => {
         const items = ref(["A", "B", "C"]);
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
+
         const nav = useListNavigation(items, {
+          containerEl,
           orientation: "horizontal",
           rtl: true,
         });
 
         // In RTL, ArrowLeft moves forward ("next")
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         expect(nav.activeIndex.value).toBe(0);
 
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         expect(nav.activeIndex.value).toBe(1);
 
         // In RTL, ArrowRight moves backward ("previous")
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         expect(nav.activeIndex.value).toBe(0);
       });
     });
@@ -263,14 +284,17 @@ describe("useListNavigation", () => {
           { id: "4", label: "D", disabled: true },
         ]);
 
-        const nav = useListNavigation(items);
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
+
+        const nav = useListNavigation(items, { containerEl });
 
         // Home jumps to first enabled item (index 1)
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "Home" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
         expect(nav.activeIndex.value).toBe(1);
 
         // End jumps to last enabled item (index 2)
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "End" }));
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "End" }));
         expect(nav.activeIndex.value).toBe(2);
       });
     });
@@ -280,17 +304,20 @@ describe("useListNavigation", () => {
     it("triggers onSelect on Enter and Space key", () => {
       scope.run(() => {
         const items = ref(["A", "B", "C"]);
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
+
         const onSelect = vi.fn();
-        const nav = useListNavigation(items, { onSelect });
+        const nav = useListNavigation(items, { containerEl, onSelect });
 
         nav.setActiveIndex(1);
 
         const enterEvent = new KeyboardEvent("keydown", { key: "Enter" });
-        nav.containerProps.value.onKeydown(enterEvent);
+        containerEl.dispatchEvent(enterEvent);
         expect(onSelect).toHaveBeenCalledWith("B", 1, enterEvent);
 
         const spaceEvent = new KeyboardEvent("keydown", { key: " " });
-        nav.containerProps.value.onKeydown(spaceEvent);
+        containerEl.dispatchEvent(spaceEvent);
         expect(onSelect).toHaveBeenCalledWith("B", 1, spaceEvent);
       });
     });
@@ -327,14 +354,18 @@ describe("useListNavigation", () => {
     it("supports selectOnFocus mode", () => {
       scope.run(() => {
         const items = ref(["A", "B", "C"]);
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
+
         const onSelect = vi.fn();
         const nav = useListNavigation(items, {
+          containerEl,
           selectOnFocus: true,
           onSelect,
         });
 
         const keyEvent = new KeyboardEvent("keydown", { key: "ArrowDown" });
-        nav.containerProps.value.onKeydown(keyEvent);
+        containerEl.dispatchEvent(keyEvent);
 
         expect(nav.activeIndex.value).toBe(0);
         expect(onSelect).toHaveBeenCalledWith("A", 0, expect.any(Event));
@@ -372,9 +403,12 @@ describe("useListNavigation", () => {
     it("matches item labels via typeahead keystrokes", () => {
       scope.run(() => {
         const items = ref(["Apple", "Banana", "Cherry"]);
-        const nav = useListNavigation(items);
+        const containerEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(containerEl);
 
-        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "c" }));
+        const nav = useListNavigation(items, { containerEl });
+
+        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
         expect(nav.activeIndex.value).toBe(2); // Cherry
       });
     });
