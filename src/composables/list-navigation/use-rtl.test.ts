@@ -1,7 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSSRApp, defineComponent, effectScope, h, nextTick, ref } from "vue";
 import { renderToString } from "vue/server-renderer";
+import { getDocument } from "@/shared/env";
 import { useRtl } from "./use-rtl";
+
+vi.mock("@/shared/env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/env")>();
+  return {
+    ...actual,
+    getDocument: vi.fn(actual.getDocument),
+  };
+});
 
 describe("useRtl", () => {
   const trackedElements: HTMLElement[] = [];
@@ -32,6 +41,7 @@ describe("useRtl", () => {
   afterEach(() => {
     scope?.stop();
     clearTrackedElements();
+    vi.restoreAllMocks();
   });
 
   it("defaults to false (LTR) when no dir attributes are present", () => {
@@ -181,7 +191,9 @@ describe("useRtl", () => {
     });
   });
 
-  it("renders in an SSR app component without errors", async () => {
+  it("falls back to false when document is unavailable in SSR", async () => {
+    vi.mocked(getDocument).mockReturnValue(null);
+
     const Component = defineComponent({
       setup() {
         const isRtl = useRtl(null);
