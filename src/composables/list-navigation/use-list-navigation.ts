@@ -367,15 +367,11 @@ export function useListNavigation<T = ListNavigationItem | string>(
   });
 
   // Clamps active index when items list shrinks
-  watch(
-    itemsList,
-    (newList) => {
-      if (activeIndex.value >= newList.length) {
-        setActiveIndex(newList.length > 0 ? newList.length - 1 : -1);
-      }
-    },
-    { flush: "sync" },
-  );
+  watch(itemsList, (newList) => {
+    if (activeIndex.value >= newList.length) {
+      setActiveIndex(newList.length > 0 ? newList.length - 1 : -1);
+    }
+  });
 
   //=====================================================================================
   // Props Builders
