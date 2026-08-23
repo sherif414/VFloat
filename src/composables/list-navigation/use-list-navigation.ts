@@ -1,368 +1,439 @@
 import {
   computed,
-  type ComputedRef,
+  getCurrentInstance,
   type MaybeRefOrGetter,
-  nextTick,
-  type Ref,
+  ref,
+  shallowRef,
   toValue,
+  useId,
   watch,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
 import { isHTMLElement } from "@/shared/dom";
-import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
-import { useEventListener } from "@/shared/use-event-listener";
-import { type NavigationIntent, resolveKeyboardIntent } from "./intent";
-import { useRtl } from "./use-rtl";
+import {
+  createFocusStrategyController,
+  resolveContainerTabindex,
+  resolveItemTabindex,
+} from "./focus-strategies";
+import { resolveKeyboardIntent } from "./intent";
+import { useRtl } from "./rtl";
+import { createTypeahead } from "./typeahead";
+import type {
+  ContainerProps,
+  ItemProps,
+  ListNavigationItem,
+  UseListNavigationOptions,
+  UseListNavigationReturn,
+} from "./types";
+
+let idCounter = 0;
+
+function generateId(): string {
+  if (getCurrentInstance()) {
+    return useId();
+  }
+  return String(++idCounter);
+}
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
 /**
- * Coordinates keyboard navigation for floating collections.
+ * Coordinates keyboard navigation, focus movement, typeahead matching, and DOM scroll alignment
+ * for linear list widgets such as menus, listboxes, select dropdowns, and comboboxes.
  *
- * @param context - The floating context object containing state and refs.
- * @param options - Configuration options for list navigation.
- * @returns An object containing a cleanup function.
+ * Supports two focus strategies:
+ * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active item, `-1` on others) and calls `.focus()`.
+ * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `.scrollIntoView()`.
+ *
+ * @param items - Reactive collection or getter of items (objects or strings).
+ * @param options - Configuration options for strategy, orientation, looping, typeahead, and callbacks.
+ * @returns State, props generators, element registration helpers, and navigation methods.
  *
  * @example
- * ```ts
- * const collection = useCollection({ values: ["open", "edit", "delete"] });
- * useListNavigation(context, {
- *   collection,
- *   orientation: "vertical",
- *   loop: true
+ * ```vue
+ * <script setup lang="ts">
+ * import { ref } from "vue";
+ * import { useListNavigation } from "v-float";
+ *
+ * const items = ref(["Apple", "Banana", "Cherry"]);
+ * const { containerProps, getItemProps, registerItemElement, activeIndex } = useListNavigation(items, {
+ *   strategy: "roving",
+ *   loop: true,
+ *   onSelect: (item) => console.log("Selected:", item),
  * });
+ * </script>
+ *
+ * <template>
+ *   <ul v-bind="containerProps">
+ *     <li
+ *       v-for="(item, index) in items"
+ *       :key="item"
+ *       :ref="el => registerItemElement(el as HTMLElement, index)"
+ *       v-bind="getItemProps(item, index)"
+ *       :class="{ active: activeIndex === index }"
+ *     >
+ *       {{ item }}
+ *     </li>
+ *   </ul>
+ * </template>
  * ```
  */
-export function useListNavigation(
-  context: FloatingContext,
-  options: UseListNavigationOptions,
-): UseListNavigationReturn {
-  const refs = context.refs;
-  const { open, setOpen } = context.state;
+export function useListNavigation<T = ListNavigationItem | string>(
+  items: MaybeRefOrGetter<readonly T[]>,
+  options: UseListNavigationOptions<T> = {},
+): UseListNavigationReturn<T> {
   const {
-    collection,
-    enabled: enabledOption = true,
-    loop: loopOption = false,
+    strategy: strategyOption = "roving",
     orientation: orientationOption = "vertical",
+    loop: loopOption = false,
+    typeahead: typeaheadOption = true,
+    typeaheadTimeout: typeaheadTimeoutOption = 500,
+    focusOnHover: focusOnHoverOption = true,
+    selectOnFocus: selectOnFocusOption = false,
+    enabled: enabledOption = true,
     rtl: rtlOption,
-    openOnArrowKeyDown: openOnArrowKeyDownOption,
-    closeOnTab: closeOnTabOption = true,
-    onActivate,
-    onEnter,
-    onExit,
+    getItemId: getItemIdOption,
+    getItemLabel: getItemLabelOption,
+    isItemDisabled: isItemDisabledOption,
+    onSelect,
+    onActiveChange,
   } = options;
 
   //=====================================================================================
-  // Derived State & Setup
+  // State & Derived Options
   //=====================================================================================
 
-  const anchorEl = computed(() => {
-    return getAnchorElement(refs.anchorEl.value);
-  });
-
-  const floatingEl = computed(() => refs.floatingEl.value);
-
-  const isEnabled = computed(() => toValue(enabledOption));
-  const isLoop = computed(() => toValue(loopOption));
+  const itemsList = computed<readonly T[]>(() => toValue(items) ?? []);
+  const strategy = computed(() => toValue(strategyOption));
   const orientation = computed(() => toValue(orientationOption));
-  const isRtl = useRtl(() => anchorEl.value ?? floatingEl.value, { rtl: rtlOption });
-  const isOpenOnArrowKeyDown = computed(() => {
-    return openOnArrowKeyDownOption !== undefined
-      ? toValue(openOnArrowKeyDownOption)
-      : context.isRoot;
+  const isLoop = computed(() => toValue(loopOption));
+  const isTypeahead = computed(() => toValue(typeaheadOption));
+  const typeaheadTimeout = computed(() => toValue(typeaheadTimeoutOption));
+  const isFocusOnHover = computed(() => toValue(focusOnHoverOption));
+  const isSelectOnFocus = computed(() => toValue(selectOnFocusOption));
+  const isEnabled = computed(() => toValue(enabledOption));
+
+  const containerEl = shallowRef<HTMLElement | null>(null);
+  const isRtl = useRtl(containerEl, { rtl: rtlOption });
+  const autoIdPrefix = generateId();
+
+  const activeIndex = ref(-1);
+  const activeItem = computed<T | undefined>(() => {
+    const idx = activeIndex.value;
+    return idx >= 0 && idx < itemsList.value.length ? itemsList.value[idx] : undefined;
   });
-  const isCloseOnTab = computed(() => toValue(closeOnTabOption));
+
+  const focusController = createFocusStrategyController(containerEl);
+  const typeaheadController = createTypeahead({
+    timeout: typeaheadTimeout,
+    enabled: isTypeahead,
+  });
 
   const cleanupRegistry = createCleanupRegistry();
+  cleanupRegistry.add(typeaheadController.cleanup);
+  cleanupRegistry.add(focusController.clearElements);
 
   //=====================================================================================
-  // Navigation Handler
+  // Item Resolvers
   //=====================================================================================
 
-  function navigateByIntent(intent: NavigationIntent | null, e: KeyboardEvent) {
-    if (intent === "close" && e.key === "Tab" && isCloseOnTab.value) {
-      setOpen(false, "tab-key", e);
+  function resolveItemId(item: T, index: number): string {
+    if (getItemIdOption) {
+      return getItemIdOption(item, index);
+    }
+    if (item && typeof item === "object" && "id" in item && item.id) {
+      return String(item.id);
+    }
+    return `vfloat-item-${autoIdPrefix}-${index}`;
+  }
+
+  function resolveItemLabel(item: T, index: number): string {
+    if (getItemLabelOption) {
+      return getItemLabelOption(item, index);
+    }
+    if (typeof item === "string") {
+      return item;
+    }
+    if (
+      item &&
+      typeof item === "object" &&
+      "label" in item &&
+      typeof (item as any).label === "string"
+    ) {
+      return (item as any).label;
+    }
+    return String(item ?? "");
+  }
+
+  function resolveItemDisabled(item: T, index: number): boolean {
+    if (isItemDisabledOption) {
+      return Boolean(isItemDisabledOption(item, index));
+    }
+    if (item && typeof item === "object" && "disabled" in item) {
+      return Boolean((item as any).disabled);
+    }
+    return false;
+  }
+
+  //=====================================================================================
+  // Navigation Methods
+  //=====================================================================================
+
+  function setActiveIndex(index: number, event?: Event): void {
+    const list = itemsList.value;
+
+    if (index < -1 || index >= list.length) {
       return;
     }
 
-    if (!intent || intent === "close") return;
-
-    let handled = false;
-    const navOptions = { loop: isLoop.value };
-
-    switch (intent) {
-      case "next":
-        collection.setNext(navOptions);
-        handled = true;
-        break;
-      case "previous":
-        collection.setPrevious(navOptions);
-        handled = true;
-        break;
-      case "first":
-        collection.setFirst();
-        handled = true;
-        break;
-      case "last":
-        collection.setLast();
-        handled = true;
-        break;
-      case "activate":
-        handled = dispatchItemAction(collection, onActivate, e);
-        break;
-      case "enter":
-        handled = dispatchItemAction(collection, onEnter, e);
-        break;
-      case "exit":
-        handled = dispatchItemAction(collection, onExit, e);
-        if (!handled && !context.isRoot) {
-          closeSubmenuAndFocusAnchor(context, anchorEl.value, e);
-          handled = true;
-        }
-        break;
+    if (index >= 0 && resolveItemDisabled(list[index], index)) {
+      return;
     }
 
-    if (handled) {
-      e.preventDefault();
+    const previousIndex = activeIndex.value;
+    activeIndex.value = index;
+
+    const currentItem = index >= 0 ? list[index] : undefined;
+
+    if (index !== previousIndex) {
+      onActiveChange?.(currentItem, index);
+
+      if (isSelectOnFocus.value && currentItem !== undefined) {
+        onSelect?.(currentItem, index, event as Event);
+      }
+    }
+
+    const activeId = currentItem !== undefined ? resolveItemId(currentItem, index) : null;
+    focusController.syncFocus(index, strategy.value, activeId);
+  }
+
+  function findNextIndex(start: number, delta: 1 | -1, loop: boolean): number | null {
+    const list = itemsList.value;
+    const count = list.length;
+    if (count === 0) return null;
+
+    let current = start;
+
+    for (let step = 0; step < count; step++) {
+      current += delta;
+
+      if (current >= count) {
+        if (!loop) return null;
+        current = 0;
+      } else if (current < 0) {
+        if (!loop) return null;
+        current = count - 1;
+      }
+
+      if (!resolveItemDisabled(list[current], current)) {
+        return current;
+      }
+    }
+
+    return null;
+  }
+
+  function next(event?: Event): void {
+    const list = itemsList.value;
+    if (list.length === 0) return;
+
+    const start = activeIndex.value >= 0 ? activeIndex.value : -1;
+    const nextIdx = findNextIndex(start, 1, isLoop.value);
+    if (nextIdx !== null) {
+      setActiveIndex(nextIdx, event);
+    }
+  }
+
+  function prev(event?: Event): void {
+    const list = itemsList.value;
+    if (list.length === 0) return;
+
+    const start = activeIndex.value >= 0 ? activeIndex.value : list.length;
+    const prevIdx = findNextIndex(start, -1, isLoop.value);
+    if (prevIdx !== null) {
+      setActiveIndex(prevIdx, event);
+    }
+  }
+
+  function first(event?: Event): void {
+    const list = itemsList.value;
+    for (let i = 0; i < list.length; i++) {
+      if (!resolveItemDisabled(list[i], i)) {
+        setActiveIndex(i, event);
+        return;
+      }
+    }
+  }
+
+  function last(event?: Event): void {
+    const list = itemsList.value;
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (!resolveItemDisabled(list[i], i)) {
+        setActiveIndex(i, event);
+        return;
+      }
     }
   }
 
   //=====================================================================================
-  // Event Handlers
+  // Event Handlers & Wiring
   //=====================================================================================
 
-  function onAnchorKeyDown(e: KeyboardEvent) {
-    if (e.defaultPrevented || !isEnabled.value) return;
+  function onKeydown(e: KeyboardEvent): void {
+    if (!isEnabled.value || e.defaultPrevented) {
+      return;
+    }
+
+    // Auto-capture container element if not already assigned
+    if (!containerEl.value && isHTMLElement(e.currentTarget)) {
+      containerEl.value = e.currentTarget;
+    }
 
     const intent = resolveKeyboardIntent(e, {
       orientation: orientation.value,
       rtl: isRtl.value,
     });
 
-    if (!intent) return;
+    if (intent === "next") {
+      e.preventDefault();
+      next(e);
+      return;
+    }
 
-    if (!open.value) {
-      if ((intent === "next" || intent === "previous") && isOpenOnArrowKeyDown.value) {
-        e.preventDefault();
-        setOpen(true, "keyboard-activate", e);
-        setInitialItemOnOpen(collection, intent, open);
+    if (intent === "previous") {
+      e.preventDefault();
+      prev(e);
+      return;
+    }
+
+    if (intent === "first") {
+      e.preventDefault();
+      first(e);
+      return;
+    }
+
+    if (intent === "last") {
+      e.preventDefault();
+      last(e);
+      return;
+    }
+
+    if (intent === "select") {
+      const idx = activeIndex.value;
+      const list = itemsList.value;
+      if (idx >= 0 && idx < list.length) {
+        const item = list[idx];
+        if (!resolveItemDisabled(item, idx)) {
+          e.preventDefault();
+          onSelect?.(item, idx, e);
+        }
       }
       return;
     }
 
-    navigateByIntent(intent, e);
-  }
-
-  function onFloatingKeyDown(e: KeyboardEvent) {
-    if (e.defaultPrevented || !isEnabled.value) return;
-    if (!open.value) return;
-
-    const intent = resolveKeyboardIntent(e, {
-      orientation: orientation.value,
-      rtl: isRtl.value,
+    // Attempt typeahead match on unhandled printable characters
+    const matchedIndex = typeaheadController.handleKey(e, {
+      items: itemsList.value,
+      activeIndex: activeIndex.value,
+      isItemDisabled: resolveItemDisabled,
+      getItemLabel: resolveItemLabel,
     });
 
-    if (!intent) return;
-
-    navigateByIntent(intent, e);
+    if (matchedIndex !== null) {
+      e.preventDefault();
+      setActiveIndex(matchedIndex, e);
+    }
   }
 
+  function onFocus(e: FocusEvent): void {
+    if (!containerEl.value && isHTMLElement(e.currentTarget)) {
+      containerEl.value = e.currentTarget;
+    }
+  }
+
+  function onBlur(): void {
+    typeaheadController.reset();
+  }
+
+  // Clamps active index when items list shrinks
+  watch(
+    itemsList,
+    (newList) => {
+      if (activeIndex.value >= newList.length) {
+        setActiveIndex(newList.length > 0 ? newList.length - 1 : -1);
+      }
+    },
+    { flush: "sync" },
+  );
+
   //=====================================================================================
-  // Wiring & State Watchers
+  // Props Builders
   //=====================================================================================
 
-  cleanupRegistry.add(
-    useEventListener(() => (isEnabled.value ? anchorEl.value : null), "keydown", onAnchorKeyDown),
-  );
-  cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value ? floatingEl.value : null),
-      "keydown",
-      onFloatingKeyDown,
-    ),
-  );
+  const containerProps = computed<ContainerProps>(() => {
+    const strat = strategy.value;
+    const currentActiveItem = activeItem.value;
+    const activeId =
+      strat === "activedescendant" && currentActiveItem !== undefined
+        ? resolveItemId(currentActiveItem, activeIndex.value)
+        : undefined;
 
-  // Sync flush ensures activeValue is cleared before downstream watchers see the closed state,
-  // preventing stale active-item references during the close transition.
-  cleanupRegistry.add(
-    watch(
-      () => open.value,
-      (isOpen) => {
-        if (!isOpen) {
-          collection.setActiveValue(null);
+    return {
+      tabindex: resolveContainerTabindex(strat),
+      "aria-activedescendant": activeId,
+      "aria-orientation": orientation.value,
+      onKeydown,
+      onFocus,
+      onBlur,
+    };
+  });
+
+  function getItemProps(item: T, index: number): ItemProps {
+    const strat = strategy.value;
+    const isDisabled = resolveItemDisabled(item, index);
+    const itemId = resolveItemId(item, index);
+    const itemTabindex = resolveItemTabindex(index, activeIndex.value, strat);
+
+    return {
+      id: itemId,
+      tabindex: itemTabindex,
+      "aria-disabled": isDisabled ? true : undefined,
+      onClick(e: MouseEvent) {
+        if (!isEnabled.value || isDisabled) return;
+        setActiveIndex(index, e);
+        onSelect?.(item, index, e);
+      },
+      onPointermove(e: PointerEvent) {
+        if (!isEnabled.value || isDisabled || !isFocusOnHover.value) return;
+        if (activeIndex.value !== index) {
+          setActiveIndex(index, e);
         }
       },
-      { flush: "sync" },
-    ),
-  );
+    };
+  }
 
   tryOnScopeDispose(cleanupRegistry.cleanup);
 
-  return { cleanup: cleanupRegistry.cleanup };
-}
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-/**
- * Sets the initial active item when opening via arrow keys, retrying on next tick if items mount asynchronously.
- */
-function setInitialItemOnOpen(
-  collection: NavigableCollection,
-  intent: "next" | "previous",
-  open: Ref<boolean>,
-): void {
-  const selectItem =
-    intent === "previous" ? () => collection.setLast() : () => collection.setFirst();
-
-  selectItem();
-  if (collection.activeValue.value === null) {
-    nextTick(() => {
-      if (open.value && collection.activeValue.value === null) {
-        selectItem();
-      }
-    });
-  }
-}
-
-/**
- * Invokes an item callback for the active collection item if it exists and is enabled.
- */
-function dispatchItemAction(
-  collection: NavigableCollection,
-  callback: ((activeValue: string, e: KeyboardEvent) => void) | undefined,
-  e: KeyboardEvent,
-): boolean {
-  const activeValue = collection.activeValue.value;
-  if (!activeValue || collection.isItemDisabled?.(activeValue) || !callback) {
-    return false;
-  }
-  callback(activeValue, e);
-  return true;
-}
-
-/**
- * Closes a nested submenu context and returns focus to its anchor element.
- */
-function closeSubmenuAndFocusAnchor(
-  context: FloatingContext,
-  anchorEl: Element | null,
-  e: KeyboardEvent,
-): void {
-  context.state.setOpen(false, "keyboard-exit", e);
-  if (isHTMLElement(anchorEl)) {
-    anchorEl.focus();
-  }
+  return {
+    activeIndex,
+    activeItem,
+    setActiveIndex,
+    next,
+    prev,
+    first,
+    last,
+    containerProps,
+    getItemProps,
+    containerEl,
+    registerItemElement: focusController.registerItemElement,
+    cleanup: cleanupRegistry.cleanup,
+  };
 }
 
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
 
-export interface NavigableCollection {
-  /**
-   * The currently active value in the collection.
-   */
-  activeValue: Ref<string | null>;
-  /**
-   * Set the active value directly.
-   */
-  setActiveValue: (value: string | null) => void;
-  /**
-   * Advance to the next focusable item.
-   */
-  setNext: (options?: { loop?: boolean }) => void;
-  /**
-   * Go back to the previous focusable item.
-   */
-  setPrevious: (options?: { loop?: boolean }) => void;
-  /**
-   * Go to the first focusable item.
-   */
-  setFirst: () => void;
-  /**
-   * Go to the last focusable item.
-   */
-  setLast: () => void;
-  /**
-   * Check if a specific value is disabled.
-   */
-  isItemDisabled?: (value: string) => boolean;
-  /**
-   * Optional ordered list of all collection values.
-   */
-  values?: ComputedRef<readonly string[]> | Ref<readonly string[]> | readonly string[];
-  /**
-   * Optional ordered list of enabled (non-disabled) collection values.
-   */
-  enabledValues?: ComputedRef<readonly string[]> | Ref<readonly string[]> | readonly string[];
-}
-
-export interface UseListNavigationOptions {
-  /**
-   * The collection manager to navigate.
-   */
-  collection: NavigableCollection;
-
-  /**
-   * Whether navigation behavior is enabled.
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, arrow-key navigation wraps from end-to-start and vice versa.
-   */
-  loop?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Primary navigation orientation.
-   * - "vertical": Up/Down to navigate, Left/Right for enter/exit (tree)
-   * - "horizontal": Left/Right to navigate, Down for enter (menubar)
-   */
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal">;
-
-  /**
-   * If true, pressing an arrow key when closed opens and sets the active value.
-   * @default context.isRoot (true for root contexts, false for nested submenus)
-   */
-  openOnArrowKeyDown?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Right-to-left layout flag affecting horizontal arrow semantics.
-   */
-  rtl?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * If true, Tab closes the current floating tree/list without preventing page focus movement.
-   * @default true
-   */
-  closeOnTab?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Callback triggered when an item is activated with Enter or Space.
-   */
-  onActivate?: (activeValue: string, e: KeyboardEvent) => void;
-
-  /**
-   * Callback triggered when a branch "enter" intent is detected from an enabled item (e.g. ArrowRight in LTR).
-   */
-  onEnter?: (activeValue: string, e: KeyboardEvent) => void;
-
-  /**
-   * Callback triggered when a branch "exit" intent is detected from an enabled item (e.g. ArrowLeft in LTR).
-   */
-  onExit?: (activeValue: string, e: KeyboardEvent) => void;
-}
-
-export interface UseListNavigationReturn {
-  /**
-   * Stops all listeners and watchers created by the composable.
-   */
-  cleanup: () => void;
-}
-
-export type { NavigationOrientation } from "./intent";
+export type * from "./types";

@@ -7,7 +7,7 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
 //=======================================================================================
 
 /**
- * Internal utility to detect whether an element is in a Right-to-Left (RTL) reading layout.
+ * Detects whether an element or document is in a Right-to-Left (RTL) reading layout.
  *
  * @param target - A DOM element, or reactive ref/getter resolving to an Element.
  * @param options - Configuration options for overrides.

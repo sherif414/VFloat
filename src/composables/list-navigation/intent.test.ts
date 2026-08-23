@@ -16,12 +16,12 @@ describe("resolveKeyboardIntent", () => {
   it("resolves universal keys", () => {
     expect(resolveKeyboardIntent(createEvent("Home"))).toBe("first");
     expect(resolveKeyboardIntent(createEvent("End"))).toBe("last");
-    expect(resolveKeyboardIntent(createEvent("Tab"))).toBe("close");
-    expect(resolveKeyboardIntent(createEvent("Enter"))).toBe("activate");
-    expect(resolveKeyboardIntent(createEvent(" "))).toBe("activate");
+    expect(resolveKeyboardIntent(createEvent("Enter"))).toBe("select");
+    expect(resolveKeyboardIntent(createEvent(" "))).toBe("select");
   });
 
   it("returns null for unhandled keys", () => {
+    expect(resolveKeyboardIntent(createEvent("Tab"))).toBeNull();
     expect(resolveKeyboardIntent(createEvent("Escape"))).toBeNull();
     expect(resolveKeyboardIntent(createEvent("a"))).toBeNull();
     expect(resolveKeyboardIntent(createEvent("F1"))).toBeNull();

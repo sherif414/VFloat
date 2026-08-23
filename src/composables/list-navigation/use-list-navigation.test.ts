@@ -1,8 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
-import { useFloatingContext } from "@/composables";
-import { useCollection } from "@/composables/collection/use-collection";
-import { useListNavigation } from "@/composables/list-navigation/use-list-navigation";
+import { useListNavigation } from "./use-list-navigation";
 
 const trackedElements: HTMLElement[] = [];
 
@@ -20,1055 +18,413 @@ function clearTrackedElements() {
   trackedElements.length = 0;
 }
 
-function dispatchKey(target: EventTarget, key: string) {
-  target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-}
-
 describe("useListNavigation", () => {
-  let scope: ReturnType<typeof effectScope> | undefined;
+  let scope: ReturnType<typeof effectScope>;
+
+  beforeEach(() => {
+    scope = effectScope();
+  });
 
   afterEach(() => {
     scope?.stop();
-    scope = undefined;
     clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  function setup(
-    options: {
-      enabled?: any;
-      loop?: any;
-      orientation?: any;
-      openOnArrowKeyDown?: any;
-      rtl?: any;
-      closeOnTab?: any;
-      anchorEl?: any;
-      values?: any;
-      isValueDisabled?: (val: string) => boolean;
-      onActivate?: (val: string, e: KeyboardEvent) => void;
-      onEnter?: (val: string, e: KeyboardEvent) => void;
-      onExit?: (val: string, e: KeyboardEvent) => void;
-    } = {},
-  ) {
-    scope = effectScope();
-
-    const anchorEl = options.anchorEl || trackElement(document.createElement("button"));
-    const floatingEl = trackElement(document.createElement("div"));
-
-    if (anchorEl instanceof HTMLElement && !anchorEl.isConnected) {
-      document.body.appendChild(anchorEl);
-    }
-    if (!floatingEl.isConnected) {
-      document.body.appendChild(floatingEl);
-    }
-
-    const openRef = ref(false);
-    const anchorRef = ref(anchorEl);
-    const floatingRef = ref(floatingEl);
-
-    let resultContext: any;
-    let collection: ReturnType<typeof useCollection>;
-
+  it("handles string arrays and default roving strategy", () => {
     scope.run(() => {
-      const context = useFloatingContext({
-        anchorEl: anchorRef,
-        floatingEl: floatingRef,
-        open: openRef,
+      const items = ref(["Apple", "Banana", "Cherry"]);
+      const nav = useListNavigation(items);
+
+      expect(nav.activeIndex.value).toBe(-1);
+      expect(nav.activeItem.value).toBeUndefined();
+
+      // Next moves to first item (index 0)
+      nav.next();
+      expect(nav.activeIndex.value).toBe(0);
+      expect(nav.activeItem.value).toBe("Apple");
+
+      // Next moves to index 1
+      nav.next();
+      expect(nav.activeIndex.value).toBe(1);
+      expect(nav.activeItem.value).toBe("Banana");
+
+      // Prev moves back to index 0
+      nav.prev();
+      expect(nav.activeIndex.value).toBe(0);
+
+      // Last moves to index 2
+      nav.last();
+      expect(nav.activeIndex.value).toBe(2);
+      expect(nav.activeItem.value).toBe("Cherry");
+
+      // First moves to index 0
+      nav.first();
+      expect(nav.activeIndex.value).toBe(0);
+    });
+  });
+
+  describe("roving focus strategy", () => {
+    it("sets correct tabindex on items and focuses element on active change", async () => {
+      await scope.run(async () => {
+        const items = ref([
+          { id: "opt-1", label: "One" },
+          { id: "opt-2", label: "Two" },
+          { id: "opt-3", label: "Three" },
+        ]);
+
+        const nav = useListNavigation(items, { strategy: "roving" });
+
+        const itemEl0 = trackElement(document.createElement("li"));
+        const itemEl1 = trackElement(document.createElement("li"));
+        const itemEl2 = trackElement(document.createElement("li"));
+
+        document.body.appendChild(itemEl0);
+        document.body.appendChild(itemEl1);
+        document.body.appendChild(itemEl2);
+
+        const focusSpy1 = vi.spyOn(itemEl1, "focus");
+
+        nav.registerItemElement(itemEl0, 0);
+        nav.registerItemElement(itemEl1, 1);
+        nav.registerItemElement(itemEl2, 2);
+
+        expect(nav.getItemProps(items.value[0], 0).tabindex).toBe(0);
+        expect(nav.getItemProps(items.value[1], 1).tabindex).toBe(-1);
+        expect(nav.containerProps.value.tabindex).toBe(-1);
+
+        nav.setActiveIndex(1);
+        await nextTick();
+
+        expect(focusSpy1).toHaveBeenCalledTimes(1);
+        expect(nav.getItemProps(items.value[0], 0).tabindex).toBe(-1);
+        expect(nav.getItemProps(items.value[1], 1).tabindex).toBe(0);
       });
-
-      collection = useCollection({
-        values: options.values || ["1", "2", "3"],
-        isValueDisabled: options.isValueDisabled,
-      });
-
-      const navigation = useListNavigation(context, {
-        collection,
-        orientation: options.orientation ?? "vertical",
-        loop: "loop" in options ? options.loop : true,
-        enabled: options.enabled,
-        openOnArrowKeyDown: options.openOnArrowKeyDown,
-        rtl: options.rtl,
-        closeOnTab: options.closeOnTab,
-        onActivate: options.onActivate,
-        onEnter: options.onEnter,
-        onExit: options.onExit,
-      });
-
-      resultContext = {
-        context,
-        navigation,
-        collection,
-        anchorEl,
-        floatingEl,
-        openRef,
-      };
-    });
-
-    return resultContext as {
-      context: ReturnType<typeof useFloatingContext>;
-      navigation: ReturnType<typeof useListNavigation>;
-      collection: ReturnType<typeof useCollection>;
-      anchorEl: any;
-      floatingEl: HTMLDivElement;
-      openRef: ReturnType<typeof ref<boolean>>;
-    };
-  }
-
-  it("opens on ArrowDown and sets activeValue to first item", () => {
-    const { anchorEl, openRef, collection } = setup();
-
-    dispatchKey(anchorEl, "ArrowDown");
-
-    expect(openRef.value).toBe(true);
-    expect(collection.activeValue.value).toBe("1");
-  });
-
-  it("opens on ArrowUp and sets activeValue to last item", () => {
-    const { anchorEl, openRef, collection } = setup();
-
-    dispatchKey(anchorEl, "ArrowUp");
-
-    expect(openRef.value).toBe(true);
-    expect(collection.activeValue.value).toBe("3");
-  });
-
-  it("navigates next on ArrowDown when floating is open", () => {
-    const { floatingEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("1");
-
-    dispatchKey(floatingEl, "ArrowDown");
-    expect(collection.activeValue.value).toBe("2");
-
-    dispatchKey(floatingEl, "ArrowDown");
-    expect(collection.activeValue.value).toBe("3");
-  });
-
-  it("navigates previous on ArrowUp when floating is open", () => {
-    const { floatingEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("3");
-
-    dispatchKey(floatingEl, "ArrowUp");
-    expect(collection.activeValue.value).toBe("2");
-
-    dispatchKey(floatingEl, "ArrowUp");
-    expect(collection.activeValue.value).toBe("1");
-  });
-
-  it("navigates next on ArrowDown when focused on anchor element while open", () => {
-    const { anchorEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("1");
-
-    dispatchKey(anchorEl, "ArrowDown");
-    expect(collection.activeValue.value).toBe("2");
-
-    dispatchKey(anchorEl, "ArrowDown");
-    expect(collection.activeValue.value).toBe("3");
-  });
-
-  it("navigates previous on ArrowUp when focused on anchor element while open", () => {
-    const { anchorEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("3");
-
-    dispatchKey(anchorEl, "ArrowUp");
-    expect(collection.activeValue.value).toBe("2");
-
-    dispatchKey(anchorEl, "ArrowUp");
-    expect(collection.activeValue.value).toBe("1");
-  });
-
-  it("navigates to first on Home", () => {
-    const { floatingEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("3");
-
-    dispatchKey(floatingEl, "Home");
-    expect(collection.activeValue.value).toBe("1");
-  });
-
-  it("navigates to last on End", () => {
-    const { floatingEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("1");
-
-    dispatchKey(floatingEl, "End");
-    expect(collection.activeValue.value).toBe("3");
-  });
-
-  it("wraps around when loop is enabled", () => {
-    const { floatingEl, openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("3");
-
-    dispatchKey(floatingEl, "ArrowDown");
-    expect(collection.activeValue.value).toBe("1");
-  });
-
-  it("closes on Tab without preventing default", () => {
-    const { floatingEl, openRef } = setup();
-    openRef.value = true;
-
-    const event = new KeyboardEvent("keydown", {
-      key: "Tab",
-      bubbles: true,
-      cancelable: true,
-    });
-    floatingEl.dispatchEvent(event);
-    expect(openRef.value).toBe(false);
-    expect(event.defaultPrevented).toBe(false);
-  });
-
-  it("ignores keydowns on floating element when closed", () => {
-    const { floatingEl, openRef, collection } = setup();
-    openRef.value = false;
-    collection.setActiveValue("1");
-
-    dispatchKey(floatingEl, "ArrowDown");
-    expect(collection.activeValue.value).toBe("1");
-  });
-
-  it("resets collection activeValue when closed", async () => {
-    const { openRef, collection } = setup();
-    openRef.value = true;
-    collection.setActiveValue("2");
-
-    openRef.value = false;
-    await nextTick();
-    expect(collection.activeValue.value).toBeNull();
-  });
-
-  describe("Activation & Submenu Navigation (onActivate / onEnter / onExit)", () => {
-    it("calls onActivate with activeValue when Enter is pressed on anchor while open", () => {
-      let activatedValue = "";
-      let activatedEvent: KeyboardEvent | null = null;
-      const { anchorEl, openRef, collection } = setup({
-        onActivate: (val, e) => {
-          activatedValue = val;
-          activatedEvent = e;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("2");
-
-      dispatchKey(anchorEl, "Enter");
-
-      expect(activatedValue).toBe("2");
-      expect(activatedEvent).toBeInstanceOf(KeyboardEvent);
-    });
-
-    it("calls onActivate with activeValue when Space is pressed on floatingEl while open", () => {
-      let activatedValue = "";
-      const { floatingEl, openRef, collection } = setup({
-        onActivate: (val) => {
-          activatedValue = val;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("3");
-
-      dispatchKey(floatingEl, " ");
-
-      expect(activatedValue).toBe("3");
-    });
-
-    it("does not call onActivate when active item is disabled", () => {
-      let activatedValue = "";
-      const { anchorEl, openRef, collection } = setup({
-        isValueDisabled: (val) => val === "2",
-        onActivate: (val) => {
-          activatedValue = val;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("2");
-
-      dispatchKey(anchorEl, "Enter");
-
-      expect(activatedValue).toBe("");
-    });
-
-    it("calls onEnter with activeValue on ArrowRight in LTR vertical list", () => {
-      let enteredValue = "";
-      let enteredEvent: KeyboardEvent | null = null;
-      const { floatingEl, openRef, collection } = setup({
-        onEnter: (val, e) => {
-          enteredValue = val;
-          enteredEvent = e;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("1");
-
-      dispatchKey(floatingEl, "ArrowRight");
-
-      expect(enteredValue).toBe("1");
-      expect(enteredEvent).toBeInstanceOf(KeyboardEvent);
-    });
-
-    it("calls onExit with activeValue on ArrowLeft in LTR vertical list", () => {
-      let exitedValue = "";
-      let exitedEvent: KeyboardEvent | null = null;
-      const { floatingEl, openRef, collection } = setup({
-        onExit: (val, e) => {
-          exitedValue = val;
-          exitedEvent = e;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("1");
-
-      dispatchKey(floatingEl, "ArrowLeft");
-
-      expect(exitedValue).toBe("1");
-      expect(exitedEvent).toBeInstanceOf(KeyboardEvent);
-    });
-
-    it("respects RTL for onEnter (ArrowLeft) and onExit (ArrowRight)", () => {
-      let enteredValue = "";
-      let exitedValue = "";
-      const { floatingEl, openRef, collection } = setup({
-        rtl: true,
-        onEnter: (val) => {
-          enteredValue = val;
-        },
-        onExit: (val) => {
-          exitedValue = val;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("1");
-
-      dispatchKey(floatingEl, "ArrowLeft");
-      expect(enteredValue).toBe("1");
-
-      dispatchKey(floatingEl, "ArrowRight");
-      expect(exitedValue).toBe("1");
-    });
-
-    it("automatically infers RTL from DOM context when rtl option is omitted", () => {
-      let enteredValue = "";
-      let exitedValue = "";
-      const containerEl = trackElement(document.createElement("div"));
-      containerEl.setAttribute("dir", "rtl");
-      const anchorEl = trackElement(document.createElement("button"));
-      containerEl.appendChild(anchorEl);
-      document.body.appendChild(containerEl);
-
-      const { floatingEl, openRef, collection } = setup({
-        anchorEl,
-        onEnter: (val) => {
-          enteredValue = val;
-        },
-        onExit: (val) => {
-          exitedValue = val;
-        },
-      });
-      openRef.value = true;
-      collection.setActiveValue("1");
-
-      dispatchKey(floatingEl, "ArrowLeft");
-      expect(enteredValue).toBe("1");
-
-      dispatchKey(floatingEl, "ArrowRight");
-      expect(exitedValue).toBe("1");
-    });
-
-    it("does not call onEnter / onExit when item is disabled", () => {
-      let entered = false;
-      let exited = false;
-      const { floatingEl, openRef, collection } = setup({
-        values: ["1", "2"],
-        isValueDisabled: (val) => val === "2",
-        onEnter: () => {
-          entered = true;
-        },
-        onExit: () => {
-          exited = true;
-        },
-      });
-      openRef.value = true;
-      collection.activeValue.value = "2";
-
-      dispatchKey(floatingEl, "ArrowRight");
-      expect(entered).toBe(false);
-
-      dispatchKey(floatingEl, "ArrowLeft");
-      expect(exited).toBe(false);
     });
   });
 
-  describe("Option: enabled", () => {
-    it("does not respond when disabled initially", () => {
-      const { anchorEl, openRef } = setup({ enabled: false });
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(false);
-    });
+  describe("active descendant strategy", () => {
+    it("manages aria-activedescendant and calls scrollIntoView", async () => {
+      await scope.run(async () => {
+        const items = ref([
+          { id: "city-cai", label: "Cairo" },
+          { id: "city-ale", label: "Alexandria" },
+        ]);
 
-    it("does not respond on floating element when disabled initially", () => {
-      const { floatingEl, openRef, collection } = setup({ enabled: false });
-      openRef.value = true;
-      collection.setActiveValue("1");
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("1");
-    });
+        const containerEl = trackElement(document.createElement("input"));
+        document.body.appendChild(containerEl);
 
-    it("supports dynamic changes of enabled status", async () => {
-      const enabledRef = ref(true);
-      const { anchorEl, openRef } = setup({ enabled: enabledRef });
-
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(true);
-
-      openRef.value = false;
-      enabledRef.value = false;
-      await nextTick();
-
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(false);
-    });
-  });
-
-  describe("Option: loop", () => {
-    it("does not wrap when loop is false", () => {
-      const { floatingEl, openRef, collection } = setup({ loop: false });
-      openRef.value = true;
-      collection.setActiveValue("3");
-
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("3");
-    });
-
-    it("does not wrap when loop defaults to false", () => {
-      const { floatingEl, openRef, collection } = setup({ loop: undefined });
-      openRef.value = true;
-      collection.setActiveValue("3");
-
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("3");
-    });
-  });
-
-  describe("Option: orientation", () => {
-    describe("horizontal orientation", () => {
-      it("opens on ArrowRight and ArrowLeft when closed", () => {
-        const { anchorEl, openRef, collection } = setup({
-          orientation: "horizontal",
-          loop: false,
+        const nav = useListNavigation(items, {
+          strategy: "activedescendant",
         });
+        nav.containerEl.value = containerEl;
 
-        dispatchKey(anchorEl, "ArrowRight");
-        expect(openRef.value).toBe(true);
-        expect(collection.activeValue.value).toBe("1");
+        const itemEl0 = trackElement(document.createElement("li"));
+        itemEl0.id = "city-cai";
+        itemEl0.scrollIntoView = vi.fn();
 
-        openRef.value = false;
-        collection.setActiveValue(null);
+        const itemEl1 = trackElement(document.createElement("li"));
+        itemEl1.id = "city-ale";
+        itemEl1.scrollIntoView = vi.fn();
 
-        dispatchKey(anchorEl, "ArrowLeft");
-        expect(openRef.value).toBe(true);
-        expect(collection.activeValue.value).toBe("3");
+        document.body.appendChild(itemEl0);
+        document.body.appendChild(itemEl1);
+
+        nav.registerItemElement(itemEl0, 0);
+        nav.registerItemElement(itemEl1, 1);
+
+        expect(nav.containerProps.value.tabindex).toBe(0);
+        expect(nav.getItemProps(items.value[0], 0).tabindex).toBe(-1);
+        expect(nav.containerProps.value["aria-activedescendant"]).toBeUndefined();
+
+        nav.setActiveIndex(1);
+        await nextTick();
+
+        expect(nav.containerProps.value["aria-activedescendant"]).toBe("city-ale");
+        expect(itemEl1.scrollIntoView).toHaveBeenCalledWith({
+          block: "nearest",
+          inline: "nearest",
+        });
       });
+    });
+  });
 
-      it("respects RTL for opening in horizontal orientation", () => {
-        const { anchorEl, openRef, collection } = setup({
+  describe("keyboard navigation", () => {
+    it("navigates with ArrowDown and ArrowUp in vertical orientation", () => {
+      scope.run(() => {
+        const items = ref(["A", "B", "C"]);
+        const nav = useListNavigation(items, { orientation: "vertical" });
+
+        const container = trackElement(document.createElement("ul"));
+        document.body.appendChild(container);
+
+        // ArrowDown -> index 0
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+        expect(nav.activeIndex.value).toBe(0);
+
+        // ArrowDown -> index 1
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+        expect(nav.activeIndex.value).toBe(1);
+
+        // ArrowUp -> index 0
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+        expect(nav.activeIndex.value).toBe(0);
+      });
+    });
+
+    it("navigates with ArrowRight and ArrowLeft in horizontal orientation", () => {
+      scope.run(() => {
+        const items = ref(["A", "B", "C"]);
+        const nav = useListNavigation(items, { orientation: "horizontal" });
+
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        expect(nav.activeIndex.value).toBe(0);
+
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        expect(nav.activeIndex.value).toBe(1);
+
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        expect(nav.activeIndex.value).toBe(0);
+      });
+    });
+
+    it("inverts horizontal arrow navigation in RTL", () => {
+      scope.run(() => {
+        const items = ref(["A", "B", "C"]);
+        const nav = useListNavigation(items, {
           orientation: "horizontal",
-          loop: false,
           rtl: true,
         });
 
-        dispatchKey(anchorEl, "ArrowLeft");
-        expect(openRef.value).toBe(true);
-        expect(collection.activeValue.value).toBe("1");
+        // In RTL, ArrowLeft moves forward ("next")
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        expect(nav.activeIndex.value).toBe(0);
 
-        openRef.value = false;
-        collection.setActiveValue(null);
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        expect(nav.activeIndex.value).toBe(1);
 
-        dispatchKey(anchorEl, "ArrowRight");
-        expect(openRef.value).toBe(true);
-        expect(collection.activeValue.value).toBe("3");
-      });
-
-      it("navigates on ArrowRight/Left and ignores ArrowUp/Down when open", () => {
-        const { floatingEl, openRef, collection } = setup({
-          orientation: "horizontal",
-        });
-        openRef.value = true;
-        collection.setActiveValue("1");
-
-        dispatchKey(floatingEl, "ArrowDown");
-        expect(collection.activeValue.value).toBe("1");
-        dispatchKey(floatingEl, "ArrowUp");
-        expect(collection.activeValue.value).toBe("1");
-
-        dispatchKey(floatingEl, "ArrowRight");
-        expect(collection.activeValue.value).toBe("2");
-        dispatchKey(floatingEl, "ArrowLeft");
-        expect(collection.activeValue.value).toBe("1");
+        // In RTL, ArrowRight moves backward ("previous")
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        expect(nav.activeIndex.value).toBe(0);
       });
     });
-  });
 
-  describe("Option: openOnArrowKeyDown", () => {
-    it("does not open when openOnArrowKeyDown is false", () => {
-      const { anchorEl, openRef } = setup({ openOnArrowKeyDown: false });
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(false);
-    });
-  });
-
-  describe("Option: closeOnTab", () => {
-    it("does not close on Tab when closeOnTab is false", () => {
-      const { floatingEl, openRef } = setup({ closeOnTab: false });
-      openRef.value = true;
-
-      dispatchKey(floatingEl, "Tab");
-      expect(openRef.value).toBe(true);
-    });
-  });
-
-  describe("Virtual Element Support", () => {
-    it("binds listeners and works with VirtualElement contextElement", () => {
-      const contextEl = document.createElement("button");
-      const virtualAnchor = {
-        contextElement: contextEl,
-      };
-
-      const { openRef, collection } = setup({ anchorEl: virtualAnchor });
-
-      dispatchKey(contextEl, "ArrowDown");
-      expect(openRef.value).toBe(true);
-      expect(collection.activeValue.value).toBe("1");
-    });
-  });
-
-  describe("Cleanup method", () => {
-    it("removes all listeners and stops watchers when cleanup is called", () => {
-      const { navigation, anchorEl, openRef } = setup();
-
-      navigation.cleanup();
-
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(false);
-    });
-  });
-
-  describe("Typeable Targets Handling", () => {
-    it("handles arrow keydowns when target is a typeable element inside the anchor", () => {
-      const anchorEl = trackElement(document.createElement("div"));
-      const inputEl = document.createElement("input");
-      inputEl.type = "text";
-      anchorEl.appendChild(inputEl);
-
-      const { openRef, collection } = setup({ anchorEl });
-
-      inputEl.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
-      );
-      expect(openRef.value).toBe(true);
-      expect(collection.activeValue.value).toBe("1");
-    });
-  });
-
-  describe("Real-world patterns & Edge Cases", () => {
-    it("skips disabled elements during navigation", () => {
-      scope = effectScope();
-      const anchorEl = trackElement(document.createElement("button"));
-      const floatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(anchorEl);
-      document.body.appendChild(floatingEl);
-
-      const openRef = ref(true);
-      const anchorRef = ref(anchorEl);
-      const floatingRef = ref(floatingEl);
-
-      let collection: any;
+    it("respects boundary and loop options", () => {
       scope.run(() => {
-        const context = useFloatingContext({
-          anchorEl: anchorRef,
-          floatingEl: floatingRef,
-          open: openRef,
-        });
-        collection = useCollection({
-          values: ["1", "2", "3"],
-          isValueDisabled: (val) => val === "2",
-        });
-        useListNavigation(context, {
-          collection,
-          orientation: "vertical",
-        });
+        const items = ref(["A", "B", "C"]);
+        const navNoLoop = useListNavigation(items, { loop: false });
+
+        navNoLoop.setActiveIndex(2);
+        navNoLoop.next();
+        expect(navNoLoop.activeIndex.value).toBe(2); // no wrap
+
+        navNoLoop.setActiveIndex(0);
+        navNoLoop.prev();
+        expect(navNoLoop.activeIndex.value).toBe(0); // no wrap
+
+        const navLoop = useListNavigation(items, { loop: true });
+        navLoop.setActiveIndex(2);
+        navLoop.next();
+        expect(navLoop.activeIndex.value).toBe(0); // wrapped to start
+
+        navLoop.prev();
+        expect(navLoop.activeIndex.value).toBe(2); // wrapped to end
       });
-
-      collection.setActiveValue("1");
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("3");
-
-      dispatchKey(floatingEl, "ArrowUp");
-      expect(collection.activeValue.value).toBe("1");
     });
 
-    it("handles dynamic updates of collection values", async () => {
-      scope = effectScope();
-      const anchorEl = trackElement(document.createElement("button"));
-      const floatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(anchorEl);
-      document.body.appendChild(floatingEl);
-
-      const openRef = ref(true);
-      const anchorRef = ref(anchorEl);
-      const floatingRef = ref(floatingEl);
-
-      const valuesRef = ref(["1", "2"]);
-      let collection: any;
+    it("skips disabled items during navigation", () => {
       scope.run(() => {
-        const context = useFloatingContext({
-          anchorEl: anchorRef,
-          floatingEl: floatingRef,
-          open: openRef,
-        });
-        collection = useCollection({
-          values: valuesRef,
-        });
-        useListNavigation(context, {
-          collection,
-          orientation: "vertical",
-        });
+        const items = ref([
+          { id: "1", label: "A" },
+          { id: "2", label: "B", disabled: true },
+          { id: "3", label: "C" },
+        ]);
+
+        const nav = useListNavigation(items);
+
+        nav.first();
+        expect(nav.activeIndex.value).toBe(0);
+
+        nav.next(); // Skips disabled item 1 -> index 2
+        expect(nav.activeIndex.value).toBe(2);
+
+        nav.prev(); // Skips disabled item 1 -> index 0
+        expect(nav.activeIndex.value).toBe(0);
       });
-
-      collection.setActiveValue("2");
-      valuesRef.value = ["1"];
-      await nextTick();
-
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("1");
     });
 
-    it("only prevents default on handled key events", () => {
-      const { floatingEl, openRef } = setup();
-      openRef.value = true;
+    it("handles Home and End keys", () => {
+      scope.run(() => {
+        const items = ref([
+          { id: "1", label: "A", disabled: true },
+          { id: "2", label: "B" },
+          { id: "3", label: "C" },
+          { id: "4", label: "D", disabled: true },
+        ]);
 
-      const unhandledEvent = new KeyboardEvent("keydown", {
-        key: "a",
-        bubbles: true,
-        cancelable: true,
+        const nav = useListNavigation(items);
+
+        // Home jumps to first enabled item (index 1)
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "Home" }));
+        expect(nav.activeIndex.value).toBe(1);
+
+        // End jumps to last enabled item (index 2)
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "End" }));
+        expect(nav.activeIndex.value).toBe(2);
       });
-      floatingEl.dispatchEvent(unhandledEvent);
-      expect(unhandledEvent.defaultPrevented).toBe(false);
-
-      const handledEvent = new KeyboardEvent("keydown", {
-        key: "ArrowDown",
-        bubbles: true,
-        cancelable: true,
-      });
-      floatingEl.dispatchEvent(handledEvent);
-      expect(handledEvent.defaultPrevented).toBe(true);
-    });
-
-    it("handles typeable elements inside floating list", () => {
-      const { floatingEl, openRef, collection } = setup();
-      openRef.value = true;
-
-      const input = trackElement(document.createElement("input"));
-      floatingEl.appendChild(input);
-
-      const typingEvent = new KeyboardEvent("keydown", {
-        key: "a",
-        bubbles: true,
-        cancelable: true,
-      });
-      input.dispatchEvent(typingEvent);
-      expect(typingEvent.defaultPrevented).toBe(false);
-
-      const arrowEvent = new KeyboardEvent("keydown", {
-        key: "ArrowDown",
-        bubbles: true,
-        cancelable: true,
-      });
-      input.dispatchEvent(arrowEvent);
-      expect(collection.activeValue.value).toBe("1");
-      expect(arrowEvent.defaultPrevented).toBe(true);
     });
   });
 
-  describe("Complex Keyboard Sequences Marathon", () => {
-    it("simulates a flat menu keyboard marathon navigation flow", async () => {
-      const { anchorEl, floatingEl, openRef, collection } = setup();
+  describe("selection and activation", () => {
+    it("triggers onSelect on Enter and Space key", () => {
+      scope.run(() => {
+        const items = ref(["A", "B", "C"]);
+        const onSelect = vi.fn();
+        const nav = useListNavigation(items, { onSelect });
 
-      // 1. Initially closed. ArrowDown opens and sets to first
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(true);
-      expect(collection.activeValue.value).toBe("1");
+        nav.setActiveIndex(1);
 
-      // 2. ArrowDown moves to next
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("2");
+        const enterEvent = new KeyboardEvent("keydown", { key: "Enter" });
+        nav.containerProps.value.onKeydown(enterEvent);
+        expect(onSelect).toHaveBeenCalledWith("B", 1, enterEvent);
 
-      // 3. ArrowDown moves to last
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("3");
-
-      // 4. ArrowDown with loop wraps to first
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(collection.activeValue.value).toBe("1");
-
-      // 5. ArrowUp with loop wraps to last
-      dispatchKey(floatingEl, "ArrowUp");
-      expect(collection.activeValue.value).toBe("3");
-
-      // 6. Home moves to first
-      dispatchKey(floatingEl, "Home");
-      expect(collection.activeValue.value).toBe("1");
-
-      // 7. End moves to last
-      dispatchKey(floatingEl, "End");
-      expect(collection.activeValue.value).toBe("3");
-
-      // 8. Tab closes the menu and resets activeValue
-      dispatchKey(floatingEl, "Tab");
-      expect(openRef.value).toBe(false);
+        const spaceEvent = new KeyboardEvent("keydown", { key: " " });
+        nav.containerProps.value.onKeydown(spaceEvent);
+        expect(onSelect).toHaveBeenCalledWith("B", 1, spaceEvent);
+      });
     });
 
-    it("simulates a parent menu and child submenu coordination flow", async () => {
-      scope = effectScope();
-      const parentAnchor = trackElement(document.createElement("button"));
-      const parentFloating = trackElement(document.createElement("div"));
-      document.body.appendChild(parentAnchor);
-      document.body.appendChild(parentFloating);
+    it("triggers onSelect and sets activeIndex on item click", () => {
+      scope.run(() => {
+        const items = ref(["A", "B", "C"]);
+        const onSelect = vi.fn();
+        const nav = useListNavigation(items, { onSelect });
 
-      const parentOpen = ref(false);
-      const parentContext = useFloatingContext({
-        anchorEl: ref(parentAnchor),
-        floatingEl: ref(parentFloating),
-        open: parentOpen,
+        const props = nav.getItemProps(items.value[2], 2);
+        const clickEvent = new MouseEvent("click");
+        props.onClick(clickEvent);
+
+        expect(nav.activeIndex.value).toBe(2);
+        expect(onSelect).toHaveBeenCalledWith("C", 2, clickEvent);
       });
-      const parentCollection = useCollection({ values: ["file", "edit", "view"] });
+    });
 
-      const childFloating = trackElement(document.createElement("div"));
-      document.body.appendChild(childFloating);
+    it("does not trigger onSelect on disabled item click", () => {
+      scope.run(() => {
+        const items = ref([{ id: "1", label: "A", disabled: true }]);
+        const onSelect = vi.fn();
+        const nav = useListNavigation(items, { onSelect });
 
-      const childOpen = ref(false);
-      const childContext = useFloatingContext({
-        anchorEl: ref(parentFloating),
-        floatingEl: ref(childFloating),
-        open: childOpen,
-        parentContext,
+        const props = nav.getItemProps(items.value[0], 0);
+        props.onClick(new MouseEvent("click"));
+
+        expect(nav.activeIndex.value).toBe(-1);
+        expect(onSelect).not.toHaveBeenCalled();
       });
-      const childCollection = useCollection({ values: ["pdf", "png", "svg"] });
+    });
 
-      useListNavigation(parentContext, {
-        collection: parentCollection,
-        orientation: "vertical",
-        onEnter: (val) => {
-          if (val === "file") {
-            childOpen.value = true;
-            childCollection.setFirst();
-          }
-        },
+    it("supports selectOnFocus mode", () => {
+      scope.run(() => {
+        const items = ref(["A", "B", "C"]);
+        const onSelect = vi.fn();
+        const nav = useListNavigation(items, {
+          selectOnFocus: true,
+          onSelect,
+        });
+
+        const keyEvent = new KeyboardEvent("keydown", { key: "ArrowDown" });
+        nav.containerProps.value.onKeydown(keyEvent);
+
+        expect(nav.activeIndex.value).toBe(0);
+        expect(onSelect).toHaveBeenCalledWith("A", 0, expect.any(Event));
       });
-
-      useListNavigation(childContext, {
-        collection: childCollection,
-        orientation: "vertical",
-        onExit: () => {
-          childOpen.value = false;
-          parentCollection.setActiveValue("file");
-        },
-      });
-
-      // 1. Open parent menu with ArrowDown
-      dispatchKey(parentAnchor, "ArrowDown");
-      expect(parentOpen.value).toBe(true);
-      expect(parentCollection.activeValue.value).toBe("file");
-
-      // 2. Press ArrowRight on "file" -> opens child submenu and focuses "pdf"
-      dispatchKey(parentFloating, "ArrowRight");
-      expect(childOpen.value).toBe(true);
-      expect(childCollection.activeValue.value).toBe("pdf");
-
-      // 3. ArrowDown inside child submenu -> moves to "png"
-      dispatchKey(childFloating, "ArrowDown");
-      expect(childCollection.activeValue.value).toBe("png");
-
-      // 4. ArrowLeft inside child submenu -> closes submenu and returns focus to "file"
-      dispatchKey(childFloating, "ArrowLeft");
-      expect(childOpen.value).toBe(false);
-      expect(parentCollection.activeValue.value).toBe("file");
     });
   });
 
-  describe("Decoupled Callbacks & Custom Collection", () => {
-    it("supports decoupled custom collection conforming to NavigableCollection interface", () => {
-      scope = effectScope();
-      const anchorEl = trackElement(document.createElement("button"));
-      const floatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(anchorEl);
-      document.body.appendChild(floatingEl);
-
-      const openRef = ref(true);
-      const anchorRef = ref(anchorEl);
-      const floatingRef = ref(floatingEl);
-
-      let setNextCalled = false;
-      let setPreviousCalled = false;
-
-      const mockCollection = {
-        activeValue: ref("item-1"),
-        setActiveValue: () => {},
-        setNext: () => {
-          setNextCalled = true;
-        },
-        setPrevious: () => {
-          setPreviousCalled = true;
-        },
-        setFirst: () => {},
-        setLast: () => {},
-      };
-
+  describe("pointer move / hover", () => {
+    it("updates activeIndex on pointer move when focusOnHover is true", () => {
       scope.run(() => {
-        const context = useFloatingContext({
-          anchorEl: anchorRef,
-          floatingEl: floatingRef,
-          open: openRef,
-        });
-        useListNavigation(context, {
-          collection: mockCollection,
-          orientation: "vertical",
-        });
+        const items = ref(["A", "B", "C"]);
+        const nav = useListNavigation(items, { focusOnHover: true });
+
+        const props = nav.getItemProps(items.value[1], 1);
+        props.onPointermove(new PointerEvent("pointermove"));
+
+        expect(nav.activeIndex.value).toBe(1);
       });
-
-      dispatchKey(floatingEl, "ArrowDown");
-      expect(setNextCalled).toBe(true);
-
-      dispatchKey(floatingEl, "ArrowUp");
-      expect(setPreviousCalled).toBe(true);
     });
 
-    it("triggers onEnter and onExit with activeValue and KeyboardEvent", () => {
-      scope = effectScope();
-      const anchorEl = trackElement(document.createElement("button"));
-      const floatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(anchorEl);
-      document.body.appendChild(floatingEl);
-
-      const openRef = ref(true);
-      const anchorRef = ref(anchorEl);
-      const floatingRef = ref(floatingEl);
-
-      let enterArgs: any[] = [];
-      let exitArgs: any[] = [];
-
-      const mockCollection = {
-        activeValue: ref("item-active"),
-        setActiveValue: () => {},
-        setNext: () => {},
-        setPrevious: () => {},
-        setFirst: () => {},
-        setLast: () => {},
-      };
-
+    it("does not update activeIndex on pointer move when focusOnHover is false", () => {
       scope.run(() => {
-        const context = useFloatingContext({
-          anchorEl: anchorRef,
-          floatingEl: floatingRef,
-          open: openRef,
-        });
-        useListNavigation(context, {
-          collection: mockCollection,
-          orientation: "vertical",
-          onEnter: (activeValue, e) => {
-            enterArgs = [activeValue, e];
-          },
-          onExit: (activeValue, e) => {
-            exitArgs = [activeValue, e];
-          },
-        });
+        const items = ref(["A", "B", "C"]);
+        const nav = useListNavigation(items, { focusOnHover: false });
+
+        const props = nav.getItemProps(items.value[1], 1);
+        props.onPointermove(new PointerEvent("pointermove"));
+
+        expect(nav.activeIndex.value).toBe(-1);
       });
-
-      dispatchKey(floatingEl, "ArrowRight");
-      expect(enterArgs[0]).toBe("item-active");
-      expect(enterArgs[1] instanceof KeyboardEvent).toBe(true);
-
-      dispatchKey(floatingEl, "ArrowLeft");
-      expect(exitArgs[0]).toBe("item-active");
-      expect(exitArgs[1] instanceof KeyboardEvent).toBe(true);
     });
   });
 
-  describe("Context-Aware Hierarchy & Smart Defaults", () => {
-    it("defaults openOnArrowKeyDown to false for nested child contexts", () => {
-      scope = effectScope();
-      const parentAnchor = trackElement(document.createElement("button"));
-      const parentFloating = trackElement(document.createElement("div"));
-      const childAnchor = trackElement(document.createElement("button"));
-      const childFloating = trackElement(document.createElement("div"));
-
-      document.body.appendChild(parentAnchor);
-      document.body.appendChild(parentFloating);
-      document.body.appendChild(childAnchor);
-      document.body.appendChild(childFloating);
-
-      const parentOpen = ref(false);
-      const childOpen = ref(false);
-
+  describe("typeahead integration", () => {
+    it("matches item labels via typeahead keystrokes", () => {
       scope.run(() => {
-        const rootContext = useFloatingContext({
-          anchorEl: ref(parentAnchor),
-          floatingEl: ref(parentFloating),
-          open: parentOpen,
-        });
-        const childContext = useFloatingContext({
-          anchorEl: ref(childAnchor),
-          floatingEl: ref(childFloating),
-          open: childOpen,
-          parentContext: rootContext,
-        });
+        const items = ref(["Apple", "Banana", "Cherry"]);
+        const nav = useListNavigation(items);
 
-        const rootCollection = useCollection({ values: ["a", "b"] });
-        const childCollection = useCollection({ values: ["1", "2"] });
-
-        // Root uses default openOnArrowKeyDown (which is context.isRoot === true)
-        useListNavigation(rootContext, { collection: rootCollection });
-        // Child uses default openOnArrowKeyDown (which is context.isRoot === false)
-        useListNavigation(childContext, { collection: childCollection });
+        nav.containerProps.value.onKeydown(new KeyboardEvent("keydown", { key: "c" }));
+        expect(nav.activeIndex.value).toBe(2); // Cherry
       });
+    });
+  });
 
-      // Pressing ArrowDown on root anchor opens root
-      dispatchKey(parentAnchor, "ArrowDown");
-      expect(parentOpen.value).toBe(true);
+  describe("dynamic updates and lifecycle", () => {
+    it("adjusts activeIndex when items list shrinks", async () => {
+      await scope.run(async () => {
+        const items = ref(["A", "B", "C", "D"]);
+        const nav = useListNavigation(items);
 
-      // Pressing ArrowDown on child anchor does NOT open child by default
-      dispatchKey(childAnchor, "ArrowDown");
-      expect(childOpen.value).toBe(false);
+        nav.setActiveIndex(3);
+        expect(nav.activeIndex.value).toBe(3);
+
+        items.value = ["A", "B"];
+        await nextTick();
+
+        expect(nav.activeIndex.value).toBe(1);
+      });
     });
 
-    it("allows explicit openOnArrowKeyDown to override smart default on nested context", () => {
-      scope = effectScope();
-      const parentAnchor = trackElement(document.createElement("button"));
-      const parentFloating = trackElement(document.createElement("div"));
-      const childAnchor = trackElement(document.createElement("button"));
-      const childFloating = trackElement(document.createElement("div"));
-
-      document.body.appendChild(parentAnchor);
-      document.body.appendChild(parentFloating);
-      document.body.appendChild(childAnchor);
-      document.body.appendChild(childFloating);
-
-      const parentOpen = ref(false);
-      const childOpen = ref(false);
-
+    it("supports custom item accessors", () => {
       scope.run(() => {
-        const rootContext = useFloatingContext({
-          anchorEl: ref(parentAnchor),
-          floatingEl: ref(parentFloating),
-          open: parentOpen,
-        });
-        const childContext = useFloatingContext({
-          anchorEl: ref(childAnchor),
-          floatingEl: ref(childFloating),
-          open: childOpen,
-          parentContext: rootContext,
+        interface CustomItem {
+          code: string;
+          name: string;
+          isUnavailable?: boolean;
+        }
+
+        const items = ref<CustomItem[]>([
+          { code: "US", name: "United States" },
+          { code: "CA", name: "Canada", isUnavailable: true },
+          { code: "MX", name: "Mexico" },
+        ]);
+
+        const nav = useListNavigation(items, {
+          getItemId: (item) => `country-${item.code}`,
+          getItemLabel: (item) => item.name,
+          isItemDisabled: (item) => Boolean(item.isUnavailable),
         });
 
-        const childCollection = useCollection({ values: ["1", "2"] });
-        useListNavigation(childContext, {
-          collection: childCollection,
-          openOnArrowKeyDown: true,
-        });
+        expect(nav.getItemProps(items.value[0], 0).id).toBe("country-US");
+        expect(nav.getItemProps(items.value[1], 1)["aria-disabled"]).toBe(true);
+
+        nav.first();
+        expect(nav.activeIndex.value).toBe(0);
+
+        nav.next(); // skips CA (index 1) -> moves to MX (index 2)
+        expect(nav.activeIndex.value).toBe(2);
       });
-
-      dispatchKey(childAnchor, "ArrowDown");
-      expect(childOpen.value).toBe(true);
-    });
-
-    it("automatically closes nested submenu and focuses anchorEl on ArrowLeft when onExit is omitted", () => {
-      scope = effectScope();
-      const parentAnchor = trackElement(document.createElement("button"));
-      const parentFloating = trackElement(document.createElement("div"));
-      const childAnchor = trackElement(document.createElement("button"));
-      const childFloating = trackElement(document.createElement("div"));
-
-      document.body.appendChild(parentAnchor);
-      document.body.appendChild(parentFloating);
-      document.body.appendChild(childAnchor);
-      document.body.appendChild(childFloating);
-
-      const parentOpen = ref(true);
-      const childOpen = ref(true);
-      let childCollection!: ReturnType<typeof useCollection>;
-
-      scope.run(() => {
-        const rootContext = useFloatingContext({
-          anchorEl: ref(parentAnchor),
-          floatingEl: ref(parentFloating),
-          open: parentOpen,
-        });
-        const childContext = useFloatingContext({
-          anchorEl: ref(childAnchor),
-          floatingEl: ref(childFloating),
-          open: childOpen,
-          parentContext: rootContext,
-        });
-
-        childCollection = useCollection({ values: ["pdf", "png"] });
-
-        // Note: No custom onExit passed to child
-        useListNavigation(childContext, {
-          collection: childCollection,
-          orientation: "vertical",
-        });
-      });
-
-      childCollection.setActiveValue("pdf");
-
-      let focused = false;
-      childAnchor.addEventListener("focus", () => {
-        focused = true;
-      });
-
-      dispatchKey(childFloating, "ArrowLeft");
-
-      expect(childOpen.value).toBe(false);
-      expect(focused).toBe(true);
-    });
-
-    it("sets collection.activeValue when items register asynchronously upon opening via arrow key", async () => {
-      scope = effectScope();
-      const anchorEl = trackElement(document.createElement("button"));
-      const floatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(anchorEl);
-      document.body.appendChild(floatingEl);
-
-      const openRef = ref(false);
-      const registeredIds = ref<string[]>([]);
-      let collection!: ReturnType<typeof useCollection>;
-
-      scope.run(() => {
-        const context = useFloatingContext({
-          anchorEl: ref(anchorEl),
-          floatingEl: ref(floatingEl),
-          open: openRef,
-        });
-
-        collection = useCollection({ values: registeredIds });
-
-        useListNavigation(context, {
-          collection,
-          orientation: "vertical",
-        });
-      });
-
-      expect(collection.activeValue.value).toBeNull();
-
-      dispatchKey(anchorEl, "ArrowDown");
-      expect(openRef.value).toBe(true);
-
-      // Simulate child items mounting asynchronously during nextTick
-      registeredIds.value = ["item-1", "item-2"];
-      await nextTick();
-
-      expect(collection.activeValue.value).toBe("item-1");
     });
   });
 });

@@ -15,6 +15,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.2.2
         version: 4.2.2(vite@6.4.3(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0))
+      '@tanstack/vue-virtual':
+        specifier: ^3.13.36
+        version: 3.13.36(vue@3.5.31(typescript@5.9.3))
       '@tsconfig/node22':
         specifier: ^22.0.5
         version: 22.0.5
@@ -1736,6 +1739,14 @@ packages:
     resolution: {integrity: sha512-mEiF5HO1QqCLXoNEfXVA1Tzo+cYsrqV7w9Juj2wdUFyW07JRenqMG225MvPwr3ZD9N1bFQj46X7r33iHxLUW0w==}
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
+
+  '@tanstack/virtual-core@3.17.8':
+    resolution: {integrity: sha512-BfEvehNpOT75r5Ksc5xW6NZuXujTfb7nlSEyVu4XHG3gdxNg1KqXruWbDewXOUaUYIo4oRbSfkjIajz4MAT8tA==}
+
+  '@tanstack/vue-virtual@3.13.36':
+    resolution: {integrity: sha512-gKpExv4RbB9luVG+SucTXoqPZv/gzu/Yvz6BNO+8kpNxJ2x+I/ulryzl5W9BRciahZGp5Tls3Dp5XP1ztVGbMw==}
+    peerDependencies:
+      vue: ^2.7.0 || ^3.0.0
 
   '@tsconfig/node22@22.0.5':
     resolution: {integrity: sha512-hLf2ld+sYN/BtOJjHUWOk568dvjFQkHnLNa6zce25GIH+vxKfvTgm3qpaH6ToF5tu/NN0IH66s+Bb5wElHrLcw==}
@@ -4870,6 +4881,13 @@ snapshots:
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
       vite: 6.4.3(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)
+
+  '@tanstack/virtual-core@3.17.8': {}
+
+  '@tanstack/vue-virtual@3.13.36(vue@3.5.31(typescript@5.9.3))':
+    dependencies:
+      '@tanstack/virtual-core': 3.17.8
+      vue: 3.5.31(typescript@5.9.3)
 
   '@tsconfig/node22@22.0.5': {}
 

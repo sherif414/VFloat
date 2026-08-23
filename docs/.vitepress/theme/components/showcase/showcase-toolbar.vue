@@ -70,10 +70,6 @@ const selectPosition = usePosition(selectContext, {
   },
 });
 
-const placementCollection = useCollection({
-  values: placements.map((p) => p.value),
-});
-
 useClick(selectContext);
 useOutsideClick(selectContext);
 useEscapeKey(selectContext);
@@ -83,11 +79,13 @@ useFocusManager(selectContext, {
   returnFocus: true,
   guards: false,
 });
-useListNavigation(selectContext, {
-  collection: placementCollection,
+
+const { activeIndex, setActiveIndex, containerProps } = useListNavigation(placements, {
   loop: true,
-  onEnter: (val) => {
-    emit("update:placement", val as Placement);
+  getItemId: (p) => p.value,
+  getItemLabel: (p) => p.label,
+  onSelect: (item) => {
+    emit("update:placement", item.value as Placement);
     selectContext.state.setOpen(false);
   },
 });
@@ -99,23 +97,16 @@ const currentPlacementLabel = computed(
 
 watch(selectContext.state.open, (isOpen) => {
   if (isOpen) {
-    placementCollection.setActiveValue(props.placement);
+    const idx = placements.findIndex((p) => p.value === props.placement);
+    if (idx !== -1) {
+      setActiveIndex(idx);
+    }
   }
 });
 
 function onOptionSelect(val: Placement) {
   emit("update:placement", val);
   selectContext.state.setOpen(false);
-}
-
-function onDropdownKeyDown(e: KeyboardEvent) {
-  if (e.key === " " || e.key === "Enter") {
-    e.preventDefault();
-    const active = placementCollection.activeValue.value;
-    if (active) {
-      onOptionSelect(active as Placement);
-    }
-  }
 }
 </script>
 
@@ -151,22 +142,21 @@ function onDropdownKeyDown(e: KeyboardEvent) {
           v-if="selectContext.state.open.value"
           ref="selectFloatingEl"
           role="listbox"
-          tabindex="-1"
           class="control-select-dropdown"
           :style="selectPosition.styles.value"
-          @keydown="onDropdownKeyDown"
+          v-bind="containerProps"
         >
           <div
-            v-for="item in placements"
+            v-for="(item, index) in placements"
             :key="item.value"
             role="option"
             :aria-selected="placement === item.value"
             class="control-select-option"
             :class="{
-              'is-active': placementCollection.activeValue.value === item.value,
+              'is-active': activeIndex === index,
               'is-selected': placement === item.value,
             }"
-            @mouseenter="placementCollection.setActiveValue(item.value)"
+            @mouseenter="setActiveIndex(index)"
             @click="onOptionSelect(item.value)"
           >
             <span>{{ item.label }}</span>

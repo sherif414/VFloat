@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSSRApp, defineComponent, effectScope, h, nextTick, ref } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { getDocument } from "@/shared/env";
-import { useRtl } from "./use-rtl";
+import { useRtl } from "./rtl";
 
 vi.mock("@/shared/env", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/env")>();

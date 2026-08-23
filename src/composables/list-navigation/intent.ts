@@ -1,14 +1,6 @@
-export type NavigationIntent =
-  | "first"
-  | "last"
-  | "next"
-  | "previous"
-  | "enter"
-  | "exit"
-  | "activate"
-  | "close";
+import type { NavigationOrientation } from "./types";
 
-export type NavigationOrientation = "vertical" | "horizontal";
+export type NavigationIntent = "first" | "last" | "next" | "previous" | "enter" | "exit" | "select";
 
 export interface KeyboardIntentOptions {
   orientation?: NavigationOrientation;
@@ -20,7 +12,7 @@ export interface KeyboardIntentOptions {
  * current orientation and reading direction.
  *
  * This mapping is stateless and purely declarative. It does not know about
- * tree structures, DOM state, or whether an item is disabled.
+ * DOM focus state or whether an item is disabled.
  */
 export function resolveKeyboardIntent(
   event: KeyboardEvent,
@@ -29,16 +21,14 @@ export function resolveKeyboardIntent(
   const { orientation = "vertical", rtl = false } = options;
   const key = event.key;
 
-  // We ignore events with modifiers (except Shift, which might be needed for some navigation
-  // but generally arrow keys shouldn't have Alt/Ctrl/Meta for basic navigation).
+  // We ignore events with Alt/Ctrl/Meta modifiers for navigation keys.
   if (event.ctrlKey || event.metaKey || event.altKey) {
     return null;
   }
 
   if (key === "Home") return "first";
   if (key === "End") return "last";
-  if (key === "Tab") return "close";
-  if (key === "Enter" || key === " ") return "activate";
+  if (key === "Enter" || key === " ") return "select";
 
   if (orientation === "vertical") {
     if (key === "ArrowDown") return "next";
@@ -48,9 +38,6 @@ export function resolveKeyboardIntent(
   } else if (orientation === "horizontal") {
     if (key === "ArrowRight") return rtl ? "previous" : "next";
     if (key === "ArrowLeft") return rtl ? "next" : "previous";
-    // Up/Down do not map to cross-axis in pure horizontal by default,
-    // though in a menubar they might map to "enter".
-    // For now, keep it strictly main-axis.
     if (key === "ArrowDown") return "enter";
   }
 

@@ -81,10 +81,6 @@ const menuItems = [
   { id: "delete", label: "Delete", shortcut: "⌫", danger: true },
 ];
 
-const menuCollection = useCollection({
-  values: menuItems.map((item) => item.id),
-});
-
 useClick(context, {
   enabled: () => props.isActive && !props.keepOpen,
 });
@@ -105,11 +101,10 @@ useFocusManager(context, {
   guards: false,
 });
 
-useListNavigation(context, {
-  collection: menuCollection,
+const { activeIndex, setActiveIndex } = useListNavigation(menuItems, {
   loop: true,
   enabled: () => props.isActive,
-  onEnter: () => {
+  onSelect: () => {
     context.state.setOpen(false);
   },
 });
@@ -171,15 +166,15 @@ defineExpose({
       :style="position.styles.value"
     >
       <div
-        v-for="item in menuItems"
+        v-for="(item, index) in menuItems"
         :key="item.id"
         role="menuitem"
         class="menu-item"
         :class="{
-          'is-active': menuCollection.activeValue.value === item.id,
+          'is-active': activeIndex === index,
           'is-danger': item.danger,
         }"
-        @mouseenter="menuCollection.setActiveValue(item.id)"
+        @mouseenter="setActiveIndex(index)"
         @click="context.state.setOpen(false)"
       >
         <span class="menu-item__label">{{ item.label }}</span>

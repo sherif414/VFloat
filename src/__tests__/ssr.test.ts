@@ -34,8 +34,9 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useRole(context, { role: "menu", label: "Actions" });
         VFloat.useArrow(context);
         VFloat.useClientPoint(context);
-        const collection = VFloat.useCollection();
-        VFloat.useListNavigation(context, { collection });
+        VFloat.useCollection();
+        const items = ref(["item1", "item2"]);
+        VFloat.useListNavigation(items);
 
         return () =>
           h("div", { class: "container" }, [
