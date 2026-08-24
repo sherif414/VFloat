@@ -77,11 +77,6 @@ describe("useListNavigation", () => {
         const containerEl = trackElement(document.createElement("ul"));
         document.body.appendChild(containerEl);
 
-        const nav = useListNavigation(items, {
-          containerEl,
-          strategy: "roving",
-        });
-
         const itemEl0 = trackElement(document.createElement("li"));
         const itemEl1 = trackElement(document.createElement("li"));
         const itemEl2 = trackElement(document.createElement("li"));
@@ -90,11 +85,15 @@ describe("useListNavigation", () => {
         containerEl.appendChild(itemEl1);
         containerEl.appendChild(itemEl2);
 
-        const focusSpy1 = vi.spyOn(itemEl1, "focus");
+        const itemEls = ref([itemEl0, itemEl1, itemEl2]);
 
-        nav.registerItemElement(itemEl0, 0);
-        nav.registerItemElement(itemEl1, 1);
-        nav.registerItemElement(itemEl2, 2);
+        const nav = useListNavigation(items, {
+          containerEl,
+          itemEls,
+          strategy: "roving",
+        });
+
+        const focusSpy1 = vi.spyOn(itemEl1, "focus");
 
         nav.setActiveIndex(1);
         await nextTick();
@@ -115,11 +114,6 @@ describe("useListNavigation", () => {
         const containerEl = trackElement(document.createElement("div"));
         document.body.appendChild(containerEl);
 
-        const nav = useListNavigation(items, {
-          containerEl,
-          strategy: "activedescendant",
-        });
-
         const itemEl0 = trackElement(document.createElement("li"));
         itemEl0.id = "city-cai";
         itemEl0.scrollIntoView = vi.fn();
@@ -131,8 +125,13 @@ describe("useListNavigation", () => {
         containerEl.appendChild(itemEl0);
         containerEl.appendChild(itemEl1);
 
-        nav.registerItemElement(itemEl0, 0);
-        nav.registerItemElement(itemEl1, 1);
+        const itemEls = ref([itemEl0, itemEl1]);
+
+        const nav = useListNavigation(items, {
+          containerEl,
+          itemEls,
+          strategy: "activedescendant",
+        });
 
         await nextTick();
 
@@ -364,14 +363,11 @@ describe("useListNavigation", () => {
       });
     });
 
-    it("supports virtual list delegation and navigation via registerItemElement", () => {
+    it("supports virtual list delegation and navigation via itemEls array ref", () => {
       scope.run(() => {
         const items = ref(Array.from({ length: 1000 }, (_, i) => `Item ${i}`));
         const containerEl = trackElement(document.createElement("div"));
         document.body.appendChild(containerEl);
-
-        const onSelect = vi.fn();
-        const nav = useListNavigation(items, { containerEl, onSelect });
 
         // Virtualizer renders slice [500, 501, 502]
         const v500 = trackElement(document.createElement("div"));
@@ -379,8 +375,12 @@ describe("useListNavigation", () => {
         containerEl.appendChild(v500);
         containerEl.appendChild(v501);
 
-        nav.registerItemElement(v500, 500);
-        nav.registerItemElement(v501, 501);
+        const itemEls = ref<(HTMLElement | null)[]>([]);
+        itemEls.value[500] = v500;
+        itemEls.value[501] = v501;
+
+        const onSelect = vi.fn();
+        const nav = useListNavigation(items, { containerEl, itemEls, onSelect });
 
         // Click on virtual item 501
         v501.dispatchEvent(new MouseEvent("click", { bubbles: true }));

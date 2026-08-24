@@ -33,8 +33,7 @@ interface UseListNavigationOptions<T = ListNavigationItem | string> {
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
-   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
-   * When using virtual lists, use `registerItemElement` instead.
+   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for` or virtual row assignments).
    */
   itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
 
@@ -159,12 +158,6 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
   last: () => void;
 
   /**
-   * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).
-   * Used for virtualized lists (e.g. `@tanstack/vue-virtual`) or dynamic item rendering.
-   */
-  registerItemElement: (el: HTMLElement | null, index: number) => void;
-
-  /**
    * Stops all watchers, timers, and listeners.
    */
   cleanup: () => void;
@@ -175,10 +168,10 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
 
 ### Item Element Resolution & Event Delegation
 
-`useListNavigation` supports both standard lists and virtualized lists:
+`useListNavigation` resolves item elements via the `itemEls` array ref:
 
-1. **Standard Lists (`itemEls`):** Pass `ref="itemEls"` in `v-for`. The composable uses the array of elements to manage focus and event delegation.
-2. **Virtual Lists (`registerItemElement`):** For virtualized lists (e.g. `@tanstack/vue-virtual`), pass `:ref="el => registerItemElement(el, index)"` on each virtual row. The composable tracks mounted slice elements and automatically handles focus and event delegation for the active slice.
+1. **Standard Lists:** Pass `ref="itemEls"` in `v-for`. The composable uses the array of elements to manage focus and event delegation.
+2. **Virtual Lists:** For virtualized lists (e.g. `@tanstack/vue-virtual`), assign each virtual row element into the `itemEls` array (`:ref="(el) => itemEls[virtualRow.index] = el"`).
 
 Clicks and hover pointer moves are **delegated on `containerEl`**, automatically resolving the item index from the target DOM element.
 
@@ -261,6 +254,7 @@ import { useListNavigation } from "v-float";
 
 const items = ref(Array.from({ length: 10000 }, (_, i) => ({ id: `id-${i}`, label: `Item ${i}` })));
 const containerEl = useTemplateRef<HTMLElement>("containerEl");
+const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 const virtualizer = useVirtualizer(
   computed(() => ({
@@ -271,8 +265,9 @@ const virtualizer = useVirtualizer(
   })),
 );
 
-const { activeIndex, registerItemElement } = useListNavigation(items, {
+const { activeIndex } = useListNavigation(items, {
   containerEl,
+  itemEls,
   strategy: "roving",
   loop: true,
   onSelect: (item) => console.log("Selected:", item.label),
@@ -294,7 +289,7 @@ watch(activeIndex, (idx) => {
       <div
         v-for="virtualRow in virtualizer.getVirtualItems()"
         :key="virtualRow.index"
-        :ref="(el) => registerItemElement(el as HTMLElement, virtualRow.index)"
+        :ref="(el) => (itemEls[virtualRow.index] = el as HTMLElement | null)"
         role="option"
         :tabindex="activeIndex === virtualRow.index ? 0 : -1"
         :style="{

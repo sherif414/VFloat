@@ -25,14 +25,13 @@ describe("focus-strategies", () => {
 
   it("calls .focus() on item element for roving strategy", () => {
     const containerEl = ref<HTMLElement | null>(document.createElement("div"));
-    const controller = createFocusStrategyController(() => containerEl.value);
-
     const item0 = document.createElement("div");
     const item1 = document.createElement("div");
     const focusSpy = vi.spyOn(item1, "focus");
 
-    controller.registerItemElement(item0, 0);
-    controller.registerItemElement(item1, 1);
+    const controller = createFocusStrategyController(() => containerEl.value, {
+      getItemEls: () => [item0, item1],
+    });
 
     controller.syncFocus(1, "roving");
     expect(focusSpy).toHaveBeenCalledTimes(1);
@@ -41,13 +40,13 @@ describe("focus-strategies", () => {
   it("sets aria-activedescendant and calls scrollIntoView for activedescendant strategy", () => {
     const container = document.createElement("input");
     const containerEl = ref<HTMLElement | null>(container);
-    const controller = createFocusStrategyController(() => containerEl.value);
-
     const item1 = document.createElement("div");
     item1.id = "item-1";
     item1.scrollIntoView = vi.fn();
 
-    controller.registerItemElement(item1, 1);
+    const controller = createFocusStrategyController(() => containerEl.value, {
+      getItemEls: () => [null, item1],
+    });
 
     controller.syncFocus(1, "activedescendant", "item-1");
 
@@ -68,7 +67,7 @@ describe("focus-strategies", () => {
     expect(container.hasAttribute("aria-activedescendant")).toBe(false);
   });
 
-  it("resolves item element via itemEls array or registerItemElement map", () => {
+  it("resolves item element via itemEls array", () => {
     const container = document.createElement("ul");
     const li0 = document.createElement("li");
     const li1 = document.createElement("li");
@@ -80,13 +79,9 @@ describe("focus-strategies", () => {
       getItemEls: () => itemEls.value,
     });
 
-    // Resolves from itemEls
+    expect(controller.getItemElement(0)).toBe(li0);
     expect(controller.getItemElement(1)).toBe(li1);
-
-    // Overridden by explicit registerItemElement (for virtual lists)
-    const customLi = document.createElement("li");
-    controller.registerItemElement(customLi, 1);
-    expect(controller.getItemElement(1)).toBe(customLi);
+    expect(controller.getItemElement(2)).toBeNull();
   });
 
   it("finds item index via findItemIndex for nested target clicks", () => {
@@ -108,18 +103,22 @@ describe("focus-strategies", () => {
     expect(controller.findItemIndex(document.createElement("div"))).toBeNull();
   });
 
-  it("supports virtual lists with arbitrary slice indices", () => {
+  it("supports virtual lists with arbitrary slice indices via sparse array", () => {
     const container = document.createElement("div");
-    const controller = createFocusStrategyController(() => container);
+    const itemEls: (HTMLElement | null)[] = [];
 
     // Simulate virtual list rendering slice from index 500 to 502
     const el500 = document.createElement("div");
     const el501 = document.createElement("div");
     const el502 = document.createElement("div");
 
-    controller.registerItemElement(el500, 500);
-    controller.registerItemElement(el501, 501);
-    controller.registerItemElement(el502, 502);
+    itemEls[500] = el500;
+    itemEls[501] = el501;
+    itemEls[502] = el502;
+
+    const controller = createFocusStrategyController(() => container, {
+      getItemEls: () => itemEls,
+    });
 
     expect(controller.getItemElement(500)).toBe(el500);
     expect(controller.getItemElement(501)).toBe(el501);
@@ -131,7 +130,7 @@ describe("focus-strategies", () => {
     expect(controller.findItemIndex(childSpan)).toBe(501);
 
     // Unmount item 500 as it scrolls out of view
-    controller.registerItemElement(null, 500);
+    itemEls[500] = null;
     expect(controller.getItemElement(500)).toBeNull();
   });
 });

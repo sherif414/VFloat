@@ -7,9 +7,6 @@ import type { FocusStrategy } from "./types";
 /**
  * Creates an item DOM element resolver and focus/scroll synchronization controller.
  *
- * Supports both standard lists (via `itemEls` array) and virtualized lists
- * (via `registerItemElement` map).
- *
  * @param getContainerEl - Accessor function returning the container DOM element.
  * @param options - Configuration for element resolution.
  * @returns Element resolver, event delegation index finder, and focus synchronizer.
@@ -19,59 +16,26 @@ export function createFocusStrategyController(
   options: FocusStrategyControllerOptions = {},
 ): FocusStrategyController {
   const { getItemEls } = options;
-  const itemElements = new Map<number, HTMLElement>();
-
-  function registerItemElement(el: HTMLElement | null, index: number): void {
-    if (el) {
-      itemElements.set(index, el);
-    } else {
-      itemElements.delete(index);
-    }
-  }
 
   function getItemElement(index: number): HTMLElement | null {
-    if (itemElements.has(index)) {
-      return itemElements.get(index) ?? null;
-    }
-
-    if (getItemEls) {
-      const els = getItemEls();
-      if (els && els[index]) {
-        return els[index] ?? null;
-      }
-    }
-
-    return null;
+    if (!getItemEls) return null;
+    const els = getItemEls();
+    return els?.[index] ?? null;
   }
 
   function findItemIndex(target: HTMLElement | null): number | null {
-    if (!target) return null;
+    if (!target || !getItemEls) return null;
+    const els = getItemEls();
+    if (!els) return null;
 
-    // 1. Check registered elements map (virtual lists & dynamic registrations)
-    for (const [idx, el] of itemElements.entries()) {
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
       if (el && (el === target || el.contains(target))) {
-        return idx;
-      }
-    }
-
-    // 2. Check item elements array (standard lists)
-    if (getItemEls) {
-      const els = getItemEls();
-      if (els) {
-        for (let i = 0; i < els.length; i++) {
-          const el = els[i];
-          if (el && (el === target || el.contains(target))) {
-            return i;
-          }
-        }
+        return i;
       }
     }
 
     return null;
-  }
-
-  function clearElements(): void {
-    itemElements.clear();
   }
 
   function syncFocus(index: number, strategy: FocusStrategy, activeId?: string | null): void {
@@ -106,10 +70,8 @@ export function createFocusStrategyController(
   }
 
   return {
-    registerItemElement,
     getItemElement,
     findItemIndex,
-    clearElements,
     syncFocus,
   };
 }
@@ -147,11 +109,6 @@ export interface FocusStrategyControllerOptions {
 
 export interface FocusStrategyController {
   /**
-   * Registers or unregisters an item's DOM element by its index (e.g. for virtual lists).
-   */
-  registerItemElement: (el: HTMLElement | null, index: number) => void;
-
-  /**
    * Retrieves the DOM element for a specific item index.
    */
   getItemElement: (index: number) => HTMLElement | null;
@@ -160,11 +117,6 @@ export interface FocusStrategyController {
    * Resolves the list index for a given event target element by matching against known item elements.
    */
   findItemIndex: (target: HTMLElement | null) => number | null;
-
-  /**
-   * Clears all registered item elements.
-   */
-  clearElements: () => void;
 
   /**
    * Synchronizes DOM focus or active-descendant/scroll alignment for the given active index.

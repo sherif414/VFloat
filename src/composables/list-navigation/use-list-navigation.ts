@@ -37,7 +37,7 @@ function generateId(): string {
  * Coordinates keyboard navigation, focus movement, typeahead matching, and DOM scroll alignment
  * for linear list widgets such as menus, listboxes, select dropdowns, and comboboxes.
  *
- * Supports both standard lists (via `itemEls` array) and virtualized lists (via `registerItemElement` map),
+ * Supports both standard lists and virtualized lists via the `itemEls` array ref,
  * with clean event delegation on `containerEl`.
  *
  * Supports two focus strategies:
@@ -46,7 +46,7 @@ function generateId(): string {
  *
  * @param items - Reactive collection or getter of items (objects or strings).
  * @param options - Configuration options for container element ref, item elements, strategy, orientation, and callbacks.
- * @returns State, navigation controls, and element registration helpers.
+ * @returns State, navigation controls, and cleanup helper.
  *
  * @example
  * ```vue
@@ -140,7 +140,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
 
   const cleanupRegistry = createCleanupRegistry();
   cleanupRegistry.add(typeaheadController.cleanup);
-  cleanupRegistry.add(focusController.clearElements);
 
   //=====================================================================================
   // Item Accessors
@@ -444,7 +443,6 @@ export function useListNavigation<T = ListNavigationItem | string>(
     prev,
     first,
     last,
-    registerItemElement: focusController.registerItemElement,
     cleanup: cleanupRegistry.cleanup,
   };
 }

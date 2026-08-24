@@ -38,8 +38,7 @@ export interface UseListNavigationOptions<T = ListNavigationItem | string> {
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
-   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
-   * When using virtual lists, use `registerItemElement` instead.
+   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for` or virtual row assignments).
    */
   itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
 
@@ -165,12 +164,6 @@ export interface UseListNavigationReturn<T = ListNavigationItem | string> {
    * Jumps to the last enabled item.
    */
   last: () => void;
-
-  /**
-   * Callback to register individual item DOM elements (`:ref="el => registerItemElement(el, index)"`).
-   * Used for virtualized lists (e.g. `@tanstack/vue-virtual`) or dynamic item rendering.
-   */
-  registerItemElement: (el: HTMLElement | null, index: number) => void;
 
   /**
    * Stops all watchers, timers, and listeners.
