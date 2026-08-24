@@ -9,41 +9,32 @@ description: Coordinates keyboard-driven list navigation, focus movement, typeah
 ## Type
 
 ```ts
-function useListNavigation<T = ListNavigationItem | string>(
-  items: MaybeRefOrGetter<readonly T[]>,
-  options?: UseListNavigationOptions<T>,
-): UseListNavigationReturn<T>;
+function useListNavigation(
+  items: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>,
+  options?: UseListNavigationOptions,
+): UseListNavigationReturn;
 
-type FocusStrategy = "roving" | "activedescendant";
+type NavigationStrategyType = "roving" | "activedescendant";
+type FocusStrategy = NavigationStrategyType;
 type NavigationOrientation = "vertical" | "horizontal";
 
-interface ListNavigationItem {
-  id?: string;
-  label?: string;
-  disabled?: boolean;
-  value?: unknown;
-}
-
-interface UseListNavigationOptions<T = ListNavigationItem | string> {
+interface UseListNavigationOptions {
   /**
-   * Ref or getter pointing to the container or input DOM element.
+   * Ref or getter pointing to the target container or input DOM element.
    * Event listeners (keyboard, click delegation, hover delegation) and ARIA attributes
    * are attached directly to this element.
    */
-  containerEl?: MaybeRefOrGetter<HTMLElement | null>;
+  targetEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
-   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for` or virtual row assignments).
-   */
-  itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
-
-  /**
-   * Focus management strategy:
+   * Navigation focus management strategy:
    * - 'roving': Uses roving tabindex (`tabindex="0"` on active item, `-1` on inactive) and calls `el.focus()`.
-   * - 'activedescendant': Focus remains on the container/input; sets `aria-activedescendant` and calls `el.scrollIntoView()`.
+   * - 'activedescendant': Focus remains on the target/input; sets `aria-activedescendant` and calls `el.scrollIntoView()`.
+   *
+   * Item `tabindex` attributes are owned and synchronized by the composable in both modes.
    * @default 'roving'
    */
-  strategy?: MaybeRefOrGetter<FocusStrategy>;
+  strategy?: MaybeRefOrGetter<NavigationStrategyType>;
 
   /**
    * Navigation axis:
@@ -96,66 +87,69 @@ interface UseListNavigationOptions<T = ListNavigationItem | string> {
   rtl?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Custom extractor for item ID.
+   * Custom extractor for item ID (used in `aria-activedescendant`).
+   * By default reads `el.id` or generates an ID.
    */
-  getItemId?: (item: T, index: number) => string;
+  getItemId?: (itemEl: HTMLElement | null, index: number) => string;
 
   /**
    * Custom extractor for item label (used in typeahead search).
+   * By default reads `el.getAttribute("aria-label")` or `el.textContent`.
    */
-  getItemLabel?: (item: T, index: number) => string;
+  getItemLabel?: (itemEl: HTMLElement | null, index: number) => string;
 
   /**
    * Custom predicate for disabled items.
+   * By default checks `el.hasAttribute("disabled")` or `el.getAttribute("aria-disabled") === "true"`.
    */
-  isItemDisabled?: (item: T, index: number) => boolean;
+  isItemDisabled?: (itemEl: HTMLElement | null, index: number) => boolean;
 
   /**
    * Callback fired when an item is committed/selected via Enter, Space, click, or `selectOnFocus`.
    */
-  onSelect?: (item: T, index: number, event: Event) => void;
+  onSelect?: (index: number, itemEl: HTMLElement | null, event: Event) => void;
 
   /**
    * Callback fired when the active item index changes.
    */
-  onActiveChange?: (item: T | undefined, index: number) => void;
+  onActiveChange?: (index: number, itemEl: HTMLElement | null) => void;
 }
 
-interface UseListNavigationReturn<T = ListNavigationItem | string> {
+interface UseListNavigationReturn {
   /**
    * Currently active item index (-1 if none is active).
    */
   activeIndex: Ref<number>;
 
   /**
-   * Currently active item reference.
+   * Currently active item DOM element (null if none is active).
    */
-  activeItem: ComputedRef<T | undefined>;
+  activeEl: ComputedRef<HTMLElement | null>;
 
   /**
    * Sets the active index directly.
    */
-  setActiveIndex: (index: number) => void;
+  setActiveIndex: (index: number, event?: Event) => void;
 
   /**
    * Moves to the next enabled item.
    */
-  next: () => void;
+  next: (event?: Event) => void;
 
   /**
    * Moves to the previous enabled item.
    */
-  prev: () => void;
+  prev: (event?: Event) => void;
 
   /**
    * Jumps to the first enabled item.
    */
-  first: () => void;
+  first: (event?: Event) => void;
 
   /**
    * Jumps to the last enabled item.
    */
-  last: () => void;
+  last: (event?: Event) => void;
 
   /**
    * Stops all watchers, timers, and listeners.
@@ -166,24 +160,27 @@ interface UseListNavigationReturn<T = ListNavigationItem | string> {
 
 ## Details
 
-### Item Element Resolution & Event Delegation
+### Single Item Source of Truth & Event Delegation
 
-`useListNavigation` resolves item elements via the `itemEls` array ref:
+`useListNavigation` takes the template ref array of DOM elements (`items`) as its single source of truth:
 
-1. **Standard Lists:** Pass `ref="itemEls"` in `v-for`. The composable uses the array of elements to manage focus and event delegation.
-2. **Virtual Lists:** For virtualized lists (e.g. `@tanstack/vue-virtual`), assign each virtual row element into the `itemEls` array (`:ref="(el) => itemEls[virtualRow.index] = el"`).
+1. **Standard Lists:** Bind `ref="itemEls"` in `v-for` and pass `itemEls` as the first argument.
+2. **Virtual Lists:** For virtualized lists (e.g. `@tanstack/vue-virtual`), assign each virtual row element into the sparse array (`:ref="(el) => itemEls[virtualRow.index] = el"`).
 
-Clicks and hover pointer moves are **delegated on `containerEl`**, automatically resolving the item index from the target DOM element.
+Clicks, hover pointer moves, and key presses are **delegated on `targetEl`**, automatically resolving the item index from the target DOM element.
 
-### Focus Strategies
+### Navigation Strategies
 
 - **Roving Tabindex (`strategy: 'roving'` - default):** Physical DOM focus moves directly to the active item element. The active item receives `tabindex="0"`, while all inactive siblings receive `tabindex="-1"`. Native browser focus rings and scrolling operate automatically.
-- **Active Descendant (`strategy: 'activedescendant'`):** Physical DOM focus remains locked on the container or text `<input>`. The container automatically receives `aria-activedescendant="<item-id>"`, and `el.scrollIntoView({ block: 'nearest', inline: 'nearest' })` is invoked to keep the active descendant visible without losing typing cursor focus.
+- **Active Descendant (`strategy: 'activedescendant'`):** Physical DOM focus remains locked on `targetEl` (e.g. text `<input>`). The target element automatically receives `aria-activedescendant="<item-id>"`, and `el.scrollIntoView({ block: 'nearest', inline: 'nearest' })` is invoked to keep the active descendant visible without losing typing cursor focus.
+
+You never bind `tabindex` yourself — the composable owns that attribute for every item element in both strategies, keeping it in sync with the active index, the strategy, and the `enabled` flag. Original values are restored when navigation is disabled or cleaned up, so unmounting never leaves stale attributes behind.
 
 ### Integrated Typeahead
 
-Typing printable characters matches item labels:
+Typing printable characters matches item labels automatically:
 
+- **Automatic Extraction:** By default, labels are read from `el.getAttribute('aria-label')` or `el.textContent`.
 - **Single-Character Cycling:** Repeatedly typing the same character (e.g. `g`, `g`, `g`) rotates focus sequentially through all enabled items starting with "G".
 - **Multi-Character Sequences:** Rapidly typing different characters (e.g. `n`, `e`, `w`) buffers the string `"new"` and navigates directly to matching labels like `"New York"`.
 - **Input Gating:** When focus is inside an editable `<input>` or `<textarea>`, typeahead is bypassed to preserve normal typing.
@@ -201,36 +198,34 @@ Typing printable characters matches item labels:
 
 ```vue
 <script setup lang="ts">
-import { ref, shallowRef, useTemplateRef } from "vue";
+import { shallowRef, useTemplateRef } from "vue";
 import { useListNavigation } from "v-float";
 
-const cities = ref([
+const cities = [
   { id: "cai", label: "Cairo" },
   { id: "ale", label: "Alexandria" },
   { id: "giz", label: "Giza", disabled: true },
   { id: "lux", label: "Luxor" },
-]);
+];
 
-const containerEl = useTemplateRef<HTMLElement>("containerEl");
+const targetEl = useTemplateRef<HTMLElement>("targetEl");
 const itemEls = shallowRef<HTMLElement[]>([]);
 
-const { activeIndex } = useListNavigation(cities, {
-  containerEl,
-  itemEls,
+const { activeIndex } = useListNavigation(itemEls, {
+  targetEl,
   strategy: "roving",
   loop: true,
-  onSelect: (item) => console.log("Selected:", item.label),
+  onSelect: (index, el) => console.log("Selected:", cities[index].label),
 });
 </script>
 
 <template>
-  <ul ref="containerEl" role="listbox" class="listbox">
+  <ul ref="targetEl" role="listbox" class="listbox">
     <li
       v-for="(city, index) in cities"
       :key="city.id"
       ref="itemEls"
       role="option"
-      :tabindex="activeIndex === index ? 0 : -1"
       :aria-disabled="city.disabled"
       class="listbox-option"
       :class="{
@@ -248,29 +243,28 @@ const { activeIndex } = useListNavigation(cities, {
 
 ```vue
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from "vue";
+import { computed, ref, shallowRef, useTemplateRef, watch } from "vue";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 import { useListNavigation } from "v-float";
 
-const items = ref(Array.from({ length: 10000 }, (_, i) => ({ id: `id-${i}`, label: `Item ${i}` })));
-const containerEl = useTemplateRef<HTMLElement>("containerEl");
+const items = Array.from({ length: 10000 }, (_, i) => ({ id: `id-${i}`, label: `Item ${i}` }));
+const targetEl = useTemplateRef<HTMLElement>("targetEl");
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 const virtualizer = useVirtualizer(
   computed(() => ({
-    count: items.value.length,
-    getScrollElement: () => containerEl.value,
+    count: items.length,
+    getScrollElement: () => targetEl.value,
     estimateSize: () => 36,
     overscan: 5,
   })),
 );
 
-const { activeIndex } = useListNavigation(items, {
-  containerEl,
-  itemEls,
+const { activeIndex } = useListNavigation(itemEls, {
+  targetEl,
   strategy: "roving",
   loop: true,
-  onSelect: (item) => console.log("Selected:", item.label),
+  onSelect: (index) => console.log("Selected:", items[index].label),
 });
 
 // Automatically scroll virtual list on keyboard navigation
@@ -282,7 +276,7 @@ watch(activeIndex, (idx) => {
 </script>
 
 <template>
-  <div ref="containerEl" role="listbox" class="virtual-list-container">
+  <div ref="targetEl" role="listbox" class="virtual-list-container">
     <div
       :style="{ height: `${virtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }"
     >
@@ -291,7 +285,6 @@ watch(activeIndex, (idx) => {
         :key="virtualRow.index"
         :ref="(el) => (itemEls[virtualRow.index] = el as HTMLElement | null)"
         role="option"
-        :tabindex="activeIndex === virtualRow.index ? 0 : -1"
         :style="{
           position: 'absolute',
           top: 0,
@@ -332,12 +325,11 @@ const filteredCities = computed(() =>
   allCities.filter((city) => city.label.toLowerCase().includes(query.value.toLowerCase())),
 );
 
-const { activeIndex } = useListNavigation(filteredCities, {
-  containerEl: inputEl,
-  itemEls,
+const { activeIndex } = useListNavigation(itemEls, {
+  targetEl: inputEl,
   strategy: "activedescendant",
-  onSelect: (item) => {
-    query.value = item.label;
+  onSelect: (index) => {
+    query.value = filteredCities.value[index].label;
     isOpen.value = false;
   },
 });
