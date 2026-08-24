@@ -1,9 +1,9 @@
 import {
   computed,
-  ComputedRef,
+  type ComputedRef,
   getCurrentInstance,
   type MaybeRefOrGetter,
-  Ref,
+  type Ref,
   ref,
   toValue,
   useId,
@@ -12,8 +12,13 @@ import {
 } from "vue";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
-import { createFocusStrategyController } from "./focus-strategies";
 import { resolveKeyboardIntent } from "./intent";
+import {
+  createNavigationController,
+  createNavigationStrategy,
+  type NavigationOrientation,
+  type NavigationStrategyType,
+} from "./navigation-strategies";
 import { useRtl } from "./rtl";
 import { createTypeahead } from "./typeahead";
 
@@ -34,40 +39,41 @@ function generateId(): string {
  * Coordinates keyboard navigation, focus movement, typeahead matching, and DOM scroll alignment
  * for linear list widgets such as menus, listboxes, select dropdowns, and comboboxes.
  *
- * Supports both standard lists and virtualized lists via the `itemEls` array ref,
- * with clean event delegation on `containerEl`.
+ * Receives the array ref of item DOM elements as the single source of truth (`items`),
+ * delegating click, hover, and keyboard interactions on `targetEl`.
  *
- * Supports two focus strategies:
+ * Supports two navigation strategies:
  * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active item, `-1` on others) and calls `.focus()`.
- * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `.scrollIntoView()`.
+ * - `'activedescendant'`: Focus remains on the target/input; sets `aria-activedescendant` and calls `.scrollIntoView()`.
  *
- * @param items - Reactive collection or getter of items (objects or strings).
- * @param options - Configuration options for container element ref, item elements, strategy, orientation, and callbacks.
- * @returns State, navigation controls, and cleanup helper.
+ * The `tabindex` attribute of every item element is owned and synchronized internally —
+ * consumers never bind `tabindex` themselves. Original values are restored on cleanup.
+ *
+ * @param items - Reactive array ref or getter of item DOM elements (e.g. from `ref="itemEls"` in `v-for`).
+ * @param options - Configuration options for target element ref, strategy, orientation, and callbacks.
+ * @returns State, active element computed ref, navigation controls, and cleanup helper.
  *
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { ref, shallowRef, useTemplateRef } from "vue";
+ * import { shallowRef, useTemplateRef } from "vue";
  * import { useListNavigation } from "v-float";
  *
- * const items = ref(["Apple", "Banana", "Cherry"]);
- * const containerEl = useTemplateRef<HTMLElement>("containerEl");
+ * const targetEl = useTemplateRef<HTMLElement>("targetEl");
  * const itemEls = shallowRef<HTMLElement[]>([]);
  *
- * const { activeIndex } = useListNavigation(items, {
- *   containerEl,
- *   itemEls,
+ * const { activeIndex, activeEl } = useListNavigation(itemEls, {
+ *   targetEl,
  *   strategy: "roving",
  *   loop: true,
- *   onSelect: (item) => console.log("Selected:", item),
+ *   onSelect: (index, el) => console.log("Selected index:", index, el),
  * });
  * </script>
  *
  * <template>
- *   <ul ref="containerEl" role="listbox">
+ *   <ul ref="targetEl" role="listbox">
  *     <li
- *       v-for="(item, index) in items"
+ *       v-for="(item, index) in ['Apple', 'Banana', 'Cherry']"
  *       :key="item"
  *       ref="itemEls"
  *       role="option"
@@ -79,13 +85,12 @@ function generateId(): string {
  * </template>
  * ```
  */
-export function useListNavigation<T = ListNavigationItem | string>(
-  items: MaybeRefOrGetter<readonly T[]>,
-  options: UseListNavigationOptions<T> = {},
-): UseListNavigationReturn<T> {
+export function useListNavigation(
+  items: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>,
+  options: UseListNavigationOptions = {},
+): UseListNavigationReturn {
   const {
-    containerEl: containerElOption,
-    itemEls: itemElsOption,
+    targetEl: targetElOption,
     strategy: strategyOption = "roving",
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
@@ -106,9 +111,9 @@ export function useListNavigation<T = ListNavigationItem | string>(
   // State & Derived Options
   //=====================================================================================
 
-  const itemsList = computed<readonly T[]>(() => toValue(items) ?? []);
-  const containerEl = computed(() => toValue(containerElOption) ?? null);
-  const strategy = computed(() => toValue(strategyOption));
+  const itemsList = computed<readonly (HTMLElement | null)[]>(() => toValue(items) ?? []);
+  const targetEl = computed(() => toValue(targetElOption) ?? null);
+  const strategyName = computed(() => toValue(strategyOption));
   const orientation = computed(() => toValue(orientationOption));
   const isLoop = computed(() => toValue(loopOption));
   const isTypeahead = computed(() => toValue(typeaheadOption));
@@ -117,18 +122,20 @@ export function useListNavigation<T = ListNavigationItem | string>(
   const isSelectOnFocus = computed(() => toValue(selectOnFocusOption));
   const isEnabled = computed(() => toValue(enabledOption));
 
-  const isRtl = useRtl(containerEl, { rtl: rtlOption });
+  const activeStrategy = computed(() => createNavigationStrategy(strategyName.value));
+  const isRtl = useRtl(targetEl, { rtl: rtlOption });
   const autoIdPrefix = generateId();
 
   const activeIndex = ref(-1);
-  const activeItem = computed<T | undefined>(() => {
+  const activeEl = computed<HTMLElement | null>(() => {
     const idx = activeIndex.value;
-    return idx >= 0 && idx < itemsList.value.length ? itemsList.value[idx] : undefined;
+    return idx >= 0 && idx < itemsList.value.length ? (itemsList.value[idx] ?? null) : null;
   });
 
-  const focusController = createFocusStrategyController(() => containerEl.value, {
-    getItemEls: () => toValue(itemElsOption),
-  });
+  const navigationController = createNavigationController(
+    () => targetEl.value,
+    () => itemsList.value,
+  );
 
   const typeaheadController = createTypeahead({
     timeout: typeaheadTimeout,
@@ -137,45 +144,72 @@ export function useListNavigation<T = ListNavigationItem | string>(
 
   const cleanupRegistry = createCleanupRegistry();
   cleanupRegistry.add(typeaheadController.cleanup);
+  cleanupRegistry.add(restoreItemTabindexes);
+
+  //=====================================================================================
+  // Item Tabindex Management
+  //=====================================================================================
+
+  // Tracks the pre-existing `tabindex` of every touched item so managed attributes can be
+  // rolled back on disable/cleanup instead of leaving stale values behind.
+  const previousItemTabindexes = new Map<HTMLElement, string | null>();
+
+  function setItemTabindex(itemEl: HTMLElement, tabindex: number): void {
+    const nextValue = String(tabindex);
+    if (itemEl.getAttribute("tabindex") === nextValue) return;
+
+    // Capture only the first observed value so repeated syncs never snapshot our own writes
+    if (!previousItemTabindexes.has(itemEl)) {
+      previousItemTabindexes.set(itemEl, itemEl.getAttribute("tabindex"));
+    }
+    itemEl.setAttribute("tabindex", nextValue);
+  }
+
+  function restoreItemTabindexes(): void {
+    for (const [itemEl, previousValue] of previousItemTabindexes) {
+      if (previousValue === null) {
+        itemEl.removeAttribute("tabindex");
+      } else {
+        itemEl.setAttribute("tabindex", previousValue);
+      }
+    }
+    previousItemTabindexes.clear();
+  }
 
   //=====================================================================================
   // Item Accessors
   //=====================================================================================
 
-  function getItemId(item: T, index: number): string {
+  function getItemId(itemEl: HTMLElement | null, index: number): string {
     if (getItemIdOption) {
-      return getItemIdOption(item, index);
+      return getItemIdOption(itemEl, index);
     }
-    if (item && typeof item === "object" && "id" in item && (item as any).id) {
-      return String((item as any).id);
+    if (itemEl?.id) {
+      return itemEl.id;
     }
     return `vfloat-item-${autoIdPrefix}-${index}`;
   }
 
-  function getItemLabel(item: T, index: number): string {
+  function getItemLabel(itemEl: HTMLElement | null, index: number): string {
     if (getItemLabelOption) {
-      return getItemLabelOption(item, index);
+      return getItemLabelOption(itemEl, index);
     }
-    if (typeof item === "string") {
-      return item;
+    if (itemEl) {
+      const ariaLabel = itemEl.getAttribute("aria-label");
+      if (ariaLabel) {
+        return ariaLabel.trim();
+      }
+      return itemEl.textContent?.trim() ?? "";
     }
-    if (
-      item &&
-      typeof item === "object" &&
-      "label" in item &&
-      typeof (item as any).label === "string"
-    ) {
-      return (item as any).label;
-    }
-    return String(item ?? "");
+    return "";
   }
 
-  function isItemDisabled(item: T, index: number): boolean {
+  function isItemDisabled(itemEl: HTMLElement | null, index: number): boolean {
     if (isItemDisabledOption) {
-      return Boolean(isItemDisabledOption(item, index));
+      return Boolean(isItemDisabledOption(itemEl, index));
     }
-    if (item && typeof item === "object" && "disabled" in item) {
-      return Boolean((item as any).disabled);
+    if (itemEl) {
+      return itemEl.hasAttribute("disabled") || itemEl.getAttribute("aria-disabled") === "true";
     }
     return false;
   }
@@ -191,25 +225,25 @@ export function useListNavigation<T = ListNavigationItem | string>(
       return;
     }
 
-    if (index >= 0 && isItemDisabled(list[index], index)) {
+    const itemEl = index >= 0 ? (list[index] ?? null) : null;
+
+    if (index >= 0 && isItemDisabled(itemEl, index)) {
       return;
     }
 
     const previousIndex = activeIndex.value;
     activeIndex.value = index;
 
-    const currentItem = index >= 0 ? list[index] : undefined;
-
     if (index !== previousIndex) {
-      onActiveChange?.(currentItem, index);
+      onActiveChange?.(index, itemEl);
 
-      if (isSelectOnFocus.value && currentItem !== undefined) {
-        onSelect?.(currentItem, index, event as Event);
+      if (isSelectOnFocus.value && index >= 0) {
+        onSelect?.(index, itemEl, event as Event);
       }
     }
 
-    const activeId = currentItem !== undefined ? getItemId(currentItem, index) : null;
-    focusController.syncFocus(index, strategy.value, activeId);
+    const activeId = index >= 0 ? getItemId(itemEl, index) : null;
+    navigationController.syncFocus(index, activeStrategy.value, activeId);
   }
 
   function findNextIndex(start: number, delta: 1 | -1, loop: boolean): number | null {
@@ -230,7 +264,8 @@ export function useListNavigation<T = ListNavigationItem | string>(
         current = count - 1;
       }
 
-      if (!isItemDisabled(list[current], current)) {
+      const itemEl = list[current] ?? null;
+      if (!isItemDisabled(itemEl, current)) {
         return current;
       }
     }
@@ -263,7 +298,8 @@ export function useListNavigation<T = ListNavigationItem | string>(
   function first(event?: Event): void {
     const list = itemsList.value;
     for (let i = 0; i < list.length; i++) {
-      if (!isItemDisabled(list[i], i)) {
+      const itemEl = list[i] ?? null;
+      if (!isItemDisabled(itemEl, i)) {
         setActiveIndex(i, event);
         return;
       }
@@ -273,7 +309,8 @@ export function useListNavigation<T = ListNavigationItem | string>(
   function last(event?: Event): void {
     const list = itemsList.value;
     for (let i = list.length - 1; i >= 0; i--) {
-      if (!isItemDisabled(list[i], i)) {
+      const itemEl = list[i] ?? null;
+      if (!isItemDisabled(itemEl, i)) {
         setActiveIndex(i, event);
         return;
       }
@@ -322,10 +359,10 @@ export function useListNavigation<T = ListNavigationItem | string>(
       const idx = activeIndex.value;
       const list = itemsList.value;
       if (idx >= 0 && idx < list.length) {
-        const item = list[idx];
-        if (!isItemDisabled(item, idx)) {
+        const itemEl = list[idx] ?? null;
+        if (!isItemDisabled(itemEl, idx)) {
           e.preventDefault();
-          onSelect?.(item, idx, e);
+          onSelect?.(idx, itemEl, e);
         }
       }
       return;
@@ -351,19 +388,19 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
 
     const target = e.target as HTMLElement | null;
-    const index = focusController.findItemIndex(target);
+    const index = navigationController.findItemIndex(target);
 
     if (index === null || index < 0 || index >= itemsList.value.length) {
       return;
     }
 
-    const item = itemsList.value[index];
-    if (isItemDisabled(item, index)) {
+    const itemEl = itemsList.value[index] ?? null;
+    if (isItemDisabled(itemEl, index)) {
       return;
     }
 
     setActiveIndex(index, e);
-    onSelect?.(item, index, e);
+    onSelect?.(index, itemEl, e);
   }
 
   function onPointermove(e: PointerEvent): void {
@@ -372,14 +409,14 @@ export function useListNavigation<T = ListNavigationItem | string>(
     }
 
     const target = e.target as HTMLElement | null;
-    const index = focusController.findItemIndex(target);
+    const index = navigationController.findItemIndex(target);
 
     if (index === null || index < 0 || index >= itemsList.value.length) {
       return;
     }
 
-    const item = itemsList.value[index];
-    if (isItemDisabled(item, index)) {
+    const itemEl = itemsList.value[index] ?? null;
+    if (isItemDisabled(itemEl, index)) {
       return;
     }
 
@@ -392,34 +429,47 @@ export function useListNavigation<T = ListNavigationItem | string>(
     typeaheadController.reset();
   }
 
-  // Attach keydown, click delegation, pointermove delegation, and blur listeners to container
+  // Attach keydown, click delegation, pointermove delegation, and blur listeners to targetEl
   cleanupRegistry.add(
-    useEventListener(() => (isEnabled.value ? containerEl.value : null), "keydown", onKeydown),
+    useEventListener(() => (isEnabled.value ? targetEl.value : null), "keydown", onKeydown),
   );
   cleanupRegistry.add(
-    useEventListener(() => (isEnabled.value ? containerEl.value : null), "click", onClick),
+    useEventListener(() => (isEnabled.value ? targetEl.value : null), "click", onClick),
   );
   cleanupRegistry.add(
     useEventListener(
-      () => (isEnabled.value && isFocusOnHover.value ? containerEl.value : null),
+      () => (isEnabled.value && isFocusOnHover.value ? targetEl.value : null),
       "pointermove",
       onPointermove,
     ),
   );
   cleanupRegistry.add(
-    useEventListener(() => (isEnabled.value ? containerEl.value : null), "blur", onBlur),
+    useEventListener(() => (isEnabled.value ? targetEl.value : null), "blur", onBlur),
   );
 
-  // Synchronize activedescendant attributes when containerEl and activeItem change
+  // Synchronize targetEl attributes when strategy and targetEl change
   watchPostEffect(() => {
-    const el = containerEl.value;
+    const el = targetEl.value;
     if (!el || !isEnabled.value) return;
 
-    if (strategy.value === "activedescendant") {
-      if (!el.hasAttribute("tabindex") && el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") {
-        el.setAttribute("tabindex", "0");
-      }
-      el.setAttribute("aria-orientation", orientation.value);
+    activeStrategy.value.onTargetUpdate?.(el, orientation.value);
+  });
+
+  // Owns item tabindex so consumers never bind it manually; reruns on items,
+  // active index, strategy, or enabled changes and rolls back when disabled
+  watchPostEffect(() => {
+    if (!isEnabled.value) {
+      restoreItemTabindexes();
+      return;
+    }
+
+    const list = itemsList.value;
+    const strategy = activeStrategy.value;
+
+    for (let idx = 0; idx < list.length; idx++) {
+      const itemEl = list[idx];
+      if (!itemEl) continue;
+      setItemTabindex(itemEl, strategy.getItemTabindex(idx, activeIndex.value));
     }
   });
 
@@ -434,7 +484,7 @@ export function useListNavigation<T = ListNavigationItem | string>(
 
   return {
     activeIndex,
-    activeItem,
+    activeEl,
     setActiveIndex,
     next,
     prev,
@@ -445,18 +495,25 @@ export function useListNavigation<T = ListNavigationItem | string>(
 }
 
 //=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-//=======================================================================================
 // 📌 Types
 //=======================================================================================
 
-export type FocusStrategy = "roving" | "activedescendant";
-export type NavigationOrientation = "vertical" | "horizontal";
+export type {
+  FocusStrategy,
+  NavigationOrientation,
+  NavigationStrategyType,
+} from "./navigation-strategies";
+
+export {
+  ActiveDescendantNavigationStrategy,
+  createNavigationController,
+  createNavigationStrategy,
+  NavigationStrategy,
+  RovingFocusNavigationStrategy,
+} from "./navigation-strategies";
 
 /**
- * Standard item representation for list navigation.
+ * Standard item representation for list navigation (metadata helpers).
  */
 export interface ListNavigationItem {
   /**
@@ -481,26 +538,23 @@ export interface ListNavigationItem {
 /**
  * Options for configuring `useListNavigation`.
  */
-export interface UseListNavigationOptions<T = ListNavigationItem | string> {
+export interface UseListNavigationOptions {
   /**
-   * Ref or getter pointing to the container or input DOM element.
+   * Ref or getter pointing to the target container or input DOM element.
    * Event listeners (keyboard, click delegation, hover delegation) and ARIA attributes
    * are attached directly to this element.
    */
-  containerEl?: MaybeRefOrGetter<HTMLElement | null>;
+  targetEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
-   * Optional ref or getter pointing to an array of item DOM elements (e.g. from `ref="itemEls"` in `v-for` or virtual row assignments).
-   */
-  itemEls?: MaybeRefOrGetter<readonly (HTMLElement | null)[] | null | undefined>;
-
-  /**
-   * Focus management strategy:
-   * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active, `-1` on inactive) and calls `el.focus()`.
-   * - `'activedescendant'`: Focus remains on the container/input; sets `aria-activedescendant` and calls `el.scrollIntoView()`.
+   * Navigation focus management strategy:
+   * - `'roving'`: Uses roving tabindex (`tabindex="0"` on active item, `-1` on inactive) and calls `el.focus()`.
+   * - `'activedescendant'`: Focus remains on the target/input; sets `aria-activedescendant` and calls `el.scrollIntoView()`.
+   *
+   * Item `tabindex` attributes are owned and synchronized by the composable in both modes.
    * @default 'roving'
    */
-  strategy?: MaybeRefOrGetter<FocusStrategy>;
+  strategy?: MaybeRefOrGetter<NavigationStrategyType>;
 
   /**
    * Navigation axis:
@@ -553,69 +607,72 @@ export interface UseListNavigationOptions<T = ListNavigationItem | string> {
   rtl?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Custom extractor for item ID.
+   * Custom extractor for item ID (used in `aria-activedescendant`).
+   * By default reads `el.id` or generates an auto-ID.
    */
-  getItemId?: (item: T, index: number) => string;
+  getItemId?: (itemEl: HTMLElement | null, index: number) => string;
 
   /**
    * Custom extractor for item label (used in typeahead search).
+   * By default reads `el.getAttribute("aria-label")` or `el.textContent`.
    */
-  getItemLabel?: (item: T, index: number) => string;
+  getItemLabel?: (itemEl: HTMLElement | null, index: number) => string;
 
   /**
    * Custom predicate for disabled items.
+   * By default checks `el.hasAttribute("disabled")` or `el.getAttribute("aria-disabled") === "true"`.
    */
-  isItemDisabled?: (item: T, index: number) => boolean;
+  isItemDisabled?: (itemEl: HTMLElement | null, index: number) => boolean;
 
   /**
    * Callback fired when an item is committed/selected via Enter, Space, click, or `selectOnFocus`.
    */
-  onSelect?: (item: T, index: number, event: Event) => void;
+  onSelect?: (index: number, itemEl: HTMLElement | null, event: Event) => void;
 
   /**
    * Callback fired when the active item index changes.
    */
-  onActiveChange?: (item: T | undefined, index: number) => void;
+  onActiveChange?: (index: number, itemEl: HTMLElement | null) => void;
 }
 
 /**
  * Return shape for `useListNavigation`.
  */
-export interface UseListNavigationReturn<T = ListNavigationItem | string> {
+export interface UseListNavigationReturn {
   /**
    * Currently active item index (-1 if none is active).
    */
   activeIndex: Ref<number>;
 
   /**
-   * Currently active item reference.
+   * Currently active item DOM element (null if none is active).
    */
-  activeItem: ComputedRef<T | undefined>;
+  activeEl: ComputedRef<HTMLElement | null>;
 
   /**
    * Sets the active index directly.
    */
-  setActiveIndex: (index: number) => void;
+  setActiveIndex: (index: number, event?: Event) => void;
 
   /**
    * Moves to the next enabled item.
    */
-  next: () => void;
+  next: (event?: Event) => void;
 
   /**
    * Moves to the previous enabled item.
    */
-  prev: () => void;
+  prev: (event?: Event) => void;
 
   /**
    * Jumps to the first enabled item.
    */
-  first: () => void;
+  first: (event?: Event) => void;
 
   /**
    * Jumps to the last enabled item.
    */
-  last: () => void;
+  last: (event?: Event) => void;
 
   /**
    * Stops all watchers, timers, and listeners.

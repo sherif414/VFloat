@@ -1,4 +1,4 @@
-import type { NavigationOrientation } from "./types";
+import type { NavigationOrientation } from "./navigation-strategies";
 
 export type NavigationIntent = "first" | "last" | "next" | "previous" | "enter" | "exit" | "select";
 

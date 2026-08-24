@@ -35,7 +35,7 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useArrow(context);
         VFloat.useClientPoint(context);
         VFloat.useCollection();
-        const items = ref(["item1", "item2"]);
+        const items = ref<HTMLElement[]>([]);
         VFloat.useListNavigation(items);
 
         return () =>

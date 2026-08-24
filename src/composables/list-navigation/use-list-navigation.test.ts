@@ -32,64 +32,66 @@ describe("useListNavigation", () => {
     vi.useRealTimers();
   });
 
-  it("handles string arrays and default roving strategy", () => {
+  it("handles element array and default roving navigation controls", () => {
     scope.run(() => {
-      const items = ref(["Apple", "Banana", "Cherry"]);
+      const el0 = trackElement(document.createElement("li"));
+      el0.textContent = "Apple";
+      const el1 = trackElement(document.createElement("li"));
+      el1.textContent = "Banana";
+      const el2 = trackElement(document.createElement("li"));
+      el2.textContent = "Cherry";
+
+      const items = ref<HTMLElement[]>([el0, el1, el2]);
       const nav = useListNavigation(items);
 
       expect(nav.activeIndex.value).toBe(-1);
-      expect(nav.activeItem.value).toBeUndefined();
+      expect(nav.activeEl.value).toBeNull();
 
       // Next moves to first item (index 0)
       nav.next();
       expect(nav.activeIndex.value).toBe(0);
-      expect(nav.activeItem.value).toBe("Apple");
+      expect(nav.activeEl.value).toBe(el0);
 
       // Next moves to index 1
       nav.next();
       expect(nav.activeIndex.value).toBe(1);
-      expect(nav.activeItem.value).toBe("Banana");
+      expect(nav.activeEl.value).toBe(el1);
 
       // Prev moves back to index 0
       nav.prev();
       expect(nav.activeIndex.value).toBe(0);
+      expect(nav.activeEl.value).toBe(el0);
 
       // Last moves to index 2
       nav.last();
       expect(nav.activeIndex.value).toBe(2);
-      expect(nav.activeItem.value).toBe("Cherry");
+      expect(nav.activeEl.value).toBe(el2);
 
       // First moves to index 0
       nav.first();
       expect(nav.activeIndex.value).toBe(0);
+      expect(nav.activeEl.value).toBe(el0);
     });
   });
 
   describe("roving focus strategy", () => {
     it("focuses active item element on active change", async () => {
       await scope.run(async () => {
-        const items = ref([
-          { id: "opt-1", label: "One" },
-          { id: "opt-2", label: "Two" },
-          { id: "opt-3", label: "Three" },
-        ]);
-
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        document.body.appendChild(targetEl);
 
         const itemEl0 = trackElement(document.createElement("li"));
         const itemEl1 = trackElement(document.createElement("li"));
         const itemEl2 = trackElement(document.createElement("li"));
 
-        containerEl.appendChild(itemEl0);
-        containerEl.appendChild(itemEl1);
-        containerEl.appendChild(itemEl2);
+        targetEl.appendChild(itemEl0);
+        targetEl.appendChild(itemEl1);
+        targetEl.appendChild(itemEl2);
 
-        const itemEls = ref([itemEl0, itemEl1, itemEl2]);
+        const items = ref([itemEl0, itemEl1, itemEl2]);
 
         const nav = useListNavigation(items, {
-          containerEl,
-          itemEls,
+          targetEl,
           strategy: "roving",
         });
 
@@ -106,13 +108,8 @@ describe("useListNavigation", () => {
   describe("active descendant strategy", () => {
     it("manages aria-activedescendant and calls scrollIntoView", async () => {
       await scope.run(async () => {
-        const items = ref([
-          { id: "city-cai", label: "Cairo" },
-          { id: "city-ale", label: "Alexandria" },
-        ]);
-
-        const containerEl = trackElement(document.createElement("div"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("div"));
+        document.body.appendChild(targetEl);
 
         const itemEl0 = trackElement(document.createElement("li"));
         itemEl0.id = "city-cai";
@@ -122,27 +119,26 @@ describe("useListNavigation", () => {
         itemEl1.id = "city-ale";
         itemEl1.scrollIntoView = vi.fn();
 
-        containerEl.appendChild(itemEl0);
-        containerEl.appendChild(itemEl1);
+        targetEl.appendChild(itemEl0);
+        targetEl.appendChild(itemEl1);
 
-        const itemEls = ref([itemEl0, itemEl1]);
+        const items = ref([itemEl0, itemEl1]);
 
         const nav = useListNavigation(items, {
-          containerEl,
-          itemEls,
+          targetEl,
           strategy: "activedescendant",
         });
 
         await nextTick();
 
-        expect(containerEl.getAttribute("tabindex")).toBe("0");
-        expect(containerEl.getAttribute("aria-orientation")).toBe("vertical");
-        expect(containerEl.hasAttribute("aria-activedescendant")).toBe(false);
+        expect(targetEl.getAttribute("tabindex")).toBe("0");
+        expect(targetEl.getAttribute("aria-orientation")).toBe("vertical");
+        expect(targetEl.hasAttribute("aria-activedescendant")).toBe(false);
 
         nav.setActiveIndex(1);
         await nextTick();
 
-        expect(containerEl.getAttribute("aria-activedescendant")).toBe("city-ale");
+        expect(targetEl.getAttribute("aria-activedescendant")).toBe("city-ale");
         expect(itemEl1.scrollIntoView).toHaveBeenCalledWith({
           block: "nearest",
           inline: "nearest",
@@ -151,82 +147,229 @@ describe("useListNavigation", () => {
     });
   });
 
+  describe("item tabindex management", () => {
+    it("applies roving tabindex to items and moves it with the active index", async () => {
+      await scope.run(async () => {
+        const itemEl0 = trackElement(document.createElement("li"));
+        const itemEl1 = trackElement(document.createElement("li"));
+        const itemEl2 = trackElement(document.createElement("li"));
+
+        const nav = useListNavigation(ref([itemEl0, itemEl1, itemEl2]), {
+          strategy: "roving",
+        });
+
+        await nextTick();
+
+        // No active index yet: first item acts as the tab stop
+        expect(itemEl0.getAttribute("tabindex")).toBe("0");
+        expect(itemEl1.getAttribute("tabindex")).toBe("-1");
+        expect(itemEl2.getAttribute("tabindex")).toBe("-1");
+
+        nav.setActiveIndex(2);
+        await nextTick();
+
+        expect(itemEl0.getAttribute("tabindex")).toBe("-1");
+        expect(itemEl1.getAttribute("tabindex")).toBe("-1");
+        expect(itemEl2.getAttribute("tabindex")).toBe("0");
+      });
+    });
+
+    it("keeps every item at tabindex=-1 for activedescendant strategy", async () => {
+      await scope.run(async () => {
+        const targetEl = trackElement(document.createElement("div"));
+        const itemEl0 = trackElement(document.createElement("li"));
+        const itemEl1 = trackElement(document.createElement("li"));
+
+        useListNavigation(ref([itemEl0, itemEl1]), {
+          targetEl,
+          strategy: "activedescendant",
+        });
+
+        await nextTick();
+
+        expect(itemEl0.getAttribute("tabindex")).toBe("-1");
+        expect(itemEl1.getAttribute("tabindex")).toBe("-1");
+        // Focus stays on the target, which receives the tab stop
+        expect(targetEl.getAttribute("tabindex")).toBe("0");
+      });
+    });
+
+    it("restores original item tabindex values on cleanup", async () => {
+      const itemEl0 = trackElement(document.createElement("li"));
+      const itemEl1 = trackElement(document.createElement("li"));
+      itemEl1.tabIndex = 3;
+
+      const localScope = effectScope();
+      localScope.run(() => {
+        useListNavigation(ref([itemEl0, itemEl1]));
+      });
+
+      await nextTick();
+      expect(itemEl0.getAttribute("tabindex")).toBe("0");
+      expect(itemEl1.getAttribute("tabindex")).toBe("-1");
+
+      localScope.stop();
+
+      // Attributes the composable introduced are removed; user-authored ones are reinstated
+      expect(itemEl0.hasAttribute("tabindex")).toBe(false);
+      expect(itemEl1.getAttribute("tabindex")).toBe("3");
+    });
+
+    it("leaves item tabindex untouched when disabled", async () => {
+      await scope.run(async () => {
+        const itemEl0 = trackElement(document.createElement("li"));
+        const itemEl1 = trackElement(document.createElement("li"));
+
+        useListNavigation(ref([itemEl0, itemEl1]), { enabled: false });
+
+        await nextTick();
+
+        expect(itemEl0.hasAttribute("tabindex")).toBe(false);
+        expect(itemEl1.hasAttribute("tabindex")).toBe(false);
+      });
+    });
+
+    it("rolls back managed tabindex when disabled and reapplies when re-enabled", async () => {
+      await scope.run(async () => {
+        const itemEl0 = trackElement(document.createElement("li"));
+        const itemEl1 = trackElement(document.createElement("li"));
+        const isEnabled = ref(true);
+
+        useListNavigation(ref([itemEl0, itemEl1]), { enabled: isEnabled });
+
+        await nextTick();
+        expect(itemEl0.getAttribute("tabindex")).toBe("0");
+        expect(itemEl1.getAttribute("tabindex")).toBe("-1");
+
+        isEnabled.value = false;
+        await nextTick();
+        expect(itemEl0.hasAttribute("tabindex")).toBe(false);
+        expect(itemEl1.hasAttribute("tabindex")).toBe(false);
+
+        isEnabled.value = true;
+        await nextTick();
+        expect(itemEl0.getAttribute("tabindex")).toBe("0");
+        expect(itemEl1.getAttribute("tabindex")).toBe("-1");
+      });
+    });
+
+    it("skips sparse entries in virtualized item arrays", async () => {
+      await scope.run(async () => {
+        const itemEl500 = trackElement(document.createElement("div"));
+        const itemEl501 = trackElement(document.createElement("div"));
+
+        const items: (HTMLElement | null)[] = [];
+        items[500] = itemEl500;
+        items[501] = itemEl501;
+
+        useListNavigation(ref(items));
+
+        await nextTick();
+
+        expect(itemEl500.getAttribute("tabindex")).toBe("-1");
+        expect(itemEl501.getAttribute("tabindex")).toBe("-1");
+      });
+    });
+  });
+
   describe("keyboard navigation", () => {
     it("navigates with ArrowDown and ArrowUp in vertical orientation", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1, li2]);
         const nav = useListNavigation(items, {
-          containerEl,
+          targetEl,
           orientation: "vertical",
         });
 
         // ArrowDown -> index 0
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
         expect(nav.activeIndex.value).toBe(0);
 
         // ArrowDown -> index 1
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
         expect(nav.activeIndex.value).toBe(1);
 
         // ArrowUp -> index 0
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
         expect(nav.activeIndex.value).toBe(0);
       });
     });
 
     it("navigates with ArrowRight and ArrowLeft in horizontal orientation", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1, li2]);
         const nav = useListNavigation(items, {
-          containerEl,
+          targetEl,
           orientation: "horizontal",
         });
 
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         expect(nav.activeIndex.value).toBe(0);
 
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         expect(nav.activeIndex.value).toBe(1);
 
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         expect(nav.activeIndex.value).toBe(0);
       });
     });
 
     it("inverts horizontal arrow navigation in RTL", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1, li2]);
         const nav = useListNavigation(items, {
-          containerEl,
+          targetEl,
           orientation: "horizontal",
           rtl: true,
         });
 
         // In RTL, ArrowLeft moves forward ("next")
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         expect(nav.activeIndex.value).toBe(0);
 
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         expect(nav.activeIndex.value).toBe(1);
 
         // In RTL, ArrowRight moves backward ("previous")
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         expect(nav.activeIndex.value).toBe(0);
       });
     });
 
     it("respects boundary and loop options", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        const items = ref([li0, li1, li2]);
+
         const navNoLoop = useListNavigation(items, { loop: false });
 
         navNoLoop.setActiveIndex(2);
@@ -247,14 +390,14 @@ describe("useListNavigation", () => {
       });
     });
 
-    it("skips disabled items during navigation", () => {
+    it("skips disabled items via DOM attributes (disabled or aria-disabled)", () => {
       scope.run(() => {
-        const items = ref([
-          { id: "1", label: "A" },
-          { id: "2", label: "B", disabled: true },
-          { id: "3", label: "C" },
-        ]);
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        li1.setAttribute("aria-disabled", "true");
+        const li2 = trackElement(document.createElement("li"));
 
+        const items = ref([li0, li1, li2]);
         const nav = useListNavigation(items);
 
         nav.first();
@@ -270,24 +413,29 @@ describe("useListNavigation", () => {
 
     it("handles Home and End keys", () => {
       scope.run(() => {
-        const items = ref([
-          { id: "1", label: "A", disabled: true },
-          { id: "2", label: "B" },
-          { id: "3", label: "C" },
-          { id: "4", label: "D", disabled: true },
-        ]);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        li0.setAttribute("disabled", "");
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        const li3 = trackElement(document.createElement("li"));
+        li3.setAttribute("aria-disabled", "true");
 
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        targetEl.appendChild(li3);
+        document.body.appendChild(targetEl);
 
-        const nav = useListNavigation(items, { containerEl });
+        const items = ref([li0, li1, li2, li3]);
+        const nav = useListNavigation(items, { targetEl });
 
         // Home jumps to first enabled item (index 1)
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
         expect(nav.activeIndex.value).toBe(1);
 
         // End jumps to last enabled item (index 2)
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "End" }));
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "End" }));
         expect(nav.activeIndex.value).toBe(2);
       });
     });
@@ -296,63 +444,68 @@ describe("useListNavigation", () => {
   describe("selection and event delegation", () => {
     it("triggers onSelect on Enter and Space key", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1, li2]);
         const onSelect = vi.fn();
-        const nav = useListNavigation(items, { containerEl, onSelect });
+        const nav = useListNavigation(items, { targetEl, onSelect });
 
         nav.setActiveIndex(1);
 
         const enterEvent = new KeyboardEvent("keydown", { key: "Enter" });
-        containerEl.dispatchEvent(enterEvent);
-        expect(onSelect).toHaveBeenCalledWith("B", 1, enterEvent);
+        targetEl.dispatchEvent(enterEvent);
+        expect(onSelect).toHaveBeenCalledWith(1, li1, enterEvent);
 
         const spaceEvent = new KeyboardEvent("keydown", { key: " " });
-        containerEl.dispatchEvent(spaceEvent);
-        expect(onSelect).toHaveBeenCalledWith("B", 1, spaceEvent);
+        targetEl.dispatchEvent(spaceEvent);
+        expect(onSelect).toHaveBeenCalledWith(1, li1, spaceEvent);
       });
     });
 
-    it("delegates click events from list item elements via itemEls", () => {
+    it("delegates click events from list item elements", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
+        const targetEl = trackElement(document.createElement("ul"));
         const li0 = trackElement(document.createElement("li"));
         const li1 = trackElement(document.createElement("li"));
         const li2 = trackElement(document.createElement("li"));
-        containerEl.appendChild(li0);
-        containerEl.appendChild(li1);
-        containerEl.appendChild(li2);
-        document.body.appendChild(containerEl);
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1, li2]);
         const onSelect = vi.fn();
         const nav = useListNavigation(items, {
-          containerEl,
-          itemEls: [li0, li1, li2],
+          targetEl,
           onSelect,
         });
 
         li2.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
         expect(nav.activeIndex.value).toBe(2);
-        expect(onSelect).toHaveBeenCalledWith("C", 2, expect.any(MouseEvent));
+        expect(onSelect).toHaveBeenCalledWith(2, li2, expect.any(MouseEvent));
       });
     });
 
     it("does not trigger onSelect when clicking a disabled item", () => {
       scope.run(() => {
-        const items = ref([{ id: "1", label: "A", disabled: true }]);
-        const containerEl = trackElement(document.createElement("ul"));
+        const targetEl = trackElement(document.createElement("ul"));
         const li0 = trackElement(document.createElement("li"));
-        containerEl.appendChild(li0);
-        document.body.appendChild(containerEl);
+        li0.setAttribute("aria-disabled", "true");
+        targetEl.appendChild(li0);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0]);
         const onSelect = vi.fn();
         const nav = useListNavigation(items, {
-          containerEl,
-          itemEls: [li0],
+          targetEl,
           onSelect,
         });
 
@@ -363,50 +516,53 @@ describe("useListNavigation", () => {
       });
     });
 
-    it("supports virtual list delegation and navigation via itemEls array ref", () => {
+    it("supports virtual list delegation and navigation via sparse array", () => {
       scope.run(() => {
-        const items = ref(Array.from({ length: 1000 }, (_, i) => `Item ${i}`));
-        const containerEl = trackElement(document.createElement("div"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("div"));
+        document.body.appendChild(targetEl);
 
         // Virtualizer renders slice [500, 501, 502]
         const v500 = trackElement(document.createElement("div"));
         const v501 = trackElement(document.createElement("div"));
-        containerEl.appendChild(v500);
-        containerEl.appendChild(v501);
+        targetEl.appendChild(v500);
+        targetEl.appendChild(v501);
 
-        const itemEls = ref<(HTMLElement | null)[]>([]);
-        itemEls.value[500] = v500;
-        itemEls.value[501] = v501;
+        const items = ref<(HTMLElement | null)[]>([]);
+        items.value[500] = v500;
+        items.value[501] = v501;
 
         const onSelect = vi.fn();
-        const nav = useListNavigation(items, { containerEl, itemEls, onSelect });
+        const nav = useListNavigation(items, { targetEl, onSelect });
 
         // Click on virtual item 501
         v501.dispatchEvent(new MouseEvent("click", { bubbles: true }));
         expect(nav.activeIndex.value).toBe(501);
-        expect(onSelect).toHaveBeenCalledWith("Item 501", 501, expect.any(MouseEvent));
+        expect(onSelect).toHaveBeenCalledWith(501, v501, expect.any(MouseEvent));
       });
     });
 
     it("supports selectOnFocus mode", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1]);
         const onSelect = vi.fn();
         const nav = useListNavigation(items, {
-          containerEl,
+          targetEl,
           selectOnFocus: true,
           onSelect,
         });
 
         const keyEvent = new KeyboardEvent("keydown", { key: "ArrowDown" });
-        containerEl.dispatchEvent(keyEvent);
+        targetEl.dispatchEvent(keyEvent);
 
         expect(nav.activeIndex.value).toBe(0);
-        expect(onSelect).toHaveBeenCalledWith("A", 0, expect.any(Event));
+        expect(onSelect).toHaveBeenCalledWith(0, li0, expect.any(Event));
       });
     });
   });
@@ -414,17 +570,16 @@ describe("useListNavigation", () => {
   describe("pointer move / hover delegation", () => {
     it("updates activeIndex on pointer move delegation when focusOnHover is true", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
+        const targetEl = trackElement(document.createElement("ul"));
         const li0 = trackElement(document.createElement("li"));
         const li1 = trackElement(document.createElement("li"));
-        containerEl.appendChild(li0);
-        containerEl.appendChild(li1);
-        document.body.appendChild(containerEl);
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1]);
         const nav = useListNavigation(items, {
-          containerEl,
-          itemEls: [li0, li1],
+          targetEl,
           focusOnHover: true,
         });
 
@@ -435,17 +590,16 @@ describe("useListNavigation", () => {
 
     it("does not update activeIndex on pointer move delegation when focusOnHover is false", () => {
       scope.run(() => {
-        const items = ref(["A", "B", "C"]);
-        const containerEl = trackElement(document.createElement("ul"));
+        const targetEl = trackElement(document.createElement("ul"));
         const li0 = trackElement(document.createElement("li"));
         const li1 = trackElement(document.createElement("li"));
-        containerEl.appendChild(li0);
-        containerEl.appendChild(li1);
-        document.body.appendChild(containerEl);
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        document.body.appendChild(targetEl);
 
+        const items = ref([li0, li1]);
         const nav = useListNavigation(items, {
-          containerEl,
-          itemEls: [li0, li1],
+          targetEl,
           focusOnHover: false,
         });
 
@@ -456,30 +610,45 @@ describe("useListNavigation", () => {
   });
 
   describe("typeahead integration", () => {
-    it("matches item labels via typeahead keystrokes", () => {
+    it("matches item labels automatically from textContent and aria-label", () => {
       scope.run(() => {
-        const items = ref(["Apple", "Banana", "Cherry"]);
-        const containerEl = trackElement(document.createElement("ul"));
-        document.body.appendChild(containerEl);
+        const targetEl = trackElement(document.createElement("ul"));
+        const li0 = trackElement(document.createElement("li"));
+        li0.textContent = "Apple";
+        const li1 = trackElement(document.createElement("li"));
+        li1.textContent = "Banana";
+        const li2 = trackElement(document.createElement("li"));
+        li2.setAttribute("aria-label", "Cherry");
 
-        const nav = useListNavigation(items, { containerEl });
+        targetEl.appendChild(li0);
+        targetEl.appendChild(li1);
+        targetEl.appendChild(li2);
+        document.body.appendChild(targetEl);
 
-        containerEl.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
+        const items = ref([li0, li1, li2]);
+        const nav = useListNavigation(items, { targetEl });
+
+        targetEl.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
         expect(nav.activeIndex.value).toBe(2); // Cherry
       });
     });
   });
 
-  describe("dynamic updates and lifecycle", () => {
+  describe("dynamic updates and custom accessors", () => {
     it("adjusts activeIndex when items list shrinks", async () => {
       await scope.run(async () => {
-        const items = ref(["A", "B", "C", "D"]);
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
+        const li3 = trackElement(document.createElement("li"));
+
+        const items = ref([li0, li1, li2, li3]);
         const nav = useListNavigation(items);
 
         nav.setActiveIndex(3);
         expect(nav.activeIndex.value).toBe(3);
 
-        items.value = ["A", "B"];
+        items.value = [li0, li1];
         await nextTick();
 
         expect(nav.activeIndex.value).toBe(1);
@@ -488,28 +657,21 @@ describe("useListNavigation", () => {
 
     it("supports custom item accessors", () => {
       scope.run(() => {
-        interface CustomItem {
-          code: string;
-          name: string;
-          isUnavailable?: boolean;
-        }
+        const li0 = trackElement(document.createElement("li"));
+        const li1 = trackElement(document.createElement("li"));
+        const li2 = trackElement(document.createElement("li"));
 
-        const items = ref<CustomItem[]>([
-          { code: "US", name: "United States" },
-          { code: "CA", name: "Canada", isUnavailable: true },
-          { code: "MX", name: "Mexico" },
-        ]);
-
+        const items = ref([li0, li1, li2]);
         const nav = useListNavigation(items, {
-          getItemId: (item) => `country-${item.code}`,
-          getItemLabel: (item) => item.name,
-          isItemDisabled: (item) => Boolean(item.isUnavailable),
+          getItemId: (_itemEl, index) => `country-id-${index}`,
+          getItemLabel: (_itemEl, index) => ["United States", "Canada", "Mexico"][index],
+          isItemDisabled: (_itemEl, index) => index === 1,
         });
 
         nav.first();
         expect(nav.activeIndex.value).toBe(0);
 
-        nav.next(); // skips CA (index 1) -> moves to MX (index 2)
+        nav.next(); // skips Canada (index 1) -> moves to Mexico (index 2)
         expect(nav.activeIndex.value).toBe(2);
       });
     });

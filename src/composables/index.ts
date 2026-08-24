@@ -56,6 +56,7 @@ export type {
   FocusStrategy,
   ListNavigationItem,
   NavigationOrientation,
+  NavigationStrategyType,
   UseListNavigationOptions,
   UseListNavigationReturn,
 } from "./list-navigation/use-list-navigation";
