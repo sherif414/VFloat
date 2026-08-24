@@ -21,5 +21,9 @@
     "builtin": true,
     "browser": true,
     "node": true
+  },
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
   }
 }
