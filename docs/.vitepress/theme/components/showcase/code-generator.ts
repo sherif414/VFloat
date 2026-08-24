@@ -140,15 +140,8 @@ const { styles } = usePosition(context, {
   },
 });
 
-const collection = useCollection({
-  values: ["duplicate", "rename", "share", "delete"],
-});
-
-${arrow ? 'const { arrowStyles } = useArrow(context, { offset: "-5px" });\n' : ""}useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
-useFocusManager(context, { modal: false, initialFocus: floatingEl });
-useListNavigation(context, { collection, loop: true });
+const itemEls = ref<HTMLElement[]>([]);
+const { activeIndex } = useListNavigation(itemEls, { targetEl: floatingEl, loop: true });
 useRole(context, { role: "menu" });
 ${scriptEnd}
 
@@ -156,18 +149,16 @@ ${scriptEnd}
   <button ref="anchorEl" type="button" aria-haspopup="menu">Actions Menu</button>
 
   <div
-    v-if="context.state.open.value"
-    ref="floatingEl"
     role="menu"
     tabindex="-1"
     :style="styles"
   >
     <div
-      v-for="item in collection.values.value"
+      v-for="(item, index) in ['duplicate', 'rename', 'share', 'delete']"
       :key="item"
+      ref="itemEls"
       role="menuitem"
-      :class="{ 'is-active': collection.activeValue.value === item }"
-      @mouseenter="collection.setActiveValue(item)"
+      :class="{ 'is-active': activeIndex === index }"
     >
       {{ item }}
     </div>
@@ -179,7 +170,6 @@ ${scriptEnd}
   return `<script setup lang="ts">
 import { ref } from "vue";
 import { useFloatingContext, usePosition, useClientPoint } from "v-float";
-
 const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);

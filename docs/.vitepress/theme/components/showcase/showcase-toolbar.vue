@@ -80,14 +80,17 @@ useFocusManager(selectContext, {
   guards: false,
 });
 
-const { activeIndex, setActiveIndex } = useListNavigation(placements, {
-  containerEl: selectFloatingEl,
+const placementOptionEls = shallowRef<HTMLElement[]>([]);
+
+const { activeIndex, setActiveIndex } = useListNavigation(placementOptionEls, {
+  targetEl: selectFloatingEl,
   loop: true,
-  getItemId: (p) => p.value,
-  getItemLabel: (p) => p.label,
-  onSelect: (item) => {
-    emit("update:placement", item.value as Placement);
-    selectContext.state.setOpen(false);
+  onSelect: (index) => {
+    const item = placements[index];
+    if (item) {
+      emit("update:placement", item.value as Placement);
+      selectContext.state.setOpen(false);
+    }
   },
 });
 useRole(selectContext, { role: "listbox" });
@@ -149,6 +152,7 @@ function onOptionSelect(val: Placement) {
           <div
             v-for="(item, index) in placements"
             :key="item.value"
+            :ref="(el) => (placementOptionEls[index] = el as HTMLElement)"
             role="option"
             :aria-selected="placement === item.value"
             class="control-select-option"

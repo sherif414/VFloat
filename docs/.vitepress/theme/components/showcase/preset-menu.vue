@@ -101,8 +101,10 @@ useFocusManager(context, {
   guards: false,
 });
 
-const { activeIndex, setActiveIndex } = useListNavigation(menuItems, {
-  containerEl: floatingEl,
+const menuItemEls = shallowRef<HTMLElement[]>([]);
+
+const { activeIndex, setActiveIndex } = useListNavigation(menuItemEls, {
+  targetEl: floatingEl,
   loop: true,
   enabled: () => props.isActive,
   onSelect: () => {
@@ -169,6 +171,7 @@ defineExpose({
       <div
         v-for="(item, index) in menuItems"
         :key="item.id"
+        :ref="(el) => (menuItemEls[index] = el as HTMLElement)"
         role="menuitem"
         class="menu-item"
         :class="{
