@@ -19,5 +19,6 @@
   "[jsonc]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
-  "cSpell.words": ["vfloat"]
+  "cSpell.words": ["vfloat"],
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }
