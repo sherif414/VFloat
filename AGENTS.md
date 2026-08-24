@@ -9,6 +9,15 @@
 - All commit messages **MUST** adhere to the Conventional Commits specification defined in [.agents/rules/commit-message.md](.agents/rules/commit-message.md).
 - Follow [.agents/rules/commit-message.md](.agents/rules/commit-message.md) as the single source of truth for commit types, scopes, SemVer mapping, and the distinction between user-facing library features (`feat`/`fix`) and maintainer/AI tooling (`chore`).
 
+## Explicit Communication & User Agency
+
+- **No Silent Changes**: Never make silent, unrequested modifications to files, configurations, or working state (e.g., altering user-authored configs during a commit request, refactoring code outside the prompt scope).
+- **Proactive Reporting with User Decision**: When identifying something that appears incorrect, deprecated, suboptimal, or broken:
+  1. Clearly raise the observation and context to the user.
+  2. Explain why a change might be beneficial (along with any alternatives or tradeoffs).
+  3. Leave the final decision to the user before applying any changes.
+- **Respect User Intent**: When given a specific task (such as staging/committing a change or running a script), execute the requested action without unilaterally modifying the underlying subject unless explicitly asked.
+
 ## Naming Conventions
 
 - Follow existing VFloat naming before borrowing Floating UI terminology. Similarity is fine, but VFloat is not a direct copy.
