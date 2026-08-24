@@ -48,7 +48,7 @@ export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    dts({ tsconfigPath: "./tsconfig.build.json", outDir: "dist", rollupTypes: true }),
+    dts({ tsconfigPath: "./tsconfig.build.json", outDirs: "dist", bundleTypes: true }),
     !process.env.VITEST && vueDevtools(),
   ],
   resolve: {

@@ -1,9 +1,5 @@
 /// <reference types="vite/client" />
 
-declare module "*.vue" {
-  const component: any;
-  export default component;
-}
-
 declare module "*.css";
+declare module "@docsearch/css";
 declare module "body-scroll-lock";
