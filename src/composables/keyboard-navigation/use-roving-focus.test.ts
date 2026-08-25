@@ -525,6 +525,115 @@ describe("useRovingFocus", () => {
     });
   });
 
+  describe("focusItemOnHover option", () => {
+    it("moves focus and active index to hovered item when focusItemOnHover is true", async () => {
+      const { Component, getRoving } = createTestComponent({ focusItemOnHover: true });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      await userEvent.hover(option3);
+
+      await expect.element(option3).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(2);
+    });
+
+    it("works when using focusOnHover alias", async () => {
+      const { Component, getRoving } = createTestComponent({ focusOnHover: true });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      const option4 = page.getByRole("option", { name: "option 4" });
+      await userEvent.hover(option4);
+
+      await expect.element(option4).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(3);
+    });
+
+    it("does not move focus on hover when focusItemOnHover is false by default", async () => {
+      const { Component } = createTestComponent();
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      await userEvent.hover(option3);
+
+      await expect.element(option1).toHaveFocus();
+      await expect.element(option3).not.toHaveFocus();
+    });
+
+    it("skips disabled items when hovered", async () => {
+      const { Component, getRoving } = createTestComponent(
+        { focusItemOnHover: true },
+        { disabledIndices: [1] },
+      );
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      const option2 = page.getByRole("option", { name: "option 2" });
+      await userEvent.hover(option2);
+
+      await expect.element(option1).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(0);
+    });
+
+    it("ignores touch pointer events", async () => {
+      const { Component } = createTestComponent({ focusItemOnHover: true });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      option3.element().dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerType: "touch",
+          bubbles: true,
+        }),
+      );
+
+      await expect.element(option1).toHaveFocus();
+    });
+
+    it("respects reactive focusItemOnHover changes", async () => {
+      const focusItemOnHover = ref(false);
+      const { Component, getRoving } = createTestComponent({ focusItemOnHover });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      const option2 = page.getByRole("option", { name: "option 2" });
+      await userEvent.hover(option2);
+      await expect.element(option1).toHaveFocus();
+
+      focusItemOnHover.value = true;
+      await userEvent.hover(option2);
+      await expect.element(option2).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(1);
+    });
+  });
+
   describe("pure traversal algorithms & drivers", () => {
     it("finds next enabled index correctly without loop", () => {
       const collection = {

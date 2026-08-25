@@ -52,6 +52,8 @@ export function useRovingFocus(
     rtl: rtlOption,
     enabled: enabledOption = true,
     openOnArrowDown: openOnArrowDownOption = true,
+    focusItemOnHover: focusItemOnHoverOption = false,
+    focusOnHover: focusOnHoverOption,
     isItemDisabled: isItemDisabledOption,
     onNavigate,
   } = options;
@@ -63,6 +65,12 @@ export function useRovingFocus(
   //=====================================================================================
   const isEnabled = computed(() => toValue(enabledOption));
   const isOpenOnArrowDown = computed(() => toValue(openOnArrowDownOption));
+  const isFocusItemOnHover = computed(() => {
+    if (focusOnHoverOption !== undefined) {
+      return toValue(focusOnHoverOption);
+    }
+    return toValue(focusItemOnHoverOption);
+  });
   const orientation = computed(() => toValue(orientationOption));
   const isRtl = useRtl(refs.floatingEl, { rtl: rtlOption });
   const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
@@ -210,8 +218,31 @@ export function useRovingFocus(
     onNavigateIntent(intent);
   }
 
+  function onFloatingPointerMove(e: PointerEvent): void {
+    if (e.defaultPrevented || !isEnabled.value || !isFocusItemOnHover.value) return;
+    if (e.pointerType === "touch") return;
+
+    const target = e.target as Node | null;
+    if (!target) return;
+
+    const list = toValue(itemsListOption);
+    if (!list) return;
+
+    for (let idx = 0; idx < list.length; idx++) {
+      const el = list[idx];
+      if (el && el.contains(target)) {
+        if (collection.isDisabled(idx)) return;
+        if (idx !== activeIndex.value) {
+          setActiveIndex(idx, e);
+        }
+        return;
+      }
+    }
+  }
+
   useEventListener(anchorEl, "keydown", onAnchorKeyDown);
   useEventListener(refs.floatingEl, "keydown", onFloatingKeyDown);
+  useEventListener(refs.floatingEl, "pointermove", onFloatingPointerMove);
 
   return {
     activeIndex,
@@ -694,6 +725,18 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   openOnArrowDown?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether moving the pointer over an item moves focus and active index to that item.
+   * @default false
+   */
+  focusItemOnHover?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Alias for `focusItemOnHover`.
+   * @default false
+   */
+  focusOnHover?: MaybeRefOrGetter<boolean>;
 
   /**
    * Predicate for determining if an item at a given index is disabled.
