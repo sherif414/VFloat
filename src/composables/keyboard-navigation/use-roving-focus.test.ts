@@ -113,16 +113,6 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("focuses activeIndex on open when provided", async () => {
-      const { Component } = createTestComponent({ activeIndex: 3 });
-      render(Component);
-      const anchor = page.getByRole("button", { name: "anchor" });
-
-      await userEvent.click(anchor);
-      const option4 = page.getByRole("option", { name: "option 4" });
-      await expect.element(option4).toHaveFocus();
-    });
-
     it("skips disabled item when focusing initial on open", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [0] });
       render(Component);

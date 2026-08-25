@@ -43,7 +43,6 @@ export function useRovingFocus(
     virtual: virtualOption = false,
     virtualItemRef,
     itemCount: itemCountOption,
-    activeIndex: activeIndexOption,
     initialIndex: initialIndexOption,
     autoFocus: autoFocusOption = true,
     scrollItemIntoView: scrollItemIntoViewOption = true,
@@ -61,22 +60,10 @@ export function useRovingFocus(
   // Reactive Options & State
   //=====================================================================================
   const isEnabled = computed(() => toValue(enabledOption));
-  const loop = computed(() => toValue(loopOption));
   const orientation = computed(() => toValue(orientationOption));
   const isRtl = useRtl(refs.floatingEl, { rtl: rtlOption });
 
-  const activeIndex = ref<number | null>(
-    toValue(activeIndexOption) ?? toValue(initialIndexOption) ?? null,
-  );
-
-  watch(
-    () => toValue(activeIndexOption),
-    (val) => {
-      if (val !== undefined) {
-        activeIndex.value = val;
-      }
-    },
-  );
+  const activeIndex = ref<number | null>(toValue(initialIndexOption) ?? null);
 
   //=====================================================================================
   // Drivers
@@ -88,7 +75,7 @@ export function useRovingFocus(
     isItemDisabled: isItemDisabledOption,
   });
 
-  const traverser = createNavigationTraverser(collection, { loop });
+  const traverser = createNavigationTraverser(collection, { loop: loopOption });
 
   const focusDriver = createFocusDriver({
     itemsList: itemsListOption,
@@ -164,7 +151,7 @@ export function useRovingFocus(
 
       if (!toValue(autoFocusOption)) return;
 
-      const initialIdx = toValue(initialIndexOption) ?? toValue(activeIndexOption) ?? null;
+      const initialIdx = toValue(initialIndexOption) ?? null;
       if (initialIdx !== null && initialIdx >= 0) {
         setActiveIndex(initialIdx);
       } else {
@@ -636,11 +623,6 @@ export interface UseRovingFocusOptions {
    * Useful when `itemsList` only contains currently rendered/windowed items.
    */
   itemCount?: MaybeRefOrGetter<number>;
-
-  /**
-   * The currently active item index in the list.
-   */
-  activeIndex?: MaybeRefOrGetter<number | null>;
 
   /**
    * The initial item index to focus when the floating element opens.
