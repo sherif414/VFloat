@@ -179,7 +179,6 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - Run linting: `pnpm lint`
 - Fix lint & format: `pnpm lint:fix`
 - Format code: `pnpm format`
-- Run type checking: `pnpm type-check`
 - Run tests (watch): `pnpm test`
 - Run tests (single run): `pnpm run test:run`
 - Run SSR tests (Node mode): `pnpm run test:ssr`
@@ -192,4 +191,4 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Always write targeted regression unit tests whenever fixing a bug, handling an edge case, or addressing an ordering/lifecycle dependency.
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
 - [ ] Ensure full SSR compatibility: never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
-- [ ] Run `pnpm lint`, `pnpm type-check`, `pnpm run test:ssr`, and `pnpm test` to validate changes.
+- [ ] Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test` to validate changes.
