@@ -13,6 +13,7 @@ const isDebugging =
 
 export default defineConfig({
   test: {
+    testTimeout: 1000,
     browser: {
       enabled: true,
       headless: true,
