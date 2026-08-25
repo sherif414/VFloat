@@ -52,8 +52,26 @@ export { useFocusManager } from "./focus-manager";
 export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";
-// List Navigation
-export { useKeyboardNavigation } from "./keyboard-navigation/use-keyboard-navigation";
+export type {
+  CreateFocusDriverOptions,
+  CreateNavigableCollectionOptions,
+  FocusDriver,
+  NavigableCollection,
+  NavigationTraverser,
+  NavigationTraverserOptions,
+  UseRovingFocusOptions,
+  UseRovingFocusReturn,
+} from "./keyboard-navigation/use-roving-focus";
+// Roving Focus
+export {
+  createFocusDriver,
+  createNavigableCollection,
+  createNavigationTraverser,
+  findFirstNavigableIndex,
+  findLastNavigableIndex,
+  findNextNavigableIndex,
+  useRovingFocus,
+} from "./keyboard-navigation/use-roving-focus";
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";

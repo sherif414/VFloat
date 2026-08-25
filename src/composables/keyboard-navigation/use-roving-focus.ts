@@ -1,5 +1,6 @@
 import { computed, type MaybeRefOrGetter, type Ref, ref, toValue, watch } from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
+import { getAnchorElement } from "@/shared/elements";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
 import { useRtl } from "./rtl";
@@ -50,6 +51,7 @@ export function useRovingFocus(
     orientation: orientationOption = "vertical",
     rtl: rtlOption,
     enabled: enabledOption = true,
+    openOnArrowDown: openOnArrowDownOption = true,
     isItemDisabled: isItemDisabledOption,
     onNavigate,
   } = options;
@@ -60,8 +62,10 @@ export function useRovingFocus(
   // Reactive Options & State
   //=====================================================================================
   const isEnabled = computed(() => toValue(enabledOption));
+  const isOpenOnArrowDown = computed(() => toValue(openOnArrowDownOption));
   const orientation = computed(() => toValue(orientationOption));
   const isRtl = useRtl(refs.floatingEl, { rtl: rtlOption });
+  const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
 
   const activeIndex = ref<number | null>(toValue(initialIndexOption) ?? null);
 
@@ -174,6 +178,25 @@ export function useRovingFocus(
   //=====================================================================================
   // Event Handlers
   //=====================================================================================
+  function onAnchorKeyDown(e: KeyboardEvent): void {
+    if (e.defaultPrevented || !isEnabled.value || !isOpenOnArrowDown.value) return;
+    if (e.isComposing || e.key === "Process" || e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!state.open.value) {
+        state.setOpen(true, "keyboard-activate", e);
+      } else if (toValue(autoFocusOption)) {
+        const initialIdx = toValue(initialIndexOption) ?? null;
+        if (initialIdx !== null && initialIdx >= 0) {
+          setActiveIndex(initialIdx);
+        } else {
+          first();
+        }
+      }
+    }
+  }
+
   function onFloatingKeyDown(e: KeyboardEvent): void {
     if (e.defaultPrevented || !isEnabled.value) return;
 
@@ -187,6 +210,7 @@ export function useRovingFocus(
     onNavigateIntent(intent);
   }
 
+  useEventListener(anchorEl, "keydown", onAnchorKeyDown);
   useEventListener(refs.floatingEl, "keydown", onFloatingKeyDown);
 
   return {
@@ -664,6 +688,12 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether pressing ArrowDown while focus is on the anchor element opens the floating element.
+   * @default true
+   */
+  openOnArrowDown?: MaybeRefOrGetter<boolean>;
 
   /**
    * Predicate for determining if an item at a given index is disabled.

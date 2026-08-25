@@ -432,6 +432,99 @@ describe("useRovingFocus", () => {
     });
   });
 
+  describe("openOnArrowDown option", () => {
+    it("opens the floating element and focuses first item on arrow down by default", async () => {
+      const { Component } = createTestComponent();
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      anchor.element().focus();
+      await expect.element(anchor).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowDown}");
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+    });
+
+    it("focuses initialIndex item when opened via arrow down on anchor", async () => {
+      const { Component } = createTestComponent({ initialIndex: 2 });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      anchor.element().focus();
+      await userEvent.keyboard("{ArrowDown}");
+      const option3 = page.getByRole("option", { name: "option 3" });
+      await expect.element(option3).toHaveFocus();
+    });
+
+    it("does not open the floating element on arrow down when openOnArrowDown is false", async () => {
+      const { Component } = createTestComponent({ openOnArrowDown: false });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      anchor.element().focus();
+      await userEvent.keyboard("{ArrowDown}");
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).not.toBeInTheDocument();
+    });
+
+    it("respects reactive openOnArrowDown changes", async () => {
+      const openOnArrowDown = ref(false);
+      const { Component } = createTestComponent({ openOnArrowDown });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      anchor.element().focus();
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(page.getByRole("option", { name: "option 1" })).not.toBeInTheDocument();
+
+      openOnArrowDown.value = true;
+      anchor.element().focus();
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(page.getByRole("option", { name: "option 1" })).toHaveFocus();
+    });
+
+    it("does not open on arrow down when composable is disabled", async () => {
+      const { Component } = createTestComponent({ openOnArrowDown: true, enabled: false });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      anchor.element().focus();
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(page.getByRole("option", { name: "option 1" })).not.toBeInTheDocument();
+    });
+
+    it("ignores arrow down with modifier keys on anchor", async () => {
+      const { Component } = createTestComponent({ openOnArrowDown: true });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      anchor.element().focus();
+      await userEvent.keyboard("{Control>}{ArrowDown}{/Control}");
+      await expect.element(page.getByRole("option", { name: "option 1" })).not.toBeInTheDocument();
+
+      await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+      await expect.element(page.getByRole("option", { name: "option 1" })).not.toBeInTheDocument();
+    });
+
+    it("focuses active item when arrow down is pressed on anchor while floating is already open", async () => {
+      const { Component } = createTestComponent({ openOnArrowDown: true });
+      render(Component);
+      const anchor = page.getByRole("button", { name: "anchor" });
+
+      await userEvent.click(anchor);
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
+
+      anchor.element().focus();
+      await expect.element(anchor).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option1).toHaveFocus();
+    });
+  });
+
   describe("pure traversal algorithms & drivers", () => {
     it("finds next enabled index correctly without loop", () => {
       const collection = {
