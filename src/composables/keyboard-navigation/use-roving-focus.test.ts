@@ -4,9 +4,6 @@ import { usePosition } from "../position";
 import {
   createFocusDriver,
   createNavigableCollection,
-  createNavigationTraverser,
-  findFirstNavigableIndex,
-  findLastNavigableIndex,
   findNextNavigableIndex,
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
@@ -15,7 +12,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
-import { defineComponent, h, ref, useTemplateRef } from "vue";
+import { computed, defineComponent, h, ref, useTemplateRef } from "vue";
 
 describe("useRovingFocus", () => {
   interface FixtureConfig {
@@ -637,9 +634,8 @@ describe("useRovingFocus", () => {
   describe("pure traversal algorithms & drivers", () => {
     it("finds next enabled index correctly without loop", () => {
       const collection = {
-        getCount: () => 4,
-        getItem: () => null,
-        isDisabled: (idx: number) => idx === 1,
+        size: computed(() => 4),
+        isItemDisabled: (idx: number) => idx === 1,
       };
 
       expect(findNextNavigableIndex(0, 1, collection, false)).toBe(2);
@@ -649,24 +645,24 @@ describe("useRovingFocus", () => {
 
     it("wraps around when loop is true", () => {
       const collection = {
-        getCount: () => 3,
+        size: computed(() => 3),
         getItem: () => null,
-        isDisabled: (idx: number) => idx === 0,
+        isItemDisabled: (idx: number) => idx === 0,
       };
 
       expect(findNextNavigableIndex(2, 1, collection, true)).toBe(1);
       expect(findNextNavigableIndex(1, -1, collection, true)).toBe(2);
     });
 
-    it("finds first and last enabled index", () => {
+    it("finds first and last enabled index via findNextNavigableIndex boundaries", () => {
       const collection = {
-        getCount: () => 4,
+        size: computed(() => 4),
         getItem: () => null,
-        isDisabled: (idx: number) => idx === 0 || idx === 3,
+        isItemDisabled: (idx: number) => idx === 0 || idx === 3,
       };
 
-      expect(findFirstNavigableIndex(collection)).toBe(1);
-      expect(findLastNavigableIndex(collection)).toBe(2);
+      expect(findNextNavigableIndex(-1, 1, collection, false)).toBe(1);
+      expect(findNextNavigableIndex(4, -1, collection, false)).toBe(2);
     });
 
     it("creates navigable collection that inspects DOM attributes and handles virtual counts", () => {
@@ -678,36 +674,36 @@ describe("useRovingFocus", () => {
         itemsList: [el0, el1],
       });
 
-      expect(collection.getCount()).toBe(2);
+      expect(collection.size.value).toBe(2);
       expect(collection.getItem(0)).toBe(el0);
-      expect(collection.isDisabled(0)).toBe(false);
-      expect(collection.isDisabled(1)).toBe(true);
+      expect(collection.isItemDisabled(0)).toBe(false);
+      expect(collection.isItemDisabled(1)).toBe(true);
 
       const virtualCollection = createNavigableCollection({
         itemsList: [],
         virtual: true,
         itemCount: 100,
       });
-      expect(virtualCollection.getCount()).toBe(100);
-      expect(virtualCollection.isDisabled(10)).toBe(false);
+      expect(virtualCollection.size.value).toBe(100);
+      expect(virtualCollection.isItemDisabled(10)).toBe(false);
     });
 
-    it("creates navigation traverser that resolves semantic intents", () => {
-      const collection = {
-        getCount: () => 3,
-        getItem: () => null,
-        isDisabled: (idx: number) => idx === 1,
-      };
+    it("finds target index based on semantic intents", () => {
+      const el0 = document.createElement("div");
+      const el1 = document.createElement("div");
+      const el2 = document.createElement("div");
+      el1.setAttribute("aria-disabled", "true");
 
-      const traverser = createNavigationTraverser(collection, { loop: true });
+      const collection = createNavigableCollection({
+        itemsList: [el0, el1, el2],
+        loop: true,
+      });
 
-      expect(traverser.findNext(0)).toBe(2);
-      expect(traverser.findPrev(2)).toBe(0);
-      expect(traverser.findFirst()).toBe(0);
-      expect(traverser.findLast()).toBe(2);
-      expect(traverser.resolveIntent("next", 0)).toBe(2);
-      expect(traverser.resolveIntent("first", 2)).toBe(0);
-      expect(traverser.resolveIntent("select", 0)).toBeNull();
+      expect(collection.findIndexByIntent("next", 0)).toBe(2);
+      expect(collection.findIndexByIntent("previous", 2)).toBe(0);
+      expect(collection.findIndexByIntent("first")).toBe(0);
+      expect(collection.findIndexByIntent("last")).toBe(2);
+      expect(collection.findIndexByIntent("select", 0)).toBeNull();
     });
 
     it("creates focus driver that synchronizes tabindex and applies focus", () => {

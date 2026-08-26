@@ -1,4 +1,13 @@
-import { computed, type MaybeRefOrGetter, type Ref, ref, toValue, watch } from "vue";
+import {
+  computed,
+  ComputedRef,
+  type MaybeRefOrGetter,
+  readonly,
+  type Ref,
+  ref,
+  toValue,
+  watch,
+} from "vue";
 import type { FloatingContext } from "@/composables/floating-context";
 import { getAnchorElement } from "@/shared/elements";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -84,10 +93,9 @@ export function useRovingFocus(
     itemsList: itemsListOption,
     itemCount: itemCountOption,
     virtual: virtualOption,
+    loop: loopOption,
     isItemDisabled: isItemDisabledOption,
   });
-
-  const traverser = createNavigationTraverser(collection, { loop: loopOption });
 
   const focusDriver = createFocusDriver({
     itemsList: itemsListOption,
@@ -98,8 +106,8 @@ export function useRovingFocus(
   //=====================================================================================
   // Navigation Actions
   //=====================================================================================
-  function setActiveIndex(idx: number, _e?: Event): void {
-    if (idx < -1 || idx >= collection.getCount() || (idx >= 0 && collection.isDisabled(idx))) {
+  function setActiveIndex(idx: number): void {
+    if (idx < -1 || idx >= collection.size.value || (idx >= 0 && collection.isItemDisabled(idx))) {
       return;
     }
 
@@ -113,36 +121,8 @@ export function useRovingFocus(
     }
   }
 
-  function next(_e?: Event): void {
-    const nextIdx = traverser.findNext(activeIndex.value);
-    if (nextIdx !== null) {
-      setActiveIndex(nextIdx);
-    }
-  }
-
-  function prev(_e?: Event): void {
-    const prevIdx = traverser.findPrev(activeIndex.value);
-    if (prevIdx !== null) {
-      setActiveIndex(prevIdx);
-    }
-  }
-
-  function first(_e?: Event): void {
-    const firstIdx = traverser.findFirst();
-    if (firstIdx !== null) {
-      setActiveIndex(firstIdx);
-    }
-  }
-
-  function last(_e?: Event): void {
-    const lastIdx = traverser.findLast();
-    if (lastIdx !== null) {
-      setActiveIndex(lastIdx);
-    }
-  }
-
-  function onNavigateIntent(intent: NavigationIntent): void {
-    const targetIdx = traverser.resolveIntent(intent, activeIndex.value);
+  function navigate(intent: NavigationIntent): void {
+    const targetIdx = collection.findIndexByIntent(intent, activeIndex.value);
     if (targetIdx !== null) {
       setActiveIndex(targetIdx);
     }
@@ -152,22 +132,20 @@ export function useRovingFocus(
   // Lifecycle & Tabindex Synchronization
   //=====================================================================================
   watch(
-    [() => state.open.value, () => refs.floatingEl.value],
+    [state.open, refs.floatingEl],
     ([isOpen, floatingEl]) => {
       if (!isEnabled.value || !isOpen || !floatingEl) {
-        if (!isOpen) {
-          activeIndex.value = null;
-        }
+        activeIndex.value = null;
         return;
       }
 
       if (!toValue(autoFocusOption)) return;
 
-      const initialIdx = toValue(initialIndexOption) ?? null;
-      if (initialIdx !== null && initialIdx >= 0) {
+      const initialIdx = toValue(initialIndexOption);
+      if (initialIdx != null && initialIdx >= 0) {
         setActiveIndex(initialIdx);
       } else {
-        first();
+        navigate("first");
       }
     },
     { flush: "post" },
@@ -187,20 +165,19 @@ export function useRovingFocus(
   // Event Handlers
   //=====================================================================================
   function onAnchorKeyDown(e: KeyboardEvent): void {
+    if (e.key !== "ArrowDown") return;
     if (e.defaultPrevented || !isEnabled.value || !isOpenOnArrowDown.value) return;
-    if (e.isComposing || e.key === "Process" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (!state.open.value) {
-        state.setOpen(true, "keyboard-activate", e);
-      } else if (toValue(autoFocusOption)) {
-        const initialIdx = toValue(initialIndexOption) ?? null;
-        if (initialIdx !== null && initialIdx >= 0) {
-          setActiveIndex(initialIdx);
-        } else {
-          first();
-        }
+    e.preventDefault();
+    if (!state.open.value) {
+      state.setOpen(true, "keyboard-activate", e);
+    } else if (toValue(autoFocusOption)) {
+      const initialIdx = toValue(initialIndexOption);
+      if (initialIdx != null) {
+        setActiveIndex(initialIdx);
+      } else {
+        navigate("first");
       }
     }
   }
@@ -215,7 +192,7 @@ export function useRovingFocus(
     if (!intent) return;
 
     e.preventDefault();
-    onNavigateIntent(intent);
+    navigate(intent);
   }
 
   function onFloatingPointerMove(e: PointerEvent): void {
@@ -231,9 +208,9 @@ export function useRovingFocus(
     for (let idx = 0; idx < list.length; idx++) {
       const el = list[idx];
       if (el && el.contains(target)) {
-        if (collection.isDisabled(idx)) return;
+        if (collection.isItemDisabled(idx)) return;
         if (idx !== activeIndex.value) {
-          setActiveIndex(idx, e);
+          setActiveIndex(idx);
         }
         return;
       }
@@ -245,12 +222,20 @@ export function useRovingFocus(
   useEventListener(refs.floatingEl, "pointermove", onFloatingPointerMove);
 
   return {
-    activeIndex,
+    activeIndex: readonly(activeIndex),
     setActiveIndex,
-    next,
-    prev,
-    first,
-    last,
+    next: () => {
+      navigate("next");
+    },
+    prev: () => {
+      navigate("previous");
+    },
+    first: () => {
+      navigate("first");
+    },
+    last: () => {
+      navigate("last");
+    },
   };
 }
 
@@ -262,111 +247,79 @@ export function useRovingFocus(
  * Creates a navigable collection abstraction over DOM and virtual item lists.
  *
  * @param options - Configuration for items list, virtual count, and disabled predicate.
- * @returns An object for querying count, elements, and disabled state.
+ * @returns An object for querying size, elements, and disabled state.
  */
 export function createNavigableCollection(
   options: CreateNavigableCollectionOptions,
 ): NavigableCollection {
   const {
-    itemsList: itemsListOption,
-    itemCount: itemCountOption,
-    virtual: virtualOption,
+    itemsList,
+    itemCount,
+    virtual,
+    loop = false,
     isItemDisabled: customIsItemDisabled,
   } = options;
 
-  return {
-    getCount(): number {
-      const isVirtual = toValue(virtualOption) ?? false;
-      const explicitCount = toValue(itemCountOption);
-      if (isVirtual && explicitCount != null) {
-        return explicitCount;
-      }
-      return toValue(itemsListOption)?.length ?? 0;
-    },
+  const size = computed<number>(() => {
+    const isVirtual = !!toValue(virtual);
+    const explicitCount = toValue(itemCount);
 
-    getItem(idx: number): HTMLElement | null {
-      const list = toValue(itemsListOption);
-      return list?.[idx] ?? null;
-    },
+    if (isVirtual && explicitCount != null) {
+      return Math.max(0, explicitCount);
+    }
 
-    isDisabled(idx: number): boolean {
-      const list = toValue(itemsListOption);
-      const el = list?.[idx] ?? null;
+    const items = toValue(itemsList);
+    return items ? Math.max(0, items.length) : 0;
+  });
 
-      if (customIsItemDisabled?.(el, idx)) {
-        return true;
-      }
-
-      const isVirtual = toValue(virtualOption) ?? false;
-      if (!el) {
-        return !isVirtual;
-      }
-
-      return el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
-    },
+  const getItem = (idx: number) => {
+    const list = toValue(itemsList);
+    return list[idx] ?? null;
   };
-}
 
-/**
- * Creates a pure navigation traverser that calculates target indices without side effects.
- *
- * @param collection - The navigable collection data source.
- * @param options - Navigation options including boundary looping.
- * @returns Pure index calculation methods.
- */
-export function createNavigationTraverser(
-  collection: NavigableCollection,
-  options: NavigationTraverserOptions = {},
-): NavigationTraverser {
-  const { loop: loopOption } = options;
+  const isItemDisabled = (idx: number) => {
+    const item = getItem(idx);
 
-  function findNext(currentIdx: number | null): number | null {
-    const count = collection.getCount();
-    if (count === 0) return null;
+    if (customIsItemDisabled?.(item, idx)) {
+      return true;
+    }
 
-    const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : -1;
-    const isLoop = toValue(loopOption) ?? false;
-    return findNextNavigableIndex(start, 1, collection, isLoop);
-  }
+    if (!item) {
+      return !toValue(virtual);
+    }
 
-  function findPrev(currentIdx: number | null): number | null {
-    const count = collection.getCount();
-    if (count === 0) return null;
+    return item.hasAttribute("disabled") || item.getAttribute("aria-disabled") === "true";
+  };
 
-    const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : count;
-    const isLoop = toValue(loopOption) ?? false;
-    return findNextNavigableIndex(start, -1, collection, isLoop);
-  }
+  const findIndexByIntent = (intent: NavigationIntent, currentIdx: number | null = null) => {
+    const total = size.value;
+    if (total === 0) return null;
 
-  function findFirst(): number | null {
-    return findFirstNavigableIndex(collection);
-  }
+    const isLoop = toValue(loop) ?? false;
 
-  function findLast(): number | null {
-    return findLastNavigableIndex(collection);
-  }
-
-  function resolveIntent(intent: NavigationIntent, currentIdx: number | null): number | null {
     switch (intent) {
-      case "next":
-        return findNext(currentIdx);
-      case "previous":
-        return findPrev(currentIdx);
+      case "next": {
+        const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : -1;
+        return findNextNavigableIndex(start, 1, { size, isItemDisabled }, isLoop);
+      }
+      case "previous": {
+        const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : total;
+        return findNextNavigableIndex(start, -1, { size, isItemDisabled }, isLoop);
+      }
       case "first":
-        return findFirst();
+        return findNextNavigableIndex(-1, 1, { size, isItemDisabled }, false);
       case "last":
-        return findLast();
+        return findNextNavigableIndex(total, -1, { size, isItemDisabled }, false);
       default:
         return null;
     }
-  }
+  };
 
   return {
-    findNext,
-    findPrev,
-    findFirst,
-    findLast,
-    resolveIntent,
+    size,
+    findIndexByIntent,
+    getItem,
+    isItemDisabled,
   };
 }
 
@@ -429,62 +382,30 @@ export function createFocusDriver(options: CreateFocusDriverOptions): FocusDrive
 export function findNextNavigableIndex(
   startIndex: number,
   delta: 1 | -1,
-  collection: NavigableCollection,
+  collection: Pick<NavigableCollection, "size" | "isItemDisabled">,
   loop: boolean,
 ): number | null {
-  const count = collection.getCount();
-  if (count === 0) return null;
+  const size = collection.size.value;
+  if (size === 0) return null;
 
   let current = startIndex;
 
-  for (let step = 0; step < count; step++) {
+  for (let step = 0; step < size; step++) {
     current += delta;
 
-    if (current >= count) {
+    if (current >= size) {
       if (!loop) return null;
       current = 0;
     } else if (current < 0) {
       if (!loop) return null;
-      current = count - 1;
+      current = size - 1;
     }
 
-    if (!collection.isDisabled(current)) {
+    if (!collection.isItemDisabled(current)) {
       return current;
     }
   }
 
-  return null;
-}
-
-/**
- * Finds the first enabled item index in the collection.
- *
- * @param collection - Collection query interface.
- * @returns First enabled item index, or null if none enabled.
- */
-export function findFirstNavigableIndex(collection: NavigableCollection): number | null {
-  const count = collection.getCount();
-  for (let idx = 0; idx < count; idx++) {
-    if (!collection.isDisabled(idx)) {
-      return idx;
-    }
-  }
-  return null;
-}
-
-/**
- * Finds the last enabled item index in the collection.
- *
- * @param collection - Collection query interface.
- * @returns Last enabled item index, or null if none enabled.
- */
-export function findLastNavigableIndex(collection: NavigableCollection): number | null {
-  const count = collection.getCount();
-  for (let idx = count - 1; idx >= 0; idx--) {
-    if (!collection.isDisabled(idx)) {
-      return idx;
-    }
-  }
   return null;
 }
 
@@ -493,13 +414,13 @@ export function findLastNavigableIndex(collection: NavigableCollection): number 
 //=======================================================================================
 
 /**
- * Normalized interface for querying collection items and disabled states.
+ * Normalized interface for querying collection items, disabled states, and navigation indices.
  */
 export interface NavigableCollection {
   /**
    * Total number of items in the collection.
    */
-  getCount: () => number;
+  size: ComputedRef<number>;
 
   /**
    * Retrieves the HTML element reference at a given index.
@@ -509,7 +430,12 @@ export interface NavigableCollection {
   /**
    * Checks whether the item at a given index is disabled.
    */
-  isDisabled: (idx: number) => boolean;
+  isItemDisabled: (idx: number) => boolean;
+
+  /**
+   * Finds the target index for a given navigation intent.
+   */
+  findIndexByIntent: (intent: NavigationIntent, currentIdx?: number | null) => number | null;
 }
 
 /**
@@ -532,49 +458,15 @@ export interface CreateNavigableCollectionOptions {
   virtual?: MaybeRefOrGetter<boolean | undefined>;
 
   /**
+   * Whether navigation wraps around list boundaries.
+   * @default false
+   */
+  loop?: MaybeRefOrGetter<boolean | undefined>;
+
+  /**
    * Custom disabled predicate.
    */
   isItemDisabled?: (item: HTMLElement | null, idx: number) => boolean;
-}
-
-/**
- * Pure index traversal interface.
- */
-export interface NavigationTraverser {
-  /**
-   * Calculates the next enabled index.
-   */
-  findNext: (currentIdx: number | null) => number | null;
-
-  /**
-   * Calculates the previous enabled index.
-   */
-  findPrev: (currentIdx: number | null) => number | null;
-
-  /**
-   * Finds the first enabled index.
-   */
-  findFirst: () => number | null;
-
-  /**
-   * Finds the last enabled index.
-   */
-  findLast: () => number | null;
-
-  /**
-   * Resolves a semantic navigation intent to a target index.
-   */
-  resolveIntent: (intent: NavigationIntent, currentIdx: number | null) => number | null;
-}
-
-/**
- * Configuration options for `createNavigationTraverser`.
- */
-export interface NavigationTraverserOptions {
-  /**
-   * Whether navigation wraps around list boundaries.
-   */
-  loop?: MaybeRefOrGetter<boolean | undefined>;
 }
 
 /**
@@ -624,7 +516,7 @@ export interface UseRovingFocusReturn {
   /**
    * The currently active item index.
    */
-  activeIndex: Ref<number | null>;
+  activeIndex: Readonly<Ref<number | null>>;
 
   /**
    * Sets the active index and moves focus to the item.
