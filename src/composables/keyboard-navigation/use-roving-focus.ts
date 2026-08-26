@@ -56,6 +56,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     itemsList: itemsListOption,
     defaultActiveIndex = 0,
     activeIndex: activeIndexOption,
+    onActiveIndexChange: onActiveIndexChangeOption,
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
     rtl: rtlOption,
@@ -81,9 +82,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const activeIndex = useControllableState({
     value: activeIndexOption,
     initialValue: defaultActiveIndex,
-    onChange: (value) => {
-      if (activeIndexOption) activeIndexOption.value = value;
-    },
+    onChange: onActiveIndexChangeOption,
   });
 
   //=====================================================================================
@@ -114,8 +113,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     }
 
     activeIndex.value = idx;
-    lastSyncedIndex = idx;
-    focusDriver.sync(idx, collection.getItem(idx));
+    lastSyncedIndex = activeIndex.value;
+    focusDriver.sync(activeIndex.value, collection.getItem(activeIndex.value));
   }
 
   function navigate(intent: NavigationIntent): void {
@@ -585,6 +584,11 @@ export interface UseRovingFocusOptions {
    * When provided, the composable synchronizes with and updates this ref.
    */
   activeIndex?: Ref<number>;
+
+  /**
+   * Callback invoked whenever the active index changes.
+   */
+  onActiveIndexChange?: (index: number) => void;
 
   /**
    * Layout orientation of the navigable list items.

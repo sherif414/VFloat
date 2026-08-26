@@ -340,7 +340,24 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("controlled activeIndex state", () => {
+  describe("controlled activeIndex state & onActiveIndexChange", () => {
+    it("fires onActiveIndexChange in uncontrolled mode when navigation occurs", async () => {
+      const onActiveIndexChangeMock = vi.fn();
+      const { Component } = createTestComponent({
+        onActiveIndexChange: onActiveIndexChangeMock,
+      });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1);
+
+      await userEvent.keyboard("{ArrowDown}");
+      expect(onActiveIndexChangeMock).toHaveBeenCalledWith(1);
+
+      await userEvent.keyboard("{ArrowDown}");
+      expect(onActiveIndexChangeMock).toHaveBeenCalledWith(2);
+    });
+
     it("moves focus to the target item when activeIndex ref changes externally", async () => {
       const controlledIndex = ref(0);
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
@@ -356,10 +373,37 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
+    it("fires onActiveIndexChange and updates controlled state when handled by consumer", async () => {
+      const controlledIndex = ref(0);
+      const onActiveIndexChangeMock = vi.fn((nextIdx: number) => {
+        controlledIndex.value = nextIdx;
+      });
+      const { Component } = createTestComponent({
+        activeIndex: controlledIndex,
+        onActiveIndexChange: onActiveIndexChangeMock,
+      });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option1);
+
+      await userEvent.keyboard("{ArrowDown}");
+      expect(onActiveIndexChangeMock).toHaveBeenCalledWith(1);
+      expect(controlledIndex.value).toBe(1);
+      await expect.element(option2).toHaveFocus();
+    });
+
     it("reverts external activeIndex change if the target index is disabled", async () => {
       const controlledIndex = ref(0);
+      const onActiveIndexChangeMock = vi.fn((nextIdx: number) => {
+        controlledIndex.value = nextIdx;
+      });
       const { Component } = createTestComponent(
-        { activeIndex: controlledIndex },
+        {
+          activeIndex: controlledIndex,
+          onActiveIndexChange: onActiveIndexChangeMock,
+        },
         { disabledIndices: [1] },
       );
       render(Component);
@@ -368,7 +412,7 @@ describe("useRovingFocus", () => {
       await userEvent.click(option1);
 
       controlledIndex.value = 1;
-      // Should revert back to 0
+      // Should revert back to 0 via onActiveIndexChange
       expect(controlledIndex.value).toBe(0);
       await expect.element(option1).toHaveFocus();
     });
