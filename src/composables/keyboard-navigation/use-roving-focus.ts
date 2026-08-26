@@ -1,6 +1,6 @@
 import {
   computed,
-  ComputedRef,
+  type ComputedRef,
   type MaybeRefOrGetter,
   readonly,
   type Ref,
@@ -8,8 +8,6 @@ import {
   toValue,
   watch,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { getAnchorElement } from "@/shared/elements";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
 import { useRtl } from "./rtl";
@@ -19,72 +17,69 @@ import { useRtl } from "./rtl";
 //=======================================================================================
 
 /**
- * Enables keyboard roving focus navigation across a list of items.
+ * Enables keyboard roving focus navigation across a list of items according to the
+ * WAI-ARIA roving tabindex pattern for composite widgets (toolbars, tablists, radiogroups, menus, listboxes).
  *
- * Supports standard DOM lists as well as virtualized lists with virtual focus tracking.
+ * Maintains `tabindex="0"` on the active item and `tabindex="-1"` on all inactive items,
+ * allowing the composite widget to be a single tab stop in the page sequential focus order.
  *
- * @param context - The floating context object containing state and refs.
- * @param options - Configuration options for roving focus behavior and virtual list support.
+ * @param options - Configuration options for container element, items list, orientation, and navigation.
  * @returns Roving focus state and navigation control methods.
  *
  * @example Standard List
  * ```ts
+ * const containerEl = useTemplateRef<HTMLElement>("container");
  * const itemsList = ref<Array<HTMLElement | null>>([]);
- * useRovingFocus(context, { itemsList });
+ *
+ * const { activeIndex, next, prev } = useRovingFocus({
+ *   containerEl,
+ *   itemsList,
+ * });
  * ```
  *
- * @example Virtual List
+ * @example Radio Group (Both Directions with Select)
  * ```ts
- * const virtualItemRef = ref<HTMLElement | null>(null);
- * useRovingFocus(context, {
+ * const { activeIndex } = useRovingFocus({
+ *   containerEl,
  *   itemsList,
- *   virtual: true,
- *   virtualItemRef,
- *   itemCount: 10000,
+ *   orientation: "both",
+ *   loop: true,
+ *   onSelect: (index) => {
+ *     selectedValue.value = items[index].value;
+ *   },
  * });
  * ```
  */
-export function useRovingFocus(
-  context: FloatingContext,
-  options: UseRovingFocusOptions,
-): UseRovingFocusReturn {
+export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusReturn {
   const {
+    containerEl: containerElOption,
     itemsList: itemsListOption,
+    defaultActiveIndex: defaultActiveIndexOption = 0,
+    activeIndex: activeIndexOption,
+    orientation: orientationOption = "vertical",
+    loop: loopOption = false,
+    rtl: rtlOption,
+    enabled: enabledOption = true,
+    focusItemOnHover: focusItemOnHoverOption = false,
+    scrollItemIntoView: scrollItemIntoViewOption = true,
     virtual: virtualOption = false,
     virtualItemRef,
     itemCount: itemCountOption,
-    initialIndex: initialIndexOption,
-    autoFocus: autoFocusOption = true,
-    scrollItemIntoView: scrollItemIntoViewOption = true,
-    loop: loopOption = false,
-    orientation: orientationOption = "vertical",
-    rtl: rtlOption,
-    enabled: enabledOption = true,
-    openOnArrowDown: openOnArrowDownOption = true,
-    focusItemOnHover: focusItemOnHoverOption = false,
-    focusOnHover: focusOnHoverOption,
     isItemDisabled: isItemDisabledOption,
-    onNavigate,
+    onSelect,
   } = options;
 
-  const { refs, state } = context;
-
   //=====================================================================================
-  // Reactive Options & State
+  // Options & Reactive State
   //=====================================================================================
   const isEnabled = computed(() => toValue(enabledOption));
-  const isOpenOnArrowDown = computed(() => toValue(openOnArrowDownOption));
-  const isFocusItemOnHover = computed(() => {
-    if (focusOnHoverOption !== undefined) {
-      return toValue(focusOnHoverOption);
-    }
-    return toValue(focusItemOnHoverOption);
-  });
+  const isFocusItemOnHover = computed(() => toValue(focusItemOnHoverOption));
   const orientation = computed(() => toValue(orientationOption));
-  const isRtl = useRtl(refs.floatingEl, { rtl: rtlOption });
-  const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
+  const containerEl = computed(() => toValue(containerElOption));
+  const isRtl = useRtl(containerEl, { rtl: rtlOption });
 
-  const activeIndex = ref<number | null>(toValue(initialIndexOption) ?? null);
+  const internalActiveIndex = ref<number>(toValue(defaultActiveIndexOption) ?? 0);
+  const activeIndex = activeIndexOption ?? internalActiveIndex;
 
   //=====================================================================================
   // Drivers
@@ -103,22 +98,19 @@ export function useRovingFocus(
     virtualItemRef,
   });
 
+  let lastSyncedIndex: number | null = null;
+
   //=====================================================================================
   // Navigation Actions
   //=====================================================================================
   function setActiveIndex(idx: number): void {
-    if (idx < -1 || idx >= collection.size.value || (idx >= 0 && collection.isItemDisabled(idx))) {
+    if (idx < 0 || idx >= collection.size.value || collection.isItemDisabled(idx)) {
       return;
     }
 
-    const previousIdx = activeIndex.value;
     activeIndex.value = idx;
-
+    lastSyncedIndex = idx;
     focusDriver.sync(idx, collection.getItem(idx));
-
-    if (idx !== previousIdx) {
-      onNavigate?.(idx >= 0 ? idx : null);
-    }
   }
 
   function navigate(intent: NavigationIntent): void {
@@ -129,60 +121,67 @@ export function useRovingFocus(
   }
 
   //=====================================================================================
-  // Lifecycle & Tabindex Synchronization
+  // Synchronization & Watchers
   //=====================================================================================
+  // Synchronize tabindex when items populate or change
   watch(
-    [state.open, refs.floatingEl],
-    ([isOpen, floatingEl]) => {
-      if (!isEnabled.value || !isOpen || !floatingEl) {
-        activeIndex.value = null;
+    [() => toValue(itemsListOption), collection.size],
+    ([list, size]) => {
+      if (!list || size === 0) return;
+
+      if (
+        activeIndex.value < 0 ||
+        activeIndex.value >= size ||
+        collection.isItemDisabled(activeIndex.value)
+      ) {
+        const defaultIdx = toValue(defaultActiveIndexOption) ?? 0;
+        let validIdx: number | null = null;
+
+        if (defaultIdx >= 0 && defaultIdx < size && !collection.isItemDisabled(defaultIdx)) {
+          validIdx = defaultIdx;
+        } else {
+          validIdx = findNextNavigableIndex(-1, 1, collection, false);
+        }
+
+        if (validIdx !== null) {
+          activeIndex.value = validIdx;
+        }
+      }
+
+      focusDriver.syncTabIndex(activeIndex.value);
+    },
+    { immediate: true, flush: "post" },
+  );
+
+  // Synchronize tabindex and DOM focus when activeIndex is changed externally
+  watch(
+    activeIndex,
+    (newIdx, oldIdx) => {
+      if (newIdx === lastSyncedIndex) return;
+
+      if (newIdx < 0 || newIdx >= collection.size.value || collection.isItemDisabled(newIdx)) {
+        // Revert invalid index changes
+        if (
+          oldIdx !== undefined &&
+          oldIdx >= 0 &&
+          oldIdx < collection.size.value &&
+          !collection.isItemDisabled(oldIdx)
+        ) {
+          activeIndex.value = oldIdx;
+        }
         return;
       }
 
-      if (!toValue(autoFocusOption)) return;
-
-      const initialIdx = toValue(initialIndexOption);
-      if (initialIdx != null && initialIdx >= 0) {
-        setActiveIndex(initialIdx);
-      } else {
-        navigate("first");
-      }
+      lastSyncedIndex = newIdx;
+      focusDriver.sync(newIdx, collection.getItem(newIdx));
     },
-    { flush: "post" },
-  );
-
-  // Sync tabIndex on element list changes
-  watch(
-    [() => toValue(itemsListOption), () => state.open.value],
-    ([list, isOpen]) => {
-      if (!isOpen || !list || list.length === 0) return;
-      focusDriver.syncTabIndex(activeIndex.value ?? 0);
-    },
-    { flush: "post" },
+    { flush: "sync" },
   );
 
   //=====================================================================================
   // Event Handlers
   //=====================================================================================
-  function onAnchorKeyDown(e: KeyboardEvent): void {
-    if (e.key !== "ArrowDown") return;
-    if (e.defaultPrevented || !isEnabled.value || !isOpenOnArrowDown.value) return;
-    if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
-
-    e.preventDefault();
-    if (!state.open.value) {
-      state.setOpen(true, "keyboard-activate", e);
-    } else if (toValue(autoFocusOption)) {
-      const initialIdx = toValue(initialIndexOption);
-      if (initialIdx != null) {
-        setActiveIndex(initialIdx);
-      } else {
-        navigate("first");
-      }
-    }
-  }
-
-  function onFloatingKeyDown(e: KeyboardEvent): void {
+  function onKeyDown(e: KeyboardEvent): void {
     if (e.defaultPrevented || !isEnabled.value) return;
 
     const intent = resolveKeyIntent(e, {
@@ -191,11 +190,25 @@ export function useRovingFocus(
     });
     if (!intent) return;
 
-    e.preventDefault();
-    navigate(intent);
+    if (intent === "select") {
+      e.preventDefault();
+      if (
+        activeIndex.value >= 0 &&
+        activeIndex.value < collection.size.value &&
+        !collection.isItemDisabled(activeIndex.value)
+      ) {
+        onSelect?.(activeIndex.value, e);
+      }
+      return;
+    }
+
+    if (intent === "first" || intent === "last" || intent === "next" || intent === "previous") {
+      e.preventDefault();
+      navigate(intent);
+    }
   }
 
-  function onFloatingPointerMove(e: PointerEvent): void {
+  function onPointerMove(e: PointerEvent): void {
     if (e.defaultPrevented || !isEnabled.value || !isFocusItemOnHover.value) return;
     if (e.pointerType === "touch") return;
 
@@ -217,12 +230,11 @@ export function useRovingFocus(
     }
   }
 
-  useEventListener(anchorEl, "keydown", onAnchorKeyDown);
-  useEventListener(refs.floatingEl, "keydown", onFloatingKeyDown);
-  useEventListener(refs.floatingEl, "pointermove", onFloatingPointerMove);
+  useEventListener(containerEl, "keydown", onKeyDown);
+  useEventListener(containerEl, "pointermove", onPointerMove);
 
   return {
-    activeIndex: readonly(activeIndex),
+    activeIndex: readonly(activeIndex) as Readonly<Ref<number>>,
     setActiveIndex,
     next: () => {
       navigate("next");
@@ -249,9 +261,7 @@ export function useRovingFocus(
  * @param options - Configuration for items list, virtual count, and disabled predicate.
  * @returns An object for querying size, elements, and disabled state.
  */
-export function createNavigableCollection(
-  options: CreateNavigableCollectionOptions,
-): NavigableCollection {
+function createNavigableCollection(options: CreateNavigableCollectionOptions): NavigableCollection {
   const {
     itemsList,
     itemCount,
@@ -329,7 +339,7 @@ export function createNavigableCollection(
  * @param options - Configuration for item elements, scrolling, and virtual ref.
  * @returns Focus and tabindex manipulation methods.
  */
-export function createFocusDriver(options: CreateFocusDriverOptions): FocusDriver {
+function createFocusDriver(options: CreateFocusDriverOptions): FocusDriver {
   const { itemsList: itemsListOption, scrollItemIntoView: scrollOption, virtualItemRef } = options;
 
   function syncTabIndex(targetIndex: number | null): void {
@@ -379,7 +389,7 @@ export function createFocusDriver(options: CreateFocusDriverOptions): FocusDrive
  * @param loop - Whether search wraps around boundaries.
  * @returns The next valid index, or null if none found.
  */
-export function findNextNavigableIndex(
+function findNextNavigableIndex(
   startIndex: number,
   delta: 1 | -1,
   collection: Pick<NavigableCollection, "size" | "isItemDisabled">,
@@ -416,7 +426,7 @@ export function findNextNavigableIndex(
 /**
  * Normalized interface for querying collection items, disabled states, and navigation indices.
  */
-export interface NavigableCollection {
+interface NavigableCollection {
   /**
    * Total number of items in the collection.
    */
@@ -441,7 +451,7 @@ export interface NavigableCollection {
 /**
  * Configuration options for `createNavigableCollection`.
  */
-export interface CreateNavigableCollectionOptions {
+interface CreateNavigableCollectionOptions {
   /**
    * The list of HTML element references.
    */
@@ -472,7 +482,7 @@ export interface CreateNavigableCollectionOptions {
 /**
  * Interface for applying DOM focus and tabindex side-effects.
  */
-export interface FocusDriver {
+interface FocusDriver {
   /**
    * Synchronizes tabindex and applies focus/scroll to the active element.
    */
@@ -492,7 +502,7 @@ export interface FocusDriver {
 /**
  * Configuration options for `createFocusDriver`.
  */
-export interface CreateFocusDriverOptions {
+interface CreateFocusDriverOptions {
   /**
    * The list of HTML element references representing navigable items.
    */
@@ -516,42 +526,99 @@ export interface UseRovingFocusReturn {
   /**
    * The currently active item index.
    */
-  activeIndex: Readonly<Ref<number | null>>;
+  activeIndex: Readonly<Ref<number>>;
 
   /**
    * Sets the active index and moves focus to the item.
    */
-  setActiveIndex: (index: number, event?: Event) => void;
+  setActiveIndex: (index: number) => void;
 
   /**
    * Moves focus to the next enabled item.
    */
-  next: (event?: Event) => void;
+  next: () => void;
 
   /**
    * Moves focus to the previous enabled item.
    */
-  prev: (event?: Event) => void;
+  prev: () => void;
 
   /**
    * Moves focus to the first enabled item.
    */
-  first: (event?: Event) => void;
+  first: () => void;
 
   /**
    * Moves focus to the last enabled item.
    */
-  last: (event?: Event) => void;
+  last: () => void;
 }
 
 /**
- * Options for configuring roving focus navigation with virtual list support.
+ * Options for configuring roving focus navigation across composite widget items.
  */
 export interface UseRovingFocusOptions {
+  /**
+   * Container element that receives keyboard and pointer events and is used for RTL detection.
+   */
+  containerEl: MaybeRefOrGetter<HTMLElement | null>;
+
   /**
    * The list of HTML element references representing navigable items.
    */
   itemsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
+
+  /**
+   * Default active item index when initialized.
+   * If the item at this index is disabled or out of bounds, falls back to the first enabled item.
+   * @default 0
+   */
+  defaultActiveIndex?: MaybeRefOrGetter<number>;
+
+  /**
+   * Optional controlled active index ref.
+   * When provided, the composable synchronizes with and updates this ref.
+   */
+  activeIndex?: Ref<number>;
+
+  /**
+   * Layout orientation of the navigable list items.
+   * - `"vertical"`: ArrowUp / ArrowDown
+   * - `"horizontal"`: ArrowLeft / ArrowRight
+   * - `"both"`: all four arrow keys navigate sequentially
+   * @default "vertical"
+   */
+  orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
+
+  /**
+   * Whether keyboard navigation loops around when reaching the list boundaries.
+   * @default false
+   */
+  loop?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether the layout follows a Right-to-Left (RTL) reading order.
+   * When omitted, automatically detected from `containerEl`.
+   */
+  rtl?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether roving focus navigation is enabled.
+   * @default true
+   */
+  enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether moving the pointer over an item moves focus and active index to that item.
+   * @default false
+   */
+  focusItemOnHover?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether or how to scroll the active item into view upon navigation.
+   * @default true
+   */
+  scrollItemIntoView?: MaybeRefOrGetter<boolean | ScrollIntoViewOptions>;
 
   /**
    * Whether virtualized list mode is enabled.
@@ -572,71 +639,12 @@ export interface UseRovingFocusOptions {
   itemCount?: MaybeRefOrGetter<number>;
 
   /**
-   * The initial item index to focus when the floating element opens.
-   */
-  initialIndex?: MaybeRefOrGetter<number | null>;
-
-  /**
-   * Whether to automatically focus the first/selected item upon opening.
-   * @default true
-   */
-  autoFocus?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether or how to scroll the active item into view upon navigation.
-   * @default true
-   */
-  scrollItemIntoView?: MaybeRefOrGetter<boolean | ScrollIntoViewOptions>;
-
-  /**
-   * Whether keyboard navigation loops around when reaching the list boundaries.
-   * @default false
-   */
-  loop?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Layout orientation of the navigable list items.
-   * @default "vertical"
-   */
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal">;
-
-  /**
-   * Whether the layout follows a Right-to-Left (RTL) reading order.
-   * @default false
-   */
-  rtl?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether roving focus navigation is enabled.
-   * @default true
-   */
-  enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether pressing ArrowDown while focus is on the anchor element opens the floating element.
-   * @default true
-   */
-  openOnArrowDown?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether moving the pointer over an item moves focus and active index to that item.
-   * @default false
-   */
-  focusItemOnHover?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Alias for `focusItemOnHover`.
-   * @default false
-   */
-  focusOnHover?: MaybeRefOrGetter<boolean>;
-
-  /**
    * Predicate for determining if an item at a given index is disabled.
    */
   isItemDisabled?: (item: HTMLElement | null, index: number) => boolean;
 
   /**
-   * Callback fired when the active item index changes during navigation.
+   * Callback fired when Enter or Space is pressed on the active item.
    */
-  onNavigate?: (index: number | null) => void;
+  onSelect?: (index: number, event: KeyboardEvent) => void;
 }

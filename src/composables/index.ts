@@ -53,10 +53,6 @@ export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";
 export type {
-  CreateFocusDriverOptions,
-  CreateNavigableCollectionOptions,
-  FocusDriver,
-  NavigableCollection,
   UseRovingFocusOptions,
   UseRovingFocusReturn,
 } from "./keyboard-navigation/use-roving-focus";

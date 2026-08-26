@@ -41,6 +41,11 @@ export function resolveKeyIntent(
     if (key === "ArrowRight") return rtl ? "previous" : "next";
     if (key === "ArrowLeft") return rtl ? "next" : "previous";
     if (key === "ArrowDown") return "enter";
+  } else if (orientation === "both") {
+    if (key === "ArrowDown" || key === "ArrowRight")
+      return rtl && key === "ArrowRight" ? "previous" : "next";
+    if (key === "ArrowUp" || key === "ArrowLeft")
+      return rtl && key === "ArrowLeft" ? "next" : "previous";
   }
 
   return null;
@@ -57,7 +62,7 @@ export interface KeyboardIntentOptions {
    * Layout orientation of the navigable items.
    * @default "vertical"
    */
-  orientation?: "vertical" | "horizontal";
+  orientation?: "vertical" | "horizontal" | "both";
 
   /**
    * Whether the layout follows a Right-to-Left (RTL) reading order.
