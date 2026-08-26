@@ -57,21 +57,11 @@ export type {
   CreateNavigableCollectionOptions,
   FocusDriver,
   NavigableCollection,
-  NavigationTraverser,
-  NavigationTraverserOptions,
   UseRovingFocusOptions,
   UseRovingFocusReturn,
 } from "./keyboard-navigation/use-roving-focus";
 // Roving Focus
-export {
-  createFocusDriver,
-  createNavigableCollection,
-  createNavigationTraverser,
-  findFirstNavigableIndex,
-  findLastNavigableIndex,
-  findNextNavigableIndex,
-  useRovingFocus,
-} from "./keyboard-navigation/use-roving-focus";
+export { useRovingFocus } from "./keyboard-navigation/use-roving-focus";
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";

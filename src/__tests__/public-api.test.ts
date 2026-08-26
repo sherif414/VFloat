@@ -23,10 +23,10 @@ describe("Public API Surface", () => {
       "useFocus",
       "useFocusManager",
       "useHover",
-      "useListNavigation",
       "useOutsideClick",
       "usePosition",
       "useRole",
+      "useRovingFocus",
       "useTypeahead",
     ].sort();
 
