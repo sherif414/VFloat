@@ -4,11 +4,11 @@ import {
   type MaybeRefOrGetter,
   readonly,
   type Ref,
-  ref,
   toValue,
   watch,
 } from "vue";
 import { useEventListener } from "@/shared/use-event-listener";
+import { useControllableState } from "@/shared/use-controllable-state";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
 import { useRtl } from "./rtl";
 
@@ -54,7 +54,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const {
     containerEl: containerElOption,
     itemsList: itemsListOption,
-    defaultActiveIndex: defaultActiveIndexOption = 0,
+    defaultActiveIndex = 0,
     activeIndex: activeIndexOption,
     orientation: orientationOption = "vertical",
     loop: loopOption = false,
@@ -78,8 +78,13 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const containerEl = computed(() => toValue(containerElOption));
   const isRtl = useRtl(containerEl, { rtl: rtlOption });
 
-  const internalActiveIndex = ref<number>(toValue(defaultActiveIndexOption) ?? 0);
-  const activeIndex = activeIndexOption ?? internalActiveIndex;
+  const activeIndex = useControllableState({
+    value: activeIndexOption,
+    initialValue: defaultActiveIndex,
+    onChange: (value) => {
+      if (activeIndexOption) activeIndexOption.value = value;
+    },
+  });
 
   //=====================================================================================
   // Drivers
@@ -134,7 +139,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
         activeIndex.value >= size ||
         collection.isItemDisabled(activeIndex.value)
       ) {
-        const defaultIdx = toValue(defaultActiveIndexOption) ?? 0;
+        const defaultIdx = defaultActiveIndex;
         let validIdx: number | null = null;
 
         if (defaultIdx >= 0 && defaultIdx < size && !collection.isItemDisabled(defaultIdx)) {
@@ -569,11 +574,11 @@ export interface UseRovingFocusOptions {
   itemsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
 
   /**
-   * Default active item index when initialized.
+   * Default active item index when uncontrolled.
    * If the item at this index is disabled or out of bounds, falls back to the first enabled item.
    * @default 0
    */
-  defaultActiveIndex?: MaybeRefOrGetter<number>;
+  defaultActiveIndex?: number;
 
   /**
    * Optional controlled active index ref.
