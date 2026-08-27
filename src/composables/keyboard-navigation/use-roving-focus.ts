@@ -20,8 +20,12 @@ import { useRtl } from "./rtl";
  * Enables keyboard roving focus navigation across a list of items according to the
  * WAI-ARIA roving tabindex pattern for composite widgets (toolbars, tablists, radiogroups, menus, listboxes).
  *
- * Maintains `tabindex="0"` on the active item and `tabindex="-1"` on all inactive items,
+ * By default, maintains `tabindex="0"` on the active item and `tabindex="-1"` on all inactive items,
  * allowing the composite widget to be a single tab stop in the page sequential focus order.
+ *
+ * @warning When `disableAutoTabindex` is `true`, `useRovingFocus` does not manage `tabindex` on DOM elements.
+ * The consumer is responsible for setting `tabindex="-1"` (or dynamic `:tabindex="activeIndex === idx ? 0 : -1"`)
+ * on every item in the template so that programmatic focus and keyboard navigation operate properly.
  *
  * @param options - Configuration options for container element, items list, orientation, and navigation.
  * @returns Roving focus state and navigation control methods.
@@ -61,6 +65,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     loop: loopOption = false,
     rtl: rtlOption,
     enabled: enabledOption = true,
+    disableAutoTabindex = false,
     focusItemOnHover: focusItemOnHoverOption = false,
     scrollItemIntoView: scrollItemIntoViewOption = true,
     virtual: virtualOption = false,
@@ -91,6 +96,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   const focusDriver = createFocusDriver({
     itemsList: itemsListOption,
+    disableAutoTabindex,
     scrollItemIntoView: scrollItemIntoViewOption,
     virtualItemRef,
   });
@@ -172,7 +178,9 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
         }
       }
 
-      focusDriver.syncTabIndex(activeIndex.value);
+      if (!disableAutoTabindex) {
+        focusDriver.syncTabIndex(activeIndex.value);
+      }
     },
     { immediate: true, flush: "post" },
   );
@@ -337,10 +345,12 @@ function createNavigableCollection(options: CreateNavigableCollectionOptions): N
  * @returns Focus and tabindex manipulation methods.
  */
 function createFocusDriver(options: CreateFocusDriverOptions): FocusDriver {
-  const { itemsList: itemsListOption, scrollItemIntoView: scrollOption, virtualItemRef } = options;
+  const { itemsList, disableAutoTabindex = false, scrollItemIntoView, virtualItemRef } = options;
 
   function syncTabIndex(targetIndex: number | null): void {
-    const list = toValue(itemsListOption);
+    if (disableAutoTabindex) return;
+
+    const list = toValue(itemsList);
     if (!list || list.length === 0) return;
     for (let idx = 0; idx < list.length; idx++) {
       const el = list[idx];
@@ -357,7 +367,7 @@ function createFocusDriver(options: CreateFocusDriverOptions): FocusDriver {
 
     if (el) {
       el.focus();
-      const shouldScroll = toValue(scrollOption);
+      const shouldScroll = toValue(scrollItemIntoView);
       if (shouldScroll) {
         const scrollConfig = typeof shouldScroll === "object" ? shouldScroll : undefined;
         el.scrollIntoView?.(scrollConfig);
@@ -506,6 +516,12 @@ interface CreateFocusDriverOptions {
   itemsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
 
   /**
+   * Whether to disable automatic tabindex management on elements.
+   * @default false
+   */
+  disableAutoTabindex?: boolean;
+
+  /**
    * Whether or how to scroll the active item into view upon navigation.
    */
   scrollItemIntoView?: MaybeRefOrGetter<boolean | ScrollIntoViewOptions>;
@@ -609,6 +625,20 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether to disable automatic `tabindex` management on item elements.
+   *
+   * By default (`false`), `useRovingFocus` automatically synchronizes `tabindex="0"` on the active item
+   * and `tabindex="-1"` on all inactive items in the DOM.
+   *
+   * @warning When set to `true`, `useRovingFocus` will not mutate `tabindex` attributes on items.
+   * You are responsible for ensuring every item has `tabindex="-1"` (or dynamic `:tabindex="activeIndex === idx ? 0 : -1"`)
+   * in your template so that programmatic focus and keyboard navigation operate properly.
+   *
+   * @default false
+   */
+  disableAutoTabindex?: boolean;
 
   /**
    * Whether moving the pointer over an item moves focus and active index to that item.

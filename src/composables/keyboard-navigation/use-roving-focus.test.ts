@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
-import { defineComponent, h, ref, useTemplateRef } from "vue";
+import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
 import {
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
@@ -14,6 +14,8 @@ describe("useRovingFocus", () => {
     disabledIndices?: number[];
     ariaDisabledIndices?: number[];
     dir?: string;
+    tabindex?: number | ((idx: number) => number | undefined);
+    unmanaged?: boolean;
   }
 
   const createTestComponent = (
@@ -40,6 +42,14 @@ describe("useRovingFocus", () => {
       const disabledSet = new Set(config.disabledIndices ?? []);
       const ariaDisabledSet = new Set(config.ariaDisabledIndices ?? []);
 
+      const resolveItemTabindex = (idx: number) => {
+        if (config.unmanaged) return undefined;
+        if (typeof config.tabindex === "function") return config.tabindex(idx);
+        if (config.tabindex !== undefined) return config.tabindex;
+        if (!options.disableAutoTabindex) return undefined;
+        return rovingReturn.activeIndex.value === idx ? 0 : -1;
+      };
+
       return () =>
         h("div", { class: "test-wrapper" }, [
           h("button", { id: "before-btn" }, "Before Widget"),
@@ -55,6 +65,7 @@ describe("useRovingFocus", () => {
                 {
                   role: "option",
                   ref: (el) => register(el as Element, idx),
+                  tabindex: resolveItemTabindex(idx),
                   disabled: disabledSet.has(idx) ? true : undefined,
                   "aria-disabled": ariaDisabledSet.has(idx) ? "true" : undefined,
                 },
@@ -590,6 +601,47 @@ describe("useRovingFocus", () => {
 
       await userEvent.keyboard("{End}");
       await expect.element(option4).toHaveFocus();
+    });
+  });
+
+  describe("disableAutoTabindex option & unmanaged tabindex", () => {
+    it("automatically manages roving tabindex when disableAutoTabindex is false (default)", async () => {
+      const { Component } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+
+      expect((option1.element() as HTMLElement).tabIndex).toBe(0);
+      expect((option2.element() as HTMLElement).tabIndex).toBe(-1);
+
+      await userEvent.click(option1);
+      await userEvent.keyboard("{ArrowDown}");
+
+      await expect.element(option2).toHaveFocus();
+      expect((option1.element() as HTMLElement).tabIndex).toBe(-1);
+      expect((option2.element() as HTMLElement).tabIndex).toBe(0);
+    });
+
+    it("does not mutate element tabIndex when disableAutoTabindex is true", async () => {
+      const { Component, getRoving } = createTestComponent(
+        { disableAutoTabindex: true },
+        { tabindex: -1 },
+      );
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+
+      // In unmanaged mode with static tabindex="-1", elements retain tabindex="-1"
+      expect((option1.element() as HTMLElement).tabIndex).toBe(-1);
+      expect((option2.element() as HTMLElement).tabIndex).toBe(-1);
+
+      // Navigating moves focus without mutating el.tabIndex
+      getRoving().next();
+      await expect.element(option2).toHaveFocus();
+      expect((option1.element() as HTMLElement).tabIndex).toBe(-1);
+      expect((option2.element() as HTMLElement).tabIndex).toBe(-1);
     });
   });
 
