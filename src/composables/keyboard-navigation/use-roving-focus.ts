@@ -1,11 +1,4 @@
-import {
-  computed,
-  type MaybeRefOrGetter,
-  readonly,
-  type Ref,
-  toValue,
-  watch,
-} from "vue";
+import { computed, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -71,6 +64,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     virtualItemRef,
     itemCount: itemCountOption,
     isItemDisabled: isItemDisabledOption,
+    allowFocusOnDisabledElements: allowFocusOnDisabledElementsOption = false,
     onSelect,
   } = options;
 
@@ -81,6 +75,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const isLoop = computed(() => !!toValue(loopOption));
   const isVirtual = computed(() => !!toValue(virtualOption));
   const isFocusItemOnHover = computed(() => toValue(focusItemOnHoverOption));
+  const canFocusDisabledElements = computed(() => toValue(allowFocusOnDisabledElementsOption));
 
   const activeIndex = useControllableState({
     value: activeIndexOption,
@@ -110,19 +105,20 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Auto-correct active index when items list populates or resizes
   watch(
-    [() => toValue(itemsListOption), size],
-    ([list, totalSize]) => {
+    [() => toValue(itemsListOption), size, canFocusDisabledElements],
+    ([list, totalSize, canFocusDisabled]) => {
       if (!list || totalSize === 0) return;
 
       if (
         activeIndex.value < 0 ||
         activeIndex.value >= totalSize ||
-        isItemDisabled(activeIndex.value)
+        (!canFocusDisabled && isItemDisabled(activeIndex.value))
       ) {
         const validIdx = resolveInitialNavigableIndex(
           defaultActiveIndex,
           totalSize,
           isItemDisabled,
+          canFocusDisabled,
         );
 
         if (validIdx !== null) {
@@ -137,12 +133,17 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   watch(
     activeIndex,
     (newIdx, oldIdx) => {
-      if (newIdx < 0 || newIdx >= size.value || isItemDisabled(newIdx)) {
+      const isInvalid =
+        newIdx < 0 ||
+        newIdx >= size.value ||
+        (!canFocusDisabledElements.value && isItemDisabled(newIdx));
+
+      if (isInvalid) {
         if (
           oldIdx !== undefined &&
           oldIdx >= 0 &&
           oldIdx < size.value &&
-          !isItemDisabled(oldIdx)
+          (canFocusDisabledElements.value || !isItemDisabled(oldIdx))
         ) {
           activeIndex.value = oldIdx;
         }
@@ -196,7 +197,11 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     (newIdx) => {
       if (newIdx === lastFocusedIndex) return;
 
-      if (newIdx >= 0 && newIdx < size.value && !isItemDisabled(newIdx)) {
+      if (
+        newIdx >= 0 &&
+        newIdx < size.value &&
+        (canFocusDisabledElements.value || !isItemDisabled(newIdx))
+      ) {
         focusItem(newIdx);
       }
     },
@@ -206,7 +211,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   // --- Keyboard Navigation ----------------------------------------------------
 
   function setActiveIndex(idx: number): void {
-    if (idx < 0 || idx >= size.value || isItemDisabled(idx)) {
+    if (idx < 0 || idx >= size.value || (!canFocusDisabledElements.value && isItemDisabled(idx))) {
       return;
     }
 
@@ -221,6 +226,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       size.value,
       isItemDisabled,
       isLoop.value,
+      canFocusDisabledElements.value,
     );
 
     if (targetIdx !== null) {
@@ -272,7 +278,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     for (let idx = 0; idx < list.length; idx++) {
       const el = list[idx];
       if (el && el.contains(target)) {
-        if (isItemDisabled(idx)) return;
+        if (!canFocusDisabledElements.value && isItemDisabled(idx)) return;
         if (idx !== activeIndex.value) {
           setActiveIndex(idx);
         }
@@ -348,6 +354,7 @@ export function findNextNavigableIndex(
   totalSize: number,
   isItemDisabled: (idx: number) => boolean,
   loop: boolean,
+  allowFocusOnDisabledElements: boolean = false,
 ): number | null {
   if (totalSize === 0) return null;
 
@@ -364,7 +371,7 @@ export function findNextNavigableIndex(
       current = totalSize - 1;
     }
 
-    if (!isItemDisabled(current)) {
+    if (allowFocusOnDisabledElements || !isItemDisabled(current)) {
       return current;
     }
   }
@@ -381,22 +388,51 @@ export function resolveNavigableIndexByIntent(
   totalSize: number,
   isItemDisabled: (idx: number) => boolean,
   loop: boolean,
+  allowFocusOnDisabledElements: boolean = false,
 ): number | null {
   if (totalSize === 0) return null;
 
   switch (intent) {
     case "next": {
       const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : -1;
-      return findNextNavigableIndex(start, 1, totalSize, isItemDisabled, loop);
+      return findNextNavigableIndex(
+        start,
+        1,
+        totalSize,
+        isItemDisabled,
+        loop,
+        allowFocusOnDisabledElements,
+      );
     }
     case "previous": {
       const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : totalSize;
-      return findNextNavigableIndex(start, -1, totalSize, isItemDisabled, loop);
+      return findNextNavigableIndex(
+        start,
+        -1,
+        totalSize,
+        isItemDisabled,
+        loop,
+        allowFocusOnDisabledElements,
+      );
     }
     case "first":
-      return findNextNavigableIndex(-1, 1, totalSize, isItemDisabled, false);
+      return findNextNavigableIndex(
+        -1,
+        1,
+        totalSize,
+        isItemDisabled,
+        false,
+        allowFocusOnDisabledElements,
+      );
     case "last":
-      return findNextNavigableIndex(totalSize, -1, totalSize, isItemDisabled, false);
+      return findNextNavigableIndex(
+        totalSize,
+        -1,
+        totalSize,
+        isItemDisabled,
+        false,
+        allowFocusOnDisabledElements,
+      );
     default:
       return null;
   }
@@ -409,11 +445,23 @@ export function resolveInitialNavigableIndex(
   defaultIndex: number,
   totalSize: number,
   isItemDisabled: (idx: number) => boolean,
+  allowFocusOnDisabledElements: boolean = false,
 ): number | null {
-  if (defaultIndex >= 0 && defaultIndex < totalSize && !isItemDisabled(defaultIndex)) {
+  if (
+    defaultIndex >= 0 &&
+    defaultIndex < totalSize &&
+    (allowFocusOnDisabledElements || !isItemDisabled(defaultIndex))
+  ) {
     return defaultIndex;
   }
-  return findNextNavigableIndex(-1, 1, totalSize, isItemDisabled, false);
+  return findNextNavigableIndex(
+    -1,
+    1,
+    totalSize,
+    isItemDisabled,
+    false,
+    allowFocusOnDisabledElements,
+  );
 }
 
 //=======================================================================================
@@ -564,8 +612,17 @@ export interface UseRovingFocusOptions {
   isItemDisabled?: (item: HTMLElement | null, index: number) => boolean;
 
   /**
+   * Whether to allow keyboard navigation and roving focus to land on disabled elements.
+   *
+   * - `false` (default / WCAG 2.1.1): Disabled elements are skipped during keyboard navigation and cannot receive active focus.
+   * - `true` (WAI-ARIA APG): Disabled elements can receive keyboard focus for discoverability, but cannot be selected (`onSelect` will not fire).
+   *
+   * @default false
+   */
+  allowFocusOnDisabledElements?: MaybeRefOrGetter<boolean>;
+
+  /**
    * Callback fired when Enter or Space is pressed on the active item.
    */
   onSelect?: (index: number, event: KeyboardEvent) => void;
 }
-
