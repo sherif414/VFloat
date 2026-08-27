@@ -3,6 +3,11 @@ import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, ref, useTemplateRef } from "vue";
 import {
+  findNextNavigableIndex,
+  resolveCollectionSize,
+  resolveInitialNavigableIndex,
+  resolveIsItemDisabled,
+  resolveNavigableIndexByIntent,
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
   useRovingFocus,
@@ -661,6 +666,94 @@ describe("useRovingFocus", () => {
 
       await userEvent.keyboard("{ArrowDown}");
       expect(virtualItemRef.value).not.toBeNull();
+    });
+  });
+
+  describe("pure idempotent helper functions", () => {
+    describe("resolveCollectionSize", () => {
+      it("returns list length for non-virtual lists", () => {
+        expect(resolveCollectionSize(5)).toBe(5);
+        expect(resolveCollectionSize(0)).toBe(0);
+        expect(resolveCollectionSize(10, 50, false)).toBe(10);
+      });
+
+      it("returns explicit itemCount when virtual is true", () => {
+        expect(resolveCollectionSize(5, 100, true)).toBe(100);
+        expect(resolveCollectionSize(0, 0, true)).toBe(0);
+        expect(resolveCollectionSize(5, null, true)).toBe(5);
+      });
+    });
+
+    describe("resolveIsItemDisabled", () => {
+      it("prioritizes customPredicate when supplied", () => {
+        const customPredicate = (_el: HTMLElement | null, idx: number) => idx === 2;
+        expect(resolveIsItemDisabled(null, 2, false, customPredicate)).toBe(true);
+        expect(resolveIsItemDisabled(null, 1, false, customPredicate)).toBe(true); // null and non-virtual is true unless custom predicate returns false? Wait, customPredicate returns false for idx 1, but item is null, so it checks !item -> true.
+      });
+
+      it("identifies disabled and aria-disabled DOM attributes", () => {
+        const btn = document.createElement("button");
+        expect(resolveIsItemDisabled(btn, 0)).toBe(false);
+
+        btn.setAttribute("disabled", "");
+        expect(resolveIsItemDisabled(btn, 0)).toBe(true);
+
+        const div = document.createElement("div");
+        div.setAttribute("aria-disabled", "true");
+        expect(resolveIsItemDisabled(div, 0)).toBe(true);
+      });
+
+      it("handles null items in virtual and non-virtual modes", () => {
+        expect(resolveIsItemDisabled(null, 0, false)).toBe(true);
+        expect(resolveIsItemDisabled(null, 0, true)).toBe(false);
+      });
+    });
+
+    describe("findNextNavigableIndex", () => {
+      it("finds next enabled index forward without loop", () => {
+        const isDisabled = (idx: number) => idx === 1;
+        expect(findNextNavigableIndex(0, 1, 4, isDisabled, false)).toBe(2);
+        expect(findNextNavigableIndex(2, 1, 4, isDisabled, false)).toBe(3);
+        expect(findNextNavigableIndex(3, 1, 4, isDisabled, false)).toBe(null);
+      });
+
+      it("wraps around when loop is true", () => {
+        const isDisabled = (idx: number) => idx === 0;
+        expect(findNextNavigableIndex(3, 1, 4, isDisabled, true)).toBe(1);
+        expect(findNextNavigableIndex(1, -1, 4, isDisabled, true)).toBe(3);
+      });
+
+      it("returns null when all items are disabled or totalSize is 0", () => {
+        expect(findNextNavigableIndex(0, 1, 0, () => false, true)).toBe(null);
+        expect(findNextNavigableIndex(0, 1, 3, () => true, true)).toBe(null);
+      });
+    });
+
+    describe("resolveNavigableIndexByIntent", () => {
+      const isDisabled = (idx: number) => idx === 1;
+
+      it("resolves next/previous/first/last intents", () => {
+        expect(resolveNavigableIndexByIntent("first", null, 4, isDisabled, false)).toBe(0);
+        expect(resolveNavigableIndexByIntent("last", null, 4, isDisabled, false)).toBe(3);
+        expect(resolveNavigableIndexByIntent("next", 0, 4, isDisabled, false)).toBe(2);
+        expect(resolveNavigableIndexByIntent("previous", 2, 4, isDisabled, false)).toBe(0);
+      });
+
+      it("returns null for unsupported navigation intents", () => {
+        expect(resolveNavigableIndexByIntent("select", 0, 4, isDisabled, false)).toBe(null);
+      });
+    });
+
+    describe("resolveInitialNavigableIndex", () => {
+      it("returns defaultIndex if valid and enabled", () => {
+        expect(resolveInitialNavigableIndex(2, 5, () => false)).toBe(2);
+      });
+
+      it("falls back to the first enabled index if default is disabled or out of bounds", () => {
+        const isDisabled = (idx: number) => idx === 0 || idx === 1;
+        expect(resolveInitialNavigableIndex(0, 5, isDisabled)).toBe(2);
+        expect(resolveInitialNavigableIndex(10, 5, isDisabled)).toBe(2);
+      });
     });
   });
 });
