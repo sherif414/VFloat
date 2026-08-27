@@ -147,6 +147,14 @@ Only these abbreviations are permitted. Everything else must be spelled out.
 - Add code comments when they explain why something exists, tradeoffs, non-obvious control flow, edge cases, or coordination between moving parts.
 - Do not add comments that only restate what the code already says.
 
+### Composable Architecture & Concern Separation
+
+- **Pure & Idempotent Helpers**: All module-level helper functions and non-main composable utilities (`📌 Helpers`) must be completely pure and idempotent with zero side effects. They must not mutate DOM elements, mutate refs, or create Vue reactivity scopes/effects.
+- **Side-Effect Containment**: All side effects (DOM attribute mutation, DOM focus/scrolling, ref updates, event listener binding, and external callbacks) must reside exclusively inside the main composable function.
+- **Single-Concern Separation for Effects, Watchers & Event Handlers**:
+  - Never conflate multiple distinct concerns within a single `watch`, `watchPostEffect`, or effect handler. Each distinct responsibility (e.g., reactive bounds auto-correction, DOM attribute synchronization, DOM focus synchronization) must have its own independent watcher.
+  - Event listeners and handlers must not combine unrelated logic representing independent capabilities or concerns when they do not depend on call order. Keep independent behaviors decoupled in dedicated event listeners within their respective feature sections.
+
 ## Modern API & Dependency Standards
 
 - **Runtime & Language Baseline:** Target ECMAScript 2024+, TypeScript 5.9+, Node.js 22+, and Vue 3.5+.
