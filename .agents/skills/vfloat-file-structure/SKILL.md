@@ -16,22 +16,24 @@ This skill defines the "Gold Standard" for file organization in the VFloat repos
 
 ## The Blueprint: Standard Order
 
-All VFloat files (especially composables) must follow this exact sequence:
+All VFloat files (especially composables) must follow this sequence:
 
 1. **Imports**: Third-party first (Vue, etc.), then internal VFloat modules.
-2. **Internal Module Constants/Types**: Simple, non-exported types or constants needed by the main logic.
+2. **Internal Module Constants/Types**: (Optional) Simple, non-exported types or constants needed by the main logic.
 3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useFloating`).
-4. **📌 Helpers Section**: (Optional) Module-level private functions or logic blocks.
-5. **📌 Types Section**: All exported interfaces (`UseXOptions`, `UseXContext`, etc.).
+4. **📌 Helpers Section**: (Optional) Module-level private functions or logic blocks. *Omit banner if there are no helpers.*
+5. **📌 Types Section**: (Optional) Exported interfaces and types (`UseXOptions`, `UseXContext`, etc.). *Omit banner if there are no types.*
+
+> [!IMPORTANT]
+> **No Empty Section Banners**: Never leave a section banner (such as `📌 Helpers` or `📌 Types`) without actual code under it. If a file has no helpers or no types, omit the banner entirely.
 
 ---
 
-## 1. Visual Markers (Banners)
+## 1. Visual Markers (Banners & Dividers)
 
-Use consistent divider widths and emoji markers.
+### Top-Level Section Banners
 
-### Main Section Banners
-
+Used for module-level sections (`📌 Main`, `📌 Helpers`, `📌 Types`).
 Width: `//` + 85 `=` (Total 87 characters).
 
 ```typescript
@@ -40,14 +42,20 @@ Width: `//` + 85 `=` (Total 87 characters).
 //=======================================================================================
 ```
 
-### Sub-section Banners (Inside Functions)
+### Sub-section Dividers (Inside Functions)
 
-Width: `//` + 85 `=` (Total 87 characters). Used to group logical blocks inside a large function.
+Used to group distinct, cohesive logical blocks within large functions.
+
+- **Format**: Single-line dashed divider (`// --- Section Name ----------------------------------------------`), followed by an empty line before the first line of code.
+- **Guideline**: **Use sparingly.** Only apply internal dividers inside large, complex functions where grouping distinct blocks (e.g. event listeners, navigation algorithms, state synchronization) genuinely improves readability. Do not use internal dividers in short or straightforward functions.
 
 ```typescript
-//=====================================================================================
-// Interaction State
-//=====================================================================================
+  // --- Interaction State ------------------------------------------------------
+
+  const interactionState = {
+    pointerType: undefined as PointerType | undefined,
+    didKeyDown: false,
+  };
 ```
 
 ---
@@ -74,6 +82,8 @@ The Types section at the bottom should include:
 - `UseXOptions`: The configuration interface.
 - `UseXReturn`: If the function returns more than just a cleanup.
 
+*Remember: If a file defines no types, omit the `📌 Types` banner entirely.*
+
 ```typescript
 //=======================================================================================
 // 📌 Types
@@ -82,17 +92,12 @@ The Types section at the bottom should include:
 export interface UseClickOptions { ... }
 ```
 
-## Examples
-
-### Reference Implementation
-
-Always refer to [use-click.ts](file:///c:/projects/VFloat/src/composables/interactions/use-click.ts) as the master template for this structure.
-
-### Checklist for Validation
+## Checklist for Validation
 
 - [ ] Imports are sorted and clean.
-- [ ] Main exported function is at the top (after imports).
-- [ ] 📌 Main and 📌 Types banners are present.
-- [ ] Sub-dividers are used for grouping logic.
+- [ ] Main exported function is at the top (after imports and module-private constants).
+- [ ] `📌 Main` banner is present.
+- [ ] `📌 Helpers` and `📌 Types` banners are **only** present when code exists in those sections (no empty section banners).
+- [ ] Internal dividers use single-line dashed dividers (`// --- Name -----------------`) with a trailing empty line, and are used sparingly only in large functions.
 - [ ] Options are destructured with defaults.
-- [ ] Types are at the absolute bottom of the file.
+- [ ] Types are placed at the bottom of the file (when present).
