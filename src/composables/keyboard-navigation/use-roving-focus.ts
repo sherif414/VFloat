@@ -70,11 +70,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     onSelect,
   } = options;
 
-  //=====================================================================================
-  // Options & Reactive State
-  //=====================================================================================
   const isEnabled = computed(() => toValue(enabledOption));
-  const isFocusItemOnHover = computed(() => toValue(focusItemOnHoverOption));
   const orientation = computed(() => toValue(orientationOption));
   const containerEl = computed(() => toValue(containerElOption));
   const isRtl = useRtl(containerEl, { rtl: rtlOption });
@@ -85,9 +81,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     onChange: onActiveIndexChangeOption,
   });
 
-  //=====================================================================================
-  // Drivers
-  //=====================================================================================
   const collection = createNavigableCollection({
     itemsList: itemsListOption,
     itemCount: itemCountOption,
@@ -104,9 +97,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   let lastSyncedIndex: number | null = null;
 
-  //=====================================================================================
-  // Navigation Actions
-  //=====================================================================================
+  // --- Keyboard Navigation ----------------------------------------------------
+
   function setActiveIndex(idx: number): void {
     if (idx < 0 || idx >= collection.size.value || collection.isItemDisabled(idx)) {
       return;
@@ -124,9 +116,37 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     }
   }
 
-  //=====================================================================================
-  // Synchronization & Watchers
-  //=====================================================================================
+  function onKeyDown(e: KeyboardEvent): void {
+    if (e.defaultPrevented || !isEnabled.value) return;
+
+    const intent = resolveKeyIntent(e, {
+      orientation: orientation.value,
+      rtl: isRtl.value,
+    });
+    if (!intent) return;
+
+    if (intent === "select") {
+      e.preventDefault();
+      if (
+        activeIndex.value >= 0 &&
+        activeIndex.value < collection.size.value &&
+        !collection.isItemDisabled(activeIndex.value)
+      ) {
+        onSelect?.(activeIndex.value, e);
+      }
+      return;
+    }
+
+    if (intent === "first" || intent === "last" || intent === "next" || intent === "previous") {
+      e.preventDefault();
+      navigate(intent);
+    }
+  }
+
+  useEventListener(containerEl, "keydown", onKeyDown);
+
+  // --- DOM Focus & Tabindex Sync ----------------------------------------------
+
   // Synchronize tabindex when items populate or change
   watch(
     [() => toValue(itemsListOption), collection.size],
@@ -182,35 +202,9 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     { flush: "sync" },
   );
 
-  //=====================================================================================
-  // Event Handlers
-  //=====================================================================================
-  function onKeyDown(e: KeyboardEvent): void {
-    if (e.defaultPrevented || !isEnabled.value) return;
+  // --- Pointer Hover Activation -----------------------------------------------
 
-    const intent = resolveKeyIntent(e, {
-      orientation: orientation.value,
-      rtl: isRtl.value,
-    });
-    if (!intent) return;
-
-    if (intent === "select") {
-      e.preventDefault();
-      if (
-        activeIndex.value >= 0 &&
-        activeIndex.value < collection.size.value &&
-        !collection.isItemDisabled(activeIndex.value)
-      ) {
-        onSelect?.(activeIndex.value, e);
-      }
-      return;
-    }
-
-    if (intent === "first" || intent === "last" || intent === "next" || intent === "previous") {
-      e.preventDefault();
-      navigate(intent);
-    }
-  }
+  const isFocusItemOnHover = computed(() => toValue(focusItemOnHoverOption));
 
   function onPointerMove(e: PointerEvent): void {
     if (e.defaultPrevented || !isEnabled.value || !isFocusItemOnHover.value) return;
@@ -234,7 +228,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     }
   }
 
-  useEventListener(containerEl, "keydown", onKeyDown);
   useEventListener(containerEl, "pointermove", onPointerMove);
 
   return {

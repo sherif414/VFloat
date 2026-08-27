@@ -23,8 +23,8 @@ Every VFloat file (especially composables) must follow this exact sequence:
 1. **Imports**: Third-party first (Vue, `@floating-ui/dom`, etc.), then internal VFloat modules (`@/...`).
 2. **Internal Module Constants/Types**: (Optional) Simple, non-exported types or constants needed by the module.
 3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingContext`).
-4. **📌 Helpers Section**: (Optional) Module-level private functions, drivers, or utility classes. *Omit banner if there are no helpers.*
-5. **📌 Types Section**: (Optional) Exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). *Omit banner if there are no types.*
+4. **📌 Helpers Section**: (Optional) Module-level private functions, drivers, or utility classes. _Omit banner if there are no helpers._
+5. **📌 Types Section**: (Optional) Exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). _Omit banner if there are no types._
 
 > [!IMPORTANT]
 > **No Empty Section Banners**: Never leave a section banner (such as `📌 Helpers` or `📌 Types`) without actual code under it. If a file does not define helpers or types, omit the banner entirely.
@@ -34,6 +34,7 @@ Every VFloat file (especially composables) must follow this exact sequence:
 ## 2. Visual Markers (Banners & Dividers)
 
 ### Module-Level Section Banners
+
 Used exclusively for top-level file sections (`📌 Main`, `📌 Helpers`, `📌 Types`).
 Width: `//` + 85 `=` (Total 87 characters).
 
@@ -44,6 +45,7 @@ Width: `//` + 85 `=` (Total 87 characters).
 ```
 
 ### Internal Feature Dividers (Inside Functions)
+
 Used to group cohesive feature blocks inside large composables.
 
 - **Format**: Single-line dashed divider (`// --- Feature Name --------------------------------------------------`), padded to 80 characters.
@@ -51,10 +53,10 @@ Used to group cohesive feature blocks inside large composables.
 - **Usage Rule**: **Use sparingly.** Only apply internal dividers inside large, multi-feature composables (100+ lines). Small, single-concern composables should not use dividers.
 
 ```typescript
-  // --- Rest Detection ---------------------------------------------------------
+// --- Rest Detection ---------------------------------------------------------
 
-  let restCoords: Coords | null = null;
-  let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
+let restCoords: Coords | null = null;
+let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
 ```
 
 ---
@@ -64,7 +66,9 @@ Used to group cohesive feature blocks inside large composables.
 Inside the main composable function, organize code based on the complexity tier:
 
 ### Tier 1: Single-Concern Composables (< 100 lines)
+
 Follows a linear flow separated only by blank lines (no internal dividers):
+
 1. **JSDoc**: Comprehensive description with `@param`, `@returns`, and `@example`.
 2. **Options Destructuring**: Destructure all options with sensible defaults.
 3. **Derived State & Reactive Refs**: `computed` wrappers, reactive refs.
@@ -73,6 +77,7 @@ Follows a linear flow separated only by blank lines (no internal dividers):
 6. **Return Statement**: Public return object or `void`.
 
 ### Tier 2: Complex Composables (100+ lines or Multi-Feature)
+
 Organize code using **Feature-Based Grouping (Vertical Cohesion)** rather than horizontal technical slicing:
 
 ```
@@ -96,21 +101,23 @@ composable()
 Divider names must answer: **"What user-facing behavior or subsystem does this block implement?"**
 
 ### The Core Rules
+
 1. **Describe the Capability, Not the Code Type**: Never use generic technical labels like `State`, `Handlers`, `Watchers`, `Logic`, or `Helpers`.
 2. **Title Case Noun Phrases**: Use standard Title Case (e.g., `Keyboard Navigation`, not `keyboard navigation`).
 3. **Use Approved Naming Formulas**:
 
-| Formula | Pattern | Examples |
-|---|---|---|
-| **[Modality / Trigger] + [Behavior]** | How the user interacts + what happens | `Keyboard Navigation`, `Pointer Hover Activation`, `Click & Toggle Trigger`, `Item Selection` |
-| **[Domain Subsystem] + [Capability]** | Dedicated feature engine / calculation | `Rest Detection`, `Safe Polygon Tracking`, `Focus Trapping`, `Search Buffer & Matcher` |
-| **[Target] + [Coordination / Sync]** | What entity is being synchronized | `DOM Focus & Tabindex Sync`, `Initial & Return Focus`, `Modal Inert Isolation` |
+| Formula                               | Pattern                                | Examples                                                                                      |
+| ------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **[Modality / Trigger] + [Behavior]** | How the user interacts + what happens  | `Keyboard Navigation`, `Pointer Hover Activation`, `Click & Toggle Trigger`, `Item Selection` |
+| **[Domain Subsystem] + [Capability]** | Dedicated feature engine / calculation | `Rest Detection`, `Safe Polygon Tracking`, `Focus Trapping`, `Search Buffer & Matcher`        |
+| **[Target] + [Coordination / Sync]**  | What entity is being synchronized      | `DOM Focus & Tabindex Sync`, `Initial & Return Focus`, `Modal Inert Isolation`                |
 
 ---
 
 ## 5. Types Section Standard
 
 The `📌 Types` section at the bottom of the file should include all exported interfaces in this order:
+
 1. `UseXContext`: Context requirements (if applicable).
 2. `UseXReturn`: Return object shape.
 3. `UseXOptions`: Configuration options with comprehensive JSDoc on every property.
