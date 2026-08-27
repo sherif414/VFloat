@@ -1,39 +1,40 @@
 ---
 name: vfloat-file-structure
-description: Enforce the unified file structure for VFloat composables and modules. This skill ensures a consistent layout where the main logic is prioritized at the top, followed by internal helpers, and finally public types/interfaces. Use this when creating new composables, refactoring existing ones, or during code cleanup.
+description: Enforce the unified file structure and feature-based code organization for VFloat composables and modules. This skill ensures a consistent layout where the public API and main logic are prioritized at the top, internal logic is organized by feature capabilities, and public types/interfaces are at the bottom.
 ---
 
-# VFloat File Structure
+# VFloat File Structure & Organization
 
-This skill defines the "Gold Standard" for file organization in the VFloat repository. It prioritizes the **public API and main logic** at the top of the file to improve "scannability" and developer experience.
+This skill defines the gold standard for file architecture and internal code organization across the VFloat repository. It ensures high scannability, vertical feature cohesion, and strict consistency.
 
 ## When to use this Skill
 
 - When creating any new composable in `src/composables/`.
-- When refactoring "shallow" or "deep" modules to align with project standards.
-- When performing a polish pass on existing files.
-- When the user asks to "fix the structure" or "normalize the file layout."
-
-## The Blueprint: Standard Order
-
-All VFloat files (especially composables) must follow this sequence:
-
-1. **Imports**: Third-party first (Vue, etc.), then internal VFloat modules.
-2. **Internal Module Constants/Types**: (Optional) Simple, non-exported types or constants needed by the main logic.
-3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useFloating`).
-4. **📌 Helpers Section**: (Optional) Module-level private functions or logic blocks. *Omit banner if there are no helpers.*
-5. **📌 Types Section**: (Optional) Exported interfaces and types (`UseXOptions`, `UseXContext`, etc.). *Omit banner if there are no types.*
-
-> [!IMPORTANT]
-> **No Empty Section Banners**: Never leave a section banner (such as `📌 Helpers` or `📌 Types`) without actual code under it. If a file has no helpers or no types, omit the banner entirely.
+- When refactoring existing composables or internal modules.
+- When performing a code cleanup or polish pass.
+- When organizing logic inside large composables.
 
 ---
 
-## 1. Visual Markers (Banners & Dividers)
+## 1. Module-Level Standard Order
 
-### Top-Level Section Banners
+Every VFloat file (especially composables) must follow this exact sequence:
 
-Used for module-level sections (`📌 Main`, `📌 Helpers`, `📌 Types`).
+1. **Imports**: Third-party first (Vue, `@floating-ui/dom`, etc.), then internal VFloat modules (`@/...`).
+2. **Internal Module Constants/Types**: (Optional) Simple, non-exported types or constants needed by the module.
+3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingContext`).
+4. **📌 Helpers Section**: (Optional) Module-level private functions, drivers, or utility classes. *Omit banner if there are no helpers.*
+5. **📌 Types Section**: (Optional) Exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). *Omit banner if there are no types.*
+
+> [!IMPORTANT]
+> **No Empty Section Banners**: Never leave a section banner (such as `📌 Helpers` or `📌 Types`) without actual code under it. If a file does not define helpers or types, omit the banner entirely.
+
+---
+
+## 2. Visual Markers (Banners & Dividers)
+
+### Module-Level Section Banners
+Used exclusively for top-level file sections (`📌 Main`, `📌 Helpers`, `📌 Types`).
 Width: `//` + 85 `=` (Total 87 characters).
 
 ```typescript
@@ -42,47 +43,77 @@ Width: `//` + 85 `=` (Total 87 characters).
 //=======================================================================================
 ```
 
-### Sub-section Dividers (Inside Functions)
+### Internal Feature Dividers (Inside Functions)
+Used to group cohesive feature blocks inside large composables.
 
-Used to group distinct, cohesive logical blocks within large functions.
-
-- **Format**: Single-line dashed divider (`// --- Section Name ----------------------------------------------`), followed by an empty line before the first line of code.
-- **Guideline**: **Use sparingly.** Only apply internal dividers inside large, complex functions where grouping distinct blocks (e.g. event listeners, navigation algorithms, state synchronization) genuinely improves readability. Do not use internal dividers in short or straightforward functions.
+- **Format**: Single-line dashed divider (`// --- Feature Name --------------------------------------------------`), padded to 80 characters.
+- **Spacing**: Always leave **1 empty line** between the divider and the first line of code.
+- **Usage Rule**: **Use sparingly.** Only apply internal dividers inside large, multi-feature composables (100+ lines). Small, single-concern composables should not use dividers.
 
 ```typescript
-  // --- Interaction State ------------------------------------------------------
+  // --- Rest Detection ---------------------------------------------------------
 
-  const interactionState = {
-    pointerType: undefined as PointerType | undefined,
-    didKeyDown: false,
-  };
+  let restCoords: Coords | null = null;
+  let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
 ```
 
 ---
 
-## 2. The Composable Anatomy
+## 3. Internal Composable Anatomy & Feature Grouping
 
-When writing the main exported function, follow this internal flow:
+Inside the main composable function, organize code based on the complexity tier:
 
-1. **JSDoc**: Comprehensive description with `@param`, `@returns`, and at least one `@example`.
-2. **Options Destructuring**: Destructure all options at the top with sensible defaults.
-3. **Internal State**: Reactive and non-reactive state variables.
-4. **Derived State**: `computed` properties and helper booleans.
-5. **Logic / Event Handlers**: The "meat" of the behavior.
-6. **Wiring (Watchers/Listeners)**: `watch`, `watchPostEffect`, and `useEventListener` calls.
-7. **Return Statement**: Only if the composable returns an object (often interaction composables return `void`).
+### Tier 1: Single-Concern Composables (< 100 lines)
+Follows a linear flow separated only by blank lines (no internal dividers):
+1. **JSDoc**: Comprehensive description with `@param`, `@returns`, and `@example`.
+2. **Options Destructuring**: Destructure all options with sensible defaults.
+3. **Derived State & Reactive Refs**: `computed` wrappers, reactive refs.
+4. **Event Handlers & Action Functions**: Logic and user action handlers.
+5. **Wiring & Listeners**: `watch`, `watchPostEffect`, `useEventListener`.
+6. **Return Statement**: Public return object or `void`.
+
+### Tier 2: Complex Composables (100+ lines or Multi-Feature)
+Organize code using **Feature-Based Grouping (Vertical Cohesion)** rather than horizontal technical slicing:
+
+```
+composable()
+│
+├── Shared Options & Root State  (Destructuring, computed option wrappers, shared refs)
+│
+├── Feature Block 1               (Private state + Actions + Handlers + Effects for Feature 1)
+│
+├── Feature Block 2               (Private state + Actions + Handlers + Effects for Feature 2)
+│
+├── Feature Block 3               (Private state + Actions + Handlers + Effects for Feature 3)
+│
+└── Public Return Statement       (Aggregates methods & state exposed to consumer)
+```
 
 ---
 
-## 3. Section Detail: 📌 Types
+## 4. Feature Divider Naming Standards
 
-The Types section at the bottom should include:
+Divider names must answer: **"What user-facing behavior or subsystem does this block implement?"**
 
-- `UseXContext`: If a specific context shape is required.
-- `UseXOptions`: The configuration interface.
-- `UseXReturn`: If the function returns more than just a cleanup.
+### The Core Rules
+1. **Describe the Capability, Not the Code Type**: Never use generic technical labels like `State`, `Handlers`, `Watchers`, `Logic`, or `Helpers`.
+2. **Title Case Noun Phrases**: Use standard Title Case (e.g., `Keyboard Navigation`, not `keyboard navigation`).
+3. **Use Approved Naming Formulas**:
 
-*Remember: If a file defines no types, omit the `📌 Types` banner entirely.*
+| Formula | Pattern | Examples |
+|---|---|---|
+| **[Modality / Trigger] + [Behavior]** | How the user interacts + what happens | `Keyboard Navigation`, `Pointer Hover Activation`, `Click & Toggle Trigger`, `Item Selection` |
+| **[Domain Subsystem] + [Capability]** | Dedicated feature engine / calculation | `Rest Detection`, `Safe Polygon Tracking`, `Focus Trapping`, `Search Buffer & Matcher` |
+| **[Target] + [Coordination / Sync]** | What entity is being synchronized | `DOM Focus & Tabindex Sync`, `Initial & Return Focus`, `Modal Inert Isolation` |
+
+---
+
+## 5. Types Section Standard
+
+The `📌 Types` section at the bottom of the file should include all exported interfaces in this order:
+1. `UseXContext`: Context requirements (if applicable).
+2. `UseXReturn`: Return object shape.
+3. `UseXOptions`: Configuration options with comprehensive JSDoc on every property.
 
 ```typescript
 //=======================================================================================
@@ -92,12 +123,16 @@ The Types section at the bottom should include:
 export interface UseClickOptions { ... }
 ```
 
+---
+
 ## Checklist for Validation
 
-- [ ] Imports are sorted and clean.
-- [ ] Main exported function is at the top (after imports and module-private constants).
+- [ ] Imports are sorted: third-party first, then internal `@/...` modules.
+- [ ] Main exported function is at the top (immediately after imports and file-private constants).
 - [ ] `📌 Main` banner is present.
-- [ ] `📌 Helpers` and `📌 Types` banners are **only** present when code exists in those sections (no empty section banners).
-- [ ] Internal dividers use single-line dashed dividers (`// --- Name -----------------`) with a trailing empty line, and are used sparingly only in large functions.
-- [ ] Options are destructured with defaults.
-- [ ] Types are placed at the bottom of the file (when present).
+- [ ] `📌 Helpers` and `📌 Types` banners are **only** present when code actually exists in those sections (no empty banners).
+- [ ] Large composables group code by **feature capabilities** rather than technical categories.
+- [ ] Internal feature dividers use single-line dashed comments (`// --- Feature Name ----`) with a trailing blank line.
+- [ ] Feature divider names are Title Case noun phrases describing functionality (no generic `// --- State ---` or `// --- Handlers ---`).
+- [ ] Options are destructured with sensible defaults at the top of the function.
+- [ ] Types and interfaces are positioned at the bottom of the file.
