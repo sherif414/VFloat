@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
-import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
+import { defineComponent, h, ref, useTemplateRef } from "vue";
 import {
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
