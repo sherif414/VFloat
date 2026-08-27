@@ -10,11 +10,11 @@
  *
  * @param event - The native KeyboardEvent triggered during navigation.
  * @param options - Configuration options for orientation and RTL reading direction.
- * @returns The resolved semantic NavigationIntent, or null if the key is unhandled.
+ * @returns The semantic NavigationIntent, or null if the key is unhandled.
  *
  * @example
  * ```ts
- * const intent = resolveKeyboardIntent(event, { orientation: "vertical", rtl: false });
+ * const intent = resolveKeyIntent(event, { orientation: "vertical", rtl: false });
  * ```
  */
 export function resolveKeyIntent(
@@ -59,7 +59,7 @@ export type NavigationIntent = "first" | "last" | "next" | "previous" | "enter" 
 
 export interface KeyboardIntentOptions {
   /**
-   * Layout orientation of the navigable items.
+   * Layout orientation of the navigable elements.
    * @default "vertical"
    */
   orientation?: "vertical" | "horizontal" | "both";

@@ -16,10 +16,10 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
  * @internal
  */
 export function useRtl(target?: UseRtlTarget, options: UseRtlOptions = {}): ComputedRef<boolean> {
-  const { rtl: rtlOption } = options;
+  const { rtl } = options;
 
-  if (rtlOption !== undefined) {
-    return computed(() => toValue(rtlOption));
+  if (rtl !== undefined) {
+    return computed(() => toValue(rtl));
   }
 
   const doc = getDocument();
@@ -51,7 +51,7 @@ export function useRtl(target?: UseRtlTarget, options: UseRtlOptions = {}): Comp
 
   return computed(() => {
     void domRevision.value;
-    return resolveRTL(toValue(target) ?? null, doc);
+    return isRtlElement(toValue(target) ?? null, doc);
   });
 }
 
@@ -62,7 +62,7 @@ export function useRtl(target?: UseRtlTarget, options: UseRtlOptions = {}): Comp
 /**
  * Fast-path check for RTL using DOM attributes.
  */
-export function resolveRTL(element: Element | null, doc: Document): boolean {
+export function isRtlElement(element: Element | null, doc: Document): boolean {
   // 1. Element-level closest [dir] check (O(depth) attribute lookup, zero layout thrashing)
   if (element && typeof element.closest === "function") {
     const dirElement = element.closest("[dir]");

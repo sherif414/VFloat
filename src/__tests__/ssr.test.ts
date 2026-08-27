@@ -36,7 +36,7 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useClientPoint(context);
         VFloat.useCollection();
         const items = ref<Array<HTMLElement | null>>([]);
-        VFloat.useRovingFocus({ containerEl: floatingEl, itemsList: items });
+        VFloat.useRovingFocus({ containerEl: floatingEl, elements: items });
 
         return () =>
           h("div", { class: "container" }, [

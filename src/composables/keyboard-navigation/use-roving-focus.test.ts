@@ -4,9 +4,9 @@ import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, ref, useTemplateRef } from "vue";
 import {
   findNextNavigableIndex,
+  isElementDisabled,
   resolveCollectionSize,
   resolveInitialNavigableIndex,
-  resolveIsItemDisabled,
   resolveNavigableIndexByIntent,
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
@@ -31,16 +31,16 @@ describe("useRovingFocus", () => {
 
     const Component = defineComponent(() => {
       const containerEl = useTemplateRef<HTMLDivElement>("container");
-      const itemsList = ref<(HTMLElement | null)[]>([]);
+      const elements = ref<(HTMLElement | null)[]>([]);
 
       rovingReturn = useRovingFocus({
         containerEl,
-        itemsList,
+        elements,
         ...options,
       });
 
       const register = (el: Element | null, idx: number) => {
-        itemsList.value[idx] = el as HTMLElement;
+        elements.value[idx] = el as HTMLElement;
       };
 
       const count = config.itemCount ?? 5;
@@ -51,7 +51,7 @@ describe("useRovingFocus", () => {
         if (config.unmanaged) return undefined;
         if (typeof config.tabindex === "function") return config.tabindex(idx);
         if (config.tabindex !== undefined) return config.tabindex;
-        if (!options.disableAutoTabindex) return undefined;
+        if (options.autoTabindex === false) return undefined;
         return rovingReturn.activeIndex.value === idx ? 0 : -1;
       };
 
@@ -242,9 +242,9 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("respects custom isItemDisabled predicate", async () => {
+    it("respects custom isElementDisabled predicate", async () => {
       const { Component } = createTestComponent({
-        isItemDisabled: (_, idx) => idx === 1,
+        isElementDisabled: (_, idx) => idx === 1,
       });
       render(Component);
 
@@ -434,9 +434,9 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focusItemOnHover option", () => {
-    it("moves focus to hovered item when focusItemOnHover is true", async () => {
-      const { Component } = createTestComponent({ focusItemOnHover: true });
+  describe("focusOnHover option", () => {
+    it("moves focus to hovered item when focusOnHover is true", async () => {
+      const { Component } = createTestComponent({ focusOnHover: true });
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -449,7 +449,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("does not move focus on hover when focusItemOnHover is false by default", async () => {
+    it("does not move focus on hover when focusOnHover is false by default", async () => {
       const { Component } = createTestComponent();
       render(Component);
 
@@ -464,10 +464,7 @@ describe("useRovingFocus", () => {
     });
 
     it("skips disabled items when hovered", async () => {
-      const { Component } = createTestComponent(
-        { focusItemOnHover: true },
-        { disabledIndices: [1] },
-      );
+      const { Component } = createTestComponent({ focusOnHover: true }, { disabledIndices: [1] });
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -480,7 +477,7 @@ describe("useRovingFocus", () => {
     });
 
     it("ignores touch pointer events", async () => {
-      const { Component } = createTestComponent({ focusItemOnHover: true });
+      const { Component } = createTestComponent({ focusOnHover: true });
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -571,12 +568,12 @@ describe("useRovingFocus", () => {
 
       const DynamicComponent = defineComponent(() => {
         const containerEl = useTemplateRef<HTMLDivElement>("container");
-        const itemsList = ref<(HTMLElement | null)[]>([]);
+        const elements = ref<(HTMLElement | null)[]>([]);
 
-        useRovingFocus({ containerEl, itemsList });
+        useRovingFocus({ containerEl, elements });
 
         const register = (el: Element | null, idx: number) => {
-          itemsList.value[idx] = el as HTMLElement;
+          elements.value[idx] = el as HTMLElement;
         };
 
         return () =>
@@ -609,8 +606,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("disableAutoTabindex option & unmanaged tabindex", () => {
-    it("automatically manages roving tabindex when disableAutoTabindex is false (default)", async () => {
+  describe("autoTabindex option & unmanaged tabindex", () => {
+    it("automatically manages roving tabindex when autoTabindex is true (default)", async () => {
       const { Component } = createTestComponent();
       render(Component);
 
@@ -628,9 +625,9 @@ describe("useRovingFocus", () => {
       expect((option2.element() as HTMLElement).tabIndex).toBe(0);
     });
 
-    it("does not mutate element tabIndex when disableAutoTabindex is true", async () => {
+    it("does not mutate element tabIndex when autoTabindex is false", async () => {
       const { Component, getRoving } = createTestComponent(
-        { disableAutoTabindex: true },
+        { autoTabindex: false },
         { tabindex: -1 },
       );
       render(Component);
@@ -651,13 +648,13 @@ describe("useRovingFocus", () => {
   });
 
   describe("virtual list support", () => {
-    it("tracks virtualItemRef on navigation in virtual mode", async () => {
-      const virtualItemRef = ref<HTMLElement | null>(null);
+    it("tracks virtualElement on navigation in virtual mode", async () => {
+      const virtualElement = ref<HTMLElement | null>(null);
 
       const { Component } = createTestComponent({
         virtual: true,
-        virtualItemRef,
-        itemCount: 100,
+        virtualElement,
+        elementCount: 100,
       });
       render(Component);
 
@@ -665,14 +662,14 @@ describe("useRovingFocus", () => {
       await userEvent.click(option1);
 
       await userEvent.keyboard("{ArrowDown}");
-      expect(virtualItemRef.value).not.toBeNull();
+      expect(virtualElement.value).not.toBeNull();
     });
   });
 
-  describe("allowFocusOnDisabledElements option (WAI-ARIA APG discoverability)", () => {
-    it("enters on defaultActiveIndex even if disabled when allowFocusOnDisabledElements is true", async () => {
+  describe("allowDisabledFocus option (WAI-ARIA APG discoverability)", () => {
+    it("enters on defaultActiveIndex even if disabled when allowDisabledFocus is true", async () => {
       const { Component } = createTestComponent(
-        { defaultActiveIndex: 0, allowFocusOnDisabledElements: true },
+        { defaultActiveIndex: 0, allowDisabledFocus: true },
         { ariaDisabledIndices: [0] },
       );
       render(Component);
@@ -685,9 +682,9 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("navigates through disabled and aria-disabled items when allowFocusOnDisabledElements is true", async () => {
+    it("navigates through disabled and aria-disabled items when allowDisabledFocus is true", async () => {
       const { Component } = createTestComponent(
-        { allowFocusOnDisabledElements: true },
+        { allowDisabledFocus: true },
         { ariaDisabledIndices: [1, 2] },
       );
       render(Component);
@@ -720,7 +717,7 @@ describe("useRovingFocus", () => {
     it("does not trigger onSelect when Enter or Space is pressed on a focused disabled item", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent(
-        { allowFocusOnDisabledElements: true, onSelect: onSelectMock },
+        { allowDisabledFocus: true, onSelect: onSelectMock },
         { ariaDisabledIndices: [1] },
       );
       render(Component);
@@ -741,10 +738,10 @@ describe("useRovingFocus", () => {
       expect(onSelectMock).not.toHaveBeenCalled();
     });
 
-    it("triggers onSelect on enabled items when allowFocusOnDisabledElements is true", async () => {
+    it("triggers onSelect on enabled items when allowDisabledFocus is true", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent(
-        { allowFocusOnDisabledElements: true, onSelect: onSelectMock },
+        { allowDisabledFocus: true, onSelect: onSelectMock },
         { ariaDisabledIndices: [1] },
       );
       render(Component);
@@ -757,9 +754,9 @@ describe("useRovingFocus", () => {
       expect(onSelectMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
     });
 
-    it("focuses disabled items on hover when focusItemOnHover and allowFocusOnDisabledElements are both true", async () => {
+    it("focuses disabled items on hover when focusOnHover and allowDisabledFocus are both true", async () => {
       const { Component } = createTestComponent(
-        { focusItemOnHover: true, allowFocusOnDisabledElements: true },
+        { focusOnHover: true, allowDisabledFocus: true },
         { ariaDisabledIndices: [1] },
       );
       render(Component);
@@ -774,9 +771,9 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("supports programmatic navigation to disabled items when allowFocusOnDisabledElements is true", async () => {
+    it("supports programmatic navigation to disabled items when allowDisabledFocus is true", async () => {
       const { Component, getRoving } = createTestComponent(
-        { allowFocusOnDisabledElements: true },
+        { allowDisabledFocus: true },
         { ariaDisabledIndices: [1, 4] },
       );
       render(Component);
@@ -797,7 +794,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("allows external activeIndex updates to target disabled items when allowFocusOnDisabledElements is true", async () => {
+    it("allows external activeIndex updates to target disabled items when allowDisabledFocus is true", async () => {
       const controlledIndex = ref(0);
       const onActiveIndexChangeMock = vi.fn((nextIdx: number) => {
         controlledIndex.value = nextIdx;
@@ -806,7 +803,7 @@ describe("useRovingFocus", () => {
         {
           activeIndex: controlledIndex,
           onActiveIndexChange: onActiveIndexChangeMock,
-          allowFocusOnDisabledElements: true,
+          allowDisabledFocus: true,
         },
         { ariaDisabledIndices: [1] },
       );
@@ -821,10 +818,10 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("reactively auto-corrects activeIndex away from a disabled item when allowFocusOnDisabledElements changes to false", async () => {
-      const allowFocusOnDisabledElementsRef = ref(true);
+    it("reactively auto-corrects activeIndex away from a disabled item when allowDisabledFocus changes to false", async () => {
+      const allowDisabledFocusRef = ref(true);
       const { Component, getRoving } = createTestComponent(
-        { allowFocusOnDisabledElements: allowFocusOnDisabledElementsRef },
+        { allowDisabledFocus: allowDisabledFocusRef },
         { ariaDisabledIndices: [0] },
       );
       render(Component);
@@ -838,7 +835,7 @@ describe("useRovingFocus", () => {
       getRoving().setActiveIndex(0);
       await expect.element(option1).toHaveFocus();
 
-      allowFocusOnDisabledElementsRef.value = false;
+      allowDisabledFocusRef.value = false;
       await expect.element(option2).toHaveFocus();
     });
   });
@@ -851,35 +848,35 @@ describe("useRovingFocus", () => {
         expect(resolveCollectionSize(10, 50, false)).toBe(10);
       });
 
-      it("returns explicit itemCount when virtual is true", () => {
+      it("returns explicit elementCount when virtual is true", () => {
         expect(resolveCollectionSize(5, 100, true)).toBe(100);
         expect(resolveCollectionSize(0, 0, true)).toBe(0);
         expect(resolveCollectionSize(5, null, true)).toBe(5);
       });
     });
 
-    describe("resolveIsItemDisabled", () => {
+    describe("isElementDisabled", () => {
       it("prioritizes customPredicate when supplied", () => {
         const customPredicate = (_el: HTMLElement | null, idx: number) => idx === 2;
-        expect(resolveIsItemDisabled(null, 2, false, customPredicate)).toBe(true);
-        expect(resolveIsItemDisabled(null, 1, false, customPredicate)).toBe(true);
+        expect(isElementDisabled(null, 2, false, customPredicate)).toBe(true);
+        expect(isElementDisabled(null, 1, false, customPredicate)).toBe(true);
       });
 
       it("identifies disabled and aria-disabled DOM attributes", () => {
         const btn = document.createElement("button");
-        expect(resolveIsItemDisabled(btn, 0)).toBe(false);
+        expect(isElementDisabled(btn, 0)).toBe(false);
 
         btn.setAttribute("disabled", "");
-        expect(resolveIsItemDisabled(btn, 0)).toBe(true);
+        expect(isElementDisabled(btn, 0)).toBe(true);
 
         const div = document.createElement("div");
         div.setAttribute("aria-disabled", "true");
-        expect(resolveIsItemDisabled(div, 0)).toBe(true);
+        expect(isElementDisabled(div, 0)).toBe(true);
       });
 
-      it("handles null items in virtual and non-virtual modes", () => {
-        expect(resolveIsItemDisabled(null, 0, false)).toBe(true);
-        expect(resolveIsItemDisabled(null, 0, true)).toBe(false);
+      it("handles null elements in virtual and non-virtual modes", () => {
+        expect(isElementDisabled(null, 0, false)).toBe(true);
+        expect(isElementDisabled(null, 0, true)).toBe(false);
       });
     });
 
@@ -897,13 +894,13 @@ describe("useRovingFocus", () => {
         expect(findNextNavigableIndex(1, -1, 4, isDisabled, true)).toBe(3);
       });
 
-      it("returns next item including disabled when allowFocusOnDisabledElements is true", () => {
+      it("returns next item including disabled when allowDisabledFocus is true", () => {
         const isDisabled = (idx: number) => idx === 1;
         expect(findNextNavigableIndex(0, 1, 4, isDisabled, false, true)).toBe(1);
         expect(findNextNavigableIndex(1, 1, 4, isDisabled, false, true)).toBe(2);
       });
 
-      it("wraps around to disabled items when loop is true and allowFocusOnDisabledElements is true", () => {
+      it("wraps around to disabled items when loop is true and allowDisabledFocus is true", () => {
         const isDisabled = (idx: number) => idx === 0;
         expect(findNextNavigableIndex(3, 1, 4, isDisabled, true, true)).toBe(0);
         expect(findNextNavigableIndex(0, -1, 4, isDisabled, true, true)).toBe(3);
@@ -925,7 +922,7 @@ describe("useRovingFocus", () => {
         expect(resolveNavigableIndexByIntent("previous", 2, 4, isDisabled, false)).toBe(0);
       });
 
-      it("resolves next/previous/first/last onto disabled items when allowFocusOnDisabledElements is true", () => {
+      it("resolves next/previous/first/last onto disabled items when allowDisabledFocus is true", () => {
         expect(resolveNavigableIndexByIntent("first", null, 4, isDisabled, false, true)).toBe(0);
         expect(resolveNavigableIndexByIntent("next", 0, 4, isDisabled, false, true)).toBe(1);
         expect(resolveNavigableIndexByIntent("previous", 2, 4, isDisabled, false, true)).toBe(1);
@@ -948,7 +945,7 @@ describe("useRovingFocus", () => {
         expect(resolveInitialNavigableIndex(10, 5, isDisabled)).toBe(2);
       });
 
-      it("returns defaultIndex even if disabled when allowFocusOnDisabledElements is true", () => {
+      it("returns defaultIndex even if disabled when allowDisabledFocus is true", () => {
         const isDisabled = (idx: number) => idx === 0;
         expect(resolveInitialNavigableIndex(0, 5, isDisabled, true)).toBe(0);
       });

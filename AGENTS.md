@@ -49,12 +49,12 @@ Use a fixed set of verbs with non-overlapping meanings. Do not invent synonyms.
 
 **Creation and lookup:**
 
-| Verb      | Meaning                                                                                                                    | Example                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `create`  | Factory that allocates a new object or closure. Always returns something new.                                              | `createCleanupRegistry()`, `createBranch()`                                  |
-| `get`     | Pure accessor that reads an existing value. No side effects, no searching. Includes derivations and lookups with fallback. | `getFloatingInternals()`, `getFirstEnabledDescendantValue()`                 |
-| `find`    | Searches a collection. May return `null`.                                                                                  | `findDeepestOpenFloatingContext()`                                           |
-| `resolve` | Stateless transformation or normalization of inputs. Maps raw values to derived forms without side effects.                | `resolveKeyboardIntent()`, `resolveInitialFocus()`, `resolveIsolationMode()` |
+| Verb      | Meaning                                                                                            | Example                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `create`  | Factory that allocates a new object or closure. Always returns something new.                      | `createCleanupRegistry()`, `createBranch()`                                |
+| `get`     | Pure accessor that retrieves an existing value, reference, or internal state.                      | `getFloatingInternals()`, `getElement(idx)`, `getAnchorElement()`          |
+| `find`    | Searches a collection. May return `null`.                                                          | `findDeepestOpenFloatingContext()`, `findNextNavigableIndex()`             |
+| `resolve` | Stateless calculation, transformation, or mapping derived purely from inputs without hidden state. | `resolveCollectionSize()`, `resolveKeyIntent()`, `resolveNavigableIndex()` |
 
 Do not use `build` or `make`.
 
@@ -96,20 +96,6 @@ Do not encode purpose in the suffix (no `onPointerMoveForRest`, no `onOutsideCli
 | `is`     | Primary boolean predicate — functions, computeds, and inline checks.                           | `isEnabled`, `isItemDisabled(value)`, `isExpanded(value)`          |
 | `can`    | Capability gate — whether an action is permitted.                                              | `canFocusDisabledItems`                                            |
 | `should` | Computed derivation that combines multiple conditions into a single actionable boolean signal. | `shouldCloseOnFocusOut`, `shouldReturnFocus`, `shouldControlPopup` |
-
-#### Computed Wrappers for Options
-
-When a composable destructures an option and wraps it in a `computed`, use the `*Option` suffix on the destructured value so the computed gets the clean name.
-
-```ts
-// Boolean options → computed uses `is*`
-const { enabled: enabledOption = true } = options;
-const isEnabled = computed(() => toValue(enabledOption));
-
-// Non-boolean options → computed gets the clean name
-const { delay: delayOption = 0 } = options;
-const delay = computed(() => toValue(delayOption));
-```
 
 #### Timer and Timeout IDs
 
