@@ -57,7 +57,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     autoTabindex = true,
     focusOnHover = false,
     scrollIntoView = true,
-    isElementDisabled: customIsElementDisabled,
     allowDisabledFocus = false,
     onSelect,
   } = options;
@@ -70,20 +69,11 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const isAutoTabindex = computed(() => !!toValue(autoTabindex));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
   const canFocusDisabled = computed(() => !!toValue(allowDisabledFocus));
+  const list = computed<(HTMLElement | null)[]>(() => toValue(elementsList));
 
-  const totalCount = computed<number>(() => {
-    const list = toValue(elementsList);
-    return list ? list.length : 0;
-  });
-
-  function getElement(idx: number): HTMLElement | null {
-    const list = toValue(elementsList);
-    return list?.[idx] ?? null;
-  }
-
-  function isDisabled(idx: number): boolean {
-    const el = getElement(idx);
-    return isElementDisabled(el, idx, customIsElementDisabled);
+  function isElementDisabled(idx: number): boolean {
+    const el = list.value[idx];
+    return !!(el?.hasAttribute("disabled") || el?.getAttribute("aria-disabled") === "true");
   }
 
   let lastFocusedIdx: number | null = null;
@@ -92,25 +82,24 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Auto-correct active index when elements populate or resize
   watch(
-    [() => toValue(elementsList), totalCount, canFocusDisabled],
-    ([list, size, canFocus]) => {
-      if (!list || size === 0) return;
+    [() => [...(toValue(elementsList) ?? [])], canFocusDisabled],
+    ([list, focusDisabled]) => {
+      if (!list || list.length === 0) return;
+      const idx = activeIndex.value;
 
-      if (
-        activeIndex.value < 0 ||
-        activeIndex.value >= size ||
-        (!canFocus && isDisabled(activeIndex.value))
-      ) {
-        const validIdx = resolveInitialNavigableIndex(
-          activeIndex.value,
-          size,
-          isDisabled,
-          canFocus,
-        );
+      const isInvalidIndex =
+        idx < 0 || idx >= list.length || (!focusDisabled && isElementDisabled(idx));
+      if (!isInvalidIndex) return;
 
-        if (validIdx !== null) {
-          activeIndex.value = validIdx;
-        }
+      const initialIndex = resolveInitialNavigableIndex(
+        idx,
+        list.length,
+        isElementDisabled,
+        focusDisabled,
+      );
+
+      if (initialIndex !== null) {
+        activeIndex.value = initialIndex;
       }
     },
     { immediate: true, flush: "post" },
@@ -120,16 +109,18 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   watch(
     activeIndex,
     (newIdx, oldIdx) => {
-      const size = totalCount.value;
+      const list = toValue(elementsList);
       const isInvalid =
-        newIdx < 0 || newIdx >= size || (!canFocusDisabled.value && isDisabled(newIdx));
+        newIdx < 0 ||
+        newIdx >= list.length ||
+        (!canFocusDisabled.value && isElementDisabled(newIdx));
 
       if (isInvalid) {
         if (
           oldIdx !== undefined &&
           oldIdx >= 0 &&
-          oldIdx < size &&
-          (canFocusDisabled.value || !isDisabled(oldIdx))
+          oldIdx < list.length &&
+          (canFocusDisabled.value || !isElementDisabled(oldIdx))
         ) {
           activeIndex.value = oldIdx;
         }
@@ -142,9 +133,9 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Synchronize tabindex attribute across elements
   watch(
-    [() => toValue(elementsList), totalCount, activeIndex, isAutoTabindex],
-    ([list, size, activeIdx, autoManage]) => {
-      if (!autoManage || !list || size === 0) return;
+    [() => [...(toValue(elementsList) ?? [])], activeIndex, isAutoTabindex],
+    ([list, activeIdx, autoManage]) => {
+      if (!autoManage || !list || list.length === 0) return;
 
       for (let idx = 0; idx < list.length; idx++) {
         const el = list[idx];
@@ -159,17 +150,16 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   // --- DOM Focus & Scroll Synchronization -------------------------------------
 
   function focusElement(idx: number): void {
-    const el = getElement(idx);
+    const el = list.value[idx];
+    if (!el) return;
 
-    if (el) {
-      el.focus();
-      const scrollConfig = toValue(scrollIntoView);
-      if (scrollConfig) {
-        const scrollOptions = typeof scrollConfig === "object" ? scrollConfig : undefined;
-        el.scrollIntoView?.(scrollOptions);
-      }
-      lastFocusedIdx = idx;
+    el.focus();
+    const scrollConfig = toValue(scrollIntoView);
+    if (scrollConfig) {
+      const scrollOptions = typeof scrollConfig === "object" ? scrollConfig : undefined;
+      el.scrollIntoView?.(scrollOptions);
     }
+    lastFocusedIdx = idx;
   }
 
   // Move DOM focus when activeIndex changes externally
@@ -180,8 +170,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
       if (
         newIdx >= 0 &&
-        newIdx < totalCount.value &&
-        (canFocusDisabled.value || !isDisabled(newIdx))
+        newIdx < toValue(elementsList).length &&
+        (canFocusDisabled.value || !isElementDisabled(newIdx))
       ) {
         focusElement(newIdx);
       }
@@ -192,7 +182,11 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   // --- Keyboard Navigation ----------------------------------------------------
 
   function setActiveIndex(idx: number): void {
-    if (idx < 0 || idx >= totalCount.value || (!canFocusDisabled.value && isDisabled(idx))) {
+    if (
+      idx < 0 ||
+      idx >= toValue(elementsList).length ||
+      (!canFocusDisabled.value && isElementDisabled(idx))
+    ) {
       return;
     }
 
@@ -204,8 +198,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const targetIdx = resolveNavigableIndexByIntent(
       intent,
       activeIndex.value,
-      totalCount.value,
-      isDisabled,
+      toValue(elementsList).length,
+      isElementDisabled,
       isLoop.value,
       canFocusDisabled.value,
     );
@@ -228,8 +222,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       e.preventDefault();
       if (
         activeIndex.value >= 0 &&
-        activeIndex.value < totalCount.value &&
-        !isDisabled(activeIndex.value)
+        activeIndex.value < toValue(elementsList).length &&
+        !isElementDisabled(activeIndex.value)
       ) {
         onSelect?.(activeIndex.value, e);
       }
@@ -259,7 +253,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     for (let idx = 0; idx < list.length; idx++) {
       const el = list[idx];
       if (el && el.contains(target)) {
-        if (!canFocusDisabled.value && isDisabled(idx)) return;
+        if (!canFocusDisabled.value && isElementDisabled(idx)) return;
         if (idx !== activeIndex.value) {
           setActiveIndex(idx);
         }
@@ -291,25 +285,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
-
-/**
- * Determines whether a collection element at a given index is disabled.
- */
-export function isElementDisabled(
-  element: HTMLElement | null,
-  idx: number,
-  customPredicate?: (element: HTMLElement | null, idx: number) => boolean,
-): boolean {
-  if (customPredicate) {
-    return customPredicate(element, idx);
-  }
-
-  if (!element) {
-    return true;
-  }
-
-  return element.hasAttribute("disabled") || element.getAttribute("aria-disabled") === "true";
-}
 
 /**
  * Finds the next enabled element index from a starting position in a given direction.
@@ -531,11 +506,6 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   scrollIntoView?: MaybeRefOrGetter<boolean | ScrollIntoViewOptions>;
-
-  /**
-   * Predicate for determining if an element at a given index is disabled.
-   */
-  isElementDisabled?: (element: HTMLElement | null, index: number) => boolean;
 
   /**
    * Whether to allow keyboard navigation and roving focus to land on disabled elements.

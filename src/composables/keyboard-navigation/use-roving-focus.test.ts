@@ -4,7 +4,6 @@ import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, ref, useTemplateRef } from "vue";
 import {
   findNextNavigableIndex,
-  isElementDisabled,
   resolveInitialNavigableIndex,
   resolveNavigableIndexByIntent,
   type UseRovingFocusOptions,
@@ -236,20 +235,6 @@ describe("useRovingFocus", () => {
 
       await userEvent.keyboard("{ArrowUp}");
       await expect.element(option1).toHaveFocus();
-    });
-
-    it("respects custom isElementDisabled predicate", async () => {
-      const { Component } = createTestComponent({
-        isElementDisabled: (_, idx) => idx === 1,
-      });
-      render(Component);
-
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
-
-      await userEvent.click(option1);
-      await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option3).toHaveFocus();
     });
   });
 
@@ -787,30 +772,6 @@ describe("useRovingFocus", () => {
   });
 
   describe("pure idempotent helper functions", () => {
-    describe("isElementDisabled", () => {
-      it("prioritizes customPredicate when supplied", () => {
-        const customPredicate = (_el: HTMLElement | null, idx: number) => idx === 2;
-        expect(isElementDisabled(null, 2, customPredicate)).toBe(true);
-        expect(isElementDisabled(null, 1, customPredicate)).toBe(false);
-      });
-
-      it("identifies disabled and aria-disabled DOM attributes", () => {
-        const btn = document.createElement("button");
-        expect(isElementDisabled(btn, 0)).toBe(false);
-
-        btn.setAttribute("disabled", "");
-        expect(isElementDisabled(btn, 0)).toBe(true);
-
-        const div = document.createElement("div");
-        div.setAttribute("aria-disabled", "true");
-        expect(isElementDisabled(div, 0)).toBe(true);
-      });
-
-      it("returns true for null elements when customPredicate is omitted", () => {
-        expect(isElementDisabled(null, 0)).toBe(true);
-      });
-    });
-
     describe("findNextNavigableIndex", () => {
       it("finds next enabled index forward without loop", () => {
         const isDisabled = (idx: number) => idx === 1;
