@@ -1,6 +1,5 @@
-import { computed, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
-import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
+import { computed, type MaybeRefOrGetter, readonly, ref, type Ref, toValue, watch } from "vue";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
 import { useRtl } from "./rtl";
 
@@ -50,9 +49,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const {
     containerEl,
     elementsList,
-    defaultActiveIndex = 0,
-    activeIndex: controlledActiveIndex,
-    onActiveIndexChange,
+    activeIndex = ref(0),
     orientation = "vertical",
     loop = false,
     rtl,
@@ -60,9 +57,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     autoTabindex = true,
     focusOnHover = false,
     scrollIntoView = true,
-    virtual = false,
-    virtualElement,
-    elementCount,
     isElementDisabled: customIsElementDisabled,
     allowDisabledFocus = false,
     onSelect,
@@ -73,21 +67,13 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const resolvedContainerEl = computed(() => toValue(containerEl));
   const isRtl = useRtl(resolvedContainerEl, { rtl });
   const isLoop = computed(() => !!toValue(loop));
-  const isVirtual = computed(() => !!toValue(virtual));
   const isAutoTabindex = computed(() => !!toValue(autoTabindex));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
   const canFocusDisabled = computed(() => !!toValue(allowDisabledFocus));
 
-  const activeIndex = useControllableState({
-    value: controlledActiveIndex,
-    initialValue: defaultActiveIndex,
-    onChange: onActiveIndexChange,
-  });
-
-  const elementsListSize = computed<number>(() => {
+  const totalCount = computed<number>(() => {
     const list = toValue(elementsList);
-    const count = toValue(elementCount) ?? 0;
-    return isVirtual.value ? count : (list?.length ?? 0);
+    return list ? list.length : 0;
   });
 
   function getElement(idx: number): HTMLElement | null {
@@ -97,7 +83,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   function isDisabled(idx: number): boolean {
     const el = getElement(idx);
-    return isElementDisabled(el, idx, isVirtual.value, customIsElementDisabled);
+    return isElementDisabled(el, idx, customIsElementDisabled);
   }
 
   let lastFocusedIdx: number | null = null;
@@ -106,7 +92,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Auto-correct active index when elements populate or resize
   watch(
-    [() => toValue(elementsList), elementsListSize, canFocusDisabled],
+    [() => toValue(elementsList), totalCount, canFocusDisabled],
     ([list, size, canFocus]) => {
       if (!list || size === 0) return;
 
@@ -116,7 +102,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
         (!canFocus && isDisabled(activeIndex.value))
       ) {
         const validIdx = resolveInitialNavigableIndex(
-          defaultActiveIndex,
+          activeIndex.value,
           size,
           isDisabled,
           canFocus,
@@ -134,16 +120,15 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   watch(
     activeIndex,
     (newIdx, oldIdx) => {
+      const size = totalCount.value;
       const isInvalid =
-        newIdx < 0 ||
-        newIdx >= elementsListSize.value ||
-        (!canFocusDisabled.value && isDisabled(newIdx));
+        newIdx < 0 || newIdx >= size || (!canFocusDisabled.value && isDisabled(newIdx));
 
       if (isInvalid) {
         if (
           oldIdx !== undefined &&
           oldIdx >= 0 &&
-          oldIdx < elementsListSize.value &&
+          oldIdx < size &&
           (canFocusDisabled.value || !isDisabled(oldIdx))
         ) {
           activeIndex.value = oldIdx;
@@ -157,7 +142,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Synchronize tabindex attribute across elements
   watch(
-    [() => toValue(elementsList), elementsListSize, activeIndex, isAutoTabindex],
+    [() => toValue(elementsList), totalCount, activeIndex, isAutoTabindex],
     ([list, size, activeIdx, autoManage]) => {
       if (!autoManage || !list || size === 0) return;
 
@@ -176,10 +161,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   function focusElement(idx: number): void {
     const el = getElement(idx);
 
-    if (virtualElement) {
-      virtualElement.value = el;
-    }
-
     if (el) {
       el.focus();
       const scrollConfig = toValue(scrollIntoView);
@@ -187,9 +168,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
         const scrollOptions = typeof scrollConfig === "object" ? scrollConfig : undefined;
         el.scrollIntoView?.(scrollOptions);
       }
+      lastFocusedIdx = idx;
     }
-
-    lastFocusedIdx = idx;
   }
 
   // Move DOM focus when activeIndex changes externally
@@ -200,7 +180,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
       if (
         newIdx >= 0 &&
-        newIdx < elementsListSize.value &&
+        newIdx < totalCount.value &&
         (canFocusDisabled.value || !isDisabled(newIdx))
       ) {
         focusElement(newIdx);
@@ -212,7 +192,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   // --- Keyboard Navigation ----------------------------------------------------
 
   function setActiveIndex(idx: number): void {
-    if (idx < 0 || idx >= elementsListSize.value || (!canFocusDisabled.value && isDisabled(idx))) {
+    if (idx < 0 || idx >= totalCount.value || (!canFocusDisabled.value && isDisabled(idx))) {
       return;
     }
 
@@ -224,7 +204,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const targetIdx = resolveNavigableIndexByIntent(
       intent,
       activeIndex.value,
-      elementsListSize.value,
+      totalCount.value,
       isDisabled,
       isLoop.value,
       canFocusDisabled.value,
@@ -248,7 +228,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       e.preventDefault();
       if (
         activeIndex.value >= 0 &&
-        activeIndex.value < elementsListSize.value &&
+        activeIndex.value < totalCount.value &&
         !isDisabled(activeIndex.value)
       ) {
         onSelect?.(activeIndex.value, e);
@@ -318,15 +298,14 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 export function isElementDisabled(
   element: HTMLElement | null,
   idx: number,
-  isVirtual: boolean = false,
   customPredicate?: (element: HTMLElement | null, idx: number) => boolean,
 ): boolean {
-  if (customPredicate?.(element, idx)) {
-    return true;
+  if (customPredicate) {
+    return customPredicate(element, idx);
   }
 
   if (!element) {
-    return !isVirtual;
+    return true;
   }
 
   return element.hasAttribute("disabled") || element.getAttribute("aria-disabled") === "true";
@@ -498,22 +477,10 @@ export interface UseRovingFocusOptions {
   elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
 
   /**
-   * Default active element index when uncontrolled.
-   * If the element at this index is disabled or out of bounds, falls back to the first enabled element.
-   * @default 0
-   */
-  defaultActiveIndex?: number;
-
-  /**
    * Optional controlled active index ref.
    * When provided, the composable synchronizes with and updates this ref.
    */
   activeIndex?: Ref<number>;
-
-  /**
-   * Callback invoked whenever the active index changes.
-   */
-  onActiveIndexChange?: (index: number) => void;
 
   /**
    * Layout orientation of the navigable list elements.
@@ -564,24 +531,6 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   scrollIntoView?: MaybeRefOrGetter<boolean | ScrollIntoViewOptions>;
-
-  /**
-   * Whether virtualized list mode is enabled.
-   * When true, navigation tracks virtual elements without requiring all elements in the DOM.
-   * @default false
-   */
-  virtual?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Ref tracking the currently active virtual DOM element.
-   */
-  virtualElement?: Ref<HTMLElement | null>;
-
-  /**
-   * Total number of elements in the virtual list.
-   * Useful when `elementsList` only contains currently rendered/windowed elements.
-   */
-  elementCount?: MaybeRefOrGetter<number>;
 
   /**
    * Predicate for determining if an element at a given index is disabled.
