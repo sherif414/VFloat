@@ -158,6 +158,8 @@ Only these abbreviations are permitted. Everything else must be spelled out.
   - Use `shallowRef()` for DOM element references (`anchorEl`, `floatingEl`, `arrowEl`) to avoid unnecessary deep reactivity proxying.
   - Use `effectScope()` and `getCurrentScope()` to encapsulate and dispose composable side effects.
   - Use `useTemplateRef()` when binding template element references in Vue components.
+  - **Reactivity Economy & Intentionality:** Do not make static initialization seeds, default values, or one-time options reactive. Options that only seed initial/uncontrolled state (e.g., `defaultOpen: boolean`, `defaultIndex: number`, `initialValue: T`) must be plain, non-reactive primitives—not `MaybeRefOrGetter`. Only wrap options in `MaybeRefOrGetter` when they represent dynamic inputs expected to reactively update over the composable's active lifecycle (e.g., `enabled`, `orientation`, `loop`, `rtl`, `scrollIntoView`).
+  - **TypeScript Contract Trust (Zero Defensive Boilerplate):** Always trust TypeScript type contracts. Never add defensive runtime fallbacks (`?? []`, `!elements || elements.length === 0`, `if (!elements) return`) when a parameter is typed as a non-nullable container (e.g., `elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>`). Distinguish container nullability from item nullability: in `Array<HTMLElement | null>`, the array itself is guaranteed to exist; only individual element lookups (`list[idx]`) require null guards when accessing DOM nodes (`el?.focus()`, `if (el)`).
 - **Dependency Guard:**
   - **NEVER** install or suggest legacy/outdated utility packages (e.g., `lodash`, `underscore`, `axios`, `moment`, `deepmerge`, `vue-demi`, `rimraf`).
   - Always inspect `package.json` before assuming any dependency exists.
