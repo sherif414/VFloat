@@ -74,7 +74,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const isAutoTabindex = computed(() => !!toValue(autoTabindex));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
   const canFocusDisabled = computed(() => !!toValue(allowDisabledFocus));
-  const list = computed<(HTMLElement | null)[]>(() => toValue(elementsList));
 
   const activeIndex = useControllableState({
     value: controlledActiveIndex,
@@ -85,7 +84,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   });
 
   function isElementDisabled(idx: number): boolean {
-    const el = list.value[idx];
+    const el = elementsList.value[idx];
     return !!(el?.hasAttribute("disabled") || el?.getAttribute("aria-disabled") === "true");
   }
 
@@ -97,7 +96,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Auto-correct active index when elements populate or resize
   watch(
-    [() => [...toValue(elementsList)], canFocusDisabled],
+    [elementsList, canFocusDisabled],
     ([elements, focusDisabled]) => {
       if (elements.length === 0) return;
 
@@ -142,7 +141,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   watch(
     activeIndex,
     (newIdx, oldIdx) => {
-      const elements = toValue(elementsList);
+      const elements = elementsList.value;
       if (elements.length === 0) return;
 
       // -1 is a valid unfocused index
@@ -172,7 +171,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Synchronize tabindex attribute across elements
   watch(
-    [() => [...toValue(elementsList)], activeIndex, isAutoTabindex, canFocusDisabled],
+    [elementsList, activeIndex, isAutoTabindex, canFocusDisabled],
     ([elements, activeIdx, autoManage, focusDisabled]) => {
       if (!autoManage || elements.length === 0) return;
 
@@ -201,12 +200,12 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   function isWidgetFocused(): boolean {
     const container = resolvedContainerEl.value;
     const doc = container?.ownerDocument ?? getDocument();
-    return isElementOrChildFocused(container, list.value, doc?.activeElement);
+    return isElementOrChildFocused(container, elementsList.value, doc?.activeElement);
   }
 
   function focusElement(idx: number, focusOptions: FocusElementOptions = {}): void {
-    if (idx < 0 || idx >= list.value.length) return;
-    const el = list.value[idx];
+    if (idx < 0 || idx >= elementsList.value.length) return;
+    const el = elementsList.value[idx];
     if (!el) return;
 
     el.focus({ preventScroll: focusOptions.preventScroll });
@@ -229,7 +228,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       if (
         isWidgetFocused() &&
         newIdx >= 0 &&
-        newIdx < toValue(elementsList).length &&
+        newIdx < elementsList.value.length &&
         (canFocusDisabled.value || !isElementDisabled(newIdx))
       ) {
         focusElement(newIdx);
@@ -249,7 +248,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
     if (
       idx < 0 ||
-      idx >= toValue(elementsList).length ||
+      idx >= elementsList.value.length ||
       (!canFocusDisabled.value && isElementDisabled(idx))
     ) {
       return;
@@ -264,7 +263,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const targetIdx = resolveNavigableIndexByIntent(
       intent,
       activeIndex.value,
-      toValue(elementsList).length,
+      elementsList.value.length,
       isElementDisabled,
       isLoop.value,
       canFocusDisabled.value,
@@ -288,7 +287,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       e.preventDefault();
       if (
         activeIndex.value >= 0 &&
-        activeIndex.value < toValue(elementsList).length &&
+        activeIndex.value < elementsList.value.length &&
         !isElementDisabled(activeIndex.value)
       ) {
         onSelect?.(activeIndex.value, e);
@@ -309,7 +308,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const target = e.target as Node | null;
     if (!target) return;
 
-    const elements = toValue(elementsList);
+    const elements = elementsList.value;
 
     for (let idx = 0; idx < elements.length; idx++) {
       const el = elements[idx];
@@ -335,7 +334,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const target = e.target as Node | null;
     if (!target) return;
 
-    const elements = toValue(elementsList);
+    const elements = elementsList.value;
 
     for (let idx = 0; idx < elements.length; idx++) {
       const el = elements[idx];
@@ -376,7 +375,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 //=======================================================================================
 
 /**
- * Checks whether the active element is within the container or matches any element in the list.
+ * Checks whether the active element is within the container or matches any element in the elementsList.
  */
 export function isElementOrChildFocused(
   container: HTMLElement | null | undefined,
@@ -577,7 +576,7 @@ export interface UseRovingFocusOptions {
   /**
    * The list of HTML element references representing navigable elements.
    */
-  elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
+  elementsList: Readonly<Ref<(HTMLElement | null)[]>>;
 
   /**
    * Optional controlled active index ref.
