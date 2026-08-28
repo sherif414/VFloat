@@ -5,7 +5,6 @@ import { defineComponent, h, ref, useTemplateRef } from "vue";
 import {
   findNextNavigableIndex,
   isElementDisabled,
-  resolveCollectionSize,
   resolveInitialNavigableIndex,
   resolveNavigableIndexByIntent,
   type UseRovingFocusOptions,
@@ -31,16 +30,16 @@ describe("useRovingFocus", () => {
 
     const Component = defineComponent(() => {
       const containerEl = useTemplateRef<HTMLDivElement>("container");
-      const elements = ref<(HTMLElement | null)[]>([]);
+      const elementsList = ref<(HTMLElement | null)[]>([]);
 
       rovingReturn = useRovingFocus({
         containerEl,
-        elements,
+        elementsList,
         ...options,
       });
 
       const register = (el: Element | null, idx: number) => {
-        elements.value[idx] = el as HTMLElement;
+        elementsList.value[idx] = el as HTMLElement;
       };
 
       const count = config.itemCount ?? 5;
@@ -568,12 +567,12 @@ describe("useRovingFocus", () => {
 
       const DynamicComponent = defineComponent(() => {
         const containerEl = useTemplateRef<HTMLDivElement>("container");
-        const elements = ref<(HTMLElement | null)[]>([]);
+        const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        useRovingFocus({ containerEl, elements });
+        useRovingFocus({ containerEl, elementsList });
 
         const register = (el: Element | null, idx: number) => {
-          elements.value[idx] = el as HTMLElement;
+          elementsList.value[idx] = el as HTMLElement;
         };
 
         return () =>
@@ -841,20 +840,6 @@ describe("useRovingFocus", () => {
   });
 
   describe("pure idempotent helper functions", () => {
-    describe("resolveCollectionSize", () => {
-      it("returns list length for non-virtual lists", () => {
-        expect(resolveCollectionSize(5)).toBe(5);
-        expect(resolveCollectionSize(0)).toBe(0);
-        expect(resolveCollectionSize(10, 50, false)).toBe(10);
-      });
-
-      it("returns explicit elementCount when virtual is true", () => {
-        expect(resolveCollectionSize(5, 100, true)).toBe(100);
-        expect(resolveCollectionSize(0, 0, true)).toBe(0);
-        expect(resolveCollectionSize(5, null, true)).toBe(5);
-      });
-    });
-
     describe("isElementDisabled", () => {
       it("prioritizes customPredicate when supplied", () => {
         const customPredicate = (_el: HTMLElement | null, idx: number) => idx === 2;

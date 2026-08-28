@@ -25,11 +25,11 @@ import { useRtl } from "./rtl";
  * @example Standard List
  * ```ts
  * const containerEl = useTemplateRef<HTMLElement>("container");
- * const elements = ref<Array<HTMLElement | null>>([]);
+ * const elementsList = ref<Array<HTMLElement | null>>([]);
  *
  * const { activeIndex, next, prev } = useRovingFocus({
  *   containerEl,
- *   elements,
+ *   elementsList,
  * });
  * ```
  *
@@ -37,7 +37,7 @@ import { useRtl } from "./rtl";
  * ```ts
  * const { activeIndex } = useRovingFocus({
  *   containerEl,
- *   elements,
+ *   elementsList,
  *   orientation: "both",
  *   loop: true,
  *   onSelect: (index) => {
@@ -49,7 +49,7 @@ import { useRtl } from "./rtl";
 export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusReturn {
   const {
     containerEl,
-    elements,
+    elementsList,
     defaultActiveIndex = 0,
     activeIndex: controlledActiveIndex,
     onActiveIndexChange,
@@ -84,14 +84,14 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     onChange: onActiveIndexChange,
   });
 
-  const totalSize = computed<number>(() => {
-    const list = toValue(elements);
-    const count = toValue(elementCount);
-    return resolveCollectionSize(list?.length ?? 0, count, isVirtual.value);
+  const elementsListSize = computed<number>(() => {
+    const list = toValue(elementsList);
+    const count = toValue(elementCount) ?? 0;
+    return isVirtual.value ? count : (list?.length ?? 0);
   });
 
   function getElement(idx: number): HTMLElement | null {
-    const list = toValue(elements);
+    const list = toValue(elementsList);
     return list?.[idx] ?? null;
   }
 
@@ -106,7 +106,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Auto-correct active index when elements populate or resize
   watch(
-    [() => toValue(elements), totalSize, canFocusDisabled],
+    [() => toValue(elementsList), elementsListSize, canFocusDisabled],
     ([list, size, canFocus]) => {
       if (!list || size === 0) return;
 
@@ -135,13 +135,15 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     activeIndex,
     (newIdx, oldIdx) => {
       const isInvalid =
-        newIdx < 0 || newIdx >= totalSize.value || (!canFocusDisabled.value && isDisabled(newIdx));
+        newIdx < 0 ||
+        newIdx >= elementsListSize.value ||
+        (!canFocusDisabled.value && isDisabled(newIdx));
 
       if (isInvalid) {
         if (
           oldIdx !== undefined &&
           oldIdx >= 0 &&
-          oldIdx < totalSize.value &&
+          oldIdx < elementsListSize.value &&
           (canFocusDisabled.value || !isDisabled(oldIdx))
         ) {
           activeIndex.value = oldIdx;
@@ -155,7 +157,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   // Synchronize tabindex attribute across elements
   watch(
-    [() => toValue(elements), totalSize, activeIndex, isAutoTabindex],
+    [() => toValue(elementsList), elementsListSize, activeIndex, isAutoTabindex],
     ([list, size, activeIdx, autoManage]) => {
       if (!autoManage || !list || size === 0) return;
 
@@ -198,7 +200,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
       if (
         newIdx >= 0 &&
-        newIdx < totalSize.value &&
+        newIdx < elementsListSize.value &&
         (canFocusDisabled.value || !isDisabled(newIdx))
       ) {
         focusElement(newIdx);
@@ -210,7 +212,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   // --- Keyboard Navigation ----------------------------------------------------
 
   function setActiveIndex(idx: number): void {
-    if (idx < 0 || idx >= totalSize.value || (!canFocusDisabled.value && isDisabled(idx))) {
+    if (idx < 0 || idx >= elementsListSize.value || (!canFocusDisabled.value && isDisabled(idx))) {
       return;
     }
 
@@ -222,7 +224,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const targetIdx = resolveNavigableIndexByIntent(
       intent,
       activeIndex.value,
-      totalSize.value,
+      elementsListSize.value,
       isDisabled,
       isLoop.value,
       canFocusDisabled.value,
@@ -246,7 +248,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       e.preventDefault();
       if (
         activeIndex.value >= 0 &&
-        activeIndex.value < totalSize.value &&
+        activeIndex.value < elementsListSize.value &&
         !isDisabled(activeIndex.value)
       ) {
         onSelect?.(activeIndex.value, e);
@@ -271,7 +273,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const target = e.target as Node | null;
     if (!target) return;
 
-    const list = toValue(elements);
+    const list = toValue(elementsList);
     if (!list) return;
 
     for (let idx = 0; idx < list.length; idx++) {
@@ -309,20 +311,6 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
-
-/**
- * Resolves the total size of the collection from elements length or virtual element count.
- */
-export function resolveCollectionSize(
-  elementsLength: number,
-  elementCount?: number | null,
-  isVirtual: boolean = false,
-): number {
-  if (isVirtual && elementCount != null) {
-    return Math.max(0, elementCount);
-  }
-  return Math.max(0, elementsLength);
-}
 
 /**
  * Determines whether a collection element at a given index is disabled.
@@ -507,7 +495,7 @@ export interface UseRovingFocusOptions {
   /**
    * The list of HTML element references representing navigable elements.
    */
-  elements: MaybeRefOrGetter<Array<HTMLElement | null>>;
+  elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
 
   /**
    * Default active element index when uncontrolled.
@@ -591,7 +579,7 @@ export interface UseRovingFocusOptions {
 
   /**
    * Total number of elements in the virtual list.
-   * Useful when `elements` only contains currently rendered/windowed elements.
+   * Useful when `elementsList` only contains currently rendered/windowed elements.
    */
   elementCount?: MaybeRefOrGetter<number>;
 
