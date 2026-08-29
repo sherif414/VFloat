@@ -340,9 +340,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
         if (!elements[idx]?.contains(target)) continue;
 
         if (idx !== activeIdx && isNavigable(idx)) {
-          // Per WAI-ARIA APG Menu pattern, hover physically moves DOM focus
-          // to the item. Scroll is suppressed to avoid viewport jumps during
-          // mouse movement.
+          // Supports the "focus follows hover" exception (e.g. active menubar / open submenu).
+          // preventScroll is an implementation choice to avoid viewport jumps while moving the mouse.
           setFocus(idx, { focusDom: true, preventScroll: true });
         }
         return;
@@ -538,7 +537,12 @@ export interface UseRovingFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Whether moving the pointer over an element moves focus and active index to that element.
+   * Whether moving the pointer over an item moves DOM focus and the active
+   * index to that item.
+   *
+   * Useful for widgets whose interaction pattern requires focus to follow
+   * pointer movement, such as certain menubar and menu interactions.
+   *
    * @default false
    */
   focusOnHover?: MaybeRefOrGetter<boolean>;
