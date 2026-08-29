@@ -1,5 +1,4 @@
-import { computed, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
-import { getDocument } from "@/shared/env";
+import { computed, ref, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -13,12 +12,8 @@ import { useRtl } from "./rtl";
  * Enables keyboard roving focus navigation across a list of elements according to the
  * WAI-ARIA roving tabindex pattern for composite widgets (toolbars, tablists, radiogroups, menus, listboxes).
  *
- * By default, maintains `tabindex="0"` on the active element (or fallback element) and `tabindex="-1"`
+ * Maintains `tabindex="0"` on the active element (or a persistent tab-stop fallback) and `tabindex="-1"`
  * on all inactive elements, allowing the composite widget to be a single tab stop in the sequential focus order.
- *
- * @warning When `autoTabindex` is `false`, `useRovingFocus` does not manage `tabindex` on DOM elements.
- * The consumer is responsible for setting `tabindex="-1"` (or dynamic `:tabindex="activeIndex === idx ? 0 : -1"`)
- * on every element in the template so that programmatic focus and keyboard navigation operate properly.
  *
  * @param options - Configuration options for container element, elements list, orientation, and navigation.
  * @returns Roving focus state and navigation control methods.
@@ -50,247 +45,249 @@ import { useRtl } from "./rtl";
  */
 export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusReturn {
   const {
-    containerEl,
     elementsList,
     activeIndex: controlledActiveIndex,
     defaultIndex = 0,
-    orientation = "vertical",
     loop = false,
     rtl,
     enabled = true,
-    autoTabindex = true,
     focusOnHover = false,
-    scrollIntoView = true,
-    allowDisabledFocus = false,
+    focusDisabledElements = false,
     onSelect,
     onActiveIndexChange,
   } = options;
 
+  // --- Shared Options & Root State --------------------------------------------
+
   const isEnabled = computed(() => toValue(enabled));
-  const resolvedOrientation = computed(() => toValue(orientation));
-  const resolvedContainerEl = computed(() => toValue(containerEl));
-  const isRtl = useRtl(resolvedContainerEl, { rtl });
+  const orientation = computed(() => toValue(options.orientation ?? "vertical"));
+  const containerEl = computed(() => toValue(options.containerEl));
+  const isRtl = useRtl(containerEl, { rtl });
   const isLoop = computed(() => !!toValue(loop));
-  const isAutoTabindex = computed(() => !!toValue(autoTabindex));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
-  const canFocusDisabled = computed(() => !!toValue(allowDisabledFocus));
+  const canFocusDisabled = computed(() => !!toValue(focusDisabledElements));
 
   const activeIndex = useControllableState({
     value: controlledActiveIndex,
     initialValue: defaultIndex,
-    onChange: (value) => {
-      onActiveIndexChange?.(value);
-    },
+    onChange: onActiveIndexChange,
   });
 
-  function isElementDisabled(idx: number): boolean {
-    const el = elementsList.value[idx];
-    return !!(el?.hasAttribute("disabled") || el?.getAttribute("aria-disabled") === "true");
+  // Persistent tab-stop index: which element holds tabindex="0" for sequential
+  // tab entry. Always points to a valid navigable index when items exist.
+  // Preserved when activeIndex resets to -1 (e.g. pointerleave) so that
+  // keyboard re-entry via Tab still lands on the last user-selected item.
+  const tabStopIndex = ref(defaultIndex >= 0 ? defaultIndex : 0);
+
+  // --- Element Validity -------------------------------------------------------
+
+  /**
+   * Whether the element at `idx` can receive roving focus. Returns false for
+   * null elements, out-of-bounds indices, and disabled items (unless
+   * `focusDisabledElements` is enabled).
+   */
+  function isNavigable(idx: number): boolean {
+    const list = elementsList.value;
+    if (idx < 0 || idx >= list.length) return false;
+    const el = list[idx];
+    if (!el) return false;
+    if (canFocusDisabled.value) return true;
+    return !el.hasAttribute("disabled") && el.getAttribute("aria-disabled") !== "true";
   }
 
-  let isInitialized = false;
-  const targetInitialIndex = controlledActiveIndex ? controlledActiveIndex.value : defaultIndex;
-  let lastFocusedIdx: number | null = null;
+  /**
+   * Whether the element at `idx` is actually disabled in the DOM, regardless
+   * of the `focusDisabledElements` option. Used exclusively by the `onSelect`
+   * guard: per WAI-ARIA APG, disabled items in composite widgets should be
+   * focusable for discoverability but must not be activatable.
+   */
+  function isItemDisabled(idx: number): boolean {
+    const el = elementsList.value[idx];
+    if (!el) return true;
+    return el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
+  }
 
-  // --- Active Index Bounds & Validation ---------------------------------------
+  // --- Tab-Stop Validation ----------------------------------------------------
 
-  // Auto-correct active index when elements populate or resize
+  // Keep tabStopIndex valid when the element list changes or
+  // canFocusDisabled toggles. Only touches tabStopIndex — never mutates
+  // activeIndex and never fires onActiveIndexChange.
   watch(
-    [elementsList, canFocusDisabled],
-    ([elements, focusDisabled]) => {
-      if (elements.length === 0) return;
+    [() => [...elementsList.value], canFocusDisabled],
+    () => {
+      const total = elementsList.value.length;
+      if (total === 0) return;
 
-      const idx = activeIndex.value;
-
-      if (!isInitialized) {
-        isInitialized = true;
-        // On first element population, attempt to honor the intended initial / default index
-        const resolved = resolveInitialNavigableIndex(
-          targetInitialIndex,
-          elements.length,
-          isElementDisabled,
-          focusDisabled,
-        );
-        if (resolved !== null && resolved !== idx) {
-          activeIndex.value = resolved;
-        }
+      // Clamp to bounds first (handles list shrinkage)
+      const clamped = Math.min(tabStopIndex.value, total - 1);
+      if (isNavigable(clamped)) {
+        tabStopIndex.value = clamped;
         return;
       }
 
-      if (idx === -1) return;
-
-      const isInvalidIndex =
-        idx < 0 || idx >= elements.length || (!focusDisabled && isElementDisabled(idx));
-      if (!isInvalidIndex) return;
-
-      const initialIndex = resolveInitialNavigableIndex(
-        idx,
-        elements.length,
-        isElementDisabled,
-        focusDisabled,
-      );
-
-      if (initialIndex !== null) {
-        activeIndex.value = initialIndex;
+      // Current tab stop is no longer valid — find the first navigable element
+      const fallback = findNextNavigableIndex(-1, 1, total, (i) => !isNavigable(i), false);
+      if (fallback !== null) {
+        tabStopIndex.value = fallback;
       }
     },
     { immediate: true, flush: "post" },
   );
 
-  // Revert invalid active index changes from external sources
-  watch(
-    activeIndex,
-    (newIdx, oldIdx) => {
-      const elements = elementsList.value;
-      if (elements.length === 0) return;
+  // --- DOM Tabindex Resolution ------------------------------------------------
 
-      // -1 is a valid unfocused index
-      if (newIdx === -1) return;
-
-      const isInvalid =
-        newIdx < -1 ||
-        newIdx >= elements.length ||
-        (!canFocusDisabled.value && isElementDisabled(newIdx));
-
-      if (isInvalid) {
-        if (
-          oldIdx !== undefined &&
-          (oldIdx === -1 ||
-            (oldIdx >= 0 &&
-              oldIdx < elements.length &&
-              (canFocusDisabled.value || !isElementDisabled(oldIdx))))
-        ) {
-          activeIndex.value = oldIdx;
-        }
+  /**
+   * Returns the roving `tabindex` value for the element at `index`.
+   *
+   * Tier 1: If activeIndex is valid, it owns the tab stop.
+   * Tier 2: Fall back to the persistent tabStopIndex.
+   * Safety: Scan for the first navigable element if both are stale.
+   */
+  const getTabindex = (index: number): 0 | -1 => {
+    const list = elementsList.value;
+    if (list.length === 0) {
+      if (activeIndex.value >= 0) {
+        return index === activeIndex.value ? 0 : -1;
       }
-    },
-    { flush: "sync" },
-  );
+      return index === tabStopIndex.value ? 0 : -1;
+    }
 
-  // --- DOM Tabindex Synchronization -------------------------------------------
+    if (activeIndex.value >= 0 && isNavigable(activeIndex.value)) {
+      return index === activeIndex.value ? 0 : -1;
+    }
 
-  // Synchronize tabindex attribute across elements
-  watch(
-    [elementsList, activeIndex, isAutoTabindex, canFocusDisabled],
-    ([elements, activeIdx, autoManage, focusDisabled]) => {
-      if (!autoManage || elements.length === 0) return;
+    if (isNavigable(tabStopIndex.value)) {
+      return index === tabStopIndex.value ? 0 : -1;
+    }
 
-      // When activeIndex is -1, designate the first enabled fallback element for sequential Tab entry
-      const targetTabindexZeroIdx =
-        activeIdx >= 0 && activeIdx < elements.length
-          ? activeIdx
-          : resolveFallbackNavigableIndex(elements.length, isElementDisabled, focusDisabled);
+    // Ultimate fallback — first navigable element (rare: both stale)
+    for (let i = 0; i < list.length; i++) {
+      if (isNavigable(i)) return index === i ? 0 : -1;
+    }
+    return -1;
+  };
 
-      for (let idx = 0; idx < elements.length; idx++) {
-        const el = elements[idx];
-        if (el) {
-          el.tabIndex = idx === targetTabindexZeroIdx ? 0 : -1;
-        }
-      }
-    },
-    { immediate: true, flush: "post" },
-  );
+  // --- DOM Focus & Scroll -----------------------------------------------------
 
-  // --- DOM Focus & Scroll Synchronization -------------------------------------
+  function focusDomElement(idx: number, preventScroll: boolean = false): void {
+    if (idx < 0 || idx >= elementsList.value.length) return;
+    const el = elementsList.value[idx];
+    if (!el || !isNavigable(idx)) return;
 
-  interface FocusElementOptions {
+    el.focus({ preventScroll: true });
+
+    if (!preventScroll) {
+      el.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
+  }
+
+  /**
+   * Finds the index of the item that currently has DOM focus inside the
+   * container. Used by `navigate()` to determine the resume point when
+   * `activeIndex` is -1 (e.g. after pointerleave while DOM focus remains
+   * inside the widget). Returns -1 if no item in the widget has focus.
+   */
+  function resolveFocusedIndex(): number {
+    const container = containerEl.value;
+    if (!container) return -1;
+    const doc = container.ownerDocument;
+    if (!doc) return -1;
+    const focused = doc.activeElement;
+    if (!focused || !container.contains(focused)) return -1;
+
+    const elements = elementsList.value;
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i]?.contains(focused)) return i;
+    }
+    return -1;
+  }
+
+  // --- Centralized Action Dispatcher ------------------------------------------
+
+  interface SetFocusOptions {
+    focusDom?: boolean;
     preventScroll?: boolean;
   }
 
-  function isWidgetFocused(): boolean {
-    const container = resolvedContainerEl.value;
-    const doc = container?.ownerDocument ?? getDocument();
-    return isElementOrChildFocused(container, elementsList.value, doc?.activeElement);
-  }
-
-  function focusElement(idx: number, focusOptions: FocusElementOptions = {}): void {
-    if (idx < 0 || idx >= elementsList.value.length) return;
-    const el = elementsList.value[idx];
-    if (!el) return;
-
-    el.focus({ preventScroll: focusOptions.preventScroll });
-    if (!focusOptions.preventScroll) {
-      const scrollConfig = toValue(scrollIntoView);
-      if (scrollConfig) {
-        const scrollOptions = typeof scrollConfig === "object" ? scrollConfig : undefined;
-        el.scrollIntoView?.(scrollOptions);
-      }
-    }
-    lastFocusedIdx = idx;
-  }
-
-  // Move DOM focus when activeIndex changes externally while widget is focused
-  watch(
-    activeIndex,
-    (newIdx) => {
-      if (newIdx === lastFocusedIdx || newIdx === -1) return;
-
-      if (
-        isWidgetFocused() &&
-        newIdx >= 0 &&
-        newIdx < elementsList.value.length &&
-        (canFocusDisabled.value || !isElementDisabled(newIdx))
-      ) {
-        focusElement(newIdx);
-      }
-    },
-    { flush: "sync" },
-  );
-
-  // --- Keyboard & Focus Navigation --------------------------------------------
-
-  function setActiveIndex(idx: number, focusOptions?: FocusElementOptions): void {
+  /**
+   * Single transition point for all state and DOM focus changes.
+   *
+   * - `setFocus(-1)` clears the active highlight but preserves tabStopIndex
+   *   so keyboard re-entry via Tab still lands on the last user-selected item.
+   * - `setFocus(validIdx)` updates both activeIndex and tabStopIndex (the
+   *   roving tab stop moves with the active selection per WAI-ARIA APG).
+   * - `focusDom: true` physically moves DOM focus and optionally scrolls.
+   */
+  function setFocus(
+    idx: number,
+    { focusDom = false, preventScroll = false }: SetFocusOptions = {},
+  ): void {
     if (idx === -1) {
-      lastFocusedIdx = -1;
       activeIndex.value = -1;
       return;
     }
 
-    if (
-      idx < 0 ||
-      idx >= elementsList.value.length ||
-      (!canFocusDisabled.value && isElementDisabled(idx))
-    ) {
-      return;
-    }
+    if (!isNavigable(idx)) return;
 
-    lastFocusedIdx = idx;
     activeIndex.value = idx;
-    focusElement(idx, focusOptions);
+    tabStopIndex.value = idx;
+
+    if (focusDom) {
+      focusDomElement(idx, preventScroll);
+    }
   }
 
+  // --- Keyboard Navigation ----------------------------------------------------
+
   function navigate(intent: NavigationIntent): void {
+    const total = elementsList.value.length;
+    if (total === 0) return;
+
+    let current: number;
+    if (activeIndex.value >= 0) {
+      current = activeIndex.value;
+    } else {
+      // No active item — probe DOM focus for a resume point. This handles the
+      // scenario where pointerleave cleared activeIndex to -1 but DOM focus
+      // remains on an item inside the widget.
+      current = resolveFocusedIndex();
+      if (current < 0) {
+        // No DOM focus in widget — start from edge so the first step lands
+        // on the first (next/first) or last (previous/last) navigable item.
+        current = intent === "next" || intent === "first" ? -1 : total;
+      }
+    }
+
     const targetIdx = resolveNavigableIndexByIntent(
       intent,
-      activeIndex.value,
-      elementsList.value.length,
-      isElementDisabled,
+      current,
+      total,
+      (i) => !isNavigable(i),
       isLoop.value,
-      canFocusDisabled.value,
     );
 
     if (targetIdx !== null) {
-      setActiveIndex(targetIdx);
+      setFocus(targetIdx, { focusDom: true });
     }
   }
 
-  function onKeyDown(e: KeyboardEvent): void {
+  useEventListener(containerEl, "keydown", (e: KeyboardEvent) => {
     if (e.defaultPrevented || !isEnabled.value) return;
 
     const intent = resolveKeyIntent(e, {
-      orientation: resolvedOrientation.value,
+      orientation: orientation.value,
       rtl: isRtl.value,
     });
     if (!intent) return;
 
     if (intent === "select") {
-      e.preventDefault();
-      if (
-        activeIndex.value >= 0 &&
-        activeIndex.value < elementsList.value.length &&
-        !isElementDisabled(activeIndex.value)
-      ) {
-        onSelect?.(activeIndex.value, e);
+      const idx = activeIndex.value;
+      // Guard: per WAI-ARIA APG, disabled items are focusable for discoverability
+      // but must not be activatable. Check actual DOM disabled state, not the
+      // navigation predicate (which is affected by focusDisabledElements).
+      if (idx >= 0 && idx < elementsList.value.length && !isItemDisabled(idx)) {
+        e.preventDefault();
+        onSelect?.(idx, e);
       }
       return;
     }
@@ -299,74 +296,79 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       e.preventDefault();
       navigate(intent);
     }
-  }
+  });
 
-  useEventListener(resolvedContainerEl, "keydown", onKeyDown);
+  // --- Focus-In Synchronization -----------------------------------------------
 
-  function onFocusIn(e: FocusEvent): void {
+  useEventListener(containerEl, "focusin", (e: FocusEvent) => {
     if (!isEnabled.value) return;
     const target = e.target as Node | null;
     if (!target) return;
 
     const elements = elementsList.value;
-
     for (let idx = 0; idx < elements.length; idx++) {
-      const el = elements[idx];
-      if (el && (el === target || el.contains(target))) {
-        if (!canFocusDisabled.value && isElementDisabled(idx)) return;
+      if (elements[idx]?.contains(target)) {
         if (idx !== activeIndex.value) {
-          lastFocusedIdx = idx;
-          activeIndex.value = idx;
+          // Element already has DOM focus (via click, Tab, or browser focus
+          // management), so just sync state without moving DOM focus again.
+          setFocus(idx, { focusDom: false });
         }
         return;
       }
     }
-  }
+  });
 
-  useEventListener(resolvedContainerEl, "focusin", onFocusIn);
+  // --- Pointer Hover Navigation -----------------------------------------------
 
-  // --- Pointer Hover Activation -----------------------------------------------
+  useEventListener(
+    () => (isFocusOnHover.value ? containerEl.value : null),
+    "pointermove",
+    (e: PointerEvent) => {
+      if (e.defaultPrevented || !isEnabled.value) return;
+      if (e.pointerType === "touch") return;
 
-  function onPointerMove(e: PointerEvent): void {
-    if (e.defaultPrevented || !isEnabled.value || !isFocusOnHover.value) return;
-    if (e.pointerType === "touch") return;
+      const target = e.target as Node | null;
+      if (!target) return;
 
-    const target = e.target as Node | null;
-    if (!target) return;
+      const elements = elementsList.value;
+      const activeIdx = activeIndex.value;
 
-    const elements = elementsList.value;
+      // Already on the hovered item — no-op
+      if (elements[activeIdx]?.contains(target)) return;
 
-    for (let idx = 0; idx < elements.length; idx++) {
-      const el = elements[idx];
-      if (el && el.contains(target)) {
-        if (!canFocusDisabled.value && isElementDisabled(idx)) return;
-        if (idx !== activeIndex.value) {
-          setActiveIndex(idx, { preventScroll: true });
+      for (let idx = 0; idx < elements.length; idx++) {
+        if (!elements[idx]?.contains(target)) continue;
+
+        if (idx !== activeIdx && isNavigable(idx)) {
+          // Per WAI-ARIA APG Menu pattern, hover physically moves DOM focus
+          // to the item. Scroll is suppressed to avoid viewport jumps during
+          // mouse movement.
+          setFocus(idx, { focusDom: true, preventScroll: true });
         }
         return;
       }
-    }
-  }
+    },
+  );
 
-  useEventListener(resolvedContainerEl, "pointermove", onPointerMove);
+  useEventListener(
+    () => (isFocusOnHover.value ? containerEl.value : null),
+    "pointerleave",
+    (e: PointerEvent) => {
+      if (!isEnabled.value) return;
+      if (e.pointerType === "touch") return;
+      // Clear highlight, but tabStopIndex remains intact for keyboard re-entry.
+      setFocus(-1);
+    },
+  );
 
   return {
-    activeIndex: readonly(activeIndex) as Readonly<Ref<number>>,
-    setActiveIndex: (index: number) => {
-      setActiveIndex(index);
-    },
-    next: () => {
-      navigate("next");
-    },
-    prev: () => {
-      navigate("previous");
-    },
-    first: () => {
-      navigate("first");
-    },
-    last: () => {
-      navigate("last");
-    },
+    activeIndex: readonly(activeIndex),
+    getTabindex,
+    setActiveIndex: (idx: number) => setFocus(idx, { focusDom: true }),
+    next: () => navigate("next"),
+    prev: () => navigate("previous"),
+    first: () => navigate("first"),
+    last: () => navigate("last"),
   };
 }
 
@@ -375,39 +377,14 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 //=======================================================================================
 
 /**
- * Checks whether the active element is within the container or matches any element in the elementsList.
- */
-export function isElementOrChildFocused(
-  container: HTMLElement | null | undefined,
-  elements: Array<HTMLElement | null>,
-  activeElement: Element | null | undefined,
-): boolean {
-  if (!activeElement) return false;
-
-  if (container && (container === activeElement || container.contains(activeElement))) {
-    return true;
-  }
-
-  for (let idx = 0; idx < elements.length; idx++) {
-    const el = elements[idx];
-    if (el && (el === activeElement || el.contains(activeElement))) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/**
  * Finds the next enabled element index from a starting position in a given direction.
  */
-export function findNextNavigableIndex(
+function findNextNavigableIndex(
   startIdx: number,
   delta: 1 | -1,
   totalSize: number,
-  isElementDisabledFn: (idx: number) => boolean,
+  isElementDisabled: (idx: number) => boolean,
   loop: boolean,
-  allowDisabledFocus: boolean = false,
 ): number | null {
   if (totalSize === 0) return null;
 
@@ -424,7 +401,7 @@ export function findNextNavigableIndex(
       current = totalSize - 1;
     }
 
-    if (allowDisabledFocus || !isElementDisabledFn(current)) {
+    if (!isElementDisabled(current)) {
       return current;
     }
   }
@@ -435,94 +412,31 @@ export function findNextNavigableIndex(
 /**
  * Resolves the target index for a given semantic navigation intent.
  */
-export function resolveNavigableIndexByIntent(
+function resolveNavigableIndexByIntent(
   intent: NavigationIntent,
   currentIdx: number | null,
   totalSize: number,
-  isElementDisabledFn: (idx: number) => boolean,
+  isNavigableElement: (idx: number) => boolean,
   loop: boolean,
-  allowDisabledFocus: boolean = false,
 ): number | null {
   if (totalSize === 0) return null;
 
   switch (intent) {
     case "next": {
       const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : -1;
-      return findNextNavigableIndex(
-        start,
-        1,
-        totalSize,
-        isElementDisabledFn,
-        loop,
-        allowDisabledFocus,
-      );
+      return findNextNavigableIndex(start, 1, totalSize, isNavigableElement, loop);
     }
     case "previous": {
       const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : totalSize;
-      return findNextNavigableIndex(
-        start,
-        -1,
-        totalSize,
-        isElementDisabledFn,
-        loop,
-        allowDisabledFocus,
-      );
+      return findNextNavigableIndex(start, -1, totalSize, isNavigableElement, loop);
     }
     case "first":
-      return findNextNavigableIndex(
-        -1,
-        1,
-        totalSize,
-        isElementDisabledFn,
-        false,
-        allowDisabledFocus,
-      );
+      return findNextNavigableIndex(-1, 1, totalSize, isNavigableElement, false);
     case "last":
-      return findNextNavigableIndex(
-        totalSize,
-        -1,
-        totalSize,
-        isElementDisabledFn,
-        false,
-        allowDisabledFocus,
-      );
+      return findNextNavigableIndex(totalSize, -1, totalSize, isNavigableElement, false);
     default:
       return null;
   }
-}
-
-/**
- * Resolves the fallback element index that should receive tabindex="0" for sequential tab entry.
- */
-export function resolveFallbackNavigableIndex(
-  totalSize: number,
-  isElementDisabledFn: (idx: number) => boolean,
-  allowDisabledFocus: boolean = false,
-): number | null {
-  if (totalSize === 0) return null;
-  return findNextNavigableIndex(-1, 1, totalSize, isElementDisabledFn, false, allowDisabledFocus);
-}
-
-/**
- * Resolves an initial or fallback valid index within collection boundaries.
- */
-export function resolveInitialNavigableIndex(
-  defaultIdx: number,
-  totalSize: number,
-  isElementDisabledFn: (idx: number) => boolean,
-  allowDisabledFocus: boolean = false,
-): number | null {
-  if (defaultIdx === -1) {
-    return -1;
-  }
-  if (
-    defaultIdx >= 0 &&
-    defaultIdx < totalSize &&
-    (allowDisabledFocus || !isElementDisabledFn(defaultIdx))
-  ) {
-    return defaultIdx;
-  }
-  return findNextNavigableIndex(-1, 1, totalSize, isElementDisabledFn, false, allowDisabledFocus);
 }
 
 //=======================================================================================
@@ -539,9 +453,14 @@ export interface UseRovingFocusReturn {
   activeIndex: Readonly<Ref<number>>;
 
   /**
-   * Sets the active index and moves focus to the element.
+   * Sets the active index and moves DOM focus to the element.
    */
   setActiveIndex: (index: number) => void;
+
+  /**
+   * Computes the roving `tabindex` (`0` or `-1`) for an element at the specified index.
+   */
+  getTabindex: (index: number) => 0 | -1;
 
   /**
    * Moves focus to the next enabled element.
@@ -619,27 +538,10 @@ export interface UseRovingFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;
 
   /**
-   * Whether `useRovingFocus` automatically synchronizes `tabindex="0"` on the active element
-   * and `tabindex="-1"` on all inactive elements in the DOM.
-   *
-   * When set to `false`, `useRovingFocus` will not mutate `tabindex` attributes on elements.
-   * You are responsible for ensuring elements have appropriate `tabindex` attributes in your template.
-   *
-   * @default true
-   */
-  autoTabindex?: MaybeRefOrGetter<boolean>;
-
-  /**
    * Whether moving the pointer over an element moves focus and active index to that element.
    * @default false
    */
   focusOnHover?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether or how to scroll the active element into view upon navigation.
-   * @default true
-   */
-  scrollIntoView?: MaybeRefOrGetter<boolean | ScrollIntoViewOptions>;
 
   /**
    * Whether to allow keyboard navigation and roving focus to land on disabled elements.
@@ -649,7 +551,7 @@ export interface UseRovingFocusOptions {
    *
    * @default false
    */
-  allowDisabledFocus?: MaybeRefOrGetter<boolean>;
+  focusDisabledElements?: MaybeRefOrGetter<boolean>;
 
   /**
    * Callback fired when Enter or Space is pressed on the active element.
