@@ -53,15 +53,11 @@ export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";
 export type {
-  FocusStrategy,
-  ListNavigationItem,
-  NavigationOrientation,
-  NavigationStrategyType,
-  UseListNavigationOptions,
-  UseListNavigationReturn,
-} from "./list-navigation/use-list-navigation";
-// List Navigation
-export { useListNavigation } from "./list-navigation/use-list-navigation";
+  UseRovingFocusOptions,
+  UseRovingFocusReturn,
+} from "./keyboard-navigation/use-roving-focus";
+// Roving Focus
+export { useRovingFocus } from "./keyboard-navigation/use-roving-focus";
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";

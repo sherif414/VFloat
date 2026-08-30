@@ -20,5 +20,6 @@
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "cSpell.words": ["Tabindexes", "vfloat"],
-  "js/ts.tsdk.path": "node_modules/typescript/lib"
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "editor.tabSize": 2
 }
