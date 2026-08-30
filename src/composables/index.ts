@@ -59,6 +59,18 @@ export type {
 } from "./keyboard-navigation/use-roving-focus";
 // Roving Focus
 export { useRovingFocus } from "./keyboard-navigation/use-roving-focus";
+export type {
+  UseAriaActivedescendantOptions,
+  UseAriaActivedescendantReturn,
+} from "./keyboard-navigation/use-aria-activedescendant";
+// Aria Activedescendant
+export { useAriaActivedescendant } from "./keyboard-navigation/use-aria-activedescendant";
+export type { VirtualizerAdapter } from "./keyboard-navigation/virtualizer-adapter";
+// Virtualizer Adapter
+export {
+  createTanStackVirtualAdapter,
+  createCustomVirtualAdapter,
+} from "./keyboard-navigation/virtualizer-adapter";
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";

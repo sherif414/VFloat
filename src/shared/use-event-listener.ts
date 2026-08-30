@@ -26,7 +26,12 @@ export function useEventListener<TEvent extends Event = Event>(
     ([currentTarget, currentEvent], _, onCleanup) => {
       cleanup();
 
-      if (!currentTarget || !currentEvent) return;
+      if (
+        !currentTarget ||
+        !currentEvent ||
+        typeof (currentTarget as EventTarget).addEventListener !== "function"
+      )
+        return;
 
       const listenerOptions =
         typeof options === "object" && options !== null ? { ...options } : options;

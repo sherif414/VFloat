@@ -2,6 +2,7 @@ import { computed, ref, type MaybeRefOrGetter, readonly, type Ref, toValue } fro
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
+import { resolveNavigableIndexByIntent } from "./navigation";
 import { useRtl } from "./rtl";
 
 //=======================================================================================
@@ -412,69 +413,6 @@ function resolveEntryIndex(
   }
 
   return -1;
-}
-
-/**
- * Finds the next enabled element index from a starting position in a given direction.
- */
-function findNextNavigableIndex(
-  startIdx: number,
-  delta: 1 | -1,
-  totalSize: number,
-  isElementDisabled: (idx: number) => boolean,
-  loop: boolean,
-): number | null {
-  if (totalSize === 0) return null;
-
-  let current = startIdx;
-
-  for (let step = 0; step < totalSize; step++) {
-    current += delta;
-
-    if (current >= totalSize) {
-      if (!loop) return null;
-      current = 0;
-    } else if (current < 0) {
-      if (!loop) return null;
-      current = totalSize - 1;
-    }
-
-    if (!isElementDisabled(current)) {
-      return current;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Resolves the target index for a given semantic navigation intent.
- */
-function resolveNavigableIndexByIntent(
-  intent: NavigationIntent,
-  currentIdx: number | null,
-  totalSize: number,
-  isNavigableElement: (idx: number) => boolean,
-  loop: boolean,
-): number | null {
-  if (totalSize === 0) return null;
-
-  switch (intent) {
-    case "next": {
-      const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : -1;
-      return findNextNavigableIndex(start, 1, totalSize, isNavigableElement, loop);
-    }
-    case "previous": {
-      const start = currentIdx !== null && currentIdx >= 0 ? currentIdx : totalSize;
-      return findNextNavigableIndex(start, -1, totalSize, isNavigableElement, loop);
-    }
-    case "first":
-      return findNextNavigableIndex(-1, 1, totalSize, isNavigableElement, false);
-    case "last":
-      return findNextNavigableIndex(totalSize, -1, totalSize, isNavigableElement, false);
-    default:
-      return null;
-  }
 }
 
 //=======================================================================================
