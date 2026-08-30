@@ -23,7 +23,7 @@ Every VFloat file (especially composables) must follow this exact sequence:
 1. **Imports**: Third-party first (Vue, `@floating-ui/dom`, etc.), then internal VFloat modules (`@/...`).
 2. **Internal Module Constants/Types**: (Optional) Simple, non-exported types or constants needed by the module.
 3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingContext`).
-4. **📌 Helpers Section**: (Optional) Module-level private pure functions and stateless calculation/lookup utilities. *Must be strictly idempotent with zero side effects (no DOM mutations, no ref updates, no reactive scopes).* _Omit banner if there are no helpers._
+4. **📌 Helpers Section**: (Optional) Module-level private pure functions and stateless calculation/lookup utilities. _Must be strictly idempotent with zero side effects (no DOM mutations, no ref updates, no reactive scopes)._ _Omit banner if there are no helpers._
 5. **📌 Types Section**: (Optional) Exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). _Omit banner if there are no types._
 
 > [!IMPORTANT]
@@ -97,6 +97,7 @@ composable()
 ### Single-Concern Separation Rule
 
 Never combine multiple behavioral or domain concerns into a single handler, watcher, or listener:
+
 - **Separate State Correction from DOM Sync**: Auto-correcting state (e.g., bounds fallback when list size changes) and syncing DOM attributes (e.g., updating `tabindex` on elements) must be separate watchers.
 - **Separate Attribute Sync from Focus/Scroll**: Updating DOM attributes (`tabindex`, `aria-*`) and moving DOM focus/scroll must be handled in their respective feature sections.
 - **Decouple Unrelated Event Logic**: Event listeners must not bundle unrelated capabilities or logic that is independent and unaffected by call order. Each feature block should bind its own focused event listener.
