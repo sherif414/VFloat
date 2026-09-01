@@ -1,4 +1,4 @@
-import { computed, ref, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
+import { computed, type MaybeRefOrGetter, readonly, type Ref, toValue } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -26,7 +26,7 @@ import { useRtl } from "./rtl";
  * const { activeIndex, next, prev } = useRovingFocus({
  *   containerEl,
  *   elementsList,
- *   defaultIndex: 0,
+ *   entryIndex: 0,
  * });
  * ```
  *
@@ -47,7 +47,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   const {
     elementsList,
     activeIndex: controlledActiveIndex,
-    defaultIndex = 0,
+    entryIndex: entryIndexOption,
     loop = false,
     rtl,
     enabled = true,
@@ -69,15 +69,9 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
   const activeIndex = useControllableState({
     value: controlledActiveIndex,
-    initialValue: defaultIndex,
+    initialValue: -1,
     onChange: onActiveIndexChange,
   });
-
-  // Persistent tab-stop index: which element holds tabindex="0" for sequential
-  // tab entry. Always points to a valid navigable index when items exist.
-  // Preserved when activeIndex resets to -1 (e.g. pointerleave) so that
-  // keyboard re-entry via Tab still lands on the last user-selected item.
-  const tabStopIndex = ref(defaultIndex >= 0 ? defaultIndex : 0);
 
   // --- Element Validity -------------------------------------------------------
 
@@ -107,41 +101,14 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     return el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
   }
 
-  // --- Tab-Stop Validation ----------------------------------------------------
-
-  // Keep tabStopIndex valid when the element list changes or
-  // canFocusDisabled toggles. Only touches tabStopIndex — never mutates
-  // activeIndex and never fires onActiveIndexChange.
-  watch(
-    [() => [...elementsList.value], canFocusDisabled],
-    () => {
-      const total = elementsList.value.length;
-      if (total === 0) return;
-
-      // Clamp to bounds first (handles list shrinkage)
-      const clamped = Math.min(tabStopIndex.value, total - 1);
-      if (isNavigable(clamped)) {
-        tabStopIndex.value = clamped;
-        return;
-      }
-
-      // Current tab stop is no longer valid — find the first navigable element
-      const fallback = findNextNavigableIndex(-1, 1, total, (i) => !isNavigable(i), false);
-      if (fallback !== null) {
-        tabStopIndex.value = fallback;
-      }
-    },
-    { immediate: true, flush: "post" },
-  );
-
   // --- DOM Tabindex Resolution ------------------------------------------------
 
   /**
    * Returns the roving `tabindex` value for the element at `index`.
    *
-   * Tier 1: If activeIndex is valid, it owns the tab stop.
-   * Tier 2: Fall back to the persistent tabStopIndex.
-   * Safety: Scan for the first navigable element if both are stale.
+   * Tier 1: If activeIndex is valid and navigable, it owns the tab stop.
+   * Tier 2: Resolves the resting entry index from `entryIndex`.
+   * Safety: Scans for the first navigable element as the universal fallback.
    */
   const getTabindex = (index: number): 0 | -1 => {
     const list = elementsList.value;
@@ -149,37 +116,59 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       if (activeIndex.value >= 0) {
         return index === activeIndex.value ? 0 : -1;
       }
-      return index === tabStopIndex.value ? 0 : -1;
+      const entry = toValue(entryIndexOption);
+      if (entry !== undefined && entry !== null) {
+        return entry >= 0 && index === entry ? 0 : -1;
+      }
+      return index === 0 ? 0 : -1;
     }
 
     if (activeIndex.value >= 0 && isNavigable(activeIndex.value)) {
       return index === activeIndex.value ? 0 : -1;
     }
 
-    if (isNavigable(tabStopIndex.value)) {
-      return index === tabStopIndex.value ? 0 : -1;
-    }
+    const targetEntry = resolveEntryIndex(list.length, toValue(entryIndexOption), isNavigable);
 
-    // Ultimate fallback — first navigable element (rare: both stale)
-    for (let i = 0; i < list.length; i++) {
-      if (isNavigable(i)) return index === i ? 0 : -1;
-    }
-    return -1;
+    return index === targetEntry ? 0 : -1;
   };
 
-  // --- DOM Focus & Scroll -----------------------------------------------------
+  // --- Centralized Actions ----------------------------------------------------
 
-  function focusDomElement(idx: number, preventScroll: boolean = false): void {
-    if (idx < 0 || idx >= elementsList.value.length) return;
-    const el = elementsList.value[idx];
-    if (!el || !isNavigable(idx)) return;
+  /**
+   * Sets the active index state without moving DOM focus.
+   * Pass `-1` to reset active focus and return the tab stop to the entry index.
+   */
+  function setActiveIndex(idx: number): void {
+    if (idx === -1) {
+      activeIndex.value = -1;
+      return;
+    }
 
-    el.focus({ preventScroll: true });
+    if (!isNavigable(idx)) return;
 
-    if (!preventScroll) {
-      el.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    activeIndex.value = idx;
+  }
+
+  /**
+   * Sets the active index state AND physically focuses the element in the DOM.
+   */
+  function focusIndex(idx: number, options: { preventScroll?: boolean } = {}): void {
+    const { preventScroll = false } = options;
+    setActiveIndex(idx);
+
+    if (isNavigable(idx)) {
+      const el = elementsList.value[idx];
+      if (!el) return;
+
+      el.focus({ preventScroll: true });
+
+      if (!preventScroll) {
+        el.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      }
     }
   }
+
+  // --- Keyboard Navigation ----------------------------------------------------
 
   /**
    * Finds the index of the item that currently has DOM focus inside the
@@ -202,49 +191,12 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     return -1;
   }
 
-  // --- Centralized Action Dispatcher ------------------------------------------
-
-  interface SetFocusOptions {
-    focusDom?: boolean;
-    preventScroll?: boolean;
-  }
-
-  /**
-   * Single transition point for all state and DOM focus changes.
-   *
-   * - `setFocus(-1)` clears the active highlight but preserves tabStopIndex
-   *   so keyboard re-entry via Tab still lands on the last user-selected item.
-   * - `setFocus(validIdx)` updates both activeIndex and tabStopIndex (the
-   *   roving tab stop moves with the active selection per WAI-ARIA APG).
-   * - `focusDom: true` physically moves DOM focus and optionally scrolls.
-   */
-  function setFocus(
-    idx: number,
-    { focusDom = false, preventScroll = false }: SetFocusOptions = {},
-  ): void {
-    if (idx === -1) {
-      activeIndex.value = -1;
-      return;
-    }
-
-    if (!isNavigable(idx)) return;
-
-    activeIndex.value = idx;
-    tabStopIndex.value = idx;
-
-    if (focusDom) {
-      focusDomElement(idx, preventScroll);
-    }
-  }
-
-  // --- Keyboard Navigation ----------------------------------------------------
-
   function navigate(intent: NavigationIntent): void {
     const total = elementsList.value.length;
     if (total === 0) return;
 
     let current: number;
-    if (activeIndex.value >= 0) {
+    if (activeIndex.value >= 0 && isNavigable(activeIndex.value)) {
       current = activeIndex.value;
     } else {
       // No active item — probe DOM focus for a resume point. This handles the
@@ -267,7 +219,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     );
 
     if (targetIdx !== null) {
-      setFocus(targetIdx, { focusDom: true });
+      focusIndex(targetIdx);
     }
   }
 
@@ -311,10 +263,22 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
         if (idx !== activeIndex.value) {
           // Element already has DOM focus (via click, Tab, or browser focus
           // management), so just sync state without moving DOM focus again.
-          setFocus(idx, { focusDom: false });
+          setActiveIndex(idx);
         }
         return;
       }
+    }
+  });
+
+  // --- Focus-Out Synchronization ----------------------------------------------
+
+  useEventListener(containerEl, "focusout", (e: FocusEvent) => {
+    if (!isEnabled.value) return;
+    const target = e.relatedTarget as Node | null;
+    const container = containerEl.value;
+
+    if (!container || !target || !container.contains(target)) {
+      setActiveIndex(-1);
     }
   });
 
@@ -341,8 +305,8 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
         if (idx !== activeIdx && isNavigable(idx)) {
           // Supports the "focus follows hover" exception (e.g. active menubar / open submenu).
-          // preventScroll is an implementation choice to avoid viewport jumps while moving the mouse.
-          setFocus(idx, { focusDom: true, preventScroll: true });
+          // preventScroll is to avoid viewport jumps while moving the mouse.
+          focusIndex(idx, { preventScroll: true });
         }
         return;
       }
@@ -355,15 +319,15 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     (e: PointerEvent) => {
       if (!isEnabled.value) return;
       if (e.pointerType === "touch") return;
-      // Clear highlight, but tabStopIndex remains intact for keyboard re-entry.
-      setFocus(-1);
+      setActiveIndex(-1);
     },
   );
 
   return {
     activeIndex: readonly(activeIndex),
     getTabindex,
-    setActiveIndex: (idx: number) => setFocus(idx, { focusDom: true }),
+    setActiveIndex,
+    focusIndex,
     next: () => navigate("next"),
     prev: () => navigate("previous"),
     first: () => navigate("first"),
@@ -374,6 +338,28 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
+
+/**
+ * Resolves the entry tab-stop index according to APG priority rules.
+ */
+function resolveEntryIndex(
+  elementsCount: number,
+  entryIndex: number | null | undefined,
+  isNavigable: (idx: number) => boolean,
+): number {
+  if (elementsCount === 0) return -1;
+
+  if (entryIndex !== undefined && entryIndex !== null) {
+    if (entryIndex === -1) return -1;
+    if (isNavigable(entryIndex)) return entryIndex;
+  }
+
+  for (let i = 0; i < elementsCount; i++) {
+    if (isNavigable(i)) return i;
+  }
+
+  return -1;
+}
 
 /**
  * Finds the next enabled element index from a starting position in a given direction.
@@ -452,9 +438,15 @@ export interface UseRovingFocusReturn {
   activeIndex: Readonly<Ref<number>>;
 
   /**
-   * Sets the active index and moves DOM focus to the element.
+   * Sets the active index state without moving DOM focus.
+   * Pass `-1` to reset active focus and return the tab stop to the resting entry index.
    */
   setActiveIndex: (index: number) => void;
+
+  /**
+   * Sets the active index and moves DOM focus to the element.
+   */
+  focusIndex: (index: number, options?: { preventScroll?: boolean }) => void;
 
   /**
    * Computes the roving `tabindex` (`0` or `-1`) for an element at the specified index.
@@ -503,11 +495,12 @@ export interface UseRovingFocusOptions {
   activeIndex?: Ref<number>;
 
   /**
-   * Initial active index for uncontrolled mode.
+   * Optional entry focus index (plain number, ref, or getter).
+   * Designates the item that receives `tabindex="0"` when the widget is idle or entered.
    * Can be set to `-1` for widgets that start with no initial highlight (e.g. Menus, Comboboxes).
-   * @default 0
+   * When omitted or null, falls back automatically to the first enabled element.
    */
-  defaultIndex?: number;
+  entryIndex?: MaybeRefOrGetter<number | null | undefined>;
 
   /**
    * Layout orientation of the navigable list elements.

@@ -101,7 +101,7 @@ describe("useRovingFocus", () => {
     });
 
     it("skips default item if disabled and tabs into the first enabled item", async () => {
-      const { Component } = createTestComponent({ defaultIndex: 0 }, { disabledIndices: [0, 1] });
+      const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0, 1] });
       render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
@@ -119,7 +119,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("acts as a single tab stop and preserves focus position when tabbing out and back in", async () => {
+    it("acts as a single tab stop and exits widget into the next page element on Tab", async () => {
       const { Component } = createTestComponent();
       render(Component);
 
@@ -137,9 +137,9 @@ describe("useRovingFocus", () => {
       await userEvent.tab();
       await expect.element(afterBtn).toHaveFocus();
 
-      // 3. Shift+Tab returns to the widget and restores focus on the last active item (option 3)
+      // 3. Shift+Tab returns to the widget and restores focus on the fallback entry item (option 1)
       await userEvent.tab({ shift: true });
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option1).toHaveFocus();
     });
   });
 
@@ -479,7 +479,7 @@ describe("useRovingFocus", () => {
   });
 
   describe("programmatic navigation methods", () => {
-    it("supports next, prev, first, last, and setActiveIndex methods", async () => {
+    it("supports next, prev, first, last, and focusIndex methods", async () => {
       const { Component, getRoving } = createTestComponent();
       render(Component);
 
@@ -502,9 +502,27 @@ describe("useRovingFocus", () => {
       getRoving().first();
       await expect.element(option1).toHaveFocus();
 
-      getRoving().setActiveIndex(2);
+      getRoving().focusIndex(2);
       const option3 = page.getByRole("option", { name: "option 3" });
       await expect.element(option3).toHaveFocus();
+    });
+
+    it("sets activeIndex state without moving DOM focus when setActiveIndex is called", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option3 = page.getByRole("option", { name: "option 3" });
+
+      await userEvent.click(option1);
+      await expect.element(option1).toHaveFocus();
+
+      getRoving().setActiveIndex(2);
+      expect(getRoving().activeIndex.value).toBe(2);
+      expect(getRoving().getTabindex(2)).toBe(0);
+      expect(getRoving().getTabindex(0)).toBe(-1);
+      await expect.element(option1).toHaveFocus();
+      await expect.element(option3).not.toHaveFocus();
     });
 
     it("continues from the last active item after activeIndex is cleared", async () => {
@@ -616,8 +634,8 @@ describe("useRovingFocus", () => {
       expect(option3.element().tabIndex).toBe(-1);
     });
 
-    it("respects defaultIndex when specified", async () => {
-      const { Component } = createTestComponent({ defaultIndex: 2 });
+    it("respects entryIndex when specified", async () => {
+      const { Component } = createTestComponent({ entryIndex: 2 });
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -652,8 +670,8 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveAttribute("tabindex", "0");
     });
 
-    it("designates a fallback tabindex=0 entry target when defaultIndex is -1", async () => {
-      const { Component, getRoving } = createTestComponent({ defaultIndex: -1 });
+    it("designates a fallback tabindex=0 entry target when entryIndex is omitted", async () => {
+      const { Component, getRoving } = createTestComponent();
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -712,7 +730,7 @@ describe("useRovingFocus", () => {
     });
 
     it("enters the widget at tabindex=0 and exits to next focusable element on Tab", async () => {
-      const { Component } = createTestComponent({ defaultIndex: 1 });
+      const { Component } = createTestComponent({ entryIndex: 1 });
       render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
@@ -729,7 +747,7 @@ describe("useRovingFocus", () => {
     });
 
     it("enters back into the active item on Shift+Tab from outside", async () => {
-      const { Component } = createTestComponent({ defaultIndex: 2 });
+      const { Component } = createTestComponent({ entryIndex: 2 });
       render(Component);
 
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -885,7 +903,7 @@ describe("useRovingFocus", () => {
       getRoving().last();
       await expect.element(option5).toHaveFocus();
 
-      getRoving().setActiveIndex(1);
+      getRoving().focusIndex(1);
       await expect.element(option2).toHaveFocus();
     });
 
@@ -912,7 +930,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("corrects tabStopIndex but not activeIndex when allowDisabledFocus changes to false", async () => {
+    it("corrects tab stop resolution but not activeIndex when allowDisabledFocus changes to false", async () => {
       const allowDisabledFocusRef = ref(true);
       const { Component, getRoving } = createTestComponent(
         { focusDisabledElements: allowDisabledFocusRef },
@@ -927,19 +945,17 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
 
       // Navigate to the disabled item (allowed because focusDisabledElements=true)
-      getRoving().setActiveIndex(0);
+      getRoving().focusIndex(0);
       await expect.element(option1).toHaveFocus();
 
       // Flipping focusDisabledElements to false does NOT auto-move focus or
-      // auto-correct activeIndex. The lightweight watcher corrects tabStopIndex
-      // so that getTabindex falls back to a valid entry point.
+      // auto-correct activeIndex. getTabindex resolves to first navigable element = index 1.
       allowDisabledFocusRef.value = false;
 
       // activeIndex is still 0 (the disabled item), but getTabindex falls
-      // through to tabStopIndex (first navigable = index 1).
+      // through to first navigable = index 1.
       expect(getRoving().getTabindex(1)).toBe(0);
       expect(getRoving().getTabindex(0)).toBe(-1);
-
       // DOM focus remains where it was — no auto-correction
       await expect.element(option1).toHaveFocus();
 
@@ -951,7 +967,7 @@ describe("useRovingFocus", () => {
 
   describe("focus stealing prevention & mount isolation", () => {
     it("does not steal document focus on mount when element 0 is disabled", async () => {
-      const { Component } = createTestComponent({ defaultIndex: 0 }, { disabledIndices: [0] });
+      const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0] });
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -987,12 +1003,13 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("uncontrolled defaultIndex & async element mounting", () => {
-    it("starts at defaultIndex in uncontrolled mode", async () => {
-      const { Component, getRoving } = createTestComponent({ defaultIndex: 2 });
+  describe("uncontrolled entryIndex & async element mounting", () => {
+    it("starts at entryIndex in uncontrolled mode", async () => {
+      const { Component, getRoving } = createTestComponent({ entryIndex: 2 });
       render(Component);
 
-      expect(getRoving().activeIndex.value).toBe(2);
+      expect(getRoving().activeIndex.value).toBe(-1);
+      expect(getRoving().getTabindex(2)).toBe(0);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -1002,7 +1019,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("preserves defaultIndex when elements populate asynchronously", async () => {
+    it("preserves entryIndex when elements populate asynchronously", async () => {
       const isLoaded = ref(false);
 
       const AsyncComponent = defineComponent(() => {
@@ -1012,7 +1029,7 @@ describe("useRovingFocus", () => {
         const roving = useRovingFocus({
           containerEl,
           elementsList,
-          defaultIndex: 2,
+          entryIndex: 2,
         });
 
         const register = (el: Element | null, idx: number) => {
@@ -1059,7 +1076,7 @@ describe("useRovingFocus", () => {
 
   describe("unfocused (-1) initial state & sequential tab stop fallback", () => {
     it("initializes with activeIndex = -1 without highlighting an initial item", async () => {
-      const { Component, getRoving } = createTestComponent({ defaultIndex: -1 });
+      const { Component, getRoving } = createTestComponent();
       render(Component);
 
       expect(getRoving().activeIndex.value).toBe(-1);
@@ -1072,8 +1089,8 @@ describe("useRovingFocus", () => {
       expect((option2.element() as HTMLElement).tabIndex).toBe(-1);
     });
 
-    it("enters on fallback element when tabbing in with defaultIndex = -1 and syncs activeIndex", async () => {
-      const { Component, getRoving } = createTestComponent({ defaultIndex: -1 });
+    it("enters on fallback element when tabbing in with activeIndex = -1 and syncs activeIndex", async () => {
+      const { Component, getRoving } = createTestComponent();
       render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
@@ -1087,7 +1104,7 @@ describe("useRovingFocus", () => {
     });
 
     it("navigates to first item on next() from initial activeIndex = -1", async () => {
-      const { Component, getRoving } = createTestComponent({ defaultIndex: -1 });
+      const { Component, getRoving } = createTestComponent();
       render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -1099,7 +1116,7 @@ describe("useRovingFocus", () => {
     });
 
     it("navigates to last item on prev() from initial activeIndex = -1", async () => {
-      const { Component, getRoving } = createTestComponent({ defaultIndex: -1 });
+      const { Component, getRoving } = createTestComponent();
       render(Component);
 
       const option5 = page.getByRole("option", { name: "option 5" });
@@ -1148,6 +1165,159 @@ describe("useRovingFocus", () => {
 
       await expect.element(option3).toHaveFocus();
       expect(scrollSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("entryIndex reactive anchoring & APG priority resolution", () => {
+    it("enters the composite widget on entryIndex when tabbing in", async () => {
+      const selectedIndex = ref(2);
+      const { Component } = createTestComponent({ entryIndex: selectedIndex });
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option3 = page.getByRole("option", { name: "option 3" });
+
+      await userEvent.click(beforeBtn);
+      await expect.element(beforeBtn).toHaveFocus();
+
+      await userEvent.tab();
+      await expect.element(option3).toHaveFocus();
+    });
+
+    it("restores entry focus to entryIndex after a transient arrow preview is dismissed", async () => {
+      const selectedIndex = ref(2);
+      const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option3 = page.getByRole("option", { name: "option 3" });
+      const option4 = page.getByRole("option", { name: "option 4" });
+      const afterBtn = page.getByRole("button", { name: "After Widget" });
+
+      // 1. Tab into widget -> lands on option 3 (entryIndex: 2)
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+      await expect.element(option3).toHaveFocus();
+
+      // 2. Preview option 4 using ArrowDown without committing selection
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option4).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(3);
+
+      // 3. User closes widget / dismisses -> activeIndex reset to -1
+      getRoving().setActiveIndex(-1);
+      await userEvent.click(afterBtn);
+      await expect.element(afterBtn).toHaveFocus();
+
+      // 4. Tab back into widget -> focus returns to committed entryIndex (option 3), not option 4
+      await userEvent.tab({ shift: true });
+      await expect.element(option3).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(2);
+    });
+
+    it("reflects dynamic entryIndex updates in tabindex without stealing DOM focus", async () => {
+      const selectedIndex = ref(1);
+      const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
+      render(Component);
+
+      const option4 = page.getByRole("option", { name: "option 4" });
+
+      expect(getRoving().getTabindex(1)).toBe(0);
+      expect(getRoving().getTabindex(0)).toBe(-1);
+      expect(getRoving().getTabindex(3)).toBe(-1);
+
+      // Focus outside the widget
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      await userEvent.click(beforeBtn);
+      await expect.element(beforeBtn).toHaveFocus();
+
+      // External selection changes
+      selectedIndex.value = 3;
+
+      expect(getRoving().getTabindex(3)).toBe(0);
+      expect(getRoving().getTabindex(1)).toBe(-1);
+      // DOM focus is not hijacked
+      await expect.element(beforeBtn).toHaveFocus();
+      await expect.element(option4).not.toHaveFocus();
+    });
+
+    it("falls back to first enabled item when entryIndex is disabled", async () => {
+      const selectedIndex = ref(1); // option 2 is disabled
+      const { Component, getRoving } = createTestComponent(
+        { entryIndex: selectedIndex },
+        { disabledIndices: [1] },
+      );
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+
+      expect(getRoving().getTabindex(0)).toBe(0);
+      expect(getRoving().getTabindex(1)).toBe(-1);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+
+      await expect.element(option1).toHaveFocus();
+      await expect.element(option2).not.toHaveFocus();
+    });
+
+    it("falls back to first enabled item when entryIndex is null or undefined", async () => {
+      const selectedIndex = ref<number | null>(null);
+      const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      expect(getRoving().getTabindex(0)).toBe(0);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+
+      await expect.element(option1).toHaveFocus();
+    });
+
+    it("disables sequential tab-stop entry when entryIndex is explicitly -1", async () => {
+      const { Component, getRoving } = createTestComponent({ entryIndex: -1 });
+      render(Component);
+
+      expect(getRoving().getTabindex(0)).toBe(-1);
+      expect(getRoving().getTabindex(1)).toBe(-1);
+    });
+  });
+
+  describe("focusout boundary handling", () => {
+    it("clears activeIndex to -1 when focus leaves the container", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const afterBtn = page.getByRole("button", { name: "After Widget" });
+
+      await userEvent.click(option1);
+      await expect.element(option1).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(0);
+
+      await userEvent.click(afterBtn);
+      await expect.element(afterBtn).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(-1);
+    });
+
+    it("does not clear activeIndex when focus moves between items inside the container", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+
+      await userEvent.click(option1);
+      await expect.element(option1).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(0);
+
+      await userEvent.click(option2);
+      await expect.element(option2).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(1);
     });
   });
 });
