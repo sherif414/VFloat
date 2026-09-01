@@ -1,4 +1,4 @@
-import { computed, ref, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
+import { computed, ref, type MaybeRefOrGetter, readonly, type Ref, toValue } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -78,6 +78,10 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   // "last-focused" re-entry pattern across focusout boundaries.
   const lastFocusedIndex = ref<number | null>(null);
 
+  // Tracks the entryIndex value when focus last occurred so dynamic entryIndex
+  // changes synchronously supersede stale focus history without imperative watchers.
+  const entryIndexAtLastFocus = ref<number | null | undefined>(undefined);
+
   // --- Element Validity -------------------------------------------------------
 
   /**
@@ -106,70 +110,66 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     return el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
   }
 
-  // --- External Sync ----------------------------------------------------------
-
-  // Sync lastFocusedIndex when entryIndex changes dynamically from outside
-  watch(
-    () => toValue(entryIndexOption),
-    (newEntry) => {
-      if (newEntry !== undefined && newEntry !== null && isNavigable(newEntry)) {
-        lastFocusedIndex.value = newEntry;
-      } else {
-        lastFocusedIndex.value = null;
-      }
-    },
-  );
-
-  // Sync lastFocusedIndex when controlled activeIndex is set externally
-  watch(
-    () => toValue(controlledActiveIndex),
-    (newIndex) => {
-      if (newIndex !== undefined && newIndex >= 0 && isNavigable(newIndex)) {
-        lastFocusedIndex.value = newIndex;
-      }
-    },
-  );
-
   // --- DOM Tabindex Resolution ------------------------------------------------
 
   /**
-   * Returns the roving `tabindex` value for the element at `index`.
-   *
-   * Tier 1: If activeIndex is valid and navigable, it owns the tab stop.
-   * Tier 2: If entryFocusMode is "last-focused", returns tab stop to last focused item.
-   * Tier 3: Resolves resting entry index from `entryIndex` (or first navigable fallback).
+   * Single source of truth for the designated roving focus tab stop.
+   * Evaluates reactively based on active focus, APG history, and entry configuration.
    */
-  const getTabindex = (index: number): 0 | -1 => {
+  const tabStopIndex = computed<number>(() => {
     const list = elementsList.value;
+    const entry = toValue(entryIndexOption);
+
+    // Initial / SSR pre-mount phase (DOM refs not yet registered)
     if (list.length === 0) {
       if (activeIndex.value >= 0) {
-        return index === activeIndex.value ? 0 : -1;
+        return activeIndex.value;
       }
-      const entry = toValue(entryIndexOption);
       if (entry !== undefined && entry !== null) {
-        return entry >= 0 && index === entry ? 0 : -1;
+        return entry >= 0 ? entry : -1;
       }
-      return index === 0 ? 0 : -1;
+      return 0;
     }
 
+    // Tier 1: If activeIndex is valid and navigable, it owns the tab stop.
     if (activeIndex.value >= 0 && isNavigable(activeIndex.value)) {
-      return index === activeIndex.value ? 0 : -1;
+      return activeIndex.value;
     }
 
+    const hasEntryChanged = entry !== entryIndexAtLastFocus.value;
+
+    // Tier 2: If entryFocusMode is "last-focused" and entry hasn't changed, returns tab stop to last focused item.
     if (
       entryFocusMode === "last-focused" &&
+      !hasEntryChanged &&
       lastFocusedIndex.value !== null &&
       isNavigable(lastFocusedIndex.value)
     ) {
-      return index === lastFocusedIndex.value ? 0 : -1;
+      return lastFocusedIndex.value;
     }
 
-    const targetEntry = resolveEntryIndex(list.length, toValue(entryIndexOption), isNavigable);
+    // Tier 3: Resolves resting entry index from `entryIndex` (or first navigable fallback).
+    return resolveEntryIndex(list.length, entry, isNavigable);
+  });
 
-    return index === targetEntry ? 0 : -1;
+  /**
+   * Returns the roving `tabindex` value for the element at `index`.
+   */
+  const getTabindex = (index: number): 0 | -1 => {
+    return index === tabStopIndex.value ? 0 : -1;
   };
 
   // --- Centralized Actions ----------------------------------------------------
+
+  /**
+   * Resets the roving focus interaction state and history, returning the
+   * resting tab stop to the configured `entryIndex` (or first enabled fallback).
+   */
+  function reset(): void {
+    activeIndex.value = -1;
+    lastFocusedIndex.value = null;
+    entryIndexAtLastFocus.value = undefined;
+  }
 
   /**
    * Sets the active index state without moving DOM focus.
@@ -177,8 +177,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
    */
   function setActiveIndex(idx: number): void {
     if (idx === -1) {
-      activeIndex.value = -1;
-      lastFocusedIndex.value = null;
+      reset();
       return;
     }
 
@@ -186,6 +185,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
 
     activeIndex.value = idx;
     lastFocusedIndex.value = idx;
+    entryIndexAtLastFocus.value = toValue(entryIndexOption);
   }
 
   /**
@@ -307,12 +307,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const elements = elementsList.value;
     for (let idx = 0; idx < elements.length; idx++) {
       if (elements[idx]?.contains(target)) {
-        lastFocusedIndex.value = idx;
-        if (idx !== activeIndex.value) {
-          // Element already has DOM focus (via click, Tab, or browser focus
-          // management), so just sync state without moving DOM focus again.
-          setActiveIndex(idx);
-        }
+        setActiveIndex(idx);
         return;
       }
     }
@@ -329,6 +324,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       activeIndex.value = -1;
       if (entryFocusMode === "entry-index") {
         lastFocusedIndex.value = null;
+        entryIndexAtLastFocus.value = undefined;
       }
     }
   });
@@ -373,14 +369,17 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       activeIndex.value = -1;
       if (entryFocusMode === "entry-index") {
         lastFocusedIndex.value = null;
+        entryIndexAtLastFocus.value = undefined;
       }
     },
   );
 
   return {
     activeIndex: readonly(activeIndex),
+    tabStopIndex: readonly(tabStopIndex),
     getTabindex,
     setActiveIndex,
+    reset,
     focusIndex,
     next: () => navigate("next"),
     prev: () => navigate("previous"),
@@ -502,10 +501,21 @@ export interface UseRovingFocusReturn {
   activeIndex: Readonly<Ref<number>>;
 
   /**
+   * The currently resolved tab-stop index designating which element owns `tabindex="0"`.
+   */
+  tabStopIndex: Readonly<Ref<number>>;
+
+  /**
    * Sets the active index state without moving DOM focus.
-   * Pass `-1` to reset active focus and return the tab stop to the resting entry index.
+   * Pass `-1` or call `reset()` to reset active focus and return the tab stop to the resting entry index.
    */
   setActiveIndex: (index: number) => void;
+
+  /**
+   * Resets the roving focus interaction state and history, returning the
+   * resting tab stop to the configured `entryIndex` (or first enabled fallback).
+   */
+  reset: () => void;
 
   /**
    * Sets the active index and moves DOM focus to the element.

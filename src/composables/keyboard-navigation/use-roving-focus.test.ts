@@ -538,6 +538,43 @@ describe("useRovingFocus", () => {
 
       await expect.element(option4).toHaveFocus();
     });
+
+    it("resets activeIndex and focus history when reset() is called", async () => {
+      const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
+      render(Component);
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(option3);
+
+      expect(getRoving().activeIndex.value).toBe(2);
+      expect(getRoving().tabStopIndex.value).toBe(2);
+
+      getRoving().reset();
+
+      expect(getRoving().activeIndex.value).toBe(-1);
+      // Resting tab stop returns to entryIndex (option 2 = index 1)
+      expect(getRoving().tabStopIndex.value).toBe(1);
+      expect(getRoving().getTabindex(1)).toBe(0);
+      expect(getRoving().getTabindex(2)).toBe(-1);
+    });
+
+    it("exposes reactive tabStopIndex matching getTabindex resolution", async () => {
+      const { Component, getRoving } = createTestComponent({ entryIndex: 0 });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+
+      expect(getRoving().tabStopIndex.value).toBe(0);
+
+      await userEvent.click(option1);
+      await userEvent.keyboard("{ArrowDown}");
+
+      await expect.element(option2).toHaveFocus();
+      expect(getRoving().tabStopIndex.value).toBe(1);
+      expect(getRoving().getTabindex(1)).toBe(0);
+      expect(getRoving().getTabindex(0)).toBe(-1);
+    });
   });
 
   describe("disabled state & modifier key ignoring", () => {
