@@ -1,4 +1,4 @@
-import { computed, type MaybeRefOrGetter, readonly, type Ref, toValue } from "vue";
+import { computed, ref, type MaybeRefOrGetter, readonly, type Ref, toValue, watch } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -48,6 +48,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     elementsList,
     activeIndex: controlledActiveIndex,
     entryIndex: entryIndexOption,
+    entryFocusMode = "last-focused",
     loop = false,
     rtl,
     enabled = true,
@@ -72,6 +73,10 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     initialValue: -1,
     onChange: onActiveIndexChange,
   });
+
+  // Stores the index of the last focused element to support the WAI-ARIA APG
+  // "last-focused" re-entry pattern across focusout boundaries.
+  const lastFocusedIndex = ref<number | null>(null);
 
   // --- Element Validity -------------------------------------------------------
 
@@ -101,14 +106,38 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     return el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
   }
 
+  // --- External Sync ----------------------------------------------------------
+
+  // Sync lastFocusedIndex when entryIndex changes dynamically from outside
+  watch(
+    () => toValue(entryIndexOption),
+    (newEntry) => {
+      if (newEntry !== undefined && newEntry !== null && isNavigable(newEntry)) {
+        lastFocusedIndex.value = newEntry;
+      } else {
+        lastFocusedIndex.value = null;
+      }
+    },
+  );
+
+  // Sync lastFocusedIndex when controlled activeIndex is set externally
+  watch(
+    () => toValue(controlledActiveIndex),
+    (newIndex) => {
+      if (newIndex !== undefined && newIndex >= 0 && isNavigable(newIndex)) {
+        lastFocusedIndex.value = newIndex;
+      }
+    },
+  );
+
   // --- DOM Tabindex Resolution ------------------------------------------------
 
   /**
    * Returns the roving `tabindex` value for the element at `index`.
    *
    * Tier 1: If activeIndex is valid and navigable, it owns the tab stop.
-   * Tier 2: Resolves the resting entry index from `entryIndex`.
-   * Safety: Scans for the first navigable element as the universal fallback.
+   * Tier 2: If entryFocusMode is "last-focused", returns tab stop to last focused item.
+   * Tier 3: Resolves resting entry index from `entryIndex` (or first navigable fallback).
    */
   const getTabindex = (index: number): 0 | -1 => {
     const list = elementsList.value;
@@ -127,6 +156,14 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       return index === activeIndex.value ? 0 : -1;
     }
 
+    if (
+      entryFocusMode === "last-focused" &&
+      lastFocusedIndex.value !== null &&
+      isNavigable(lastFocusedIndex.value)
+    ) {
+      return index === lastFocusedIndex.value ? 0 : -1;
+    }
+
     const targetEntry = resolveEntryIndex(list.length, toValue(entryIndexOption), isNavigable);
 
     return index === targetEntry ? 0 : -1;
@@ -141,12 +178,14 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
   function setActiveIndex(idx: number): void {
     if (idx === -1) {
       activeIndex.value = -1;
+      lastFocusedIndex.value = null;
       return;
     }
 
     if (!isNavigable(idx)) return;
 
     activeIndex.value = idx;
+    lastFocusedIndex.value = idx;
   }
 
   /**
@@ -204,9 +243,17 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
       // remains on an item inside the widget.
       current = resolveFocusedIndex();
       if (current < 0) {
-        // No DOM focus in widget — start from edge so the first step lands
-        // on the first (next/first) or last (previous/last) navigable item.
-        current = intent === "next" || intent === "first" ? -1 : total;
+        if (
+          entryFocusMode === "last-focused" &&
+          lastFocusedIndex.value !== null &&
+          isNavigable(lastFocusedIndex.value)
+        ) {
+          current = lastFocusedIndex.value;
+        } else {
+          // No DOM focus in widget — start from edge so the first step lands
+          // on the first (next/first) or last (previous/last) navigable item.
+          current = intent === "next" || intent === "first" ? -1 : total;
+        }
       }
     }
 
@@ -260,6 +307,7 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const elements = elementsList.value;
     for (let idx = 0; idx < elements.length; idx++) {
       if (elements[idx]?.contains(target)) {
+        lastFocusedIndex.value = idx;
         if (idx !== activeIndex.value) {
           // Element already has DOM focus (via click, Tab, or browser focus
           // management), so just sync state without moving DOM focus again.
@@ -278,7 +326,10 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     const container = containerEl.value;
 
     if (!container || !target || !container.contains(target)) {
-      setActiveIndex(-1);
+      activeIndex.value = -1;
+      if (entryFocusMode === "entry-index") {
+        lastFocusedIndex.value = null;
+      }
     }
   });
 
@@ -319,7 +370,10 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     (e: PointerEvent) => {
       if (!isEnabled.value) return;
       if (e.pointerType === "touch") return;
-      setActiveIndex(-1);
+      activeIndex.value = -1;
+      if (entryFocusMode === "entry-index") {
+        lastFocusedIndex.value = null;
+      }
     },
   );
 
@@ -429,6 +483,16 @@ function resolveNavigableIndexByIntent(
 //=======================================================================================
 
 /**
+ * Mode defining how the composite widget handles sequential tab entry after blur.
+ *
+ * - `"last-focused"` (default / WAI-ARIA APG): Initial tab entry targets `entryIndex`
+ *   (or first enabled item); subsequent entries restore focus to the last focused element.
+ * - `"entry-index"`: Every sequential tab entry unconditionally resets focus
+ *   back to `entryIndex` (or first enabled item).
+ */
+export type RovingEntryFocusMode = "last-focused" | "entry-index";
+
+/**
  * Return shape for `useRovingFocus`.
  */
 export interface UseRovingFocusReturn {
@@ -501,6 +565,20 @@ export interface UseRovingFocusOptions {
    * When omitted or null, falls back automatically to the first enabled element.
    */
   entryIndex?: MaybeRefOrGetter<number | null | undefined>;
+
+  /**
+   * Strategy for determining which element receives focus when sequentially
+   * tabbing into the composite widget after focus has previously left.
+   *
+   * - `"last-focused"` (default / WAI-ARIA APG): Initial tab entry targets
+   *   `entryIndex` (or first enabled item); subsequent entries restore focus
+   *   to the last focused element.
+   * - `"entry-index"`: Every sequential tab entry unconditionally resets focus
+   *   back to `entryIndex` (or first enabled item).
+   *
+   * @default "last-focused"
+   */
+  entryFocusMode?: RovingEntryFocusMode;
 
   /**
    * Layout orientation of the navigable list elements.

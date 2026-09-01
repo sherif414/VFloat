@@ -137,9 +137,9 @@ describe("useRovingFocus", () => {
       await userEvent.tab();
       await expect.element(afterBtn).toHaveFocus();
 
-      // 3. Shift+Tab returns to the widget and restores focus on the fallback entry item (option 1)
+      // 3. Shift+Tab returns to the widget and restores focus on the last focused item (option 3) per WAI-ARIA APG
       await userEvent.tab({ shift: true });
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option3).toHaveFocus();
     });
   });
 
@@ -1318,6 +1318,106 @@ describe("useRovingFocus", () => {
       await userEvent.click(option2);
       await expect.element(option2).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(1);
+    });
+  });
+
+  describe("entryFocusMode (last-focused vs entry-index)", () => {
+    it("restores focus to the last focused element on re-entry when entryFocusMode is last-focused (default)", async () => {
+      const { Component } = createTestComponent({
+        entryIndex: 1,
+        entryFocusMode: "last-focused",
+      });
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+      const option4 = page.getByRole("option", { name: "option 4" });
+      const afterBtn = page.getByRole("button", { name: "After Widget" });
+
+      // 1. Initial tab entry lands on entryIndex (option 2)
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+      await expect.element(option2).toHaveFocus();
+
+      // 2. Navigate to option 4
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option4).toHaveFocus();
+
+      // 3. Tab out to afterBtn
+      await userEvent.tab();
+      await expect.element(afterBtn).toHaveFocus();
+
+      // 4. Shift+Tab back into the widget -> restores focus to option 4 (last focused element)
+      await userEvent.tab({ shift: true });
+      await expect.element(option4).toHaveFocus();
+    });
+
+    it("unconditionally resets focus to entryIndex on re-entry when entryFocusMode is entry-index", async () => {
+      const { Component } = createTestComponent({
+        entryIndex: 1,
+        entryFocusMode: "entry-index",
+      });
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+      const option4 = page.getByRole("option", { name: "option 4" });
+      const afterBtn = page.getByRole("button", { name: "After Widget" });
+
+      // 1. Initial tab entry lands on entryIndex (option 2)
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+      await expect.element(option2).toHaveFocus();
+
+      // 2. Navigate to option 4
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option4).toHaveFocus();
+
+      // 3. Tab out to afterBtn
+      await userEvent.tab();
+      await expect.element(afterBtn).toHaveFocus();
+
+      // 4. Shift+Tab back into the widget -> resets to entryIndex (option 2)
+      await userEvent.tab({ shift: true });
+      await expect.element(option2).toHaveFocus();
+    });
+
+    it("syncs resting tab stop when entryIndex updates reactively while widget is unfocused", async () => {
+      const entryIndexRef = ref(1);
+      const { Component, getRoving } = createTestComponent({
+        entryIndex: entryIndexRef,
+        entryFocusMode: "last-focused",
+      });
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+      const option4 = page.getByRole("option", { name: "option 4" });
+      const afterBtn = page.getByRole("button", { name: "After Widget" });
+
+      // 1. Enter and navigate to option 4
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+      await expect.element(option2).toHaveFocus();
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option4).toHaveFocus();
+
+      // 2. Leave widget
+      await userEvent.tab();
+      await expect.element(afterBtn).toHaveFocus();
+
+      // 3. External application changes entryIndex (e.g. selected tab updated externally to index 0)
+      entryIndexRef.value = 0;
+      expect(getRoving().getTabindex(0)).toBe(0);
+      expect(getRoving().getTabindex(3)).toBe(-1);
+
+      // 4. Re-entering widget lands on the newly updated entryIndex (option 1)
+      await userEvent.tab({ shift: true });
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1).toHaveFocus();
     });
   });
 });
