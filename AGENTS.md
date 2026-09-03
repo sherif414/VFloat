@@ -141,6 +141,21 @@ Only these abbreviations are permitted. Everything else must be spelled out.
   - Never conflate multiple distinct concerns within a single `watch`, `watchPostEffect`, or effect handler. Each distinct responsibility (e.g., reactive bounds auto-correction, DOM attribute synchronization, DOM focus synchronization) must have its own independent watcher.
   - Event listeners and handlers must not combine unrelated logic representing independent capabilities or concerns when they do not depend on call order. Keep independent behaviors decoupled in dedicated event listeners within their respective feature sections.
 
+### Module Encapsulation & Export Discipline
+
+- **Internals Must Never Be Exported**: Internals are functions, interfaces, types, constants, and variables that are only used within their defining module and never outside of it. If an entity is not imported and consumed by an outside file, it must never have `export`.
+- **No Speculative Exports**: Never export symbols out of habit, convenience, or speculative future reuse.
+- **Composable File Exports**:
+  - Export only the primary composable function (for example, `useClick`) and its public companion types (`UseClickOptions`, `UseClickReturn`, `UseClickContext`).
+  - Keep helper functions in `📌 Helpers` strictly unexported. Use `function helperName(...)`, not `export function helperName(...)`.
+  - Keep internal types, working interfaces, state objects, constants, and lookup tables private to the module file.
+- **Internal Helper Modules**:
+  - In internal multi-file directories (such as `*-controller.ts`, `geometry.ts`, `intent.ts`), export only the specific symbols that collaborating files explicitly import.
+  - Any function, type, or constant used only within that helper file must remain unexported.
+  - Never re-export internal utilities, state registries, or classes from `src/index.ts` or public entrypoints.
+- **Never Export for Tests**:
+  - Do not export module internals solely to test them in isolation. Test behavior through the composable's public API.
+
 ## Modern API & Dependency Standards
 
 - **Runtime & Language Baseline:** Target ECMAScript 2024+, TypeScript 5.9+, Node.js 22+, and Vue 3.5+.
@@ -190,3 +205,4 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
 - [ ] Ensure full SSR compatibility: never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
 - [ ] Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test` to validate changes.
+- [ ] Keep module internals private: never export functions, interfaces, types, constants, or variables that are only used within their defining module and not imported outside of it.
