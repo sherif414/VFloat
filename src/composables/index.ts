@@ -60,6 +60,7 @@ export type {
 // Roving Focus
 export { useRovingFocus } from "./keyboard-navigation/use-roving-focus";
 export type {
+  AriaActivedescendantItemParam,
   UseAriaActivedescendantOptions,
   UseAriaActivedescendantReturn,
 } from "./keyboard-navigation/use-aria-activedescendant";

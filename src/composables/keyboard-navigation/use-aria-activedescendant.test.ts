@@ -955,4 +955,440 @@ describe("useAriaActivedescendant", () => {
       expect(ret.getItemProps).toBeDefined();
     });
   });
+
+  describe("Suite 21: reactive bounds auto-correction", () => {
+    it("resets activeIndex to -1 when collection becomes empty", async () => {
+      const { Component, countRef, getReturn } = createTestComponent(
+        { defaultIndex: 2 },
+        { itemCount: 5 },
+      );
+      render(Component);
+      expect(getReturn().activeIndex.value).toBe(2);
+
+      countRef.value = 0;
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(-1);
+      expect(getReturn().activeId.value).toBeUndefined();
+    });
+
+    it("resets activeIndex to -1 when active index exceeds new collection bounds", async () => {
+      const { Component, countRef, getReturn } = createTestComponent(
+        { defaultIndex: 4 },
+        { itemCount: 5 },
+      );
+      render(Component);
+      expect(getReturn().activeIndex.value).toBe(4);
+
+      // Filtering reduces items from 5 to 3 (valid indices: 0..2)
+      countRef.value = 3;
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(-1);
+    });
+
+    it("preserves activeIndex when still within new collection bounds", async () => {
+      const { Component, countRef, getReturn } = createTestComponent(
+        { defaultIndex: 1 },
+        { itemCount: 5 },
+      );
+      render(Component);
+      expect(getReturn().activeIndex.value).toBe(1);
+
+      countRef.value = 3;
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(1);
+    });
+  });
+
+  describe("Suite 22: PageUp and PageDown keyboard navigation", () => {
+    it("navigates forward by default pageSize (10) on PageDown", async () => {
+      const { Component, getReturn } = createTestComponent({ defaultIndex: 0 }, { itemCount: 25 });
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await userEvent.click(anchor);
+
+      await userEvent.keyboard("{PageDown}");
+      expect(getReturn().activeIndex.value).toBe(10);
+    });
+
+    it("navigates backward by default pageSize (10) on PageUp", async () => {
+      const { Component, getReturn } = createTestComponent({ defaultIndex: 15 }, { itemCount: 25 });
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await userEvent.click(anchor);
+
+      await userEvent.keyboard("{PageUp}");
+      expect(getReturn().activeIndex.value).toBe(5);
+    });
+
+    it("respects custom pageSize option", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 1, pageSize: 3 },
+        { itemCount: 10 },
+      );
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await userEvent.click(anchor);
+
+      await userEvent.keyboard("{PageDown}");
+      expect(getReturn().activeIndex.value).toBe(4);
+
+      await userEvent.keyboard("{PageUp}");
+      expect(getReturn().activeIndex.value).toBe(1);
+    });
+
+    it("clamps to boundary when jumping past end or start (loop: false)", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 2, pageSize: 5 },
+        { itemCount: 5 },
+      );
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await userEvent.click(anchor);
+
+      await userEvent.keyboard("{PageDown}");
+      expect(getReturn().activeIndex.value).toBe(4);
+
+      await userEvent.keyboard("{PageUp}");
+      expect(getReturn().activeIndex.value).toBe(0);
+    });
+
+    it("skips disabled items during page navigation", async () => {
+      // Items 0..5, disabled: 3. defaultIndex: 1, pageSize: 2 -> step 1 lands on 2, step 2 would land on 3 (disabled) -> lands on 4
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 1, pageSize: 2 },
+        { itemCount: 6, disabledIndices: [3] },
+      );
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await userEvent.click(anchor);
+
+      await userEvent.keyboard("{PageDown}");
+      expect(getReturn().activeIndex.value).toBe(4);
+    });
+
+    it("supports programmatic pageUp and pageDown methods", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 2, pageSize: 4 },
+        { itemCount: 15 },
+      );
+      render(Component);
+
+      getReturn().pageDown();
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(6);
+
+      getReturn().pageUp();
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+    });
+
+    it("ignores PageUp and PageDown when modifier keys (Ctrl, Meta, Alt) are pressed", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 2, pageSize: 5 },
+        { itemCount: 15 },
+      );
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+
+      anchor
+        .element()
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "PageDown", ctrlKey: true, bubbles: true }),
+        );
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+
+      anchor
+        .element()
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "PageUp", altKey: true, bubbles: true }),
+        );
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+    });
+  });
+
+  describe("Suite 23: virtualizer isIndexRendered coordination", () => {
+    it("skips DOM search and keeps activeId undefined when isIndexRendered returns false", async () => {
+      const isIndexRendered = vi.fn().mockReturnValue(false);
+      const virtualizer = { scrollToIndex: vi.fn(), count: 50, isIndexRendered };
+      const { Component, getReturn } = createTestComponent(
+        {
+          defaultIndex: 25,
+          virtualizer,
+        } as any,
+        { noElementsList: true },
+      );
+
+      render(Component);
+      expect(isIndexRendered).toHaveBeenCalledWith(25);
+      expect(getReturn().activeId.value).toBeUndefined();
+    });
+
+    it("commits activeId once isIndexRendered returns true and element is mounted", async () => {
+      let rendered = false;
+      const isIndexRendered = vi.fn(() => rendered);
+      const virtualizer = { scrollToIndex: vi.fn(), count: 50, isIndexRendered };
+
+      const isMounted = ref(false);
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
+        const listboxEl = useTemplateRef<HTMLElement>("listbox");
+
+        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
+          anchorEl,
+          listboxEl,
+          defaultIndex: 10,
+          virtualizer,
+          idPrefix: "virt",
+        });
+
+        return () =>
+          h("div", [
+            h("input", { ref: "anchor", "aria-label": "anchor", ...getAnchorProps() }),
+            h(
+              "ul",
+              { ref: "listbox", role: "listbox" },
+              isMounted.value
+                ? [h("li", { role: "option", ...getOptionProps(10) }, "Item 10")]
+                : [],
+            ),
+          ]);
+      });
+
+      render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
+
+      rendered = true;
+      isMounted.value = true;
+      await nextTick();
+
+      await expect.element(anchor).toHaveAttribute("aria-activedescendant", "virt-opt-10");
+    });
+  });
+
+  describe("Suite 24: scrollIntoView option & scrollToActive method", () => {
+    it("does not scroll container when scrollIntoView is false", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 0, scrollIntoView: false },
+        { itemCount: 10 },
+      );
+      render(Component);
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+      expect(listbox.scrollTop).toBe(0);
+
+      getReturn().setActiveIndex(9);
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(9);
+      expect(listbox.scrollTop).toBe(0);
+    });
+
+    it("imperatively scrolls active item with scrollToActive()", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 0, scrollIntoView: false },
+        { itemCount: 10 },
+      );
+      render(Component);
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+
+      getReturn().setActiveIndex(9);
+      await nextTick();
+      expect(listbox.scrollTop).toBe(0);
+
+      getReturn().scrollToActive();
+      await nextTick();
+      expect(listbox.scrollTop).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Suite 25: focusout & resetOnBlur synchronization", () => {
+    it("resets activeIndex to defaultIndex when focus leaves target to outside element", async () => {
+      const { Component, getReturn } = createTestComponent({ defaultIndex: -1, resetOnBlur: true });
+      render(Component);
+
+      getReturn().setActiveIndex(2);
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      const outsideEl = document.createElement("button");
+      document.body.appendChild(outsideEl);
+
+      anchor
+        .element()
+        .dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: outsideEl }));
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(-1);
+      outsideEl.remove();
+    });
+
+    it("preserves activeIndex on focusout when resetOnBlur is false (default)", async () => {
+      const { Component, getReturn } = createTestComponent({
+        defaultIndex: -1,
+        resetOnBlur: false,
+      });
+      render(Component);
+
+      getReturn().setActiveIndex(2);
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      const outsideEl = document.createElement("button");
+      document.body.appendChild(outsideEl);
+
+      anchor
+        .element()
+        .dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: outsideEl }));
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(2);
+      outsideEl.remove();
+    });
+
+    it("does not reset activeIndex when focus moves from target into the listbox container", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: -1, resetOnBlur: true },
+        { withInteractiveChild: true },
+      );
+      render(Component);
+
+      getReturn().setActiveIndex(1);
+      await nextTick();
+
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+      const nestedBtn = listbox.querySelector(".nested-btn") as HTMLElement;
+
+      anchor
+        .element()
+        .dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: nestedBtn }));
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(1);
+    });
+  });
+
+  describe("Suite 26: pointerleave & clearOnPointerLeave synchronization", () => {
+    it("clears activeIndex on pointerleave when clearOnPointerLeave is true", async () => {
+      const { Component, getReturn } = createTestComponent({
+        focusOnHover: true,
+        clearOnPointerLeave: true,
+        defaultIndex: 2,
+      });
+      render(Component);
+      await nextTick();
+
+      const listbox = page.getByRole("listbox");
+      listbox.element().dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(-1);
+    });
+
+    it("preserves activeIndex on pointerleave when clearOnPointerLeave is false (default)", async () => {
+      const { Component, getReturn } = createTestComponent({
+        focusOnHover: true,
+        clearOnPointerLeave: false,
+        defaultIndex: 2,
+      });
+      render(Component);
+      await nextTick();
+
+      const listbox = page.getByRole("listbox");
+      listbox.element().dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(2);
+    });
+  });
+
+  describe("Suite 27: pointer hover does not trigger container scroll jumps", () => {
+    it("updates active item on hover without modifying container scrollTop", async () => {
+      const { Component, getReturn } = createTestComponent(
+        { focusOnHover: true },
+        { itemCount: 10 },
+      );
+      render(Component);
+      await nextTick();
+
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+      listbox.scrollTop = 0;
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      option3
+        .element()
+        .dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 5, clientY: 5 }));
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(2);
+      expect(listbox.scrollTop).toBe(0);
+    });
+  });
+
+  describe("Suite 28: oversized element bounded scroll alignment", () => {
+    it("aligns top of item with top of container when element is taller than container", async () => {
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLElement>("anchor");
+        const listboxEl = useTemplateRef<HTMLElement>("listbox");
+        const elementsList = ref<(HTMLElement | null)[]>([]);
+
+        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
+          anchorEl,
+          listboxEl,
+          elementsList,
+          defaultIndex: 0,
+        });
+
+        return () =>
+          h("div", [
+            h("input", { ref: "anchor", ...getAnchorProps() }),
+            h(
+              "ul",
+              { ref: "listbox", role: "listbox", style: "max-height: 100px; overflow: auto;" },
+              [
+                h(
+                  "li",
+                  {
+                    ref: (el) => (elementsList.value[0] = el as HTMLElement),
+                    ...getOptionProps(0),
+                    style: "height: 50px;",
+                  },
+                  "Item 0",
+                ),
+                h(
+                  "li",
+                  {
+                    ref: (el) => (elementsList.value[1] = el as HTMLElement),
+                    ...getOptionProps(1),
+                    style: "height: 200px;", // Taller than 100px container
+                  },
+                  "Oversized Item 1",
+                ),
+              ],
+            ),
+          ]);
+      });
+
+      render(Component);
+      await nextTick();
+
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+      expect(listbox.scrollTop).toBe(0);
+
+      const anchor = page.getByRole("textbox");
+      await userEvent.click(anchor);
+      await userEvent.keyboard("{ArrowDown}");
+
+      // When activating the 200px item, it should scroll to align top of item (top = 50px)
+      await nextTick();
+      expect(listbox.scrollTop).toBe(50);
+    });
+  });
 });
