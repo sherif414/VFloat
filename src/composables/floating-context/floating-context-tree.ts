@@ -1,9 +1,15 @@
-import { type ShallowRef, shallowRef } from "vue";
+import { type Ref, type ShallowRef, shallowRef } from "vue";
 import { getDomPath, isElement, isNode } from "@/shared/dom";
 import { getDocument, isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { OpenChangeReason } from "@/types";
-import type { FloatingContext, FloatingContextId, FloatingState } from "./use-floating-context";
+import type {
+  AnchorElement,
+  FloatingContext,
+  FloatingContextId,
+  FloatingElement,
+  FloatingState,
+} from "./use-floating-context";
 
 const isDev = import.meta.env.DEV;
 
@@ -171,7 +177,7 @@ export class FloatingTree {
   getFloatingElements(context: FloatingContextTarget): HTMLElement[] {
     const elements: HTMLElement[] = [];
     const collectEl = (ctx: FloatingContextTarget) => {
-      const el = ctx.refs.floatingEl.value;
+      const el = ctx.refs.floatingEl?.value;
       if (el) elements.push(el);
     };
 
@@ -227,8 +233,8 @@ export class FloatingTree {
 
     const path = getDomPath(target);
     const containsTarget = (ctx: FloatingContextTarget): boolean => {
-      const anchorEl = ctx.refs.anchorEl.value;
-      const floatingEl = ctx.refs.floatingEl.value;
+      const anchorEl = ctx.refs.anchorEl?.value;
+      const floatingEl = ctx.refs.floatingEl?.value;
 
       if (floatingEl) {
         if (floatingEl.contains(target) || path.includes(floatingEl)) {
@@ -276,11 +282,14 @@ export class FloatingTree {
    * Closes all descendant contexts from innermost child to nearest parent.
    */
   closeDescendants(
-    context: FloatingContext,
+    context: FloatingContextTarget | { id: FloatingContextId },
     reason: OpenChangeReason = "programmatic",
     event?: Event,
   ): void {
-    const descendants = this.getDescendants(context.id);
+    const rootId = "id" in context && context.id ? context.id : undefined;
+    if (!rootId) return;
+
+    const descendants = this.getDescendants(rootId);
     for (let i = descendants.length - 1; i >= 0; i--) {
       descendants[i].state.setOpen(false, reason, event);
     }
@@ -302,6 +311,15 @@ export const floatingTree = new FloatingTree();
  *
  * @internal
  */
-export type FloatingContextTarget = Pick<FloatingContext, "refs" | "state"> & {
+export type FloatingContextTarget = {
   id?: FloatingContextId;
+  refs: {
+    floatingEl?: Ref<FloatingElement>;
+    anchorEl?: Ref<AnchorElement>;
+    arrowEl?: Ref<HTMLElement | null>;
+  };
+  state?: {
+    open: Readonly<Ref<boolean>>;
+    setOpen?: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
+  };
 };

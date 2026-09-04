@@ -15,6 +15,7 @@ export { useAriaActivedescendant } from "./use-aria-activedescendant";
 
 export type {
   RovingEntryFocusMode,
+  UseRovingFocusContext,
   UseRovingFocusOptions,
   UseRovingFocusReturn,
 } from "./use-roving-focus";

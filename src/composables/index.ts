@@ -57,6 +57,7 @@ export type {
   RovingEntryFocusMode,
   UseAriaActivedescendantOptions,
   UseAriaActivedescendantReturn,
+  UseRovingFocusContext,
   UseRovingFocusOptions,
   UseRovingFocusReturn,
   VirtualizerAdapter,

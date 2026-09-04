@@ -40,7 +40,7 @@ export function resolveKeyIntent(
   } else if (orientation === "horizontal") {
     if (key === "ArrowRight") return rtl ? "previous" : "next";
     if (key === "ArrowLeft") return rtl ? "next" : "previous";
-    if (key === "ArrowDown") return "enter";
+    if (key === "ArrowDown" || key === "ArrowUp") return "enter";
   } else if (orientation === "both") {
     if (key === "ArrowDown" || key === "ArrowRight")
       return rtl && key === "ArrowRight" ? "previous" : "next";

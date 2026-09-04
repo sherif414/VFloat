@@ -1,14 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
+import { type FloatingContext, useFloatingContext } from "../floating-context";
 import {
+  type UseRovingFocusContext,
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
   useRovingFocus,
 } from "./use-roving-focus";
 
 describe("useRovingFocus", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
   interface FixtureConfig {
     itemCount?: number;
     disabledIndices?: number[];
@@ -16,6 +21,8 @@ describe("useRovingFocus", () => {
     dir?: string;
     tabindex?: number | ((idx: number) => number | undefined);
     unmanaged?: boolean;
+    context?: UseRovingFocusContext;
+    parentContext?: FloatingContext;
   }
 
   const createTestComponent = (
@@ -23,13 +30,24 @@ describe("useRovingFocus", () => {
     config: FixtureConfig = {},
   ) => {
     let rovingReturn!: UseRovingFocusReturn;
+    let testContext!: FloatingContext | UseRovingFocusContext;
 
     const Component = defineComponent(() => {
       const containerEl = useTemplateRef<HTMLDivElement>("container");
+      const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
       const elementsList = ref<(HTMLElement | null)[]>([]);
 
-      rovingReturn = useRovingFocus({
-        containerEl,
+      const floatingContext =
+        config.context ??
+        useFloatingContext({
+          anchorEl,
+          floatingEl: containerEl,
+          parentContext: config.parentContext,
+          defaultOpen: true,
+        });
+      testContext = floatingContext;
+
+      rovingReturn = useRovingFocus(floatingContext, {
         elementsList,
         ...options,
       });
@@ -44,7 +62,7 @@ describe("useRovingFocus", () => {
 
       return () =>
         h("div", { class: "test-wrapper" }, [
-          h("button", { id: "before-btn" }, "Before Widget"),
+          h("button", { id: "before-btn", ref: "anchor" }, "Before Widget"),
           h(
             "div",
             {
@@ -69,7 +87,7 @@ describe("useRovingFocus", () => {
         ]);
     });
 
-    return { Component, getRoving: () => rovingReturn };
+    return { Component, getRoving: () => rovingReturn, getContext: () => testContext };
   };
 
   describe("sequential tab order & focus entry (WCAG single tab stop)", () => {
@@ -330,6 +348,162 @@ describe("useRovingFocus", () => {
       await userEvent.keyboard("{Space}");
       expect(onSelectMock).toHaveBeenCalledTimes(2);
       expect(onSelectMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
+    });
+  });
+
+  describe("onEnter and onExit callbacks (nested navigation)", () => {
+    it("fires onEnter when ArrowRight is pressed on active item in vertical orientation", async () => {
+      const onEnterMock = vi.fn();
+      const { Component } = createTestComponent({ onEnter: onEnterMock });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1);
+
+      await userEvent.keyboard("{ArrowRight}");
+      expect(onEnterMock).toHaveBeenCalledTimes(1);
+      expect(onEnterMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
+    });
+
+    it("fires onEnter when ArrowLeft is pressed in vertical RTL orientation", async () => {
+      const onEnterMock = vi.fn();
+      const { Component } = createTestComponent(
+        { onEnter: onEnterMock, rtl: true },
+        { dir: "rtl" },
+      );
+      render(Component);
+
+      const option2 = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option2);
+
+      await userEvent.keyboard("{ArrowLeft}");
+      expect(onEnterMock).toHaveBeenCalledTimes(1);
+      expect(onEnterMock).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
+    });
+
+    it("fires onEnter when ArrowDown or ArrowUp is pressed in horizontal orientation", async () => {
+      const onEnterMock = vi.fn();
+      const { Component } = createTestComponent({
+        orientation: "horizontal",
+        onEnter: onEnterMock,
+      });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1);
+
+      await userEvent.keyboard("{ArrowDown}");
+      expect(onEnterMock).toHaveBeenCalledTimes(1);
+      expect(onEnterMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
+
+      await userEvent.keyboard("{ArrowUp}");
+      expect(onEnterMock).toHaveBeenCalledTimes(2);
+      expect(onEnterMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
+    });
+
+    it("does not fire onEnter when active item is disabled", async () => {
+      const onEnterMock = vi.fn();
+      const { Component } = createTestComponent(
+        { activeIndex: ref(0), focusDisabledElements: true, onEnter: onEnterMock },
+        { ariaDisabledIndices: [0] },
+      );
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option1 = page.getByRole("option", { name: "option 1" });
+
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+      await expect.element(option1).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowRight}");
+      expect(onEnterMock).not.toHaveBeenCalled();
+    });
+
+    it("fires onExit when ArrowLeft is pressed in vertical orientation", async () => {
+      const onExitMock = vi.fn();
+      const { Component } = createTestComponent({ onExit: onExitMock });
+      render(Component);
+
+      const option2 = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option2);
+
+      await userEvent.keyboard("{ArrowLeft}");
+      expect(onExitMock).toHaveBeenCalledTimes(1);
+      expect(onExitMock).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
+    });
+
+    it("fires onExit when ArrowRight is pressed in vertical RTL orientation", async () => {
+      const onExitMock = vi.fn();
+      const { Component } = createTestComponent({ onExit: onExitMock, rtl: true }, { dir: "rtl" });
+      render(Component);
+
+      const option2 = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option2);
+
+      await userEvent.keyboard("{ArrowRight}");
+      expect(onExitMock).toHaveBeenCalledTimes(1);
+      expect(onExitMock).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
+    });
+
+    it("fires onExit even if currently active item is disabled", async () => {
+      const onExitMock = vi.fn();
+      const { Component } = createTestComponent(
+        { activeIndex: ref(0), focusDisabledElements: true, onExit: onExitMock },
+        { ariaDisabledIndices: [0] },
+      );
+      render(Component);
+
+      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const option1 = page.getByRole("option", { name: "option 1" });
+
+      await userEvent.click(beforeBtn);
+      await userEvent.tab();
+      await expect.element(option1).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowLeft}");
+      expect(onExitMock).toHaveBeenCalledTimes(1);
+      expect(onExitMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
+    });
+
+    it("prevents default by default, but allows bubbling if callback returns false", async () => {
+      let preventDefaultSpy = vi.fn();
+      const onEnterReturnFalse = vi.fn((_idx, e: KeyboardEvent) => {
+        preventDefaultSpy = vi.spyOn(e, "preventDefault");
+        return false;
+      });
+
+      const { Component } = createTestComponent({ onEnter: onEnterReturnFalse });
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1);
+
+      await userEvent.keyboard("{ArrowRight}");
+      expect(onEnterReturnFalse).toHaveBeenCalledTimes(1);
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not prevent default when onEnter/onExit are not provided", async () => {
+      const { Component } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1);
+
+      let prevented = false;
+      const keydownListener = (e: KeyboardEvent) => {
+        if (e.defaultPrevented) prevented = true;
+      };
+      window.addEventListener("keydown", keydownListener);
+
+      await userEvent.keyboard("{ArrowRight}");
+      expect(prevented).toBe(false);
+
+      await userEvent.keyboard("{ArrowLeft}");
+      expect(prevented).toBe(false);
+
+      window.removeEventListener("keydown", keydownListener);
     });
   });
 
@@ -621,7 +795,14 @@ describe("useRovingFocus", () => {
         const containerEl = useTemplateRef<HTMLDivElement>("container");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        useRovingFocus({ containerEl, elementsList });
+        const anchorEl = ref<HTMLElement | null>(null);
+        const context = useFloatingContext({
+          anchorEl,
+          floatingEl: containerEl,
+          defaultOpen: true,
+        });
+
+        useRovingFocus(context, { elementsList });
 
         const register = (el: Element | null, idx: number) => {
           elementsList.value[idx] = el as HTMLElement;
@@ -1063,8 +1244,14 @@ describe("useRovingFocus", () => {
         const containerEl = useTemplateRef<HTMLDivElement>("container");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const roving = useRovingFocus({
-          containerEl,
+        const anchorEl = ref<HTMLElement | null>(null);
+        const context = useFloatingContext({
+          anchorEl,
+          floatingEl: containerEl,
+          defaultOpen: true,
+        });
+
+        const roving = useRovingFocus(context, {
           elementsList,
           entryIndex: 2,
         });
@@ -1541,6 +1728,509 @@ describe("useRovingFocus", () => {
       expect(roving.activeIndex.value).toBe(4);
 
       option1ContainsSpy.mockRestore();
+    });
+  });
+
+  describe("FloatingContext integration & nested floating surfaces", () => {
+    it("resolves containerEl from context.refs.floatingEl by default", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option2 = page.getByRole("option", { name: "option 2" });
+
+      await userEvent.click(option1);
+      expect(getRoving().activeIndex.value).toBe(0);
+
+      await userEvent.keyboard("{ArrowDown}");
+      expect(getRoving().activeIndex.value).toBe(1);
+      await expect.element(option2).toHaveFocus();
+    });
+
+    it("preserves activeIndex on focusout when focus enters a teleported child floating element", async () => {
+      let rootRoving!: UseRovingFocusReturn;
+
+      const RootWithChild = defineComponent(() => {
+        const rootContainerEl = useTemplateRef<HTMLDivElement>("rootContainer");
+        const rootElementsList = ref<(HTMLElement | null)[]>([]);
+        const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
+        const childElementsList = ref<(HTMLElement | null)[]>([]);
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootContext = useFloatingContext({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootContainerEl,
+          defaultOpen: true,
+        });
+
+        rootRoving = useRovingFocus(rootContext, {
+          elementsList: rootElementsList,
+        });
+
+        const childAnchorEl = ref<HTMLElement | null>(null);
+        const childContext = useFloatingContext({
+          anchorEl: childAnchorEl,
+          floatingEl: childContainerEl,
+          parentContext: rootContext,
+          defaultOpen: true,
+        });
+
+        useRovingFocus(childContext, {
+          elementsList: childElementsList,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootContainer", id: "root-menu" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    rootElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: rootRoving.getTabindex(0),
+                },
+                "Root Option 1",
+              ),
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    rootElementsList.value[1] = el as HTMLElement;
+                  },
+                  tabindex: rootRoving.getTabindex(1),
+                },
+                "Root Option 2 (Sub Trigger)",
+              ),
+            ]),
+            // Teleported child menu rendering outside root container in DOM
+            h("div", { ref: "childContainer", id: "child-submenu" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    childElementsList.value[0] = el as HTMLElement;
+                  },
+                },
+                "Child Option 1",
+              ),
+            ]),
+          ]);
+      });
+
+      render(RootWithChild);
+
+      const rootOption2 = page.getByRole("option", { name: "Root Option 2 (Sub Trigger)" });
+      const childOption1 = page.getByRole("option", { name: "Child Option 1" });
+
+      // Focus root option 2
+      await userEvent.click(rootOption2);
+      expect(rootRoving.activeIndex.value).toBe(1);
+
+      // Now move focus to child option 1 (simulating entering teleported submenu)
+      await userEvent.click(childOption1);
+      await expect.element(childOption1).toHaveFocus();
+
+      // Parent container received focusout, but target is within descendant child in FloatingTree:
+      // Parent's activeIndex must NOT be wiped to -1!
+      expect(rootRoving.activeIndex.value).toBe(1);
+    });
+
+    it("preserves activeIndex on pointerleave when pointer enters a teleported child floating element", async () => {
+      let rootRoving!: UseRovingFocusReturn;
+
+      const RootWithChild = defineComponent(() => {
+        const rootContainerEl = useTemplateRef<HTMLDivElement>("rootContainer");
+        const rootElementsList = ref<(HTMLElement | null)[]>([]);
+        const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootContext = useFloatingContext({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootContainerEl,
+          defaultOpen: true,
+        });
+
+        rootRoving = useRovingFocus(rootContext, {
+          elementsList: rootElementsList,
+        });
+
+        const childAnchorEl = ref<HTMLElement | null>(null);
+        useFloatingContext({
+          anchorEl: childAnchorEl,
+          floatingEl: childContainerEl,
+          parentContext: rootContext,
+          defaultOpen: true,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootContainer", id: "root-menu" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    rootElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: rootRoving.getTabindex(0),
+                },
+                "Root Option 1",
+              ),
+            ]),
+            h("div", { ref: "childContainer", id: "child-submenu" }, "Child menu"),
+          ]);
+      });
+
+      render(RootWithChild);
+
+      const rootOption1 = page.getByRole("option", { name: "Root Option 1" });
+      await userEvent.click(rootOption1);
+      expect(rootRoving.activeIndex.value).toBe(0);
+
+      const rootContainer = page.getByRole("option", { name: "Root Option 1" }).element()
+        ?.parentElement as HTMLElement;
+      const childContainer = document.getElementById("child-submenu") as HTMLElement;
+
+      // Dispatch pointerleave from rootContainer with relatedTarget set to childContainer
+      rootContainer.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: false, relatedTarget: childContainer }),
+      );
+      await nextTick();
+
+      // Parent activeIndex should NOT be cleared to -1
+      expect(rootRoving.activeIndex.value).toBe(0);
+    });
+
+    it("clears activeIndex on focusout when focus leaves to an external element outside the floating tree", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const afterBtn = page.getByRole("button", { name: "After Widget" });
+
+      await userEvent.click(option1);
+      expect(getRoving().activeIndex.value).toBe(0);
+
+      // Move focus outside widget to afterBtn
+      await userEvent.click(afterBtn);
+      await expect.element(afterBtn).toHaveFocus();
+
+      expect(getRoving().activeIndex.value).toBe(-1);
+    });
+
+    it("closes open descendant submenus when navigating between sibling items in parent menu", async () => {
+      let childContext!: FloatingContext;
+      let rootRoving!: UseRovingFocusReturn;
+
+      const RootWithChild = defineComponent(() => {
+        const rootContainerEl = useTemplateRef<HTMLDivElement>("rootContainer");
+        const rootElementsList = ref<(HTMLElement | null)[]>([]);
+        const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootContext = useFloatingContext({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootContainerEl,
+          defaultOpen: true,
+        });
+
+        rootRoving = useRovingFocus(rootContext, {
+          elementsList: rootElementsList,
+        });
+
+        const childAnchorEl = ref<HTMLElement | null>(null);
+        childContext = useFloatingContext({
+          anchorEl: childAnchorEl,
+          floatingEl: childContainerEl,
+          parentContext: rootContext,
+          defaultOpen: true,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootContainer" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    rootElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: rootRoving.getTabindex(0),
+                },
+                "Parent Item 1 (Submenu open)",
+              ),
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    rootElementsList.value[1] = el as HTMLElement;
+                  },
+                  tabindex: rootRoving.getTabindex(1),
+                },
+                "Parent Item 2",
+              ),
+            ]),
+            h("div", { ref: "childContainer" }, "Child Submenu"),
+          ]);
+      });
+
+      render(RootWithChild);
+
+      const item1 = page.getByRole("option", { name: "Parent Item 1 (Submenu open)" });
+      const item2 = page.getByRole("option", { name: "Parent Item 2" });
+
+      await userEvent.click(item1);
+      expect(rootRoving.activeIndex.value).toBe(0);
+      expect(childContext.state.open.value).toBe(true);
+
+      // ArrowDown to sibling item 2
+      await userEvent.keyboard("{ArrowDown}");
+      expect(rootRoving.activeIndex.value).toBe(1);
+      await expect.element(item2).toHaveFocus();
+
+      // Child context should have been closed automatically
+      expect(childContext.state.open.value).toBe(false);
+    });
+
+    it("automatically closes submenu and returns focus to anchorEl on exit intent in child context", async () => {
+      let childContext!: FloatingContext;
+      let childRoving!: UseRovingFocusReturn;
+      const onOpenChangeMock = vi.fn();
+
+      const SubmenuFixture = defineComponent(() => {
+        const rootFloatingEl = useTemplateRef<HTMLDivElement>("rootFloating");
+        const subTriggerEl = useTemplateRef<HTMLButtonElement>("subTrigger");
+        const childFloatingEl = useTemplateRef<HTMLDivElement>("childFloating");
+        const childElementsList = ref<(HTMLElement | null)[]>([]);
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootContext = useFloatingContext({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootFloatingEl,
+          defaultOpen: true,
+        });
+
+        childContext = useFloatingContext({
+          anchorEl: subTriggerEl,
+          floatingEl: childFloatingEl,
+          parentContext: rootContext,
+          defaultOpen: true,
+          onOpenChange: onOpenChangeMock,
+        });
+
+        childRoving = useRovingFocus(childContext, {
+          elementsList: childElementsList,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootFloating" }, [
+              h("button", { ref: "subTrigger", id: "sub-trigger" }, "Open Submenu"),
+            ]),
+            h("div", { ref: "childFloating", id: "child-floating" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    childElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: childRoving.getTabindex(0),
+                },
+                "Sub Item 1",
+              ),
+            ]),
+          ]);
+      });
+
+      render(SubmenuFixture);
+
+      const subTrigger = page.getByRole("button", { name: "Open Submenu" });
+      const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
+
+      await userEvent.click(subItem1);
+      await expect.element(subItem1).toHaveFocus();
+      expect(childRoving.activeIndex.value).toBe(0);
+
+      // Press ArrowLeft (exit intent in vertical LTR)
+      await userEvent.keyboard("{ArrowLeft}");
+
+      // Child context should close with reason "keyboard-exit"
+      expect(childContext.state.open.value).toBe(false);
+      expect(onOpenChangeMock).toHaveBeenCalledWith(
+        false,
+        "keyboard-exit",
+        expect.any(KeyboardEvent),
+      );
+
+      // Focus should return to the anchor trigger
+      await expect.element(subTrigger).toHaveFocus();
+    });
+
+    it("supports RTL exit intent (ArrowRight) to close child submenu and restore focus", async () => {
+      let childContext!: FloatingContext;
+      let childRoving!: UseRovingFocusReturn;
+      const onOpenChangeMock = vi.fn();
+
+      const SubmenuFixtureRtl = defineComponent(() => {
+        const rootFloatingEl = useTemplateRef<HTMLDivElement>("rootFloating");
+        const subTriggerEl = useTemplateRef<HTMLButtonElement>("subTrigger");
+        const childFloatingEl = useTemplateRef<HTMLDivElement>("childFloating");
+        const childElementsList = ref<(HTMLElement | null)[]>([]);
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootContext = useFloatingContext({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootFloatingEl,
+          defaultOpen: true,
+        });
+
+        childContext = useFloatingContext({
+          anchorEl: subTriggerEl,
+          floatingEl: childFloatingEl,
+          parentContext: rootContext,
+          defaultOpen: true,
+          onOpenChange: onOpenChangeMock,
+        });
+
+        childRoving = useRovingFocus(childContext, {
+          elementsList: childElementsList,
+          rtl: true,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootFloating" }, [h("button", { ref: "subTrigger" }, "Open Submenu")]),
+            h("div", { ref: "childFloating", dir: "rtl" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    childElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: childRoving.getTabindex(0),
+                },
+                "Sub Item 1",
+              ),
+            ]),
+          ]);
+      });
+
+      render(SubmenuFixtureRtl);
+
+      const subTrigger = page.getByRole("button", { name: "Open Submenu" });
+      const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
+
+      await userEvent.click(subItem1);
+      await expect.element(subItem1).toHaveFocus();
+
+      // Press ArrowRight (exit intent in RTL)
+      await userEvent.keyboard("{ArrowRight}");
+
+      expect(childContext.state.open.value).toBe(false);
+      expect(onOpenChangeMock).toHaveBeenCalledWith(
+        false,
+        "keyboard-exit",
+        expect.any(KeyboardEvent),
+      );
+      await expect.element(subTrigger).toHaveFocus();
+    });
+
+    it("prefers custom onExit over default exit behavior in child context", async () => {
+      let childContext!: FloatingContext;
+      const customOnExit = vi.fn();
+
+      const SubmenuFixture = defineComponent(() => {
+        const rootFloatingEl = useTemplateRef<HTMLDivElement>("rootFloating");
+        const subTriggerEl = useTemplateRef<HTMLButtonElement>("subTrigger");
+        const childFloatingEl = useTemplateRef<HTMLDivElement>("childFloating");
+        const childElementsList = ref<(HTMLElement | null)[]>([]);
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootContext = useFloatingContext({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootFloatingEl,
+          defaultOpen: true,
+        });
+
+        childContext = useFloatingContext({
+          anchorEl: subTriggerEl,
+          floatingEl: childFloatingEl,
+          parentContext: rootContext,
+          defaultOpen: true,
+        });
+
+        useRovingFocus(childContext, {
+          elementsList: childElementsList,
+          onExit: customOnExit,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootFloating" }, [h("button", { ref: "subTrigger" }, "Open Submenu")]),
+            h("div", { ref: "childFloating" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    childElementsList.value[0] = el as HTMLElement;
+                  },
+                },
+                "Sub Item 1",
+              ),
+            ]),
+          ]);
+      });
+
+      render(SubmenuFixture);
+
+      const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
+      await userEvent.click(subItem1);
+
+      await userEvent.keyboard("{ArrowLeft}");
+
+      expect(customOnExit).toHaveBeenCalledTimes(1);
+      expect(customOnExit).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
+      // Child context should NOT be closed because custom handler intercepted it
+      expect(childContext.state.open.value).toBe(true);
+    });
+
+    it("automatically resets roving focus when context.state.open transitions to false", async () => {
+      const { Component, getRoving, getContext } = createTestComponent();
+      render(Component);
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(option3);
+      expect(getRoving().activeIndex.value).toBe(2);
+
+      // Close the context
+      getContext().state?.setOpen?.(false);
+      await nextTick();
+
+      expect(getRoving().activeIndex.value).toBe(-1);
+      expect(getRoving().tabStopIndex.value).toBe(0); // restored to entryIndex
+    });
+
+    it("does not exit or close root context on exit key when onExit is omitted", async () => {
+      const { Component, getRoving, getContext } = createTestComponent();
+      render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1);
+      expect(getRoving().activeIndex.value).toBe(0);
+
+      await userEvent.keyboard("{ArrowLeft}");
+      // Context should remain open and activeIndex unchanged
+      expect(getContext().state?.open.value).toBe(true);
+      expect(getRoving().activeIndex.value).toBe(0);
     });
   });
 });
