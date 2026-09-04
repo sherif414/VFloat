@@ -33,8 +33,8 @@ const createTestComponent = (
     const elementsList = ref<(HTMLElement | null)[]>([]);
 
     composableReturn = useAriaActivedescendant({
-      anchorEl,
-      listboxEl: config.noListbox ? undefined : listboxEl,
+      targetEl: anchorEl,
+      containerEl: config.noListbox ? undefined : listboxEl,
       elementsList: config.noElementsList ? undefined : elementsList,
       ...options,
     });
@@ -52,12 +52,12 @@ const createTestComponent = (
           ? h("button", {
               ref: "anchor",
               "aria-label": "anchor-button",
-              ...composableReturn.getAnchorProps(),
+              ...composableReturn.getTargetProps(),
             })
           : h("input", {
               ref: "anchor",
               "aria-label": "anchor",
-              ...composableReturn.getAnchorProps(),
+              ...composableReturn.getTargetProps(),
             }),
         h(
           "ul",
@@ -65,7 +65,7 @@ const createTestComponent = (
             ref: "listbox",
             role: "listbox",
             style: "max-height: 100px; max-width: 100px; overflow: auto;",
-            ...composableReturn.getListboxProps(),
+            ...composableReturn.getContainerProps(),
           },
           Array.from({ length: countRef.value }).map((_, idx) => {
             const key = config.itemKeys?.[idx];
@@ -194,9 +194,9 @@ describe("useAriaActivedescendant", () => {
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
         const virtualizer = { scrollToIndex: vi.fn(), count: 100 };
 
-        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
-          anchorEl,
-          listboxEl,
+        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: listboxEl,
           defaultIndex: 50,
           virtualizer,
           idPrefix: "virt",
@@ -204,7 +204,7 @@ describe("useAriaActivedescendant", () => {
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getAnchorProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
             h(
               "ul",
               { ref: "listbox", role: "listbox" },
@@ -696,16 +696,16 @@ describe("useAriaActivedescendant", () => {
         const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
 
-        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
-          anchorEl,
-          listboxEl,
+        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: listboxEl,
           itemCount: 10,
           focusOnHover: true,
         });
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getAnchorProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
             h(
               "ul",
               { ref: "listbox", role: "listbox" },
@@ -852,8 +852,8 @@ describe("useAriaActivedescendant", () => {
         const containerEl = useTemplateRef<HTMLElement>("container");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
-          anchorEl,
+        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
           containerEl,
           elementsList,
           orientation: "horizontal",
@@ -862,7 +862,7 @@ describe("useAriaActivedescendant", () => {
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getAnchorProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
             h(
               "div",
               {
@@ -945,13 +945,13 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 20: generic API surface & aliases", () => {
-    it("provides getTargetProps and getContainerProps matching aliases", () => {
+  describe("Suite 20: generic API surface", () => {
+    it("provides getTargetProps, getContainerProps, and getItemProps", () => {
       const { Component, getReturn } = createTestComponent();
       render(Component);
       const ret = getReturn();
-      expect(ret.getTargetProps).toBe(ret.getAnchorProps);
-      expect(ret.getContainerProps).toBe(ret.getListboxProps);
+      expect(ret.getTargetProps).toBeDefined();
+      expect(ret.getContainerProps).toBeDefined();
       expect(ret.getItemProps).toBeDefined();
     });
   });
@@ -1138,9 +1138,9 @@ describe("useAriaActivedescendant", () => {
         const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
 
-        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
-          anchorEl,
-          listboxEl,
+        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: listboxEl,
           defaultIndex: 10,
           virtualizer,
           idPrefix: "virt",
@@ -1148,7 +1148,7 @@ describe("useAriaActivedescendant", () => {
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getAnchorProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
             h(
               "ul",
               { ref: "listbox", role: "listbox" },
@@ -1339,16 +1339,16 @@ describe("useAriaActivedescendant", () => {
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const { getAnchorProps, getOptionProps } = useAriaActivedescendant({
-          anchorEl,
-          listboxEl,
+        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: listboxEl,
           elementsList,
           defaultIndex: 0,
         });
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", ...getAnchorProps() }),
+            h("input", { ref: "anchor", ...getTargetProps() }),
             h(
               "ul",
               { ref: "listbox", role: "listbox", style: "max-height: 100px; overflow: auto;" },

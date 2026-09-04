@@ -37,7 +37,11 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useCollection();
         const items = ref<Array<HTMLElement | null>>([]);
         VFloat.useRovingFocus({ containerEl: floatingEl, elementsList: items });
-        VFloat.useAriaActivedescendant({ anchorEl, listboxEl: floatingEl, elementsList: items });
+        VFloat.useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: floatingEl,
+          elementsList: items,
+        });
 
         return () =>
           h("div", { class: "container" }, [
