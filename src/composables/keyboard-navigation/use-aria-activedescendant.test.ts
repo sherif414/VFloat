@@ -1152,7 +1152,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(2);
     });
 
-    it("ignores PageUp and PageDown when modifier keys (Ctrl, Meta, Alt) are pressed", async () => {
+    it("ignores PageUp and PageDown when modifier keys (Ctrl, Meta, Alt, Shift) are pressed", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 2, pageSize: 5 },
         { itemCount: 15 },
@@ -1175,6 +1175,29 @@ describe("useAriaActivedescendant", () => {
         );
       await nextTick();
       expect(getReturn().activeIndex.value).toBe(2);
+
+      // Shift + PageDown and Shift + PageUp preserve native text selection in editable fields
+      const shiftPageDown = new KeyboardEvent("keydown", {
+        key: "PageDown",
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      anchor.element().dispatchEvent(shiftPageDown);
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+      expect(shiftPageDown.defaultPrevented).toBe(false);
+
+      const shiftPageUp = new KeyboardEvent("keydown", {
+        key: "PageUp",
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      anchor.element().dispatchEvent(shiftPageUp);
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(2);
+      expect(shiftPageUp.defaultPrevented).toBe(false);
     });
   });
 

@@ -549,13 +549,13 @@ export function useAriaActivedescendant(
       }
     }
 
-    if (e.key === "PageUp" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === "PageUp" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
       e.preventDefault();
       navigate("page-up");
       return;
     }
 
-    if (e.key === "PageDown" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === "PageDown" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
       e.preventDefault();
       navigate("page-down");
       return;
