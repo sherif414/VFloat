@@ -348,15 +348,42 @@ describe("useAriaActivedescendant", () => {
     });
 
     it("ignores IME composition events", async () => {
-      const { Component } = createTestComponent({ defaultIndex: 0 });
+      const onSelectMock = vi.fn();
+      const { Component } = createTestComponent({ defaultIndex: 0, onSelect: onSelectMock });
       render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
+
+      // Arrow down during composition
       anchor
         .element()
-        .dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", isComposing: true }));
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowDown", isComposing: true, bubbles: true }),
+        );
       await nextTick();
       const option1 = page.getByRole("option", { name: "option 1" });
       await expect.element(option1).toHaveAttribute("data-active", "");
+
+      // Enter during IME composition (confirming ideograph) must not select or trigger onSelect
+      anchor
+        .element()
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }),
+        );
+      await nextTick();
+      expect(onSelectMock).not.toHaveBeenCalled();
+
+      // Legacy IME keyCode 229 must also be ignored
+      anchor
+        .element()
+        .dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Enter",
+            keyCode: 229,
+            bubbles: true,
+          } as KeyboardEventInit),
+        );
+      await nextTick();
+      expect(onSelectMock).not.toHaveBeenCalled();
     });
 
     it("prevents default on navigation keys", async () => {

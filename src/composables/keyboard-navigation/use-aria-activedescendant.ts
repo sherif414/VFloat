@@ -533,6 +533,7 @@ export function useAriaActivedescendant(
 
   useEventListener(targetElement, "keydown", (e: KeyboardEvent) => {
     if (e.defaultPrevented || !isEnabled.value) return;
+    if (e.isComposing || e.keyCode === 229) return;
 
     if (isKeyHandled && !isKeyHandled(e)) return;
 
