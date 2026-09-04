@@ -227,6 +227,15 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     if (!focused || !container.contains(focused)) return -1;
 
     const elements = elementsList.value;
+    const lastIdx = lastFocusedIndex.value;
+    // Fast-path: check last focused item first before scanning the collection.
+    if (lastIdx !== null && lastIdx >= 0) {
+      const lastEl = elements[lastIdx];
+      if (lastEl && (lastEl === focused || lastEl.contains(focused))) {
+        return lastIdx;
+      }
+    }
+
     for (let i = 0; i < elements.length; i++) {
       if (elements[i]?.contains(focused)) return i;
     }
@@ -308,6 +317,15 @@ export function useRovingFocus(options: UseRovingFocusOptions): UseRovingFocusRe
     if (!target) return;
 
     const elements = elementsList.value;
+    const activeIdx = activeIndex.value;
+    const activeEl = activeIdx >= 0 ? elements[activeIdx] : null;
+
+    // Fast-path: check if target is within the currently active item before scanning.
+    if (activeEl && (activeEl === target || activeEl.contains(target))) {
+      setActiveIndex(activeIdx);
+      return;
+    }
+
     for (let idx = 0; idx < elements.length; idx++) {
       if (elements[idx]?.contains(target)) {
         setActiveIndex(idx);

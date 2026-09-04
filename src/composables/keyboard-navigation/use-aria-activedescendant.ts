@@ -400,9 +400,14 @@ export function useAriaActivedescendant(
       return;
     }
 
-    const elRect = targetEl.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const { dx, dy } = resolveBoundedScrollDelta(elRect, containerRect, currentOrientation.value);
+    const { dx, dy } =
+      targetEl.offsetParent === container
+        ? resolveOffsetScrollDelta(targetEl, container, currentOrientation.value)
+        : resolveBoundedScrollDelta(
+            targetEl.getBoundingClientRect(),
+            container.getBoundingClientRect(),
+            currentOrientation.value,
+          );
 
     if (dy !== 0) {
       container.scrollTop += dy;
@@ -805,6 +810,54 @@ function resolveItemIndexAndKey(param: AriaActivedescendantItemParam): {
     return { index: param };
   }
   return param;
+}
+
+/**
+ * Resolves horizontal and vertical scroll deltas needed to bring an element into view
+ * within a bounded container using offset-based geometry when targetEl.offsetParent === container.
+ * Eliminates layout reflows by avoiding getBoundingClientRect().
+ */
+function resolveOffsetScrollDelta(
+  targetEl: HTMLElement,
+  container: HTMLElement,
+  orientation: "vertical" | "horizontal" | "both" = "vertical",
+): { dx: number; dy: number } {
+  let dx = 0;
+  let dy = 0;
+
+  if (orientation === "vertical" || orientation === "both") {
+    const elTop = targetEl.offsetTop - container.scrollTop;
+    const elBottom = elTop + targetEl.offsetHeight;
+    const containerHeight = container.clientHeight;
+
+    if (elTop < 0) {
+      dy = elTop;
+    } else if (elBottom > containerHeight) {
+      if (targetEl.offsetHeight > containerHeight) {
+        dy = elTop;
+      } else {
+        dy = elBottom - containerHeight;
+      }
+    }
+  }
+
+  if (orientation === "horizontal" || orientation === "both") {
+    const elLeft = targetEl.offsetLeft - container.scrollLeft;
+    const elRight = elLeft + targetEl.offsetWidth;
+    const containerWidth = container.clientWidth;
+
+    if (elLeft < 0) {
+      dx = elLeft;
+    } else if (elRight > containerWidth) {
+      if (targetEl.offsetWidth > containerWidth) {
+        dx = elLeft;
+      } else {
+        dx = elRight - containerWidth;
+      }
+    }
+  }
+
+  return { dx, dy };
 }
 
 /**

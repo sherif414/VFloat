@@ -1391,4 +1391,147 @@ describe("useAriaActivedescendant", () => {
       expect(listbox.scrollTop).toBe(50);
     });
   });
+
+  describe("scroll optimization: offset-based geometry fast-path", () => {
+    it("uses offset-based fast-path when container is positioned without calling getBoundingClientRect", async () => {
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLElement>("anchor");
+        const listboxEl = useTemplateRef<HTMLElement>("listbox");
+        const elementsList = ref<(HTMLElement | null)[]>([]);
+
+        const { getTargetProps, getContainerProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: listboxEl,
+          elementsList,
+          scrollIntoView: true,
+        });
+
+        return () =>
+          h("div", [
+            h("input", { ref: "anchor", ...getTargetProps() }),
+            h(
+              "ul",
+              {
+                ref: "listbox",
+                role: "listbox",
+                style: "position: relative; height: 100px; overflow-y: auto;",
+                ...getContainerProps(),
+              },
+              Array.from({ length: 5 }).map((_, idx) =>
+                h(
+                  "li",
+                  {
+                    ref: (el) => (elementsList.value[idx] = el as HTMLElement),
+                    ...getOptionProps(idx),
+                    style: "height: 50px;",
+                  },
+                  `Item ${idx}`,
+                ),
+              ),
+            ),
+          ]);
+      });
+
+      render(Component);
+      await nextTick();
+
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+      const options = listbox.querySelectorAll("li");
+      const targetItem = options[3] as HTMLElement;
+
+      // Verify prerequisite: targetItem.offsetParent === listbox
+      expect(targetItem.offsetParent).toBe(listbox);
+
+      const targetRectSpy = vi.spyOn(targetItem, "getBoundingClientRect");
+      const containerRectSpy = vi.spyOn(listbox, "getBoundingClientRect");
+
+      const anchor = page.getByRole("textbox");
+      await userEvent.click(anchor);
+
+      // Navigate down to item 3 (offset: 150px; container height: 100px)
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await nextTick();
+
+      // Should have scrolled to reveal item 3: scrollTop = (3 + 1) * 50 - 100 = 100
+      expect(listbox.scrollTop).toBe(100);
+
+      // Fast-path: getBoundingClientRect must NOT have been called on target or container
+      expect(targetRectSpy).not.toHaveBeenCalled();
+      expect(containerRectSpy).not.toHaveBeenCalled();
+
+      targetRectSpy.mockRestore();
+      containerRectSpy.mockRestore();
+    });
+
+    it("falls back to getBoundingClientRect when container is not positioned (offsetParent !== container)", async () => {
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLElement>("anchor");
+        const listboxEl = useTemplateRef<HTMLElement>("listbox");
+        const elementsList = ref<(HTMLElement | null)[]>([]);
+
+        const { getTargetProps, getContainerProps, getOptionProps } = useAriaActivedescendant({
+          targetEl: anchorEl,
+          containerEl: listboxEl,
+          elementsList,
+          scrollIntoView: true,
+        });
+
+        return () =>
+          h("div", [
+            h("input", { ref: "anchor", ...getTargetProps() }),
+            h(
+              "ul",
+              {
+                ref: "listbox",
+                role: "listbox",
+                // Unpositioned container (position: static default)
+                style: "height: 100px; overflow-y: auto;",
+                ...getContainerProps(),
+              },
+              Array.from({ length: 5 }).map((_, idx) =>
+                h(
+                  "li",
+                  {
+                    ref: (el) => (elementsList.value[idx] = el as HTMLElement),
+                    ...getOptionProps(idx),
+                    style: "height: 50px;",
+                  },
+                  `Item ${idx}`,
+                ),
+              ),
+            ),
+          ]);
+      });
+
+      render(Component);
+      await nextTick();
+
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+      const options = listbox.querySelectorAll("li");
+      const targetItem = options[3] as HTMLElement;
+
+      // Because listbox is position: static, offsetParent is body (not listbox)
+      expect(targetItem.offsetParent).not.toBe(listbox);
+
+      const targetRectSpy = vi.spyOn(targetItem, "getBoundingClientRect");
+
+      const anchor = page.getByRole("textbox");
+      await userEvent.click(anchor);
+
+      // Navigate down to item 3
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+      await nextTick();
+
+      // Fallback path: getBoundingClientRect was called
+      expect(targetRectSpy).toHaveBeenCalled();
+
+      targetRectSpy.mockRestore();
+    });
+  });
 });

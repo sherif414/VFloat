@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
-import { defineComponent, h, ref, useTemplateRef } from "vue";
+import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
 import {
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
@@ -1455,6 +1455,92 @@ describe("useRovingFocus", () => {
       await userEvent.tab({ shift: true });
       const option1 = page.getByRole("option", { name: "option 1" });
       await expect.element(option1).toHaveFocus();
+    });
+  });
+
+  describe("focus synchronization fast-path optimizations", () => {
+    it("uses fast-path when activeIndex element receives focusin without linear scanning", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+      await nextTick();
+
+      const roving = getRoving();
+      // Set active index to 2
+      roving.focusIndex(2);
+      await nextTick();
+
+      const option3 = page.getByRole("option", { name: "option 3" }).element() as HTMLElement;
+      await expect.element(page.getByRole("option", { name: "option 3" })).toHaveFocus();
+
+      // Spy on option elements' contains method
+      const option1 = page.getByRole("option", { name: "option 1" }).element() as HTMLElement;
+      const option1ContainsSpy = vi.spyOn(option1, "contains");
+
+      // Trigger focusin with target = option3 (already activeIndex 2)
+      option3.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextTick();
+
+      // option1 (index 0) should NOT have been scanned via contains()
+      expect(option1ContainsSpy).not.toHaveBeenCalled();
+      expect(roving.activeIndex.value).toBe(2);
+
+      option1ContainsSpy.mockRestore();
+    });
+
+    it("falls back to linear scan when focusin target differs from activeIndex", async () => {
+      const { Component, getRoving } = createTestComponent();
+      render(Component);
+      await nextTick();
+
+      const roving = getRoving();
+      roving.focusIndex(0);
+      await nextTick();
+      expect(roving.activeIndex.value).toBe(0);
+
+      const option3 = page.getByRole("option", { name: "option 3" }).element() as HTMLElement;
+      // Focus target is option3 while activeIndex is 0
+      option3.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextTick();
+
+      // Should fall back to linear scan and find index 2
+      expect(roving.activeIndex.value).toBe(2);
+    });
+
+    it("uses fast-path in resolveFocusedIndex by probing lastFocusedIndex first", async () => {
+      const activeIndexRef = ref(-1);
+      const { Component, getRoving } = createTestComponent({
+        activeIndex: activeIndexRef,
+        onActiveIndexChange: (idx) => {
+          activeIndexRef.value = idx;
+        },
+      });
+      render(Component);
+      await nextTick();
+
+      const roving = getRoving();
+      // Focus index 3
+      roving.focusIndex(3);
+      await nextTick();
+
+      const option1 = page.getByRole("option", { name: "option 1" }).element() as HTMLElement;
+      const option4 = page.getByRole("option", { name: "option 4" }).element() as HTMLElement;
+      expect(document.activeElement).toBe(option4);
+
+      // Simulate activeIndex cleared externally to -1 while DOM focus remains on option4
+      activeIndexRef.value = -1;
+      await nextTick();
+
+      const option1ContainsSpy = vi.spyOn(option1, "contains");
+
+      // Navigate down from option4 (should resume from index 3 via lastFocusedIndex fast-path -> index 4)
+      option4.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      await nextTick();
+
+      // option1 should NOT have been scanned
+      expect(option1ContainsSpy).not.toHaveBeenCalled();
+      expect(roving.activeIndex.value).toBe(4);
+
+      option1ContainsSpy.mockRestore();
     });
   });
 });
