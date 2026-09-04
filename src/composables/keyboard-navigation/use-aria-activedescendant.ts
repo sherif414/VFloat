@@ -86,9 +86,7 @@ export function useAriaActivedescendant(
 ): UseAriaActivedescendantReturn {
   const {
     targetEl,
-    anchorEl,
     containerEl,
-    listboxEl,
     elementsList,
     itemCount: rawItemCount,
     activeIndex: controlledActiveIndex,
@@ -124,8 +122,8 @@ export function useAriaActivedescendant(
   const isPreventPointerDown = computed(() => toValue(preventPointerDown) ?? true);
   const isScrollIntoView = computed(() => toValue(scrollIntoView) ?? true);
   const currentPageSize = computed(() => Math.max(1, toValue(pageSize) ?? 10));
-  const targetElement = computed(() => toValue(targetEl ?? anchorEl) ?? null);
-  const containerElement = computed(() => toValue(containerEl ?? listboxEl) ?? null);
+  const targetElement = computed(() => toValue(targetEl) ?? null);
+  const containerElement = computed(() => toValue(containerEl) ?? null);
   const isRtl = useRtl(targetElement, { rtl });
 
   const isEditable = computed(() => {
@@ -722,12 +720,10 @@ export function useAriaActivedescendant(
   const getTargetProps = () => ({
     "aria-activedescendant": activeId.value,
   });
-  const getAnchorProps = getTargetProps;
 
   const getContainerProps = () => ({
     id: containerElement.value?.id || undefined,
   });
-  const getListboxProps = getContainerProps;
 
   const getItemProps = (itemOrIndex: AriaActivedescendantItemParam) => {
     const { index, key } = resolveItemIndexAndKey(itemOrIndex);
@@ -748,7 +744,6 @@ export function useAriaActivedescendant(
   const getOptionProps = (index: number) => getItemProps(index);
   const getVirtualItemProps = (virtualItem: { index: number; key?: string | number }) =>
     getItemProps(virtualItem);
-  const getVirtualOptionProps = getVirtualItemProps;
 
   return {
     activeIndex: readonly(activeIndex),
@@ -767,13 +762,10 @@ export function useAriaActivedescendant(
       }
     },
     getTargetProps,
-    getAnchorProps,
     getContainerProps,
-    getListboxProps,
     getItemProps,
     getOptionProps,
     getVirtualItemProps,
-    getVirtualOptionProps,
   };
 }
 
@@ -944,19 +936,9 @@ export interface UseAriaActivedescendantReturn {
   getTargetProps: () => Record<string, unknown>;
 
   /**
-   * Alias for {@link getTargetProps}.
-   */
-  getAnchorProps: () => Record<string, unknown>;
-
-  /**
    * Generates container identity props.
    */
   getContainerProps: () => Record<string, unknown>;
-
-  /**
-   * Alias for {@link getContainerProps}.
-   */
-  getListboxProps: () => Record<string, unknown>;
 
   /**
    * Generates identity, state, and event props for an item at the given index or item descriptor.
@@ -977,14 +959,6 @@ export interface UseAriaActivedescendantReturn {
     index: number;
     key?: string | number;
   }) => Record<string, unknown>;
-
-  /**
-   * Alias for {@link getVirtualItemProps}.
-   */
-  getVirtualOptionProps: (virtualItem: {
-    index: number;
-    key?: string | number;
-  }) => Record<string, unknown>;
 }
 
 /**
@@ -997,19 +971,9 @@ export interface UseAriaActivedescendantOptions {
   targetEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
-   * Alias for `targetEl`. Anchor or input element that retains physical DOM focus and receives keyboard events.
-   */
-  anchorEl?: MaybeRefOrGetter<HTMLElement | null>;
-
-  /**
    * Composite container element holding the items. Used for bounded scroll calculations and query validation.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
-
-  /**
-   * Alias for `containerEl`. The list or popup container element holding the option elements.
-   */
-  listboxEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
    * Total number of items in the collection. Use this when working with
