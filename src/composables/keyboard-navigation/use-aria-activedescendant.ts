@@ -462,6 +462,8 @@ export function useAriaActivedescendant(
 
     if (focusOptions.preventScroll) {
       suppressNextScroll = true;
+    } else {
+      lastHoveredEl = null;
     }
 
     const wasActive = activeIndex.value === idx;
@@ -632,6 +634,8 @@ export function useAriaActivedescendant(
   }
 
   let lastHoveredEl: HTMLElement | null = null;
+  let lastPointerX = -1;
+  let lastPointerY = -1;
 
   useEventListener(
     () => (isFocusOnHover.value ? containerElement.value : null),
@@ -639,6 +643,13 @@ export function useAriaActivedescendant(
     (e: PointerEvent) => {
       if (e.defaultPrevented || !isEnabled.value) return;
       if (e.pointerType === "touch") return;
+
+      // Ignore synthetic pointermove events fired when elements scroll under a stationary cursor
+      if (e.clientX === lastPointerX && e.clientY === lastPointerY) {
+        return;
+      }
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
 
       const target = e.target as HTMLElement | null;
       if (!target || target === lastHoveredEl) return;
@@ -697,6 +708,8 @@ export function useAriaActivedescendant(
     "pointerleave",
     (e: PointerEvent) => {
       lastHoveredEl = null;
+      lastPointerX = -1;
+      lastPointerY = -1;
       if (!isEnabled.value || e.pointerType === "touch") return;
       if (toValue(clearOnPointerLeave)) {
         setVirtualFocus(-1);

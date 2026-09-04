@@ -373,15 +373,13 @@ describe("useAriaActivedescendant", () => {
       expect(onSelectMock).not.toHaveBeenCalled();
 
       // Legacy IME keyCode 229 must also be ignored
-      anchor
-        .element()
-        .dispatchEvent(
-          new KeyboardEvent("keydown", {
-            key: "Enter",
-            keyCode: 229,
-            bubbles: true,
-          } as KeyboardEventInit),
-        );
+      anchor.element().dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          keyCode: 229,
+          bubbles: true,
+        } as KeyboardEventInit),
+      );
       await nextTick();
       expect(onSelectMock).not.toHaveBeenCalled();
     });
@@ -751,6 +749,48 @@ describe("useAriaActivedescendant", () => {
         .dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 1, clientY: 1 }));
       await nextTick();
       await expect.element(option2).toHaveAttribute("data-active", "");
+    });
+
+    it("ignores synthetic pointermove events with identical coordinates during scroll", async () => {
+      const { Component, getReturn } = createTestComponent({ focusOnHover: true });
+      render(Component);
+      await nextTick();
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+
+      // Move pointer over option 1
+      option1
+        .element()
+        .dispatchEvent(
+          new PointerEvent("pointermove", { bubbles: true, clientX: 50, clientY: 50 }),
+        );
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(0);
+
+      // Keyboard navigation advances activeIndex to option 2 (item 1)
+      getReturn().next();
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(1);
+
+      // Synthetic pointermove fires due to scroll with identical screen coordinates
+      option1
+        .element()
+        .dispatchEvent(
+          new PointerEvent("pointermove", { bubbles: true, clientX: 50, clientY: 50 }),
+        );
+      await nextTick();
+
+      // Active index must NOT be hijacked back to 0
+      expect(getReturn().activeIndex.value).toBe(1);
+
+      // Physical pointer movement with new coordinates does update activeIndex
+      option1
+        .element()
+        .dispatchEvent(
+          new PointerEvent("pointermove", { bubbles: true, clientX: 50, clientY: 52 }),
+        );
+      await nextTick();
+      expect(getReturn().activeIndex.value).toBe(0);
     });
   });
 
