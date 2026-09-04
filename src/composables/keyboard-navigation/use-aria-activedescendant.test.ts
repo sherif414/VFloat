@@ -235,6 +235,44 @@ describe("useAriaActivedescendant", () => {
       const anchor = page.getByRole("textbox", { name: "anchor" });
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
+
+    it("resolves active element and commits aria-activedescendant inside Shadow DOM", async () => {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const shadow = host.attachShadow({ mode: "open" });
+
+      const input = document.createElement("input");
+      input.setAttribute("aria-label", "shadow-anchor");
+      const listbox = document.createElement("ul");
+      listbox.setAttribute("role", "listbox");
+      const opt = document.createElement("li");
+      opt.id = "shadow-opt-0";
+      opt.setAttribute("role", "option");
+      listbox.appendChild(opt);
+      shadow.appendChild(input);
+      shadow.appendChild(listbox);
+
+      // Verify that document.getElementById cannot reach inside shadow root
+      expect(document.getElementById("shadow-opt-0")).toBeNull();
+      expect(shadow.getElementById("shadow-opt-0")).toBe(opt);
+
+      const targetEl = ref(input);
+      const containerEl = ref(listbox);
+
+      const { activeId } = useAriaActivedescendant({
+        targetEl,
+        containerEl,
+        itemCount: 1,
+        defaultIndex: 0,
+        idPrefix: "shadow",
+        getItemId: () => "shadow-opt-0",
+      });
+
+      await nextTick();
+      expect(activeId.value).toBe("shadow-opt-0");
+
+      host.remove();
+    });
   });
 
   describe("Suite 3: data-active & selection separation", () => {

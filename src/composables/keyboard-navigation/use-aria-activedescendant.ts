@@ -241,9 +241,13 @@ export function useAriaActivedescendant(
       return elements[idx];
     }
 
-    // 2. O(1) native hash-map lookup on document
+    // 2. O(1) native hash-map lookup on Document or ShadowRoot
     try {
-      const docEl = document.getElementById(id);
+      const root =
+        (containerElement.value?.getRootNode?.() as Document | ShadowRoot | null) ??
+        (targetElement.value?.getRootNode?.() as Document | ShadowRoot | null) ??
+        document;
+      const docEl = root.getElementById?.(id) ?? document.getElementById(id);
       if (docEl && docEl.isConnected) {
         const container = containerElement.value;
         if (!container || container.contains(docEl)) {
