@@ -13,6 +13,13 @@ In VFloat, keyboard navigation is split into a clean separation of concerns:
 3. **[`useTypeahead`](/api/use-typeahead)** handles character-based search and jumping, buffering keystrokes and cycling through matching collection items.
 4. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
 
+## Keyboard Navigation Strategy
+
+We separate keyboard navigation into two distinct patterns based on whether the component requires continuous text input:
+
+- **Virtual Focus (`aria-activedescendant`)**: Used exclusively for text-input-driven components (e.g., Comboboxes, Autocompletes, Searchable Selects). Physical DOM focus remains locked on the `<input>` to preserve the text cursor, IME composition, and mobile software keyboards, while virtual focus navigates suggestions.
+- **Physical Roving Focus (Roving Tabindex)**: Used for all standalone composite widgets (e.g., Menus, Tabs, Toolbars, Trees, and non-searchable Listboxes). Physical DOM focus moves directly to each item, providing native `:focus-visible` styling, built-in scroll alignment, and robust screen reader support.
+
 ---
 
 ## 1. DOM Focus Model: Menus and Action Lists

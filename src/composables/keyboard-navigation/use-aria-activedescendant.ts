@@ -38,17 +38,13 @@ const NON_EDITABLE_INPUT_TYPES = new Set([
 //=======================================================================================
 
 /**
- * Manages virtual focus and keyboard navigation across composite widget items using the
- * WAI-ARIA `aria-activedescendant` pattern.
+ * Manages virtual focus and keyboard navigation for text-input-driven components using `aria-activedescendant`.
  *
- * Physical DOM focus stays pinned on the target/anchor element while the active descendant
- * is communicated to assistive technologies via the `aria-activedescendant` attribute.
- * Supports static DOM lists, dynamic collections, and virtualized scrolling engines.
+ * Physical DOM focus remains pinned on the `<input>` target to preserve the text cursor, IME
+ * composition, and mobile software keyboards, while virtual focus navigates suggestions.
  *
- * This is the complement to {@link useRovingFocus}: use `useRovingFocus` when DOM focus
- * should physically move between items (menus, toolbars, radio groups), and use
- * `useAriaActivedescendant` when DOM focus must remain on an input or container
- * (comboboxes, autocompletes, searchable selects, virtualized lists, trees, grids).
+ * For standalone composite widgets (menus, tabs, toolbars, trees, non-searchable listboxes),
+ * use {@link useRovingFocus}.
  *
  * @param options - Configuration for target element, items, orientation, and virtualizer.
  * @returns State, navigation actions, and prop getters.
@@ -634,7 +630,8 @@ export function useAriaActivedescendant(
       }
     }
 
-    // Prevent browser from blurring the target/anchor input
+    // Virtual Focus Strategy: prevent browser from blurring the target input, preserving
+    // the text cursor, IME composition, and mobile software keyboards.
     e.preventDefault();
   }
 

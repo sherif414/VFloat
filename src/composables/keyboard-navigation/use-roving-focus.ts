@@ -10,11 +10,13 @@ import { useRtl } from "./rtl";
 //=======================================================================================
 
 /**
- * Enables keyboard roving focus navigation across a list of elements according to the
- * WAI-ARIA roving tabindex pattern for composite widgets (toolbars, tablists, radiogroups, menus, listboxes).
+ * Enables keyboard roving focus navigation across standalone composite widgets (menus, tabs, toolbars, trees, non-searchable listboxes).
  *
- * Maintains `tabindex="0"` on the active element (or a persistent tab-stop fallback) and `tabindex="-1"`
- * on all inactive elements, allowing the composite widget to be a single tab stop in the sequential focus order.
+ * Physical DOM focus moves directly to each item, providing native `:focus-visible` styling,
+ * built-in scroll alignment, and roving `tabindex="0"` / `tabindex="-1"` coordination.
+ *
+ * For text-input-driven components (comboboxes, autocompletes, searchable selects),
+ * use {@link useAriaActivedescendant}.
  *
  * @param options - Configuration options for container element, elements list, orientation, and navigation.
  * @returns Roving focus state and navigation control methods.

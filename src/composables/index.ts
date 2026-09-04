@@ -53,25 +53,21 @@ export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";
 export type {
-  RovingEntryFocusMode,
-  UseRovingFocusOptions,
-  UseRovingFocusReturn,
-} from "./keyboard-navigation/use-roving-focus";
-// Roving Focus
-export { useRovingFocus } from "./keyboard-navigation/use-roving-focus";
-export type {
   AriaActivedescendantItemParam,
+  RovingEntryFocusMode,
   UseAriaActivedescendantOptions,
   UseAriaActivedescendantReturn,
-} from "./keyboard-navigation/use-aria-activedescendant";
-// Aria Activedescendant
-export { useAriaActivedescendant } from "./keyboard-navigation/use-aria-activedescendant";
-export type { VirtualizerAdapter } from "./keyboard-navigation/virtualizer-adapter";
-// Virtualizer Adapter
+  UseRovingFocusOptions,
+  UseRovingFocusReturn,
+  VirtualizerAdapter,
+} from "./keyboard-navigation";
+// Keyboard Navigation (Virtual Focus & Physical Roving Focus)
 export {
-  createTanStackVirtualAdapter,
   createCustomVirtualAdapter,
-} from "./keyboard-navigation/virtualizer-adapter";
+  createTanStackVirtualAdapter,
+  useAriaActivedescendant,
+  useRovingFocus,
+} from "./keyboard-navigation";
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";
