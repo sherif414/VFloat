@@ -166,11 +166,7 @@ export function useAriaActivedescendant(
     totalCount,
     (count) => {
       if (!isEnabled.value) return;
-      if (count === 0) {
-        if (activeIndex.value !== -1) {
-          activeIndex.value = -1;
-        }
-      } else if (activeIndex.value >= count) {
+      if (count === 0 || activeIndex.value >= count) {
         // Active index is out of bounds due to dynamic collection shrinkage (e.g. filtering)
         activeIndex.value = -1;
       }
