@@ -292,34 +292,26 @@ export function useAriaActivedescendant(
 
     // Fast-path for virtualizer adapter: skip DOM queries if virtualizer knows index is not rendered
     if (virtualizer?.isIndexRendered && !virtualizer.isIndexRendered(idx)) {
-      if (committedActiveId.value !== undefined) {
-        committedActiveId.value = undefined;
-      }
+      committedActiveId.value = undefined;
       return;
     }
 
     const targetId = resolveItemId(idx);
     if (!isValidAriaId(targetId)) {
-      if (committedActiveId.value !== undefined) {
-        committedActiveId.value = undefined;
-      }
+      committedActiveId.value = undefined;
       return;
     }
 
     const mountedEl = findMountedElement(idx, targetId);
     if (mountedEl) {
       const actualId = mountedEl.id && isValidAriaId(mountedEl.id) ? mountedEl.id : targetId;
-      if (committedActiveId.value !== actualId) {
-        committedActiveId.value = actualId;
-      }
+      committedActiveId.value = actualId;
       lastRetriedIndex = -1;
       return;
     }
 
     // Element is not in the DOM yet (e.g. virtualized off-screen). Clear attribute.
-    if (committedActiveId.value !== undefined) {
-      committedActiveId.value = undefined;
-    }
+    committedActiveId.value = undefined;
 
     // Deduplicate nextTick retries: schedule at most once per activeIndex change
     if (lastRetriedIndex !== idx && typeof window !== "undefined") {
@@ -329,9 +321,7 @@ export function useAriaActivedescendant(
           const retryEl = findMountedElement(idx, targetId);
           if (retryEl) {
             const actualId = retryEl.id && isValidAriaId(retryEl.id) ? retryEl.id : targetId;
-            if (committedActiveId.value !== actualId) {
-              committedActiveId.value = actualId;
-            }
+            committedActiveId.value = actualId;
           }
         }
       });
