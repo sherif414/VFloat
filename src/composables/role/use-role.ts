@@ -11,6 +11,12 @@ import type { FloatingContext } from "@/composables/floating-context";
 import { isHTMLElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 
+type ManagedAttribute = {
+  attribute: string;
+  el: HTMLElement;
+  previousValue: string | null;
+};
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -297,6 +303,13 @@ export type FloatingRoleItemRole =
   | "separator"
   | "treeitem";
 
+export interface UseRoleReturn {
+  /**
+   * Stops watchers and restores attributes managed by the composable.
+   */
+  cleanup: () => void;
+}
+
 /**
  * Options for syncing ARIA roles, states, and relationships.
  */
@@ -365,16 +378,3 @@ export interface UseRoleOptions {
    */
   selectedIndices?: Array<number> | ((index: number) => boolean);
 }
-
-export interface UseRoleReturn {
-  /**
-   * Stops watchers and restores attributes managed by the composable.
-   */
-  cleanup: () => void;
-}
-
-type ManagedAttribute = {
-  attribute: string;
-  el: HTMLElement;
-  previousValue: string | null;
-};

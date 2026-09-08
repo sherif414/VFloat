@@ -64,9 +64,8 @@ export function useTypeahead(
     isValueDisabled: isValueDisabledOption,
   } = options;
 
-  //=====================================================================================
-  // Reactive Options & Derived State
-  //=====================================================================================
+  // --- Shared Options & Derived State -----------------------------------------
+
   const isEnabled = computed(() => toValue(enabledOption));
   const resetMs = computed(() => toValue(resetMsOption));
   const ignoreKeys = computed(() => toValue(ignoreKeysOption));
@@ -85,9 +84,8 @@ export function useTypeahead(
   const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
   const floatingEl = computed(() => refs.floatingEl.value);
 
-  //=====================================================================================
-  // Internal State
-  //=====================================================================================
+  // --- Search Buffer & Match State -------------------------------------------
+
   const isTypingRef = ref(false);
   let typingBuffer = "";
   let resetTimeoutId = -1;
@@ -96,9 +94,8 @@ export function useTypeahead(
 
   const cleanupRegistry = createCleanupRegistry();
 
-  //=====================================================================================
-  // State Helpers
-  //=====================================================================================
+  // --- Buffer Reset & State Helpers ------------------------------------------
+
   function isItemDisabled(value: string): boolean {
     if (collection?.isItemDisabled?.(value)) return true;
     if (isValueDisabledOption?.(value)) return true;
@@ -167,9 +164,8 @@ export function useTypeahead(
     { flush: "sync" },
   );
 
-  //=====================================================================================
-  // Event Handlers
-  //=====================================================================================
+  // --- Typeahead Keyboard Search ---------------------------------------------
+
   function onKeyDown(e: KeyboardEvent) {
     if (e.defaultPrevented || !isEnabled.value) return;
 
@@ -275,9 +271,8 @@ export function useTypeahead(
     }
   }
 
-  //=====================================================================================
-  // Wiring: Register listeners
-  //=====================================================================================
+  // --- Target Event Listeners ------------------------------------------------
+
   cleanupRegistry.add(
     useEventListener(() => (isEnabled.value ? anchorEl.value : null), "keydown", onKeyDown),
   );
@@ -372,6 +367,26 @@ export interface UseTypeaheadContext {
 }
 
 /**
+ * Return shape for `useTypeahead`.
+ */
+export interface UseTypeaheadReturn {
+  /**
+   * Reactive boolean indicating whether a user typing session is actively in progress.
+   */
+  isTyping: Readonly<Ref<boolean>>;
+
+  /**
+   * Resets the active typing buffer and timeout.
+   */
+  reset: () => void;
+
+  /**
+   * Stops all listeners and watchers created by the composable.
+   */
+  cleanup: () => void;
+}
+
+/**
  * Configuration options for `useTypeahead`.
  */
 export interface UseTypeaheadOptions {
@@ -442,24 +457,4 @@ export interface UseTypeaheadOptions {
    * Predicate for skipping disabled items during matching.
    */
   isValueDisabled?: (value: string) => boolean;
-}
-
-/**
- * Return shape for `useTypeahead`.
- */
-export interface UseTypeaheadReturn {
-  /**
-   * Reactive boolean indicating whether a user typing session is actively in progress.
-   */
-  isTyping: Readonly<Ref<boolean>>;
-
-  /**
-   * Resets the active typing buffer and timeout.
-   */
-  reset: () => void;
-
-  /**
-   * Stops all listeners and watchers created by the composable.
-   */
-  cleanup: () => void;
 }

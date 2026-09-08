@@ -113,9 +113,7 @@ export function useFocusManager(
     return el?.ownerDocument ?? getDocument();
   }
 
-  //=====================================================================================
-  // Focus Trapping & Keydown Navigation
-  //=====================================================================================
+  // --- Focus Trapping & Keydown Navigation -----------------------------------
 
   function onFloatingKeyDown(event: KeyboardEvent) {
     if (event.key !== "Tab" || event.defaultPrevented || !isEnabled.value || !open.value) {
@@ -203,9 +201,7 @@ export function useFocusManager(
     });
   }
 
-  //=====================================================================================
-  // Focus Guards (Sentinels)
-  //=====================================================================================
+  // --- Focus Guards ----------------------------------------------------------
 
   function onGuardFocus(type: "start" | "end", event: FocusEvent) {
     if (!isEnabled.value || !open.value) return;
@@ -240,9 +236,7 @@ export function useFocusManager(
     }
   }
 
-  //=====================================================================================
-  // Background Isolation
-  //=====================================================================================
+  // --- Background Isolation --------------------------------------------------
 
   function setupIsolation() {
     cleanupIsolation();
@@ -262,9 +256,7 @@ export function useFocusManager(
     }
   }
 
-  //=====================================================================================
-  // Initial & Return Focus
-  //=====================================================================================
+  // --- Initial & Return Focus ------------------------------------------------
 
   let isPointerDownOutside = false;
   let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -379,9 +371,7 @@ export function useFocusManager(
     }
   }
 
-  //=====================================================================================
-  // Outside Focus Detection (for non-modal dismissal)
-  //=====================================================================================
+  // --- Outside Focus Detection -----------------------------------------------
 
   function onDocumentFocusIn(event: FocusEvent) {
     if (!isEnabled.value || !open.value) return;
@@ -421,9 +411,7 @@ export function useFocusManager(
     }
   }
 
-  //=====================================================================================
-  // Lifecycle & Activation
-  //=====================================================================================
+  // --- Lifecycle & Activation ------------------------------------------------
 
   function activate() {
     if (!isEnabled.value || !open.value) {
@@ -565,10 +553,6 @@ export function useFocusManager(
 }
 
 //=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-//=======================================================================================
 // 📌 Types
 //=======================================================================================
 
@@ -584,6 +568,26 @@ export interface UseFocusManagerContext {
    * Floating open state and setter.
    */
   state: FloatingContext["state"];
+}
+
+/**
+ * Return shape for `useFocusManager`.
+ */
+export interface UseFocusManagerReturn {
+  /**
+   * Whether focus management is currently active.
+   */
+  isActive: ComputedRef<boolean>;
+
+  /**
+   * Manually activates focus management.
+   */
+  activate: () => void;
+
+  /**
+   * Manually deactivates focus management and closes/restores focus.
+   */
+  deactivate: () => void;
 }
 
 /**
@@ -661,24 +665,4 @@ export interface UseFocusManagerOptions {
    * Optional error callback when focus management activation encounters an error.
    */
   onError?: (error: unknown) => void;
-}
-
-/**
- * Return shape for `useFocusManager`.
- */
-export interface UseFocusManagerReturn {
-  /**
-   * Whether focus management is currently active.
-   */
-  isActive: ComputedRef<boolean>;
-
-  /**
-   * Manually activates focus management.
-   */
-  activate: () => void;
-
-  /**
-   * Manually deactivates focus management and closes/restores focus.
-   */
-  deactivate: () => void;
 }

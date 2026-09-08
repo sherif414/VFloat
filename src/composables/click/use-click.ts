@@ -50,9 +50,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     ignoreTouch: ignoreTouchOption = false,
   } = options;
 
-  //=====================================================================================
-  // Interaction State
-  //=====================================================================================
+  // --- Interaction State -----------------------------------------------------
+
   // Kept as plain locals (not refs/reactive) because they only coordinate
   // intra-event ordering.
   const interactionState = {
@@ -76,9 +75,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     return null;
   });
 
-  //=====================================================================================
-  // Event Handlers
-  //=====================================================================================
+  // --- Click & Activation Handlers -------------------------------------------
 
   function onOpenChange(reason: OpenChangeReason, event: Event) {
     const isStickIfOpen = toValue(stickIfOpenOption);
@@ -205,9 +202,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
     return type === "touch" && toValue(ignoreTouchOption);
   }
 
-  //=====================================================================================
-  // Wiring: attach handlers to the current anchor element
-  //=====================================================================================
+  // --- Anchor Event Listeners ------------------------------------------------
 
   watchPostEffect(() => {
     const el = anchorEl.value;

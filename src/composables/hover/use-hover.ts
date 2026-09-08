@@ -6,6 +6,10 @@ import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
+interface UseDelayedOpenOptions {
+  delay: MaybeRefOrGetter<number | { open?: number; close?: number }>;
+}
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -59,9 +63,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     { delay: delayOption },
   );
 
-  //=====================================================================================
-  // Rest Detection
-  //=====================================================================================
+  // --- Rest Detection ---------------------------------------------------------
 
   let restCoords: Coords | null = null;
   let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -116,9 +118,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     clearTimeout(restTimeoutId);
   });
 
-  //=====================================================================================
-  // General Event Handlers
-  //=====================================================================================
+  // --- Hover & Safe Polygon Handlers -----------------------------------------
 
   function isSupportedPointerType(e: PointerEvent): boolean {
     if (toValue(mouseOnlyOption)) {
@@ -216,9 +216,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     }
   }
 
-  //=====================================================================================
-  // Wiring
-  //=====================================================================================
+  // --- Pointer Event Listeners -----------------------------------------------
 
   watchPostEffect(() => {
     const el = anchorDomEl.value;
@@ -251,6 +249,7 @@ export function useHover(context: FloatingContext, options: UseHoverOptions = {}
     clearPolygon();
   });
 }
+
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
@@ -355,10 +354,6 @@ export interface UseHoverOptions {
    * @returns true if the pointer leave should be ignored
    */
   ignorePointerLeave?: (target: EventTarget | null) => boolean;
-}
-
-interface UseDelayedOpenOptions {
-  delay: MaybeRefOrGetter<number | { open?: number; close?: number }>;
 }
 
 export type { SafePolygonOptions } from "./polygon";

@@ -62,9 +62,7 @@ export function useClientPoint(
   const isEnabled = computed(() => toValue(enabledOption));
   const trackingAreaEl = computed(() => trackingAreaElOption?.value ?? getDefaultTrackingArea());
 
-  //=====================================================================================
-  // Session State
-  //=====================================================================================
+  // --- Session State ---------------------------------------------------------
 
   function clearTrackingSession(): void {
     trackingStrategy.onClose();
@@ -88,9 +86,7 @@ export function useClientPoint(
     { immediate: true },
   );
 
-  //=====================================================================================
-  // Wiring
-  //=====================================================================================
+  // --- Virtual Anchor & Pointer Tracking -------------------------------------
 
   watchEffect(() => {
     if (!isEnabled.value) {
@@ -156,13 +152,30 @@ export function useClientPoint(
 // 📌 Helpers
 //=======================================================================================
 
-const getDefaultTrackingArea = (): HTMLElement | null => {
+function getDefaultTrackingArea(): HTMLElement | null {
   return getDocument()?.documentElement ?? null;
-};
+}
 
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Minimal floating context shape required by `useClientPoint()`.
+ */
+export interface UseClientPointContext {
+  refs: {
+    anchorEl: Ref<AnchorElement>;
+  };
+  state: FloatingContext["state"];
+}
+
+/**
+ * Coordinates returned by `useClientPoint()`.
+ */
+export interface UseClientPointReturn {
+  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
+}
 
 /**
  * Options for pointer-driven virtual anchor tracking.
@@ -204,23 +217,6 @@ export interface UseClientPointOptions {
    * Chooses how the pointer position behaves after the floating element opens.
    */
   trackingMode?: TrackingMode;
-}
-
-/**
- * Coordinates returned by `useClientPoint()`.
- */
-export interface UseClientPointReturn {
-  coordinates: Readonly<Ref<{ x: number | null; y: number | null }>>;
-}
-
-/**
- * Minimal floating context shape required by `useClientPoint()`.
- */
-export interface UseClientPointContext {
-  refs: {
-    anchorEl: Ref<AnchorElement>;
-  };
-  state: FloatingContext["state"];
 }
 
 export type { Coordinates, TrackingMode } from "./types";

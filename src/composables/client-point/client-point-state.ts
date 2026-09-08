@@ -1,11 +1,11 @@
 import { computed, type MaybeRefOrGetter, type Ref, ref, toValue } from "vue";
 import type { Coordinates } from "./types";
 
+const DEFAULT_COORDINATES = { x: null, y: null };
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
-
-const DEFAULT_COORDINATES = { x: null, y: null };
 
 /**
  * Creates the coordinate state used by client-point virtual anchors.

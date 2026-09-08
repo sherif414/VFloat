@@ -62,7 +62,7 @@ export function useRtl(target?: UseRtlTarget, options: UseRtlOptions = {}): Comp
 /**
  * Fast-path check for RTL using DOM attributes.
  */
-export function isRtlElement(element: Element | null, doc: Document): boolean {
+function isRtlElement(element: Element | null, doc: Document): boolean {
   // 1. Element-level closest [dir] check (O(depth) attribute lookup, zero layout thrashing)
   if (element && typeof element.closest === "function") {
     const dirElement = element.closest("[dir]");

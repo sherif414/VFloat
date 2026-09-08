@@ -1,6 +1,19 @@
 import { getWindow } from "@/shared/env";
 import type { VirtualElement } from "@/types";
 
+const NON_TYPEABLE_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "hidden",
+  "image",
+  "radio",
+  "range",
+  "reset",
+  "submit",
+]);
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -56,19 +69,6 @@ export function isMouseLikePointerType(pointerType: string | undefined, strict?:
   const isMouse = pointerType === "mouse";
   return strict ? isMouse : isMouse || pointerType === "pen";
 }
-
-const NON_TYPEABLE_INPUT_TYPES = new Set([
-  "button",
-  "checkbox",
-  "color",
-  "file",
-  "hidden",
-  "image",
-  "radio",
-  "range",
-  "reset",
-  "submit",
-]);
 
 /**
  * Returns true when text input handling should be left to the browser.

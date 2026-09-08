@@ -1,7 +1,3 @@
-//=======================================================================================
-// 📌 Environment Flags & Accessors
-//=======================================================================================
-
 /**
  * Indicates whether execution is running in a client (browser) environment with DOM APIs.
  */

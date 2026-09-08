@@ -1,10 +1,6 @@
 import { isHTMLElement } from "@/shared/dom";
 import { getWindow } from "@/shared/env";
 
-//=======================================================================================
-// 📌 Constants & Selectors
-//=======================================================================================
-
 const CANDIDATE_SELECTOR = [
   "a[href]",
   "button:not(:disabled)",

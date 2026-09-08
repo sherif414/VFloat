@@ -9,6 +9,13 @@ import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import { useEventListener } from "@/shared/use-event-listener";
 
+/**
+ * Delay in milliseconds for checking active element after blur event.
+ * Using 0ms ensures check happens in next event loop tick, which is more
+ * reliable than relatedTarget for Shadow DOM and programmatic focus changes.
+ */
+const BLUR_CHECK_DELAY = 0;
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -63,7 +70,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     blurTimeoutId = undefined;
   }
 
-  // --- Window Event Listeners for Edge Cases ---
+  // --- Window Focus Coordination --------------------------------------------
 
   // 1. Blocks the floating element from opening when a user switches back to a
   //    tab where the reference element was focused but the popover was closed.
@@ -104,7 +111,8 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     }),
   );
 
-  // --- Element Event Handlers ---
+  // --- Focus & Blur Handlers -------------------------------------------------
+
   function onFocus(event: FocusEvent): void {
     if (!isEnabled.value) return;
 
@@ -193,7 +201,8 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
     ),
   );
 
-  // --- Attach Listeners to the Anchor Element ---
+  // --- Anchor Event Listeners ------------------------------------------------
+
   registerCleanup(
     watchPostEffect(() => {
       if (!isEnabled.value) return;
@@ -231,17 +240,6 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 }
 
 //=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
-/**
- * Delay in milliseconds for checking active element after blur event.
- * Using 0ms ensures check happens in next event loop tick, which is more
- * reliable than relatedTarget for Shadow DOM and programmatic focus changes.
- */
-const BLUR_CHECK_DELAY = 0;
-
-//=======================================================================================
 // 📌 Types
 //=======================================================================================
 
@@ -257,6 +255,17 @@ export interface UseFocusContext {
    * The open state and close handler for the floating context.
    */
   state: FloatingContext["state"];
+}
+
+/**
+ * Cleanup handle returned by `useFocus`.
+ */
+export interface UseFocusReturn {
+  /**
+   * Cleanup function that removes all event listeners and clears pending timeouts.
+   * Useful for manual cleanup in testing scenarios.
+   */
+  cleanup: () => void;
 }
 
 /**
@@ -282,15 +291,4 @@ export interface UseFocusOptions {
    * @returns true if the focus out should be ignored
    */
   ignoreFocusOut?: (target: EventTarget | null) => boolean;
-}
-
-/**
- * Cleanup handle returned by `useFocus`.
- */
-export interface UseFocusReturn {
-  /**
-   * Cleanup function that removes all event listeners and clears pending timeouts.
-   * Useful for manual cleanup in testing scenarios.
-   */
-  cleanup: () => void;
 }

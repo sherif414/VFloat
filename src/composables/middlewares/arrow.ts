@@ -25,6 +25,10 @@ export function arrow(options: ArrowMiddlewareOptions): Middleware {
   };
 }
 
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
 /**
  * Configures the arrow middleware used to position an inner element against the anchor.
  */
