@@ -2,8 +2,8 @@ import type { Middleware, Placement } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
-import { useArrow, useFloatingContext, usePosition } from "@/composables";
-import { floatingInternals } from "@/composables/floating-context/use-floating-context";
+import { useArrow, useFloatingNode, usePosition } from "@/composables";
+import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -75,11 +75,11 @@ describe("usePosition", () => {
 
   it("computes position from context refs without mutating open state", async () => {
     let position!: ReturnType<typeof usePosition>;
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
     const open = ref(true);
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         open,
@@ -104,7 +104,7 @@ describe("usePosition", () => {
     let position!: ReturnType<typeof usePosition>;
 
     scope?.run(() => {
-      const context = useFloatingContext({
+      const context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
@@ -123,10 +123,10 @@ describe("usePosition", () => {
   });
 
   it("creates built-in middleware from declarative options", () => {
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
@@ -150,10 +150,10 @@ describe("usePosition", () => {
 
   it("appends custom middleware after declarative middleware", () => {
     const middleware = createMiddleware("custom", { ok: true });
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
@@ -178,7 +178,7 @@ describe("usePosition", () => {
     let position!: ReturnType<typeof usePosition>;
 
     scope?.run(() => {
-      const context = useFloatingContext({
+      const context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         open,
@@ -198,10 +198,10 @@ describe("usePosition", () => {
 
   it("registers arrow middleware through positioning", () => {
     const arrowEl = ref(createElement("div"));
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         arrowEl,
@@ -220,10 +220,10 @@ describe("usePosition", () => {
 
   it("stores placement and middlewareData in floatingInternals", async () => {
     let position!: ReturnType<typeof usePosition>;
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });

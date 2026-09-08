@@ -9,8 +9,8 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { isHTMLElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
@@ -41,7 +41,7 @@ import {
  *
  * @example
  * ```ts
- * const context = useFloatingContext({ anchorEl, floatingEl });
+ * const context = useFloatingNode({ anchorEl, floatingEl });
  * useFocusManager(context, {
  *   modal: true,
  *   returnFocus: true,
@@ -563,11 +563,11 @@ export interface UseFocusManagerContext {
   /**
    * Floating elements refs.
    */
-  refs: FloatingContext["refs"];
+  refs: FloatingNode["refs"];
   /**
    * Floating open state and setter.
    */
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 /**

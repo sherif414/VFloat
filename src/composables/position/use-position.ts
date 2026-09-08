@@ -28,8 +28,8 @@ import {
   toValue,
   watch,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingInternals } from "@/composables/floating-context/use-floating-context";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
 import { isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 
@@ -38,10 +38,10 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
 //=======================================================================================
 
 /**
- * Adds JavaScript positioning to a floating context.
+ * Adds JavaScript positioning to a floating node.
  */
 export function usePosition(
-  context: FloatingContext,
+  context: FloatingNode,
   options: UsePositionOptions = {},
 ): FloatingPosition {
   const {

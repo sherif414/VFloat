@@ -22,7 +22,7 @@ describe("Public API Surface", () => {
       "useClientPoint",
       "useCollection",
       "useEscapeKey",
-      "useFloatingContext",
+      "useFloatingNode",
       "useFocus",
       "useFocusManager",
       "useHover",

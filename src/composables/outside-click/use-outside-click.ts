@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
 import { getDocument } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -11,14 +11,14 @@ import { useEventListener } from "@/shared/use-event-listener";
 //=======================================================================================
 
 /**
- * Closes a floating context when pointer input lands outside its floating family.
+ * Closes a floating node when pointer input lands outside its floating family.
  *
- * @param context - The floating context with refs and open state.
+ * @param context - The floating node with refs and open state.
  * @param options - Configuration options for outside-click dismissal.
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingContext(...)
+ * const context = useFloatingNode(...)
  * useOutsideClick(context)
  * ```
  *
@@ -146,13 +146,13 @@ export function useOutsideClick(
  */
 export interface UseOutsideClickContext {
   /**
-   * The reactive refs exposed by the floating context.
+   * The reactive refs exposed by the floating node.
    */
-  refs: FloatingContext["refs"];
+  refs: FloatingNode["refs"];
   /**
-   * The reactive state and state mutators for the floating context.
+   * The reactive state and state mutators for the floating node.
    */
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 /**

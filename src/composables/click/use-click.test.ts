@@ -6,7 +6,7 @@ import {
   type UseClickContext,
   type UseClickOptions,
   useClick,
-  useFloatingContext,
+  useFloatingNode,
   useHover,
 } from "@/composables";
 
@@ -372,9 +372,9 @@ describe("useClick", () => {
       const parentScope = effectScope();
       scope = parentScope;
 
-      let floatingContext!: ReturnType<typeof useFloatingContext>;
+      let floatingContext!: ReturnType<typeof useFloatingNode>;
       parentScope.run(() => {
-        floatingContext = useFloatingContext({
+        floatingContext = useFloatingNode({
           anchorEl: ref(anchorEl),
           floatingEl: ref(floatingEl),
         });
@@ -417,9 +417,9 @@ describe("useClick", () => {
       const parentScope = effectScope();
       scope = parentScope;
 
-      let floatingContext!: ReturnType<typeof useFloatingContext>;
+      let floatingContext!: ReturnType<typeof useFloatingNode>;
       parentScope.run(() => {
-        floatingContext = useFloatingContext({
+        floatingContext = useFloatingNode({
           anchorEl: ref(anchorEl),
           floatingEl: ref(floatingEl),
         });

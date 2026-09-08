@@ -30,15 +30,15 @@ export type { UseEscapeKeyContext, UseEscapeKeyOptions } from "./escape-key/use-
 export { useEscapeKey } from "./escape-key/use-escape-key";
 export type {
   AnchorElement,
-  FloatingContext,
-  FloatingContextId,
+  FloatingNode,
+  FloatingNodeId,
   FloatingElement,
   FloatingRefs,
   FloatingState,
-  UseFloatingContextOptions,
-} from "./floating-context";
-// Floating Context
-export { useFloatingContext } from "./floating-context";
+  UseFloatingNodeOptions,
+} from "./floating-tree";
+// Floating Node
+export { useFloatingNode } from "./floating-tree";
 export type { UseFocusContext, UseFocusOptions } from "./focus/use-focus";
 // Focus
 export { useFocus } from "./focus/use-focus";

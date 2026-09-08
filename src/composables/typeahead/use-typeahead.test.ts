@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
-import { useCollection, useFloatingContext, useTypeahead } from "@/composables";
+import { useCollection, useFloatingNode, useTypeahead } from "@/composables";
 
 const trackedElements: HTMLElement[] = [];
 
@@ -82,7 +82,7 @@ describe("useTypeahead", () => {
     let collection: ReturnType<typeof useCollection> | undefined;
 
     scope.run(() => {
-      const context = useFloatingContext({
+      const context = useFloatingNode({
         anchorEl: anchorRef,
         floatingEl: floatingRef,
         open: openRef,
@@ -127,7 +127,7 @@ describe("useTypeahead", () => {
     });
 
     return resultContext as {
-      context: ReturnType<typeof useFloatingContext>;
+      context: ReturnType<typeof useFloatingNode>;
       typeahead: ReturnType<typeof useTypeahead>;
       collection?: ReturnType<typeof useCollection>;
       anchorEl: HTMLButtonElement;
@@ -483,7 +483,7 @@ describe("useTypeahead", () => {
           contextElement: contextEl,
           getBoundingClientRect: () => contextEl.getBoundingClientRect(),
         };
-        const context = useFloatingContext({
+        const context = useFloatingNode({
           anchorEl: ref(virtualAnchor),
           floatingEl: ref(floatingEl),
           open: ref(true),

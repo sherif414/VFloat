@@ -2,9 +2,9 @@ import type { MiddlewareData, Placement } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ref, ShallowRef } from "vue";
 import { computed, effectScope, nextTick, ref, shallowRef } from "vue";
-import type { AnchorElement, FloatingContext, FloatingElement } from "@/composables";
-import { useArrow, useFloatingContext, usePosition } from "@/composables";
-import { floatingInternals } from "@/composables/floating-context/use-floating-context";
+import type { AnchorElement, FloatingNode, FloatingElement } from "@/composables";
+import { useArrow, useFloatingNode, usePosition } from "@/composables";
+import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -48,7 +48,7 @@ interface MutableInternalsStub {
 }
 
 function setupPositionInternals(
-  context: FloatingContext,
+  context: FloatingNode,
   overrides: { placement?: Placement; middlewareData?: MiddlewareData } = {},
 ): MutableInternalsStub {
   const middlewareData = shallowRef<MiddlewareData>(overrides.middlewareData ?? {});
@@ -88,14 +88,14 @@ function setupPositionInternals(
 describe("useArrow", () => {
   let anchorEl: HTMLElement;
   let floatingEl: HTMLElement;
-  let context: FloatingContext;
+  let context: FloatingNode;
 
   beforeEach(() => {
     scope = effectScope();
     anchorEl = createElement("button");
     floatingEl = createElement("div");
     scope.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
@@ -115,7 +115,7 @@ describe("useArrow", () => {
       const arrowEl = context.refs.arrowEl;
       arrowEl.value = createElement("div");
       scope?.run(() => {
-        context = useFloatingContext({
+        context = useFloatingNode({
           anchorEl: ref<AnchorElement>(anchorEl),
           floatingEl: ref<FloatingElement>(floatingEl),
           arrowEl,

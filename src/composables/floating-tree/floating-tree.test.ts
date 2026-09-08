@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
-import { FloatingTree, FloatingTreeNode } from "./floating-context-tree";
-import type { FloatingContext } from "./use-floating-context";
+import { FloatingTree, FloatingTreeNode } from "./floating-tree";
+import type { FloatingNode } from "./use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -21,8 +21,8 @@ function clearTrackedElements() {
 }
 
 function createMockContext(
-  overrides: Partial<FloatingContext> & { open?: boolean } = {},
-): FloatingContext {
+  overrides: Partial<FloatingNode> & { open?: boolean } = {},
+): FloatingNode {
   const { open: initialOpen = false, ...restOverrides } = overrides;
   const id = Symbol("mock-context");
   const open = ref(initialOpen);

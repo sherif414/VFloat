@@ -1,7 +1,7 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { getDocument } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -14,12 +14,12 @@ import { useEventListener } from "@/shared/use-event-listener";
  *
  * When triggered, it will close the floating element by setting open to false.
  *
- * @param context - The floating context with open state and change handler.
+ * @param context - The floating node with open state and change handler.
  * @param options - {@link UseEscapeKeyOptions}
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingContext(...)
+ * const context = useFloatingNode(...)
  * useEscapeKey(context) // Closes the floating element on escape
  * ```
  *
@@ -94,7 +94,7 @@ export interface UseEscapeKeyContext {
   /**
    * The floating state that should respond to Escape.
    */
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 export interface UseEscapeKeyOptions {

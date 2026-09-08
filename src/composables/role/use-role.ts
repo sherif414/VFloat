@@ -7,7 +7,7 @@ import {
   useId,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { isHTMLElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 
@@ -27,7 +27,7 @@ type ManagedAttribute = {
  * Behavior composables still own interaction. `useRole()` only keeps the semantic
  * contract aligned with the current DOM and open state.
  */
-export function useRole(context: FloatingContext, options: UseRoleOptions = {}): UseRoleReturn {
+export function useRole(context: FloatingNode, options: UseRoleOptions = {}): UseRoleReturn {
   const { open } = context.state;
   const {
     enabled: enabledOption = true,
@@ -164,7 +164,7 @@ export function useRole(context: FloatingContext, options: UseRoleOptions = {}):
 // 📌 Helpers
 //=======================================================================================
 
-function getAnchorEl(anchorEl: FloatingContext["refs"]["anchorEl"]["value"]) {
+function getAnchorEl(anchorEl: FloatingNode["refs"]["anchorEl"]["value"]) {
   if (isHTMLElement(anchorEl)) {
     return anchorEl;
   }

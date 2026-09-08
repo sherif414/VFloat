@@ -13,7 +13,7 @@ describe("SSR Compatibility (Node Environment)", () => {
         const arrowEl = ref<HTMLElement | null>(null);
         const open = ref(false);
 
-        const context = VFloat.useFloatingContext({
+        const context = VFloat.useFloatingNode({
           anchorEl,
           floatingEl,
           arrowEl,
@@ -77,7 +77,7 @@ describe("SSR Compatibility (Node Environment)", () => {
         const floatingEl = ref<HTMLElement | null>(null);
         const open = ref(false);
 
-        const context = VFloat.useFloatingContext({ anchorEl, floatingEl, open });
+        const context = VFloat.useFloatingNode({ anchorEl, floatingEl, open });
         VFloat.useRole(context, { role: "dialog", modal: true });
 
         return () =>
@@ -95,7 +95,7 @@ describe("SSR Compatibility (Node Environment)", () => {
     expect(html1).toBe(html2);
   });
 
-  it("handles nested floating contexts during SSR without crashing", async () => {
+  it("handles nested floating nodes during SSR without crashing", async () => {
     const NestedComponent = defineComponent({
       name: "NestedComponent",
       setup() {
@@ -104,12 +104,12 @@ describe("SSR Compatibility (Node Environment)", () => {
         const childAnchorEl = ref<HTMLElement | null>(null);
         const childFloatingEl = ref<HTMLElement | null>(null);
 
-        const parentContext = VFloat.useFloatingContext({
+        const parentContext = VFloat.useFloatingNode({
           anchorEl: parentAnchorEl,
           floatingEl: parentFloatingEl,
         });
 
-        const childContext = VFloat.useFloatingContext({
+        const childContext = VFloat.useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childFloatingEl,
           parentContext,

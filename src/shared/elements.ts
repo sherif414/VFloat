@@ -1,5 +1,5 @@
 import { isHTMLElement } from "@/shared/dom";
-import type { AnchorElement } from "@/composables/floating-context/use-floating-context";
+import type { AnchorElement } from "@/composables/floating-tree/use-floating-node";
 
 //=======================================================================================
 // 📌 Main

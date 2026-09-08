@@ -6,7 +6,7 @@ import {
   type FloatingElement,
   type UseOutsideClickContext,
   type UseOutsideClickOptions,
-  useFloatingContext,
+  useFloatingNode,
   useOutsideClick,
 } from "@/composables";
 
@@ -199,13 +199,13 @@ describe("useOutsideClick", () => {
 
     scope = effectScope();
     scope.run(() => {
-      const parentContext = useFloatingContext({
+      const parentContext = useFloatingNode({
         anchorEl: ref(anchorEl),
         floatingEl: ref(floatingEl),
         open: parentOpen,
         onOpenChange: onParentOpenChange,
       });
-      useFloatingContext({
+      useFloatingNode({
         anchorEl: ref(childAnchorEl),
         floatingEl: ref(childFloatingEl),
         parentContext,
@@ -234,12 +234,12 @@ describe("useOutsideClick", () => {
 
     scope = effectScope();
     scope.run(() => {
-      const parentContext = useFloatingContext({
+      const parentContext = useFloatingNode({
         anchorEl: ref(anchorEl),
         floatingEl: ref(floatingEl),
         open: parentOpen,
       });
-      const childContext = useFloatingContext({
+      const childContext = useFloatingNode({
         anchorEl: ref(childAnchorEl),
         floatingEl: ref(childFloatingEl),
         parentContext,

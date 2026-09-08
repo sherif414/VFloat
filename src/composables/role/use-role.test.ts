@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables";
-import { useFloatingContext } from "@/composables";
+import { useFloatingNode } from "@/composables";
 import { type UseRoleOptions, type UseRoleReturn, useRole } from "@/composables/role/use-role";
 
 type RoleTestContext = {
   anchorEl: HTMLButtonElement;
-  context: ReturnType<typeof useFloatingContext>;
+  context: ReturnType<typeof useFloatingNode>;
   floatingEl: HTMLDivElement;
   items: HTMLButtonElement[];
   listRef: ReturnType<typeof ref<Array<HTMLElement | null>>>;
@@ -72,7 +72,7 @@ function setupRole(options: UseRoleOptions, initialOpen = false): RoleTestContex
   const openRef = ref(initialOpen);
   const anchorRef = ref<AnchorElement>(anchorEl);
   const floatingRef = ref<FloatingElement>(floatingEl);
-  const context = useFloatingContext({
+  const context = useFloatingNode({
     anchorEl: anchorRef,
     floatingEl: floatingRef,
     open: openRef,
@@ -196,7 +196,7 @@ describe("useRole", () => {
     document.body.appendChild(childFloatingEl);
 
     const childOpen = ref(false);
-    const childContext = useFloatingContext({
+    const childContext = useFloatingNode({
       anchorEl: ref<AnchorElement>(parent.items[1]),
       floatingEl: ref<FloatingElement>(childFloatingEl),
       open: childOpen,

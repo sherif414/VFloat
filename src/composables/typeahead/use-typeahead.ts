@@ -9,7 +9,7 @@ import {
   unref,
   watch,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
@@ -25,7 +25,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  * Captures typing sequences and jumps to matching enabled items in menus, select
  * lists, or dropdowns.
  *
- * @param context - The floating context object containing state and refs.
+ * @param context - The floating node object containing state and refs.
  * @param options - Configuration options for typeahead matching.
  * @returns State and cleanup helpers for typeahead navigation.
  *
@@ -357,13 +357,13 @@ export type TypeaheadFindMatchFn = (
  */
 export interface UseTypeaheadContext {
   /**
-   * The reactive element refs exposed by the floating context.
+   * The reactive element refs exposed by the floating node.
    */
-  refs: FloatingContext["refs"];
+  refs: FloatingNode["refs"];
   /**
-   * The reactive state exposed by the floating context.
+   * The reactive state exposed by the floating node.
    */
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 /**

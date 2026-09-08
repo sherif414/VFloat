@@ -3,16 +3,16 @@ import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { ref, watch } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
-import { floatingTree } from "./floating-context-tree";
+import { floatingTree } from "./floating-tree";
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
 /**
- * Creates the shared floating context used by interaction and positioning composables.
+ * Creates the shared floating node used by interaction and positioning composables.
  */
-export function useFloatingContext(options: UseFloatingContextOptions): FloatingContext {
+export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const {
     anchorEl,
     floatingEl,
@@ -22,7 +22,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
     onOpenChange,
     parentContext,
   } = options;
-  const id = createFloatingContextId();
+  const id = createFloatingNodeId();
   const open = useControllableState({
     value: openOption,
     initialValue: defaultOpen,
@@ -67,7 +67,7 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
 
   const isRoot = !parentContext;
 
-  const context: FloatingContext = {
+  const context: FloatingNode = {
     id,
     refs: {
       anchorEl,
@@ -92,8 +92,8 @@ export function useFloatingContext(options: UseFloatingContextOptions): Floating
 // 📌 Helpers
 //=======================================================================================
 
-function createFloatingContextId(): FloatingContextId {
-  return Symbol("v-float-context");
+function createFloatingNodeId(): FloatingNodeId {
+  return Symbol("v-float-node");
 }
 
 //=======================================================================================
@@ -102,24 +102,24 @@ function createFloatingContextId(): FloatingContextId {
 
 /**
  * Internal registry storing non-public capabilities (middleware registries)
- * attached to floating contexts via WeakMap.
+ * attached to floating nodes via WeakMap.
  *
  * @internal
  */
 export class FloatingInternalsRegistry {
-  private readonly store = new WeakMap<FloatingContextId, FloatingInternals>();
+  private readonly store = new WeakMap<FloatingNodeId, FloatingInternals>();
 
   /**
-   * Reads internal state associated with the floating context identifier.
+   * Reads internal state associated with the floating node identifier.
    */
-  get(id: FloatingContextId): FloatingInternals | undefined {
+  get(id: FloatingNodeId): FloatingInternals | undefined {
     return this.store.get(id);
   }
 
   /**
-   * Attaches internal capabilities onto the floating context identifier.
+   * Attaches internal capabilities onto the floating node identifier.
    */
-  set(id: FloatingContextId, internals: FloatingInternals): void {
+  set(id: FloatingNodeId, internals: FloatingInternals): void {
     this.store.set(id, internals);
   }
 }
@@ -131,7 +131,7 @@ export const floatingInternals = new FloatingInternalsRegistry();
 //=======================================================================================
 
 /**
- * Anchor values accepted by the floating context.
+ * Anchor values accepted by the floating node.
  */
 export type AnchorElement = HTMLElement | VirtualElement | null;
 
@@ -141,12 +141,12 @@ export type AnchorElement = HTMLElement | VirtualElement | null;
 export type FloatingElement = HTMLElement | null;
 
 /**
- * Stable identity for a floating context.
+ * Stable identity for a floating node.
  */
-export type FloatingContextId = symbol;
+export type FloatingNodeId = symbol;
 
 /**
- * Reactive refs owned by the floating context.
+ * Reactive refs owned by the floating node.
  */
 export interface FloatingRefs {
   anchorEl: Ref<AnchorElement>;
@@ -173,22 +173,22 @@ export interface FloatingState {
 }
 
 /**
- * Public floating context shared with companion composables.
+ * Public floating node shared with companion composables.
  */
-export interface FloatingContext {
-  id: FloatingContextId;
+export interface FloatingNode {
+  id: FloatingNodeId;
   refs: FloatingRefs;
   state: FloatingState;
   /**
-   * Whether this is a top-level floating context without a parentContext.
+   * Whether this is a top-level floating node without a parentContext.
    */
   isRoot: boolean;
 }
 
 /**
- * Options for creating a floating context.
+ * Options for creating a floating node.
  */
-export interface UseFloatingContextOptions {
+export interface UseFloatingNodeOptions {
   /**
    * Anchor element or virtual element the floating panel is positioned against.
    */
@@ -220,9 +220,9 @@ export interface UseFloatingContextOptions {
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 
   /**
-   * Optional parent floating context used to coordinate related floating surfaces.
+   * Optional parent floating node used to coordinate related floating surfaces.
    */
-  parentContext?: FloatingContext | null;
+  parentContext?: FloatingNode | null;
 }
 
 /**

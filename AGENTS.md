@@ -23,9 +23,9 @@
 ## Naming Conventions
 
 - Follow existing VFloat naming before borrowing Floating UI terminology. Similarity is fine, but VFloat is not a direct copy.
-- Public composables use `useX` export names with kebab-case filenames. Example: `useFloatingContext` lives in `use-floating-context.ts`.
+- Public composables use `useX` export names with kebab-case filenames. Example: `useFloatingNode` lives in `use-floating-context.ts`.
 - Element refs and variables should use explicit `*El` names. Prefer `anchorEl`, `floatingEl`, and `arrowEl` over generic names like `reference` or `element`.
-- The stable public entrypoint is `useFloatingContext(options)` where `options` contains `refs`, optional `state`, and optional `parentContext`. Preserve that call shape unless a change is explicitly requested.
+- The stable public entrypoint is `useFloatingNode(options)` where `options` contains `refs`, optional `state`, and optional `parentContext`. Preserve that call shape unless a change is explicitly requested.
 - Grouped floating return data uses the `refs` and `state` vocabulary. Positioning is a separate composable (`usePosition`). New API additions should fit into those groups rather than flattening more fields onto the root.
 - Open-change reasons and similar string-literal event names should use kebab-case. Example: `anchor-click`, `outside-pointer`, and `escape-key`.
 - Internal implementation files should use descriptive kebab-case nouns with role-oriented suffixes where helpful, such as `*-controller.ts`, `*-registry.ts`, `*-factory.ts`, `*-strategies.ts`, `*-model.ts`, `*-state.ts`, `*-modality.ts`, `geometry.ts`, `bridge.ts`, and `intent.ts`.
@@ -53,7 +53,7 @@ Use a fixed set of verbs with non-overlapping meanings. Do not invent synonyms.
 | --------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `create`  | Factory that allocates a new object or closure. Always returns something new.                      | `createCleanupRegistry()`, `createBranch()`                                |
 | `get`     | Pure accessor that retrieves an existing value, reference, or internal state.                      | `getFloatingInternals()`, `getElement(idx)`, `getAnchorElement()`          |
-| `find`    | Searches a collection. May return `null`.                                                          | `findDeepestOpenFloatingContext()`, `findNextNavigableIndex()`             |
+| `find`    | Searches a collection. May return `null`.                                                          | `findDeepestOpenFloatingNode()`, `findNextNavigableIndex()`             |
 | `resolve` | Stateless calculation, transformation, or mapping derived purely from inputs without hidden state. | `resolveCollectionSize()`, `resolveKeyIntent()`, `resolveNavigableIndex()` |
 
 Do not use `build` or `make`.
@@ -120,8 +120,8 @@ Only these abbreviations are permitted. Everything else must be spelled out.
 ## Type Conventions
 
 - Public composable companion types use `UseXOptions`, `UseXReturn`, and `UseXContext` when those shapes are exposed. Examples: `UseClickOptions`, `UseArrowReturn`, `UseClickContext`.
-- Shared root and state types use the `Floating*` prefix. Examples: `FloatingContext`, `FloatingRefs`, `FloatingState`, `FloatingPosition`, `FloatingInternals`, and `FloatingMiddlewareRegistry`.
-- Prefer `interface` for object-shaped public contracts and configuration objects. Examples: `UseFloatingContextOptions`, `UseClickContext`, `FloatingPosition`, and `NavigableCollection`.
+- Shared root and state types use the `Floating*` prefix. Examples: `FloatingNode`, `FloatingRefs`, `FloatingState`, `FloatingPosition`, `FloatingInternals`, and `FloatingMiddlewareRegistry`.
+- Prefer `interface` for object-shaped public contracts and configuration objects. Examples: `UseFloatingNodeOptions`, `UseClickContext`, `FloatingPosition`, and `NavigableCollection`.
 - Prefer `type` for unions, function signatures, tuples, and simple aliases. Examples: `OpenChangeReason`, `SafePolygonHandler`, `Point`, `AnchorElement`, `FloatingRole`, and `NavigationIntent`.
 - Domain-specific aliases should keep the domain noun in the type name. Prefer names like `AnchorElement`, `FloatingElement`, `Coordinates`, `PointerEventData`, `AxisConstraint`, and `TrackingMode` over generic aliases.
 - Internal service and protocol types should use explicit role suffixes when applicable, such as `*Controller`, `*Registry`, `*Strategy`, `*Contract`, and `*Registration`. Example: `TrackingStrategy`, `VirtualElementFactoryContract`.

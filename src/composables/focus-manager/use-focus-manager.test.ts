@@ -5,7 +5,7 @@ import {
   type UseFocusManagerContext,
   type UseFocusManagerOptions,
   type UseFocusManagerReturn,
-  useFloatingContext,
+  useFloatingNode,
   useFocusManager,
 } from "@/composables";
 
@@ -474,7 +474,7 @@ describe("useFocusManager", () => {
     });
   });
 
-  describe("nested floating contexts", () => {
+  describe("nested floating nodes", () => {
     it("coordinates parent and child contexts without premature closing", async () => {
       const parentAnchorEl = trackElement(document.createElement("button"));
       const parentFloatingEl = trackElement(document.createElement("div"));
@@ -498,12 +498,12 @@ describe("useFocusManager", () => {
       let result!: UseFocusManagerReturn;
 
       scope.run(() => {
-        const parentContext = useFloatingContext({
+        const parentContext = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        useFloatingContext({
+        useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
           parentContext,

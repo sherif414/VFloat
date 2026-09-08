@@ -4,7 +4,7 @@ import type { AnchorElement, FloatingElement } from "@/composables";
 import {
   type UseFocusContext,
   type UseFocusOptions,
-  useFloatingContext,
+  useFloatingNode,
   useFocus,
 } from "@/composables";
 
@@ -316,13 +316,13 @@ describe("useFocus", () => {
       activeScopes.push(scope);
 
       scope.run(() => {
-        const parentContext = useFloatingContext({
+        const parentContext = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
           onOpenChange: parentChanges,
         });
-        useFloatingContext({
+        useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
           parentContext,
@@ -357,12 +357,12 @@ describe("useFocus", () => {
       activeScopes.push(scope);
 
       scope.run(() => {
-        const parentContext = useFloatingContext({
+        const parentContext = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        const childContext = useFloatingContext({
+        const childContext = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
           parentContext,

@@ -1,10 +1,10 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
 import type {
   AnchorElement,
-  FloatingContextId,
+  FloatingNodeId,
   FloatingElement,
-} from "@/composables/floating-context";
-import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+} from "@/composables/floating-tree";
+import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -19,7 +19,7 @@ import { useRtl } from "./rtl";
 
 /**
  * Enables keyboard roving focus navigation across composite widgets (menus, tabs, toolbars, trees, listboxes)
- * within a floating context.
+ * within a floating node.
  *
  * Automatically resolves `containerEl` from `context.refs.floatingEl`, integrates with `FloatingTree`
  * to protect active focus across teleported submenus, automatically closes sibling submenus during
@@ -34,7 +34,7 @@ import { useRtl } from "./rtl";
  *
  * @example Floating Menu
  * ```ts
- * const context = useFloatingContext({ anchorEl, floatingEl });
+ * const context = useFloatingNode({ anchorEl, floatingEl });
  * const elementsList = ref<Array<HTMLElement | null>>([]);
  *
  * const { activeIndex, next, prev } = useRovingFocus(context, {
@@ -45,7 +45,7 @@ import { useRtl } from "./rtl";
  *
  * @example Submenu Navigation (Enter / Exit)
  * ```ts
- * const subContext = useFloatingContext({
+ * const subContext = useFloatingNode({
  *   anchorEl: triggerEl,
  *   floatingEl: subMenuEl,
  *   parentContext: rootContext,
@@ -518,7 +518,7 @@ function resolveEntryIndex(
  * Floating context required by `useRovingFocus`.
  */
 export interface UseRovingFocusContext {
-  id: FloatingContextId;
+  id: FloatingNodeId;
   refs: {
     floatingEl: Ref<FloatingElement>;
     anchorEl?: Ref<AnchorElement>;

@@ -1,10 +1,10 @@
 import type { Padding } from "@floating-ui/dom";
 import { type ComputedRef, computed, getCurrentInstance, onMounted, toValue } from "vue";
-import type { FloatingContext, FloatingContextId } from "@/composables/floating-context";
+import type { FloatingNode, FloatingNodeId } from "@/composables/floating-tree";
 import {
   floatingInternals,
   type FloatingInternals,
-} from "@/composables/floating-context/use-floating-context";
+} from "@/composables/floating-tree/use-floating-node";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { arrow } from "../middlewares";
 
@@ -13,12 +13,12 @@ import { arrow } from "../middlewares";
 //=======================================================================================
 
 /**
- * Connects an arrow element to the current floating context and exposes computed coordinates and inline styles.
+ * Connects an arrow element to the current floating node and exposes computed coordinates and inline styles.
  *
  * This composable handles arrow registration inside the floating position's middleware registry
  * and returns the reactive styles and offsets needed to render a floating arrow pointing to the anchor.
  *
- * @param context - The shared floating context.
+ * @param context - The shared floating node.
  * @param options - Configuration options for arrow positioning.
  * @returns An object containing computed coordinates and styles for the arrow.
  *
@@ -26,13 +26,13 @@ import { arrow } from "../middlewares";
  * ```vue
  * <script setup lang="ts">
  * import { ref } from "vue";
- * import { useArrow, useFloatingContext, usePosition } from "v-float";
+ * import { useArrow, useFloatingNode, usePosition } from "v-float";
  *
  * const anchorEl = ref<HTMLElement | null>(null);
  * const floatingEl = ref<HTMLElement | null>(null);
  * const arrowEl = ref<HTMLElement | null>(null);
  *
- * const context = useFloatingContext({
+ * const context = useFloatingNode({
  *   anchorEl,
  *   floatingEl,
  *   arrowEl,
@@ -149,14 +149,14 @@ export function useArrow(context: UseArrowContext, options: UseArrowOptions = {}
  */
 export interface UseArrowContext {
   /**
-   * The unique identifier for the floating context.
+   * The unique identifier for the floating node.
    */
-  id: FloatingContextId;
+  id: FloatingNodeId;
 
   /**
-   * The reactive refs exposed by the floating context.
+   * The reactive refs exposed by the floating node.
    */
-  refs: FloatingContext["refs"];
+  refs: FloatingNode["refs"];
 }
 
 /**

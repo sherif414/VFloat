@@ -6,7 +6,7 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
+import type { FloatingNode } from "@/composables/floating-tree";
 import {
   isButtonTarget,
   isHTMLElement,
@@ -28,12 +28,12 @@ type PointerType = "mouse" | "touch" | "pen";
  *
  * This composable provides trigger handlers for opening/toggling floating elements.
  *
- * @param context - The floating context with open state and change handler.
+ * @param context - The floating node with open state and change handler.
  * @param options - Configuration options for click behavior.
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingContext(...)
+ * const context = useFloatingNode(...)
  * useClick(context)
  * ```
  */
@@ -234,13 +234,13 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
  */
 export interface UseClickContext {
   /**
-   * The reactive refs exposed by the floating context.
+   * The reactive refs exposed by the floating node.
    */
-  refs: FloatingContext["refs"];
+  refs: FloatingNode["refs"];
   /**
-   * The reactive state and state mutators for the floating context.
+   * The reactive state and state mutators for the floating node.
    */
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 /**

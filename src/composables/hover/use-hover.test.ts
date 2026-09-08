@@ -1,8 +1,8 @@
 import type { Strategy } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref } from "vue";
-import type { FloatingContext } from "@/composables";
-import { type UseHoverOptions, useFloatingContext, useHover } from "@/composables";
+import type { FloatingNode } from "@/composables";
+import { type UseHoverOptions, useFloatingNode, useHover } from "@/composables";
 
 const trackedElements: HTMLElement[] = [];
 const activeScopes: ReturnType<typeof effectScope>[] = [];
@@ -50,7 +50,7 @@ function makeDOMRect(x: number, y: number, w: number, h: number): DOMRect {
 type HoverTestContext = {
   anchorEl: HTMLDivElement;
   floatingEl: HTMLDivElement;
-  context: FloatingContext;
+  context: FloatingNode;
   scope: ReturnType<typeof effectScope>;
   setOpen: ReturnType<typeof vi.fn>;
 };
@@ -94,7 +94,7 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
         left: "0px",
       })),
     },
-  } as unknown as FloatingContext;
+  } as unknown as FloatingNode;
 
   const scope = effectScope();
   activeScopes.push(scope);
@@ -296,7 +296,7 @@ describe("useHover", () => {
 
       const scope = effectScope();
       activeScopes.push(scope);
-      let rootContext!: FloatingContext;
+      let rootContext!: FloatingNode;
       scope.run(() => {
         rootContext = {
           refs: {
@@ -322,7 +322,7 @@ describe("useHover", () => {
               left: "0px",
             })),
           },
-        } as unknown as FloatingContext;
+        } as unknown as FloatingNode;
 
         useHover(rootContext, {
           ignorePointerLeave: (target) => target === ignoredEl,
@@ -365,15 +365,15 @@ describe("useHover", () => {
       const childOpen = ref(true);
       const scope = effectScope();
       activeScopes.push(scope);
-      let parentContext!: FloatingContext;
+      let parentContext!: FloatingNode;
 
       scope.run(() => {
-        parentContext = useFloatingContext({
+        parentContext = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        useFloatingContext({
+        useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
           parentContext,
@@ -413,15 +413,15 @@ describe("useHover", () => {
       const childOpen = ref(false);
       const scope = effectScope();
       activeScopes.push(scope);
-      let childContext!: FloatingContext;
+      let childContext!: FloatingNode;
 
       scope.run(() => {
-        const parentContext = useFloatingContext({
+        const parentContext = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        childContext = useFloatingContext({
+        childContext = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
           parentContext,

@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, type Ref, toValue, watch, watchEffect } from "vue";
-import type { AnchorElement, FloatingContext } from "@/composables/floating-context";
+import type { AnchorElement, FloatingNode } from "@/composables/floating-tree";
 import { getDocument } from "@/shared/env";
 import { createClientPointState } from "./client-point-state";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
@@ -14,9 +14,9 @@ import { createVirtualElement } from "./virtual-element-factory";
  * Replaces the anchor element with a virtual element that follows pointer coordinates.
  *
  * This composable listens to pointer interactions on a target element and updates
- * the floating context's anchor reference to a dynamic virtual element.
+ * the floating node's anchor reference to a dynamic virtual element.
  *
- * @param context - The minimal floating context required to manage the anchor element ref and open state.
+ * @param context - The minimal floating node required to manage the anchor element ref and open state.
  * @param options - Configuration options for pointer-driven virtual anchor tracking.
  * @returns An object containing the readonly pointer coordinates.
  *
@@ -24,12 +24,12 @@ import { createVirtualElement } from "./virtual-element-factory";
  * ```vue
  * <script setup lang="ts">
  * import { ref } from "vue";
- * import { useClientPoint, useFloatingContext, usePosition } from "v-float";
+ * import { useClientPoint, useFloatingNode, usePosition } from "v-float";
  *
  * const trackingAreaEl = ref<HTMLElement | null>(null);
  * const anchorEl = ref<HTMLElement | null>(null);
  * const floatingEl = ref<HTMLElement | null>(null);
- * const context = useFloatingContext({ anchorEl, floatingEl });
+ * const context = useFloatingNode({ anchorEl, floatingEl });
  * const { styles } = usePosition(context);
  *
  * useClientPoint(context, {
@@ -161,13 +161,13 @@ function getDefaultTrackingArea(): HTMLElement | null {
 //=======================================================================================
 
 /**
- * Minimal floating context shape required by `useClientPoint()`.
+ * Minimal floating node shape required by `useClientPoint()`.
  */
 export interface UseClientPointContext {
   refs: {
     anchorEl: Ref<AnchorElement>;
   };
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 /**

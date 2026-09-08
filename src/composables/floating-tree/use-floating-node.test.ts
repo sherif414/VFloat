@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref, watchEffect } from "vue";
-import { floatingTree } from "./floating-context-tree";
+import { floatingTree } from "./floating-tree";
 import {
   FloatingInternalsRegistry,
   floatingInternals,
-  useFloatingContext,
-} from "./use-floating-context";
+  useFloatingNode,
+} from "./use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -24,7 +24,7 @@ function clearTrackedElements() {
   trackedElements.length = 0;
 }
 
-describe("useFloatingContext", () => {
+describe("useFloatingNode", () => {
   beforeEach(() => {
     scope = effectScope();
   });
@@ -38,9 +38,9 @@ describe("useFloatingContext", () => {
   });
 
   it("uses defaultOpen for uncontrolled state", () => {
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         defaultOpen: true,
@@ -51,9 +51,9 @@ describe("useFloatingContext", () => {
   });
 
   it("prefers controlled open state over defaultOpen", () => {
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: ref(false),
@@ -68,10 +68,10 @@ describe("useFloatingContext", () => {
     const open = ref(false);
     const onOpenChange = vi.fn();
     const event = new KeyboardEvent("keydown");
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open,
@@ -87,10 +87,10 @@ describe("useFloatingContext", () => {
 
   it("falls back to programmatic reasons and ignores duplicate updates", () => {
     const onOpenChange = vi.fn();
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         onOpenChange,
@@ -106,11 +106,11 @@ describe("useFloatingContext", () => {
   });
 
   it("tracks lastOpenReason and lastOpenEvent when opened and resets on close", async () => {
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
     const dummyEvent = new MouseEvent("click");
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
@@ -140,10 +140,10 @@ describe("useFloatingContext", () => {
 
   it("resets lastOpenReason and lastOpenEvent when controlled open ref changes to false", async () => {
     const openRef = ref(true);
-    let context!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: openRef,
@@ -161,15 +161,15 @@ describe("useFloatingContext", () => {
   });
 
   it("assigns each context a stable symbol id", () => {
-    let context!: ReturnType<typeof useFloatingContext>;
-    let otherContext!: ReturnType<typeof useFloatingContext>;
+    let context!: ReturnType<typeof useFloatingNode>;
+    let otherContext!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingContext({
+      context = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
-      otherContext = useFloatingContext({
+      otherContext = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
@@ -185,23 +185,23 @@ describe("useFloatingContext", () => {
     const rootOpen = ref(true);
     const childOpen = ref(true);
     const grandchildOpen = ref(true);
-    let root!: ReturnType<typeof useFloatingContext>;
+    let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      root = useFloatingContext({
+      root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: rootOpen,
         onOpenChange: () => calls.push("root"),
       });
-      const child = useFloatingContext({
+      const child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         parentContext: root,
         open: childOpen,
         onOpenChange: () => calls.push("child"),
       });
-      useFloatingContext({
+      useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         parentContext: child,
@@ -221,15 +221,15 @@ describe("useFloatingContext", () => {
   it("does not open ancestors when opening a child context", () => {
     const rootOpen = ref(false);
     const childOpen = ref(false);
-    let child!: ReturnType<typeof useFloatingContext>;
+    let child!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      const root = useFloatingContext({
+      const root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: rootOpen,
       });
-      child = useFloatingContext({
+      child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         parentContext: root,
@@ -248,12 +248,12 @@ describe("useFloatingContext", () => {
     const childOpen = ref(true);
 
     scope?.run(() => {
-      const root = useFloatingContext({
+      const root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: rootOpen,
       });
-      useFloatingContext({
+      useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         parentContext: root,
@@ -269,10 +269,10 @@ describe("useFloatingContext", () => {
   it("unregisters child context links on scope disposal", () => {
     const rootOpen = ref(true);
     const childOpen = ref(true);
-    let root!: ReturnType<typeof useFloatingContext>;
+    let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      root = useFloatingContext({
+      root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: rootOpen,
@@ -281,7 +281,7 @@ describe("useFloatingContext", () => {
 
     const localScope = effectScope();
     localScope.run(() => {
-      useFloatingContext({
+      useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         parentContext: root,
@@ -299,10 +299,10 @@ describe("useFloatingContext", () => {
   it("unregisters child context links from family helpers on scope disposal", () => {
     const rootFloatingEl = trackElement(document.createElement("div"));
     const childFloatingEl = trackElement(document.createElement("div"));
-    let root!: ReturnType<typeof useFloatingContext>;
+    let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      root = useFloatingContext({
+      root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(rootFloatingEl),
       });
@@ -310,7 +310,7 @@ describe("useFloatingContext", () => {
 
     const localScope = effectScope();
     localScope.run(() => {
-      useFloatingContext({
+      useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(childFloatingEl),
         parentContext: root,
@@ -327,10 +327,10 @@ describe("useFloatingContext", () => {
   it("updates descendant floating element helpers when child contexts mount later", async () => {
     const rootFloatingEl = trackElement(document.createElement("div"));
     const childFloatingEl = trackElement(document.createElement("div"));
-    let root!: ReturnType<typeof useFloatingContext>;
+    let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      root = useFloatingContext({
+      root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(rootFloatingEl),
       });
@@ -344,7 +344,7 @@ describe("useFloatingContext", () => {
         lengths.push(floatingTree.getFloatingElements(root).length);
       });
 
-      useFloatingContext({
+      useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(childFloatingEl),
         parentContext: root,
@@ -358,15 +358,15 @@ describe("useFloatingContext", () => {
   });
 
   it("sets isRoot to true for root contexts and false for nested child contexts", () => {
-    let root!: ReturnType<typeof useFloatingContext>;
-    let child!: ReturnType<typeof useFloatingContext>;
+    let root!: ReturnType<typeof useFloatingNode>;
+    let child!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      root = useFloatingContext({
+      root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
-      child = useFloatingContext({
+      child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         parentContext: root,

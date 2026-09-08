@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
@@ -25,12 +25,12 @@ const BLUR_CHECK_DELAY = 0;
  *
  * Keyboard-only interaction hook. Compose with `useClick`, `useHover`, `useEscapeKey` for a complete UX.
  *
- * @param context - The floating context with open state and change handler
+ * @param context - The floating node with open state and change handler
  * @param options - Configuration options
  *
  * @example
  * ```ts
- * const ctx = useFloatingContext(...)
+ * const ctx = useFloatingNode(...)
  * useFocus(ctx)
  * ```
  */
@@ -250,11 +250,11 @@ export interface UseFocusContext {
   /**
    * The floating refs used to attach focus listeners.
    */
-  refs: FloatingContext["refs"];
+  refs: FloatingNode["refs"];
   /**
-   * The open state and close handler for the floating context.
+   * The open state and close handler for the floating node.
    */
-  state: FloatingContext["state"];
+  state: FloatingNode["state"];
 }
 
 /**

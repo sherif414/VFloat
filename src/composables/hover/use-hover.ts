@@ -1,7 +1,7 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingContext } from "@/composables/floating-context";
-import { floatingTree } from "@/composables/floating-context/floating-context-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
@@ -19,19 +19,19 @@ interface UseDelayedOpenOptions {
  * with enhanced behaviors like delayed open/close, rest detection, and custom
  * exit handling.
  *
- * @param context - The floating context with open state and change handler
+ * @param context - The floating node with open state and change handler
  * @param options - Configuration options for hover behavior
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingContext(...)
+ * const context = useFloatingNode(...)
  * useHover(context, {
  *   delay: { open: 100, close: 300 },
  *   restMs: 150
  * });
  * ```
  */
-export function useHover(context: FloatingContext, options: UseHoverOptions = {}): void {
+export function useHover(context: FloatingNode, options: UseHoverOptions = {}): void {
   const { open, setOpen } = context.state;
   const { anchorEl, floatingEl } = context.refs;
   const {

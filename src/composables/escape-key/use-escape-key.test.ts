@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
-import { type UseEscapeKeyContext, useEscapeKey, useFloatingContext } from "@/composables";
+import { type UseEscapeKeyContext, useEscapeKey, useFloatingNode } from "@/composables";
 
-function createMockFloatingContext(): UseEscapeKeyContext {
+function createMockFloatingNode(): UseEscapeKeyContext {
   const open = ref(false);
   const setOpen = vi.fn((value: boolean) => {
     open.value = value;
@@ -26,9 +26,9 @@ describe("useEscapeKey", () => {
     vi.useRealTimers();
   });
 
-  describe("FloatingContext behavior", () => {
+  describe("FloatingNode behavior", () => {
     it("closes floating element on escape key press", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -47,7 +47,7 @@ describe("useEscapeKey", () => {
     });
 
     it("does not trigger when floating element is already closed", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(false);
       (context.state.setOpen as any).mockClear();
 
@@ -62,7 +62,7 @@ describe("useEscapeKey", () => {
     });
 
     it("respects enabled option", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -77,7 +77,7 @@ describe("useEscapeKey", () => {
     });
 
     it("respects defaultPrevented from another handler", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -102,7 +102,7 @@ describe("useEscapeKey", () => {
     });
 
     it("uses custom onEscape handler when provided", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
       const customHandler = vi.fn();
@@ -121,7 +121,7 @@ describe("useEscapeKey", () => {
     });
 
     it("ignores non-escape keys", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -145,7 +145,7 @@ describe("useEscapeKey", () => {
 
   describe("Composition event handling", () => {
     it("ignores escape during composition", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -173,7 +173,7 @@ describe("useEscapeKey", () => {
 
   describe("Options handling", () => {
     it("respects reactive enabled option", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       const enabled = ref(true);
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
@@ -198,7 +198,7 @@ describe("useEscapeKey", () => {
     });
 
     it("handles capture option", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -217,7 +217,7 @@ describe("useEscapeKey", () => {
     });
 
     it("prevents default when preventDefault is enabled", async () => {
-      const context = createMockFloatingContext();
+      const context = createMockFloatingNode();
       context.state.setOpen(true);
       (context.state.setOpen as any).mockClear();
 
@@ -243,8 +243,8 @@ describe("useEscapeKey", () => {
     });
 
     it("shares a single composition listener across multiple consumers", async () => {
-      const contextA = createMockFloatingContext();
-      const contextB = createMockFloatingContext();
+      const contextA = createMockFloatingNode();
+      const contextB = createMockFloatingNode();
       contextA.state.setOpen(true);
       contextB.state.setOpen(true);
       (contextA.state.setOpen as any).mockClear();
@@ -282,20 +282,20 @@ describe("useEscapeKey", () => {
 
       scope = effectScope();
       scope.run(() => {
-        const root = useFloatingContext({
+        const root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: rootOpen,
           onOpenChange: () => calls.push("root"),
         });
-        const child = useFloatingContext({
+        const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parentContext: root,
           open: childOpen,
           onOpenChange: () => calls.push("child"),
         });
-        useFloatingContext({
+        useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parentContext: child,
@@ -325,26 +325,26 @@ describe("useEscapeKey", () => {
 
       scope = effectScope();
       scope.run(() => {
-        const root = useFloatingContext({
+        const root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: rootOpen,
         });
-        useFloatingContext({
+        useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parentContext: root,
           open: firstChildOpen,
           onOpenChange: () => calls.push("first-child"),
         });
-        const secondChild = useFloatingContext({
+        const secondChild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parentContext: root,
           open: secondChildOpen,
           onOpenChange: () => calls.push("second-child"),
         });
-        useFloatingContext({
+        useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parentContext: secondChild,
