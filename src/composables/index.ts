@@ -34,10 +34,12 @@ export type {
   FloatingNodeId,
   FloatingElement,
   FloatingNodeElements,
+  FloatingTree,
   UseFloatingNodeOptions,
+  UseFloatingTreeReturn,
 } from "./floating-tree";
 // Floating Node
-export { useFloatingNode } from "./floating-tree";
+export { useFloatingNode, useFloatingTree } from "./floating-tree";
 export type { UseFocusContext, UseFocusOptions } from "./focus/use-focus";
 // Focus
 export { useFocus } from "./focus/use-focus";

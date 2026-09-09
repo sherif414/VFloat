@@ -6,6 +6,7 @@ import {
   type UseFocusManagerOptions,
   type UseFocusManagerReturn,
   useFloatingNode,
+  useFloatingTree,
   useFocusManager,
 } from "@/composables";
 
@@ -92,6 +93,7 @@ function setupFocusManager(
     },
     open: openRef,
     setOpen: setOpenMock,
+    tree: null,
   };
 
   const scope = effectScope();
@@ -497,17 +499,19 @@ describe("useFocusManager", () => {
       let result!: UseFocusManagerReturn;
 
       scope.run(() => {
+        const tree = useFloatingTree();
         const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        useFloatingNode({
+        const childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentNode,
           open: childOpen,
         });
+        tree.addNode(parentNode);
+        tree.addNode(childNode, parentNode.id);
         result = useFocusManager(parentNode, { modal: false, closeOnFocusOut: true });
       });
 
@@ -587,6 +591,7 @@ describe("useFocusManager", () => {
         },
         open,
         setOpen,
+        tree: null,
       };
 
       const scope = effectScope();

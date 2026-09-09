@@ -1,3 +1,5 @@
+export type { FloatingTree, UseFloatingTreeReturn } from "./use-floating-tree";
+export { useFloatingTree } from "./use-floating-tree";
 export type {
   AnchorElement,
   FloatingNode,

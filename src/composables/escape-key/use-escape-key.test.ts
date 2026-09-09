@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
-import { type UseEscapeKeyContext, useEscapeKey, useFloatingNode } from "@/composables";
+import {
+  type UseEscapeKeyContext,
+  useEscapeKey,
+  useFloatingNode,
+  useFloatingTree,
+} from "@/composables";
 
 function createMockFloatingNode(): UseEscapeKeyContext {
   const open = ref(false);
@@ -12,6 +17,7 @@ function createMockFloatingNode(): UseEscapeKeyContext {
     id: Symbol("mock-node"),
     open,
     setOpen,
+    tree: null,
   };
 }
 
@@ -261,6 +267,7 @@ describe("useEscapeKey", () => {
 
       scope = effectScope();
       scope.run(() => {
+        const tree = useFloatingTree();
         const root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
@@ -270,17 +277,18 @@ describe("useEscapeKey", () => {
         const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentNode: root,
           open: childOpen,
           onOpenChange: () => calls.push("child"),
         });
-        useFloatingNode({
+        const grandchild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentNode: child,
           open: grandchildOpen,
           onOpenChange: () => calls.push("grandchild"),
         });
+        tree.addNode(root);
+        tree.addNode(child, root.id);
+        tree.addNode(grandchild, child.id);
 
         useEscapeKey(root);
       });
@@ -304,32 +312,34 @@ describe("useEscapeKey", () => {
 
       scope = effectScope();
       scope.run(() => {
+        const tree = useFloatingTree();
         const root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: rootOpen,
         });
-        useFloatingNode({
+        const firstChild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentNode: root,
           open: firstChildOpen,
           onOpenChange: () => calls.push("first-child"),
         });
         const secondChild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentNode: root,
           open: secondChildOpen,
           onOpenChange: () => calls.push("second-child"),
         });
-        useFloatingNode({
+        const secondGrandchild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentNode: secondChild,
           open: secondGrandchildOpen,
           onOpenChange: () => calls.push("second-grandchild"),
         });
+        tree.addNode(root);
+        tree.addNode(firstChild, root.id);
+        tree.addNode(secondChild, root.id);
+        tree.addNode(secondGrandchild, secondChild.id);
 
         useEscapeKey(root);
       });

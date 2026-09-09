@@ -1,9 +1,8 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
-import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
-import { getAnchorElement } from "@/shared/elements";
+import { getAnchorElement, isTargetWithinElements } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
@@ -57,6 +56,15 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
   const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? globalDocument);
   const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
   const isEnabled = computed(() => toValue(enabledOption));
+
+  // Family check scoped to the node's own tree; standalone nodes fall back
+  // to their own anchor and floating elements.
+  function isWithinFamily(target: EventTarget | null): boolean {
+    return (
+      node.tree?.isTargetWithin(node, target) ??
+      isTargetWithinElements(anchorElOption.value, node.refs.floatingEl.value, target)
+    );
+  }
 
   let isFocusBlocked = false;
   const isSafariOnMac = isMac() && isSafari();
@@ -165,7 +173,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
         return;
       }
 
-      if (floatingTree.isTargetWithin(node, activeEl)) {
+      if (isWithinFamily(activeEl)) {
         return;
       }
 
@@ -191,7 +199,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
         const target = e.target;
         if (!(target instanceof Element)) return;
 
-        if (floatingTree.isTargetWithin(node, target)) return;
+        if (isWithinFamily(target)) return;
 
         if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
 
@@ -246,7 +254,10 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
 /**
  * Context required by `useFocus`.
  */
-export interface UseFocusContext extends Pick<FloatingNode, "refs" | "open" | "setOpen"> {}
+export interface UseFocusContext extends Pick<
+  FloatingNode,
+  "id" | "refs" | "open" | "setOpen" | "tree"
+> {}
 
 /**
  * Cleanup handle returned by `useFocus`.

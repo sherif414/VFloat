@@ -23,6 +23,7 @@ describe("Public API Surface", () => {
       "useCollection",
       "useEscapeKey",
       "useFloatingNode",
+      "useFloatingTree",
       "useFocus",
       "useFocusManager",
       "useHover",

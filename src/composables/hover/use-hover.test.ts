@@ -2,7 +2,7 @@ import type { Strategy } from "@floating-ui/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref } from "vue";
 import type { FloatingNode } from "@/composables";
-import { type UseHoverOptions, useFloatingNode, useHover } from "@/composables";
+import { type UseHoverOptions, useFloatingNode, useFloatingTree, useHover } from "@/composables";
 
 const trackedElements: HTMLElement[] = [];
 const activeScopes: ReturnType<typeof effectScope>[] = [];
@@ -364,17 +364,19 @@ describe("useHover", () => {
       let parentNode!: FloatingNode;
 
       scope.run(() => {
+        const tree = useFloatingTree();
         parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        useFloatingNode({
+        const childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentNode,
           open: childOpen,
         });
+        tree.addNode(parentNode);
+        tree.addNode(childNode, parentNode.id);
 
         useHover(parentNode);
       });
@@ -412,6 +414,7 @@ describe("useHover", () => {
       let childNode!: FloatingNode;
 
       scope.run(() => {
+        const tree = useFloatingTree();
         const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
@@ -420,9 +423,10 @@ describe("useHover", () => {
         childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentNode,
           open: childOpen,
         });
+        tree.addNode(parentNode);
+        tree.addNode(childNode, parentNode.id);
 
         useHover(childNode);
       });

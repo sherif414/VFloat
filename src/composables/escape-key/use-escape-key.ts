@@ -1,7 +1,6 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
 import type { FloatingNode } from "@/composables/floating-tree";
-import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { getDocument } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -72,7 +71,7 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
       return;
     }
 
-    const targetNode = floatingTree.getDeepestOpenContext(node);
+    const targetNode = node.tree?.getDeepestOpenContext(node) ?? node;
     targetNode.setOpen(false, "escape-key", event);
   };
 
@@ -87,7 +86,10 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
 /**
  * Context required by `useEscapeKey`.
  */
-export interface UseEscapeKeyContext extends Pick<FloatingNode, "id" | "open" | "setOpen"> {}
+export interface UseEscapeKeyContext extends Pick<
+  FloatingNode,
+  "id" | "open" | "setOpen" | "tree"
+> {}
 
 export interface UseEscapeKeyOptions {
   /**

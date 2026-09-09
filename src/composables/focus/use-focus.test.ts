@@ -5,6 +5,7 @@ import {
   type UseFocusContext,
   type UseFocusOptions,
   useFloatingNode,
+  useFloatingTree,
   useFocus,
 } from "@/composables";
 
@@ -102,6 +103,7 @@ function setupFocus(
   const arrowRef = ref<HTMLElement | null>(null);
 
   const node: UseFocusContext = {
+    id: Symbol("mock-node"),
     refs: {
       anchorEl: anchorRef,
       floatingEl: floatingRef,
@@ -109,6 +111,7 @@ function setupFocus(
     },
     open: openRef,
     setOpen: setOpenMock,
+    tree: null,
   };
 
   const scope = effectScope();
@@ -314,18 +317,20 @@ describe("useFocus", () => {
       activeScopes.push(scope);
 
       scope.run(() => {
+        const tree = useFloatingTree();
         const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
           onOpenChange: parentChanges,
         });
-        useFloatingNode({
+        const childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentNode,
           open: childOpen,
         });
+        tree.addNode(parentNode);
+        tree.addNode(childNode, parentNode.id);
         useFocus(parentNode, { requireFocusVisible: false });
       });
 
@@ -355,6 +360,7 @@ describe("useFocus", () => {
       activeScopes.push(scope);
 
       scope.run(() => {
+        const tree = useFloatingTree();
         const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
@@ -363,9 +369,10 @@ describe("useFocus", () => {
         const childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentNode,
           open: childOpen,
         });
+        tree.addNode(parentNode);
+        tree.addNode(childNode, parentNode.id);
         useFocus(childNode, { requireFocusVisible: false });
       });
 

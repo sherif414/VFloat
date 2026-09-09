@@ -10,9 +10,11 @@ import {
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
-import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { isHTMLElement } from "@/shared/dom";
-import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
+import {
+  getAnchorElement as resolveAnchorElement,
+  isTargetWithinElements,
+} from "@/shared/elements";
 import { getDocument } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -113,6 +115,20 @@ export function useFocusManager(
     return el?.ownerDocument ?? getDocument();
   }
 
+  // Family checks scoped to the node's own tree; standalone nodes fall back
+  // to their own anchor and floating elements.
+  function isWithinFamily(target: EventTarget | null): boolean {
+    return (
+      node.tree?.isTargetWithin(node, target) ??
+      isTargetWithinElements(anchorElOption.value, floatingElOption.value, target)
+    );
+  }
+
+  function getFamilyElements(): HTMLElement[] {
+    const floating = getFloatingElement();
+    return node.tree?.getFloatingElements(node) ?? (floating ? [floating] : []);
+  }
+
   // --- Focus Trapping & Keydown Navigation -----------------------------------
 
   function onFloatingKeyDown(event: KeyboardEvent) {
@@ -168,7 +184,7 @@ export function useFocusManager(
     if (!floating) return;
 
     const relatedTarget = event.relatedTarget as Node | null;
-    if (relatedTarget && floatingTree.isTargetWithin(node, relatedTarget)) {
+    if (relatedTarget && isWithinFamily(relatedTarget)) {
       return;
     }
 
@@ -181,11 +197,7 @@ export function useFocusManager(
       const doc = currentFloating.ownerDocument ?? getDocument();
       const currentActive = doc?.activeElement;
 
-      if (
-        currentActive === doc?.body ||
-        !currentActive ||
-        !floatingTree.isTargetWithin(node, currentActive)
-      ) {
+      if (currentActive === doc?.body || !currentActive || !isWithinFamily(currentActive)) {
         if (isPointerDownOutside) return;
 
         const firstTabbable = getFirstTabbableElement(currentFloating);
@@ -242,7 +254,7 @@ export function useFocusManager(
     cleanupIsolation();
     if (!shouldInertOutside.value) return;
 
-    const containers = floatingTree.getFloatingElements(node);
+    const containers = getFamilyElements();
     if (containers.length === 0) return;
 
     const handle = isolateOutsideElements(containers, true);
@@ -268,7 +280,7 @@ export function useFocusManager(
     if (!target) return;
 
     // If the interaction is outside this floating tree, prevent focus hijacking
-    if (!floatingTree.isTargetWithin(node, target)) {
+    if (!isWithinFamily(target)) {
       isPointerDownOutside = true;
       if (pointerDownOutsideTimeoutId) clearTimeout(pointerDownOutsideTimeoutId);
       pointerDownOutsideTimeoutId = setTimeout(() => {
@@ -328,7 +340,7 @@ export function useFocusManager(
     const doc = getTargetDocument();
     const activeEl = doc?.activeElement ?? null;
     const isFocusOnBody = activeEl === doc?.body;
-    const isFocusInside = activeEl ? floatingTree.isTargetWithin(node, activeEl) : false;
+    const isFocusInside = activeEl ? isWithinFamily(activeEl) : false;
 
     // If focus has naturally moved to an outside element, don't steal it back.
     const focusMovedOutside = activeEl && !isFocusOnBody && !isFocusInside;
@@ -379,7 +391,7 @@ export function useFocusManager(
     const target = event.target as Node | null;
     if (!target) return;
 
-    if (floatingTree.isTargetWithin(node, target)) {
+    if (isWithinFamily(target)) {
       return;
     }
 
@@ -398,7 +410,7 @@ export function useFocusManager(
     const target = event.target as Node | null;
     if (!target) return;
 
-    if (floatingTree.isTargetWithin(node, target)) {
+    if (isWithinFamily(target)) {
       return;
     }
 
@@ -559,8 +571,10 @@ export function useFocusManager(
 /**
  * Context required by `useFocusManager`.
  */
-export interface UseFocusManagerContext
-  extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+export interface UseFocusManagerContext extends Pick<
+  FloatingNode,
+  "id" | "refs" | "open" | "setOpen" | "tree"
+> {}
 
 /**
  * Return shape for `useFocusManager`.

@@ -3,14 +3,16 @@ import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { ref, watch } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
-import { floatingTree } from "./floating-tree";
+import type { FloatingTree } from "./use-floating-tree";
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
 /**
- * Creates the shared floating node used by interaction and positioning composables.
+ * Creates a standalone floating node used by interaction and positioning composables.
+ * The node has no knowledge of trees; join a tree explicitly via `tree.addNode()`
+ * when coordinating related surfaces such as nested menus.
  */
 export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const id = createFloatingNodeId();
@@ -31,7 +33,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
         lastOpenReason.value = null;
         lastOpenEvent.value = null;
         // TODO: not sure if this should be handled here
-        floatingTree.closeDescendants(node, reason, event);
+        node.tree?.closeDescendants(node, reason, event);
       } else {
         lastOpenReason.value = reason;
         lastOpenEvent.value = event ?? null;
@@ -42,7 +44,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     if (!value) {
       lastOpenReason.value = null;
       lastOpenEvent.value = null;
-      floatingTree.closeDescendants(node, reason, event);
+      node.tree?.closeDescendants(node, reason, event);
     } else {
       lastOpenReason.value = reason;
       lastOpenEvent.value = event ?? null;
@@ -58,8 +60,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     }
   });
 
-  const isRoot = !options.parentNode;
-
   const node: FloatingNode = {
     id,
     refs: {
@@ -71,10 +71,10 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     setOpen,
     lastOpenReason,
     lastOpenEvent,
-    isRoot,
+    isRoot: true,
+    tree: null,
   };
 
-  floatingTree.addNode(node, options.parentNode ?? null);
   return node;
 }
 
@@ -161,8 +161,14 @@ export interface FloatingNode {
   lastOpenEvent?: Readonly<Ref<Event | null>>;
   /**
    * Whether this is a top-level floating node without a parent node.
+   * Patched by `tree.addNode()` and `tree.removeNode()`; true for standalone nodes.
    */
   isRoot: boolean;
+  /**
+   * The tree this node is registered in, or null when standalone.
+   * Assigned by `tree.addNode()` and cleared by `tree.removeNode()`.
+   */
+  tree: FloatingTree | null;
 }
 
 /**
@@ -198,11 +204,6 @@ export interface UseFloatingNodeOptions {
    * Called whenever the open state changes through VFloat helpers.
    */
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
-
-  /**
-   * Optional parent floating node used to coordinate related floating surfaces.
-   */
-  parentNode?: FloatingNode | null;
 }
 
 /**

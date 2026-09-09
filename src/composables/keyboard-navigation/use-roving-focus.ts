@@ -1,7 +1,9 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
-import { floatingTree } from "@/composables/floating-tree/floating-tree";
-import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
+import {
+  getAnchorElement as resolveAnchorElement,
+  isTargetWithinElements,
+} from "@/shared/elements";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -16,8 +18,8 @@ import { useRtl } from "./rtl";
  * Enables keyboard roving focus navigation across composite widgets (menus, tabs, toolbars, trees, listboxes)
  * within a floating node.
  *
- * Automatically resolves `containerEl` from `node.refs.floatingEl`, integrates with `FloatingTree`
- * to protect active focus across teleported submenus, automatically closes sibling submenus during
+ * Automatically resolves `containerEl` from `node.refs.floatingEl`, integrates with
+ * the node's floating tree to protect active focus across teleported submenus, automatically closes sibling submenus during
  * arrow navigation, and handles default submenu collapse on exit.
  *
  * For text-input-driven components (comboboxes, autocompletes, searchable selects),
@@ -40,11 +42,14 @@ import { useRtl } from "./rtl";
  *
  * @example Submenu Navigation (Enter / Exit)
  * ```ts
+ * const tree = useFloatingTree();
+ * const rootNode = useFloatingNode({ anchorEl, floatingEl });
  * const subNode = useFloatingNode({
  *   anchorEl: triggerEl,
  *   floatingEl: subMenuEl,
- *   parentNode: rootNode,
  * });
+ * tree.addNode(rootNode);
+ * tree.addNode(subNode, rootNode.id);
  *
  * useRovingFocus(subNode, {
  *   elementsList: subItemsList,
@@ -125,14 +130,16 @@ export function useRovingFocus(
 
   /**
    * Tests whether a node is within this widget's container or any of its teleported
-   * descendant surfaces registered in the FloatingTree.
+   * descendant surfaces registered in the node's floating tree.
    */
   function isWithin(target: Node | null): boolean {
     if (!target) return false;
     const container = containerEl.value;
     if (container?.contains(target)) return true;
-    if (floatingTree.isTargetWithin(node, target)) return true;
-    return false;
+    return (
+      node.tree?.isTargetWithin(node, target) ??
+      isTargetWithinElements(node.refs.anchorEl.value, node.refs.floatingEl.value, target)
+    );
   }
 
   // --- DOM Tabindex Resolution ------------------------------------------------
@@ -301,7 +308,7 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        floatingTree.closeDescendants(node, "keyboard-exit");
+        node.tree?.closeDescendants(node, "keyboard-exit");
       }
       focusIndex(targetIdx);
     }
@@ -512,8 +519,10 @@ function resolveEntryIndex(
 /**
  * Floating node required by `useRovingFocus`.
  */
-export interface UseRovingFocusContext
-  extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen" | "isRoot"> {}
+export interface UseRovingFocusContext extends Pick<
+  FloatingNode,
+  "id" | "refs" | "open" | "setOpen" | "isRoot" | "tree"
+> {}
 
 /**
  * Mode defining how the composite widget handles sequential tab entry after blur.

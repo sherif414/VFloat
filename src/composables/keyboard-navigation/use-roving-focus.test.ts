@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import { type FloatingNode, useFloatingNode } from "../floating-tree";
+import { type FloatingNode, useFloatingNode, useFloatingTree } from "../floating-tree";
 import {
   type UseRovingFocusContext,
   type UseRovingFocusOptions,
@@ -22,7 +22,6 @@ describe("useRovingFocus", () => {
     tabindex?: number | ((idx: number) => number | undefined);
     unmanaged?: boolean;
     node?: UseRovingFocusContext;
-    parentNode?: FloatingNode;
   }
 
   const createTestComponent = (
@@ -42,7 +41,6 @@ describe("useRovingFocus", () => {
         useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
-          parentNode: config.parentNode,
           defaultOpen: true,
         });
       testNode = floatingNode;
@@ -1757,11 +1755,13 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
+        const tree = useFloatingTree();
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
           defaultOpen: true,
         });
+        tree.addNode(rootNode);
 
         rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
@@ -1771,9 +1771,9 @@ describe("useRovingFocus", () => {
         const childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          parentNode: rootNode,
           defaultOpen: true,
         });
+        tree.addNode(childNode, rootNode.id);
 
         useRovingFocus(childNode, {
           elementsList: childElementsList,
@@ -1848,23 +1848,25 @@ describe("useRovingFocus", () => {
         const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
+        const tree = useFloatingTree();
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
           defaultOpen: true,
         });
+        tree.addNode(rootNode);
 
         rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
         });
 
         const childAnchorEl = ref<HTMLElement | null>(null);
-        useFloatingNode({
+        const childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          parentNode: rootNode,
           defaultOpen: true,
         });
+        tree.addNode(childNode, rootNode.id);
 
         return () =>
           h("div", [
@@ -1932,11 +1934,13 @@ describe("useRovingFocus", () => {
         const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
+        const tree = useFloatingTree();
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
           defaultOpen: true,
         });
+        tree.addNode(rootNode);
 
         rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
@@ -1946,9 +1950,9 @@ describe("useRovingFocus", () => {
         childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          parentNode: rootNode,
           defaultOpen: true,
         });
+        tree.addNode(childNode, rootNode.id);
 
         return () =>
           h("div", [
@@ -2010,19 +2014,21 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
+        const tree = useFloatingTree();
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
           defaultOpen: true,
         });
+        tree.addNode(rootNode);
 
         childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          parentNode: rootNode,
           defaultOpen: true,
           onOpenChange: onOpenChangeMock,
         });
+        tree.addNode(childNode, rootNode.id);
 
         childRoving = useRovingFocus(childNode, {
           elementsList: childElementsList,
@@ -2085,19 +2091,21 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
+        const tree = useFloatingTree();
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
           defaultOpen: true,
         });
+        tree.addNode(rootNode);
 
         childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          parentNode: rootNode,
           defaultOpen: true,
           onOpenChange: onOpenChangeMock,
         });
+        tree.addNode(childNode, rootNode.id);
 
         childRoving = useRovingFocus(childNode, {
           elementsList: childElementsList,
@@ -2154,18 +2162,20 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
+        const tree = useFloatingTree();
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
           defaultOpen: true,
         });
+        tree.addNode(rootNode);
 
         childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          parentNode: rootNode,
           defaultOpen: true,
         });
+        tree.addNode(childNode, rootNode.id);
 
         useRovingFocus(childNode, {
           elementsList: childElementsList,

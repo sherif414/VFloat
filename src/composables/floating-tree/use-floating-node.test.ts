@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref, watchEffect } from "vue";
-import { floatingTree } from "./floating-tree";
+import { useFloatingTree } from "./use-floating-tree";
 import { FloatingInternalsRegistry, floatingInternals, useFloatingNode } from "./use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
@@ -176,6 +176,33 @@ describe("useFloatingNode", () => {
     expect(node.id).not.toBe(otherNode.id);
   });
 
+  it("creates standalone nodes with a null tree and root status", () => {
+    let node!: ReturnType<typeof useFloatingNode>;
+    scope?.run(() => {
+      node = useFloatingNode({
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+      });
+    });
+
+    expect(node.tree).toBeNull();
+    expect(node.isRoot).toBe(true);
+  });
+
+  it("closes without cascading when standalone without a tree", () => {
+    let node!: ReturnType<typeof useFloatingNode>;
+    scope?.run(() => {
+      node = useFloatingNode({
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+        defaultOpen: true,
+      });
+    });
+
+    expect(() => node.setOpen(false, "outside-pointer")).not.toThrow();
+    expect(node.open.value).toBe(false);
+  });
+
   it("closes descendant nodes from deepest to nearest child before closing the parent", () => {
     const calls: string[] = [];
     const rootOpen = ref(true);
@@ -184,6 +211,7 @@ describe("useFloatingNode", () => {
     let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
+      const tree = useFloatingTree();
       root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
@@ -193,17 +221,18 @@ describe("useFloatingNode", () => {
       const child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentNode: root,
         open: childOpen,
         onOpenChange: () => calls.push("child"),
       });
-      useFloatingNode({
+      const grandchild = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentNode: child,
         open: grandchildOpen,
         onOpenChange: () => calls.push("grandchild"),
       });
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+      tree.addNode(grandchild, child.id);
     });
 
     root.setOpen(false, "outside-pointer");
@@ -220,6 +249,7 @@ describe("useFloatingNode", () => {
     let child!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
+      const tree = useFloatingTree();
       const root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
@@ -228,9 +258,10 @@ describe("useFloatingNode", () => {
       child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentNode: root,
         open: childOpen,
       });
+      tree.addNode(root);
+      tree.addNode(child, root.id);
     });
 
     child.setOpen(true, "programmatic");
@@ -244,17 +275,19 @@ describe("useFloatingNode", () => {
     const childOpen = ref(true);
 
     scope?.run(() => {
+      const tree = useFloatingTree();
       const root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: rootOpen,
       });
-      useFloatingNode({
+      const child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentNode: root,
         open: childOpen,
       });
+      tree.addNode(root);
+      tree.addNode(child, root.id);
     });
 
     rootOpen.value = false;
@@ -268,24 +301,27 @@ describe("useFloatingNode", () => {
     let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
+      const tree = useFloatingTree();
       root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: rootOpen,
       });
-    });
+      tree.addNode(root);
 
-    const localScope = effectScope();
-    localScope.run(() => {
-      useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-        parentNode: root,
-        open: childOpen,
+      const localScope = effectScope();
+      localScope.run(() => {
+        const child = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          open: childOpen,
+        });
+        tree.addNode(child, root.id);
       });
+
+      localScope.stop();
     });
 
-    localScope.stop();
     root.setOpen(false, "outside-pointer");
 
     expect(rootOpen.value).toBe(false);
@@ -298,26 +334,28 @@ describe("useFloatingNode", () => {
     let root!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
+      const tree = useFloatingTree();
       root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(rootFloatingEl),
       });
-    });
+      tree.addNode(root);
 
-    const localScope = effectScope();
-    localScope.run(() => {
-      useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(childFloatingEl),
-        parentNode: root,
+      const localScope = effectScope();
+      localScope.run(() => {
+        const child = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(childFloatingEl),
+        });
+        tree.addNode(child, root.id);
       });
+
+      expect(tree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
+
+      localScope.stop();
+
+      expect(tree.getFloatingElements(root)).toEqual([rootFloatingEl]);
     });
-
-    expect(floatingTree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
-
-    localScope.stop();
-
-    expect(floatingTree.getFloatingElements(root)).toEqual([rootFloatingEl]);
   });
 
   it("updates descendant floating element helpers when child nodes mount later", async () => {
@@ -336,15 +374,17 @@ describe("useFloatingNode", () => {
     const localScope = effectScope();
 
     localScope.run(() => {
+      const tree = useFloatingTree();
+      tree.addNode(root);
       watchEffect(() => {
-        lengths.push(floatingTree.getFloatingElements(root).length);
+        lengths.push(tree.getFloatingElements(root).length);
       });
 
-      useFloatingNode({
+      const child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(childFloatingEl),
-        parentNode: root,
       });
+      tree.addNode(child, root.id);
     });
 
     await nextTick();
@@ -353,11 +393,12 @@ describe("useFloatingNode", () => {
     expect(lengths).toEqual([1, 2]);
   });
 
-  it("sets isRoot to true for root nodes and false for nested child nodes", () => {
+  it("sets isRoot to true for standalone nodes and false once added under a parent id", () => {
     let root!: ReturnType<typeof useFloatingNode>;
     let child!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
+      const tree = useFloatingTree();
       root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
@@ -365,8 +406,9 @@ describe("useFloatingNode", () => {
       child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentNode: root,
       });
+      tree.addNode(root);
+      tree.addNode(child, root.id);
     });
 
     expect(root.isRoot).toBe(true);

@@ -1,8 +1,7 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
-import { floatingTree } from "@/composables/floating-tree/floating-tree";
-import { getAnchorElement } from "@/shared/elements";
+import { getAnchorElement, isTargetWithinElements } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
 
@@ -169,7 +168,12 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     const { clientX, clientY } = e;
     const relatedTarget = e.relatedTarget as Node | null;
 
-    if (floatingTree.isTargetWithin(node, relatedTarget)) {
+    // Family check scoped to the node's own tree; standalone nodes fall back
+    // to their own anchor and floating elements.
+    const isWithinFamily =
+      node.tree?.isTargetWithin(node, relatedTarget) ??
+      isTargetWithinElements(anchorEl.value, floatingEl.value, relatedTarget);
+    if (isWithinFamily) {
       return;
     }
 

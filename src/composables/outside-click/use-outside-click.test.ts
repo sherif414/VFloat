@@ -7,6 +7,7 @@ import {
   type UseOutsideClickContext,
   type UseOutsideClickOptions,
   useFloatingNode,
+  useFloatingTree,
   useOutsideClick,
 } from "@/composables";
 
@@ -72,6 +73,7 @@ describe("useOutsideClick", () => {
       },
       open: openRef,
       setOpen: setOpenMock as () => void,
+      tree: null,
     };
   };
 
@@ -198,18 +200,20 @@ describe("useOutsideClick", () => {
 
     scope = effectScope();
     scope.run(() => {
+      const tree = useFloatingTree();
       const parentNode = useFloatingNode({
         anchorEl: ref(anchorEl),
         floatingEl: ref(floatingEl),
         open: parentOpen,
         onOpenChange: onParentOpenChange,
       });
-      useFloatingNode({
+      const childNode = useFloatingNode({
         anchorEl: ref(childAnchorEl),
         floatingEl: ref(childFloatingEl),
-        parentNode,
         open: childOpen,
       });
+      tree.addNode(parentNode);
+      tree.addNode(childNode, parentNode.id);
 
       useOutsideClick(parentNode, { event: "click" });
     });
@@ -233,6 +237,7 @@ describe("useOutsideClick", () => {
 
     scope = effectScope();
     scope.run(() => {
+      const tree = useFloatingTree();
       const parentNode = useFloatingNode({
         anchorEl: ref(anchorEl),
         floatingEl: ref(floatingEl),
@@ -241,9 +246,10 @@ describe("useOutsideClick", () => {
       const childNode = useFloatingNode({
         anchorEl: ref(childAnchorEl),
         floatingEl: ref(childFloatingEl),
-        parentNode,
         open: childOpen,
       });
+      tree.addNode(parentNode);
+      tree.addNode(childNode, parentNode.id);
 
       useOutsideClick(childNode, { event: "click" });
     });
