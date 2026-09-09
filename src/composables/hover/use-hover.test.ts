@@ -50,7 +50,7 @@ function makeDOMRect(x: number, y: number, w: number, h: number): DOMRect {
 type HoverTestContext = {
   anchorEl: HTMLDivElement;
   floatingEl: HTMLDivElement;
-  context: FloatingNode;
+  node: FloatingNode;
   scope: ReturnType<typeof effectScope>;
   setOpen: ReturnType<typeof vi.fn>;
 };
@@ -70,16 +70,14 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
     open.value = val;
   });
 
-  const context = {
+  const node = {
     refs: {
       anchorEl: ref(anchorEl),
       floatingEl: ref(floatingEl),
       arrowEl: ref(null),
     },
-    state: {
-      open,
-      setOpen,
-    },
+    open,
+    setOpen,
     position: {
       placement: ref("bottom"),
       strategy: ref("absolute" as Strategy),
@@ -99,7 +97,7 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
   const scope = effectScope();
   activeScopes.push(scope);
   scope.run(() => {
-    useHover(context, options);
+    useHover(node, options);
   });
 
   await nextTick();
@@ -108,7 +106,7 @@ async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverT
   return {
     anchorEl,
     floatingEl,
-    context,
+    node,
     scope,
     setOpen,
   };
@@ -137,7 +135,7 @@ describe("useHover", () => {
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
       expect(ctx.setOpen).toHaveBeenCalledWith(true, "hover", expect.any(Event));
     });
 
@@ -152,7 +150,7 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       expect(ctx.setOpen).toHaveBeenCalledWith(false, "hover", expect.any(Event));
     });
 
@@ -162,7 +160,7 @@ describe("useHover", () => {
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
@@ -171,7 +169,7 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
@@ -179,28 +177,28 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("attaches/reattaches listeners when element refs change", async () => {
       const ctx = await createHoverContext();
       const oldRef = ctx.anchorEl;
 
-      ctx.context.refs.anchorEl.value = null;
+      ctx.node.refs.anchorEl.value = null;
       await nextTick();
 
       oldRef.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       const newRef = trackElement(document.createElement("div"));
       document.body.appendChild(newRef);
-      ctx.context.refs.anchorEl.value = newRef;
+      ctx.node.refs.anchorEl.value = newRef;
       await nextTick();
 
       newRef.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("disables functionality when enabled becomes false", async () => {
@@ -209,16 +207,16 @@ describe("useHover", () => {
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       enabled.value = false;
       await nextTick();
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 
@@ -229,11 +227,11 @@ describe("useHover", () => {
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       vi.advanceTimersByTime(99);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("respects delay.close (object notation)", async () => {
@@ -241,18 +239,18 @@ describe("useHover", () => {
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       vi.advanceTimersByTime(99);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("respects delay (number notation) for both open and close", async () => {
@@ -261,18 +259,18 @@ describe("useHover", () => {
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       vi.advanceTimersByTime(150);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
       vi.advanceTimersByTime(150);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 
@@ -296,18 +294,16 @@ describe("useHover", () => {
 
       const scope = effectScope();
       activeScopes.push(scope);
-      let rootContext!: FloatingNode;
+      let rootNode!: FloatingNode;
       scope.run(() => {
-        rootContext = {
+        rootNode = {
           refs: {
             anchorEl: ref(anchorEl),
             floatingEl: ref(floatingEl),
             arrowEl: ref(null),
           },
-          state: {
-            open,
-            setOpen,
-          },
+          open,
+          setOpen,
           position: {
             placement: ref("bottom"),
             strategy: ref("absolute"),
@@ -324,7 +320,7 @@ describe("useHover", () => {
           },
         } as unknown as FloatingNode;
 
-        useHover(rootContext, {
+        useHover(rootNode, {
           ignorePointerLeave: (target) => target === ignoredEl,
         });
       });
@@ -335,7 +331,7 @@ describe("useHover", () => {
       anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
 
-      expect(rootContext.state.open.value).toBe(true);
+      expect(rootNode.open.value).toBe(true);
 
       anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
@@ -346,11 +342,11 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(rootContext.state.open.value).toBe(true);
+      expect(rootNode.open.value).toBe(true);
     });
   });
 
-  describe("parent-linked contexts", () => {
+  describe("parent-linked nodes", () => {
     it("keeps a parent open when the pointer leaves into a child floating element", async () => {
       const parentAnchorEl = trackElement(document.createElement("div"));
       const parentFloatingEl = trackElement(document.createElement("div"));
@@ -365,10 +361,10 @@ describe("useHover", () => {
       const childOpen = ref(true);
       const scope = effectScope();
       activeScopes.push(scope);
-      let parentContext!: FloatingNode;
+      let parentNode!: FloatingNode;
 
       scope.run(() => {
-        parentContext = useFloatingNode({
+        parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
@@ -376,18 +372,18 @@ describe("useHover", () => {
         useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentContext,
+          parentNode,
           open: childOpen,
         });
 
-        useHover(parentContext);
+        useHover(parentNode);
       });
 
       await nextTick();
       parentAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(parentContext.state.open.value).toBe(true);
+      expect(parentNode.open.value).toBe(true);
 
       parentAnchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
@@ -396,7 +392,7 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(parentContext.state.open.value).toBe(true);
+      expect(parentNode.open.value).toBe(true);
     });
 
     it("closes a child when the pointer leaves into the parent floating element", async () => {
@@ -413,29 +409,29 @@ describe("useHover", () => {
       const childOpen = ref(false);
       const scope = effectScope();
       activeScopes.push(scope);
-      let childContext!: FloatingNode;
+      let childNode!: FloatingNode;
 
       scope.run(() => {
-        const parentContext = useFloatingNode({
+        const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        childContext = useFloatingNode({
+        childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentContext,
+          parentNode,
           open: childOpen,
         });
 
-        useHover(childContext);
+        useHover(childNode);
       });
 
       await nextTick();
       childAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(childContext.state.open.value).toBe(true);
+      expect(childNode.open.value).toBe(true);
 
       childAnchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
@@ -444,7 +440,7 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(childContext.state.open.value).toBe(false);
+      expect(childNode.open.value).toBe(false);
     });
   });
 
@@ -454,12 +450,12 @@ describe("useHover", () => {
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       vi.advanceTimersByTime(49);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("resets rest timer if pointer moves significantly before restMs expires", async () => {
@@ -467,19 +463,19 @@ describe("useHover", () => {
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       vi.advanceTimersByTime(25);
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 30, clientY: 10 }));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       vi.advanceTimersByTime(30);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       vi.advanceTimersByTime(20);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("cancels rest period timer if pointer leaves before restMs expires", async () => {
@@ -495,7 +491,7 @@ describe("useHover", () => {
       await nextTick();
 
       vi.advanceTimersByTime(100);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("ignores restMs if delay.open is greater than 0", async () => {
@@ -508,10 +504,10 @@ describe("useHover", () => {
       await nextTick();
 
       vi.advanceTimersByTime(1);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       vi.advanceTimersByTime(99);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
   });
 
@@ -522,16 +518,16 @@ describe("useHover", () => {
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "touch" }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "pen" }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "mouse" }));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
@@ -541,7 +537,7 @@ describe("useHover", () => {
       );
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
@@ -550,7 +546,7 @@ describe("useHover", () => {
         }),
       );
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 
@@ -568,7 +564,7 @@ describe("useHover", () => {
       await nextTick();
       vi.runAllTimers();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("cancels pending close delay if pointer re-enters reference", async () => {
@@ -587,7 +583,7 @@ describe("useHover", () => {
       await nextTick();
       vi.advanceTimersByTime(100);
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("closes (respecting delay) if pointer leaves floating element", async () => {
@@ -602,7 +598,7 @@ describe("useHover", () => {
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(150);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
@@ -610,31 +606,31 @@ describe("useHover", () => {
       await nextTick();
 
       vi.advanceTimersByTime(99);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
       vi.advanceTimersByTime(1);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("reacts to external state changes", async () => {
       const ctx = await createHoverContext();
 
-      ctx.context.state.setOpen(true);
+      ctx.node.setOpen(true);
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 
@@ -655,14 +651,14 @@ describe("useHover", () => {
       vi.advanceTimersByTime(0);
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       document.dispatchEvent(makePointerEvent("pointermove", { clientX: 25, clientY: 105 }));
       vi.advanceTimersByTime(20);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", {
@@ -680,7 +676,7 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 
@@ -690,25 +686,25 @@ describe("useHover", () => {
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.scope.stop();
       await nextTick();
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
-      ctx.context.state.setOpen(true);
+      ctx.node.setOpen(true);
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("cancels scheduled open when anchor element is removed from DOM during open delay", async () => {
@@ -716,7 +712,7 @@ describe("useHover", () => {
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.advanceTimersByTime(50);
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       // Unmount anchor element before delay expires
       ctx.anchorEl.remove();
@@ -725,7 +721,7 @@ describe("useHover", () => {
       vi.advanceTimersByTime(60);
       await nextTick();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       expect(ctx.setOpen).not.toHaveBeenCalledWith(true, "hover", expect.anything());
     });
   });

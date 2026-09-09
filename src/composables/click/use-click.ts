@@ -28,18 +28,18 @@ type PointerType = "mouse" | "touch" | "pen";
  *
  * This composable provides trigger handlers for opening/toggling floating elements.
  *
- * @param context - The floating node with open state and change handler.
+ * @param node - The floating node with open state and change handler.
  * @param options - Configuration options for click behavior.
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingNode(...)
- * useClick(context)
+ * const node = useFloatingNode(...)
+ * useClick(node)
  * ```
  */
-export function useClick(context: UseClickContext, options: UseClickOptions = {}): void {
-  const { open, setOpen } = context.state;
-  const refs = context.refs;
+export function useClick(node: UseClickContext, options: UseClickOptions = {}): void {
+  const { open, setOpen } = node;
+  const refs = node.refs;
   const {
     enabled: enabledOption = true,
     event: eventOption = "click",
@@ -80,7 +80,7 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
   function onOpenChange(reason: OpenChangeReason, event: Event) {
     const isStickIfOpen = toValue(stickIfOpenOption);
     const isToggle = toValue(toggleOption);
-    const lastReason = context.state.lastOpenReason?.value;
+    const lastReason = node.lastOpenReason?.value;
 
     if (open.value) {
       const isAlreadyClicked =
@@ -232,16 +232,8 @@ export function useClick(context: UseClickContext, options: UseClickOptions = {}
 /**
  * Context required by `useClick`.
  */
-export interface UseClickContext {
-  /**
-   * The reactive refs exposed by the floating node.
-   */
-  refs: FloatingNode["refs"];
-  /**
-   * The reactive state and state mutators for the floating node.
-   */
-  state: FloatingNode["state"];
-}
+export interface UseClickContext
+  extends Pick<FloatingNode, "refs" | "open" | "setOpen" | "lastOpenReason"> {}
 
 /**
  * Options for configuring the useClick behavior.

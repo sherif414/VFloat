@@ -13,30 +13,30 @@ describe("SSR Compatibility (Node Environment)", () => {
         const arrowEl = ref<HTMLElement | null>(null);
         const open = ref(false);
 
-        const context = VFloat.useFloatingNode({
+        const node = VFloat.useFloatingNode({
           anchorEl,
           floatingEl,
           arrowEl,
           open,
         });
 
-        const position = VFloat.usePosition(context, {
+        const position = VFloat.usePosition(node, {
           placement: "bottom-start",
           strategy: "fixed",
         });
 
-        VFloat.useClick(context);
-        VFloat.useHover(context);
-        VFloat.useFocus(context);
-        VFloat.useFocusManager(context, { modal: true });
-        VFloat.useEscapeKey(context);
-        VFloat.useOutsideClick(context);
-        VFloat.useRole(context, { role: "menu", label: "Actions" });
-        VFloat.useArrow(context);
-        VFloat.useClientPoint(context);
+        VFloat.useClick(node);
+        VFloat.useHover(node);
+        VFloat.useFocus(node);
+        VFloat.useFocusManager(node, { modal: true });
+        VFloat.useEscapeKey(node);
+        VFloat.useOutsideClick(node);
+        VFloat.useRole(node, { role: "menu", label: "Actions" });
+        VFloat.useArrow(node);
+        VFloat.useClientPoint(node);
         VFloat.useCollection();
         const items = ref<Array<HTMLElement | null>>([]);
-        VFloat.useRovingFocus(context, { elementsList: items });
+        VFloat.useRovingFocus(node, { elementsList: items });
         VFloat.useAriaActivedescendant({
           targetEl: anchorEl,
           containerEl: floatingEl,
@@ -77,8 +77,8 @@ describe("SSR Compatibility (Node Environment)", () => {
         const floatingEl = ref<HTMLElement | null>(null);
         const open = ref(false);
 
-        const context = VFloat.useFloatingNode({ anchorEl, floatingEl, open });
-        VFloat.useRole(context, { role: "dialog", modal: true });
+        const node = VFloat.useFloatingNode({ anchorEl, floatingEl, open });
+        VFloat.useRole(node, { role: "dialog", modal: true });
 
         return () =>
           h("div", [
@@ -104,21 +104,21 @@ describe("SSR Compatibility (Node Environment)", () => {
         const childAnchorEl = ref<HTMLElement | null>(null);
         const childFloatingEl = ref<HTMLElement | null>(null);
 
-        const parentContext = VFloat.useFloatingNode({
+        const parentNode = VFloat.useFloatingNode({
           anchorEl: parentAnchorEl,
           floatingEl: parentFloatingEl,
         });
 
-        const childContext = VFloat.useFloatingNode({
+        const childNode = VFloat.useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childFloatingEl,
-          parentContext,
+          parentNode,
         });
 
-        VFloat.usePosition(parentContext);
-        VFloat.usePosition(childContext);
-        VFloat.useOutsideClick(parentContext);
-        VFloat.useOutsideClick(childContext);
+        VFloat.usePosition(parentNode);
+        VFloat.usePosition(childNode);
+        VFloat.useOutsideClick(parentNode);
+        VFloat.useOutsideClick(childNode);
 
         return () =>
           h("div", [

@@ -19,21 +19,21 @@ interface UseDelayedOpenOptions {
  * with enhanced behaviors like delayed open/close, rest detection, and custom
  * exit handling.
  *
- * @param context - The floating node with open state and change handler
+ * @param node - The floating node with open state and change handler
  * @param options - Configuration options for hover behavior
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingNode(...)
- * useHover(context, {
+ * const node = useFloatingNode(...)
+ * useHover(node, {
  *   delay: { open: 100, close: 300 },
  *   restMs: 150
  * });
  * ```
  */
-export function useHover(context: FloatingNode, options: UseHoverOptions = {}): void {
-  const { open, setOpen } = context.state;
-  const { anchorEl, floatingEl } = context.refs;
+export function useHover(node: FloatingNode, options: UseHoverOptions = {}): void {
+  const { open, setOpen } = node;
+  const { anchorEl, floatingEl } = node.refs;
   const {
     enabled: enabledOption = true,
     delay: delayOption = 0,
@@ -169,7 +169,7 @@ export function useHover(context: FloatingNode, options: UseHoverOptions = {}): 
     const { clientX, clientY } = e;
     const relatedTarget = e.relatedTarget as Node | null;
 
-    if (floatingTree.isTargetWithin(context, relatedTarget)) {
+    if (floatingTree.isTargetWithin(node, relatedTarget)) {
       return;
     }
 
@@ -177,7 +177,7 @@ export function useHover(context: FloatingNode, options: UseHoverOptions = {}): 
       return;
     }
 
-    if (context.state.lastOpenReason?.value && context.state.lastOpenReason.value !== "hover") {
+    if (node.lastOpenReason?.value && node.lastOpenReason.value !== "hover") {
       return;
     }
 

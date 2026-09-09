@@ -48,7 +48,7 @@ interface MutableInternalsStub {
 }
 
 function setupPositionInternals(
-  context: FloatingNode,
+  node: FloatingNode,
   overrides: { placement?: Placement; middlewareData?: MiddlewareData } = {},
 ): MutableInternalsStub {
   const middlewareData = shallowRef<MiddlewareData>(overrides.middlewareData ?? {});
@@ -56,7 +56,7 @@ function setupPositionInternals(
   const registrations = ref<{ id: number; middleware: any }[]>([]);
   let nextId = 0;
 
-  floatingInternals.set(context.id, {
+  floatingInternals.set(node.id, {
     placement,
     middlewareData,
     middlewareRegistry: {
@@ -88,14 +88,14 @@ function setupPositionInternals(
 describe("useArrow", () => {
   let anchorEl: HTMLElement;
   let floatingEl: HTMLElement;
-  let context: FloatingNode;
+  let node: FloatingNode;
 
   beforeEach(() => {
     scope = effectScope();
     anchorEl = createElement("button");
     floatingEl = createElement("div");
     scope.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
@@ -111,66 +111,66 @@ describe("useArrow", () => {
   });
 
   describe("arrow ref ownership", () => {
-    it("uses the context-owned arrow element ref", () => {
-      const arrowEl = context.refs.arrowEl;
+    it("uses the node-owned arrow element ref", () => {
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
       scope?.run(() => {
-        context = useFloatingNode({
+        node = useFloatingNode({
           anchorEl: ref<AnchorElement>(anchorEl),
           floatingEl: ref<FloatingElement>(floatingEl),
           arrowEl,
         });
-        usePosition(context);
-        useArrow(context);
+        usePosition(node);
+        useArrow(node);
       });
 
-      expect(context.refs.arrowEl.value).toBe(arrowEl.value);
+      expect(node.refs.arrowEl.value).toBe(arrowEl.value);
     });
 
     it("falls back to an internal arrow element ref", () => {
       scope?.run(() => {
-        usePosition(context);
-        useArrow(context);
+        usePosition(node);
+        useArrow(node);
       });
 
-      expect(context.refs.arrowEl.value).toBeNull();
+      expect(node.refs.arrowEl.value).toBeNull();
     });
   });
 
   describe("middleware registration", () => {
     it("registers arrow middleware in the position middleware registry", () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
       scope?.run(() => {
-        usePosition(context);
-        useArrow(context);
+        usePosition(node);
+        useArrow(node);
       });
 
-      const internals = floatingInternals.get(context.id);
+      const internals = floatingInternals.get(node.id);
       const names = internals?.middlewareRegistry?.middlewares.value.map((m) => m.name);
       expect(names).toContain("arrow");
     });
 
     it("does not register the middleware when element is null", () => {
       scope?.run(() => {
-        usePosition(context);
-        useArrow(context);
+        usePosition(node);
+        useArrow(node);
       });
 
-      const internals = floatingInternals.get(context.id);
+      const internals = floatingInternals.get(node.id);
       const middlewares = internals?.middlewareRegistry?.middlewares.value ?? [];
       const arrowMiddleware = middlewares.find((m) => m.name === "arrow");
       expect(arrowMiddleware).toBeUndefined();
     });
 
     it("adds arrow middleware reactively when element transitions from null to an element", async () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       scope?.run(() => {
-        usePosition(context);
-        useArrow(context);
+        usePosition(node);
+        useArrow(node);
       });
 
-      const internals = floatingInternals.get(context.id);
+      const internals = floatingInternals.get(node.id);
       const hasArrow = () =>
         internals?.middlewareRegistry?.middlewares.value.some((m) => m.name === "arrow") ?? false;
 
@@ -183,18 +183,18 @@ describe("useArrow", () => {
     });
 
     it("registers arrow middleware even when useArrow is called before usePosition", () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
 
       let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
       scope?.run(() => {
-        const result = useArrow(context);
+        const result = useArrow(node);
         arrowStyles = result.arrowStyles;
-        usePosition(context);
+        usePosition(node);
       });
 
       expect(arrowStyles.value).toBeDefined();
-      const internals = floatingInternals.get(context.id);
+      const internals = floatingInternals.get(node.id);
       const names = internals?.middlewareRegistry?.middlewares.value.map((m) => m.name);
       expect(names).toContain("arrow");
     });
@@ -202,16 +202,16 @@ describe("useArrow", () => {
 
   describe("coordinate extraction", () => {
     it("exposes arrowX and arrowY from middlewareData", () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
-      setupPositionInternals(context, {
+      setupPositionInternals(node, {
         middlewareData: { arrow: { x: 15, y: 20, centerOffset: 0 } },
       });
 
       let arrowX!: ReturnType<typeof useArrow>["arrowX"];
       let arrowY!: ReturnType<typeof useArrow>["arrowY"];
       scope?.run(() => {
-        const result = useArrow(context);
+        const result = useArrow(node);
         arrowX = result.arrowX;
         arrowY = result.arrowY;
       });
@@ -221,14 +221,14 @@ describe("useArrow", () => {
     });
 
     it("defaults arrowX and arrowY to 0 when arrow data is absent", () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
-      setupPositionInternals(context, { middlewareData: {} });
+      setupPositionInternals(node, { middlewareData: {} });
 
       let arrowX!: ReturnType<typeof useArrow>["arrowX"];
       let arrowY!: ReturnType<typeof useArrow>["arrowY"];
       scope?.run(() => {
-        const result = useArrow(context);
+        const result = useArrow(node);
         arrowX = result.arrowX;
         arrowY = result.arrowY;
       });
@@ -238,16 +238,16 @@ describe("useArrow", () => {
     });
 
     it("reacts to changes in middlewareData", async () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
-      const stub = setupPositionInternals(context, {
+      const stub = setupPositionInternals(node, {
         middlewareData: { arrow: { x: 5, y: 10, centerOffset: 0 } },
       });
 
       let arrowX!: ReturnType<typeof useArrow>["arrowX"];
       let arrowY!: ReturnType<typeof useArrow>["arrowY"];
       scope?.run(() => {
-        const result = useArrow(context);
+        const result = useArrow(node);
         arrowX = result.arrowX;
         arrowY = result.arrowY;
       });
@@ -266,13 +266,13 @@ describe("useArrow", () => {
 
   describe("style generation", () => {
     it("returns empty styles when element is null", () => {
-      setupPositionInternals(context, {
+      setupPositionInternals(node, {
         middlewareData: { arrow: { x: 10, y: 10, centerOffset: 0 } },
       });
 
       let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
       scope?.run(() => {
-        const result = useArrow(context);
+        const result = useArrow(node);
         arrowStyles = result.arrowStyles;
       });
 
@@ -280,13 +280,13 @@ describe("useArrow", () => {
     });
 
     it("returns empty styles when arrow middlewareData is absent", () => {
-      const arrowEl = context.refs.arrowEl;
+      const arrowEl = node.refs.arrowEl;
       arrowEl.value = createElement("div");
-      setupPositionInternals(context, { middlewareData: {} });
+      setupPositionInternals(node, { middlewareData: {} });
 
       let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
       scope?.run(() => {
-        const result = useArrow(context);
+        const result = useArrow(node);
         arrowStyles = result.arrowStyles;
       });
 
@@ -295,16 +295,16 @@ describe("useArrow", () => {
 
     describe("placement: bottom", () => {
       it("uses inset-inline-start for X and inset-block-start for the offset", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "bottom",
           middlewareData: { arrow: { x: 16, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -317,16 +317,16 @@ describe("useArrow", () => {
 
     describe("placement: top", () => {
       it("uses inset-inline-start for X and inset-block-end for the offset", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "top",
           middlewareData: { arrow: { x: 20, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -339,16 +339,16 @@ describe("useArrow", () => {
 
     describe("placement: right", () => {
       it("uses inset-block-start for Y and inset-inline-start for the offset", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "right",
           middlewareData: { arrow: { x: 0, y: 12, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -361,16 +361,16 @@ describe("useArrow", () => {
 
     describe("placement: left", () => {
       it("uses inset-block-start for Y and inset-inline-end for the offset", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "left",
           middlewareData: { arrow: { x: 0, y: 8, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -383,16 +383,16 @@ describe("useArrow", () => {
 
     describe("alignment variants", () => {
       it("strips the alignment suffix and uses the base side for styles", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "bottom-start",
           middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -403,16 +403,16 @@ describe("useArrow", () => {
       });
 
       it("handles top-end placement correctly", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "top-end",
           middlewareData: { arrow: { x: 30, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -423,16 +423,16 @@ describe("useArrow", () => {
       });
 
       it("handles left-start placement correctly", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "left-start",
           middlewareData: { arrow: { x: 0, y: 4, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -443,16 +443,16 @@ describe("useArrow", () => {
       });
 
       it("handles right-end placement correctly", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "right-end",
           middlewareData: { arrow: { x: 0, y: 18, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
 
@@ -465,16 +465,16 @@ describe("useArrow", () => {
 
     describe("custom offset", () => {
       it("uses the provided offset string instead of the default", () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        setupPositionInternals(context, {
+        setupPositionInternals(node, {
           placement: "bottom",
           middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context, {
+          const result = useArrow(node, {
             offset: "-8px",
           });
           arrowStyles = result.arrowStyles;
@@ -486,16 +486,16 @@ describe("useArrow", () => {
 
     describe("reactive styles", () => {
       it("recomputes styles when placement changes", async () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        const stub = setupPositionInternals(context, {
+        const stub = setupPositionInternals(node, {
           placement: "top",
           middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
         expect(arrowStyles.value).toHaveProperty("inset-block-end");
@@ -508,16 +508,16 @@ describe("useArrow", () => {
       });
 
       it("recomputes styles when middlewareData changes", async () => {
-        const arrowEl = context.refs.arrowEl;
+        const arrowEl = node.refs.arrowEl;
         arrowEl.value = createElement("div");
-        const stub = setupPositionInternals(context, {
+        const stub = setupPositionInternals(node, {
           placement: "bottom",
           middlewareData: { arrow: { x: 5, y: 0, centerOffset: 0 } },
         });
 
         let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
         scope?.run(() => {
-          const result = useArrow(context);
+          const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
         expect(arrowStyles.value["inset-inline-start"]).toBe("5px");

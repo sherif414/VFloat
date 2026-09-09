@@ -13,24 +13,15 @@ import { floatingTree } from "./floating-tree";
  * Creates the shared floating node used by interaction and positioning composables.
  */
 export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
-  const {
-    anchorEl,
-    floatingEl,
-    arrowEl: arrowElOption,
-    open: openOption,
-    defaultOpen = false,
-    onOpenChange,
-    parentContext,
-  } = options;
   const id = createFloatingNodeId();
   const open = useControllableState({
-    value: openOption,
-    initialValue: defaultOpen,
+    value: options.open,
+    initialValue: !!options.defaultOpen,
     onChange: (value) => {
-      if (openOption) openOption.value = value;
+      if (options.open) options.open.value = value;
     },
   });
-  const arrowEl = arrowElOption ?? ref<HTMLElement | null>(null);
+
   const lastOpenReason = ref<OpenChangeReason | null>(null);
   const lastOpenEvent = ref<Event | null>(null);
 
@@ -39,23 +30,25 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
       if (!value) {
         lastOpenReason.value = null;
         lastOpenEvent.value = null;
-        floatingTree.closeDescendants(context, reason, event);
+        // TODO: not sure if this should be handled here
+        floatingTree.closeDescendants(node, reason, event);
       } else {
         lastOpenReason.value = reason;
         lastOpenEvent.value = event ?? null;
       }
       return;
     }
+
     if (!value) {
       lastOpenReason.value = null;
       lastOpenEvent.value = null;
-      floatingTree.closeDescendants(context, reason, event);
+      floatingTree.closeDescendants(node, reason, event);
     } else {
       lastOpenReason.value = reason;
       lastOpenEvent.value = event ?? null;
     }
     open.value = value;
-    onOpenChange?.(value, reason, event);
+    options.onOpenChange?.(value, reason, event);
   };
 
   watch(open, (isOpen) => {
@@ -65,27 +58,24 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     }
   });
 
-  const isRoot = !parentContext;
+  const isRoot = !options.parentNode;
 
-  const context: FloatingNode = {
+  const node: FloatingNode = {
     id,
     refs: {
-      anchorEl,
-      floatingEl,
-      arrowEl,
+      anchorEl: options.anchorEl,
+      floatingEl: options.floatingEl,
+      arrowEl: options.arrowEl ?? ref<HTMLElement | null>(null),
     },
-    state: {
-      open,
-      setOpen,
-      lastOpenReason,
-      lastOpenEvent,
-    },
+    open,
+    setOpen,
+    lastOpenReason,
+    lastOpenEvent,
     isRoot,
   };
 
-  floatingTree.addNode(context, parentContext ?? null);
-
-  return context;
+  floatingTree.addNode(node, options.parentNode ?? null);
+  return node;
 }
 
 //=======================================================================================
@@ -148,16 +138,15 @@ export type FloatingNodeId = symbol;
 /**
  * Reactive refs owned by the floating node.
  */
-export interface FloatingRefs {
+export interface FloatingNodeElements {
   anchorEl: Ref<AnchorElement>;
   floatingEl: Ref<FloatingElement>;
   arrowEl: Ref<HTMLElement | null>;
 }
 
-/**
- * Open-state API exposed to consumers.
- */
-export interface FloatingState {
+export interface FloatingNode {
+  id: FloatingNodeId;
+  refs: FloatingNodeElements;
   open: Readonly<Ref<boolean>>;
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
   /**
@@ -170,17 +159,8 @@ export interface FloatingState {
    * Null when closed.
    */
   lastOpenEvent?: Readonly<Ref<Event | null>>;
-}
-
-/**
- * Public floating node shared with companion composables.
- */
-export interface FloatingNode {
-  id: FloatingNodeId;
-  refs: FloatingRefs;
-  state: FloatingState;
   /**
-   * Whether this is a top-level floating node without a parentContext.
+   * Whether this is a top-level floating node without a parent node.
    */
   isRoot: boolean;
 }
@@ -222,7 +202,7 @@ export interface UseFloatingNodeOptions {
   /**
    * Optional parent floating node used to coordinate related floating surfaces.
    */
-  parentContext?: FloatingNode | null;
+  parentNode?: FloatingNode | null;
 }
 
 /**

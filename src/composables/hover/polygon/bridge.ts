@@ -43,7 +43,7 @@ export interface SafePolygonOptions {
 /**
  * Factory that produces a pointer-move handler for safe-polygon hover retention.
  */
-export type SafePolygon = (context: CreateSafePolygonHandlerContext) => SafePolygonHandler;
+export type SafePolygon = (node: CreateSafePolygonHandlerContext) => SafePolygonHandler;
 /**
  * Mouse-move handler produced by `safePolygon`.
  */
@@ -73,8 +73,8 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
   let timeoutId = -1;
   let hasLanded = false;
 
-  return function createSafePolygonHandler(context: CreateSafePolygonHandlerContext) {
-    const { x, y, elements, buffer: contextBuffer, onClose } = context;
+  return function createSafePolygonHandler(node: CreateSafePolygonHandlerContext) {
+    const { x, y, elements, buffer: nodeBuffer, onClose } = node;
     const referenceEl = computed(() => {
       const domReference = elements.domReference;
 
@@ -151,7 +151,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       }
 
       const rectPoly = buildRectangularTrough(side, floatingRect, anchorRect);
-      const polygon = buildSafePolygon(side, x, y, floatingRect, anchorRect, contextBuffer);
+      const polygon = buildSafePolygon(side, x, y, floatingRect, anchorRect, nodeBuffer);
       options.onPolygonChange?.(polygon);
 
       // Keep the interaction alive while the cursor is still traveling through

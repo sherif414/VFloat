@@ -82,7 +82,7 @@ describe("useTypeahead", () => {
     let collection: ReturnType<typeof useCollection> | undefined;
 
     scope.run(() => {
-      const context = useFloatingNode({
+      const node = useFloatingNode({
         anchorEl: anchorRef,
         floatingEl: floatingRef,
         open: openRef,
@@ -102,7 +102,7 @@ describe("useTypeahead", () => {
         });
       }
 
-      const typeahead = useTypeahead(context, {
+      const typeahead = useTypeahead(node, {
         collection,
         list: options.list,
         activeIndex: options.activeIndex,
@@ -117,7 +117,7 @@ describe("useTypeahead", () => {
       });
 
       resultContext = {
-        context,
+        node,
         typeahead,
         collection,
         anchorEl,
@@ -127,7 +127,7 @@ describe("useTypeahead", () => {
     });
 
     return resultContext as {
-      context: ReturnType<typeof useFloatingNode>;
+      node: ReturnType<typeof useFloatingNode>;
       typeahead: ReturnType<typeof useTypeahead>;
       collection?: ReturnType<typeof useCollection>;
       anchorEl: HTMLButtonElement;
@@ -471,8 +471,8 @@ describe("useTypeahead", () => {
 
     it("handles virtual element anchors gracefully", () => {
       scope = effectScope();
-      const contextEl = trackElement(document.createElement("button"));
-      document.body.appendChild(contextEl);
+      const nodeEl = trackElement(document.createElement("button"));
+      document.body.appendChild(nodeEl);
 
       const floatingEl = trackElement(document.createElement("div"));
       document.body.appendChild(floatingEl);
@@ -480,20 +480,20 @@ describe("useTypeahead", () => {
       let collection: any;
       scope.run(() => {
         const virtualAnchor = {
-          contextElement: contextEl,
-          getBoundingClientRect: () => contextEl.getBoundingClientRect(),
+          contextElement: nodeEl,
+          getBoundingClientRect: () => nodeEl.getBoundingClientRect(),
         };
-        const context = useFloatingNode({
+        const node = useFloatingNode({
           anchorEl: ref(virtualAnchor),
           floatingEl: ref(floatingEl),
           open: ref(true),
         });
 
         collection = useCollection({ values: ["Apple", "Banana"] });
-        useTypeahead(context, { collection });
+        useTypeahead(node, { collection });
       });
 
-      dispatchKey(contextEl, "b");
+      dispatchKey(nodeEl, "b");
       expect(collection.activeValue.value).toBe("Banana");
     });
 

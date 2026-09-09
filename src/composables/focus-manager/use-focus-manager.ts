@@ -35,25 +35,25 @@ import {
  * modal and non-modal focus containment, portal focus guards, background isolation,
  * and return focus restoration.
  *
- * @param context - Floating context containing elements refs and open state.
+ * @param node - Floating node containing elements refs and open state.
  * @param options - Configuration options for focus management.
  * @returns Object with `isActive` status and manual `activate` / `deactivate` controls.
  *
  * @example
  * ```ts
- * const context = useFloatingNode({ anchorEl, floatingEl });
- * useFocusManager(context, {
+ * const node = useFloatingNode({ anchorEl, floatingEl });
+ * useFocusManager(node, {
  *   modal: true,
  *   returnFocus: true,
  * });
  * ```
  */
 export function useFocusManager(
-  context: UseFocusManagerContext,
+  node: UseFocusManagerContext,
   options: UseFocusManagerOptions = {},
 ): UseFocusManagerReturn {
-  const { anchorEl: anchorElOption, floatingEl: floatingElOption } = context.refs;
-  const { open, setOpen } = context.state;
+  const { anchorEl: anchorElOption, floatingEl: floatingElOption } = node.refs;
+  const { open, setOpen } = node;
 
   const {
     enabled: enabledOption = true,
@@ -168,7 +168,7 @@ export function useFocusManager(
     if (!floating) return;
 
     const relatedTarget = event.relatedTarget as Node | null;
-    if (relatedTarget && floatingTree.isTargetWithin(context, relatedTarget)) {
+    if (relatedTarget && floatingTree.isTargetWithin(node, relatedTarget)) {
       return;
     }
 
@@ -184,7 +184,7 @@ export function useFocusManager(
       if (
         currentActive === doc?.body ||
         !currentActive ||
-        !floatingTree.isTargetWithin(context, currentActive)
+        !floatingTree.isTargetWithin(node, currentActive)
       ) {
         if (isPointerDownOutside) return;
 
@@ -242,7 +242,7 @@ export function useFocusManager(
     cleanupIsolation();
     if (!shouldInertOutside.value) return;
 
-    const containers = floatingTree.getFloatingElements(context);
+    const containers = floatingTree.getFloatingElements(node);
     if (containers.length === 0) return;
 
     const handle = isolateOutsideElements(containers, true);
@@ -268,7 +268,7 @@ export function useFocusManager(
     if (!target) return;
 
     // If the interaction is outside this floating tree, prevent focus hijacking
-    if (!floatingTree.isTargetWithin(context, target)) {
+    if (!floatingTree.isTargetWithin(node, target)) {
       isPointerDownOutside = true;
       if (pointerDownOutsideTimeoutId) clearTimeout(pointerDownOutsideTimeoutId);
       pointerDownOutsideTimeoutId = setTimeout(() => {
@@ -328,7 +328,7 @@ export function useFocusManager(
     const doc = getTargetDocument();
     const activeEl = doc?.activeElement ?? null;
     const isFocusOnBody = activeEl === doc?.body;
-    const isFocusInside = activeEl ? floatingTree.isTargetWithin(context, activeEl) : false;
+    const isFocusInside = activeEl ? floatingTree.isTargetWithin(node, activeEl) : false;
 
     // If focus has naturally moved to an outside element, don't steal it back.
     const focusMovedOutside = activeEl && !isFocusOnBody && !isFocusInside;
@@ -379,7 +379,7 @@ export function useFocusManager(
     const target = event.target as Node | null;
     if (!target) return;
 
-    if (floatingTree.isTargetWithin(context, target)) {
+    if (floatingTree.isTargetWithin(node, target)) {
       return;
     }
 
@@ -398,7 +398,7 @@ export function useFocusManager(
     const target = event.target as Node | null;
     if (!target) return;
 
-    if (floatingTree.isTargetWithin(context, target)) {
+    if (floatingTree.isTargetWithin(node, target)) {
       return;
     }
 
@@ -559,16 +559,8 @@ export function useFocusManager(
 /**
  * Context required by `useFocusManager`.
  */
-export interface UseFocusManagerContext {
-  /**
-   * Floating elements refs.
-   */
-  refs: FloatingNode["refs"];
-  /**
-   * Floating open state and setter.
-   */
-  state: FloatingNode["state"];
-}
+export interface UseFocusManagerContext
+  extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
 
 /**
  * Return shape for `useFocusManager`.

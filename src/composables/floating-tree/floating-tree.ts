@@ -8,7 +8,6 @@ import type {
   FloatingNode,
   FloatingNodeId,
   FloatingElement,
-  FloatingState,
 } from "./use-floating-node";
 
 const isDev = import.meta.env.DEV;
@@ -19,13 +18,13 @@ const isDev = import.meta.env.DEV;
 
 export class FloatingTreeNode {
   readonly id: FloatingNodeId;
-  readonly context: FloatingNode;
+  readonly node: FloatingNode;
   readonly parentId: FloatingNodeId | null;
   readonly childIds: ShallowRef<Set<FloatingNodeId>> = shallowRef(new Set());
 
-  constructor(context: FloatingNode, parentId: FloatingNodeId | null = null) {
-    this.id = context.id;
-    this.context = context;
+  constructor(node: FloatingNode, parentId: FloatingNodeId | null = null) {
+    this.id = node.id;
+    this.node = node;
     this.parentId = parentId;
   }
 
@@ -55,21 +54,18 @@ export class FloatingTree {
    * Registers a floating node in the tree and links it to its parent.
    * Automatically unregisters when the component effect scope disposes.
    */
-  addNode(
-    context: FloatingNode,
-    parentContext: FloatingNode | null = null,
-  ): FloatingTreeNode {
+  addNode(node: FloatingNode, parentNode: FloatingNode | null = null): FloatingTreeNode {
     // In SSR, avoid populating the process-level tree to prevent memory leaks across concurrent requests
     if (isServer) {
-      return new FloatingTreeNode(context, null);
+      return new FloatingTreeNode(node, null);
     }
 
     // Guard against duplicate registration: return existing node to preserve child tree
-    const existingNode = this.nodes.get(context.id);
+    const existingNode = this.nodes.get(node.id);
     if (existingNode) {
       if (isDev) {
         console.warn(
-          `[FloatingTree] Context "${String(context.id)}" is already registered in the floating tree.`,
+          `[FloatingTree] Node "${String(node.id)}" is already registered in the floating tree.`,
         );
       }
       return existingNode;
@@ -77,32 +73,32 @@ export class FloatingTree {
 
     // Validate parent linkage to prevent out-of-order registration and cycles
     let resolvedParentId: FloatingNodeId | null = null;
-    if (parentContext) {
-      if (parentContext.id === context.id) {
+    if (parentNode) {
+      if (parentNode.id === node.id) {
         if (isDev) {
-          console.warn("[FloatingTree] A context cannot be its own parent.");
+          console.warn("[FloatingTree] A node cannot be its own parent.");
         }
       } else {
-        const parentNode = this.nodes.get(parentContext.id);
-        if (parentNode) {
-          resolvedParentId = parentContext.id;
-          parentNode.addChild(context.id);
+        const parentTreeNode = this.nodes.get(parentNode.id);
+        if (parentTreeNode) {
+          resolvedParentId = parentNode.id;
+          parentTreeNode.addChild(node.id);
         } else if (isDev) {
           console.warn(
-            `[FloatingTree] Cannot register node under parent "${String(parentContext.id)}": parent node is not registered in the floating tree. Ensure parent context is initialized before child context.`,
+            `[FloatingTree] Cannot register node under parent "${String(parentNode.id)}": parent node is not registered in the floating tree. Ensure parent node is initialized before child node.`,
           );
         }
       }
     }
 
-    const node = new FloatingTreeNode(context, resolvedParentId);
-    this.nodes.set(context.id, node);
+    const treeNode = new FloatingTreeNode(node, resolvedParentId);
+    this.nodes.set(treeNode.id, treeNode);
 
     tryOnScopeDispose(() => {
-      this.removeNode(context.id);
+      this.removeNode(treeNode.id);
     });
 
-    return node;
+    return treeNode;
   }
 
   /**
@@ -121,30 +117,30 @@ export class FloatingTree {
   }
 
   /**
-   * Retrieves a tree node by context ID.
+   * Retrieves a tree node by node ID.
    */
   getNode(id: FloatingNodeId): FloatingTreeNode | undefined {
     return this.nodes.get(id);
   }
 
   /**
-   * Returns immediate child contexts for a given context or ID.
+   * Returns immediate child nodes for a given node or ID.
    */
   getChildren(target: FloatingNode | FloatingNodeId): FloatingNode[] {
     const id = typeof target === "object" ? target.id : target;
-    const node = this.nodes.get(id);
-    if (!node) return [];
+    const treeNode = this.nodes.get(id);
+    if (!treeNode) return [];
 
     const children: FloatingNode[] = [];
-    for (const childId of node.childIds.value) {
+    for (const childId of treeNode.childIds.value) {
       const childNode = this.nodes.get(childId);
-      if (childNode) children.push(childNode.context);
+      if (childNode) children.push(childNode.node);
     }
     return children;
   }
 
   /**
-   * Returns all descendant contexts depth-first.
+   * Returns all descendant nodes depth-first.
    */
   getDescendants(target: FloatingNode | FloatingNodeId): FloatingNode[] {
     const rootId = typeof target === "object" ? target.id : target;
@@ -155,13 +151,13 @@ export class FloatingTree {
       if (visited.has(currentId)) return;
       visited.add(currentId);
 
-      const node = this.nodes.get(currentId);
-      if (!node) return;
+      const treeNode = this.nodes.get(currentId);
+      if (!treeNode) return;
 
-      for (const childId of node.childIds.value) {
+      for (const childId of treeNode.childIds.value) {
         const childNode = this.nodes.get(childId);
         if (childNode) {
-          descendants.push(childNode.context);
+          descendants.push(childNode.node);
           traverse(childId);
         }
       }
@@ -172,17 +168,17 @@ export class FloatingTree {
   }
 
   /**
-   * Returns mounted floating DOM elements for the context and all its descendants.
+   * Returns mounted floating DOM elements for the node and all its descendants.
    */
-  getFloatingElements(context: FloatingNodeTarget): HTMLElement[] {
+  getFloatingElements(node: FloatingNodeTarget): HTMLElement[] {
     const elements: HTMLElement[] = [];
-    const collectEl = (ctx: FloatingNodeTarget) => {
-      const el = ctx.refs.floatingEl?.value;
+    const collectEl = (target: FloatingNodeTarget) => {
+      const el = target.refs.floatingEl?.value;
       if (el) elements.push(el);
     };
 
-    collectEl(context);
-    const rootId = "id" in context && context.id ? context.id : undefined;
+    collectEl(node);
+    const rootId = "id" in node && node.id ? node.id : undefined;
     if (rootId) {
       for (const descendant of this.getDescendants(rootId)) {
         collectEl(descendant);
@@ -193,48 +189,50 @@ export class FloatingTree {
   }
 
   /**
-   * Finds the deepest currently open descendant context in the subtree.
+   * Finds the deepest currently open descendant node in the subtree.
    */
-  getDeepestOpenContext<T extends { state: FloatingState }>(context: T): T | FloatingNode {
-    const rootId = "id" in context && context.id ? (context.id as FloatingNodeId) : undefined;
-    if (!rootId) return context;
+  getDeepestOpenContext<T extends Pick<FloatingNode, "id" | "open">>(
+    node: T,
+  ): T | FloatingNode {
+    const rootId = "id" in node && node.id ? (node.id as FloatingNodeId) : undefined;
+    if (!rootId) return node;
 
-    let deepestContext: T | FloatingNode = context;
-    let maxDepth = context.state.open.value ? 0 : -1;
+    let deepestNode: T | FloatingNode = node;
+    let maxDepth = node.open.value ? 0 : -1;
     const visited = new Set<FloatingNodeId>();
 
-    const traverse = (ctx: FloatingNode, depth: number) => {
-      if (visited.has(ctx.id)) return;
-      visited.add(ctx.id);
+    const traverse = (current: FloatingNode, depth: number) => {
+      if (visited.has(current.id)) return;
+      visited.add(current.id);
 
-      if (ctx.state.open.value && depth > maxDepth) {
+      if (current.open.value && depth > maxDepth) {
         maxDepth = depth;
-        deepestContext = ctx;
+        deepestNode = current;
       }
-      for (const child of this.getChildren(ctx.id)) {
+      for (const child of this.getChildren(current.id)) {
         traverse(child, depth + 1);
       }
     };
 
-    const node = this.nodes.get(rootId);
-    if (node) {
-      traverse(node.context, node.context.state.open.value ? 0 : -1);
+    const treeNode = this.nodes.get(rootId);
+    if (treeNode) {
+      traverse(treeNode.node, treeNode.node.open.value ? 0 : -1);
     }
 
-    return deepestContext;
+    return deepestNode;
   }
 
   /**
-   * Checks whether `target` is inside the context's own elements or any descendant's.
+   * Checks whether `target` is inside the node's own elements or any descendant's.
    * Traverses Shadow DOM boundaries via `getDomPath()` to support Web Components.
    */
-  isTargetWithin(context: FloatingNodeTarget, target: EventTarget | null): boolean {
+  isTargetWithin(node: FloatingNodeTarget, target: EventTarget | null): boolean {
     if (!isNode(target)) return false;
 
     const path = getDomPath(target);
-    const containsTarget = (ctx: FloatingNodeTarget): boolean => {
-      const anchorEl = ctx.refs.anchorEl?.value;
-      const floatingEl = ctx.refs.floatingEl?.value;
+    const containsTarget = (candidate: FloatingNodeTarget): boolean => {
+      const anchorEl = candidate.refs.anchorEl?.value;
+      const floatingEl = candidate.refs.floatingEl?.value;
 
       if (floatingEl) {
         if (floatingEl.contains(target) || path.includes(floatingEl)) {
@@ -266,9 +264,9 @@ export class FloatingTree {
       return false;
     };
 
-    if (containsTarget(context)) return true;
+    if (containsTarget(node)) return true;
 
-    const rootId = "id" in context && context.id ? (context.id as FloatingNodeId) : undefined;
+    const rootId = "id" in node && node.id ? (node.id as FloatingNodeId) : undefined;
     if (rootId) {
       for (const descendant of this.getDescendants(rootId)) {
         if (containsTarget(descendant)) return true;
@@ -279,19 +277,19 @@ export class FloatingTree {
   }
 
   /**
-   * Closes all descendant contexts from innermost child to nearest parent.
+   * Closes all descendant nodes from innermost child to nearest parent.
    */
   closeDescendants(
-    context: FloatingNodeTarget | { id: FloatingNodeId },
+    node: FloatingNodeTarget | { id: FloatingNodeId },
     reason: OpenChangeReason = "programmatic",
     event?: Event,
   ): void {
-    const rootId = "id" in context && context.id ? context.id : undefined;
+    const rootId = "id" in node && node.id ? node.id : undefined;
     if (!rootId) return;
 
     const descendants = this.getDescendants(rootId);
     for (let i = descendants.length - 1; i >= 0; i--) {
-      descendants[i].state.setOpen(false, reason, event);
+      descendants[i].setOpen(false, reason, event);
     }
   }
 }
@@ -318,8 +316,6 @@ export type FloatingNodeTarget = {
     anchorEl?: Ref<AnchorElement>;
     arrowEl?: Ref<HTMLElement | null>;
   };
-  state?: {
-    open: Readonly<Ref<boolean>>;
-    setOpen?: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
-  };
+  open?: Readonly<Ref<boolean>>;
+  setOpen?: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
 };

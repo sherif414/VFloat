@@ -21,8 +21,8 @@ describe("useRovingFocus", () => {
     dir?: string;
     tabindex?: number | ((idx: number) => number | undefined);
     unmanaged?: boolean;
-    context?: UseRovingFocusContext;
-    parentContext?: FloatingNode;
+    node?: UseRovingFocusContext;
+    parentNode?: FloatingNode;
   }
 
   const createTestComponent = (
@@ -30,24 +30,24 @@ describe("useRovingFocus", () => {
     config: FixtureConfig = {},
   ) => {
     let rovingReturn!: UseRovingFocusReturn;
-    let testContext!: FloatingNode | UseRovingFocusContext;
+    let testNode!: FloatingNode | UseRovingFocusContext;
 
     const Component = defineComponent(() => {
       const containerEl = useTemplateRef<HTMLDivElement>("container");
       const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
       const elementsList = ref<(HTMLElement | null)[]>([]);
 
-      const floatingContext =
-        config.context ??
+      const floatingNode =
+        config.node ??
         useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
-          parentContext: config.parentContext,
+          parentNode: config.parentNode,
           defaultOpen: true,
         });
-      testContext = floatingContext;
+      testNode = floatingNode;
 
-      rovingReturn = useRovingFocus(floatingContext, {
+      rovingReturn = useRovingFocus(floatingNode, {
         elementsList,
         ...options,
       });
@@ -87,7 +87,7 @@ describe("useRovingFocus", () => {
         ]);
     });
 
-    return { Component, getRoving: () => rovingReturn, getContext: () => testContext };
+    return { Component, getRoving: () => rovingReturn, getContext: () => testNode };
   };
 
   describe("sequential tab order & focus entry (WCAG single tab stop)", () => {
@@ -796,13 +796,13 @@ describe("useRovingFocus", () => {
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
         const anchorEl = ref<HTMLElement | null>(null);
-        const context = useFloatingNode({
+        const node = useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
           defaultOpen: true,
         });
 
-        useRovingFocus(context, { elementsList });
+        useRovingFocus(node, { elementsList });
 
         const register = (el: Element | null, idx: number) => {
           elementsList.value[idx] = el as HTMLElement;
@@ -1245,13 +1245,13 @@ describe("useRovingFocus", () => {
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
         const anchorEl = ref<HTMLElement | null>(null);
-        const context = useFloatingNode({
+        const node = useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
           defaultOpen: true,
         });
 
-        const roving = useRovingFocus(context, {
+        const roving = useRovingFocus(node, {
           elementsList,
           entryIndex: 2,
         });
@@ -1732,7 +1732,7 @@ describe("useRovingFocus", () => {
   });
 
   describe("FloatingNode integration & nested floating surfaces", () => {
-    it("resolves containerEl from context.refs.floatingEl by default", async () => {
+    it("resolves containerEl from node.refs.floatingEl by default", async () => {
       const { Component, getRoving } = createTestComponent();
       render(Component);
 
@@ -1757,25 +1757,25 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
-        const rootContext = useFloatingNode({
+        const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
           defaultOpen: true,
         });
 
-        rootRoving = useRovingFocus(rootContext, {
+        rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
         });
 
         const childAnchorEl = ref<HTMLElement | null>(null);
-        const childContext = useFloatingNode({
+        const childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          parentContext: rootContext,
+          parentNode: rootNode,
           defaultOpen: true,
         });
 
-        useRovingFocus(childContext, {
+        useRovingFocus(childNode, {
           elementsList: childElementsList,
         });
 
@@ -1848,13 +1848,13 @@ describe("useRovingFocus", () => {
         const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
-        const rootContext = useFloatingNode({
+        const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
           defaultOpen: true,
         });
 
-        rootRoving = useRovingFocus(rootContext, {
+        rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
         });
 
@@ -1862,7 +1862,7 @@ describe("useRovingFocus", () => {
         useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          parentContext: rootContext,
+          parentNode: rootNode,
           defaultOpen: true,
         });
 
@@ -1923,7 +1923,7 @@ describe("useRovingFocus", () => {
     });
 
     it("closes open descendant submenus when navigating between sibling items in parent menu", async () => {
-      let childContext!: FloatingNode;
+      let childNode!: FloatingNode;
       let rootRoving!: UseRovingFocusReturn;
 
       const RootWithChild = defineComponent(() => {
@@ -1932,21 +1932,21 @@ describe("useRovingFocus", () => {
         const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
-        const rootContext = useFloatingNode({
+        const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
           defaultOpen: true,
         });
 
-        rootRoving = useRovingFocus(rootContext, {
+        rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
         });
 
         const childAnchorEl = ref<HTMLElement | null>(null);
-        childContext = useFloatingNode({
+        childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          parentContext: rootContext,
+          parentNode: rootNode,
           defaultOpen: true,
         });
 
@@ -1987,19 +1987,19 @@ describe("useRovingFocus", () => {
 
       await userEvent.click(item1);
       expect(rootRoving.activeIndex.value).toBe(0);
-      expect(childContext.state.open.value).toBe(true);
+      expect(childNode.open.value).toBe(true);
 
       // ArrowDown to sibling item 2
       await userEvent.keyboard("{ArrowDown}");
       expect(rootRoving.activeIndex.value).toBe(1);
       await expect.element(item2).toHaveFocus();
 
-      // Child context should have been closed automatically
-      expect(childContext.state.open.value).toBe(false);
+      // Child node should have been closed automatically
+      expect(childNode.open.value).toBe(false);
     });
 
-    it("automatically closes submenu and returns focus to anchorEl on exit intent in child context", async () => {
-      let childContext!: FloatingNode;
+    it("automatically closes submenu and returns focus to anchorEl on exit intent in child node", async () => {
+      let childNode!: FloatingNode;
       let childRoving!: UseRovingFocusReturn;
       const onOpenChangeMock = vi.fn();
 
@@ -2010,21 +2010,21 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
-        const rootContext = useFloatingNode({
+        const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
           defaultOpen: true,
         });
 
-        childContext = useFloatingNode({
+        childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          parentContext: rootContext,
+          parentNode: rootNode,
           defaultOpen: true,
           onOpenChange: onOpenChangeMock,
         });
 
-        childRoving = useRovingFocus(childContext, {
+        childRoving = useRovingFocus(childNode, {
           elementsList: childElementsList,
         });
 
@@ -2061,8 +2061,8 @@ describe("useRovingFocus", () => {
       // Press ArrowLeft (exit intent in vertical LTR)
       await userEvent.keyboard("{ArrowLeft}");
 
-      // Child context should close with reason "keyboard-exit"
-      expect(childContext.state.open.value).toBe(false);
+      // Child node should close with reason "keyboard-exit"
+      expect(childNode.open.value).toBe(false);
       expect(onOpenChangeMock).toHaveBeenCalledWith(
         false,
         "keyboard-exit",
@@ -2074,7 +2074,7 @@ describe("useRovingFocus", () => {
     });
 
     it("supports RTL exit intent (ArrowRight) to close child submenu and restore focus", async () => {
-      let childContext!: FloatingNode;
+      let childNode!: FloatingNode;
       let childRoving!: UseRovingFocusReturn;
       const onOpenChangeMock = vi.fn();
 
@@ -2085,21 +2085,21 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
-        const rootContext = useFloatingNode({
+        const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
           defaultOpen: true,
         });
 
-        childContext = useFloatingNode({
+        childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          parentContext: rootContext,
+          parentNode: rootNode,
           defaultOpen: true,
           onOpenChange: onOpenChangeMock,
         });
 
-        childRoving = useRovingFocus(childContext, {
+        childRoving = useRovingFocus(childNode, {
           elementsList: childElementsList,
           rtl: true,
         });
@@ -2134,7 +2134,7 @@ describe("useRovingFocus", () => {
       // Press ArrowRight (exit intent in RTL)
       await userEvent.keyboard("{ArrowRight}");
 
-      expect(childContext.state.open.value).toBe(false);
+      expect(childNode.open.value).toBe(false);
       expect(onOpenChangeMock).toHaveBeenCalledWith(
         false,
         "keyboard-exit",
@@ -2143,8 +2143,8 @@ describe("useRovingFocus", () => {
       await expect.element(subTrigger).toHaveFocus();
     });
 
-    it("prefers custom onExit over default exit behavior in child context", async () => {
-      let childContext!: FloatingNode;
+    it("prefers custom onExit over default exit behavior in child node", async () => {
+      let childNode!: FloatingNode;
       const customOnExit = vi.fn();
 
       const SubmenuFixture = defineComponent(() => {
@@ -2154,20 +2154,20 @@ describe("useRovingFocus", () => {
         const childElementsList = ref<(HTMLElement | null)[]>([]);
 
         const rootAnchorEl = ref<HTMLElement | null>(null);
-        const rootContext = useFloatingNode({
+        const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
           defaultOpen: true,
         });
 
-        childContext = useFloatingNode({
+        childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          parentContext: rootContext,
+          parentNode: rootNode,
           defaultOpen: true,
         });
 
-        useRovingFocus(childContext, {
+        useRovingFocus(childNode, {
           elementsList: childElementsList,
           onExit: customOnExit,
         });
@@ -2199,11 +2199,11 @@ describe("useRovingFocus", () => {
 
       expect(customOnExit).toHaveBeenCalledTimes(1);
       expect(customOnExit).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
-      // Child context should NOT be closed because custom handler intercepted it
-      expect(childContext.state.open.value).toBe(true);
+      // Child node should NOT be closed because custom handler intercepted it
+      expect(childNode.open.value).toBe(true);
     });
 
-    it("automatically resets roving focus when context.state.open transitions to false", async () => {
+    it("automatically resets roving focus when node.open transitions to false", async () => {
       const { Component, getRoving, getContext } = createTestComponent();
       render(Component);
 
@@ -2211,15 +2211,15 @@ describe("useRovingFocus", () => {
       await userEvent.click(option3);
       expect(getRoving().activeIndex.value).toBe(2);
 
-      // Close the context
-      getContext().state?.setOpen?.(false);
+      // Close the node
+      getContext().setOpen?.(false);
       await nextTick();
 
       expect(getRoving().activeIndex.value).toBe(-1);
       expect(getRoving().tabStopIndex.value).toBe(0); // restored to entryIndex
     });
 
-    it("does not exit or close root context on exit key when onExit is omitted", async () => {
+    it("does not exit or close root node on exit key when onExit is omitted", async () => {
       const { Component, getRoving, getContext } = createTestComponent();
       render(Component);
 
@@ -2229,7 +2229,7 @@ describe("useRovingFocus", () => {
 
       await userEvent.keyboard("{ArrowLeft}");
       // Context should remain open and activeIndex unchanged
-      expect(getContext().state?.open.value).toBe(true);
+      expect(getContext().open.value).toBe(true);
       expect(getRoving().activeIndex.value).toBe(0);
     });
   });

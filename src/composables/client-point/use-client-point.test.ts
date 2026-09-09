@@ -77,7 +77,7 @@ const createPointerEventData = (
 });
 
 type ClientPointHarness = {
-  context: UseClientPointContext;
+  node: UseClientPointContext;
   open: Ref<boolean>;
   trackingAreaEl: Ref<HTMLElement | null>;
   scope: ReturnType<typeof effectScope> | null;
@@ -93,11 +93,8 @@ function createClientPointHarness(): ClientPointHarness {
     open,
     trackingAreaEl,
     scope: null,
-    context: {
-      state: {
-        open,
-        setOpen: vi.fn(),
-      },
+    node: {
+      open,
       refs: {
         anchorEl: ref<AnchorElement>(null),
       },
@@ -229,7 +226,7 @@ describe("useClientPoint", () => {
 
     let result!: ReturnType<typeof useClientPoint>;
     harness.scope.run(() => {
-      result = useClientPoint(harness.context, {
+      result = useClientPoint(harness.node, {
         trackingAreaEl: harness.trackingAreaEl,
         ...options,
       });
@@ -273,7 +270,7 @@ describe("useClientPoint", () => {
       );
       await nextTick();
 
-      const virtualAnchor = harness.context.refs.anchorEl.value;
+      const virtualAnchor = harness.node.refs.anchorEl.value;
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
       expect(isVirtualElement(virtualAnchor)).toBe(true);
       expect((virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
@@ -303,7 +300,7 @@ describe("useClientPoint", () => {
 
     it("clears the anchor when disabled", () => {
       const originalAnchorEl = trackElement(document.createElement("button"));
-      harness.context.refs.anchorEl.value = originalAnchorEl;
+      harness.node.refs.anchorEl.value = originalAnchorEl;
 
       const { coordinates } = initClientPoint({
         enabled: false,
@@ -317,7 +314,7 @@ describe("useClientPoint", () => {
       );
 
       expect(coordinates.value).toEqual({ x: null, y: null });
-      expect(harness.context.refs.anchorEl.value).toBeNull();
+      expect(harness.node.refs.anchorEl.value).toBeNull();
     });
   });
 
@@ -601,8 +598,8 @@ describe("useClientPoint", () => {
         }),
       );
 
-      expect(harness.context.refs.anchorEl.value).toBeDefined();
-      expect(harness.context.refs.anchorEl.value?.getBoundingClientRect).toBeDefined();
+      expect(harness.node.refs.anchorEl.value).toBeDefined();
+      expect(harness.node.refs.anchorEl.value?.getBoundingClientRect).toBeDefined();
     });
 
     it("does not replace the anchor element when pointer movement is ignored while closed", async () => {
@@ -613,7 +610,7 @@ describe("useClientPoint", () => {
       harness.open.value = false;
       await nextTick();
 
-      const initialAnchor = harness.context.refs.anchorEl.value;
+      const initialAnchor = harness.node.refs.anchorEl.value;
 
       harness.trackingAreaEl.value?.dispatchEvent(
         createPointerEvent("pointermove", {
@@ -622,7 +619,7 @@ describe("useClientPoint", () => {
         }),
       );
 
-      expect(harness.context.refs.anchorEl.value).toBe(initialAnchor);
+      expect(harness.node.refs.anchorEl.value).toBe(initialAnchor);
     });
   });
 
@@ -646,7 +643,7 @@ describe("useClientPoint", () => {
       );
       await nextTick();
 
-      const initialVirtualElement = harness.context.refs.anchorEl.value;
+      const initialVirtualElement = harness.node.refs.anchorEl.value;
       expect(initialVirtualElement).toBeDefined();
       expect(isVirtualElement(initialVirtualElement)).toBe(true);
       expect(
@@ -656,7 +653,7 @@ describe("useClientPoint", () => {
       harness.trackingAreaEl.value = newTarget;
       await nextTick();
 
-      const updatedVirtualElement = harness.context.refs.anchorEl.value;
+      const updatedVirtualElement = harness.node.refs.anchorEl.value;
       expect(updatedVirtualElement).toBeDefined();
       expect(isVirtualElement(updatedVirtualElement)).toBe(true);
       expect(
@@ -682,7 +679,7 @@ describe("useClientPoint", () => {
       );
       await nextTick();
 
-      const virtualAnchor = harness.context.refs.anchorEl.value;
+      const virtualAnchor = harness.node.refs.anchorEl.value;
       expect(virtualAnchor).toBeDefined();
       expect(isVirtualElement(virtualAnchor)).toBe(true);
       expect((virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
@@ -717,7 +714,7 @@ describe("useClientPoint", () => {
 
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
-      const rect = harness.context.refs.anchorEl.value?.getBoundingClientRect();
+      const rect = harness.node.refs.anchorEl.value?.getBoundingClientRect();
       expect(rect?.x).toBe(100);
       expect(rect?.y).toBe(200);
     });
@@ -742,12 +739,12 @@ describe("useClientPoint", () => {
       await nextTick();
 
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
-      const virtualAnchorEl = harness.context.refs.anchorEl.value;
+      const virtualAnchorEl = harness.node.refs.anchorEl.value;
 
       enabled.value = false;
       await nextTick();
 
-      expect(harness.context.refs.anchorEl.value).toBe(virtualAnchorEl);
+      expect(harness.node.refs.anchorEl.value).toBe(virtualAnchorEl);
 
       harness.open.value = false;
       await nextTick();

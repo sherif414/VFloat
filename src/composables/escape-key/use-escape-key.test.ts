@@ -9,10 +9,9 @@ function createMockFloatingNode(): UseEscapeKeyContext {
   });
 
   return {
-    state: {
-      open,
-      setOpen,
-    },
+    id: Symbol("mock-node"),
+    open,
+    setOpen,
   };
 }
 
@@ -28,58 +27,54 @@ describe("useEscapeKey", () => {
 
   describe("FloatingNode behavior", () => {
     it("closes floating element on escape key press", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context);
+        useEscapeKey(node);
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.state.setOpen).toHaveBeenCalledWith(
-        false,
-        "escape-key",
-        expect.any(KeyboardEvent),
-      );
+      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
     });
 
     it("does not trigger when floating element is already closed", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(false);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(false);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context);
+        useEscapeKey(node);
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
     });
 
     it("respects enabled option", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context, { enabled: false });
+        useEscapeKey(node, { enabled: false });
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
     });
 
     it("respects defaultPrevented from another handler", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       const onKeyDown = (event: KeyboardEvent) => {
         if (event.key === "Escape") {
@@ -91,25 +86,25 @@ describe("useEscapeKey", () => {
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context);
+        useEscapeKey(node);
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
 
       document.removeEventListener("keydown", onKeyDown, { capture: true });
 
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
     });
 
     it("uses custom onEscape handler when provided", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
       const customHandler = vi.fn();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context, {
+        useEscapeKey(node, {
           onEscape: customHandler,
         });
       });
@@ -117,17 +112,17 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
       expect(customHandler).toHaveBeenCalled();
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
     });
 
     it("ignores non-escape keys", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context);
+        useEscapeKey(node);
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
@@ -139,91 +134,79 @@ describe("useEscapeKey", () => {
         } as any),
       );
 
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
     });
   });
 
   describe("Composition event handling", () => {
     it("ignores escape during composition", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context);
+        useEscapeKey(node);
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
 
       document.dispatchEvent(new CompositionEvent("compositionend"));
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.state.setOpen).toHaveBeenCalledWith(
-        false,
-        "escape-key",
-        expect.any(KeyboardEvent),
-      );
+      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
     });
   });
 
   describe("Options handling", () => {
     it("respects reactive enabled option", async () => {
-      const context = createMockFloatingNode();
+      const node = createMockFloatingNode();
       const enabled = ref(true);
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context, { enabled });
+        useEscapeKey(node, { enabled });
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(context.state.setOpen).toHaveBeenCalledWith(
-        false,
-        "escape-key",
-        expect.any(KeyboardEvent),
-      );
+      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
 
       vi.clearAllMocks();
       enabled.value = false;
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(context.state.setOpen).not.toHaveBeenCalled();
+      expect(node.setOpen).not.toHaveBeenCalled();
     });
 
     it("handles capture option", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context, { capture: true });
+        useEscapeKey(node, { capture: true });
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(context.state.setOpen).toHaveBeenCalledWith(
-        false,
-        "escape-key",
-        expect.any(KeyboardEvent),
-      );
+      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
     });
 
     it("prevents default when preventDefault is enabled", async () => {
-      const context = createMockFloatingNode();
-      context.state.setOpen(true);
-      (context.state.setOpen as any).mockClear();
+      const node = createMockFloatingNode();
+      node.setOpen(true);
+      (node.setOpen as any).mockClear();
 
       scope = effectScope();
       scope.run(() => {
-        useEscapeKey(context, { preventDefault: true });
+        useEscapeKey(node, { preventDefault: true });
       });
 
       const event = new KeyboardEvent("keydown", {
@@ -235,20 +218,16 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(true);
-      expect(context.state.setOpen).toHaveBeenCalledWith(
-        false,
-        "escape-key",
-        expect.any(KeyboardEvent),
-      );
+      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
     });
 
     it("shares a single composition listener across multiple consumers", async () => {
-      const contextA = createMockFloatingNode();
-      const contextB = createMockFloatingNode();
-      contextA.state.setOpen(true);
-      contextB.state.setOpen(true);
-      (contextA.state.setOpen as any).mockClear();
-      (contextB.state.setOpen as any).mockClear();
+      const nodeA = createMockFloatingNode();
+      const nodeB = createMockFloatingNode();
+      nodeA.setOpen(true);
+      nodeB.setOpen(true);
+      (nodeA.setOpen as any).mockClear();
+      (nodeB.setOpen as any).mockClear();
 
       const addEventListenerSpy = vi.spyOn(document, "addEventListener");
 
@@ -256,11 +235,11 @@ describe("useEscapeKey", () => {
       const scopeB = effectScope();
 
       scopeA.run(() => {
-        useEscapeKey(contextA);
+        useEscapeKey(nodeA);
       });
 
       scopeB.run(() => {
-        useEscapeKey(contextB);
+        useEscapeKey(nodeB);
       });
 
       const compositionListeners = addEventListenerSpy.mock.calls.filter(
@@ -291,14 +270,14 @@ describe("useEscapeKey", () => {
         const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentContext: root,
+          parentNode: root,
           open: childOpen,
           onOpenChange: () => calls.push("child"),
         });
         useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentContext: child,
+          parentNode: child,
           open: grandchildOpen,
           onOpenChange: () => calls.push("grandchild"),
         });
@@ -333,21 +312,21 @@ describe("useEscapeKey", () => {
         useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentContext: root,
+          parentNode: root,
           open: firstChildOpen,
           onOpenChange: () => calls.push("first-child"),
         });
         const secondChild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentContext: root,
+          parentNode: root,
           open: secondChildOpen,
           onOpenChange: () => calls.push("second-child"),
         });
         useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parentContext: secondChild,
+          parentNode: secondChild,
           open: secondGrandchildOpen,
           onOpenChange: () => calls.push("second-grandchild"),
         });

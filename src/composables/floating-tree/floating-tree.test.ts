@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
+import type { OpenChangeReason } from "@/types";
 import { FloatingTree, FloatingTreeNode } from "./floating-tree";
-import type { FloatingNode } from "./use-floating-node";
+import type {
+  AnchorElement,
+  FloatingElement,
+  FloatingNode,
+} from "./use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -20,25 +25,23 @@ function clearTrackedElements() {
   trackedElements.length = 0;
 }
 
-function createMockContext(
-  overrides: Partial<FloatingNode> & { open?: boolean } = {},
+function createMockNode(
+  overrides: Omit<Partial<FloatingNode>, "open"> & { open?: boolean } = {},
 ): FloatingNode {
   const { open: initialOpen = false, ...restOverrides } = overrides;
-  const id = Symbol("mock-context");
+  const id = Symbol("mock-node");
   const open = ref(initialOpen);
   return {
     id,
     refs: {
-      anchorEl: ref(null),
-      floatingEl: ref(null),
-      arrowEl: ref(null),
+      anchorEl: ref<AnchorElement>(null),
+      floatingEl: ref<FloatingElement>(null),
+      arrowEl: ref<HTMLElement | null>(null),
     },
-    state: {
-      open,
-      setOpen: vi.fn((value: boolean) => {
-        open.value = value;
-      }),
-    },
+    open,
+    setOpen: vi.fn((value: boolean, _reason?: OpenChangeReason, _event?: Event) => {
+      open.value = value;
+    }),
     isRoot: true,
     ...restOverrides,
   };
@@ -59,28 +62,28 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
   describe("FloatingTreeNode", () => {
     it("adds and removes child IDs reactively", () => {
-      const context = createMockContext();
-      const node = new FloatingTreeNode(context);
+      const node = createMockNode();
+      const treeNode = new FloatingTreeNode(node);
       const childId = Symbol("child");
 
-      expect(node.childIds.value.has(childId)).toBe(false);
+      expect(treeNode.childIds.value.has(childId)).toBe(false);
 
-      node.addChild(childId);
-      expect(node.childIds.value.has(childId)).toBe(true);
+      treeNode.addChild(childId);
+      expect(treeNode.childIds.value.has(childId)).toBe(true);
 
-      node.addChild(childId);
-      expect(node.childIds.value.size).toBe(1);
+      treeNode.addChild(childId);
+      expect(treeNode.childIds.value.size).toBe(1);
 
-      node.removeChild(childId);
-      expect(node.childIds.value.has(childId)).toBe(false);
+      treeNode.removeChild(childId);
+      expect(treeNode.childIds.value.has(childId)).toBe(false);
     });
   });
 
   describe("FloatingTree instance", () => {
     it("adds nodes and links parent-child relationships", () => {
       const tree = new FloatingTree();
-      const parent = createMockContext();
-      const child = createMockContext({ isRoot: false });
+      const parent = createMockNode();
+      const child = createMockNode({ isRoot: false });
 
       const parentNode = tree.addNode(parent);
       const childNode = tree.addNode(child, parent);
@@ -94,8 +97,8 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
     it("removes a node and unlinks it from its parent", () => {
       const tree = new FloatingTree();
-      const parent = createMockContext();
-      const child = createMockContext({ isRoot: false });
+      const parent = createMockNode();
+      const child = createMockNode({ isRoot: false });
 
       tree.addNode(parent);
       tree.addNode(child, parent);
@@ -110,12 +113,12 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
     it("unregisters on scope disposal", () => {
       const tree = new FloatingTree();
-      const parent = createMockContext();
+      const parent = createMockNode();
       tree.addNode(parent);
 
       const localScope = effectScope();
       localScope.run(() => {
-        const child = createMockContext({ isRoot: false });
+        const child = createMockNode({ isRoot: false });
         tree.addNode(child, parent);
       });
 
@@ -128,9 +131,9 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
     it("traverses depth-first descendants across multi-level hierarchy", () => {
       const tree = new FloatingTree();
-      const root = createMockContext();
-      const child = createMockContext({ isRoot: false });
-      const grandchild = createMockContext({ isRoot: false });
+      const root = createMockNode();
+      const child = createMockNode({ isRoot: false });
+      const grandchild = createMockNode({ isRoot: false });
 
       tree.addNode(root);
       tree.addNode(child, root);
@@ -141,10 +144,10 @@ describe("FloatingTree & FloatingTreeNode", () => {
     });
 
     describe("deepest open traversal", () => {
-      it("returns root context when no descendants are open", () => {
+      it("returns root node when no descendants are open", () => {
         const tree = new FloatingTree();
-        const root = createMockContext();
-        const child = createMockContext({ isRoot: false });
+        const root = createMockNode();
+        const child = createMockNode({ isRoot: false });
 
         tree.addNode(root, null);
         tree.addNode(child, root);
@@ -154,9 +157,9 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
       it("returns deepest open descendant in a chain", () => {
         const tree = new FloatingTree();
-        const root = createMockContext({ open: true });
-        const child = createMockContext({ isRoot: false, open: true });
-        const grandchild = createMockContext({ isRoot: false, open: true });
+        const root = createMockNode({ open: true });
+        const child = createMockNode({ isRoot: false, open: true });
+        const grandchild = createMockNode({ isRoot: false, open: true });
 
         tree.addNode(root, null);
         tree.addNode(child, root);
@@ -165,12 +168,12 @@ describe("FloatingTree & FloatingTreeNode", () => {
         expect(tree.getDeepestOpenContext(root)).toBe(grandchild);
       });
 
-      it("finds deepest open context across multiple branches", () => {
+      it("finds deepest open node across multiple branches", () => {
         const tree = new FloatingTree();
-        const root = createMockContext();
-        const branchA1 = createMockContext({ isRoot: false, open: true });
-        const branchB1 = createMockContext({ isRoot: false, open: true });
-        const branchB2 = createMockContext({ isRoot: false, open: true });
+        const root = createMockNode();
+        const branchA1 = createMockNode({ isRoot: false, open: true });
+        const branchB1 = createMockNode({ isRoot: false, open: true });
+        const branchB2 = createMockNode({ isRoot: false, open: true });
 
         tree.addNode(root, null);
         tree.addNode(branchA1, root);
@@ -189,33 +192,31 @@ describe("FloatingTree & FloatingTreeNode", () => {
         const childEl = trackElement(document.createElement("span"));
         anchorEl.appendChild(childEl);
 
-        const context = createMockContext();
-        context.refs.anchorEl.value = anchorEl;
-        context.refs.floatingEl.value = floatingEl;
+        const node = createMockNode();
+        node.refs.anchorEl.value = anchorEl;
+        node.refs.floatingEl.value = floatingEl;
 
-        tree.addNode(context, null);
+        tree.addNode(node, null);
 
-        expect(tree.isTargetWithin(context, childEl)).toBe(true);
-        expect(tree.isTargetWithin(context, anchorEl)).toBe(true);
-        expect(tree.isTargetWithin(context, floatingEl)).toBe(true);
-        expect(tree.isTargetWithin(context, trackElement(document.createElement("div")))).toBe(
-          false,
-        );
-        expect(tree.isTargetWithin(context, null)).toBe(false);
+        expect(tree.isTargetWithin(node, childEl)).toBe(true);
+        expect(tree.isTargetWithin(node, anchorEl)).toBe(true);
+        expect(tree.isTargetWithin(node, floatingEl)).toBe(true);
+        expect(tree.isTargetWithin(node, trackElement(document.createElement("div")))).toBe(false);
+        expect(tree.isTargetWithin(node, null)).toBe(false);
       });
 
-      it("identifies targets within descendant context elements", () => {
+      it("identifies targets within descendant node elements", () => {
         const tree = new FloatingTree();
         const rootAnchor = trackElement(document.createElement("button"));
         const rootFloating = trackElement(document.createElement("div"));
         const childAnchor = trackElement(document.createElement("button"));
         const childFloating = trackElement(document.createElement("div"));
 
-        const root = createMockContext();
+        const root = createMockNode();
         root.refs.anchorEl.value = rootAnchor;
         root.refs.floatingEl.value = rootFloating;
 
-        const child = createMockContext({ isRoot: false });
+        const child = createMockNode({ isRoot: false });
         child.refs.anchorEl.value = childAnchor;
         child.refs.floatingEl.value = childFloating;
 
@@ -232,21 +233,21 @@ describe("FloatingTree & FloatingTreeNode", () => {
         const targetEl = trackElement(document.createElement("span"));
         hostEl.appendChild(targetEl);
 
-        const context = createMockContext();
-        context.refs.anchorEl.value = {
+        const node = createMockNode();
+        node.refs.anchorEl.value = {
           getBoundingClientRect: () => hostEl.getBoundingClientRect(),
           contextElement: hostEl,
-        };
+        } as unknown as AnchorElement;
 
-        tree.addNode(context, null);
+        tree.addNode(node, null);
 
-        expect(tree.isTargetWithin(context, targetEl)).toBe(true);
+        expect(tree.isTargetWithin(node, targetEl)).toBe(true);
 
-        context.refs.anchorEl.value = {
+        node.refs.anchorEl.value = {
           getBoundingClientRect: () => hostEl.getBoundingClientRect(),
         };
 
-        expect(tree.isTargetWithin(context, targetEl)).toBe(false);
+        expect(tree.isTargetWithin(node, targetEl)).toBe(false);
       });
 
       it("collects mounted floating elements across hierarchy", () => {
@@ -254,10 +255,10 @@ describe("FloatingTree & FloatingTreeNode", () => {
         const rootFloatingEl = trackElement(document.createElement("div"));
         const childFloatingEl = trackElement(document.createElement("div"));
 
-        const root = createMockContext();
+        const root = createMockNode();
         root.refs.floatingEl.value = rootFloatingEl;
 
-        const child = createMockContext({ isRoot: false });
+        const child = createMockNode({ isRoot: false });
         child.refs.floatingEl.value = childFloatingEl;
 
         tree.addNode(root, null);
@@ -266,7 +267,7 @@ describe("FloatingTree & FloatingTreeNode", () => {
         expect(tree.getFloatingElements(root)).toEqual([rootFloatingEl, childFloatingEl]);
       });
 
-      it("recognizes focus guard elements adjacent to floating elements as within context", () => {
+      it("recognizes focus guard elements adjacent to floating elements as within node", () => {
         const tree = new FloatingTree();
         const container = trackElement(document.createElement("div"));
         const startGuard = document.createElement("span");
@@ -283,13 +284,13 @@ describe("FloatingTree & FloatingTreeNode", () => {
         container.appendChild(unrelatedGuard);
         document.body.appendChild(container);
 
-        const context = createMockContext();
-        context.refs.floatingEl.value = floatingEl;
-        tree.addNode(context, null);
+        const node = createMockNode();
+        node.refs.floatingEl.value = floatingEl;
+        tree.addNode(node, null);
 
-        expect(tree.isTargetWithin(context, startGuard)).toBe(true);
-        expect(tree.isTargetWithin(context, endGuard)).toBe(true);
-        expect(tree.isTargetWithin(context, unrelatedGuard)).toBe(false);
+        expect(tree.isTargetWithin(node, startGuard)).toBe(true);
+        expect(tree.isTargetWithin(node, endGuard)).toBe(true);
+        expect(tree.isTargetWithin(node, unrelatedGuard)).toBe(false);
       });
     });
 
@@ -297,8 +298,8 @@ describe("FloatingTree & FloatingTreeNode", () => {
       it("warns and rejects parent link when parent is not registered (out-of-order registration)", () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
         const tree = new FloatingTree();
-        const parent = createMockContext();
-        const child = createMockContext({ isRoot: false });
+        const parent = createMockNode();
+        const child = createMockNode({ isRoot: false });
 
         const childNode = tree.addNode(child, parent);
 
@@ -313,12 +314,12 @@ describe("FloatingTree & FloatingTreeNode", () => {
       it("warns and prevents self-parenting", () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
         const tree = new FloatingTree();
-        const context = createMockContext();
+        const node = createMockNode();
 
-        const node = tree.addNode(context, context);
+        const treeNode = tree.addNode(node, node);
 
-        expect(node.parentId).toBeNull();
-        expect(warnSpy).toHaveBeenCalledWith("[FloatingTree] A context cannot be its own parent.");
+        expect(treeNode.parentId).toBeNull();
+        expect(warnSpy).toHaveBeenCalledWith("[FloatingTree] A node cannot be its own parent.");
 
         warnSpy.mockRestore();
       });
@@ -326,8 +327,8 @@ describe("FloatingTree & FloatingTreeNode", () => {
       it("warns and returns existing node on duplicate registration preserving children", () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
         const tree = new FloatingTree();
-        const parent = createMockContext();
-        const child = createMockContext({ isRoot: false });
+        const parent = createMockNode();
+        const child = createMockNode({ isRoot: false });
 
         const node1 = tree.addNode(parent);
         tree.addNode(child, parent);
@@ -346,8 +347,8 @@ describe("FloatingTree & FloatingTreeNode", () => {
 
       it("avoids infinite loop when circular references exist", () => {
         const tree = new FloatingTree();
-        const nodeA = createMockContext();
-        const nodeB = createMockContext({ isRoot: false });
+        const nodeA = createMockNode();
+        const nodeB = createMockNode({ isRoot: false });
 
         tree.addNode(nodeA);
         tree.addNode(nodeB, nodeA);
@@ -361,17 +362,17 @@ describe("FloatingTree & FloatingTreeNode", () => {
     });
 
     describe("descendant actions", () => {
-      it("closes descendant contexts from innermost child to nearest parent with reason and event", () => {
+      it("closes descendant nodes from innermost child to nearest parent with reason and event", () => {
         const tree = new FloatingTree();
         const calls: string[] = [];
-        const root = createMockContext();
-        const child = createMockContext({ isRoot: false });
-        const grandchild = createMockContext({ isRoot: false });
+        const root = createMockNode();
+        const child = createMockNode({ isRoot: false });
+        const grandchild = createMockNode({ isRoot: false });
 
-        child.state.setOpen = vi.fn((_open, reason) => {
+        child.setOpen = vi.fn((_open: boolean, reason?: OpenChangeReason) => {
           calls.push(`child:${reason}`);
         });
-        grandchild.state.setOpen = vi.fn((_open, reason) => {
+        grandchild.setOpen = vi.fn((_open: boolean, reason?: OpenChangeReason) => {
           calls.push(`grandchild:${reason}`);
         });
 
@@ -383,8 +384,8 @@ describe("FloatingTree & FloatingTreeNode", () => {
         tree.closeDescendants(root, "outside-pointer", event);
 
         expect(calls).toEqual(["grandchild:outside-pointer", "child:outside-pointer"]);
-        expect(grandchild.state.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
-        expect(child.state.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
+        expect(grandchild.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
+        expect(child.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
       });
     });
 
@@ -395,26 +396,26 @@ describe("FloatingTree & FloatingTreeNode", () => {
         const shadowBtn = document.createElement("button");
         shadowRoot.appendChild(shadowBtn);
 
-        const context = createMockContext();
-        context.refs.floatingEl.value = shadowHost;
+        const node = createMockNode();
+        node.refs.floatingEl.value = shadowHost;
 
         const tree = new FloatingTree();
-        tree.addNode(context, null);
+        tree.addNode(node, null);
 
-        expect(tree.isTargetWithin(context, shadowBtn)).toBe(true);
+        expect(tree.isTargetWithin(node, shadowBtn)).toBe(true);
       });
 
-      it("detects targets within shadow DOM attached to descendant context elements", () => {
+      it("detects targets within shadow DOM attached to descendant node elements", () => {
         const rootHost = trackElement(document.createElement("div"));
         const childHost = trackElement(document.createElement("div"));
         const childShadowRoot = childHost.attachShadow({ mode: "open" });
         const nestedTarget = document.createElement("span");
         childShadowRoot.appendChild(nestedTarget);
 
-        const root = createMockContext();
+        const root = createMockNode();
         root.refs.floatingEl.value = rootHost;
 
-        const child = createMockContext({ isRoot: false });
+        const child = createMockNode({ isRoot: false });
         child.refs.floatingEl.value = childHost;
 
         const tree = new FloatingTree();

@@ -1,14 +1,9 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
-import type {
-  AnchorElement,
-  FloatingNodeId,
-  FloatingElement,
-} from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { floatingTree } from "@/composables/floating-tree/floating-tree";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
-import type { OpenChangeReason } from "@/types";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
 import { resolveNavigableIndexByIntent } from "./navigation";
 import { useRtl } from "./rtl";
@@ -21,23 +16,23 @@ import { useRtl } from "./rtl";
  * Enables keyboard roving focus navigation across composite widgets (menus, tabs, toolbars, trees, listboxes)
  * within a floating node.
  *
- * Automatically resolves `containerEl` from `context.refs.floatingEl`, integrates with `FloatingTree`
+ * Automatically resolves `containerEl` from `node.refs.floatingEl`, integrates with `FloatingTree`
  * to protect active focus across teleported submenus, automatically closes sibling submenus during
  * arrow navigation, and handles default submenu collapse on exit.
  *
  * For text-input-driven components (comboboxes, autocompletes, searchable selects),
  * use {@link useAriaActivedescendant}.
  *
- * @param context - Floating context defining elements and open state.
+ * @param node - Floating node defining elements and open state.
  * @param options - Configuration options for elements list, orientation, and navigation.
  * @returns Roving focus state and navigation control methods.
  *
  * @example Floating Menu
  * ```ts
- * const context = useFloatingNode({ anchorEl, floatingEl });
+ * const node = useFloatingNode({ anchorEl, floatingEl });
  * const elementsList = ref<Array<HTMLElement | null>>([]);
  *
- * const { activeIndex, next, prev } = useRovingFocus(context, {
+ * const { activeIndex, next, prev } = useRovingFocus(node, {
  *   elementsList,
  *   entryIndex: 0,
  * });
@@ -45,19 +40,19 @@ import { useRtl } from "./rtl";
  *
  * @example Submenu Navigation (Enter / Exit)
  * ```ts
- * const subContext = useFloatingNode({
+ * const subNode = useFloatingNode({
  *   anchorEl: triggerEl,
  *   floatingEl: subMenuEl,
- *   parentContext: rootContext,
+ *   parentNode: rootNode,
  * });
  *
- * useRovingFocus(subContext, {
+ * useRovingFocus(subNode, {
  *   elementsList: subItemsList,
  * });
  * ```
  */
 export function useRovingFocus(
-  context: UseRovingFocusContext,
+  node: UseRovingFocusContext,
   options: UseRovingFocusOptions,
 ): UseRovingFocusReturn {
   const {
@@ -80,7 +75,7 @@ export function useRovingFocus(
 
   const isEnabled = computed(() => toValue(enabled));
   const orientation = computed(() => toValue(options.orientation ?? "vertical"));
-  const containerEl = computed(() => toValue(options.containerEl) ?? context.refs.floatingEl.value);
+  const containerEl = computed(() => toValue(options.containerEl) ?? node.refs.floatingEl.value);
   const isRtl = useRtl(containerEl, { rtl });
   const isLoop = computed(() => !!toValue(loop));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
@@ -136,7 +131,7 @@ export function useRovingFocus(
     if (!target) return false;
     const container = containerEl.value;
     if (container?.contains(target)) return true;
-    if (floatingTree.isTargetWithin(context, target)) return true;
+    if (floatingTree.isTargetWithin(node, target)) return true;
     return false;
   }
 
@@ -306,7 +301,7 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        floatingTree.closeDescendants(context, "keyboard-exit");
+        floatingTree.closeDescendants(node, "keyboard-exit");
       }
       focusIndex(targetIdx);
     }
@@ -353,10 +348,10 @@ export function useRovingFocus(
         if (result !== false) {
           e.preventDefault();
         }
-      } else if (!context.isRoot && context.state?.setOpen) {
+      } else if (!node.isRoot && node?.setOpen) {
         e.preventDefault();
-        context.state.setOpen(false, "keyboard-exit", e);
-        const anchor = resolveAnchorElement(context.refs.anchorEl?.value ?? null);
+        node.setOpen(false, "keyboard-exit", e);
+        const anchor = resolveAnchorElement(node.refs.anchorEl?.value ?? null);
         anchor?.focus({ preventScroll: true });
       }
       return;
@@ -462,8 +457,8 @@ export function useRovingFocus(
 
   // --- Lifecycle Coordination -------------------------------------------------
 
-  if (context.state?.open) {
-    watch(context.state.open, (isOpen) => {
+  if (node?.open) {
+    watch(node.open, (isOpen) => {
       if (!isOpen) {
         reset();
       }
@@ -515,20 +510,10 @@ function resolveEntryIndex(
 //=======================================================================================
 
 /**
- * Floating context required by `useRovingFocus`.
+ * Floating node required by `useRovingFocus`.
  */
-export interface UseRovingFocusContext {
-  id: FloatingNodeId;
-  refs: {
-    floatingEl: Ref<FloatingElement>;
-    anchorEl?: Ref<AnchorElement>;
-  };
-  state?: {
-    open: Readonly<Ref<boolean>>;
-    setOpen?: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
-  };
-  isRoot?: boolean;
-}
+export interface UseRovingFocusContext
+  extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen" | "isRoot"> {}
 
 /**
  * Mode defining how the composite widget handles sequential tab entry after blur.
@@ -608,7 +593,7 @@ export interface UseRovingFocusOptions {
 
   /**
    * Optional custom container element that receives keyboard and pointer events and is used for RTL detection.
-   * When omitted, defaults automatically to `context.refs.floatingEl`.
+   * When omitted, defaults automatically to `node.refs.floatingEl`.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
 

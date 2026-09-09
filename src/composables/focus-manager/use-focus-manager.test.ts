@@ -12,7 +12,7 @@ import {
 type FocusManagerTestContext = {
   anchorEl: HTMLButtonElement;
   floatingEl: HTMLDivElement;
-  context: UseFocusManagerContext;
+  node: UseFocusManagerContext;
   openRef: ReturnType<typeof ref<boolean>>;
   result: UseFocusManagerReturn;
   scope: ReturnType<typeof effectScope>;
@@ -83,16 +83,15 @@ function setupFocusManager(
   const floatingRef = ref<FloatingElement>(floatingEl);
   const arrowRef = ref<HTMLElement | null>(null);
 
-  const context: UseFocusManagerContext = {
+  const node: UseFocusManagerContext = {
+    id: Symbol("mock-node"),
     refs: {
       anchorEl: anchorRef,
       floatingEl: floatingRef,
       arrowEl: arrowRef,
     },
-    state: {
-      open: openRef,
-      setOpen: setOpenMock,
-    },
+    open: openRef,
+    setOpen: setOpenMock,
   };
 
   const scope = effectScope();
@@ -100,13 +99,13 @@ function setupFocusManager(
 
   let result!: UseFocusManagerReturn;
   scope.run(() => {
-    result = useFocusManager(context, options);
+    result = useFocusManager(node, options);
   });
 
   return {
     anchorEl,
     floatingEl,
-    context,
+    node,
     openRef,
     result,
     scope,
@@ -115,7 +114,7 @@ function setupFocusManager(
 }
 
 async function openManager(ctx: FocusManagerTestContext) {
-  ctx.context.state.setOpen(true);
+  ctx.node.setOpen(true);
   await flushFocus();
   ctx.setOpenMock.mockClear();
 }
@@ -294,7 +293,7 @@ describe("useFocusManager", () => {
       await openManager(ctx);
       expect(document.activeElement).not.toBe(ctx.anchorEl);
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       expect(document.activeElement).toBe(ctx.anchorEl);
@@ -306,13 +305,13 @@ describe("useFocusManager", () => {
 
       const ctx = setupFocusManager({ returnFocus: true });
       ctx.anchorEl.remove();
-      ctx.context.refs.anchorEl.value = null;
+      ctx.node.refs.anchorEl.value = null;
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
       expect(document.activeElement).not.toBe(previousFocus);
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       expect(document.activeElement).toBe(previousFocus);
@@ -324,7 +323,7 @@ describe("useFocusManager", () => {
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       expect(document.activeElement).toBe(customEl);
@@ -338,7 +337,7 @@ describe("useFocusManager", () => {
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       expect(document.activeElement).not.toBe(previousFocus);
@@ -355,7 +354,7 @@ describe("useFocusManager", () => {
       outsideFocus.focus();
 
       // Close the floating element
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       // Focus should remain on the outside element, not restored to anchor
@@ -377,7 +376,7 @@ describe("useFocusManager", () => {
       outsideButton.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
 
       // Suppose the outside component or useOutsideClick closes the floating element synchronously
-      ctx.context.state.setOpen(false, "outside-pointer", new Event("pointerdown"));
+      ctx.node.setOpen(false, "outside-pointer", new Event("pointerdown"));
       await flushFocus();
 
       // Focus should NOT be pulled back to `prev` because of the outside pointerdown interaction
@@ -392,13 +391,13 @@ describe("useFocusManager", () => {
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
       expect(ctx.setOpenMock).toHaveBeenCalledWith(false, "blur", expect.any(Event));
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("closes on pointerdown outside when closeOnFocusOut is true", async () => {
@@ -407,7 +406,7 @@ describe("useFocusManager", () => {
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       outsideEl.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       await flushFocus();
@@ -430,11 +429,11 @@ describe("useFocusManager", () => {
 
       ignoredEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("closes on Tab when closeOnTab is true", async () => {
@@ -466,7 +465,7 @@ describe("useFocusManager", () => {
         (outsideEl as any).inert === true;
       expect(hasIsolation).toBe(true);
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
@@ -475,7 +474,7 @@ describe("useFocusManager", () => {
   });
 
   describe("nested floating nodes", () => {
-    it("coordinates parent and child contexts without premature closing", async () => {
+    it("coordinates parent and child nodes without premature closing", async () => {
       const parentAnchorEl = trackElement(document.createElement("button"));
       const parentFloatingEl = trackElement(document.createElement("div"));
       const childAnchorEl = trackElement(document.createElement("button"));
@@ -498,7 +497,7 @@ describe("useFocusManager", () => {
       let result!: UseFocusManagerReturn;
 
       scope.run(() => {
-        const parentContext = useFloatingNode({
+        const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
@@ -506,10 +505,10 @@ describe("useFocusManager", () => {
         useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentContext,
+          parentNode,
           open: childOpen,
         });
-        result = useFocusManager(parentContext, { modal: false, closeOnFocusOut: true });
+        result = useFocusManager(parentNode, { modal: false, closeOnFocusOut: true });
       });
 
       await flushFocus();
@@ -535,21 +534,21 @@ describe("useFocusManager", () => {
       await flushFocus();
 
       expect(ctx.setOpenMock).toHaveBeenCalledWith(false, "programmatic");
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
 
     it("handles missing floating element gracefully without closing open state prematurely", async () => {
       const ctx = setupFocusManager();
-      ctx.context.refs.floatingEl.value = null;
+      ctx.node.refs.floatingEl.value = null;
 
-      ctx.context.state.setOpen(true);
+      ctx.node.setOpen(true);
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
       expect(ctx.result.isActive.value).toBe(false);
 
       // Now mount the floating element
-      ctx.context.refs.floatingEl.value = ctx.floatingEl;
+      ctx.node.refs.floatingEl.value = ctx.floatingEl;
       await flushFocus();
 
       expect(ctx.result.isActive.value).toBe(true);
@@ -579,23 +578,22 @@ describe("useFocusManager", () => {
         open.value = val;
       });
 
-      const context: UseFocusManagerContext = {
+      const node: UseFocusManagerContext = {
+        id: Symbol("mock-node"),
         refs: {
           anchorEl: ref(anchorEl),
           floatingEl: ref(floatingEl),
           arrowEl: ref(null),
         },
-        state: {
-          open,
-          setOpen,
-        },
+        open,
+        setOpen,
       };
 
       const scope = effectScope();
       activeScopes.push(scope);
 
       scope.run(() => {
-        useFocusManager(context, { modal: true, guards: true });
+        useFocusManager(node, { modal: true, guards: true });
       });
 
       open.value = true;

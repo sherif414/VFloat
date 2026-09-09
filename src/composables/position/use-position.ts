@@ -41,7 +41,7 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
  * Adds JavaScript positioning to a floating node.
  */
 export function usePosition(
-  context: FloatingNode,
+  node: FloatingNode,
   options: UsePositionOptions = {},
 ): FloatingPosition {
   const {
@@ -53,7 +53,7 @@ export function usePosition(
     autoUpdate: autoUpdateOption = true,
     enabled: enabledOption = true,
   } = options;
-  const { anchorEl, floatingEl } = context.refs;
+  const { anchorEl, floatingEl } = node.refs;
 
   const registrations = ref<
     {
@@ -120,7 +120,7 @@ export function usePosition(
       placement.value = result.placement;
       strategy.value = result.strategy;
       middlewareData.value = result.middlewareData;
-      isPositioned.value = context.state.open.value;
+      isPositioned.value = node.open.value;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error("[VFloat] Failed to compute position:", error);
@@ -128,7 +128,7 @@ export function usePosition(
     }
   };
 
-  watch(context.state.open, (isOpen) => {
+  watch(node.open, (isOpen) => {
     if (!isOpen) {
       isPositioned.value = false;
     }
@@ -201,7 +201,7 @@ export function usePosition(
     update,
   };
 
-  floatingInternals.set(context.id, {
+  floatingInternals.set(node.id, {
     middlewareRegistry: {
       middlewares: mergedMiddlewares,
       register: registerMiddleware,

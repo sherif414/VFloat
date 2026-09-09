@@ -14,32 +14,29 @@ import { useEventListener } from "@/shared/use-event-listener";
  *
  * When triggered, it will close the floating element by setting open to false.
  *
- * @param context - The floating node with open state and change handler.
+ * @param node - The floating node with open state and change handler.
  * @param options - {@link UseEscapeKeyOptions}
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingNode(...)
- * useEscapeKey(context) // Closes the floating element on escape
+ * const node = useFloatingNode(...)
+ * useEscapeKey(node) // Closes the floating element on escape
  * ```
  *
  * @example Custom handler
  * ```ts
- * useEscapeKey(context, {
+ * useEscapeKey(node, {
  *   onEscape: (event) => {
  *     if (hasUnsavedChanges.value) {
  *       showConfirmDialog.value = true
  *     } else {
- *       context.state.setOpen(false)
+ *       node.setOpen(false)
  *     }
  *   }
  * })
  * ```
  */
-export function useEscapeKey(
-  context: UseEscapeKeyContext,
-  options: UseEscapeKeyOptions = {},
-): void {
+export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOptions = {}): void {
   const {
     enabled = true,
     capture = false,
@@ -48,7 +45,7 @@ export function useEscapeKey(
     ignoreEscapeKey,
   } = options;
   const { isComposing } = useComposition();
-  const { open } = context.state;
+  const { open } = node;
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
@@ -75,8 +72,8 @@ export function useEscapeKey(
       return;
     }
 
-    const targetContext = floatingTree.getDeepestOpenContext(context);
-    targetContext.state.setOpen(false, "escape-key", event);
+    const targetNode = floatingTree.getDeepestOpenContext(node);
+    targetNode.setOpen(false, "escape-key", event);
   };
 
   // Event listener setup
@@ -90,12 +87,7 @@ export function useEscapeKey(
 /**
  * Context required by `useEscapeKey`.
  */
-export interface UseEscapeKeyContext {
-  /**
-   * The floating state that should respond to Escape.
-   */
-  state: FloatingNode["state"];
-}
+export interface UseEscapeKeyContext extends Pick<FloatingNode, "id" | "open" | "setOpen"> {}
 
 export interface UseEscapeKeyOptions {
   /**

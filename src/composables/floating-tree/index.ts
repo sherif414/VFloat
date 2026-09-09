@@ -3,8 +3,7 @@ export type {
   FloatingNode,
   FloatingNodeId,
   FloatingElement,
-  FloatingRefs,
-  FloatingState,
+  FloatingNodeElements,
   UseFloatingNodeOptions,
 } from "./use-floating-node";
 export { useFloatingNode } from "./use-floating-node";

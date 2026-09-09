@@ -73,18 +73,18 @@ describe("usePosition", () => {
     vi.useRealTimers();
   });
 
-  it("computes position from context refs without mutating open state", async () => {
+  it("computes position from node refs without mutating open state", async () => {
     let position!: ReturnType<typeof usePosition>;
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
     const open = ref(true);
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         open,
       });
-      position = usePosition(context, {
+      position = usePosition(node, {
         placement: "top",
         strategy: "fixed",
       });
@@ -92,7 +92,7 @@ describe("usePosition", () => {
 
     await position.update();
 
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
     expect(position.isPositioned.value).toBe(true);
     expect(position.strategy.value).toBe("fixed");
     expect(position.styles.value.position).toBe("fixed");
@@ -104,11 +104,11 @@ describe("usePosition", () => {
     let position!: ReturnType<typeof usePosition>;
 
     scope?.run(() => {
-      const context = useFloatingNode({
+      const node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
-      position = usePosition(context, {
+      position = usePosition(node, {
         placement,
         middlewares: [middleware],
       });
@@ -123,14 +123,14 @@ describe("usePosition", () => {
   });
 
   it("creates built-in middleware from declarative options", () => {
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
-      usePosition(context, {
+      usePosition(node, {
         middleware: {
           inline: true,
           offset: 8,
@@ -143,21 +143,21 @@ describe("usePosition", () => {
 
     expect(
       floatingInternals
-        .get(context.id)
+        .get(node.id)
         ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
     ).toEqual(["inline", "offset", "flip", "shift", "size"]);
   });
 
   it("appends custom middleware after declarative middleware", () => {
     const middleware = createMiddleware("custom", { ok: true });
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
-      usePosition(context, {
+      usePosition(node, {
         middleware: {
           offset: 8,
           custom: [middleware],
@@ -167,7 +167,7 @@ describe("usePosition", () => {
 
     expect(
       floatingInternals
-        .get(context.id)
+        .get(node.id)
         ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
     ).toEqual(["offset", "custom"]);
   });
@@ -178,12 +178,12 @@ describe("usePosition", () => {
     let position!: ReturnType<typeof usePosition>;
 
     scope?.run(() => {
-      const context = useFloatingNode({
+      const node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         open,
       });
-      position = usePosition(context, { enabled });
+      position = usePosition(node, { enabled });
     });
 
     await position.update();
@@ -198,39 +198,39 @@ describe("usePosition", () => {
 
   it("registers arrow middleware through positioning", () => {
     const arrowEl = ref(createElement("div"));
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         arrowEl,
       });
-      usePosition(context);
-      useArrow(context);
+      usePosition(node);
+      useArrow(node);
     });
 
-    expect(context.refs.arrowEl.value).toBe(arrowEl.value);
+    expect(node.refs.arrowEl.value).toBe(arrowEl.value);
     expect(
       floatingInternals
-        .get(context.id)
+        .get(node.id)
         ?.middlewareRegistry?.middlewares.value.some((middleware) => middleware.name === "arrow"),
     ).toBe(true);
   });
 
   it("stores placement and middlewareData in floatingInternals", async () => {
     let position!: ReturnType<typeof usePosition>;
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
       });
-      position = usePosition(context, { placement: "top" });
+      position = usePosition(node, { placement: "top" });
     });
 
-    const internals = floatingInternals.get(context.id);
+    const internals = floatingInternals.get(node.id);
     expect(internals?.placement).toBe(position.placement);
     expect(internals?.middlewareData).toBe(position.middlewareData);
   });

@@ -18,7 +18,7 @@ type VirtualElementConfig = {
  *
  * Virtual elements position floating components relative to the cursor
  * rather than a static DOM anchor. This function manages coordinate fallback,
- * baseline coordinates, and custom context elements.
+ * baseline coordinates, and custom node elements.
  *
  * @example Creating a virtual element
  * ```ts

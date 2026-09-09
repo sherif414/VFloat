@@ -6,7 +6,7 @@ import { type UseRoleOptions, type UseRoleReturn, useRole } from "@/composables/
 
 type RoleTestContext = {
   anchorEl: HTMLButtonElement;
-  context: ReturnType<typeof useFloatingNode>;
+  node: ReturnType<typeof useFloatingNode>;
   floatingEl: HTMLDivElement;
   items: HTMLButtonElement[];
   listRef: ReturnType<typeof ref<Array<HTMLElement | null>>>;
@@ -72,7 +72,7 @@ function setupRole(options: UseRoleOptions, initialOpen = false): RoleTestContex
   const openRef = ref(initialOpen);
   const anchorRef = ref<AnchorElement>(anchorEl);
   const floatingRef = ref<FloatingElement>(floatingEl);
-  const context = useFloatingNode({
+  const node = useFloatingNode({
     anchorEl: anchorRef,
     floatingEl: floatingRef,
     open: openRef,
@@ -82,7 +82,7 @@ function setupRole(options: UseRoleOptions, initialOpen = false): RoleTestContex
 
   let result!: UseRoleReturn;
   scope.run(() => {
-    result = useRole(context, {
+    result = useRole(node, {
       listRef,
       ...options,
     });
@@ -90,7 +90,7 @@ function setupRole(options: UseRoleOptions, initialOpen = false): RoleTestContex
 
   return {
     anchorEl,
-    context,
+    node,
     floatingEl,
     items,
     listRef,
@@ -190,13 +190,13 @@ describe("useRole", () => {
     expect(gridCtx.items[0].getAttribute("aria-selected")).toBe("true");
   });
 
-  it("lets child menu contexts manage submenu trigger relationships", async () => {
+  it("lets child menu nodes manage submenu trigger relationships", async () => {
     const parent = setupRole({ role: "menu" }, true);
     const childFloatingEl = createFloatingElement("child-menu");
     document.body.appendChild(childFloatingEl);
 
     const childOpen = ref(false);
-    const childContext = useFloatingNode({
+    const childNode = useFloatingNode({
       anchorEl: ref<AnchorElement>(parent.items[1]),
       floatingEl: ref<FloatingElement>(childFloatingEl),
       open: childOpen,
@@ -204,7 +204,7 @@ describe("useRole", () => {
     const scope = effectScope();
     activeScopes.push(scope);
     scope.run(() => {
-      useRole(childContext, { role: "menu", label: "Child menu" });
+      useRole(childNode, { role: "menu", label: "Child menu" });
     });
 
     await flushRole();

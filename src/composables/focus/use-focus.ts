@@ -25,7 +25,7 @@ const BLUR_CHECK_DELAY = 0;
  *
  * Keyboard-only interaction hook. Compose with `useClick`, `useHover`, `useEscapeKey` for a complete UX.
  *
- * @param context - The floating node with open state and change handler
+ * @param node - The floating node with open state and change handler
  * @param options - Configuration options
  *
  * @example
@@ -34,9 +34,9 @@ const BLUR_CHECK_DELAY = 0;
  * useFocus(ctx)
  * ```
  */
-export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
-  const { open, setOpen } = context.state;
-  const { anchorEl: anchorElOption } = context.refs;
+export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
+  const { open, setOpen } = node;
+  const { anchorEl: anchorElOption } = node.refs;
 
   const {
     enabled: enabledOption = true,
@@ -165,7 +165,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         return;
       }
 
-      if (floatingTree.isTargetWithin(context, activeEl)) {
+      if (floatingTree.isTargetWithin(node, activeEl)) {
         return;
       }
 
@@ -191,7 +191,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
         const target = e.target;
         if (!(target instanceof Element)) return;
 
-        if (floatingTree.isTargetWithin(context, target)) return;
+        if (floatingTree.isTargetWithin(node, target)) return;
 
         if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
 
@@ -246,16 +246,7 @@ export function useFocus(context: UseFocusContext, options: UseFocusOptions = {}
 /**
  * Context required by `useFocus`.
  */
-export interface UseFocusContext {
-  /**
-   * The floating refs used to attach focus listeners.
-   */
-  refs: FloatingNode["refs"];
-  /**
-   * The open state and close handler for the floating node.
-   */
-  state: FloatingNode["state"];
-}
+export interface UseFocusContext extends Pick<FloatingNode, "refs" | "open" | "setOpen"> {}
 
 /**
  * Cleanup handle returned by `useFocus`.

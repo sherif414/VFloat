@@ -16,7 +16,7 @@ export abstract class TrackingStrategy {
 
   protected lastKnownCoordinates: Coordinates | null = null;
 
-  abstract process(e: PointerEventData, context: TrackingContext): Coordinates | null;
+  abstract process(e: PointerEventData, node: TrackingContext): Coordinates | null;
   abstract getRequiredEvents(): PointerEventData["type"][];
 
   getCoordinatesForOpening(): Coordinates | null {
@@ -42,7 +42,7 @@ export class FollowTracker extends TrackingStrategy {
     return ["pointerdown", "pointermove", "pointerenter"];
   }
 
-  process(e: PointerEventData, context: TrackingContext): Coordinates | null {
+  process(e: PointerEventData, node: TrackingContext): Coordinates | null {
     const coordinates = e.coordinates;
     this.lastKnownCoordinates = coordinates;
 
@@ -52,7 +52,7 @@ export class FollowTracker extends TrackingStrategy {
       case "pointermove":
         // Keep following while open, but only for mouse-like pointers. Touch input
         // should not drag the floating element around after the initial trigger.
-        if (context.isOpen && isMouseLikePointerType(e.originalEvent.pointerType, true)) {
+        if (node.isOpen && isMouseLikePointerType(e.originalEvent.pointerType, true)) {
           return coordinates;
         }
 
@@ -77,7 +77,7 @@ export class StaticTracker extends TrackingStrategy {
     return ["pointerdown", "pointerenter", "pointermove"];
   }
 
-  process(e: PointerEventData, context: TrackingContext): Coordinates | null {
+  process(e: PointerEventData, node: TrackingContext): Coordinates | null {
     const coordinates = e.coordinates;
     this.lastKnownCoordinates = coordinates;
 
@@ -85,7 +85,7 @@ export class StaticTracker extends TrackingStrategy {
       // Remember the trigger point so opening can anchor to the original click
       // even if the pointer moves before the floating element becomes visible.
       this.triggerCoordinates = coordinates;
-      return context.isOpen ? coordinates : null;
+      return node.isOpen ? coordinates : null;
     }
 
     return null;

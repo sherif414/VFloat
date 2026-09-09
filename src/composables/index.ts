@@ -33,8 +33,7 @@ export type {
   FloatingNode,
   FloatingNodeId,
   FloatingElement,
-  FloatingRefs,
-  FloatingState,
+  FloatingNodeElements,
   UseFloatingNodeOptions,
 } from "./floating-tree";
 // Floating Node

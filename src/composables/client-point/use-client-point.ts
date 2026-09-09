@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, type Ref, toValue, watch, watchEffect } from "vue";
-import type { AnchorElement, FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { getDocument } from "@/shared/env";
 import { createClientPointState } from "./client-point-state";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";
@@ -16,7 +16,7 @@ import { createVirtualElement } from "./virtual-element-factory";
  * This composable listens to pointer interactions on a target element and updates
  * the floating node's anchor reference to a dynamic virtual element.
  *
- * @param context - The minimal floating node required to manage the anchor element ref and open state.
+ * @param node - The minimal floating node required to manage the anchor element ref and open state.
  * @param options - Configuration options for pointer-driven virtual anchor tracking.
  * @returns An object containing the readonly pointer coordinates.
  *
@@ -29,17 +29,17 @@ import { createVirtualElement } from "./virtual-element-factory";
  * const trackingAreaEl = ref<HTMLElement | null>(null);
  * const anchorEl = ref<HTMLElement | null>(null);
  * const floatingEl = ref<HTMLElement | null>(null);
- * const context = useFloatingNode({ anchorEl, floatingEl });
- * const { styles } = usePosition(context);
+ * const node = useFloatingNode({ anchorEl, floatingEl });
+ * const { styles } = usePosition(node);
  *
- * useClientPoint(context, {
+ * useClientPoint(node, {
  *   trackingAreaEl,
  * });
  * </script>
  * ```
  */
 export function useClientPoint(
-  context: UseClientPointContext,
+  node: UseClientPointContext,
   options: UseClientPointOptions = {},
 ): UseClientPointReturn {
   const {
@@ -50,7 +50,7 @@ export function useClientPoint(
     trackingMode: trackingModeOption = "follow",
   } = options;
 
-  const { open } = context.state;
+  const { open } = node;
 
   const state = createClientPointState({
     x: xOption,
@@ -91,12 +91,12 @@ export function useClientPoint(
   watchEffect(() => {
     if (!isEnabled.value) {
       if (!open.value) {
-        context.refs.anchorEl.value = null;
+        node.refs.anchorEl.value = null;
       }
       return;
     }
 
-    context.refs.anchorEl.value = createVirtualElement({
+    node.refs.anchorEl.value = createVirtualElement({
       coordinates: state.coordinates.value,
       trackingTarget: trackingAreaEl.value,
       baselineCoordinates: state.initialCoordinates.value,
@@ -163,11 +163,8 @@ function getDefaultTrackingArea(): HTMLElement | null {
 /**
  * Minimal floating node shape required by `useClientPoint()`.
  */
-export interface UseClientPointContext {
-  refs: {
-    anchorEl: Ref<AnchorElement>;
-  };
-  state: FloatingNode["state"];
+export interface UseClientPointContext extends Pick<FloatingNode, "open"> {
+  refs: Pick<FloatingNode["refs"], "anchorEl">;
 }
 
 /**

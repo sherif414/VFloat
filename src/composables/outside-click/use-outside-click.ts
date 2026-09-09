@@ -13,18 +13,18 @@ import { useEventListener } from "@/shared/use-event-listener";
 /**
  * Closes a floating node when pointer input lands outside its floating family.
  *
- * @param context - The floating node with refs and open state.
+ * @param node - The floating node with refs and open state.
  * @param options - Configuration options for outside-click dismissal.
  *
  * @example Basic usage
  * ```ts
- * const context = useFloatingNode(...)
- * useOutsideClick(context)
+ * const node = useFloatingNode(...)
+ * useOutsideClick(node)
  * ```
  *
  * @example Ignore a related external element
  * ```ts
- * useOutsideClick(context, {
+ * useOutsideClick(node, {
  *   ignoreClick: (_event, target) => {
  *     return target instanceof Node && !!toolbarEl.value?.contains(target)
  *   }
@@ -32,10 +32,10 @@ import { useEventListener } from "@/shared/use-event-listener";
  * ```
  */
 export function useOutsideClick(
-  context: UseOutsideClickContext,
+  node: UseOutsideClickContext,
   options: UseOutsideClickOptions = {},
 ): void {
-  const { open, setOpen } = context.state;
+  const { open, setOpen } = node;
   const {
     enabled: enabledOption = true,
     event: eventOption = "pointerdown",
@@ -47,7 +47,7 @@ export function useOutsideClick(
   } = options;
 
   const isEnabled = computed(() => toValue(enabledOption));
-  const floatingEl = computed(() => context.refs.floatingEl.value);
+  const floatingEl = computed(() => node.refs.floatingEl.value);
 
   let dragStartedInside = false;
   let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -72,13 +72,13 @@ export function useOutsideClick(
       toValue(ignoreScrollbarOption) &&
       isHTMLElement(target) &&
       floatingEl.value &&
-      (floatingEl.value.contains(target) || floatingTree.isTargetWithin(context, target)) &&
+      (floatingEl.value.contains(target) || floatingTree.isTargetWithin(node, target)) &&
       isClickOnScrollbar(event, target)
     ) {
       return;
     }
 
-    if (floatingTree.isTargetWithin(context, target)) {
+    if (floatingTree.isTargetWithin(node, target)) {
       return;
     }
 
@@ -144,16 +144,8 @@ export function useOutsideClick(
 /**
  * Context required by `useOutsideClick`.
  */
-export interface UseOutsideClickContext {
-  /**
-   * The reactive refs exposed by the floating node.
-   */
-  refs: FloatingNode["refs"];
-  /**
-   * The reactive state and state mutators for the floating node.
-   */
-  state: FloatingNode["state"];
-}
+export interface UseOutsideClickContext
+  extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
 
 /**
  * Options for configuring outside-click dismissal.

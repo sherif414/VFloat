@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref, watchEffect } from "vue";
 import { floatingTree } from "./floating-tree";
-import {
-  FloatingInternalsRegistry,
-  floatingInternals,
-  useFloatingNode,
-} from "./use-floating-node";
+import { FloatingInternalsRegistry, floatingInternals, useFloatingNode } from "./use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -38,22 +34,22 @@ describe("useFloatingNode", () => {
   });
 
   it("uses defaultOpen for uncontrolled state", () => {
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         defaultOpen: true,
       });
     });
 
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
   });
 
   it("prefers controlled open state over defaultOpen", () => {
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: ref(false),
@@ -61,17 +57,17 @@ describe("useFloatingNode", () => {
       });
     });
 
-    expect(context.state.open.value).toBe(false);
+    expect(node.open.value).toBe(false);
   });
 
   it("uses controlled open state and forwards reasons and events", () => {
     const open = ref(false);
     const onOpenChange = vi.fn();
     const event = new KeyboardEvent("keydown");
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open,
@@ -79,7 +75,7 @@ describe("useFloatingNode", () => {
       });
     });
 
-    context.state.setOpen(true, "anchor-click", event);
+    node.setOpen(true, "anchor-click", event);
 
     expect(open.value).toBe(true);
     expect(onOpenChange).toHaveBeenCalledWith(true, "anchor-click", event);
@@ -87,100 +83,100 @@ describe("useFloatingNode", () => {
 
   it("falls back to programmatic reasons and ignores duplicate updates", () => {
     const onOpenChange = vi.fn();
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         onOpenChange,
       });
     });
 
-    context.state.setOpen(true);
-    context.state.setOpen(true, "anchor-click");
+    node.setOpen(true);
+    node.setOpen(true, "anchor-click");
 
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
     expect(onOpenChange).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(true, "programmatic", undefined);
   });
 
   it("tracks lastOpenReason and lastOpenEvent when opened and resets on close", async () => {
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
     const dummyEvent = new MouseEvent("click");
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
     });
 
-    expect(context.state.lastOpenReason?.value).toBeNull();
-    expect(context.state.lastOpenEvent?.value).toBeNull();
+    expect(node.lastOpenReason?.value).toBeNull();
+    expect(node.lastOpenEvent?.value).toBeNull();
 
-    context.state.setOpen(true, "hover", dummyEvent);
-    expect(context.state.open.value).toBe(true);
-    expect(context.state.lastOpenReason?.value).toBe("hover");
-    expect(context.state.lastOpenEvent?.value).toBe(dummyEvent);
+    node.setOpen(true, "hover", dummyEvent);
+    expect(node.open.value).toBe(true);
+    expect(node.lastOpenReason?.value).toBe("hover");
+    expect(node.lastOpenEvent?.value).toBe(dummyEvent);
 
     // Reaffirming open state with another reason updates lastOpenReason / lastOpenEvent
     const clickEvent = new MouseEvent("click");
-    context.state.setOpen(true, "anchor-click", clickEvent);
-    expect(context.state.open.value).toBe(true);
-    expect(context.state.lastOpenReason?.value).toBe("anchor-click");
-    expect(context.state.lastOpenEvent?.value).toBe(clickEvent);
+    node.setOpen(true, "anchor-click", clickEvent);
+    expect(node.open.value).toBe(true);
+    expect(node.lastOpenReason?.value).toBe("anchor-click");
+    expect(node.lastOpenEvent?.value).toBe(clickEvent);
 
     // Closing resets lastOpenReason and lastOpenEvent to null
-    context.state.setOpen(false, "escape-key");
-    expect(context.state.open.value).toBe(false);
-    expect(context.state.lastOpenReason?.value).toBeNull();
-    expect(context.state.lastOpenEvent?.value).toBeNull();
+    node.setOpen(false, "escape-key");
+    expect(node.open.value).toBe(false);
+    expect(node.lastOpenReason?.value).toBeNull();
+    expect(node.lastOpenEvent?.value).toBeNull();
   });
 
   it("resets lastOpenReason and lastOpenEvent when controlled open ref changes to false", async () => {
     const openRef = ref(true);
-    let context!: ReturnType<typeof useFloatingNode>;
+    let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
         open: openRef,
       });
     });
 
-    context.state.setOpen(true, "hover");
-    expect(context.state.lastOpenReason?.value).toBe("hover");
+    node.setOpen(true, "hover");
+    expect(node.lastOpenReason?.value).toBe("hover");
 
     openRef.value = false;
     await nextTick();
 
-    expect(context.state.lastOpenReason?.value).toBeNull();
-    expect(context.state.lastOpenEvent?.value).toBeNull();
+    expect(node.lastOpenReason?.value).toBeNull();
+    expect(node.lastOpenEvent?.value).toBeNull();
   });
 
-  it("assigns each context a stable symbol id", () => {
-    let context!: ReturnType<typeof useFloatingNode>;
-    let otherContext!: ReturnType<typeof useFloatingNode>;
+  it("assigns each node a stable symbol id", () => {
+    let node!: ReturnType<typeof useFloatingNode>;
+    let otherNode!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
-      context = useFloatingNode({
+      node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
-      otherContext = useFloatingNode({
+      otherNode = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
       });
     });
 
-    expect(typeof context.id).toBe("symbol");
-    expect(context.id).toBe(context.id);
-    expect(context.id).not.toBe(otherContext.id);
+    expect(typeof node.id).toBe("symbol");
+    expect(node.id).toBe(node.id);
+    expect(node.id).not.toBe(otherNode.id);
   });
 
-  it("closes descendant contexts from deepest to nearest child before closing the parent", () => {
+  it("closes descendant nodes from deepest to nearest child before closing the parent", () => {
     const calls: string[] = [];
     const rootOpen = ref(true);
     const childOpen = ref(true);
@@ -197,20 +193,20 @@ describe("useFloatingNode", () => {
       const child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentContext: root,
+        parentNode: root,
         open: childOpen,
         onOpenChange: () => calls.push("child"),
       });
       useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentContext: child,
+        parentNode: child,
         open: grandchildOpen,
         onOpenChange: () => calls.push("grandchild"),
       });
     });
 
-    root.state.setOpen(false, "outside-pointer");
+    root.setOpen(false, "outside-pointer");
 
     expect(rootOpen.value).toBe(false);
     expect(childOpen.value).toBe(false);
@@ -218,7 +214,7 @@ describe("useFloatingNode", () => {
     expect(calls).toEqual(["grandchild", "child", "root"]);
   });
 
-  it("does not open ancestors when opening a child context", () => {
+  it("does not open ancestors when opening a child node", () => {
     const rootOpen = ref(false);
     const childOpen = ref(false);
     let child!: ReturnType<typeof useFloatingNode>;
@@ -232,12 +228,12 @@ describe("useFloatingNode", () => {
       child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentContext: root,
+        parentNode: root,
         open: childOpen,
       });
     });
 
-    child.state.setOpen(true, "programmatic");
+    child.setOpen(true, "programmatic");
 
     expect(rootOpen.value).toBe(false);
     expect(childOpen.value).toBe(true);
@@ -256,7 +252,7 @@ describe("useFloatingNode", () => {
       useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentContext: root,
+        parentNode: root,
         open: childOpen,
       });
     });
@@ -266,7 +262,7 @@ describe("useFloatingNode", () => {
     expect(childOpen.value).toBe(true);
   });
 
-  it("unregisters child context links on scope disposal", () => {
+  it("unregisters child node links on scope disposal", () => {
     const rootOpen = ref(true);
     const childOpen = ref(true);
     let root!: ReturnType<typeof useFloatingNode>;
@@ -284,19 +280,19 @@ describe("useFloatingNode", () => {
       useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentContext: root,
+        parentNode: root,
         open: childOpen,
       });
     });
 
     localScope.stop();
-    root.state.setOpen(false, "outside-pointer");
+    root.setOpen(false, "outside-pointer");
 
     expect(rootOpen.value).toBe(false);
     expect(childOpen.value).toBe(true);
   });
 
-  it("unregisters child context links from family helpers on scope disposal", () => {
+  it("unregisters child node links from family helpers on scope disposal", () => {
     const rootFloatingEl = trackElement(document.createElement("div"));
     const childFloatingEl = trackElement(document.createElement("div"));
     let root!: ReturnType<typeof useFloatingNode>;
@@ -313,7 +309,7 @@ describe("useFloatingNode", () => {
       useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(childFloatingEl),
-        parentContext: root,
+        parentNode: root,
       });
     });
 
@@ -324,7 +320,7 @@ describe("useFloatingNode", () => {
     expect(floatingTree.getFloatingElements(root)).toEqual([rootFloatingEl]);
   });
 
-  it("updates descendant floating element helpers when child contexts mount later", async () => {
+  it("updates descendant floating element helpers when child nodes mount later", async () => {
     const rootFloatingEl = trackElement(document.createElement("div"));
     const childFloatingEl = trackElement(document.createElement("div"));
     let root!: ReturnType<typeof useFloatingNode>;
@@ -347,7 +343,7 @@ describe("useFloatingNode", () => {
       useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(childFloatingEl),
-        parentContext: root,
+        parentNode: root,
       });
     });
 
@@ -357,7 +353,7 @@ describe("useFloatingNode", () => {
     expect(lengths).toEqual([1, 2]);
   });
 
-  it("sets isRoot to true for root contexts and false for nested child contexts", () => {
+  it("sets isRoot to true for root nodes and false for nested child nodes", () => {
     let root!: ReturnType<typeof useFloatingNode>;
     let child!: ReturnType<typeof useFloatingNode>;
 
@@ -369,7 +365,7 @@ describe("useFloatingNode", () => {
       child = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        parentContext: root,
+        parentNode: root,
       });
     });
 

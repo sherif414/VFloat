@@ -210,7 +210,7 @@ describe("utils and core helpers", () => {
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("covers lifecycle helpers and floating context plus position shapes", () => {
+  it("covers lifecycle helpers and floating node plus position shapes", () => {
     const cleanupRegistry = createCleanupRegistry();
     const cleanup = vi.fn();
     cleanupRegistry.add(cleanup);
@@ -236,9 +236,10 @@ describe("utils and core helpers", () => {
     const setOpen = vi.fn();
     const update = vi.fn();
 
-    const context = {
+    const node = {
       refs: { anchorEl, floatingEl, arrowEl },
-      state: { open, setOpen },
+      open,
+      setOpen,
     };
     const position = {
       x,
@@ -251,8 +252,8 @@ describe("utils and core helpers", () => {
       update,
     };
 
-    expect(context.refs).toBe(context.refs);
-    expect(context.state.open).toBe(open);
+    expect(node.refs).toBe(node.refs);
+    expect(node.open).toBe(open);
     expect(position.update).toBe(update);
 
     expect(getAnchorElement(anchorEl.value)).toBe(anchorEl.value);

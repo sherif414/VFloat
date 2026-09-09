@@ -18,7 +18,7 @@ import { arrow } from "../middlewares";
  * This composable handles arrow registration inside the floating position's middleware registry
  * and returns the reactive styles and offsets needed to render a floating arrow pointing to the anchor.
  *
- * @param context - The shared floating node.
+ * @param node - The shared floating node.
  * @param options - Configuration options for arrow positioning.
  * @returns An object containing computed coordinates and styles for the arrow.
  *
@@ -32,13 +32,13 @@ import { arrow } from "../middlewares";
  * const floatingEl = ref<HTMLElement | null>(null);
  * const arrowEl = ref<HTMLElement | null>(null);
  *
- * const context = useFloatingNode({
+ * const node = useFloatingNode({
  *   anchorEl,
  *   floatingEl,
  *   arrowEl,
  * });
- * const position = usePosition(context, { placement: "top" });
- * const { arrowStyles } = useArrow(context);
+ * const position = usePosition(node, { placement: "top" });
+ * const { arrowStyles } = useArrow(node);
  * </script>
  *
  * <template>
@@ -50,13 +50,13 @@ import { arrow } from "../middlewares";
  * </template>
  * ```
  */
-export function useArrow(context: UseArrowContext, options: UseArrowOptions = {}): UseArrowReturn {
-  const { refs } = context;
+export function useArrow(node: UseArrowContext, options: UseArrowOptions = {}): UseArrowReturn {
+  const { refs } = node;
   const { arrowEl } = refs;
   const { offset = "-4px", padding } = options;
 
   // Resolved lazily or on mount in case useArrow is called before usePosition.
-  let internals: FloatingInternals | undefined = floatingInternals.get(context.id);
+  let internals: FloatingInternals | undefined = floatingInternals.get(node.id);
   let unregisterArrow: (() => void) | undefined;
 
   function registerArrow() {
@@ -71,7 +71,7 @@ export function useArrow(context: UseArrowContext, options: UseArrowOptions = {}
 
   function getInternals(): FloatingInternals | undefined {
     if (!internals) {
-      internals = floatingInternals.get(context.id);
+      internals = floatingInternals.get(node.id);
       if (internals) {
         registerArrow();
       }
@@ -182,7 +182,7 @@ export interface UseArrowReturn {
 }
 
 /**
- * Options for positioning the context-owned arrow element.
+ * Options for positioning the node-owned arrow element.
  */
 export interface UseArrowOptions {
   /**

@@ -1,4 +1,4 @@
-import { userEvent } from "@vitest/browser/context";
+import { userEvent } from "vitest/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import {
@@ -42,7 +42,7 @@ function createOutsideElement(id = "outside"): HTMLElement {
 }
 
 describe("useOutsideClick", () => {
-  let context: UseOutsideClickContext;
+  let node: UseOutsideClickContext;
   let anchorEl: HTMLElement;
   let floatingEl: HTMLElement;
   let scope: ReturnType<typeof effectScope>;
@@ -63,23 +63,22 @@ describe("useOutsideClick", () => {
       openRef.value = open;
     });
 
-    context = {
+    node = {
+      id: Symbol("mock-node"),
       refs: {
         anchorEl: ref<AnchorElement>(anchorEl),
         floatingEl: ref<FloatingElement>(floatingEl),
         arrowEl: ref<HTMLElement | null>(null),
       },
-      state: {
-        open: openRef,
-        setOpen: setOpenMock as () => void,
-      },
+      open: openRef,
+      setOpen: setOpenMock as () => void,
     };
   };
 
   const initOutsideClick = (options?: UseOutsideClickOptions) => {
     scope = effectScope();
     scope.run(() => {
-      useOutsideClick(context, options);
+      useOutsideClick(node, options);
     });
   };
 
@@ -103,7 +102,7 @@ describe("useOutsideClick", () => {
 
     expect(setOpenMock).toHaveBeenCalledTimes(1);
     expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "outside-pointer", expect.any(Event));
-    expect(context.state.open.value).toBe(false);
+    expect(node.open.value).toBe(false);
   });
 
   it("closes on outside pointerdown when configured", async () => {
@@ -117,7 +116,7 @@ describe("useOutsideClick", () => {
 
     expect(setOpenMock).toHaveBeenCalledTimes(1);
     expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "outside-pointer", expect.any(Event));
-    expect(context.state.open.value).toBe(false);
+    expect(node.open.value).toBe(false);
   });
 
   it("does not close when outside dismissal is disabled", async () => {
@@ -128,7 +127,7 @@ describe("useOutsideClick", () => {
     await nextTick();
 
     expect(setOpenMock).not.toHaveBeenCalled();
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
   });
 
   it("does not close when clicking the anchor or floating element", async () => {
@@ -139,7 +138,7 @@ describe("useOutsideClick", () => {
     await nextTick();
 
     expect(setOpenMock).not.toHaveBeenCalled();
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
   });
 
   it("uses the ignoreClick predicate for per-target dismissal", async () => {
@@ -171,7 +170,7 @@ describe("useOutsideClick", () => {
 
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(setOpenMock).not.toHaveBeenCalled();
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
   });
 
   it("ignores outside click after a drag that started inside the floating element", async () => {
@@ -183,7 +182,7 @@ describe("useOutsideClick", () => {
     await nextTick();
 
     expect(setOpenMock).not.toHaveBeenCalled();
-    expect(context.state.open.value).toBe(true);
+    expect(node.open.value).toBe(true);
   });
 
   it("keeps a parent open when clicking inside a child floating element", async () => {
@@ -199,7 +198,7 @@ describe("useOutsideClick", () => {
 
     scope = effectScope();
     scope.run(() => {
-      const parentContext = useFloatingNode({
+      const parentNode = useFloatingNode({
         anchorEl: ref(anchorEl),
         floatingEl: ref(floatingEl),
         open: parentOpen,
@@ -208,11 +207,11 @@ describe("useOutsideClick", () => {
       useFloatingNode({
         anchorEl: ref(childAnchorEl),
         floatingEl: ref(childFloatingEl),
-        parentContext,
+        parentNode,
         open: childOpen,
       });
 
-      useOutsideClick(parentContext, { event: "click" });
+      useOutsideClick(parentNode, { event: "click" });
     });
 
     await userEvent.click(childFloatingEl);
@@ -222,7 +221,7 @@ describe("useOutsideClick", () => {
     expect(onParentOpenChange).not.toHaveBeenCalled();
   });
 
-  it("treats parent blank areas as outside for child contexts", async () => {
+  it("treats parent blank areas as outside for child nodes", async () => {
     const childAnchorEl = trackElement(document.createElement("button"));
     const childFloatingEl = trackElement(document.createElement("div"));
     childFloatingEl.style.width = "100px";
@@ -234,19 +233,19 @@ describe("useOutsideClick", () => {
 
     scope = effectScope();
     scope.run(() => {
-      const parentContext = useFloatingNode({
+      const parentNode = useFloatingNode({
         anchorEl: ref(anchorEl),
         floatingEl: ref(floatingEl),
         open: parentOpen,
       });
-      const childContext = useFloatingNode({
+      const childNode = useFloatingNode({
         anchorEl: ref(childAnchorEl),
         floatingEl: ref(childFloatingEl),
-        parentContext,
+        parentNode,
         open: childOpen,
       });
 
-      useOutsideClick(childContext, { event: "click" });
+      useOutsideClick(childNode, { event: "click" });
     });
 
     await userEvent.click(floatingEl);

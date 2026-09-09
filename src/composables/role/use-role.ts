@@ -27,8 +27,8 @@ type ManagedAttribute = {
  * Behavior composables still own interaction. `useRole()` only keeps the semantic
  * contract aligned with the current DOM and open state.
  */
-export function useRole(context: FloatingNode, options: UseRoleOptions = {}): UseRoleReturn {
-  const { open } = context.state;
+export function useRole(node: FloatingNode, options: UseRoleOptions = {}): UseRoleReturn {
+  const { open } = node;
   const {
     enabled: enabledOption = true,
     role: roleOption = null,
@@ -61,8 +61,8 @@ export function useRole(context: FloatingNode, options: UseRoleOptions = {}): Us
     }
 
     const role = toValue(roleOption);
-    const anchorEl = getAnchorEl(context.refs.anchorEl.value);
-    const floatingEl = context.refs.floatingEl.value;
+    const anchorEl = getAnchorEl(node.refs.anchorEl.value);
+    const floatingEl = node.refs.floatingEl.value;
 
     if (floatingEl && role) {
       setManagedAttribute(managedAttributes, floatingEl, "role", role);

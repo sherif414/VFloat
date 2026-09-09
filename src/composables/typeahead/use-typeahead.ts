@@ -25,30 +25,30 @@ import { useEventListener } from "@/shared/use-event-listener";
  * Captures typing sequences and jumps to matching enabled items in menus, select
  * lists, or dropdowns.
  *
- * @param context - The floating node object containing state and refs.
+ * @param node - The floating node object containing state and refs.
  * @param options - Configuration options for typeahead matching.
  * @returns State and cleanup helpers for typeahead navigation.
  *
  * @example With useCollection
  * ```ts
  * const collection = useCollection({ values: ["Apple", "Banana", "Cherry"] });
- * useTypeahead(context, { collection });
+ * useTypeahead(node, { collection });
  * ```
  *
  * @example With custom list and onMatch
  * ```ts
- * useTypeahead(context, {
+ * useTypeahead(node, {
  *   list: ["Apple", "Banana", "Cherry"],
  *   onMatch: (index) => { activeIndex.value = index; },
  * });
  * ```
  */
 export function useTypeahead(
-  context: UseTypeaheadContext,
+  node: UseTypeaheadContext,
   options: UseTypeaheadOptions = {},
 ): UseTypeaheadReturn {
-  const refs = context.refs;
-  const { open } = context.state;
+  const refs = node.refs;
+  const { open } = node;
 
   const {
     collection,
@@ -355,16 +355,7 @@ export type TypeaheadFindMatchFn = (
 /**
  * Context required by `useTypeahead`.
  */
-export interface UseTypeaheadContext {
-  /**
-   * The reactive element refs exposed by the floating node.
-   */
-  refs: FloatingNode["refs"];
-  /**
-   * The reactive state exposed by the floating node.
-   */
-  state: FloatingNode["state"];
-}
+export interface UseTypeaheadContext extends Pick<FloatingNode, "refs" | "open"> {}
 
 /**
  * Return shape for `useTypeahead`.

@@ -20,7 +20,7 @@ import { matchesFocusVisible } from "@/shared/platform";
 
 type FocusTestContext = {
   anchorEl: HTMLElement;
-  context: UseFocusContext;
+  node: UseFocusContext;
   floatingEl: HTMLElement;
   openRef: ReturnType<typeof ref<boolean>>;
   result: ReturnType<typeof useFocus>;
@@ -101,16 +101,14 @@ function setupFocus(
   const floatingRef = ref<FloatingElement>(floatingEl);
   const arrowRef = ref<HTMLElement | null>(null);
 
-  const context: UseFocusContext = {
+  const node: UseFocusContext = {
     refs: {
       anchorEl: anchorRef,
       floatingEl: floatingRef,
       arrowEl: arrowRef,
     },
-    state: {
-      open: openRef,
-      setOpen: setOpenMock,
-    },
+    open: openRef,
+    setOpen: setOpenMock,
   };
 
   const scope = effectScope();
@@ -118,12 +116,12 @@ function setupFocus(
 
   let result!: ReturnType<typeof useFocus>;
   scope.run(() => {
-    result = useFocus(context, options);
+    result = useFocus(node, options);
   });
 
   return {
     anchorEl,
-    context,
+    node,
     floatingEl,
     openRef,
     result,
@@ -169,7 +167,7 @@ describe("useFocus", () => {
       ctx.anchorEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
       expect(ctx.setOpenMock).toHaveBeenCalledWith(true, "focus", expect.any(FocusEvent));
     });
 
@@ -179,7 +177,7 @@ describe("useFocus", () => {
 
       ctx.anchorEl.focus();
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       vi.mocked(matchesFocusVisible).mockReturnValue(true);
 
@@ -188,7 +186,7 @@ describe("useFocus", () => {
       ctx.anchorEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("blocks one refocus after the window blurs while the closed anchor stays focused", async () => {
@@ -196,11 +194,11 @@ describe("useFocus", () => {
 
       ctx.anchorEl.focus();
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       window.dispatchEvent(new Event("blur"));
 
@@ -208,7 +206,7 @@ describe("useFocus", () => {
       ctx.anchorEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
 
       window.dispatchEvent(new Event("focus"));
 
@@ -216,7 +214,7 @@ describe("useFocus", () => {
       ctx.anchorEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
   });
 
@@ -227,12 +225,12 @@ describe("useFocus", () => {
 
       ctx.anchorEl.focus();
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       outsideEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       expect(ctx.setOpenMock).toHaveBeenLastCalledWith(false, "blur", expect.any(FocusEvent));
     });
 
@@ -245,7 +243,7 @@ describe("useFocus", () => {
       ctx.floatingEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("stays open when focus moves within the anchor subtree", async () => {
@@ -263,12 +261,12 @@ describe("useFocus", () => {
 
       anchorEl.focus();
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       childInput.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
   });
 
@@ -286,21 +284,21 @@ describe("useFocus", () => {
 
       ctx.anchorEl.focus();
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ignoredEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       outsideEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 
-  describe("parent-linked contexts", () => {
+  describe("parent-linked nodes", () => {
     it("keeps a parent open when focus moves into a child floating element", async () => {
       const parentAnchorEl = createButton("parent-anchor");
       const parentFloatingEl = createFloatingElement("parent-floating");
@@ -316,7 +314,7 @@ describe("useFocus", () => {
       activeScopes.push(scope);
 
       scope.run(() => {
-        const parentContext = useFloatingNode({
+        const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
@@ -325,10 +323,10 @@ describe("useFocus", () => {
         useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentContext,
+          parentNode,
           open: childOpen,
         });
-        useFocus(parentContext, { requireFocusVisible: false });
+        useFocus(parentNode, { requireFocusVisible: false });
       });
 
       await nextTick();
@@ -357,18 +355,18 @@ describe("useFocus", () => {
       activeScopes.push(scope);
 
       scope.run(() => {
-        const parentContext = useFloatingNode({
+        const parentNode = useFloatingNode({
           anchorEl: ref(parentAnchorEl),
           floatingEl: ref(parentFloatingEl),
           open: parentOpen,
         });
-        const childContext = useFloatingNode({
+        const childNode = useFloatingNode({
           anchorEl: ref(childAnchorEl),
           floatingEl: ref(childFloatingEl),
-          parentContext,
+          parentNode,
           open: childOpen,
         });
-        useFocus(childContext, { requireFocusVisible: false });
+        useFocus(childNode, { requireFocusVisible: false });
       });
 
       await nextTick();
@@ -391,7 +389,7 @@ describe("useFocus", () => {
       ctx.anchorEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
       expect(ctx.setOpenMock).not.toHaveBeenCalled();
     });
 
@@ -401,26 +399,26 @@ describe("useFocus", () => {
 
       ctx.anchorEl.focus();
       await flushFocus();
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       ctx.anchorEl.blur();
       ctx.result.cleanup();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
       outsideEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
 
-      ctx.context.state.setOpen(false);
+      ctx.node.setOpen(false);
       await flushFocus();
 
       ctx.anchorEl.focus();
       await flushFocus();
 
-      expect(ctx.context.state.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(false);
     });
   });
 });

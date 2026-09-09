@@ -101,7 +101,7 @@ describe("safePolygon", () => {
       expect(typeof result).toBe("function");
     });
 
-    it("SafePolygon returns a function (SafePolygonHandler) when given context", () => {
+    it("SafePolygon returns a function (SafePolygonHandler) when given node", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       expect(typeof handler).toBe("function");
