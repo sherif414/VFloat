@@ -22,7 +22,7 @@ Every VFloat file (especially composables) must follow this exact sequence:
 
 1. **Imports**: Third-party first (Vue, `@floating-ui/dom`, etc.), then internal VFloat modules (`@/...`).
 2. **Internal Module Constants/Types**: (Optional) File-private, non-exported types, interfaces, or constants needed by the module. Must NOT be exported.
-3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingContext`).
+3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingNode`).
 4. **📌 Helpers Section**: (Optional) Module-level private pure functions and stateless calculation/lookup utilities. _Must NOT be exported (`function ...`, never `export function ...`). Must be strictly idempotent with zero side effects (no DOM mutations, no ref updates, no reactive scopes)._ _Omit banner if there are no helpers._
 5. **📌 Types Section**: (Optional) Publicly exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). _Internal types used only within the file belong in Section 2 as unexported declarations. Omit banner if there are no types._
 
