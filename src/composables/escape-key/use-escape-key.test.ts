@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import {
   type UseEscapeKeyContext,
+  type UseEscapeKeyOptions,
   useEscapeKey,
   useFloatingNode,
   useFloatingTree,
@@ -24,6 +25,10 @@ function createMockFloatingNode(): UseEscapeKeyContext {
 describe("useEscapeKey", () => {
   let scope: ReturnType<typeof effectScope> | undefined;
 
+  beforeEach(() => {
+    scope = effectScope();
+  });
+
   afterEach(() => {
     scope?.stop();
     scope = undefined;
@@ -31,16 +36,19 @@ describe("useEscapeKey", () => {
     vi.useRealTimers();
   });
 
+  function setupEscape(node: UseEscapeKeyContext, options?: UseEscapeKeyOptions) {
+    scope?.run(() => {
+      useEscapeKey(node, options);
+    });
+  }
+
   describe("FloatingNode behavior", () => {
     it("closes floating element on escape key press", async () => {
       const node = createMockFloatingNode();
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node);
-      });
+      setupEscape(node);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
@@ -52,10 +60,7 @@ describe("useEscapeKey", () => {
       node.setOpen(false);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node);
-      });
+      setupEscape(node);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
@@ -67,10 +72,7 @@ describe("useEscapeKey", () => {
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node, { enabled: false });
-      });
+      setupEscape(node, { enabled: false });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
@@ -90,10 +92,7 @@ describe("useEscapeKey", () => {
 
       document.addEventListener("keydown", onKeyDown, { capture: true });
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node);
-      });
+      setupEscape(node);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
 
@@ -108,12 +107,7 @@ describe("useEscapeKey", () => {
       (node.setOpen as any).mockClear();
       const customHandler = vi.fn();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node, {
-          onEscape: customHandler,
-        });
-      });
+      setupEscape(node, { onEscape: customHandler });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
@@ -126,10 +120,7 @@ describe("useEscapeKey", () => {
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node);
-      });
+      setupEscape(node);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
       document.dispatchEvent(
@@ -150,10 +141,7 @@ describe("useEscapeKey", () => {
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node);
-      });
+      setupEscape(node);
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -175,10 +163,7 @@ describe("useEscapeKey", () => {
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node, { enabled });
-      });
+      setupEscape(node, { enabled });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
@@ -195,10 +180,7 @@ describe("useEscapeKey", () => {
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node, { capture: true });
-      });
+      setupEscape(node, { capture: true });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
@@ -210,10 +192,7 @@ describe("useEscapeKey", () => {
       node.setOpen(true);
       (node.setOpen as any).mockClear();
 
-      scope = effectScope();
-      scope.run(() => {
-        useEscapeKey(node, { preventDefault: true });
-      });
+      setupEscape(node, { preventDefault: true });
 
       const event = new KeyboardEvent("keydown", {
         key: "Escape",
@@ -265,8 +244,7 @@ describe("useEscapeKey", () => {
       const childOpen = ref(true);
       const grandchildOpen = ref(true);
 
-      scope = effectScope();
-      scope.run(() => {
+      scope?.run(() => {
         const tree = useFloatingTree();
         const root = useFloatingNode({
           anchorEl: ref(null),
@@ -310,8 +288,7 @@ describe("useEscapeKey", () => {
       const secondChildOpen = ref(true);
       const secondGrandchildOpen = ref(true);
 
-      scope = effectScope();
-      scope.run(() => {
+      scope?.run(() => {
         const tree = useFloatingTree();
         const root = useFloatingNode({
           anchorEl: ref(null),
