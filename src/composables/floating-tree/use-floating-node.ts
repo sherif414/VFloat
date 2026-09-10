@@ -36,7 +36,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     if (!value) {
       storedReason.value = null;
       storedEvent.value = null;
-      node.tree?.closeDescendants(node, reason, event);
     } else {
       storedReason.value = reason;
       storedEvent.value = event ?? null;

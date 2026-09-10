@@ -43,7 +43,6 @@ interface TreeQueryTarget {
  */
 export function useFloatingTree(): FloatingTree {
   const nodes = new Map<FloatingNodeId, TreeEntry>();
-  let isClosingDescendants = false;
 
   /**
    * Registers a floating node in the tree and links it under `parentId`.
@@ -251,26 +250,20 @@ export function useFloatingTree(): FloatingTree {
 
   /**
    * Closes all descendant nodes from innermost child to nearest parent.
-   * Runs as a single traversal: nested sweeps triggered by each descendant's
-   * own setOpen are suppressed while the outer pass is in flight.
+   * Call explicitly when parent teardown must cascade; `setOpen` stays
+   * tree-agnostic and never cascades on its own.
    */
   function closeDescendants(
     node: Pick<FloatingNode, "id">,
     reason: OpenChangeReason = "programmatic",
     event?: Event,
   ): void {
-    if (isClosingDescendants) return;
     const descendants = getDescendants(node.id);
     if (descendants.length === 0) return;
-    isClosingDescendants = true;
-    try {
-      for (let i = descendants.length - 1; i >= 0; i--) {
-        const descendant = descendants[i]!;
-        if (!descendant.open.value) continue;
-        descendant.setOpen(false, reason, event);
-      }
-    } finally {
-      isClosingDescendants = false;
+    for (let i = descendants.length - 1; i >= 0; i--) {
+      const descendant = descendants[i]!;
+      if (!descendant.open.value) continue;
+      descendant.setOpen(false, reason, event);
     }
   }
 

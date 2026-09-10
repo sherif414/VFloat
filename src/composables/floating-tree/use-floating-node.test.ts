@@ -212,15 +212,16 @@ describe("useFloatingNode", () => {
     expect(node.open.value).toBe(false);
   });
 
-  it("closes descendant nodes from deepest to nearest child before closing the parent", () => {
+  it("does not close descendants when the parent closes; cascade is explicit via tree.closeDescendants", () => {
     const calls: string[] = [];
     const rootOpen = ref(true);
     const childOpen = ref(true);
     const grandchildOpen = ref(true);
     let root!: ReturnType<typeof useFloatingNode>;
+    let tree!: ReturnType<typeof useFloatingTree>;
 
     scope?.run(() => {
-      const tree = useFloatingTree();
+      tree = useFloatingTree();
       root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
@@ -247,40 +248,9 @@ describe("useFloatingNode", () => {
     root.setOpen(false, "outside-pointer");
 
     expect(rootOpen.value).toBe(false);
-    expect(childOpen.value).toBe(false);
-    expect(grandchildOpen.value).toBe(false);
-    expect(calls).toEqual(["grandchild", "child", "root"]);
-  });
-
-  it("closes a deep chain with a single traversal instead of an exponential cascade", () => {
-    // Regression test: each nested setOpen used to trigger its own subtree sweep
-    // (2^n closeDescendants invocations for a chain of depth n).
-    const depth = 8;
-    let root!: ReturnType<typeof useFloatingNode>;
-    let tree!: ReturnType<typeof useFloatingTree>;
-
-    scope?.run(() => {
-      tree = useFloatingTree();
-      const opens = Array.from({ length: depth + 1 }, () => ref(true));
-      const nodes = opens.map((open) =>
-        useFloatingNode({ anchorEl: ref(null), floatingEl: ref(null), open }),
-      );
-      root = nodes[0]!;
-      tree.addNode(root);
-      for (let i = 1; i < nodes.length; i++) tree.addNode(nodes[i]!, nodes[i - 1]!.id);
-    });
-
-    let closeCalls = 0;
-    const originalClose = tree.closeDescendants.bind(tree);
-    tree.closeDescendants = ((...args: Parameters<typeof tree.closeDescendants>) => {
-      closeCalls += 1;
-      return originalClose(...args);
-    }) as typeof tree.closeDescendants;
-
-    root.setOpen(false, "outside-pointer");
-
-    expect(root.open.value).toBe(false);
-    expect(closeCalls).toBeLessThanOrEqual(depth + 1);
+    expect(childOpen.value).toBe(true);
+    expect(grandchildOpen.value).toBe(true);
+    expect(calls).toEqual(["root"]);
   });
 
   it("does not open ancestors when opening a child node", () => {
