@@ -1,6 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { effectScope, nextTick, ref } from "vue";
-import type { AnchorElement, FloatingElement } from "@/composables";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-vue";
+import {
+  defineComponent,
+  effectScope,
+  h,
+  nextTick,
+  onMounted,
+  ref,
+  shallowRef,
+  useTemplateRef,
+} from "vue";
 import {
   type UseFocusManagerContext,
   type UseFocusManagerOptions,
@@ -9,49 +18,114 @@ import {
   useFloatingTree,
   useFocusManager,
 } from "@/composables";
+import { clearTrackedElements, getTestEl, trackElement } from "@/test-utils";
 
-type FocusManagerTestContext = {
-  anchorEl: HTMLButtonElement;
-  floatingEl: HTMLDivElement;
-  node: UseFocusManagerContext;
-  openRef: ReturnType<typeof ref<boolean>>;
-  result: UseFocusManagerReturn;
-  scope: ReturnType<typeof effectScope>;
-  setOpenMock: ReturnType<typeof vi.fn>;
-};
-
-const trackedElements: HTMLElement[] = [];
-const activeScopes: ReturnType<typeof effectScope>[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-
-  trackedElements.length = 0;
-}
-
-function appendButton(container: HTMLElement, id: string, text = id): HTMLButtonElement {
-  const button = trackElement(document.createElement("button"));
-  button.id = id;
-  button.textContent = text;
-  container.appendChild(button);
-  return button;
-}
-
-function createOutsideElement(id = "outside"): HTMLButtonElement {
+function createOutsideButton(id = "outside"): HTMLButtonElement {
+  // Created on demand with the same timing as the legacy suite: buttons that
+  // tests move focus to must be appended after open, otherwise modal
+  // isolation marks them inert and focus() becomes a no-op.
   const outsideEl = trackElement(document.createElement("button"));
   outsideEl.id = id;
   outsideEl.textContent = id;
   document.body.appendChild(outsideEl);
   return outsideEl;
+}
+
+function createTestComponent(options: UseFocusManagerOptions = {}, initialOpen = false) {
+  const openRef = ref(initialOpen);
+  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn((value: boolean) => {
+    openRef.value = value;
+  });
+  let node!: UseFocusManagerContext;
+  let result!: UseFocusManagerReturn;
+
+  const Component = defineComponent(() => {
+    const anchorTemplateEl = useTemplateRef<HTMLButtonElement>("anchor");
+    const floatingTemplateEl = useTemplateRef<HTMLDivElement>("floating");
+    // Writable mirrors so tests can detach refs mid-flight. Synced on mount.
+    const anchorRef = shallowRef<HTMLButtonElement | null>(null);
+    const floatingRef = shallowRef<HTMLDivElement | null>(null);
+
+    node = {
+      id: Symbol("mock-node"),
+      refs: {
+        anchorEl: anchorRef,
+        floatingEl: floatingRef,
+        arrowEl: ref<HTMLElement | null>(null),
+      },
+      open: openRef,
+      setOpen: setOpenMock as () => void,
+      tree: null,
+    };
+    result = useFocusManager(node, options);
+
+    onMounted(() => {
+      anchorRef.value = anchorTemplateEl.value;
+      floatingRef.value = floatingTemplateEl.value;
+    });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "anchor", "data-testid": "anchor", type: "button" }, "Anchor"),
+        h("div", { id: "floating", ref: "floating", "data-testid": "floating", tabindex: -1 }),
+      ]);
+  });
+
+  return { Component, getNode: () => node, getResult: () => result, openRef, setOpenMock };
+}
+
+function createTreeComponent() {
+  const parentOpen = ref(true);
+  const childOpen = ref(true);
+  let result!: UseFocusManagerReturn;
+
+  const Component = defineComponent(() => {
+    const parentAnchorEl = useTemplateRef<HTMLButtonElement>("parent-anchor");
+    const parentFloatingEl = useTemplateRef<HTMLDivElement>("parent-floating");
+    const childAnchorEl = useTemplateRef<HTMLButtonElement>("child-anchor");
+    const childFloatingEl = useTemplateRef<HTMLDivElement>("child-floating");
+
+    const tree = useFloatingTree();
+    const parentNode = useFloatingNode({
+      anchorEl: parentAnchorEl,
+      floatingEl: parentFloatingEl,
+      open: parentOpen,
+    });
+    const childNode = useFloatingNode({
+      anchorEl: childAnchorEl,
+      floatingEl: childFloatingEl,
+      open: childOpen,
+    });
+    tree.addNode(parentNode);
+    tree.addNode(childNode, parentNode.id);
+    result = useFocusManager(parentNode, { modal: false, closeOnFocusOut: true });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "parent-anchor", "data-testid": "parent-anchor" }, "Parent anchor"),
+        h(
+          "div",
+          { ref: "parent-floating", "data-testid": "parent-floating", tabindex: -1 },
+          "Parent floating",
+        ),
+        h("button", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child anchor"),
+        h(
+          "div",
+          { ref: "child-floating", "data-testid": "child-floating", tabindex: -1 },
+          "Child floating",
+        ),
+      ]);
+  });
+
+  return { Component, getResult: () => result, parentOpen, childOpen };
+}
+
+function appendButton(container: HTMLElement, id: string, text = id): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.id = id;
+  button.textContent = text;
+  container.appendChild(button);
+  return button;
 }
 
 async function flushFocus() {
@@ -62,76 +136,56 @@ async function flushFocus() {
   await nextTick();
 }
 
-function setupFocusManager(
+interface ManagerFixture {
+  anchorEl: HTMLButtonElement;
+  floatingEl: HTMLDivElement;
+  node: UseFocusManagerContext;
+  openRef: ReturnType<typeof ref<boolean>>;
+  result: UseFocusManagerReturn;
+  setOpenMock: ReturnType<typeof vi.fn>;
+}
+
+async function renderManager(
   options: UseFocusManagerOptions = {},
   initialOpen = false,
-): FocusManagerTestContext {
-  const anchorEl = trackElement(document.createElement("button"));
-  anchorEl.id = "anchor";
-  anchorEl.textContent = "Anchor";
-  document.body.appendChild(anchorEl);
-
-  const floatingEl = trackElement(document.createElement("div"));
-  floatingEl.id = "floating";
-  floatingEl.tabIndex = -1;
-  document.body.appendChild(floatingEl);
-
-  const openRef = ref(initialOpen);
-  const setOpenMock = vi.fn((value: boolean) => {
-    openRef.value = value;
-  });
-  const anchorRef = ref<AnchorElement>(anchorEl);
-  const floatingRef = ref<FloatingElement>(floatingEl);
-  const arrowRef = ref<HTMLElement | null>(null);
-
-  const node: UseFocusManagerContext = {
-    id: Symbol("mock-node"),
-    refs: {
-      anchorEl: anchorRef,
-      floatingEl: floatingRef,
-      arrowEl: arrowRef,
-    },
-    open: openRef,
-    setOpen: setOpenMock,
-    tree: null,
-  };
-
-  const scope = effectScope();
-  activeScopes.push(scope);
-
-  let result!: UseFocusManagerReturn;
-  scope.run(() => {
-    result = useFocusManager(node, options);
-  });
-
+): Promise<ManagerFixture> {
+  const fixture = createTestComponent(options, initialOpen);
+  await render(fixture.Component);
+  vi.useFakeTimers();
+  await nextTick();
   return {
-    anchorEl,
-    floatingEl,
-    node,
-    openRef,
-    result,
-    scope,
-    setOpenMock,
+    anchorEl: getTestEl("anchor") as HTMLButtonElement,
+    floatingEl: getTestEl("floating") as HTMLDivElement,
+    node: fixture.getNode(),
+    openRef: fixture.openRef,
+    result: fixture.getResult(),
+    setOpenMock: fixture.setOpenMock,
   };
 }
 
-async function openManager(ctx: FocusManagerTestContext) {
+async function renderTreeManager() {
+  const fixture = createTreeComponent();
+  const view = await render(fixture.Component);
+  vi.useFakeTimers();
+  await nextTick();
+  return {
+    parentFloatingEl: getTestEl("parent-floating", view.container),
+    childFloatingEl: getTestEl("child-floating", view.container),
+    result: fixture.getResult(),
+    parentOpen: fixture.parentOpen,
+    childOpen: fixture.childOpen,
+  };
+}
+
+async function openManager(ctx: ManagerFixture) {
   ctx.node.setOpen(true);
   await flushFocus();
   ctx.setOpenMock.mockClear();
 }
 
 describe("useFocusManager", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
   afterEach(() => {
-    for (const scope of [...activeScopes].reverse()) {
-      scope.stop();
-    }
-
-    activeScopes.length = 0;
+    // Drains iframe fixtures, the only non-render DOM left in this file.
     clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -139,7 +193,7 @@ describe("useFocusManager", () => {
 
   describe("initial focus", () => {
     it("focuses the first visible tabbable element by default", async () => {
-      const ctx = setupFocusManager();
+      const ctx = await renderManager();
       const hiddenButton = appendButton(ctx.floatingEl, "hidden");
       hiddenButton.style.display = "none";
       const visibleButton = appendButton(ctx.floatingEl, "visible");
@@ -151,11 +205,11 @@ describe("useFocusManager", () => {
     });
 
     it("supports element-based initial focus", async () => {
-      const targetButton = trackElement(document.createElement("button"));
+      const targetButton = document.createElement("button");
       targetButton.id = "target";
       targetButton.textContent = "Target";
 
-      const ctx = setupFocusManager({ initialFocus: targetButton });
+      const ctx = await renderManager({ initialFocus: targetButton });
       appendButton(ctx.floatingEl, "first");
       ctx.floatingEl.appendChild(targetButton);
 
@@ -165,7 +219,7 @@ describe("useFocusManager", () => {
 
     it("supports function-based initial focus", async () => {
       let target: HTMLElement | null = null;
-      const ctx = setupFocusManager({ initialFocus: () => target });
+      const ctx = await renderManager({ initialFocus: () => target });
       appendButton(ctx.floatingEl, "first");
       target = appendButton(ctx.floatingEl, "target-fn");
 
@@ -174,7 +228,7 @@ describe("useFocusManager", () => {
     });
 
     it("falls back to the floating container when no tabbables exist", async () => {
-      const ctx = setupFocusManager();
+      const ctx = await renderManager();
       ctx.floatingEl.textContent = "Non-tabbable content";
 
       await openManager(ctx);
@@ -182,7 +236,7 @@ describe("useFocusManager", () => {
     });
 
     it("does not move focus when initialFocus is false", async () => {
-      const ctx = setupFocusManager({ modal: false, initialFocus: false });
+      const ctx = await renderManager({ modal: false, initialFocus: false });
       appendButton(ctx.floatingEl, "first");
       ctx.anchorEl.focus();
 
@@ -193,7 +247,7 @@ describe("useFocusManager", () => {
 
   describe("modal focus trapping", () => {
     it("wraps focus from last to first element on Tab", async () => {
-      const ctx = setupFocusManager({ modal: true });
+      const ctx = await renderManager({ modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const last = appendButton(ctx.floatingEl, "last");
 
@@ -212,7 +266,7 @@ describe("useFocusManager", () => {
     });
 
     it("wraps focus from first to last element on Shift+Tab", async () => {
-      const ctx = setupFocusManager({ modal: true });
+      const ctx = await renderManager({ modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const last = appendButton(ctx.floatingEl, "last");
 
@@ -233,7 +287,7 @@ describe("useFocusManager", () => {
     });
 
     it("recovers focus to first tabbable child when active child element is removed from DOM in modal", async () => {
-      const ctx = setupFocusManager({ modal: true });
+      const ctx = await renderManager({ modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const nextBtn = appendButton(ctx.floatingEl, "next");
 
@@ -252,7 +306,7 @@ describe("useFocusManager", () => {
 
   describe("focus guards", () => {
     it("creates start and end guard sentinels around floating element", async () => {
-      const ctx = setupFocusManager({ guards: true });
+      const ctx = await renderManager({ guards: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -265,7 +319,7 @@ describe("useFocusManager", () => {
     });
 
     it("redirects focus when focus guard sentinel receives focus", async () => {
-      const ctx = setupFocusManager({ guards: true, modal: true });
+      const ctx = await renderManager({ guards: true, modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const last = appendButton(ctx.floatingEl, "last");
 
@@ -286,10 +340,9 @@ describe("useFocusManager", () => {
 
   describe("return focus", () => {
     it("returns focus to the anchor trigger element on close", async () => {
-      const previousFocus = createOutsideElement("prev");
+      const previousFocus = createOutsideButton("prev");
+      const ctx = await renderManager({ returnFocus: true });
       previousFocus.focus();
-
-      const ctx = setupFocusManager({ returnFocus: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -302,10 +355,9 @@ describe("useFocusManager", () => {
     });
 
     it("falls back to previously active element when anchor is unavailable", async () => {
-      const previousFocus = createOutsideElement("prev");
+      const previousFocus = createOutsideButton("prev");
+      const ctx = await renderManager({ returnFocus: true });
       previousFocus.focus();
-
-      const ctx = setupFocusManager({ returnFocus: true });
       ctx.anchorEl.remove();
       ctx.node.refs.anchorEl.value = null;
       appendButton(ctx.floatingEl, "btn");
@@ -320,8 +372,8 @@ describe("useFocusManager", () => {
     });
 
     it("supports returning focus to a custom element ref", async () => {
-      const customEl = createOutsideElement("custom-return");
-      const ctx = setupFocusManager({ returnFocus: customEl });
+      const customEl = createOutsideButton("custom-return");
+      const ctx = await renderManager({ returnFocus: customEl });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -332,10 +384,9 @@ describe("useFocusManager", () => {
     });
 
     it("does not return focus when returnFocus is false", async () => {
-      const previousFocus = createOutsideElement("prev");
+      const previousFocus = createOutsideButton("prev");
+      const ctx = await renderManager({ returnFocus: false });
       previousFocus.focus();
-
-      const ctx = setupFocusManager({ returnFocus: false });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -346,13 +397,14 @@ describe("useFocusManager", () => {
     });
 
     it("does not hijack focus when focus naturally moves to an outside element", async () => {
-      const ctx = setupFocusManager({ returnFocus: true });
+      const ctx = await renderManager({ returnFocus: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
 
+      // Created after open so modal isolation does not mark it inert.
       // Simulate focus moving outside naturally (e.g., via Tab or manual focus)
-      const outsideFocus = createOutsideElement("natural-outside");
+      const outsideFocus = createOutsideButton("natural-outside");
       outsideFocus.focus();
 
       // Close the floating element
@@ -364,15 +416,14 @@ describe("useFocusManager", () => {
     });
 
     it("does not hijack focus when an outside pointerdown interaction is detected", async () => {
-      const previousFocus = createOutsideElement("prev");
+      const previousFocus = createOutsideButton("prev");
+      const ctx = await renderManager({ returnFocus: true });
       previousFocus.focus();
-
-      const ctx = setupFocusManager({ returnFocus: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
 
-      const outsideButton = createOutsideElement("outside-button");
+      const outsideButton = createOutsideButton("outside-button");
 
       // Simulate pointerdown on the outside button
       outsideButton.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
@@ -388,8 +439,8 @@ describe("useFocusManager", () => {
 
   describe("non-modal & dismissal behavior", () => {
     it("closes with blur reason on document focusin when closeOnFocusOut is true", async () => {
-      const outsideEl = createOutsideElement();
-      const ctx = setupFocusManager({ modal: false, closeOnFocusOut: true });
+      const outsideEl = createOutsideButton();
+      const ctx = await renderManager({ modal: false, closeOnFocusOut: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -403,8 +454,8 @@ describe("useFocusManager", () => {
     });
 
     it("closes on pointerdown outside when closeOnFocusOut is true", async () => {
-      const outsideEl = createOutsideElement();
-      const ctx = setupFocusManager({ modal: false, closeOnFocusOut: true });
+      const outsideEl = createOutsideButton();
+      const ctx = await renderManager({ modal: false, closeOnFocusOut: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -417,10 +468,10 @@ describe("useFocusManager", () => {
     });
 
     it("respects ignoreFocusOut predicate", async () => {
-      const ignoredEl = createOutsideElement("ignored");
-      const outsideEl = createOutsideElement("outside");
+      const ignoredEl = createOutsideButton("ignored");
+      const outsideEl = createOutsideButton("outside");
 
-      const ctx = setupFocusManager({
+      const ctx = await renderManager({
         modal: false,
         closeOnFocusOut: true,
         ignoreFocusOut: (target) => target === ignoredEl,
@@ -439,7 +490,7 @@ describe("useFocusManager", () => {
     });
 
     it("closes on Tab when closeOnTab is true", async () => {
-      const ctx = setupFocusManager({ modal: false, closeOnTab: true });
+      const ctx = await renderManager({ modal: false, closeOnTab: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -455,8 +506,8 @@ describe("useFocusManager", () => {
 
   describe("background isolation", () => {
     it("isolates outside content with aria-hidden or inert and restores on close", async () => {
-      const outsideEl = createOutsideElement();
-      const ctx = setupFocusManager({ modal: true });
+      const outsideEl = createOutsideButton();
+      const ctx = await renderManager({ modal: true });
       appendButton(ctx.floatingEl, "btn");
 
       await openManager(ctx);
@@ -477,58 +528,25 @@ describe("useFocusManager", () => {
 
   describe("nested floating nodes", () => {
     it("coordinates parent and child nodes without premature closing", async () => {
-      const parentAnchorEl = trackElement(document.createElement("button"));
-      const parentFloatingEl = trackElement(document.createElement("div"));
-      const childAnchorEl = trackElement(document.createElement("button"));
-      const childFloatingEl = trackElement(document.createElement("div"));
-      parentAnchorEl.id = "parent-anchor";
-      childAnchorEl.id = "child-anchor";
-      parentFloatingEl.id = "parent-floating";
-      childFloatingEl.id = "child-floating";
-      parentFloatingEl.tabIndex = -1;
-      childFloatingEl.tabIndex = -1;
-      document.body.append(parentAnchorEl, parentFloatingEl, childAnchorEl, childFloatingEl);
+      const ctx = await renderTreeManager();
 
-      appendButton(parentFloatingEl, "parent-btn");
-      const childBtn = appendButton(childFloatingEl, "child-btn");
-
-      const parentOpen = ref(true);
-      const childOpen = ref(true);
-      const scope = effectScope();
-      activeScopes.push(scope);
-      let result!: UseFocusManagerReturn;
-
-      scope.run(() => {
-        const tree = useFloatingTree();
-        const parentNode = useFloatingNode({
-          anchorEl: ref(parentAnchorEl),
-          floatingEl: ref(parentFloatingEl),
-          open: parentOpen,
-        });
-        const childNode = useFloatingNode({
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-          open: childOpen,
-        });
-        tree.addNode(parentNode);
-        tree.addNode(childNode, parentNode.id);
-        result = useFocusManager(parentNode, { modal: false, closeOnFocusOut: true });
-      });
+      appendButton(ctx.parentFloatingEl, "parent-btn");
+      const childBtn = appendButton(ctx.childFloatingEl, "child-btn");
 
       await flushFocus();
-      expect(result.isActive.value).toBe(true);
+      expect(ctx.result.isActive.value).toBe(true);
 
       // Focus inside child floating element must not close parent
       childBtn.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(parentOpen.value).toBe(true);
+      expect(ctx.parentOpen.value).toBe(true);
     });
   });
 
   describe("lifecycle & manual controls", () => {
     it("supports manual activate and deactivate methods", async () => {
-      const ctx = setupFocusManager({}, true);
+      const ctx = await renderManager({}, true);
       appendButton(ctx.floatingEl, "btn");
 
       await flushFocus();
@@ -542,7 +560,7 @@ describe("useFocusManager", () => {
     });
 
     it("handles missing floating element gracefully without closing open state prematurely", async () => {
-      const ctx = setupFocusManager();
+      const ctx = await renderManager();
       ctx.node.refs.floatingEl.value = null;
 
       ctx.node.setOpen(true);
@@ -595,12 +613,12 @@ describe("useFocusManager", () => {
       };
 
       const scope = effectScope();
-      activeScopes.push(scope);
 
       scope.run(() => {
         useFocusManager(node, { modal: true, guards: true });
       });
 
+      vi.useFakeTimers();
       open.value = true;
       await flushFocus();
 
@@ -610,6 +628,8 @@ describe("useFocusManager", () => {
       expect(startGuard).toBeTruthy();
       expect(endGuard).toBeTruthy();
       expect(iframeDoc.activeElement).toBe(button);
+
+      scope.stop();
     });
   });
 });
