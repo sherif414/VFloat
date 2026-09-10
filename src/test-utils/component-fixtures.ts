@@ -19,6 +19,31 @@ export function registerListItem(
   elementsList.value[idx] = el as HTMLElement | null;
 }
 
+const trackedElements: HTMLElement[] = [];
+
+/**
+ * Registers a detached element for teardown. Tier-P DOM-utility suites that
+ * cannot render components use this single shared tracker instead of
+ * copy-pasting the helper per file. Render-based suites must not use it.
+ */
+export function trackElement<T extends HTMLElement>(el: T): T {
+  trackedElements.push(el);
+  return el;
+}
+
+/**
+ * Removes tracked elements in reverse order and resets the registry.
+ * Call from `afterEach()`.
+ */
+export function clearTrackedElements(): void {
+  for (const el of [...trackedElements].reverse()) {
+    if (el.isConnected) {
+      el.remove();
+    }
+  }
+  trackedElements.length = 0;
+}
+
 /**
  * Queries a rendered element by test id. Throws when the fixture is missing
  * so failures point at the broken fixture instead of a null dereference.
