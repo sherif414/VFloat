@@ -2,23 +2,8 @@ import type { MiddlewareArguments } from "@floating-ui/dom";
 import { platform } from "@floating-ui/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
+import { clearTrackedElements, trackElement } from "@/test-utils";
 import { arrow } from "./arrow";
-
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
 
 describe("arrow middleware", () => {
   afterEach(() => {

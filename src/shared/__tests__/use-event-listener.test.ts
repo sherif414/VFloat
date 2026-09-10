@@ -1,22 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
 import { useEventListener } from "@/shared/use-event-listener";
-
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
+import { clearTrackedElements, trackElement } from "@/test-utils";
 
 describe("useEventListener", () => {
   afterEach(() => {
