@@ -1,54 +1,74 @@
 ---
 name: vfloat-test-standards
-description: Enforce test isolation, lifecycle cleanup (DOM/effectScope/timers), minimal test file layout, and Vitest browser mode testing standards across all VFloat unit and composable tests. Use this when writing new tests, refactoring test suites, debugging test flakiness or DOM leaks, or performing test code reviews.
+description: Enforce the unified test file layout, tier system (pure / render-based / legacy), and Vitest Browser Mode standards across all VFloat tests. Render-based component testing is mandatory for DOM/interaction coverage. Use when writing new tests, migrating legacy suites, or reviewing test PRs.
 ---
 
 # VFloat Test Standards
 
 This skill defines the testing standards for the VFloat codebase. All VFloat tests run natively in **Vitest Browser Mode** (Playwright / Chromium). Tests must prioritize strict isolation, zero DOM/reactivity leakage, minimal file structure, and high-fidelity interaction modeling.
 
+The reference pattern for all DOM/interaction tests is the list-navigation suites
+(`src/composables/keyboard-navigation/use-roving-focus.test.ts`,
+`src/composables/keyboard-navigation/use-aria-activedescendant.test.ts`):
+component rendering via `vitest-browser-vue`, accessible queries via `page`,
+and real user gestures via `userEvent`.
+
 ## When to Use This Skill
 
 - When writing new unit or composable tests (`*.test.ts`).
+- When migrating legacy manual-DOM suites to the render-based pattern.
 - When refactoring existing test suites or adding regression tests.
 - When diagnosing flaky tests, unclosed watchers, or DOM leaks between tests.
 - When reviewing test PRs or performing test code audits.
 
 ---
 
-## 1. Test Isolation & Teardown Protocol
+## 1. Test Tiers
 
-Every test suite must guarantee that no DOM elements, Vue reactive effects, timers, or event listeners leak across tests. Follow the four golden rules of test isolation:
+Every test file belongs to exactly one tier. The tier determines which sections
+and lifecycle hooks are required.
 
-### Rule 1: Track and Tear Down Every DOM Element
+### Tier P — Pure / logic (no DOM)
 
-All DOM elements appended during tests must be registered with a tracking helper and removed in reverse order during `afterEach()`.
+For geometry, matching, ID generation, public API surface, and state machines
+without rendered output. Reference: `polygon-geometry.test.ts`,
+`public-api.test.ts`, `use-collection.test.ts`.
+
+- No `render()`, no `document.createElement`, no tracking helpers.
+- `effectScope()` in `beforeEach()` only when the composable under test needs a
+  reactive scope; otherwise no lifecycle hooks at all.
+- `afterEach()` stops the scope and resets mocks/timers when a scope or fake
+  timers were used.
+
+### Tier S — Single composable, render-based (default for DOM)
+
+For one composable with rendered anchor/floating elements. Reference:
+list-navigation suites; pilot: `use-typeahead.test.ts`.
+
+- **Mandatory:** `render()` from `vitest-browser-vue`, element lookup from the
+  rendered output (`page.getByRole()` or `document.body.querySelector()`),
+  and `userEvent` or the shared `dispatchKey` builder for key input.
+- **Forbidden in new files:** manual `document.createElement` /
+  `trackElement` / `clearTrackedElements` / manual `effectScope()` wrapping.
+  The component instance owns its scope; `render()` owns DOM cleanup.
+- Minimal lifecycle: `afterEach(() => { vi.clearAllMocks(); vi.useRealTimers(); })`
+  only. No `beforeEach` fixture setup — each test renders its own component.
+
+### Tier I — Integration, render-based
+
+For multiple composables plus tree, collection, or virtualizer coordination.
+Same rules as Tier S, plus reactive controls (`countRef`, `activeIndex` refs)
+returned from the factory for bounds auto-correction and virtualizer tests.
+Reference: `use-aria-activedescendant.test.ts` Suites 18/21.
+
+### Legacy manual-DOM (deprecated)
+
+Suites still using `trackElement` + manual `effectScope` (`use-click`,
+`use-hover`, `use-focus`, `use-position`, `use-arrow`, `use-role`,
+`use-outside-click`, `use-client-point`) keep the full cleanup below until
+migrated. Do not copy this pattern into new files.
 
 ```typescript
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
-```
-
-### Rule 2: Explicitly Dispose Vue `effectScope`
-
-Composables attach reactive watchers, `watchPostEffect`, and document event listeners. Wrap composable instantiation in an `effectScope()` and stop it in `afterEach()`.
-
-```typescript
-let scope: ReturnType<typeof effectScope>;
-
 afterEach(() => {
   scope?.stop();
   clearTrackedElements();
@@ -57,45 +77,51 @@ afterEach(() => {
 });
 ```
 
-### Rule 3: Restore Timers & Reset Mocks
-
-Always reset mocks with `vi.clearAllMocks()` and restore fake timers with `vi.useRealTimers()` in `afterEach()`. If a test uses `vi.useFakeTimers()`, ensure timers are flushed or restored before teardown.
-
-### Rule 4: Zero Cross-Test State Leakage
-
-Never share mutable state (e.g., modified DOM elements, shared refs, unresolved promises) across `it()` blocks. Each test must construct its own fresh state or rely on fresh setup in `beforeEach()`.
-
 ---
 
-## 2. Minimal Test File Layout
+## 2. Test File Layout
 
-Test files should be clean, lightweight, and easy to scan without heavy decorative banner comments. Follow this standard sequence:
+Test files stay minimal: blank-line separated sections, no decorative section
+banners. Follow this exact order:
 
-1. **Imports**:
-   - Third-party test utilities (`vitest`, `@vitest/browser/context`).
-   - Vue reactivity APIs (`ref`, `computed`, `effectScope`, `nextTick`).
-   - Internal composables and types (`@/composables/...`).
-2. **Helpers & Fixtures**:
-   - DOM element tracking helper (`trackElement`, `clearTrackedElements`).
-   - Context factory / helper functions (e.g., `createElements()`, `setupContext()`).
-3. **Lifecycle Hooks**:
-   - `beforeEach()` to set up fresh fixtures.
-   - `afterEach()` for guaranteed cleanup (`scope?.stop()`, `clearTrackedElements()`, `vi.clearAllMocks()`, `vi.useRealTimers()`).
-4. **`describe` Suites**:
-   - Top-level `describe("useX", () => { ... })`.
-   - Nested `describe("feature or behavior", () => { ... })` grouping related assertions.
+1. **Imports**: `vitest` first, then `vitest-browser-vue`, then
+   `vitest/browser`, then `vue`, then `@floating-ui/dom`, then internal
+   VFloat modules (`@/...`). For Tier S/I the render imports are required:
+   `render`, `page`/`userEvent`, `defineComponent`, `h`, `useTemplateRef`.
+2. **Mocks**: `vi.mock()` calls only, immediately after imports.
+3. **Fixture types**: unexported `FixtureConfig` interface and setup option
+   types. Never export from a `.test.ts` file.
+4. **Factory**: `createTestComponent(options, config)` at module scope
+   returning `{ Component, getReturn, ...refs }`. The component wires
+   `useFloatingNode` + the composable under test with `useTemplateRef` refs
+   and exposes getters for assertions. Per-test inline components are allowed
+   only for exotic cases (e.g. virtual anchors).
+5. **Lifecycle hooks**: Tier S/I use the minimal `afterEach` above; Tier P
+   uses scope/timer cleanup only when needed.
+6. **Suites**: single top-level `describe("useX")` with nested behavior groups
+   (`describe("prefix matching")`) following the `use-roving-focus`
+   convention. Mega-files (1000+ lines) may use numbered suites
+   (`describe("Suite N: title")`) following the `use-aria-activedescendant`
+   convention.
 
 ---
 
 ## 3. Vitest Browser Mode: Interaction Guidelines
 
-In Vitest Browser Mode, choose the most effective tool for each layer of testing:
+| Strategy                                                     | When to Use                                                                          | Example                                                                                                    |
+| :----------------------------------------------------------- | :----------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------- |
+| **`render` + `userEvent`**                                   | Default for Tier S/I user gestures: focus, clicks, tabs, keyboard search             | `await render(Component);` `await userEvent.click(anchor);` `await userEvent.keyboard("{ArrowDown}");`     |
+| **`render` + `dispatchKey`** (`@/test-utils/event-builders`) | Deterministic key/pointer input with fake timers, geometry, or `pointerType` control | `dispatchKey(floatingEl, "b");` `vi.advanceTimersByTime(500);`                                             |
+| **Accessible queries**                                       | Element lookup from rendered output                                                  | `page.getByRole("button", { name: "Anchor" });` `document.body.querySelector('[data-testid="floating"]');` |
+| **Direct Vue reactivity**                                    | Dynamic option changes and reactive sync                                             | `enabledRef.value = false;` `await nextTick();`                                                            |
 
-| Strategy                                      | When to Use                                                                                                                            | Example                                                                                                   |
-| :-------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| **`userEvent`** (`@vitest/browser/context`)   | End-to-end user gestures where real browser focus, sequential event bubbling, or keyboard handling is tested.                          | `await userEvent.click(anchorEl);`<br>`await userEvent.keyboard("{Escape}");`<br>`await userEvent.tab();` |
-| **Synthetic DOM Events** (`dispatchEvent`)    | Coordinate-level geometry tests, mouse speed calculations, safe-polygon raycasting, or specific `pointerType` values (`touch`, `pen`). | `anchorEl.dispatchEvent(new PointerEvent("pointerenter", { clientX: 10, clientY: 20 }));`                 |
-| **Direct Vue Reactivity** (`ref.value = ...`) | Dynamic option changes, prop updates, and testing reactive state synchronization.                                                      | `openRef.value = true;`<br>`await nextTick();`                                                            |
+Rules:
+
+- Never share mutable state across `it()` blocks. Each test renders its own
+  component and queries its own elements.
+- Use `vi.useFakeTimers()` only around buffer/timeout assertions and always
+  pair with `vi.useRealTimers()` in `afterEach()`.
+- Prefer `await expect.element(el).toHaveFocus()` for focus assertions.
 
 ---
 
@@ -125,12 +151,14 @@ In Vitest Browser Mode, choose the most effective tool for each layer of testing
 
 Use this checklist when writing or reviewing tests:
 
-- [ ] All created DOM elements are registered with `trackElement()` and removed in `afterEach()`.
-- [ ] Composable execution is wrapped in an `effectScope()` and stopped in `afterEach()`.
-- [ ] `vi.clearAllMocks()` and `vi.useRealTimers()` are called in `afterEach()`.
-- [ ] No state or DOM mutations leak between `it()` blocks.
-- [ ] `userEvent` is used for user interaction flows (clicks, tabs, keyboard).
-- [ ] Synthetic `dispatchEvent` is used for coordinate/geometry/pointerType mocks.
+- [ ] File declares its tier (P pure, S render-based, I integration) and follows that tier's lifecycle.
+- [ ] New DOM/interaction tests use `render()` + accessible queries; no `trackElement`, no manual `effectScope`.
+- [ ] Sections follow the Imports → Mocks → Fixture types → Factory → Lifecycle → Suites order.
+- [ ] Factory is `createTestComponent` at module scope (inline components only for exotic cases).
+- [ ] Suites use behavior names; only mega-files (1000+ lines) may use numbered `Suite N` describes.
+- [ ] No state or DOM mutations leak between `it()` blocks; each test renders its own component.
+- [ ] `vi.clearAllMocks()` runs in `afterEach`; fake timers are always restored with `vi.useRealTimers()`.
+- [ ] `userEvent` is used for user gesture flows; `dispatchKey` for timer-controlled or coordinate input.
 - [ ] Open-change reasons use kebab-case string literals.
-- [ ] Element variables use the `*El` naming suffix.
-- [ ] File structure is minimal without decorative section banners.
+- [ ] Element variables use the `*El` suffix; nothing is exported from the test file.
+- [ ] Shared builders come from `@/test-utils/*`, never copy-pasted between files.
