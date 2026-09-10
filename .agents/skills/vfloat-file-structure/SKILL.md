@@ -70,7 +70,7 @@ Inside the main composable function, organize code based on the complexity tier:
 Follows a linear flow separated only by blank lines (no internal dividers):
 
 1. **JSDoc**: Comprehensive description with `@param`, `@returns`, and `@example`.
-2. **Options Destructuring**: Destructure all options with sensible defaults.
+2. **Options Access**: Do not destructure options. Access infrequently used options directly via `options.xxx` (e.g. `toValue(options.delay ?? 0)`). Only extract a local for options read 2+ times (e.g. a `computed` wrapper). Never rename options with an `*Option` suffix.
 3. **Derived State & Reactive Refs**: `computed` wrappers, reactive refs.
 4. **Event Handlers & Action Functions**: Logic and user action handlers.
 5. **Wiring & Listeners**: `watch`, `watchPostEffect`, `useEventListener`.
@@ -83,7 +83,7 @@ Organize code using **Feature-Based Grouping (Vertical Cohesion)** rather than h
 ```
 composable()
 │
-├── Shared Options & Root State  (Destructuring, computed option wrappers, shared refs)
+├── Shared Options & Root State  (Direct `options.xxx` access, computed wrappers only for options read 2+ times, shared refs)
 │
 ├── Feature Block 1               (Private state + Actions + Handlers + Effects for Feature 1)
 │
@@ -168,6 +168,6 @@ Internals are functions, interfaces, types, constants, and variables used only w
 - [ ] Event listeners are decoupled and do not combine unrelated feature logic.
 - [ ] Internal feature dividers use single-line dashed comments (`// --- Feature Name ----`) with a trailing blank line.
 - [ ] Feature divider names are Title Case noun phrases describing functionality (no generic `// --- State ---` or `// --- Handlers ---`).
-- [ ] Options are destructured with sensible defaults at the top of the function.
+- [ ] Options are accessed directly via `options.xxx` with inline defaults (e.g. `toValue(options.enabled ?? true)`); only options read 2+ times get a local/computed. No `*Option` suffix renames.
 - [ ] Types and interfaces are positioned at the bottom of the file.
 - [ ] Module internals (entities used only within the defining module and not imported elsewhere) are unexported.
