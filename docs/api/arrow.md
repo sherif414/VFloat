@@ -4,7 +4,7 @@ description: Positions the arrow so it stays aligned with the reference element.
 
 # arrow
 
-`arrow` positions an arrow element so it points toward the reference element and exposes the resulting coordinates through the floating context middleware data.
+`arrow` positions an arrow element so it points toward the anchor element and exposes the resulting coordinates through the node middleware data.
 
 - Type
 
@@ -25,24 +25,24 @@ description: Positions the arrow so it stays aligned with the reference element.
 
 - Details
 
-  `arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element.
+  `arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element. When `element` is `null`, the middleware returns no data instead of measuring.
 
-  The middleware writes its result to `middlewareData.value.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually.
+  The middleware writes its result to `middlewareData.value.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually. Prefer `useArrow()` when you want registration, RTL-aware inset styles, and scope cleanup handled for you.
 
 - Example
 
   ```vue
   <script setup lang="ts">
   import { computed, ref } from "vue";
-  import { arrow, useFloatingContext, usePosition } from "v-float";
+  import { arrow, useFloatingNode, usePosition } from "v-float";
 
   const anchorEl = ref<HTMLElement | null>(null);
   const floatingEl = ref<HTMLElement | null>(null);
   const arrowEl = ref<HTMLElement | null>(null);
   const open = ref(true);
 
-  const context = useFloatingContext({ anchorEl, floatingEl, open });
-  const { middlewareData, styles } = usePosition(context, {
+  const node = useFloatingNode({ anchorEl, floatingEl, open });
+  const { middlewareData, styles } = usePosition(node, {
     placement: "top",
     middleware: {
       offset: 8,
@@ -65,7 +65,7 @@ description: Positions the arrow so it stays aligned with the reference element.
   <template>
     <button ref="anchorEl">Anchor</button>
 
-    <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
+    <div v-if="node.open" ref="floatingEl" :style="styles">
       <div ref="arrowEl" style="position: absolute" :style="arrowStyles">^</div>
       Floating content
     </div>
@@ -73,6 +73,6 @@ description: Positions the arrow so it stays aligned with the reference element.
   ```
 
 - See also
-  - [useArrow](/api/use-arrow) - Registers and styles the arrow element from the floating context
-  - [useFloatingContext](/api/use-floating-context) - Creates shared refs and open state
+  - [useArrow](/api/use-arrow) - Registers and styles the arrow element from the floating node
+  - [useFloatingNode](/api/use-floating-node) - Creates shared refs and open state
   - [offset](/api/offset) - Adds spacing between the anchor and floating element

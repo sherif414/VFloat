@@ -15,9 +15,10 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 ## Positioning
 
-- [`useFloatingContext`](/api/use-floating-context) - Creates shared refs and open state
+- [`useFloatingNode`](/api/use-floating-node) - Creates a standalone node with shared refs and open state
+- [`useFloatingTree`](/api/use-floating-tree) - Coordinates related nodes such as nested menus
 - [`usePosition`](/api/use-position) - Positions a floating element relative to an anchor element
-- [`useArrow`](/api/use-arrow) - Connects an arrow element to a floating context
+- [`useArrow`](/api/use-arrow) - Connects an arrow element to a floating node
 - [`useClientPoint`](/api/use-client-point) - Positions a floating element relative to pointer coordinates
 
 ## Interactions
@@ -32,8 +33,9 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 
 ## Collections
 
-- [`useCollection`](/api/use-collection) - Manages collections for keyboard navigation
-- [`useListNavigation`](/api/use-list-navigation) - Moves active focus between items in a collection with the keyboard
+- [`useCollection`](/api/use-collection) - Manages a headless string-value model for keyboard navigation
+- [`useRovingFocus`](/api/use-roving-focus) - Moves physical DOM focus between items with roving tabindex
+- [`useAriaActivedescendant`](/api/use-aria-activedescendant) - Highlights options virtually while focus stays on an input
 - [`useTypeahead`](/api/use-typeahead) - Coordinates keyboard typeahead search and jumping across items
 
 ## Middleware
@@ -41,7 +43,8 @@ These pages define the public surface of VFloat. Use the guide pages for the men
 - [`arrow`](/api/arrow) - Aligns an arrow with the reference element
 - [`autoPlacement`](/api/autoplacement) - Chooses a placement that fits available space
 - [`flip`](/api/flip) - Switches to another placement when space is limited
-- [`hide`](/api/hide) - Exposes visibility state for clipped references and escaped floating elements
+- [`hide`](/api/hide) - Exposes visibility state for clipped anchors and escaped floating elements
+- [`inline`](/api/inline) - Positions relative to multi-line inline anchors
 - [`offset`](/api/offset) - Adds distance between the reference and floating element
 - [`shift`](/api/shift) - Keeps the floating element within view
 - [`size`](/api/size) - Measures available space for sizing the floating element

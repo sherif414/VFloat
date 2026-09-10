@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Placement, UsePositionMiddlewareOptions, VirtualElement } from "v-float";
 import { computed, shallowRef, watch } from "vue";
-import { useClientPoint, useFloatingContext, usePosition } from "v-float";
+import { useClientPoint, useFloatingNode, usePosition } from "v-float";
 
 interface Props {
   placement: Placement;
@@ -22,7 +22,7 @@ const trackingAreaEl = shallowRef<HTMLElement | null>(null);
 const anchorEl = shallowRef<VirtualElement | HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   defaultOpen: false,
@@ -43,8 +43,8 @@ watch(
   () => [coordinates.value.x, coordinates.value.y],
   ([x, y]) => {
     if (x != null && y != null && props.isActive) {
-      if (!context.state.open.value) {
-        context.state.setOpen(true);
+      if (!context.open.value) {
+        context.setOpen(true);
       }
       void position.update();
     }
@@ -55,7 +55,7 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.state.setOpen(true);
+      context.setOpen(true);
     }
   },
   { immediate: true },
@@ -65,7 +65,7 @@ watch(
   () => props.isActive,
   (active) => {
     if (!active) {
-      context.state.setOpen(false);
+      context.setOpen(false);
     }
   },
 );
@@ -80,14 +80,14 @@ watch(
 
 function onPointerEnter() {
   if (props.isActive && coordinates.value.x != null && coordinates.value.y != null) {
-    context.state.setOpen(true);
+    context.setOpen(true);
     void position.update();
   }
 }
 
 function onPointerLeave() {
   if (!props.keepOpen) {
-    context.state.setOpen(false);
+    context.setOpen(false);
   }
 }
 
@@ -106,7 +106,7 @@ defineExpose({
     @pointerleave="onPointerLeave"
   >
     <div
-      v-if="context.state.open.value && coordinates.x !== null"
+      v-if="context.open.value && coordinates.x !== null"
       ref="floatingEl"
       class="floating-panel panel-cursor"
       :style="position.styles.value"

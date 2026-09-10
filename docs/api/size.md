@@ -37,19 +37,21 @@ description: Measures available space so the floating element can size itself.
 
   This middleware is useful for menus, popovers, and other surfaces that need to stay inside the viewport without overflowing.
 
+  When you only need the floating element to match the anchor width, prefer the `matchWidth` shortcut in [`usePosition`](/api/use-position) over writing this middleware by hand.
+
 - Example
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { size, useFloatingContext, usePosition } from "v-float";
+import { size, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({ anchorEl, floatingEl, open });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl, open });
+const { styles } = usePosition(node, {
   middleware: {
     custom: [
       size({
@@ -68,7 +70,7 @@ const { styles } = usePosition(context, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

@@ -4,19 +4,20 @@ description: Opens and closes floating content on hover.
 
 # useHover
 
-`useHover` opens and closes a floating context when the pointer enters or leaves the anchor or floating element.
+`useHover` opens and closes a floating node when the pointer enters or leaves the anchor or floating element.
 
 ## Type
 
 ```ts
-function useHover(context: FloatingContext, options?: UseHoverOptions): void;
+function useHover(node: FloatingNode, options?: UseHoverOptions): void;
 
 interface UseHoverOptions {
-  enabled?: MaybeRef<boolean>;
-  delay?: MaybeRef<number | { open?: number; close?: number }>;
-  restMs?: MaybeRef<number>;
-  mouseOnly?: MaybeRef<boolean>;
-  safePolygon?: MaybeRef<boolean | SafePolygonOptions>;
+  enabled?: MaybeRefOrGetter<boolean>;
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  delay?: MaybeRefOrGetter<number | { open?: number; close?: number }>;
+  restMs?: MaybeRefOrGetter<number>;
+  mouseOnly?: MaybeRefOrGetter<boolean>;
+  safePolygon?: MaybeRefOrGetter<boolean | SafePolygonOptions>;
   ignorePointerLeave?: (target: EventTarget | null) => boolean;
 }
 
@@ -29,13 +30,15 @@ interface SafePolygonOptions {
 
 ## Details
 
-`useHover` is the right fit for tooltips, previews, and other surfaces that should follow pointer intent. It uses the shared `FloatingContext`, so hover can coexist with click or focus on the same surface.
+`useHover` is the right fit for tooltips, previews, and other surfaces that should follow pointer intent. It shares the node's open state, so hover can coexist with click or focus on the same surface: hover never closes a surface pinned by another reason, and `stickIfOpen` in [`useClick`](/api/use-click) re-affirms the reason so hover leave stops dismissing after a pinning click.
 
-- `delay` can be a single number or separate open and close values.
-- `restMs` only matters when the open delay is `0`.
-- `mouseOnly` limits hover behavior to mouse-like pointers.
-- `safePolygon` keeps the surface open while the pointer moves between trigger and panel. It infers the travel direction from their rendered rectangles, so it does not depend on `usePosition`.
-- `ignorePointerLeave` is a predicate to determine if a pointer leave event should be ignored (for example, to keep a parent menu open when hovering a nested submenu/child branch).
+- `enabled` defaults to `true`.
+- `delay` (default `0`) can be a single number or separate open and close values. A missing side falls back to `0`. Leaving cancels a pending open; re-entering cancels a pending close.
+- `restMs` (default `0`) requires the pointer to rest on the anchor before opening. It only matters when the open delay is `0`: pointer movement beyond a small threshold re-arms the timer, and leaving the anchor cancels it.
+- `mouseOnly` (default `false`) limits hover behavior to `pointerType === "mouse"`; pen and touch are ignored while it is `true`.
+- `safePolygon` (default `false`) keeps the surface open while the pointer moves between trigger and panel. It infers the travel direction from their rendered rectangles, so it does not depend on `usePosition`. Pass `true` for defaults (`buffer: 1`, `requireIntent: true`) or a `SafePolygonOptions` object to tune them. Clearing the polygon (on close or re-enter) reports an empty polygon through `onPolygonChange`.
+- `tree` makes pointer-leave checks family-aware across nested surfaces: moving into a descendant's elements does not close the parent. When omitted, only the node's own anchor and floating elements count as inside.
+- `ignorePointerLeave` is a predicate to determine if a pointer leave event should be ignored (for example, to keep a parent menu open when hovering a nested submenu/child branch). It runs after the family check.
 
 `useHover` opens and closes with the `hover` reason.
 
@@ -44,17 +47,17 @@ interface SafePolygonOptions {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useHover } from "v-float";
+import { useFloatingNode, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
   placement: "top",
 });
 
-useHover(context, {
+useHover(node, {
   delay: { open: 100, close: 150 },
   safePolygon: true,
 });
@@ -63,7 +66,7 @@ useHover(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Tooltip content</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">Tooltip content</div>
 </template>
 ```
 
@@ -71,5 +74,5 @@ useHover(context, {
 
 - [`useClick`](/api/use-click)
 - [`useFocus`](/api/use-focus)
-- [`useFloatingContext`](/api/use-floating-context)
+- [useFloatingNode](/api/use-floating-node)
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips)

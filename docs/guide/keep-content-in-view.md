@@ -27,13 +27,13 @@ This is the stack many production surfaces end up using first.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   open,
@@ -69,18 +69,18 @@ Use [`shift`](/api/shift).
 
 ## Problem 4: "The Panel Should Match Width Or Fit Height"
 
-Use [`size`](/api/size).
+Use [`size`](/api/size) through `middleware.custom`, since sizing is a raw middleware rather than a declarative key.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { size, useFloatingContext, usePosition } from "v-float";
+import { size, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   open,
@@ -110,7 +110,7 @@ const { styles } = usePosition(context, {
 
 ## Problem 5: "I Want The Best Side Automatically"
 
-Use [`autoPlacement`](/api/autoplacement) when the exact side is less important than finding the side with the most room.
+Use [`autoPlacement`](/api/autoplacement) through `middleware.custom` (as `custom: [autoPlacement()]`) when the exact side is less important than finding the side with the most room.
 
 ## Problem 6: "I Need An Arrow"
 
@@ -119,14 +119,14 @@ Use [`useArrow`](/api/use-arrow) to register the arrow middleware and read arrow
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useArrow, useFloatingContext, usePosition } from "v-float";
+import { useArrow, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   arrowEl,
@@ -150,10 +150,10 @@ Order is not a formatting detail. It changes outcomes.
 A common baseline order is:
 
 1. `offset`
-2. `flip` or `autoPlacement`
+2. `flip`, or `autoPlacement` through `custom`
 3. `shift`
-4. `size`
-5. `arrow`
+4. `matchWidth`, or `size` through `custom`
+5. `arrow` via `useArrow`, which registers itself by name
 
 If you want more detail, read [Middleware Pipeline](/guide/middleware-pipeline) and [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas).
 

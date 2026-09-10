@@ -22,7 +22,7 @@ We want one tooltip that works for two real user paths:
 - A mouse user hovers the trigger
 - A keyboard user tabs to the trigger
 
-That usually means [`useFloatingContext`](/api/use-floating-context), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
+That usually means [`useFloatingNode`](/api/use-floating-node), [`useHover`](/api/use-hover), [`useFocus`](/api/use-focus), and [`offset`](/api/offset).
 
 ## Step 1: Build The Shared Context
 
@@ -31,12 +31,12 @@ Start by wiring the anchor, floating element, and placement.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: {
@@ -53,12 +53,12 @@ Now add the interaction layer that matches tooltip expectations.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useFocus, useHover } from "v-float";
+import { useFloatingNode, usePosition, useFocus, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: {
@@ -84,13 +84,7 @@ Render the trigger and tooltip from the same shared state.
 <template>
   <button ref="anchorEl" type="button" aria-describedby="save-tooltip">Save</button>
 
-  <div
-    v-if="context.state.open.value"
-    id="save-tooltip"
-    ref="floatingEl"
-    role="tooltip"
-    :style="styles"
-  >
+  <div v-if="context.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
     Save the current draft without publishing it.
   </div>
 </template>

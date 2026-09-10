@@ -17,7 +17,7 @@ A dialog usually needs:
 - focus containment while open
 - clear semantics such as `role="dialog"` and `aria-modal="true"` for modal flows
 
-In VFloat terms, the core stack is usually [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click) or manual open state, [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useFocusManager`](/api/use-focus-manager).
+In VFloat terms, the core stack is usually [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click) or manual open state, [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useFocusManager`](/api/use-focus-manager).
 
 ## Step 1: Build The Shared Context
 
@@ -26,12 +26,12 @@ Start with the same stable `context` shape.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 </script>
 ```
@@ -46,7 +46,7 @@ import { ref } from "vue";
 import {
   useClick,
   useEscapeKey,
-  useFloatingContext,
+  useFloatingNode,
   useFocusManager,
   useOutsideClick,
   usePosition,
@@ -55,7 +55,7 @@ import {
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
 useClick(context);
@@ -77,12 +77,12 @@ Render the dialog with explicit semantics.
   <button ref="anchorEl" type="button">Open dialog</button>
 
   <Teleport to="body">
-    <div v-if="context.state.open.value" class="backdrop">
+    <div v-if="context.open.value" class="backdrop">
       <div ref="floatingEl" role="dialog" aria-modal="true" tabindex="-1" :style="styles">
         <h2>Edit profile</h2>
         <p>Update your public display information.</p>
         <button type="button">Save</button>
-        <button type="button" @click="context.state.setOpen(false)">Cancel</button>
+        <button type="button" @click="context.setOpen(false)">Cancel</button>
       </div>
     </div>
   </Teleport>

@@ -38,7 +38,7 @@ Choose a menu-like dropdown when:
 - arrow-key navigation matters
 - one item may lead to a child branch
 
-Start with [Keyboard Navigation](/guide/keyboard-navigation) and [Build Nested Menus](/guide/build-nested-menus).
+Start with [Keyboard Navigation](/guide/keyboard-navigation) and [Build Nested Menus](/guide/build-nested-menus). Plan on [`useRovingFocus`](/api/use-roving-focus) for physical item focus (or [`useAriaActivedescendant`](/api/use-aria-activedescendant) for input-driven lists), with related nodes joined through [`useFloatingTree`](/api/use-floating-tree) via `tree.addNode(child, parentId)`.
 
 ## Dialog
 
@@ -48,7 +48,7 @@ Choose a dialog when:
 - focus should move into it and stay managed
 - the user must meaningfully engage with the content before moving on
 
-Start with [Build Dialogs and Modals](/guide/build-dialogs-and-modals).
+Start with [Build Dialogs and Modals](/guide/build-dialogs-and-modals). Plan on [`useFocusManager`](/api/use-focus-manager) for initial focus, modal trapping, and return focus.
 
 ## Context Menu Or Pointer-Based Surface
 
@@ -58,7 +58,7 @@ Choose a pointer-driven surface when:
 - the surface should open at the pointer location
 - cursor position is part of the interaction model
 
-Start with [Use Virtual Anchors](/guide/use-virtual-anchors).
+Start with [Use Virtual Anchors](/guide/use-virtual-anchors). Plan on [`useClientPoint`](/api/use-client-point) with `trackingMode: "follow"` for cursor-following surfaces or `"static"` for opening-point surfaces.
 
 ## Next Step
 

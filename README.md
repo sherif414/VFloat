@@ -37,15 +37,15 @@ yarn add v-float
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloatingContext, usePosition, useHover, offset } from "v-float";
+import { useFloatingNode, usePosition, useHover } from "v-float";
 
 const anchorEl = useTemplateRef("anchorEl");
 const floatingEl = useTemplateRef("floatingEl");
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8)],
+  middleware: { offset: 8 },
 });
 
 useHover(context);
@@ -54,7 +54,7 @@ useHover(context);
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">This is a tooltip</div>
+  <div v-if="context.open" ref="floatingEl" :style="styles">This is a tooltip</div>
 </template>
 ```
 
@@ -63,24 +63,15 @@ useHover(context);
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import {
-  useFloatingContext,
-  usePosition,
-  useClick,
-  useEscapeKey,
-  useOutsideClick,
-  offset,
-  flip,
-  shift,
-} from "v-float";
+import { useFloatingNode, usePosition, useClick, useEscapeKey, useOutsideClick } from "v-float";
 
 const triggerEl = useTemplateRef("triggerEl");
 const menuEl = useTemplateRef("menuEl");
 
-const context = useFloatingContext({ anchorEl: triggerEl, floatingEl: menuEl });
+const context = useFloatingNode({ anchorEl: triggerEl, floatingEl: menuEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middlewares: [offset(4), flip(), shift({ padding: 8 })],
+  middleware: { offset: 4, flip: true, shift: { padding: 8 } },
 });
 
 useClick(context);
@@ -91,7 +82,7 @@ useEscapeKey(context);
 <template>
   <button ref="triggerEl">Open Menu</button>
 
-  <div v-if="context.state.open.value" ref="menuEl" :style="styles">
+  <div v-if="context.open" ref="menuEl" :style="styles">
     <div>Menu Item 1</div>
     <div>Menu Item 2</div>
     <div>Menu Item 3</div>
@@ -104,16 +95,16 @@ useEscapeKey(context);
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloatingContext, usePosition, useHover, useArrow, offset, flip } from "v-float";
+import { useFloatingNode, usePosition, useHover, useArrow } from "v-float";
 
 const anchorEl = useTemplateRef("anchorEl");
 const tooltipEl = useTemplateRef("tooltipEl");
 const arrowEl = useTemplateRef("arrowEl");
 
-const context = useFloatingContext({ anchorEl, floatingEl: tooltipEl, arrowEl });
+const context = useFloatingNode({ anchorEl, floatingEl: tooltipEl, arrowEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middlewares: [offset(8), flip()],
+  middleware: { offset: 8, flip: true },
 });
 
 useHover(context);
@@ -126,7 +117,7 @@ const { arrowStyles } = useArrow(context, {
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="tooltipEl" :style="styles" class="tooltip">
+  <div v-if="context.open" ref="tooltipEl" :style="styles" class="tooltip">
     This is a tooltip with an arrow
     <div ref="arrowEl" class="arrow" :style="arrowStyles"></div>
   </div>
@@ -157,7 +148,8 @@ const { arrowStyles } = useArrow(context, {
 
 ### Positioning
 
-- `**useFloatingContext**`: Creates shared refs and open state
+- `**useFloatingNode**`: Creates a standalone node with shared refs and open state
+- `**useFloatingTree**`: Coordinates related nodes such as nested menus
 - `**usePosition**`: Positions a floating element relative to an anchor with middleware support
 - `**useArrow**`: Positions arrow elements pointing to the anchor
 - `**useClientPoint**`: Positions floating elements at cursor/touch coordinates
@@ -167,15 +159,17 @@ const { arrowStyles } = useArrow(context, {
 - `**useClick**`: Click event handling with toggle and dismiss options
 - `**useHover**`: Hover interactions with configurable delays and safe polygon
 - `**useFocus**`: Focus/blur event handling for keyboard navigation
-- `**useFocusTrap**`: Keeps keyboard focus inside floating content
+- `**useFocusManager**`: Initial focus, modal trapping, guards, and return focus
 - `**useEscapeKey**`: Closes floating content on Escape key press
 - `**useOutsideClick**`: Closes floating content when clicking outside
 - `**useRole**`: Synchronizes ARIA roles and states for floating surfaces
 
 ### Collections
 
-- `**useCollection**`: Manages collections for keyboard navigation
-- `**useListNavigation**`: Coordinates arrow-key, Home, End, and Tab navigation for floating collections
+- `**useCollection**`: Headless string-value model for keyboard navigation
+- `**useRovingFocus**`: Physical DOM focus with roving tabindex for menus, tabs, and toolbars
+- `**useAriaActivedescendant**`: Virtual focus for text-input widgets like comboboxes
+- `**useTypeahead**`: Type-to-focus search across collections
 
 ### Middleware
 
@@ -187,6 +181,7 @@ VFloat ships these positioning middleware helpers:
 - `**hide**`: Hide floating element when anchor is not visible
 - `**autoPlacement**`: Automatically choose the best placement
 - `**size**`: Resize floating element to fit within viewport
+- `**inline**`: Position relative to multi-line inline anchors
 - `**arrow**`: Position arrow elements within the floating surface
 
 ## Project Status

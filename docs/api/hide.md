@@ -37,14 +37,14 @@ description: Exposes visibility state for clipped references and escaped floatin
 ```vue
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { hide, useFloatingContext, usePosition } from "v-float";
+import { hide, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({ anchorEl, floatingEl, open });
-const { middlewareData, styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl, open });
+const { middlewareData, styles } = usePosition(node, {
   middleware: {
     custom: [hide()],
   },
@@ -58,9 +58,7 @@ const visibility = computed(() => {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="[styles, { visibility }]">
-    Floating content
-  </div>
+  <div v-if="node.open" ref="floatingEl" :style="[styles, { visibility }]">Floating content</div>
 </template>
 ```
 

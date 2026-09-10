@@ -9,26 +9,14 @@ description: Coordinates keyboard typeahead search and jumping across collection
 ## Type
 
 ```ts
-function useTypeahead(
-  context: UseTypeaheadContext,
-  options?: UseTypeaheadOptions,
-): UseTypeaheadReturn;
+function useTypeahead(node: UseTypeaheadContext, options?: UseTypeaheadOptions): UseTypeaheadReturn;
 
 type TypeaheadFindMatchFn = (
   orderedList: readonly (string | null)[],
   typedString: string,
 ) => string | number | null | undefined;
 
-interface UseTypeaheadContext {
-  /**
-   * The reactive element refs exposed by the floating context.
-   */
-  refs: FloatingContext["refs"];
-  /**
-   * The reactive state exposed by the floating context.
-   */
-  state: FloatingContext["state"];
-}
+interface UseTypeaheadContext extends Pick<FloatingNode, "refs" | "open"> {}
 
 interface UseTypeaheadOptions {
   /**
@@ -85,10 +73,15 @@ interface UseTypeaheadOptions {
   ignoreKeys?: MaybeRefOrGetter<readonly string[]>;
 
   /**
-   * Custom function to determine matching item.
+   * Custom function to determine matching item. Accepts a ref, a computed ref,
+   * a plain function, or null.
    * @default prefix startsWith matcher
    */
-  findMatch?: TypeaheadFindMatchFn | null;
+  findMatch?:
+    | Ref<TypeaheadFindMatchFn | null>
+    | ComputedRef<TypeaheadFindMatchFn | null>
+    | TypeaheadFindMatchFn
+    | null;
 
   /**
    * Predicate for skipping disabled items during matching.
@@ -116,7 +109,7 @@ interface UseTypeaheadReturn {
 
 ## Details
 
-`useTypeahead` pairs naturally with [`useListNavigation`](/api/use-list-navigation) and [`useCollection`](/api/use-collection) to deliver complete, accessible keyboard navigation:
+`useTypeahead` pairs with [`useCollection`](/api/use-collection) for the value model and bridges to index-based focus through `onMatch`:
 
 - **Multi-Character Typing Buffer:** Keystrokes typed within `resetMs` (default `750ms`) accumulate into a multi-character query (e.g. typing `b` then `l` jumps to _"Blueberry"_ rather than stopping at _"Banana"_).
 - **Rapid Single-Character Cycling:** Typing the same character repeatedly cycles sequentially through all matching items starting with that character (_Apple_ &rarr; _Apricot_ &rarr; _Avocado_ &rarr; _Apple_).
@@ -125,22 +118,17 @@ interface UseTypeaheadReturn {
 - **Space Key Handling:** An initial Space key does not trigger typeahead, preserving default button toggling and listbox activation. Space keys typed within an active query are preserved for multi-word labels (e.g., _"New York"_).
 - **Native Input Protection:** Typing in `<input>` or `<textarea>` elements embedded within the floating surface or anchor trigger is ignored so native text input is never blocked.
 - **Reactive Typing State:** Exposes an `isTyping` reactive boolean and `onTypingChange` callback to easily bind visual typing indicators.
+- **List resolution:** an explicit `list` wins when present, otherwise `collection.values` is searched. `collection` is a narrow structural shape, so any object with `activeValue` and `setActiveValue` works.
+- **Driving focus:** forward matches into [`useRovingFocus`](/api/use-roving-focus) or [`useAriaActivedescendant`](/api/use-aria-activedescendant) through `onMatch: (index) => setActiveIndex(index)`.
 
 ## Example
 
-This select dropdown combines `useCollection`, `useListNavigation`, and `useTypeahead` for full keyboard accessibility.
+This select dropdown combines `useCollection` and `useTypeahead` for keyboard search over values.
 
 ```vue
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import {
-  useClick,
-  useCollection,
-  useFloatingContext,
-  useListNavigation,
-  usePosition,
-  useTypeahead,
-} from "v-float";
+import { useClick, useCollection, useFloatingNode, usePosition, useTypeahead } from "v-float";
 
 interface Country {
   code: string;
@@ -160,8 +148,8 @@ const countries = ref<Country[]>([
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
-const { styles } = usePosition(context);
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node);
 
 const values = computed(() => countries.value.map((c) => c.name));
 const collection = useCollection({
@@ -169,9 +157,8 @@ const collection = useCollection({
   isValueDisabled: (name) => !!countries.value.find((c) => c.name === name)?.disabled,
 });
 
-useClick(context);
-useListNavigation(context, { collection, loop: true });
-useTypeahead(context, { collection });
+useClick(node);
+useTypeahead(node, { collection });
 </script>
 
 <template>
@@ -179,7 +166,7 @@ useTypeahead(context, { collection });
     {{ collection.activeValue.value || "Select Country" }}
   </button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" role="listbox" :style="styles">
+  <div v-if="node.open" ref="floatingEl" role="listbox" :style="styles">
     <div
       v-for="country in countries"
       :key="country.code"
@@ -201,6 +188,7 @@ useTypeahead(context, { collection });
 ## See Also
 
 - [`useCollection`](/api/use-collection)
-- [`useListNavigation`](/api/use-list-navigation)
-- [`useFloatingContext`](/api/use-floating-context)
+- [`useRovingFocus`](/api/use-roving-focus)
+- [`useAriaActivedescendant`](/api/use-aria-activedescendant)
+- [useFloatingNode](/api/use-floating-node)
 - [Keyboard Navigation Guide](/guide/keyboard-navigation)

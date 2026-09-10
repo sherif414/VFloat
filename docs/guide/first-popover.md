@@ -16,7 +16,7 @@ The names on this page should already feel familiar:
 
 - `anchorEl` is the button or trigger
 - `floatingEl` is the popover panel
-- `context` is the shared object returned by [`useFloatingContext`](/api/use-floating-context)
+- `context` is the shared object returned by [`useFloatingNode`](/api/use-floating-node)
 
 The main difference from the tooltip page is the interaction layer. For a popover, we usually want:
 
@@ -25,7 +25,7 @@ The main difference from the tooltip page is the interaction layer. For a popove
 - Click outside to close
 - Escape to close for keyboard users
 
-That means we will use [`useFloatingContext`](/api/use-floating-context), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`offset`](/api/offset).
+That means we will use [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`offset`](/api/offset).
 
 If those names still feel abstract, that is fine. The example makes the shape easier to see.
 
@@ -36,12 +36,12 @@ Start with the same refs and placement you used for the tooltip.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -58,12 +58,12 @@ Now swap the hover behavior for click-based interaction.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingContext, useOutsideClick, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -90,12 +90,12 @@ Now render the trigger and the panel with the shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingContext, useOutsideClick, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
   middleware: {
@@ -111,7 +111,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl" type="button">Open popover</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">
+  <div v-if="context.open.value" ref="floatingEl" :style="styles">
     <p>Popover content goes here.</p>
     <button type="button">Action</button>
   </div>

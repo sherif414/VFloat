@@ -10,14 +10,11 @@ description: Manages initial focus, modal trapping, return focus, and portal bou
 
 ```ts
 function useFocusManager(
-  context: UseFocusManagerContext,
+  node: UseFocusManagerContext,
   options?: UseFocusManagerOptions,
 ): UseFocusManagerReturn;
 
-interface UseFocusManagerContext {
-  refs: FloatingContext["refs"];
-  state: FloatingContext["state"];
-}
+interface UseFocusManagerContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
 
 interface UseFocusManagerOptions {
   /**
@@ -25,6 +22,12 @@ interface UseFocusManagerOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Explicit floating tree for family-aware focus checks across nested surfaces.
+   * When omitted, only the node's own anchor and floating elements count as inside.
+   */
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
 
   /**
    * Whether the floating surface acts as a modal dialog, strictly trapping focus inside
@@ -60,12 +63,14 @@ interface UseFocusManagerOptions {
 
   /**
    * When `modal` is false, closes the floating element when focus moves outside its family.
+   * Has no effect when `modal` is true.
    * @default false
    */
   closeOnFocusOut?: MaybeRefOrGetter<boolean>;
 
   /**
    * When `modal` is false, closes the floating element when the user presses Tab to leave.
+   * When `modal` is true, Tab wraps inside instead.
    * @default false
    */
   closeOnTab?: MaybeRefOrGetter<boolean>;
@@ -88,7 +93,7 @@ interface UseFocusManagerOptions {
   ignoreFocusOut?: (target: EventTarget | null) => boolean;
 
   /**
-   * Optional error callback when focus management encounters an error.
+   * Optional error callback when focus management activation encounters an error.
    */
   onError?: (error: unknown) => void;
 }
@@ -100,12 +105,13 @@ interface UseFocusManagerReturn {
   isActive: ComputedRef<boolean>;
 
   /**
-   * Manually activates focus management.
+   * Manually activates focus management. No-op while the node is closed.
    */
   activate: () => void;
 
   /**
-   * Manually deactivates focus management and restores focus.
+   * Manually deactivates focus management, closes with the `programmatic` reason,
+   * and restores focus according to `returnFocus`.
    */
   deactivate: () => void;
 }
@@ -113,45 +119,43 @@ interface UseFocusManagerReturn {
 
 ## Details
 
-`useFocusManager` is the central surface focus manager for dialogs, popovers, and modal overlays. It coordinates the full focus lifecycle of an open floating surface:
+`useFocusManager` is the central surface focus manager for dialogs, popovers, and modal overlays. It activates after open (once the floating element mounts) and deactivates on close or unmount:
 
-- **Initial Focus**: When the surface opens, focus is routed to the first tabbable child (or the element specified by `initialFocus`). If no tabbable children exist, it focuses the floating container (`tabindex="-1"`) to prevent focus loss.
-- **Modal Focus Trapping**: When `modal` is `true`, <kbd>Tab</kbd> wraps from the last tabbable element to the first, and <kbd>Shift+Tab</kbd> wraps from the first element to the last.
+- **Initial Focus**: When the surface opens, focus is routed to the first tabbable child (or the element specified by `initialFocus`). If no tabbable children exist, it focuses the floating container (`tabindex="-1"`) to prevent focus loss. Custom targets must be connected to the document; disconnected targets fall back to the default.
+- **Modal Focus Trapping**: When `modal` is `true`, <kbd>Tab</kbd> wraps from the last tabbable element to the first, and <kbd>Shift+Tab</kbd> wraps from the first element to the last. If focus escapes anyway (for example, when the focused child unmounts), it is pulled back inside.
 - **Focus Guards (Sentinels)**: When `guards` is `true`, invisible boundary sentinels are maintained around portaled floating elements so <kbd>Tab</kbd> and <kbd>Shift+Tab</kbd> never escape into the browser address bar or unrelated document roots.
-- **Return Focus**: When the surface closes, focus is automatically returned to the trigger element that was active before opening (or the custom element provided in `returnFocus`). If the trigger was unmounted, it safely falls back without throwing runtime errors.
-- **Background Isolation**: When `modal` or `outsideElementsInert` is `true`, outside sibling elements are marked `inert` (with `aria-hidden="true"` fallback) and restored upon close.
-- **Non-Modal Dismissal**: When `modal` is `false`, setting `closeOnFocusOut: true` or `closeOnTab: true` cleanly dismisses the surface when focus leaves, with built-in awareness of parent and child floating layers in a `FloatingTree`.
+- **Return Focus**: When the surface closes, focus is returned to the custom `returnFocus` element when it is connected, otherwise to the anchor, otherwise to the element that was active before opening. Focus is never stolen when it already moved elsewhere naturally, and unmounting deactivates without restoring focus.
+- **Background Isolation**: When `modal` or `outsideElementsInert` is `true`, outside sibling elements are marked `inert` (with `aria-hidden="true"` fallback) and restored upon close. Nested family elements resolved through `tree` stay interactive.
+- **Non-Modal Dismissal**: When `modal` is `false`, setting `closeOnFocusOut: true` dismisses the surface when focus (reason `"blur"`) or pointer input (reason `"outside-pointer"`) lands outside, honoring `ignoreFocusOut`. Setting `closeOnTab: true` closes with the `"tab-key"` reason when <kbd>Tab</kbd> leaves. `closeOnFocusOut` has no effect while `modal` is `true`.
 
 ## Example
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFocusManager, useFloatingContext } from "v-float";
+import { useFocusManager, useFloatingNode } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-const context = useFloatingContext({ anchorEl, floatingEl, open });
+const node = useFloatingNode({ anchorEl, floatingEl, open });
 
-useFocusManager(context, {
+useFocusManager(node, {
   modal: true,
   returnFocus: true,
 });
 </script>
 
 <template>
-  <button ref="anchorEl" type="button" @click="context.state.setOpen(!context.state.open.value)">
-    Open dialog
-  </button>
+  <button ref="anchorEl" type="button" @click="node.setOpen(!node.open)">Open dialog</button>
 
   <Teleport to="body">
-    <div v-if="context.state.open.value" class="backdrop">
+    <div v-if="node.open" class="backdrop">
       <div ref="floatingEl" role="dialog" aria-modal="true" tabindex="-1">
         <h2>Dialog Title</h2>
         <input placeholder="Type something..." />
-        <button type="button" @click="context.state.setOpen(false)">Close</button>
+        <button type="button" @click="node.setOpen(false)">Close</button>
       </div>
     </div>
   </Teleport>
@@ -163,4 +167,4 @@ useFocusManager(context, {
 - [`useFocus`](/api/use-focus) - Trigger-level focus detection for anchors
 - [`useEscapeKey`](/api/use-escape-key) - Dismissal on Escape key press
 - [`useOutsideClick`](/api/use-outside-click) - Dismissal on pointer clicks outside
-- [`useListNavigation`](/api/use-list-navigation) - Composite keyboard navigation for menus and listboxes
+- [useFloatingTree](/api/use-floating-tree) - Family-aware focus checks for nested surfaces

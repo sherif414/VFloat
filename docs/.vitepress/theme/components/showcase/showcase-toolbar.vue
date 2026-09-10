@@ -3,14 +3,13 @@ import type { Placement } from "v-float";
 import { computed, shallowRef, watch } from "vue";
 import {
   useClick,
-  useCollection,
   useEscapeKey,
-  useFloatingContext,
+  useFloatingNode,
   useFocusManager,
-  useListNavigation,
   useOutsideClick,
   usePosition,
   useRole,
+  useRovingFocus,
 } from "v-float";
 import type { PresetType } from "./types";
 
@@ -55,7 +54,7 @@ const offsetPresets = [4, 8, 16];
 const selectAnchorEl = shallowRef<HTMLElement | null>(null);
 const selectFloatingEl = shallowRef<HTMLElement | null>(null);
 
-const selectContext = useFloatingContext({
+const selectContext = useFloatingNode({
   anchorEl: selectAnchorEl,
   floatingEl: selectFloatingEl,
 });
@@ -82,14 +81,15 @@ useFocusManager(selectContext, {
 
 const placementOptionEls = shallowRef<HTMLElement[]>([]);
 
-const { activeIndex, setActiveIndex } = useListNavigation(placementOptionEls, {
-  targetEl: selectFloatingEl,
+const { activeIndex, getTabindex, setActiveIndex } = useRovingFocus(selectContext, {
+  elementsList: placementOptionEls,
+  containerEl: selectFloatingEl,
   loop: true,
   onSelect: (index) => {
     const item = placements[index];
     if (item) {
       emit("update:placement", item.value as Placement);
-      selectContext.state.setOpen(false);
+      selectContext.setOpen(false);
     }
   },
 });
@@ -99,7 +99,7 @@ const currentPlacementLabel = computed(
   () => placements.find((p) => p.value === props.placement)?.label ?? props.placement,
 );
 
-watch(selectContext.state.open, (isOpen) => {
+watch(selectContext.open, (isOpen) => {
   if (isOpen) {
     const idx = placements.findIndex((p) => p.value === props.placement);
     if (idx !== -1) {
@@ -110,7 +110,7 @@ watch(selectContext.state.open, (isOpen) => {
 
 function onOptionSelect(val: Placement) {
   emit("update:placement", val);
-  selectContext.state.setOpen(false);
+  selectContext.setOpen(false);
 }
 </script>
 
@@ -123,9 +123,9 @@ function onOptionSelect(val: Placement) {
         ref="selectAnchorEl"
         type="button"
         class="control-select-btn"
-        :class="{ 'is-open': selectContext.state.open.value }"
+        :class="{ 'is-open': selectContext.open.value }"
         aria-haspopup="listbox"
-        :aria-expanded="selectContext.state.open.value"
+        :aria-expanded="selectContext.open.value"
       >
         <span>{{ currentPlacementLabel }}</span>
         <svg
@@ -143,7 +143,7 @@ function onOptionSelect(val: Placement) {
 
       <Teleport to="body">
         <div
-          v-if="selectContext.state.open.value"
+          v-if="selectContext.open.value"
           ref="selectFloatingEl"
           role="listbox"
           class="control-select-dropdown"
@@ -156,6 +156,7 @@ function onOptionSelect(val: Placement) {
             role="option"
             :aria-selected="placement === item.value"
             class="control-select-option"
+            :tabindex="getTabindex(index)"
             :class="{
               'is-active': activeIndex === index,
               'is-selected': placement === item.value,

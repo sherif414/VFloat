@@ -11,7 +11,7 @@ That is where virtual anchors come in.
 This guide covers two practical paths:
 
 - Pointer-driven positioning with [`useClientPoint`](/api/use-client-point)
-- Manual virtual anchors passed into [`useFloatingContext`](/api/use-floating-context)
+- Manual virtual anchors passed into [`useFloatingNode`](/api/use-floating-node)
 
 ## When To Reach For A Virtual Anchor
 
@@ -23,16 +23,18 @@ Use a virtual anchor when:
 
 ## Path 1: Follow The Pointer
 
+Point `trackingAreaEl` at the surface that should listen for pointer movement. `useClientPoint` replaces the node's anchor with a virtual element that follows the cursor, so the `anchorEl` passed to `useFloatingNode` is only a placeholder until tracking starts:
+
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useFloatingContext, usePosition, useHover } from "v-float";
+import { useClientPoint, useFloatingNode, usePosition, useHover } from "v-float";
 
 const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "right-start",
 });
@@ -55,13 +57,13 @@ Sometimes you want the surface to open at the pointer location and stay there ev
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useEscapeKey, useFloatingContext, usePosition } from "v-float";
+import { useClientPoint, useEscapeKey, useFloatingNode, usePosition } from "v-float";
 
 const areaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
 });
@@ -74,7 +76,7 @@ useClientPoint(context, {
 useEscapeKey(context);
 
 function openMenu() {
-  context.state.setOpen(true);
+  context.setOpen(true);
 }
 </script>
 ```
@@ -83,12 +85,12 @@ Static mode matters because it prevents the menu from drifting as the pointer mo
 
 ## Manual Virtual Anchors
 
-If you already have coordinates or a computed rectangle, you do not need `useClientPoint()`. You can pass a manual virtual anchor to `useFloatingContext()`.
+If you already have coordinates or a computed rectangle, you do not need `useClientPoint()`. You can pass a manual virtual anchor to `useFloatingNode()`.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
@@ -113,7 +115,7 @@ const virtualAnchor = {
 
 const anchorEl = ref(virtualAnchor);
 
-const context = useFloatingContext({ anchorEl, floatingEl, open });
+const context = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(context);
 </script>
 ```

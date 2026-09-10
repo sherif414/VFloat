@@ -30,7 +30,7 @@ That matters because VFloat's positioning model is based on geometry, not on the
 
 [`usePosition`](/api/use-position) gives you the current computed result.
 
-In everyday template code, the most important field is `styles.value`.
+In everyday template code, the most important field is `styles`, a computed ref you bind directly with `:style="styles"` (read as `styles.value` inside `<script setup>`).
 
 When you need more insight, you can also inspect `placement`, `middlewareData`, `isPositioned`, and `update`.
 
@@ -40,7 +40,7 @@ One of the easiest mistakes in floating UI is to blur the line between where a s
 
 VFloat keeps these separate on purpose:
 
-- shared refs and open state belong to `useFloatingContext()`
+- shared refs and open state belong to `useFloatingNode()`
 - positioning belongs to `usePosition()` and middlewares
 - interaction belongs to composables like `useHover()` and `useClick()`
 

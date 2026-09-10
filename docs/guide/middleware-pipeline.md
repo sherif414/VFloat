@@ -20,7 +20,7 @@ Then VFloat turns the middleware options into a pipeline.
 
 The easiest mistake is to think of middleware options as a list of independent features. In practice, VFloat turns them into middleware that run in order and influence each other.
 
-That is why this:
+That is why the stack below is not equivalent to the same helpers in a different order.
 
 ```ts
 middleware: {
@@ -34,13 +34,15 @@ is not equivalent to the same helpers in a different order.
 
 ## Common Roles In The Pipeline
 
+VFloat's declarative `middleware` keys run in a fixed order: `inline`, `offset`, `flip`, `shift`, `matchWidth`, then `custom`.
+
+- `inline` positions relative to individual client rects for multi-line anchors.
 - `offset` adds distance from the anchor.
 - `flip` changes sides when the preferred side does not fit.
 - `shift` keeps the surface visible inside the clipping area.
-- `size` applies width and height constraints.
-- `autoPlacement` chooses the side with the most room.
-- `arrow` exposes the data needed to position an arrow element correctly.
-- `hide` exposes visibility state for clipped or escaped conditions.
+- `matchWidth` sizes the panel to the anchor width.
+- `custom` appends raw middleware after the built-ins, which is where helpers like [`size`](/api/size), [`autoPlacement`](/api/autoplacement), and [`hide`](/api/hide) belong.
+- `arrow` is not a `middleware` key at all: [`useArrow`](/api/use-arrow) registers the arrow middleware by name and exposes its styles.
 
 ## A Good Mental Model
 
@@ -50,8 +52,8 @@ Think of middleware as successive refinements:
 2. add a gap
 3. if there is no room, try another side
 4. if it still overflows, nudge it back into view
-5. if the panel should resize, apply those constraints
-6. if an arrow exists, compute its placement from the final geometry
+5. if the panel should track the anchor width, apply `matchWidth`, or apply sizing constraints through `custom`
+6. if an arrow exists, `useArrow` computes its placement from the final geometry
 
 ## Next Step
 

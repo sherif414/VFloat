@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Placement, UsePositionMiddlewareOptions } from "v-float";
 import { computed, shallowRef, watch } from "vue";
-import { useArrow, useFloatingContext, useFocus, useHover, usePosition, useRole } from "v-float";
+import { useArrow, useFloatingNode, useFocus, useHover, usePosition, useRole } from "v-float";
 
 interface Props {
   placement: Placement;
@@ -26,7 +26,7 @@ const anchorEl = shallowRef<HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 const arrowEl = shallowRef<HTMLElement | null>(null);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   arrowEl,
@@ -49,7 +49,7 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.state.setOpen(true);
+      context.setOpen(true);
     }
   },
   { immediate: true },
@@ -115,7 +115,7 @@ defineExpose({
     </div>
 
     <div
-      v-if="context.state.open.value"
+      v-if="context.open.value"
       ref="floatingEl"
       role="tooltip"
       class="floating-panel panel-tooltip"

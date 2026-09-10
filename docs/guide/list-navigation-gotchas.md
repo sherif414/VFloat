@@ -8,7 +8,7 @@ List navigation bugs can feel subtle because the UI may look correct while the k
 
 ## Stable Item Values Matter
 
-`useListNavigation()` depends on a collection with stable string values. With `useCollection()`, item values should be durable IDs that do not change between renders. If item values are unstable, active state and keyboard movement can drift away from the item the user sees.
+Keyboard navigation in VFloat is split across [`useCollection`](/api/use-collection) (string values), [`useRovingFocus`](/api/use-roving-focus) (physical focus), [`useAriaActivedescendant`](/api/use-aria-activedescendant) (virtual focus), and [`useTypeahead`](/api/use-typeahead) (search). The value layer depends on a collection with stable string values. With `useCollection()`, item values should be durable IDs that do not change between renders. If item values are unstable, active state and keyboard movement can drift away from the item the user sees.
 
 ## Disabled Items Need Real Navigation Rules
 

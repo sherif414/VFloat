@@ -24,12 +24,12 @@ Here's the full working code. We'll take it apart after.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useHover } from "v-float";
+import { useFloatingNode, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: { offset: 8 },
@@ -41,7 +41,7 @@ useHover(context);
 <template>
   <button ref="anchorEl" type="button">Save changes</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="context.open.value" ref="floatingEl" role="tooltip" :style="styles">
     This button saves your changes.
   </div>
 </template>
@@ -63,13 +63,16 @@ Bind them in the template with `ref="anchorEl"` and `ref="floatingEl"`, and VFlo
 ## The Context Ties Everything Together
 
 ```ts
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 ```
 
-[`useFloatingContext`](/api/use-floating-context) creates a shared `context` object. It holds two things you'll use constantly:
+[`useFloatingNode`](/api/use-floating-node) creates a shared `context` object. It's flat — there is no nested `state` wrapper — and it holds the pieces you'll use constantly:
 
 - **`context.refs`** — the anchor, floating, and arrow element refs. Every other composable reads from here.
-- **`context.state.open`** — a boolean ref that tracks whether the surface is currently visible. Interaction composables flip this on and off.
+- **`context.open`** — a boolean ref that tracks whether the surface is currently visible. Interaction composables flip this on and off.
+- **`context.setOpen`** — the function that changes open state. Call it directly when you need to open or close the surface yourself.
+
+The context also exposes `lastOpenReason` and `lastOpenEvent` so you can see why the surface last opened.
 
 The context doesn't position anything. It doesn't listen for hover or click events. It's just the shared root that every other composable plugs into. Think of it as the wiring harness — nothing happens without it, but it doesn't do the work itself.
 
@@ -98,14 +101,14 @@ Middlewares are small functions that adjust the final position. You'll add more 
 useHover(context);
 ```
 
-[`useHover`](/api/use-hover) listens for pointer enter and leave events on the anchor and updates `context.state.open` automatically. You don't write event handlers. You don't manage timeouts. The composable reads the element refs from the context and writes open state back to it.
+[`useHover`](/api/use-hover) listens for pointer enter and leave events on the anchor and updates `context.open` automatically. You don't write event handlers. You don't manage timeouts. The composable reads the element refs from the context and writes open state back to it.
 
 ## The Template Has Three Key Bindings
 
 ```vue
 <button ref="anchorEl" type="button">Save changes</button>
 
-<div v-if="context.state.open.value" ref="floatingEl" role="tooltip" :style="styles">
+<div v-if="context.open.value" ref="floatingEl" role="tooltip" :style="styles">
   This button saves your changes.
 </div>
 ```
@@ -113,7 +116,7 @@ useHover(context);
 Three lines do real work:
 
 - **`ref="anchorEl"`** and **`ref="floatingEl"`** give VFloat access to the rendered DOM nodes. Without these, the composables have nothing to position and nothing to listen to.
-- **`v-if="context.state.open.value"`** mounts and unmounts the tooltip based on the shared open state. When `useHover` sets it to `true`, the tooltip appears. When it sets it to `false`, the tooltip disappears.
+- **`v-if="context.open.value"`** mounts and unmounts the tooltip based on the shared open state. When `useHover` sets it to `true`, the tooltip appears. When it sets it to `false`, the tooltip disappears.
 - **`:style="styles"`** applies the computed position. This is the output of `usePosition` — the coordinates that place the tooltip above the button with an 8-pixel gap.
 
 The `role="tooltip"` attribute tells assistive technology what the element is. It's not required for VFloat to function, but it matters for accessibility.
@@ -124,8 +127,8 @@ Tracing the full lifecycle helps the pieces click:
 
 1. The page renders. Both refs are `null` — the tooltip isn't in the DOM yet.
 2. The button renders and `anchorEl` gets a real DOM node.
-3. The user hovers the button. `useHover` detects `pointerenter` and calls `context.state.setOpen(true, ...)`.
-4. `context.state.open.value` becomes `true`. The `v-if` mounts the tooltip. `floatingEl` gets a real DOM node.
+3. The user hovers the button. `useHover` detects `pointerenter` and calls `context.setOpen(true, ...)`.
+4. `context.open.value` becomes `true`. The `v-if` mounts the tooltip. `floatingEl` gets a real DOM node.
 5. `usePosition` reads both element rects, applies `placement: "top"` and `offset: 8`, and writes the result to `styles`.
 6. The tooltip appears above the button with the correct gap.
 7. The pointer leaves. `useHover` calls `setOpen(false, ...)`. The `v-if` unmounts the tooltip.
@@ -138,4 +141,4 @@ This tooltip opens on hover but ignores keyboard users entirely. [Build Accessib
 
 If you want a click-driven surface instead, [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) swaps `useHover` for `useClick` and adds outside-click dismissal.
 
-For a deeper look at the shared context, [Floating Context](/guide/floating-context) explains the `refs` and `state` groups in detail.
+For a deeper look at the shared context, [Floating Context](/guide/floating-context) explains the flat node shape — `refs`, `open`, and `setOpen` — in detail.

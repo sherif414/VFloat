@@ -19,19 +19,33 @@ So if a stack feels wrong, ask:
 
 Many stacks work well when they start like this:
 
-```ts
-middleware: {
-  offset: 8,
-  flip: true,
-  shift: { padding: 8 },
-};
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useFloatingNode, usePosition } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const context = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(context, {
+  placement: "bottom",
+  middleware: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+  },
+});
+</script>
 ```
 
-That order reads naturally:
+That order reads naturally, and it matches the order VFloat applies semantic middleware (`inline`, then `offset`, then `flip`, then `shift`, then `matchWidth`, then `custom`):
 
 - create distance
 - choose a viable side
 - keep the surface visible
+
+Use `middleware` for these declarative options and `middlewares` for raw Floating UI middleware; `custom` entries run after the built-ins.
 
 ## Next Step
 

@@ -17,12 +17,12 @@ export function generateShowcaseCode(options: CodeGeneratorOptions): string {
   if (activePreset === "tooltip") {
     return `<script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useHover, useFocus${arrow ? ", useArrow" : ""} } from "v-float";
+import { useFloatingNode, usePosition, useHover, useFocus${arrow ? ", useArrow" : ""} } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 ${arrow ? "const arrowEl = ref<HTMLElement | null>(null);\n" : ""}
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   ${arrow ? "arrowEl," : ""}
@@ -45,7 +45,7 @@ ${scriptEnd}
   <button ref="anchorEl" type="button">Hover me</button>
 
   <div
-    v-if="context.state.open.value"
+    v-if="context.open.value"
     ref="floatingEl"
     role="tooltip"
     :style="styles"
@@ -60,7 +60,7 @@ ${scriptEnd}
     return `<script setup lang="ts">
 import { ref } from "vue";
 import {
-  useFloatingContext,
+  useFloatingNode,
   usePosition,
   useClick,
   useOutsideClick,
@@ -70,7 +70,7 @@ import {
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 ${arrow ? "const arrowEl = ref<HTMLElement | null>(null);\n" : ""}
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   ${arrow ? "arrowEl," : ""}
@@ -94,14 +94,14 @@ ${scriptEnd}
   <button ref="anchorEl" type="button">Open Card</button>
 
   <div
-    v-if="context.state.open.value"
+    v-if="context.open.value"
     ref="floatingEl"
     role="dialog"
     :style="styles"
   >
     <h3>Settings</h3>
     <p>Dismiss by clicking outside or pressing Escape.</p>
-    <button type="button" @click="context.state.setOpen(false)">Close</button>
+    <button type="button" @click="context.setOpen(false)">Close</button>
     ${arrow ? '<div ref="arrowEl" class="arrow" :style="arrowStyles" />' : ""}
   </div>
 </template>`;
@@ -111,13 +111,12 @@ ${scriptEnd}
     return `<script setup lang="ts">
 import { ref } from "vue";
 import {
-  useFloatingContext,
+  useFloatingNode,
   usePosition,
   useClick,
   useOutsideClick,
   useEscapeKey,
-  useCollection,
-  useListNavigation,
+  useRovingFocus,
   useFocusManager,
   useRole${arrow ? ",\n  useArrow" : ""}
 } from "v-float";
@@ -125,7 +124,7 @@ import {
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 ${arrow ? "const arrowEl = ref<HTMLElement | null>(null);\n" : ""}
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   ${arrow ? "arrowEl," : ""}
@@ -141,7 +140,7 @@ const { styles } = usePosition(context, {
 });
 
 const itemEls = ref<HTMLElement[]>([]);
-const { activeIndex } = useListNavigation(itemEls, { targetEl: floatingEl, loop: true });
+const { activeIndex, getTabindex } = useRovingFocus(context, { elementsList: itemEls, loop: true });
 useRole(context, { role: "menu" });
 ${scriptEnd}
 
@@ -158,6 +157,7 @@ ${scriptEnd}
       :key="item"
       ref="itemEls"
       role="menuitem"
+      :tabindex="getTabindex(index)"
       :class="{ 'is-active': activeIndex === index }"
     >
       {{ item }}
@@ -169,12 +169,12 @@ ${scriptEnd}
 
   return `<script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useClientPoint } from "v-float";
+import { useFloatingNode, usePosition, useClientPoint } from "v-float";
 const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   defaultOpen: true,
@@ -198,7 +198,7 @@ ${scriptEnd}
 <template>
   <div ref="trackingAreaEl" class="tracker-canvas">
     <div
-      v-if="context.state.open.value && coordinates.x !== null"
+      v-if="context.open.value && coordinates.x !== null"
       ref="floatingEl"
       :style="styles"
     >

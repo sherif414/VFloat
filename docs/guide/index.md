@@ -18,20 +18,20 @@ Pre-built component libraries solve these problems, but they force their markup,
 
 Every floating surface comes down to two questions: **where** should it appear, and **when** should it be visible? VFloat divides these responsibilities across dedicated composables connected by a shared context:
 
-- **`useFloatingContext`** holds the shared state used by the various composables.
+- **`useFloatingNode`** holds the shared state used by the various composables.
 - **`usePosition`** handles the positioning calculations. It tells you where to place your floating element and returns reactive styles to bind to your template.
 - **`useHover`** decides when the floating element should be visible and when it should hide based on hover behavior.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition, useHover, useEscapeKey } from "v-float";
+import { useFloatingNode, usePosition, useHover, useEscapeKey } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 // 1. Hold shared state and element refs
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 
 // 2. WHERE: calculate coordinates and return styles
 const { styles } = usePosition(context, {
@@ -47,7 +47,7 @@ useEscapeKey(context);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="context.open.value" ref="floatingEl" role="tooltip" :style="styles">
     Tooltip content
   </div>
 </template>
@@ -67,15 +67,15 @@ useOutsideClick(context);
 useEscapeKey(context);
 ```
 
-Building a dropdown menu? Keep the click trigger and add keyboard list navigation:
+Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
 
 ```ts
-const collection = useCollection();
+const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 useClick(context);
 useOutsideClick(context);
 useEscapeKey(context);
-useListNavigation(context, { collection });
+useRovingFocus(context, { elementsList: itemEls });
 ```
 
 Need a modal dialog? Add focus management to trap focus inside the dialog while it's open:

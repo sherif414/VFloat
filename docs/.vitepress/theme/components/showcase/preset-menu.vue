@@ -4,14 +4,13 @@ import { computed, shallowRef, watch } from "vue";
 import {
   useArrow,
   useClick,
-  useCollection,
   useEscapeKey,
-  useFloatingContext,
+  useFloatingNode,
   useFocusManager,
-  useListNavigation,
   useOutsideClick,
   usePosition,
   useRole,
+  useRovingFocus,
 } from "v-float";
 
 interface Props {
@@ -37,7 +36,7 @@ const anchorEl = shallowRef<HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 const arrowEl = shallowRef<HTMLElement | null>(null);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   arrowEl,
@@ -60,7 +59,7 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.state.setOpen(true);
+      context.setOpen(true);
     }
   },
   { immediate: true },
@@ -103,12 +102,12 @@ useFocusManager(context, {
 
 const menuItemEls = shallowRef<HTMLElement[]>([]);
 
-const { activeIndex, setActiveIndex } = useListNavigation(menuItemEls, {
-  targetEl: floatingEl,
+const { activeIndex, getTabindex, setActiveIndex } = useRovingFocus(context, {
+  elementsList: menuItemEls,
   loop: true,
   enabled: () => props.isActive,
   onSelect: () => {
-    context.state.setOpen(false);
+    context.setOpen(false);
   },
 });
 
@@ -134,11 +133,11 @@ defineExpose({
         type="button"
         class="anchor-btn"
         :class="{
-          'is-active': context.state.open.value,
+          'is-active': context.open.value,
           'is-dragging': isDragging,
         }"
         aria-haspopup="menu"
-        :aria-expanded="context.state.open.value"
+        :aria-expanded="context.open.value"
         @pointerdown="emit('pointerdown', $event)"
       >
         <svg
@@ -161,7 +160,7 @@ defineExpose({
     </div>
 
     <div
-      v-if="context.state.open.value"
+      v-if="context.open.value"
       ref="floatingEl"
       role="menu"
       tabindex="-1"
@@ -174,12 +173,13 @@ defineExpose({
         :ref="(el) => (menuItemEls[index] = el as HTMLElement)"
         role="menuitem"
         class="menu-item"
+        :tabindex="getTabindex(index)"
         :class="{
           'is-active': activeIndex === index,
           'is-danger': item.danger,
         }"
         @mouseenter="setActiveIndex(index)"
-        @click="context.state.setOpen(false)"
+        @click="context.setOpen(false)"
       >
         <span class="menu-item__label">{{ item.label }}</span>
         <kbd class="menu-item__shortcut">{{ item.shortcut }}</kbd>

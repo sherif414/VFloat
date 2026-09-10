@@ -30,14 +30,14 @@ description: Switches to another placement when the current side is blocked.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingContext, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({ anchorEl, floatingEl, open });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl, open });
+const { styles } = usePosition(node, {
   middleware: {
     flip: {
       fallbackPlacements: ["top", "right", "bottom"],
@@ -49,7 +49,7 @@ const { styles } = usePosition(context, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

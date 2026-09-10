@@ -180,7 +180,8 @@ export default defineConfigWithTheme({
         {
           text: "Positioning",
           items: [
-            { text: "useFloatingContext", link: "/api/use-floating-context" },
+            { text: "useFloatingNode", link: "/api/use-floating-node" },
+            { text: "useFloatingTree", link: "/api/use-floating-tree" },
             { text: "usePosition", link: "/api/use-position" },
             { text: "useArrow", link: "/api/use-arrow" },
             { text: "useClientPoint", link: "/api/use-client-point" },
@@ -202,7 +203,8 @@ export default defineConfigWithTheme({
           text: "Collections",
           items: [
             { text: "useCollection", link: "/api/use-collection" },
-            { text: "useListNavigation", link: "/api/use-list-navigation" },
+            { text: "useRovingFocus", link: "/api/use-roving-focus" },
+            { text: "useAriaActivedescendant", link: "/api/use-aria-activedescendant" },
             { text: "useTypeahead", link: "/api/use-typeahead" },
           ],
         },
@@ -215,6 +217,7 @@ export default defineConfigWithTheme({
             { text: "size", link: "/api/size" },
             { text: "autoPlacement", link: "/api/autoplacement" },
             { text: "hide", link: "/api/hide" },
+            { text: "inline", link: "/api/inline" },
             { text: "arrow", link: "/api/arrow" },
           ],
         },

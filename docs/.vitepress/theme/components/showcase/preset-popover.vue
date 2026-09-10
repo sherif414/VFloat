@@ -5,7 +5,7 @@ import {
   useArrow,
   useClick,
   useEscapeKey,
-  useFloatingContext,
+  useFloatingNode,
   useOutsideClick,
   usePosition,
   useRole,
@@ -34,7 +34,7 @@ const anchorEl = shallowRef<HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 const arrowEl = shallowRef<HTMLElement | null>(null);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   arrowEl,
@@ -57,7 +57,7 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.state.setOpen(true);
+      context.setOpen(true);
     }
   },
   { immediate: true },
@@ -105,7 +105,7 @@ defineExpose({
         type="button"
         class="anchor-btn"
         :class="{
-          'is-active': context.state.open.value,
+          'is-active': context.open.value,
           'is-dragging': isDragging,
         }"
         @pointerdown="emit('pointerdown', $event)"
@@ -124,12 +124,12 @@ defineExpose({
           <circle cx="5" cy="13" r="1.5" />
           <circle cx="11" cy="13" r="1.5" />
         </svg>
-        <span>{{ context.state.open.value ? "Close card" : "Open card" }}</span>
+        <span>{{ context.open.value ? "Close card" : "Open card" }}</span>
       </button>
     </div>
 
     <div
-      v-if="context.state.open.value"
+      v-if="context.open.value"
       ref="floatingEl"
       role="dialog"
       aria-modal="false"
@@ -142,7 +142,7 @@ defineExpose({
           type="button"
           class="popover-close-btn"
           aria-label="Close"
-          @click="context.state.setOpen(false)"
+          @click="context.setOpen(false)"
         >
           ✕
         </button>
@@ -156,14 +156,14 @@ defineExpose({
         <button
           type="button"
           class="action-btn action-btn--secondary"
-          @click="context.state.setOpen(false)"
+          @click="context.setOpen(false)"
         >
           Done
         </button>
         <button
           type="button"
           class="action-btn action-btn--primary"
-          @click="context.state.setOpen(false)"
+          @click="context.setOpen(false)"
         >
           Copy Link
         </button>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useFloatingContext, useHover, usePosition } from "v-float";
+import { useFloatingNode, useHover, usePosition } from "v-float";
 import { ref } from "vue";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middleware: {
@@ -23,7 +23,7 @@ useHover(context);
     <button ref="anchorEl" class="tooltip-demo__button" type="button">Save changes</button>
 
     <div
-      v-if="context.state.open.value"
+      v-if="context.open.value"
       ref="floatingEl"
       class="tooltip-demo__floating"
       role="tooltip"

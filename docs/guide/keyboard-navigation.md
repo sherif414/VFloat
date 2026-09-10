@@ -8,10 +8,11 @@ Predictable keyboard navigation is a core requirement for accessible floating su
 
 In VFloat, keyboard navigation is split into a clean separation of concerns:
 
-1. **[`useCollection`](/api/use-collection)** is the data-first reactive manager for item IDs, active selection, and disabled states.
-2. **[`useListNavigation`](/api/use-list-navigation)** is an event interceptor. It listens for keyboard events on the anchor and floating elements and translates key triggers (arrows, Home, End, Tab) into movement operations on the collection.
-3. **[`useTypeahead`](/api/use-typeahead)** handles character-based search and jumping, buffering keystrokes and cycling through matching collection items.
-4. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
+1. **[`useCollection`](/api/use-collection)** is the data-first reactive manager for string values, active selection, and disabled states.
+2. **[`useRovingFocus`](/api/use-roving-focus)** moves physical DOM focus between items in standalone composite widgets (menus, tabs, toolbars). Focus lands on the item itself with a single tab stop.
+3. **[`useAriaActivedescendant`](/api/use-aria-activedescendant)** drives virtual focus for text-input widgets (comboboxes, autocompletes). DOM focus stays pinned on the `<input>` while `aria-activedescendant` highlights the active option.
+4. **[`useTypeahead`](/api/use-typeahead)** handles character-based search and jumping, buffering keystrokes and cycling through matching items. Forward matches into either focus model through `onMatch`.
+5. **[`useRole`](/api/use-role)** is a semantic synchronizer. It applies standard ARIA roles and popup states such as `aria-expanded` and `aria-controls`; focus-specific states such as `tabindex` and `aria-activedescendant` stay in your render layer.
 
 ## Keyboard Navigation Strategy
 
@@ -30,14 +31,8 @@ In this model, focus actually shifts into the floating list, and arrow keys move
 
 ```vue
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from "vue";
-import {
-  useFloatingContext,
-  usePosition,
-  useCollection,
-  useListNavigation,
-  useRole,
-} from "v-float";
+import { ref, shallowRef } from "vue";
+import { useFloatingNode, usePosition, useRovingFocus, useRole } from "v-float";
 
 interface MenuItem {
   id: string;
@@ -54,65 +49,46 @@ const items = ref<MenuItem[]>([
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
-const itemsRef = ref<Array<HTMLElement | null>>([]);
+const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
-// 1. Manage collection state
-const itemValues = computed(() => items.value.map((i) => i.id));
-const collection = useCollection({
-  values: itemValues,
-  isValueDisabled: (id) => !!items.value.find((i) => i.id === id)?.disabled,
-});
-
-// 2. Intercept keyboard navigation on elements
-useListNavigation(context, {
-  collection,
+// 1. Move physical DOM focus across items
+const { activeIndex, getTabindex } = useRovingFocus(context, {
+  elementsList: itemEls,
   orientation: "vertical",
   loop: true,
 });
 
-// 3. Keep ARIA roles synchronized
+// 2. Keep ARIA roles synchronized
 useRole(context, {
   role: "menu",
-  listRef: itemsRef,
+  listRef: itemEls,
   disabledIndices: (idx) => !!items.value[idx]?.disabled,
-});
-
-// 4. Focus the active item in the DOM when the selection moves
-watch(collection.activeValue, async (val) => {
-  if (val == null) return;
-  await nextTick();
-  const index = items.value.findIndex((item) => item.id === val);
-  const element = itemsRef.value[index];
-  if (element && document.activeElement !== element) {
-    element.focus();
-  }
 });
 </script>
 ```
 
 ### Template
 
-Render item elements with roving `tabindex` and bind dynamic active classes:
+Render item elements with roving `tabindex` from `getTabindex` and bind dynamic active classes:
 
 ```vue
 <template>
-  <button ref="anchorEl" type="button" @click="context.state.setOpen(!context.state.open.value)">
+  <button ref="anchorEl" type="button" @click="context.setOpen(!context.open.value)">
     Menu Options
   </button>
 
-  <ul v-if="context.state.open.value" ref="floatingEl" role="menu" :style="styles">
+  <ul v-if="context.open.value" ref="floatingEl" role="menu" :style="styles">
     <li
       v-for="(item, index) in items"
       :key="item.id"
-      :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
+      :ref="(el) => (itemEls[index] = el as HTMLElement | null)"
       role="menuitem"
       :aria-disabled="item.disabled"
-      :tabindex="collection.activeValue.value === item.id ? 0 : -1"
-      :class="{ active: collection.activeValue.value === item.id }"
-      @click="collection.setActiveValue(item.id)"
+      :tabindex="getTabindex(index)"
+      :class="{ active: activeIndex === index }"
     >
       {{ item.label }}
     </li>
@@ -130,14 +106,8 @@ In this model, DOM focus stays inside a text input or combobox container, allowi
 
 ```vue
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import {
-  useFloatingContext,
-  usePosition,
-  useCollection,
-  useListNavigation,
-  useRole,
-} from "v-float";
+import { computed, ref, shallowRef, useTemplateRef } from "vue";
+import { useAriaActivedescendant, useFloatingNode, usePosition, useRole } from "v-float";
 
 interface SearchOption {
   value: string;
@@ -150,57 +120,62 @@ const options = ref<SearchOption[]>([
   { value: "svelte", label: "Svelte" },
 ]);
 
-const anchorEl = ref<HTMLElement | null>(null);
+const query = ref("");
+const isOpen = ref(false);
+const inputEl = useTemplateRef<HTMLInputElement>("inputEl");
 const floatingEl = ref<HTMLElement | null>(null);
-const itemsRef = ref<Array<HTMLElement | null>>([]);
+const itemEls = shallowRef<HTMLElement[]>([]);
 
-const context = useFloatingContext({ anchorEl, floatingEl });
+const anchorEl = ref<HTMLElement | null>(null);
+const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
-const values = computed(() => options.value.map((o) => o.value));
-const collection = useCollection({ values });
+const filteredOptions = computed(() =>
+  options.value.filter((o) => o.label.toLowerCase().includes(query.value.toLowerCase())),
+);
 
-useListNavigation(context, {
-  collection,
-  orientation: "vertical",
-  openOnArrowKeyDown: true,
+const { activeIndex, getTargetProps, getItemProps } = useAriaActivedescendant({
+  targetEl: inputEl,
+  elementsList: itemEls,
+  onSelect: (index) => {
+    query.value = filteredOptions.value[index]!.label;
+    isOpen.value = false;
+  },
 });
 
 useRole(context, {
   role: "listbox",
-  listRef: itemsRef,
+  listRef: itemEls,
 });
 </script>
 ```
 
 ### Template
 
-Directly bind `aria-activedescendant` on the input trigger referencing the active option ID:
+Spread `getTargetProps()` on the input trigger and `getItemProps(index)` on each option:
 
 ```vue
 <template>
   <input
-    ref="anchorEl"
+    ref="inputEl"
+    v-model="query"
     type="text"
     role="combobox"
     aria-autocomplete="list"
-    :aria-expanded="context.state.open.value"
-    :aria-activedescendant="
-      collection.activeValue.value ? `opt-${collection.activeValue.value}` : undefined
-    "
-    @focus="context.state.setOpen(true)"
+    :aria-expanded="isOpen"
+    v-bind="getTargetProps()"
+    @focus="isOpen = true"
   />
 
-  <ul v-if="context.state.open.value" ref="floatingEl" role="listbox" :style="styles">
+  <ul v-if="isOpen" ref="floatingEl" role="listbox" :style="styles">
     <li
-      v-for="(item, index) in options"
+      v-for="(item, index) in filteredOptions"
       :key="item.value"
-      :id="`opt-${item.value}`"
-      :ref="(el) => (itemsRef[index] = el as HTMLElement | null)"
+      ref="itemEls"
       role="option"
-      :aria-selected="collection.activeValue.value === item.value"
-      :class="{ active: collection.activeValue.value === item.value }"
-      @click="collection.setActiveValue(item.value)"
+      v-bind="getItemProps(index)"
+      :aria-selected="activeIndex === index"
+      :class="{ active: activeIndex === index }"
     >
       {{ item.label }}
     </li>
@@ -212,19 +187,21 @@ Directly bind `aria-activedescendant` on the input trigger referencing the activ
 
 ## 3. Keyboard Interactions Resolved
 
-Here are the key events handled automatically by `useListNavigation`:
+Here are the key events handled automatically by the focus models:
 
-| Key          | Orientation         | Action                                                                                                                                  |
-| ------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `ArrowDown`  | `"vertical"`        | Selects next enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects first item.                               |
-| `ArrowUp`    | `"vertical"`        | Selects previous enabled item. If closed and `openOnArrowKeyDown` is true, opens list and selects last item.                            |
-| `ArrowRight` | `"horizontal"`      | Selects next enabled item (or previous in RTL).                                                                                         |
-| `ArrowLeft`  | `"horizontal"`      | Selects previous enabled item (or next in RTL).                                                                                         |
-| `ArrowRight` | `"vertical"` (Menu) | Fires `onEnter`; submenu triggers use this to open the child floating context and target the first enabled child.                       |
-| `ArrowLeft`  | `"vertical"` (Menu) | Fires `onExit`; submenu panels use this to close the child floating context and return focus to the parent trigger.                     |
-| `Home`       | Any                 | Selects the first enabled item in the collection.                                                                                       |
-| `End`        | Any                 | Selects the last enabled item in the collection.                                                                                        |
-| `Tab`        | Any                 | Closes the open floating surface (if `closeOnTab` is true) without blocking the default focus movement to the next element on the page. |
+| Key          | Orientation         | Action                                                                                                                           |
+| ------------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `ArrowDown`  | `"vertical"`        | Moves to the next enabled item.                                                                                                  |
+| `ArrowUp`    | `"vertical"`        | Moves to the previous enabled item.                                                                                              |
+| `ArrowRight` | `"horizontal"`      | Moves to the next enabled item (or previous in RTL).                                                                             |
+| `ArrowLeft`  | `"horizontal"`      | Moves to the previous enabled item (or next in RTL).                                                                             |
+| `ArrowRight` | `"vertical"` (Menu) | Fires `onEnter`; submenu triggers use this to open the child floating node and focus its first item.                             |
+| `ArrowLeft`  | `"vertical"` (Menu) | Fires `onExit`; submenu panels use this to close the child floating node and return focus to the parent trigger.                 |
+| `Home`       | Any                 | Moves to the first enabled item.                                                                                                 |
+| `End`        | Any                 | Moves to the last enabled item.                                                                                                  |
+| `PageUp`     | Any (virtual)       | Moves up by `pageSize` (default `10`) in `useAriaActivedescendant`.                                                              |
+| `PageDown`   | Any (virtual)       | Moves down by `pageSize` (default `10`) in `useAriaActivedescendant`.                                                            |
+| `Tab`        | Any                 | Passes through to document flow. In non-modal [`useFocusManager`](/api/use-focus-manager) surfaces, `closeOnTab` closes on exit. |
 
 ---
 
@@ -232,5 +209,6 @@ Here are the key events handled automatically by `useListNavigation`:
 
 - Learn how to build multi-level menus in [Build Nested Menus](/guide/build-nested-menus).
 - Read the [useCollection API](/api/use-collection) reference.
-- Read the [useListNavigation API](/api/use-list-navigation) reference.
+- Read the [useRovingFocus API](/api/use-roving-focus) reference.
+- Read the [useAriaActivedescendant API](/api/use-aria-activedescendant) reference.
 - Read the [useTypeahead API](/api/use-typeahead) reference.

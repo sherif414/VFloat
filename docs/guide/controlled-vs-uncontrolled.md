@@ -12,6 +12,8 @@ This page is about that design choice.
 
 In the uncontrolled model, the floating surface owns its own open state through the `context`.
 
+To start an uncontrolled surface open, pass `defaultOpen`. It is a plain initial value, not a reactive input.
+
 This feels good when:
 
 - the surface is local
@@ -20,7 +22,7 @@ This feels good when:
 
 ## Controlled: The Parent Owns The Truth
 
-In the controlled model, the parent owns an `open` ref and gives it to [`useFloatingContext`](/api/use-floating-context), along with `onOpenChange`.
+In the controlled model, the parent owns an `open` ref and gives it to [`useFloatingNode`](/api/use-floating-node). Add `onOpenChange` when the parent needs to react to changes with side effects — VFloat keeps the `open` ref itself in sync.
 
 This feels good when:
 

@@ -35,14 +35,14 @@ description: Chooses a placement that fits the available space.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { autoPlacement, useFloatingContext, usePosition } from "v-float";
+import { autoPlacement, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingContext({ anchorEl, floatingEl, open });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl, open });
+const { styles } = usePosition(node, {
   middleware: {
     custom: [
       autoPlacement({
@@ -56,11 +56,11 @@ const { styles } = usePosition(context, {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="context.state.open.value" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 
 - See also
   - [flip](/api/flip) - Keeps a preferred placement and falls back when needed
   - [shift](/api/shift) - Nudges the floating element back into view
-  - [useFloatingContext](/api/use-floating-context) - Creates shared refs and open state
+  - [useFloatingNode](/api/use-floating-node) - Creates shared refs and open state

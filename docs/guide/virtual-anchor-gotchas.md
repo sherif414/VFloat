@@ -10,7 +10,29 @@ Virtual anchors are powerful because they let you position against geometry inst
 
 If the surface should stay at the opening point, use static tracking. If it should follow the cursor, use follow mode.
 
+Choose the mode up front when you wire up [`useClientPoint`](/api/use-client-point):
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useClientPoint, useFloatingNode } from "v-float";
+
+const trackingAreaEl = ref<HTMLElement | null>(null);
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const context = useFloatingNode({ anchorEl, floatingEl });
+
+useClientPoint(context, {
+  trackingAreaEl,
+  trackingMode: "follow",
+});
+</script>
+```
+
 Most jumpy menu bugs come from using a moving anchor for a UI that should have stayed still.
+
+`useClientPoint` overwrites `node.refs.anchorEl` with a virtual element; the `anchorEl` you passed to `useFloatingNode` is only a placeholder. `trackingAreaEl` defaults to `document.documentElement`, `trackingMode` defaults to `"follow"`, and `trackingMode` is not reactive after setup — pick `"follow"` or `"static"` before the composable runs. When both `x` and `y` resolve to non-null numbers, the composable enters controlled mode and pointer tracking detaches.
 
 ## The Second Trap: Forgetting The Anchor Is Not A Real Trigger
 

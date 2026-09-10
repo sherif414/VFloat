@@ -12,19 +12,19 @@ This page shows both models and when each one makes sense.
 
 ## The Default: Let VFloat Own It
 
-If you call [`useFloatingContext`](/api/use-floating-context) without `open`, VFloat creates and owns that state for you.
+If you call [`useFloatingNode`](/api/use-floating-node) without `open`, VFloat creates and owns that state for you.
 
 To start an uncontrolled surface open, pass `defaultOpen`. It is an initial value, not a reactive input.
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useFloatingContext } from "v-float";
+import { useClick, useFloatingNode } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   defaultOpen: true,
@@ -34,7 +34,7 @@ useClick(context);
 </script>
 ```
 
-This is usually the simplest starting point. The component stays small, and your interaction composables and template all coordinate through `context.state`.
+This is usually the simplest starting point. The component stays small, and your interaction composables and template all coordinate through `context.open`.
 
 ## The Controlled Version
 
@@ -43,13 +43,13 @@ When the parent needs to read or react to the open state directly in its own log
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useFloatingContext, useOutsideClick } from "v-float";
+import { useClick, useFloatingNode, useOutsideClick } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-const context = useFloatingContext({
+const context = useFloatingNode({
   anchorEl,
   floatingEl,
   open,
@@ -60,17 +60,17 @@ useOutsideClick(context);
 
 // To change the state programmatically, call setOpen
 function close() {
-  context.state.setOpen(false);
+  context.setOpen(false);
 }
 </script>
 ```
 
 When using this pattern, VFloat automatically updates the `open` ref when interaction helpers (like click or hover) trigger open changes.
 
-To update the state programmatically, **always call `context.state.setOpen()`** instead of mutating the `open` ref directly. This guarantees that internal cleanup tasks, such as dismissing nested menus, execute correctly.
+To update the state programmatically, **always call `context.setOpen()`** instead of mutating the `open` ref directly. This keeps reason and event bookkeeping (`lastOpenReason`, `lastOpenEvent`, `onOpenChange`) consistent. Note that closing a node never cascades to related nodes on its own; when family teardown must follow, call `tree.closeDescendants(context, reason, event)` on your [`useFloatingTree`](/api/use-floating-tree) explicitly.
 
 > [!IMPORTANT]
-> The `open` ref passed to `useFloatingContext` options must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.
+> The `open` ref passed to `useFloatingNode` options must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.
 
 > [!NOTE]
 > `onOpenChange` is mainly for side-effects and debugging. Do not use it to synchronize or drive the `open` state.
