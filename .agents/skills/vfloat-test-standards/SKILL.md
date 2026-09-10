@@ -34,7 +34,11 @@ For geometry, matching, ID generation, public API surface, and state machines
 without rendered output. Reference: `polygon-geometry.test.ts`,
 `public-api.test.ts`, `use-collection.test.ts`.
 
-- No `render()`, no `document.createElement`, no tracking helpers.
+- No `render()`, no manual `effectScope()` wrapping beyond the lifecycle below.
+- DOM-utility suites (tab order, inert stack, focus guards) may create stub
+  elements with `document.createElement`, but must register them with the
+  shared `trackElement` / `clearTrackedElements` from `@/test-utils` — never a
+  local copy.
 - `effectScope()` in `beforeEach()` only when the composable under test needs a
   reactive scope; otherwise no lifecycle hooks at all.
 - `afterEach()` stops the scope and resets mocks/timers when a scope or fake
