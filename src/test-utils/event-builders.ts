@@ -40,6 +40,17 @@ export function dispatchKey(
 }
 
 /**
+ * Creates a bubbling mouse event for click and mousedown interaction tests.
+ */
+export function makeMouseEvent(type: string, opts: MouseEventInit = {}): MouseEvent {
+  return new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    ...opts,
+  });
+}
+
+/**
  * Creates a mouse-flavored pointer event for geometry and safe-polygon tests.
  */
 export function makePointerEvent(
