@@ -1,6 +1,6 @@
 import type { Middleware, MiddlewareData, Placement } from "@floating-ui/dom";
 import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
-import { ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 import type { FloatingTree } from "./use-floating-tree";
@@ -24,41 +24,31 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     },
   });
 
-  const lastOpenReason = ref<OpenChangeReason | null>(null);
-  const lastOpenEvent = ref<Event | null>(null);
+  const storedReason = ref<OpenChangeReason | null>(null);
+  const storedEvent = ref<Event | null>(null);
+
+  // Derived so `open === false` with a non-null reason is structurally
+  // impossible: no watcher timing involved, sync and async readers agree.
+  const lastOpenReason = computed<OpenChangeReason | null>(() =>
+    open.value ? storedReason.value : null,
+  );
+  const lastOpenEvent = computed<Event | null>(() => (open.value ? storedEvent.value : null));
 
   const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
-    if (open.value === value) {
-      if (!value) {
-        lastOpenReason.value = null;
-        lastOpenEvent.value = null;
-        // TODO: not sure if this should be handled here
-        node.tree?.closeDescendants(node, reason, event);
-      } else {
-        lastOpenReason.value = reason;
-        lastOpenEvent.value = event ?? null;
-      }
-      return;
-    }
-
     if (!value) {
-      lastOpenReason.value = null;
-      lastOpenEvent.value = null;
+      storedReason.value = null;
+      storedEvent.value = null;
+      // Single traversal: closeDescendants closes each open descendant directly
+      // and suppresses nested sweeps internally, so reaffirmed closes stay cheap.
       node.tree?.closeDescendants(node, reason, event);
     } else {
-      lastOpenReason.value = reason;
-      lastOpenEvent.value = event ?? null;
+      storedReason.value = reason;
+      storedEvent.value = event ?? null;
     }
+    if (open.value === value) return;
     open.value = value;
     options.onOpenChange?.(value, reason, event);
   };
-
-  watch(open, (isOpen) => {
-    if (!isOpen) {
-      lastOpenReason.value = null;
-      lastOpenEvent.value = null;
-    }
-  });
 
   const node: FloatingNode = {
     id,

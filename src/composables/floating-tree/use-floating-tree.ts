@@ -43,6 +43,10 @@ interface TreeQueryTarget {
  */
 export function useFloatingTree(): FloatingTree {
   const nodes = new Map<FloatingNodeId, TreeEntry>();
+  // Guards re-entrant cascades: the outer closeDescendants pass already visits
+  // every descendant deepest-first, so nested sweeps triggered by each
+  // descendant's setOpen are redundant and would blow up exponentially.
+  let isClosingDescendants = false;
 
   /**
    * Registers a floating node in the tree and links it under `parentId`.
@@ -94,18 +98,31 @@ export function useFloatingTree(): FloatingTree {
   }
 
   /**
-   * Removes a node from the tree, severs its link from its parent,
-   * and returns it to standalone state.
+   * Removes a node from the tree, re-parents its immediate children to the
+   * removed node's parent (or to root level), and returns it to standalone state.
+   * Re-parenting keeps surviving subtrees reachable instead of orphaning them
+   * with dangling parent links when a parent scope disposes first.
    */
   function removeNode(id: FloatingNodeId): void {
     const entry = nodes.get(id);
     if (!entry) return;
 
-    if (entry.parentId != null) {
-      const parent = nodes.get(entry.parentId);
-      if (parent) {
-        parent.childIds.value = withRemovedId(parent.childIds.value, id);
+    const parent = entry.parentId != null ? nodes.get(entry.parentId) : undefined;
+    // A dangling parent link (parent already gone) degrades to root level.
+    const inheritedParentId = parent ? entry.parentId : null;
+
+    for (const childId of entry.childIds.value) {
+      const child = nodes.get(childId);
+      if (!child) continue;
+      child.parentId = inheritedParentId;
+      child.node.isRoot = inheritedParentId == null;
+      if (parent && inheritedParentId != null) {
+        parent.childIds.value = withAddedId(parent.childIds.value, childId);
       }
+    }
+
+    if (parent && entry.parentId != null) {
+      parent.childIds.value = withRemovedId(parent.childIds.value, id);
     }
 
     nodes.delete(id);
@@ -238,15 +255,27 @@ export function useFloatingTree(): FloatingTree {
 
   /**
    * Closes all descendant nodes from innermost child to nearest parent.
+   * Runs as a single traversal: nested sweeps triggered by each descendant's
+   * own setOpen are suppressed while the outer pass is in flight.
    */
   function closeDescendants(
     node: Pick<FloatingNode, "id">,
     reason: OpenChangeReason = "programmatic",
     event?: Event,
   ): void {
+    if (isClosingDescendants) return;
     const descendants = getDescendants(node.id);
-    for (let i = descendants.length - 1; i >= 0; i--) {
-      descendants[i].setOpen(false, reason, event);
+    if (descendants.length === 0) return;
+    isClosingDescendants = true;
+    try {
+      for (let i = descendants.length - 1; i >= 0; i--) {
+        const descendant = descendants[i]!;
+        // Skip already-closed nodes so reaffirmed closes stay cheap.
+        if (!descendant.open.value) continue;
+        descendant.setOpen(false, reason, event);
+      }
+    } finally {
+      isClosingDescendants = false;
     }
   }
 
@@ -298,7 +327,8 @@ export interface FloatingTree {
    */
   addNode: (child: FloatingNode, parentId?: FloatingNodeId | null) => void;
   /**
-   * Removes a node, severs its parent link, and returns it to standalone state.
+   * Removes a node, re-parents its children to the removed node's parent,
+   * and returns it to standalone state.
    */
   removeNode: (id: FloatingNodeId) => void;
   /**

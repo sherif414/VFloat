@@ -336,8 +336,8 @@ describe("useFloatingTree", () => {
       const tree = useFloatingTree();
       const calls: string[] = [];
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false });
-      const grandchild = createMockNode({ isRoot: false });
+      const child = createMockNode({ isRoot: false, open: true });
+      const grandchild = createMockNode({ isRoot: false, open: true });
 
       child.setOpen = vi.fn((_open: boolean, reason?: OpenChangeReason) => {
         calls.push(`child:${reason}`);
@@ -356,6 +356,70 @@ describe("useFloatingTree", () => {
       expect(calls).toEqual(["grandchild:outside-pointer", "child:outside-pointer"]);
       expect(grandchild.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
       expect(child.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
+    });
+
+    it("skips already-closed descendants when closing", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      // Closed descendants carry no reason metadata, so reaffirming the close is a no-op.
+      const child = createMockNode({ isRoot: false, open: false });
+      const grandchild = createMockNode({ isRoot: false, open: true });
+
+      child.setOpen = vi.fn();
+      grandchild.setOpen = vi.fn();
+
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+      tree.addNode(grandchild, child.id);
+
+      tree.closeDescendants(root, "outside-pointer");
+
+      expect(child.setOpen).not.toHaveBeenCalled();
+      expect(grandchild.setOpen).toHaveBeenCalledWith(false, "outside-pointer", undefined);
+    });
+  });
+
+  describe("node removal", () => {
+    it("re-parents children to the grandparent when a middle node is removed", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      const child = createMockNode({ isRoot: false });
+      const grandchild = createMockNode({ isRoot: false });
+
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+      tree.addNode(grandchild, child.id);
+
+      tree.removeNode(child.id);
+
+      // No dangling parent links: the surviving grandchild stays reachable from the root.
+      expect(tree.getNode(child.id)).toBeUndefined();
+      expect(tree.getNode(grandchild.id)).toBe(grandchild);
+      expect(tree.getChildren(root.id)).toEqual([grandchild]);
+      expect(grandchild.isRoot).toBe(false);
+      expect(child.tree).toBeNull();
+      expect(child.isRoot).toBe(true);
+    });
+
+    it("promotes children to roots when the root node is removed", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      const child = createMockNode({ isRoot: false });
+      const grandchild = createMockNode({ isRoot: false });
+
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+      tree.addNode(grandchild, child.id);
+
+      tree.removeNode(root.id);
+
+      expect(tree.getNode(root.id)).toBeUndefined();
+      expect(tree.getNode(child.id)).toBe(child);
+      expect(tree.getNode(grandchild.id)).toBe(grandchild);
+      expect(child.isRoot).toBe(true);
+      // The surviving subtree stays linked: grandchild is still reachable via the child.
+      expect(tree.getDescendants(child.id)).toEqual([grandchild]);
+      expect(tree.getChildren(child.id)).toEqual([grandchild]);
     });
   });
 
