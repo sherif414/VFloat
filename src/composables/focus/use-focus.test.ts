@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { effectScope, nextTick, ref } from "vue";
-import type { AnchorElement, FloatingElement } from "@/composables";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-vue";
+import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
 import {
   type UseFocusContext,
   type UseFocusOptions,
@@ -8,6 +8,7 @@ import {
   useFloatingTree,
   useFocus,
 } from "@/composables";
+import { getTestEl } from "@/test-utils";
 
 vi.mock("@/shared/platform", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/platform")>();
@@ -19,54 +20,102 @@ vi.mock("@/shared/platform", async (importOriginal) => {
 
 import { matchesFocusVisible } from "@/shared/platform";
 
-type FocusTestContext = {
-  anchorEl: HTMLElement;
-  node: UseFocusContext;
-  floatingEl: HTMLElement;
-  openRef: ReturnType<typeof ref<boolean>>;
-  result: ReturnType<typeof useFocus>;
-  scope: ReturnType<typeof effectScope>;
-  setOpenMock: ReturnType<typeof vi.fn>;
-};
-
-const trackedElements: HTMLElement[] = [];
-const activeScopes: ReturnType<typeof effectScope>[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
+interface FixtureConfig {
+  anchorKind?: "button" | "anchor-subtree";
+  withOutside?: boolean;
+  withIgnored?: boolean;
 }
 
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
+function createTestComponent(
+  options: UseFocusOptions = {},
+  initialOpen = false,
+  config: FixtureConfig = {},
+) {
+  const openRef = ref(initialOpen);
+  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn((value: boolean) => {
+    openRef.value = value;
+  });
+  let node!: UseFocusContext;
+  let result!: ReturnType<typeof useFocus>;
 
-  trackedElements.length = 0;
+  const Component = defineComponent(() => {
+    const anchorEl = useTemplateRef<HTMLElement>("anchor");
+    const floatingEl = useTemplateRef<HTMLElement>("floating");
+
+    node = {
+      id: Symbol("mock-node"),
+      refs: {
+        anchorEl,
+        floatingEl,
+        arrowEl: ref<HTMLElement | null>(null),
+      },
+      open: openRef,
+      setOpen: setOpenMock as () => void,
+      tree: null,
+    };
+    result = useFocus(node, options);
+
+    const anchorKind = config.anchorKind ?? "button";
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        anchorKind === "anchor-subtree"
+          ? h("div", { ref: "anchor", "data-testid": "anchor", tabindex: 0 }, [
+              "Anchor",
+              h("input", { "data-testid": "anchor-child", type: "text" }),
+            ])
+          : h("button", { ref: "anchor", "data-testid": "anchor", type: "button" }, "Anchor"),
+        h("div", { ref: "floating", "data-testid": "floating", tabindex: -1 }, "Floating content"),
+        ...(config.withOutside
+          ? [h("button", { "data-testid": "outside", type: "button" }, "Outside")]
+          : []),
+        ...(config.withIgnored
+          ? [h("button", { "data-testid": "ignored", type: "button" }, "Ignored")]
+          : []),
+      ]);
+  });
+
+  return { Component, getNode: () => node, getResult: () => result, openRef, setOpenMock };
 }
 
-function createButton(id: string, text = id) {
-  const button = trackElement(document.createElement("button"));
-  button.id = id;
-  button.type = "button";
-  button.textContent = text;
-  return button;
-}
+function createTreeComponent(target: "parent" | "child") {
+  const parentOpen = ref(true);
+  const childOpen = ref(true);
+  const parentChanges = vi.fn();
 
-function createFloatingElement(id = "floating") {
-  const floatingEl = trackElement(document.createElement("div"));
-  floatingEl.id = id;
-  floatingEl.tabIndex = -1;
-  floatingEl.textContent = "Floating content";
-  return floatingEl;
-}
+  const Component = defineComponent(() => {
+    const parentAnchorEl = useTemplateRef<HTMLElement>("parent-anchor");
+    const parentFloatingEl = useTemplateRef<HTMLElement>("parent-floating");
+    const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
+    const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
 
-function createOutsideButton(id = "outside") {
-  const button = createButton(id, id);
-  document.body.appendChild(button);
-  return button;
+    const tree = useFloatingTree();
+    const parentNode = useFloatingNode({
+      anchorEl: parentAnchorEl,
+      floatingEl: parentFloatingEl,
+      open: parentOpen,
+      onOpenChange: parentChanges,
+    });
+    const childNode = useFloatingNode({
+      anchorEl: childAnchorEl,
+      floatingEl: childFloatingEl,
+      open: childOpen,
+    });
+    tree.addNode(parentNode);
+    tree.addNode(childNode, parentNode.id);
+    useFocus(target === "parent" ? parentNode : childNode, { requireFocusVisible: false });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "parent-anchor", "data-testid": "parent-anchor" }, "Parent"),
+        h("div", { ref: "parent-floating", "data-testid": "parent-floating" }, "Parent floating"),
+        h("button", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child"),
+        h("div", { ref: "child-floating", "data-testid": "child-floating" }, "Child floating"),
+        h("button", { "data-testid": "outside", type: "button" }, "Outside"),
+      ]);
+  });
+
+  return { Component, parentOpen, childOpen, parentChanges };
 }
 
 async function flushFocus() {
@@ -75,89 +124,57 @@ async function flushFocus() {
   await nextTick();
 }
 
-function setupFocus(
+interface FocusFixture {
+  anchorEl: HTMLElement;
+  floatingEl: HTMLElement;
+  node: UseFocusContext;
+  openRef: ReturnType<typeof ref<boolean>>;
+  result: ReturnType<typeof useFocus>;
+  setOpenMock: ReturnType<typeof vi.fn>;
+  childInputEl: HTMLElement | null;
+  outsideEl: HTMLElement | null;
+  ignoredEl: HTMLElement | null;
+}
+
+async function renderFocus(
   options: UseFocusOptions = {},
   initialOpen = false,
-  elements?: {
-    anchorEl?: HTMLElement;
-    floatingEl?: HTMLElement;
-  },
-): FocusTestContext {
-  const anchorEl = elements?.anchorEl ?? createButton("anchor", "Anchor");
-  const floatingEl = elements?.floatingEl ?? createFloatingElement();
-
-  if (!anchorEl.isConnected) {
-    document.body.appendChild(anchorEl);
-  }
-
-  if (!floatingEl.isConnected) {
-    document.body.appendChild(floatingEl);
-  }
-
-  const openRef = ref(initialOpen);
-  const setOpenMock = vi.fn((value: boolean) => {
-    openRef.value = value;
-  });
-  const anchorRef = ref<AnchorElement>(anchorEl);
-  const floatingRef = ref<FloatingElement>(floatingEl);
-  const arrowRef = ref<HTMLElement | null>(null);
-
-  const node: UseFocusContext = {
-    id: Symbol("mock-node"),
-    refs: {
-      anchorEl: anchorRef,
-      floatingEl: floatingRef,
-      arrowEl: arrowRef,
-    },
-    open: openRef,
-    setOpen: setOpenMock,
-    tree: null,
-  };
-
-  const scope = effectScope();
-  activeScopes.push(scope);
-
-  let result!: ReturnType<typeof useFocus>;
-  scope.run(() => {
-    result = useFocus(node, options);
-  });
-
+  config: FixtureConfig = {},
+): Promise<FocusFixture> {
+  const fixture = createTestComponent(options, initialOpen, config);
+  await render(fixture.Component);
+  vi.useFakeTimers();
+  await nextTick();
   return {
-    anchorEl,
-    node,
-    floatingEl,
-    openRef,
-    result,
-    scope,
-    setOpenMock,
+    anchorEl: getTestEl("anchor"),
+    floatingEl: getTestEl("floating"),
+    node: fixture.getNode(),
+    openRef: fixture.openRef,
+    result: fixture.getResult(),
+    setOpenMock: fixture.setOpenMock,
+    childInputEl: config.anchorKind === "anchor-subtree" ? getTestEl("anchor-child") : null,
+    outsideEl: config.withOutside || config.withIgnored ? getTestEl("outside") : null,
+    ignoredEl: config.withIgnored ? getTestEl("ignored") : null,
   };
 }
 
-async function setupFocusReady(
-  options: UseFocusOptions = {},
-  initialOpen = false,
-  elements?: {
-    anchorEl?: HTMLElement;
-    floatingEl?: HTMLElement;
-  },
-) {
-  const ctx = setupFocus(options, initialOpen, elements);
+async function renderTreeFocus(target: "parent" | "child") {
+  const fixture = createTreeComponent(target);
+  await render(fixture.Component);
+  vi.useFakeTimers();
   await nextTick();
-  return ctx;
+  return {
+    parentFloatingEl: getTestEl("parent-floating"),
+    childFloatingEl: getTestEl("child-floating"),
+    outsideEl: getTestEl("outside"),
+    parentOpen: fixture.parentOpen,
+    childOpen: fixture.childOpen,
+    parentChanges: fixture.parentChanges,
+  };
 }
 
 describe("useFocus", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
   afterEach(() => {
-    for (const scope of [...activeScopes].reverse()) {
-      scope.stop();
-    }
-
-    activeScopes.length = 0;
-    clearTrackedElements();
     vi.clearAllMocks();
     vi.mocked(matchesFocusVisible).mockReset();
     vi.useRealTimers();
@@ -165,7 +182,7 @@ describe("useFocus", () => {
 
   describe("opening behavior", () => {
     it("opens on focus when focus-visible is not required", async () => {
-      const ctx = await setupFocusReady({ requireFocusVisible: false });
+      const ctx = await renderFocus({ requireFocusVisible: false });
 
       ctx.anchorEl.focus();
       await flushFocus();
@@ -176,7 +193,7 @@ describe("useFocus", () => {
 
     it("only opens when the focused element matches focus-visible", async () => {
       vi.mocked(matchesFocusVisible).mockReturnValue(false);
-      const ctx = await setupFocusReady({ requireFocusVisible: true });
+      const ctx = await renderFocus({ requireFocusVisible: true });
 
       ctx.anchorEl.focus();
       await flushFocus();
@@ -193,7 +210,7 @@ describe("useFocus", () => {
     });
 
     it("blocks one refocus after the window blurs while the closed anchor stays focused", async () => {
-      const ctx = await setupFocusReady({ requireFocusVisible: false });
+      const ctx = await renderFocus({ requireFocusVisible: false });
 
       ctx.anchorEl.focus();
       await flushFocus();
@@ -223,14 +240,13 @@ describe("useFocus", () => {
 
   describe("closing behavior", () => {
     it("closes when focus leaves both the anchor and floating element", async () => {
-      const outsideEl = createOutsideButton();
-      const ctx = await setupFocusReady({ requireFocusVisible: false });
+      const ctx = await renderFocus({ requireFocusVisible: false }, false, { withOutside: true });
 
       ctx.anchorEl.focus();
       await flushFocus();
       expect(ctx.node.open.value).toBe(true);
 
-      outsideEl.focus();
+      ctx.outsideEl!.focus();
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(false);
@@ -238,7 +254,7 @@ describe("useFocus", () => {
     });
 
     it("stays open when focus moves into the floating element", async () => {
-      const ctx = await setupFocusReady({ requireFocusVisible: false });
+      const ctx = await renderFocus({ requireFocusVisible: false });
 
       ctx.anchorEl.focus();
       await flushFocus();
@@ -250,23 +266,15 @@ describe("useFocus", () => {
     });
 
     it("stays open when focus moves within the anchor subtree", async () => {
-      const anchorEl = trackElement(document.createElement("div"));
-      anchorEl.id = "anchor";
-      anchorEl.tabIndex = 0;
-      const childInput = trackElement(document.createElement("input"));
-      childInput.id = "anchor-child";
-      anchorEl.appendChild(childInput);
-
-      const ctx = await setupFocusReady({ requireFocusVisible: false }, false, {
-        anchorEl,
-        floatingEl: createFloatingElement(),
+      const ctx = await renderFocus({ requireFocusVisible: false }, false, {
+        anchorKind: "anchor-subtree",
       });
 
-      anchorEl.focus();
+      ctx.anchorEl.focus();
       await flushFocus();
       expect(ctx.node.open.value).toBe(true);
 
-      childInput.focus();
+      ctx.childInputEl!.focus();
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(true);
@@ -275,26 +283,27 @@ describe("useFocus", () => {
 
   describe("ignoreFocusOut predicate", () => {
     it("keeps the floating element open when focus moves to an ignored element", async () => {
-      const ignoredEl = createButton("ignored", "Ignored");
-      document.body.appendChild(ignoredEl);
-      const outsideEl = createButton("outside", "Outside");
-      document.body.appendChild(outsideEl);
-
-      const ctx = await setupFocusReady({
-        requireFocusVisible: false,
-        ignoreFocusOut: (target) => target === ignoredEl,
-      });
+      let ignoredEl: HTMLElement | null = null;
+      const ctx = await renderFocus(
+        {
+          requireFocusVisible: false,
+          ignoreFocusOut: (target) => target === ignoredEl,
+        },
+        false,
+        { withOutside: true, withIgnored: true },
+      );
+      ignoredEl = ctx.ignoredEl;
 
       ctx.anchorEl.focus();
       await flushFocus();
       expect(ctx.node.open.value).toBe(true);
 
-      ignoredEl.focus();
+      ctx.ignoredEl!.focus();
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(true);
 
-      outsideEl.focus();
+      ctx.outsideEl!.focus();
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(false);
@@ -303,38 +312,9 @@ describe("useFocus", () => {
 
   describe("parent-linked nodes", () => {
     it("keeps a parent open when focus moves into a child floating element", async () => {
-      const parentAnchorEl = createButton("parent-anchor");
-      const parentFloatingEl = createFloatingElement("parent-floating");
-      const childAnchorEl = createButton("child-anchor");
-      const childFloatingEl = createFloatingElement("child-floating");
-      const outsideEl = createOutsideButton();
-      document.body.append(parentAnchorEl, parentFloatingEl, childAnchorEl, childFloatingEl);
+      const { childFloatingEl, outsideEl, parentOpen, parentChanges } =
+        await renderTreeFocus("parent");
 
-      const parentOpen = ref(true);
-      const childOpen = ref(true);
-      const parentChanges = vi.fn();
-      const scope = effectScope();
-      activeScopes.push(scope);
-
-      scope.run(() => {
-        const tree = useFloatingTree();
-        const parentNode = useFloatingNode({
-          anchorEl: ref(parentAnchorEl),
-          floatingEl: ref(parentFloatingEl),
-          open: parentOpen,
-          onOpenChange: parentChanges,
-        });
-        const childNode = useFloatingNode({
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-          open: childOpen,
-        });
-        tree.addNode(parentNode);
-        tree.addNode(childNode, parentNode.id);
-        useFocus(parentNode, { requireFocusVisible: false });
-      });
-
-      await nextTick();
       childFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
@@ -348,35 +328,8 @@ describe("useFocus", () => {
     });
 
     it("closes a child when focus moves into the parent floating element", async () => {
-      const parentAnchorEl = createButton("parent-anchor");
-      const parentFloatingEl = createFloatingElement("parent-floating");
-      const childAnchorEl = createButton("child-anchor");
-      const childFloatingEl = createFloatingElement("child-floating");
-      document.body.append(parentAnchorEl, parentFloatingEl, childAnchorEl, childFloatingEl);
+      const { parentFloatingEl, parentOpen, childOpen } = await renderTreeFocus("child");
 
-      const parentOpen = ref(true);
-      const childOpen = ref(true);
-      const scope = effectScope();
-      activeScopes.push(scope);
-
-      scope.run(() => {
-        const tree = useFloatingTree();
-        const parentNode = useFloatingNode({
-          anchorEl: ref(parentAnchorEl),
-          floatingEl: ref(parentFloatingEl),
-          open: parentOpen,
-        });
-        const childNode = useFloatingNode({
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-          open: childOpen,
-        });
-        tree.addNode(parentNode);
-        tree.addNode(childNode, parentNode.id);
-        useFocus(childNode, { requireFocusVisible: false });
-      });
-
-      await nextTick();
       parentFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
@@ -388,7 +341,7 @@ describe("useFocus", () => {
   describe("lifecycle and cleanup", () => {
     it("does not respond when disabled", async () => {
       const enabled = ref(false);
-      const ctx = await setupFocusReady({
+      const ctx = await renderFocus({
         enabled,
         requireFocusVisible: false,
       });
@@ -401,8 +354,7 @@ describe("useFocus", () => {
     });
 
     it("cleanup clears pending blur work and removes every listener", async () => {
-      const outsideEl = createOutsideButton();
-      const ctx = await setupFocusReady({ requireFocusVisible: false });
+      const ctx = await renderFocus({ requireFocusVisible: false }, false, { withOutside: true });
 
       ctx.anchorEl.focus();
       await flushFocus();
@@ -414,7 +366,7 @@ describe("useFocus", () => {
 
       expect(ctx.node.open.value).toBe(true);
 
-      outsideEl.focus();
+      ctx.outsideEl!.focus();
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(true);
