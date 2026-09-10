@@ -5,41 +5,14 @@ import { computed, effectScope, nextTick, ref, shallowRef } from "vue";
 import type { AnchorElement, FloatingNode, FloatingElement } from "@/composables";
 import { useArrow, useFloatingNode, usePosition } from "@/composables";
 import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
+import { clearTrackedElements, trackElement } from "@/test-utils";
 
-const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
 
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
-
-function createElement(tagName: string, rect: Partial<DOMRect> = {}): HTMLElement {
-  const el = trackElement(document.createElement(tagName));
-  el.getBoundingClientRect = () =>
-    ({
-      x: 0,
-      y: 0,
-      width: 40,
-      height: 20,
-      top: 0,
-      left: 0,
-      right: 40,
-      bottom: 20,
-      toJSON: () => ({}),
-      ...rect,
-    }) as DOMRect;
-  document.body.appendChild(el);
-  return el;
+// Detached stubs: these tests assert middleware registration and style
+// computeds, never layout, so the elements stay out of the document.
+function createStubElement(tagName: "button" | "div"): HTMLElement {
+  return trackElement(document.createElement(tagName));
 }
 
 interface MutableInternalsStub {
@@ -92,8 +65,8 @@ describe("useArrow", () => {
 
   beforeEach(() => {
     scope = effectScope();
-    anchorEl = createElement("button");
-    floatingEl = createElement("div");
+    anchorEl = createStubElement("button");
+    floatingEl = createStubElement("div");
     scope.run(() => {
       node = useFloatingNode({
         anchorEl: ref<AnchorElement>(anchorEl),
@@ -113,7 +86,7 @@ describe("useArrow", () => {
   describe("arrow ref ownership", () => {
     it("uses the node-owned arrow element ref", () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       scope?.run(() => {
         node = useFloatingNode({
           anchorEl: ref<AnchorElement>(anchorEl),
@@ -140,7 +113,7 @@ describe("useArrow", () => {
   describe("middleware registration", () => {
     it("registers arrow middleware in the position middleware registry", () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       scope?.run(() => {
         usePosition(node);
         useArrow(node);
@@ -176,7 +149,7 @@ describe("useArrow", () => {
 
       expect(hasArrow()).toBe(false);
 
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       await nextTick();
 
       expect(hasArrow()).toBe(true);
@@ -184,7 +157,7 @@ describe("useArrow", () => {
 
     it("registers arrow middleware even when useArrow is called before usePosition", () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
 
       let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
       scope?.run(() => {
@@ -203,7 +176,7 @@ describe("useArrow", () => {
   describe("coordinate extraction", () => {
     it("exposes arrowX and arrowY from middlewareData", () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       setupPositionInternals(node, {
         middlewareData: { arrow: { x: 15, y: 20, centerOffset: 0 } },
       });
@@ -222,7 +195,7 @@ describe("useArrow", () => {
 
     it("defaults arrowX and arrowY to 0 when arrow data is absent", () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       setupPositionInternals(node, { middlewareData: {} });
 
       let arrowX!: ReturnType<typeof useArrow>["arrowX"];
@@ -239,7 +212,7 @@ describe("useArrow", () => {
 
     it("reacts to changes in middlewareData", async () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       const stub = setupPositionInternals(node, {
         middlewareData: { arrow: { x: 5, y: 10, centerOffset: 0 } },
       });
@@ -281,7 +254,7 @@ describe("useArrow", () => {
 
     it("returns empty styles when arrow middlewareData is absent", () => {
       const arrowEl = node.refs.arrowEl;
-      arrowEl.value = createElement("div");
+      arrowEl.value = createStubElement("div");
       setupPositionInternals(node, { middlewareData: {} });
 
       let arrowStyles!: ReturnType<typeof useArrow>["arrowStyles"];
@@ -296,7 +269,7 @@ describe("useArrow", () => {
     describe("placement: bottom", () => {
       it("uses inset-inline-start for X and inset-block-start for the offset", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "bottom",
           middlewareData: { arrow: { x: 16, y: 0, centerOffset: 0 } },
@@ -318,7 +291,7 @@ describe("useArrow", () => {
     describe("placement: top", () => {
       it("uses inset-inline-start for X and inset-block-end for the offset", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "top",
           middlewareData: { arrow: { x: 20, y: 0, centerOffset: 0 } },
@@ -340,7 +313,7 @@ describe("useArrow", () => {
     describe("placement: right", () => {
       it("uses inset-block-start for Y and inset-inline-start for the offset", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "right",
           middlewareData: { arrow: { x: 0, y: 12, centerOffset: 0 } },
@@ -362,7 +335,7 @@ describe("useArrow", () => {
     describe("placement: left", () => {
       it("uses inset-block-start for Y and inset-inline-end for the offset", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "left",
           middlewareData: { arrow: { x: 0, y: 8, centerOffset: 0 } },
@@ -384,7 +357,7 @@ describe("useArrow", () => {
     describe("alignment variants", () => {
       it("strips the alignment suffix and uses the base side for styles", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "bottom-start",
           middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
@@ -404,7 +377,7 @@ describe("useArrow", () => {
 
       it("handles top-end placement correctly", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "top-end",
           middlewareData: { arrow: { x: 30, y: 0, centerOffset: 0 } },
@@ -424,7 +397,7 @@ describe("useArrow", () => {
 
       it("handles left-start placement correctly", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "left-start",
           middlewareData: { arrow: { x: 0, y: 4, centerOffset: 0 } },
@@ -444,7 +417,7 @@ describe("useArrow", () => {
 
       it("handles right-end placement correctly", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "right-end",
           middlewareData: { arrow: { x: 0, y: 18, centerOffset: 0 } },
@@ -466,7 +439,7 @@ describe("useArrow", () => {
     describe("custom offset", () => {
       it("uses the provided offset string instead of the default", () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
           placement: "bottom",
           middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
@@ -487,7 +460,7 @@ describe("useArrow", () => {
     describe("reactive styles", () => {
       it("recomputes styles when placement changes", async () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         const stub = setupPositionInternals(node, {
           placement: "top",
           middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
@@ -509,7 +482,7 @@ describe("useArrow", () => {
 
       it("recomputes styles when middlewareData changes", async () => {
         const arrowEl = node.refs.arrowEl;
-        arrowEl.value = createElement("div");
+        arrowEl.value = createStubElement("div");
         const stub = setupPositionInternals(node, {
           placement: "bottom",
           middlewareData: { arrow: { x: 5, y: 0, centerOffset: 0 } },
