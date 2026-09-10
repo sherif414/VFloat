@@ -1,21 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearTrackedElements, trackElement } from "@/test-utils";
 import { isolateOutsideElements } from "./inert-stack";
-
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
 
 describe("isolateOutsideElements", () => {
   let container: HTMLDivElement;

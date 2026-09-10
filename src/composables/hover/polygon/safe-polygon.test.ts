@@ -4,37 +4,10 @@ import {
   type Polygon,
   safePolygon,
 } from "@/composables/hover/polygon";
+import { clearTrackedElements, makeDOMRect, trackElement } from "@/test-utils";
 
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
-
-function makeDOMRect(x: number, y: number, w: number, h: number): DOMRect {
-  return {
-    x,
-    y,
-    width: w,
-    height: h,
-    top: y,
-    right: x + w,
-    bottom: y + h,
-    left: x,
-    toJSON() {},
-  } as DOMRect;
-}
-
+// Deliberately local: fabricates `target`/`relatedTarget` per call, which real
+// MouseEvents cannot do. For dispatchable events use the shared builder instead.
 function makeMouseEvent(
   type: string,
   opts: Partial<MouseEvent & { relatedTarget: EventTarget | null }> = {},

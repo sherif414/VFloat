@@ -21,25 +21,11 @@ import {
 import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
+import { clearTrackedElements, trackElement } from "@/test-utils";
 import type { VirtualElement } from "@/types";
 
 const originalPlatform = navigator.platform;
 const originalUserAgent = navigator.userAgent;
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
 
 afterEach(() => {
   Object.defineProperty(window.navigator, "platform", {

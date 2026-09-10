@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { clearTrackedElements, trackElement } from "@/test-utils";
 import {
   getFirstTabbableElement,
   getFocusableElements,
@@ -8,13 +9,6 @@ import {
   isElementTabbable,
 } from "./tabbable";
 
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
 function createContainer(): HTMLDivElement {
   const container = trackElement(document.createElement("div"));
   document.body.appendChild(container);
@@ -23,12 +17,7 @@ function createContainer(): HTMLDivElement {
 
 describe("tabbable utilities (native implementation)", () => {
   afterEach(() => {
-    for (const el of [...trackedElements].reverse()) {
-      if (el.isConnected) {
-        el.remove();
-      }
-    }
-    trackedElements.length = 0;
+    clearTrackedElements();
   });
 
   describe("getTabbableElements", () => {
