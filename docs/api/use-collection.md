@@ -33,14 +33,27 @@ interface UseCollectionReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `values` | `MaybeRefOrGetter<readonly string[]>` | `[]` | Reactive; must be stable strings. |
+| `isValueDisabled` | `(value: string) => boolean` | — | Marks values to skip during movement. |
+| `loop` (on `setNext`/`setPrevious`) | `boolean` | `false` | Wraps at boundaries; edges are a no-op by default. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `values` / `enabledValues` | `ComputedRef<readonly string[]>` | Full list and non-disabled subset. |
+| `activeValue` | `Ref<string \| null>` | Starts as `null`; unknown/disabled values are ignored. |
+| `setActiveValue` | `(value \| null) => void` | `null` always clears. |
+| `setNext` / `setPrevious` / `setFirst` / `setLast` | `() => void` | Move through enabled values only. |
+| `isItemDisabled` | `(value) => boolean` | Disabled check for rendering. |
+
 ## Details
 
-- `options` is optional and defaults to `{ values: [] }`. `values` itself is reactive and accepts a ref or getter.
-- Values must be stable strings.
-- `values` exposes the full reactive list; `enabledValues` derives the non-disabled subset live.
-- `activeValue` starts as `null`. `setActiveValue(null)` always clears; unknown or disabled values are silently ignored.
-- `setNext()`, `setPrevious()`, `setFirst()`, and `setLast()` move through enabled values only. Empty or all-disabled collections resolve to `null`.
-- Pass `{ loop: true }` to wrap at the collection boundaries (`loop` defaults to `false`, where edges are a no-op).
+- `options` is optional and defaults to `{ values: [] }`.
 - If the active value disappears from `values` or becomes disabled, it is cleared synchronously.
 - `useCollection` never touches the DOM, focus, open state, or trees. It pairs with [`useTypeahead`](/api/use-typeahead), which reads `collection.values` and drives `collection.setActiveValue` on match. Index-based focus movement belongs to [`useRovingFocus`](/api/use-roving-focus) and [`useAriaActivedescendant`](/api/use-aria-activedescendant), which you bridge manually (for example, through `useTypeahead`'s `onMatch`).
 
@@ -98,8 +111,8 @@ useClick(node);
 
 ## See Also
 
-- [`useTypeahead`](/api/use-typeahead)
-- [`useRovingFocus`](/api/use-roving-focus)
-- [`useAriaActivedescendant`](/api/use-aria-activedescendant)
-- [useFloatingNode](/api/use-floating-node)
-- [Keyboard Navigation](/guide/keyboard-navigation)
+- [`useTypeahead`](/api/use-typeahead) - Typeahead search over collection values
+- [`useRovingFocus`](/api/use-roving-focus) - Physical focus movement between items
+- [`useAriaActivedescendant`](/api/use-aria-activedescendant) - Virtual highlighting while focus stays put
+- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
+- [Keyboard Navigation](/guide/keyboard-navigation) - Navigation workflow

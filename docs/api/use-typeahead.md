@@ -107,6 +107,29 @@ interface UseTypeaheadReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `collection` | `{ activeValue, setActiveValue, … }` | — | Value model to drive; any matching structural shape works. |
+| `list` | `MaybeRefOrGetter<readonly (string \| null)[]>` | — | Wins over `collection.values` when present. |
+| `activeIndex` / `selectedIndex` | `MaybeRefOrGetter<number \| null>` | — | Arrow-selected and selected positions. |
+| `onMatch` | `(index, value) => void` | — | Forward into `setActiveIndex` for focus movement. |
+| `onTypingChange` | `(isTyping: boolean) => void` | — | Binds typing indicators. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates typeahead. |
+| `resetMs` | `MaybeRefOrGetter<number>` | `750` | Buffer reset timeout. |
+| `ignoreKeys` | `MaybeRefOrGetter<readonly string[]>` | `[]` | Keys to skip. |
+| `findMatch` | fn, ref, or `null` | prefix matcher | Custom matcher; `null` uses the built-in prefix search. |
+| `isValueDisabled` | `(value: string) => boolean` | — | Skips disabled values during matching. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `isTyping` | `Readonly<Ref<boolean>>` | Typing session in progress. |
+| `reset` | `() => void` | Clears the typing buffer and timeout. |
+| `cleanup` | `() => void` | Stops listeners and watchers. |
+
 ## Details
 
 `useTypeahead` pairs with [`useCollection`](/api/use-collection) for the value model and bridges to index-based focus through `onMatch`:
@@ -187,8 +210,8 @@ useTypeahead(node, { collection });
 
 ## See Also
 
-- [`useCollection`](/api/use-collection)
-- [`useRovingFocus`](/api/use-roving-focus)
-- [`useAriaActivedescendant`](/api/use-aria-activedescendant)
-- [useFloatingNode](/api/use-floating-node)
-- [Keyboard Navigation Guide](/guide/keyboard-navigation)
+- [`useCollection`](/api/use-collection) - Headless value model for keyboard navigation
+- [`useRovingFocus`](/api/use-roving-focus) - Physical focus movement between items
+- [`useAriaActivedescendant`](/api/use-aria-activedescendant) - Virtual highlighting while focus stays put
+- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
+- [Keyboard Navigation](/guide/keyboard-navigation) - Navigation workflow

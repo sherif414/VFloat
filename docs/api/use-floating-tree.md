@@ -8,6 +8,8 @@ description: Coordinate related floating nodes such as nested menus in an explic
 
 ## Type
 
+The factory signature and the tree coordination surface:
+
 ```ts
 function useFloatingTree(): FloatingTree;
 ```
@@ -74,7 +76,7 @@ useOutsideClick(node, { tree });
 
 ## See Also
 
-- [useFloatingNode](/api/use-floating-node) - Create the standalone nodes that join a tree
-- [useOutsideClick](/api/use-outside-click) - Dismiss a whole node family on outside input
-- [useEscapeKey](/api/use-escape-key) - Stacked dismissal through the deepest open node
+- [`useFloatingNode`](/api/use-floating-node) - Create the standalone nodes that join a tree
+- [`useOutsideClick`](/api/use-outside-click) - Dismiss a whole node family on outside input
+- [`useEscapeKey`](/api/use-escape-key) - Stacked dismissal through the deepest open node
 - [Tree Coordination Explained](/guide/tree-coordination-explained) - Why linkage is explicit

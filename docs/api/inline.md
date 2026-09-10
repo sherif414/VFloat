@@ -4,27 +4,39 @@ description: Positions the floating element relative to multi-line inline anchor
 
 # inline
 
-`inline` positions the floating element relative to individual client rects so it stays aligned with multi-line inline anchors such as wrapped links.
+`inline` positions the floating element relative to individual client rects so it stays aligned with multi-line inline anchors such as wrapped links. Use it when the anchor wraps across lines.
 
-- Type
+## Type
 
-  ```ts
-  function inline(options?: InlineOptions): Middleware;
+The factory signature and its options shape:
 
-  interface InlineOptions {
-    padding?: Padding;
-    x?: number;
-    y?: number;
-  }
-  ```
+```ts
+function inline(options?: InlineOptions): Middleware;
 
-- Details
+interface InlineOptions {
+  padding?: Padding;
+  x?: number;
+  y?: number;
+}
+```
 
-  Without `inline`, an anchor that wraps across lines is measured as one bounding box and the floating element can detach from the line the pointer is actually over. `inline` measures each client rect instead, so the placement tracks the current line.
+## Options
 
-  In most cases you do not need this middleware directly. Pass `middleware: { inline: true }` (or an options object) to [`usePosition`](/api/use-position) and the declarative entry is added for you.
+| Name | Type | Notes |
+| --- | --- | --- |
+| `padding` | `Padding` | Inset from the line rect. |
+| `x` | `number` | X offset within the rect. |
+| `y` | `number` | Y offset within the rect. |
 
-- Example
+## Details
+
+Without `inline`, an anchor that wraps across lines is measured as one bounding box and the floating element can detach from the line the pointer is actually over. `inline` measures each client rect instead, so the placement tracks the current line.
+
+In most cases you do not need this middleware directly. Pass `middleware: { inline: true }` (or an options object) to [`usePosition`](/api/use-position) and the declarative entry is added for you.
+
+## Example
+
+Declare `inline` through `usePosition` instead of composing it by hand:
 
 ```vue
 <script setup lang="ts">
@@ -50,7 +62,8 @@ const { styles } = usePosition(node, {
 </template>
 ```
 
-- See also
-  - [usePosition](/api/use-position) - Declares `inline` through `middleware.inline`
-  - [offset](/api/offset) - Adds spacing between the anchor and floating element
-  - [shift](/api/shift) - Keeps the floating element in view
+## See Also
+
+- [`usePosition`](/api/use-position) - Declares `inline` through `middleware.inline`
+- [`offset`](/api/offset) - Adds spacing between the anchor and floating element
+- [`shift`](/api/shift) - Keeps the floating element in view

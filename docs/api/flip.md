@@ -4,28 +4,43 @@ description: Switches to another placement when the current side is blocked.
 
 # flip
 
-`flip` switches to alternative placements when the preferred placement does not fit.
+`flip` switches to alternative placements when the preferred placement does not fit. Use it when you want to start from one placement and only move elsewhere if that side overflows.
 
-- Type
+## Type
 
-  ```ts
-  function flip(options?: FlipOptions): Middleware;
+The factory signature and its options shape:
 
-  interface FlipOptions {
-    mainAxis?: boolean;
-    crossAxis?: boolean | "alignment";
-    fallbackAxisSideDirection?: "none" | "start" | "end";
-    flipAlignment?: boolean;
-    fallbackPlacements?: Array<Placement>;
-    fallbackStrategy?: "bestFit" | "initialPlacement";
-  }
-  ```
+```ts
+function flip(options?: FlipOptions): Middleware;
 
-- Details
+interface FlipOptions {
+  mainAxis?: boolean;
+  crossAxis?: boolean | "alignment";
+  fallbackAxisSideDirection?: "none" | "start" | "end";
+  flipAlignment?: boolean;
+  fallbackPlacements?: Array<Placement>;
+  fallbackStrategy?: "bestFit" | "initialPlacement";
+}
+```
 
-  `flip` is the common choice when you want to start from a preferred placement and only move elsewhere if that placement overflows. It can also flip alignment, try a custom fallback list, or choose between a best-fit and initial-placement strategy.
+## Options
 
-- Example
+| Name | Type | Notes |
+| --- | --- | --- |
+| `mainAxis` | `boolean` | Allows flipping on the main axis. |
+| `crossAxis` | `boolean \| "alignment"` | Allows flipping on the cross axis or alignment. |
+| `fallbackAxisSideDirection` | `"none" \| "start" \| "end"` | Direction for fallback axis sides. |
+| `flipAlignment` | `boolean` | Flips the alignment when placement flips. |
+| `fallbackPlacements` | `Array<Placement>` | Custom fallback list to try in order. |
+| `fallbackStrategy` | `"bestFit" \| "initialPlacement"` | Chooses best fit or keeps the initial placement. |
+
+## Details
+
+`flip` is the common choice when you want to start from a preferred placement and only move elsewhere if that placement overflows. It can also flip alignment, try a custom fallback list, or choose between a best-fit and initial-placement strategy.
+
+## Example
+
+Pass `flip` through the declarative `middleware` option on `usePosition`:
 
 ```vue
 <script setup lang="ts">
@@ -53,7 +68,8 @@ const { styles } = usePosition(node, {
 </template>
 ```
 
-- See also
-  - [autoPlacement](/api/autoplacement) - Picks the best placement automatically
-  - [shift](/api/shift) - Keeps the floating element inside the clipping area
-  - [offset](/api/offset) - Adds spacing before flip logic runs
+## See Also
+
+- [`autoPlacement`](/api/autoplacement) - Picks the best placement automatically
+- [`shift`](/api/shift) - Keeps the floating element inside the clipping area
+- [`offset`](/api/offset) - Adds spacing before flip logic runs

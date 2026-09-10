@@ -51,18 +51,41 @@ interface UseRovingFocusReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `elementsList` | `Readonly<Ref<(HTMLElement \| null)[]>>` | Required | Template ref array bound in `v-for`. |
+| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | floating element | Owns keyboard, focus, and pointer listeners. |
+| `activeIndex` | `Ref<number>` | uncontrolled `-1` | Pass a ref to control. |
+| `entryIndex` | `MaybeRefOrGetter<number \| null \| undefined>` | — | Entry tab stop; falls back to first enabled item. |
+| `entryFocusMode` | `"last-focused" \| "entry-index"` | `"last-focused"` | Reopen where focus left off or reset to entry. |
+| `orientation` | `"vertical" \| "horizontal" \| "both"` | `"vertical"` | `"both"` navigates all four arrows sequentially. |
+| `loop` | `MaybeRefOrGetter<boolean>` | `false` | Edges stop instead of wrapping. |
+| `rtl` | `MaybeRefOrGetter<boolean>` | auto-detected | Inverts horizontal navigation unless overridden. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates navigation. |
+| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware submenu coordination. |
+| `focusOnHover` | `MaybeRefOrGetter<boolean>` | `false` | Moves focus to the hovered item. |
+| `focusDisabledElements` | `MaybeRefOrGetter<boolean>` | `false` | Highlights disabled items; selection still never fires. |
+| `onSelect` / `onEnter` / `onExit` / `onActiveIndexChange` | callbacks | — | Selection, submenu interception, and change observation. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `activeIndex` | `Readonly<Ref<number>>` | Starts at `-1`; clears on close, focus-out, and `reset()`. |
+| `tabStopIndex` | `Readonly<Ref<number>>` | Which item owns the single tab stop. |
+| `setActiveIndex` / `reset` / `focusIndex` | functions | Programmatic control. |
+| `getTabindex` | `(index) => 0 \| -1` | Bind as `:tabindex="getTabindex(index)"`. |
+| `next` / `prev` / `first` / `last` | `() => void` | Boundary movement helpers. |
+
 ## Details
 
-- `elementsList` is required: bind a template ref array in `v-for` and pass it in. `containerEl` defaults to the node's floating element and owns the keyboard, focus, and pointer listeners.
-- `orientation` defaults to `"vertical"`. `"both"` makes all four arrows navigate sequentially; otherwise the off-axis arrows enter submenus or exit back. Horizontal navigation inverts automatically in RTL layouts unless `rtl` overrides it.
-- `loop` defaults to `false`; edges stop instead of wrapping.
+- `containerEl` defaults to the node's floating element and owns the keyboard, focus, and pointer listeners.
+- Horizontal navigation inverts automatically in RTL layouts unless `rtl` overrides it.
 - Disabled items (`disabled` attribute or `aria-disabled="true"`) are skipped unless `focusDisabledElements` is `true`. Selection callbacks never fire on truly disabled items either way.
 - The composable never writes `tabindex` itself. Bind `:tabindex="getTabindex(index)"` in your template; `tabStopIndex` tells you which item owns the single tab stop.
-- `entryIndex` chooses the entry tab stop (`-1` means none, `null`/`undefined` falls back to the first enabled item). `entryFocusMode` defaults to `"last-focused"` (reopen where focus left off); `"entry-index"` always resets to `entryIndex`.
-- `tree` makes navigation family-aware across nested surfaces: moving to another index closes open descendants, and submenu entry/exit coordinate through the tree. Without it, only the node's own anchor and floating elements count as inside.
-- `focusOnHover` (default `false`) moves focus to the hovered item.
 - `onSelect` fires on Enter, Space, or click for a non-disabled item. `onEnter`/`onExit` intercept submenu entry and exit; returning `false` lets the event bubble. Without `onExit`, exiting collapses the node with the `"keyboard-exit"` reason and refocuses the anchor.
-- `activeIndex` starts at `-1` and clears to `-1` on close, focus-out, and `reset()`. Pass an `activeIndex` ref to control it, and observe changes through `onActiveIndexChange`.
 - Typeahead search is not built in. Pair with [`useTypeahead`](/api/use-typeahead) and forward `onMatch: (index) => setActiveIndex(index)`.
 
 ## Example
@@ -111,5 +134,5 @@ const { activeIndex, getTabindex } = useRovingFocus(node, {
 - [`useAriaActivedescendant`](/api/use-aria-activedescendant) - Virtual focus for text-input-driven widgets
 - [`useCollection`](/api/use-collection) - Headless string-value model
 - [`useTypeahead`](/api/use-typeahead) - Type-to-focus search that drives `setActiveIndex`
-- [useFloatingTree](/api/use-floating-tree) - Submenu coordination
-- [Keyboard Navigation](/guide/keyboard-navigation)
+- [`useFloatingTree`](/api/use-floating-tree) - Submenu coordination
+- [Keyboard Navigation](/guide/keyboard-navigation) - Navigation workflow

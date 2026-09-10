@@ -4,32 +4,43 @@ description: Positions the arrow so it stays aligned with the reference element.
 
 # arrow
 
-`arrow` positions an arrow element so it points toward the anchor element and exposes the resulting coordinates through the node middleware data.
+`arrow` positions an arrow element so it points toward the anchor element and exposes the resulting coordinates through the node middleware data. Use it when the floating panel needs a visual pointer.
 
-- Type
+## Type
 
-  ```ts
-  function arrow(options: ArrowMiddlewareOptions): Middleware;
+The factory signature and its data shapes:
 
-  interface ArrowMiddlewareOptions {
-    element: Ref<HTMLElement | null>;
-    padding?: Padding;
-  }
+```ts
+function arrow(options: ArrowMiddlewareOptions): Middleware;
 
-  interface ArrowData {
-    x?: number;
-    y?: number;
-    centerOffset: number;
-  }
-  ```
+interface ArrowMiddlewareOptions {
+  element: Ref<HTMLElement | null>;
+  padding?: Padding;
+}
 
-- Details
+interface ArrowData {
+  x?: number;
+  y?: number;
+  centerOffset: number;
+}
+```
 
-  `arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element. When `element` is `null`, the middleware returns no data instead of measuring.
+## Options
 
-  The middleware writes its result to `middlewareData.value.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually. Prefer `useArrow()` when you want registration, RTL-aware inset styles, and scope cleanup handled for you.
+| Name | Type | Notes |
+| --- | --- | --- |
+| `element` | `Ref<HTMLElement \| null>` | Arrow element ref. When `null`, the middleware returns no data. |
+| `padding` | `Padding` | Keeps the arrow away from the floating edges. |
 
-- Example
+## Details
+
+`arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element. When `element` is `null`, the middleware returns no data instead of measuring.
+
+The middleware writes its result to `middlewareData.value.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually. Prefer `useArrow()` when you want registration, RTL-aware inset styles, and scope cleanup handled for you.
+
+## Example
+
+Compose `arrow` through `middleware.custom` and read its data for manual styles:
 
   ```vue
   <script setup lang="ts">
@@ -72,7 +83,8 @@ description: Positions the arrow so it stays aligned with the reference element.
   </template>
   ```
 
-- See also
-  - [useArrow](/api/use-arrow) - Registers and styles the arrow element from the floating node
-  - [useFloatingNode](/api/use-floating-node) - Creates shared refs and open state
-  - [offset](/api/offset) - Adds spacing between the anchor and floating element
+## See Also
+
+- [`useArrow`](/api/use-arrow) - Registers and styles the arrow element from the floating node
+- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
+- [`offset`](/api/offset) - Adds spacing between the anchor and floating element

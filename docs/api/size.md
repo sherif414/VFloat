@@ -4,42 +4,57 @@ description: Measures available space so the floating element can size itself.
 
 # size
 
-`size` provides the available width and height around the floating element so you can resize it to fit the current boundary.
+`size` provides the available width and height around the floating element so you can resize it to fit the current boundary. Use it for menus and popovers that must stay inside the viewport.
 
-- Type
+## Type
 
-  ```ts
-  function size(options?: SizeOptions): Middleware;
+The factory signature and its state shapes:
 
-  interface SizeOptions {
-    apply?: (state: SizeState) => void;
-    padding?: Padding;
-    boundary?: Boundary;
-    rootBoundary?: RootBoundary;
-    elementContext?: ElementContext;
-    altBoundary?: boolean;
-  }
+```ts
+function size(options?: SizeOptions): Middleware;
 
-  interface SizeState {
-    availableWidth: number;
-    availableHeight: number;
-    rects: MiddlewareState["rects"];
-    elements: {
-      floating: HTMLElement;
-      reference: Element | VirtualElement;
-    };
-  }
-  ```
+interface SizeOptions {
+  apply?: (state: SizeState) => void;
+  padding?: Padding;
+  boundary?: Boundary;
+  rootBoundary?: RootBoundary;
+  elementContext?: ElementContext;
+  altBoundary?: boolean;
+}
 
-- Details
+interface SizeState {
+  availableWidth: number;
+  availableHeight: number;
+  rects: MiddlewareState["rects"];
+  elements: {
+    floating: HTMLElement;
+    reference: Element | VirtualElement;
+  };
+}
+```
 
-  `size` does not resize anything on its own. Use the `apply` callback to write styles such as `maxWidth`, `maxHeight`, or a matched reference width.
+## Options
 
-  This middleware is useful for menus, popovers, and other surfaces that need to stay inside the viewport without overflowing.
+| Name | Type | Notes |
+| --- | --- | --- |
+| `apply` | `(state: SizeState) => void` | Writes styles such as `maxWidth` or `maxHeight`. Nothing resizes on its own. |
+| `padding` | `Padding` | Inset from the clipping edge. |
+| `boundary` | `Boundary` | Clipping boundary. |
+| `rootBoundary` | `RootBoundary` | Root clipping boundary. |
+| `elementContext` | `ElementContext` | Element the boundary applies to. |
+| `altBoundary` | `boolean` | Uses the alternate boundary. |
 
-  When you only need the floating element to match the anchor width, prefer the `matchWidth` shortcut in [`usePosition`](/api/use-position) over writing this middleware by hand.
+## Details
 
-- Example
+`size` does not resize anything on its own. Use the `apply` callback to write styles such as `maxWidth`, `maxHeight`, or a matched reference width.
+
+This middleware is useful for menus, popovers, and other surfaces that need to stay inside the viewport without overflowing.
+
+When you only need the floating element to match the anchor width, prefer the `matchWidth` shortcut in [`usePosition`](/api/use-position) over writing this middleware by hand.
+
+## Example
+
+Add `size` through `middleware.custom` when you need full control over the applied styles:
 
 ```vue
 <script setup lang="ts">
@@ -74,6 +89,7 @@ const { styles } = usePosition(node, {
 </template>
 ```
 
-- See also
-  - [shift](/api/shift) - Keeps the floating element in view
-  - [flip](/api/flip) - Chooses another placement when room is tight
+## See Also
+
+- [`shift`](/api/shift) - Keeps the floating element in view
+- [`flip`](/api/flip) - Chooses another placement when room is tight

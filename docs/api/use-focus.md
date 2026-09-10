@@ -25,21 +25,34 @@ interface UseFocusReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Fully reactive. |
+| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware focus checks for nested surfaces. |
+| `requireFocusVisible` | `MaybeRefOrGetter<boolean>` | `true` | Keyboard focus opens; pointer-only focus usually does not. |
+| `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | — | Keeps open when focus moves to selected outside targets. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `cleanup` | `() => void` | Removes listeners manually; also runs on scope dispose. |
+
 ## Details
 
 `useFocus` is a keyboard-first interaction layer. It opens with the `focus` reason and closes with the `blur` reason, which keeps focus-driven surfaces easy to trace alongside hover and click interactions.
 
-- `enabled` defaults to `true` and is fully reactive.
-- `requireFocusVisible` defaults to `true`.
 - With the default `requireFocusVisible: true`, keyboard focus opens the surface while pointer-only focus usually does not.
 - Focus can move into the floating element, or stay within the anchor subtree, without immediately closing the surface.
 - `tree` makes focus checks family-aware across nested surfaces. When omitted, only the node's own anchor and floating elements count as inside.
-- `ignoreFocusOut` is a predicate to determine if focus moving to a specific outside target should be ignored, leaving the floating element open. It is consulted both when the anchor blurs and when focus lands elsewhere in the document.
 - Blur handling is deferred a tick and reads `activeElement` (rather than trusting `relatedTarget`), so Shadow DOM and programmatic focus moves close reliably. Tab-switching away and back does not reopen a closed surface.
 - Safari, window blur, and cross-document focus edge cases are handled internally.
-- Call `cleanup()` if you need to remove the anchor, document, and window listeners manually and clear any pending blur timeout. Cleanup also runs automatically on scope dispose.
 
 ## Example
+
+Open on keyboard focus:
 
 ```vue
 <script setup lang="ts">
@@ -63,7 +76,7 @@ useFocus(node);
 
 ## See Also
 
-- [`useHover`](/api/use-hover)
-- [`useClick`](/api/use-click)
-- [`useEscapeKey`](/api/use-escape-key)
-- [Build Accessible Tooltips](/guide/build-accessible-tooltips)
+- [`useHover`](/api/use-hover) - Opens on hover
+- [`useClick`](/api/use-click) - Opens on click
+- [`useEscapeKey`](/api/use-escape-key) - Closes on Escape
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Focus workflow

@@ -117,6 +117,31 @@ interface UseFocusManagerReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates activation. |
+| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware focus checks; nested families stay interactive. |
+| `modal` | `MaybeRefOrGetter<boolean>` | `true` | Traps focus and isolates background. |
+| `initialFocus` | element, ref, fn, or `false` | — | `false` skips; omitted focuses first tabbable child or container. |
+| `returnFocus` | `boolean \| element \| ref` | `true` | Restores to trigger, custom element, or nothing. |
+| `guards` | `MaybeRefOrGetter<boolean>` | `true` | Portal boundary sentinels for Tab wrapping. |
+| `closeOnFocusOut` | `MaybeRefOrGetter<boolean>` | `false` | Non-modal only; dismisses on outside focus/pointer. |
+| `closeOnTab` | `MaybeRefOrGetter<boolean>` | `false` | Non-modal closes on Tab leave; modal wraps instead. |
+| `outsideElementsInert` | `MaybeRefOrGetter<boolean>` | follows `modal` | `inert` isolation with `aria-hidden` fallback. |
+| `preventScroll` | `MaybeRefOrGetter<boolean>` | `true` | Prevents scroll on programmatic focus. |
+| `ignoreFocusOut` | `(target) => boolean` | — | Keeps open for selected outside targets. |
+| `onError` | `(error: unknown) => void` | — | Activation error callback. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `isActive` | `ComputedRef<boolean>` | Whether focus management is active. |
+| `activate` | `() => void` | Manual activation; no-op while closed. |
+| `deactivate` | `() => void` | Deactivates, closes with `"programmatic"`, restores focus. |
+
 ## Details
 
 `useFocusManager` is the central surface focus manager for dialogs, popovers, and modal overlays. It activates after open (once the floating element mounts) and deactivates on close or unmount:
@@ -167,4 +192,4 @@ useFocusManager(node, {
 - [`useFocus`](/api/use-focus) - Trigger-level focus detection for anchors
 - [`useEscapeKey`](/api/use-escape-key) - Dismissal on Escape key press
 - [`useOutsideClick`](/api/use-outside-click) - Dismissal on pointer clicks outside
-- [useFloatingTree](/api/use-floating-tree) - Family-aware focus checks for nested surfaces
+- [`useFloatingTree`](/api/use-floating-tree) - Family-aware focus checks for nested surfaces

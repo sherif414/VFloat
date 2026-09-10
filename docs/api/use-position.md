@@ -54,22 +54,36 @@ type FloatingStyles = {
 };
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `placement` | `MaybeRefOrGetter<Placement \| undefined>` | `"bottom"` | Reactive; changing triggers recompute. |
+| `strategy` | `MaybeRefOrGetter<Strategy \| undefined>` | `"absolute"` | Reactive. |
+| `transform` | `MaybeRefOrGetter<boolean \| undefined>` | `true` | Writes coordinates as CSS transform; `false` writes `left`/`top`. |
+| `middleware` | `MaybeRefOrGetter<UsePositionMiddlewareOptions \| undefined>` | — | Declarative entries resolve as `inline`, `offset`, `flip`, `shift`, `size` (from `matchWidth`), then `custom`. |
+| `middlewares` | `MaybeRefOrGetter<Middleware[]>` | `[]` | Raw pipeline for existing code; new code should prefer `middleware`. |
+| `autoUpdate` | `MaybeRefOrGetter<boolean \| AutoUpdateOptions \| undefined>` | `true` | `false` disables; wiring runs only while `enabled` and both elements are mounted. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates computation and listeners without tying to open state. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `x` / `y` | `Readonly<Ref<number>>` | Last computed coordinates. |
+| `strategy` / `placement` | `Readonly<Ref<…>>` | Last computed strategy and placement. |
+| `middlewareData` | `Readonly<Ref<MiddlewareData>>` | Raw middleware output. |
+| `isPositioned` | `Readonly<Ref<boolean>>` | `true` after a compute while open; resets on close, disable, and dispose. |
+| `styles` | `Readonly<Ref<FloatingStyles>>` | Bind to the floating element. Rounded by DPR; safe base style before mount. |
+| `update` | `() => Promise<void>` | Manual recompute; no-op while disabled or elements are missing. |
+
 ## Details
 
 `usePosition` reads `node.refs.anchorEl` and `node.refs.floatingEl`. It never creates or mutates open state.
 
-- `placement` defaults to `"bottom"`.
-- `strategy` defaults to `"absolute"`.
-- `transform` is enabled by default and writes coordinates as a CSS transform. Pass `false` to write `left` and `top` instead.
-- `middleware` configures common positioning behavior without manually composing Floating UI middleware. Declarative entries resolve in order: `inline`, `offset`, `flip`, `shift`, `size` (from `matchWidth`), then `middleware.custom`.
 - `middleware.custom` appends raw middleware after the declarative entries.
-- `middlewares` still accepts a raw middleware pipeline for existing code, but new code should prefer `middleware` and `middleware.custom`.
 - Companion composables such as [`useArrow`](/api/use-arrow) register their middleware on the same node by name. A registered entry replaces the base entry with the same name instead of duplicating it.
-- `autoUpdate` is enabled by default. Pass `false` to disable it, or pass an `AutoUpdateOptions` object. Wiring only runs while `enabled` is true and both elements are mounted, and it cleans up when either element changes.
-- `enabled` gates computation and auto-update listeners without tying positioning to open state. `update()` is a no-op while disabled or while either element is missing.
 - `placement`, `strategy`, `middleware`, `middlewares`, and `enabled` all accept reactive values. Changing them triggers a recompute when enabled.
-- `x`, `y`, `placement`, `strategy`, and `middlewareData` expose the last computed result. `isPositioned` reflects `node.open` at compute time: it becomes `true` after a successful compute while open, and resets to `false` on close, on disable, and on scope dispose.
-- `styles` is the style ref you usually bind to the floating element. Coordinates are rounded by device pixel ratio, `will-change: transform` is added on high-DPR screens, and a safe base style is returned before the floating element mounts.
 - Computation failures log in development without throwing.
 
 ## Example
@@ -103,22 +117,10 @@ useRole(node, { role: "tooltip" });
 </template>
 ```
 
-Use `middleware.custom` when you need a middleware that VFloat does not expose as a semantic option.
-
-```ts
-usePosition(node, {
-  placement: "bottom-start",
-  middleware: {
-    offset: 8,
-    flip: true,
-    shift: { padding: 8 },
-    custom: [myCustomMiddleware()],
-  },
-});
-```
+Use `middleware.custom` (see Options) when you need a middleware that VFloat does not expose as a semantic option.
 
 ## See Also
 
-- [useFloatingNode](/api/use-floating-node) - Shared refs and open state
-- [offset](/api/offset) - Add space between anchor and floating element
+- [`useFloatingNode`](/api/use-floating-node) - Shared refs and open state
+- [`offset`](/api/offset) - Add space between anchor and floating element
 - [Placement and Positioning](/guide/placement-and-positioning) - Positioning mental model

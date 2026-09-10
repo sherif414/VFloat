@@ -6,6 +6,10 @@ description: A reference index for VFloat's public composables and middleware.
 
 These pages define the public surface of VFloat. Use the guide pages for the mental model and workflows; use the API pages when you need exact signatures, options, defaults, and return values.
 
+## How To Read These Pages
+
+Composable pages (`useX`) follow Type / Options / Returns / Details / Example / See Also. Middleware pages (`offset`, `flip`, `shift`) use the compact Type / Options / Details / Example / See Also.
+
 ## Start With The Guide
 
 - [Guide Overview](/guide/) - Learn how the guide section is organized and choose a starting path

@@ -43,19 +43,35 @@ interface FloatingNode {
 }
 ```
 
+## Options
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `anchorEl` | `Ref<AnchorElement>` | Required. Also accepts a [virtual element](/guide/use-virtual-anchors). |
+| `floatingEl` | `Ref<FloatingElement>` | Required. |
+| `arrowEl` | `Ref<HTMLElement \| null>` | Optional. Used by [`useArrow`](/api/use-arrow); an empty ref is created when omitted. |
+| `open` | `Ref<boolean>` | Controlled open state. When passed, `defaultOpen` is ignored after creation. |
+| `defaultOpen` | `boolean` | Seeds uncontrolled state. Defaults to `false`. |
+| `onOpenChange` | `(open, reason, event?) => void` | Called only when the value actually changes. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `id` | `FloatingNodeId` | Stable symbol; trees use it instead of object identity. |
+| `refs` | `FloatingNodeElements` | Shared `anchorEl` / `floatingEl` / `arrowEl` refs. |
+| `open` | `Readonly<Ref<boolean>>` | Current open state. |
+| `setOpen` | `(open, reason?, event?) => void` | Missing reasons fall back to `"programmatic"`. |
+| `lastOpenReason` | `Readonly<Ref<OpenChangeReason \| null>>` | `null` when closed. |
+| `lastOpenEvent` | `Readonly<Ref<Event \| null>>` | `null` when closed. |
+
 ## Details
 
 `useFloatingNode` does not compute coordinates, run middlewares, or join a tree. Add [`usePosition`](/api/use-position) when a surface needs JavaScript positioning, and join a [`useFloatingTree`](/api/use-floating-tree) only when related surfaces need coordination such as nested menus.
 
-- `anchorEl` and `floatingEl` are required. `anchorEl` also accepts a [virtual element](/guide/use-virtual-anchors).
-- `arrowEl` is optional and used by [`useArrow`](/api/use-arrow). When omitted, the node creates its own empty ref.
-- `node.id` is a stable symbol created with the node. Trees and interaction composables use it instead of comparing node objects by identity.
-- `open` defaults to internally managed state seeded from `defaultOpen` (or `false` when omitted).
 - Passing `open` makes the node controlled: your ref owns the value and `defaultOpen` is ignored after creation.
 - `setOpen(open, reason = "programmatic", event?)` stores the reason and source event, then forwards them to `onOpenChange` only when the value actually changes.
 - Reaffirming the current open value (`setOpen(true)` while already open) still updates `lastOpenReason` and `lastOpenEvent` without calling `onOpenChange`.
-- `lastOpenReason` and `lastOpenEvent` are `null` when closed, including after an externally-driven controlled close.
-- Missing reasons fall back to `"programmatic"`.
 - `setOpen` never cascades to other nodes. Closing a parent leaves descendants open unless you call `tree.closeDescendants(node, reason, event)` explicitly.
 - The node object itself is never mutated by tree linkage; hierarchy lives in the tree's map.
 
@@ -104,7 +120,7 @@ useRole(node, { role: "dialog" });
 
 ## See Also
 
-- [useFloatingTree](/api/use-floating-tree) - Coordinate related nodes such as nested menus
-- [usePosition](/api/use-position) - Opt into JavaScript positioning
-- [useClick](/api/use-click) - Click-based activation
+- [`useFloatingTree`](/api/use-floating-tree) - Coordinate related nodes such as nested menus
+- [`usePosition`](/api/use-position) - Opt into JavaScript positioning
+- [`useClick`](/api/use-click) - Click-based activation
 - [Floating Context](/guide/floating-context) - Node mental model

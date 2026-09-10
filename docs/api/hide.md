@@ -4,35 +4,50 @@ description: Exposes visibility state for clipped references and escaped floatin
 
 # hide
 
-`hide` exposes visibility data so you can hide a floating element when the reference is clipped or the floating element escapes its boundary.
+`hide` exposes visibility data so you can hide a floating element when the reference is clipped or the floating element escapes its boundary. Use it when a tooltip should vanish instead of floating detached.
 
-- Type
+## Type
 
-  ```ts
-  function hide(options?: HideOptions): Middleware;
+The factory signature and its data shapes:
 
-  interface HideOptions {
-    strategy?: "referenceHidden" | "escaped";
-    padding?: Padding;
-    boundary?: Boundary;
-    rootBoundary?: RootBoundary;
-    elementContext?: ElementContext;
-    altBoundary?: boolean;
-  }
+```ts
+function hide(options?: HideOptions): Middleware;
 
-  interface HideData {
-    referenceHidden?: boolean;
-    escaped?: boolean;
-  }
-  ```
+interface HideOptions {
+  strategy?: "referenceHidden" | "escaped";
+  padding?: Padding;
+  boundary?: Boundary;
+  rootBoundary?: RootBoundary;
+  elementContext?: ElementContext;
+  altBoundary?: boolean;
+}
 
-- Details
+interface HideData {
+  referenceHidden?: boolean;
+  escaped?: boolean;
+}
+```
 
-  Use `referenceHidden` when you want to hide the floating element if its anchor is fully obscured. Use `escaped` when you want to know whether the floating element has moved outside its clipping context.
+## Options
 
-  The middleware does not hide anything by itself. It only writes data to `middlewareData.value.hide`, which you can map to `visibility`, `display`, or an accessibility state.
+| Name | Type | Notes |
+| --- | --- | --- |
+| `strategy` | `"referenceHidden" \| "escaped"` | Which visibility signal to track. |
+| `padding` | `Padding` | Inset from the clipping edge. |
+| `boundary` | `Boundary` | Clipping boundary. |
+| `rootBoundary` | `RootBoundary` | Root clipping boundary. |
+| `elementContext` | `ElementContext` | Element the boundary applies to. |
+| `altBoundary` | `boolean` | Uses the alternate boundary. |
 
-- Example
+## Details
+
+Use `referenceHidden` when you want to hide the floating element if its anchor is fully obscured. Use `escaped` when you want to know whether the floating element has moved outside its clipping context.
+
+The middleware does not hide anything by itself. It only writes data to `middlewareData.value.hide`, which you can map to `visibility`, `display`, or an accessibility state.
+
+## Example
+
+Read `middlewareData.value.hide` and map it to visibility:
 
 ```vue
 <script setup lang="ts">
@@ -62,6 +77,7 @@ const visibility = computed(() => {
 </template>
 ```
 
-- See also
-  - [shift](/api/shift) - Keeps the floating element in view
-  - [flip](/api/flip) - Moves to a better placement when space is limited
+## See Also
+
+- [`shift`](/api/shift) - Keeps the floating element in view
+- [`flip`](/api/flip) - Moves to a better placement when space is limited

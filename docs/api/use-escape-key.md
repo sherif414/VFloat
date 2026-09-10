@@ -23,19 +23,32 @@ interface UseEscapeKeyOptions {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive on/off switch. |
+| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Closes only the deepest open node. Reactive. |
+| `capture` | `boolean` | `false` | Plain boolean, read once. |
+| `preventDefault` | `boolean` | `false` | Plain boolean, read once. |
+| `onEscape` | `(event: KeyboardEvent) => void` | — | Replaces the default close behavior. |
+| `ignoreEscapeKey` | `(event: KeyboardEvent) => boolean` | — | Runs before close; lets children handle Escape first. |
+
+## Returns
+
+Returns `void`. Listens on `document` and closes with the `escape-key` reason.
+
 ## Details
 
 `useEscapeKey` listens on `document` and ignores Escape while IME composition is active. By default it closes the node with the `escape-key` reason.
 
-- `enabled` (default `true`) is reactive and lets you turn the listener on and off. `tree` is reactive too; `capture` and `preventDefault` are plain booleans read once.
-- `capture` defaults to `false`.
-- `preventDefault` defaults to `false`.
 - `onEscape` replaces the default close behavior when you need custom handling. When provided, the node is not closed automatically.
-- `ignoreEscapeKey` is a predicate to determine if an escape key press should be ignored, allowing sub-components or child branches to handle the escape event first. It runs before `preventDefault`, `onEscape`, and the default close.
 - Presses already handled elsewhere (`defaultPrevented`), non-Escape keys, and presses while the node is closed are ignored.
 - When nested nodes share an explicit [`useFloatingTree`](/api/use-floating-tree) passed via `tree`, one Escape press closes only the deepest open node. Repeated presses walk the stack from the innermost surface outward. Without `tree`, only the current node closes.
 
 ## Example
+
+Close a click-opened surface with Escape:
 
 ```vue
 <script setup lang="ts">
@@ -60,7 +73,7 @@ useEscapeKey(node);
 
 ## See Also
 
-- [`useClick`](/api/use-click)
-- [`useFocus`](/api/use-focus)
-- [`useFocusManager`](/api/use-focus-manager)
-- [useFloatingTree](/api/use-floating-tree)
+- [`useClick`](/api/use-click) - Opens on click
+- [`useFocus`](/api/use-focus) - Opens on focus
+- [`useFocusManager`](/api/use-focus-manager) - Traps and restores focus
+- [`useFloatingTree`](/api/use-floating-tree) - Coordinates nested dismissal

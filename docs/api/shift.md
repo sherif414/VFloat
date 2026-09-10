@@ -4,35 +4,52 @@ description: Keeps the floating element within the available viewport space.
 
 # shift
 
-`shift` nudges the floating element back into view after placement has been chosen.
+`shift` nudges the floating element back into view after placement has been chosen. Use it when you want to preserve the chosen placement and only adjust coordinates enough to stay visible.
 
-- Type
+## Type
 
-  ```ts
-  function shift(options?: ShiftOptions): Middleware;
+The factory signature and its options shape:
 
-  interface ShiftOptions {
-    mainAxis?: boolean;
-    crossAxis?: boolean;
-    limiter?: {
-      fn: (state: MiddlewareState) => Coords;
-      options?: unknown;
-    };
-    padding?: Padding;
-    boundary?: Boundary;
-    rootBoundary?: RootBoundary;
-    elementContext?: ElementContext;
-    altBoundary?: boolean;
-  }
-  ```
+```ts
+function shift(options?: ShiftOptions): Middleware;
 
-- Details
+interface ShiftOptions {
+  mainAxis?: boolean;
+  crossAxis?: boolean;
+  limiter?: {
+    fn: (state: MiddlewareState) => Coords;
+    options?: unknown;
+  };
+  padding?: Padding;
+  boundary?: Boundary;
+  rootBoundary?: RootBoundary;
+  elementContext?: ElementContext;
+  altBoundary?: boolean;
+}
+```
 
-  `shift` is the right choice when you want to preserve the chosen placement and only adjust the coordinates enough to keep the floating element visible. It can shift on the main axis, the cross axis, or both.
+## Options
 
-  Use it together with `flip()` when you want a stable preferred placement plus a fallback if that placement cannot fit.
+| Name | Type | Notes |
+| --- | --- | --- |
+| `mainAxis` | `boolean` | Allows shifting on the main axis. |
+| `crossAxis` | `boolean` | Allows shifting on the cross axis. |
+| `limiter` | `{ fn, options? }` | Constrains shift movement. |
+| `padding` | `Padding` | Inset from the clipping edge. |
+| `boundary` | `Boundary` | Clipping boundary. |
+| `rootBoundary` | `RootBoundary` | Root clipping boundary. |
+| `elementContext` | `ElementContext` | Element the boundary applies to. |
+| `altBoundary` | `boolean` | Uses the alternate boundary. |
 
-- Example
+## Details
+
+`shift` is the right choice when you want to preserve the chosen placement and only adjust the coordinates enough to keep the floating element visible. It can shift on the main axis, the cross axis, or both.
+
+Use it together with `flip()` when you want a stable preferred placement plus a fallback if that placement cannot fit.
+
+## Example
+
+Pass `shift` through the declarative `middleware` option on `usePosition`:
 
 ```vue
 <script setup lang="ts">
@@ -58,7 +75,8 @@ const { styles } = usePosition(node, {
 </template>
 ```
 
-- See also
-  - [flip](/api/flip) - Chooses another placement when the preferred one overflows
-  - [offset](/api/offset) - Adds spacing before shifting
-  - [size](/api/size) - Adjusts the floating element to the available space
+## See Also
+
+- [`flip`](/api/flip) - Chooses another placement when the preferred one overflows
+- [`offset`](/api/offset) - Adds spacing before shifting
+- [`size`](/api/size) - Adjusts the floating element to the available space

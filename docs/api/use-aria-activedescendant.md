@@ -67,18 +67,41 @@ interface UseAriaActivedescendantReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `targetEl` / `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | — | Input holding focus and list bounding scroll/hover. |
+| `itemCount` / `elementsList` | count or element array | — | `elementsList` wins; use `itemCount` for virtualized lists. |
+| `activeIndex` / `defaultIndex` | `Ref<number>` / `number` | uncontrolled / `-1` | Pass a ref to control. |
+| `orientation` | `"vertical" \| "horizontal" \| "both"` | `"vertical"` | Arrow-key axes. |
+| `loop` | `MaybeRefOrGetter<boolean>` | `false` | Wraps at edges. |
+| `pageSize` | `MaybeRefOrGetter<number>` | `10` | PageUp/PageDown step. |
+| `enabled` / `scrollIntoView` / `preventPointerDown` | `MaybeRefOrGetter<boolean>` | `true` | Navigation, scrolling, and pointerdown prevention. |
+| `editable` | `boolean \| "auto"` | `"auto"` | Preserves editing keys inside inputs. |
+| `focusOnHover` / `clearOnPointerLeave` / `resetOnBlur` / `focusDisabledElements` | `MaybeRefOrGetter<boolean>` | `false` | Hover, leave, blur, and disabled highlighting. |
+| `isItemDisabled` | `(index) => boolean` | — | Wins over DOM disabled attributes. |
+| `idPrefix` / `getItemId` / `getItemKey` | strings and fns | SSR-safe prefix | Option id scheme `${prefix}-opt-${key ?? index}`. |
+| `virtualizer` / `onSelect` / `onActiveIndexChange` / `isKeyHandled` | adapters and callbacks | — | Virtual lists, selection, and key interception. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `activeIndex` / `activeId` | refs | Index and committed DOM id; id clears for unmounted rows. |
+| `setActiveIndex` / `clearActive` / `next` / `prev` / `first` / `last` / `pageUp` / `pageDown` | functions | Programmatic movement. |
+| `scrollToActive` | `() => void` | Scrolls the active option into view. |
+| `getTargetProps` / `getContainerProps` / `getItemProps` / `getOptionProps` / `getVirtualItemProps` | prop getters | Spread on input, listbox, and options. |
+
 ## Details
 
 Unlike [`useRovingFocus`](/api/use-roving-focus), this composable takes no floating node and never moves DOM focus. Wire it by spreading `getTargetProps()` on the input, an `id` from `getContainerProps()` on the listbox, and `getItemProps(index)` on each option.
 
 - `targetEl` holds physical focus and owns the keyboard listeners; `containerEl` bounds scrolling and hover handling. Either may be omitted for headless index use, but normally both are provided.
 - The item count resolves from `elementsList` first, then `itemCount`, then `virtualizer.count`. Use `itemCount` for virtualized lists where only a window of rows is mounted.
-- Options render as `${idPrefix}-opt-${key ?? index}` with an SSR-safe generated prefix unless `getItemId` overrides the scheme. The attribute commits only when the referenced element is actually mounted; off-screen rows clear it until they render.
-- `orientation` defaults to `"vertical"`; `loop` defaults to `false`. <kbd>PageUp</kbd>/<kbd>PageDown</kbd> move by `pageSize` (default `10`); <kbd>Home</kbd>/<kbd>End</kbd> jump to the edges.
+- The attribute commits only when the referenced element is actually mounted; off-screen rows clear it until they render.
 - Disabled options resolve from `isItemDisabled` first, then DOM `disabled`/`aria-disabled` attributes. `focusDisabledElements` allows highlighting them, but `onSelect` still never fires for disabled options. `tabindex` is never touched.
-- `editable` defaults to `"auto"`, which preserves Space, Home, and End for text editing inside inputs and skips handling during IME composition.
-- `scrollIntoView` defaults to `true`. For virtualized lists, pass a `virtualizer` adapter instead of scrolling the DOM: `createTanStackVirtualAdapter(virtualizer)` for TanStack Virtual, or `createCustomVirtualAdapter({ scrollToIndex, count, isIndexRendered })` for anything else. Unrendered indices keep the attribute cleared.
-- `focusOnHover` (default `false`) highlights the hovered option; `clearOnPointerLeave` (default `false`, only with `focusOnHover`) clears on leave; `resetOnBlur` (default `false`) resets to `defaultIndex` (default `-1`) when focus leaves the input and list.
+- For virtualized lists, pass a `virtualizer` adapter instead of scrolling the DOM. Unrendered indices keep the attribute cleared.
 - Typeahead search is not built in. Pair with [`useTypeahead`](/api/use-typeahead) and forward `onMatch: (index) => setActiveIndex(index)`.
 
 ## Example

@@ -28,18 +28,27 @@ interface UseArrowReturn {
 }
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `offset` | `string` | `"-4px"` | Gap between the arrow tip and the floating edge. |
+| `padding` | `Padding` | — | Keeps the arrow away from the floating edges. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `arrowX` / `arrowY` | `ComputedRef<number>` | Fall back to `0` before middleware data arrives. |
+| `arrowStyles` | `ComputedRef<Record<string, string>>` | Logical insets for LTR/RTL; `{}` until positioned. The arrow still needs its own absolute positioning. |
+
 ## Details
 
 `useArrow` connects an arrow element to the floating node and registers the arrow middleware on that node's middleware registry.
 
 - `node.refs.arrowEl` is the arrow element measured by the middleware. Registration is skipped while it is `null`.
-- `offset` defaults to `"-4px"`.
-- `padding` is passed to the arrow middleware to keep the arrow away from the floating element's edges.
 - `middlewareData` and `placement` are read from the node internals registered by `usePosition()`. `useArrow` works when called before `usePosition`: it resolves the internals lazily and retries on mount.
-- `arrowX` and `arrowY` fall back to `0` before middleware data arrives, and `arrowStyles` returns `{}` until then.
-- `arrowStyles` uses logical inset properties (`inset-inline-start`, `inset-block-start`, and so on) derived from the resolved placement, so the arrow tracks the side opposite the anchor in both LTR and RTL layouts.
 - Registration is removed when the calling effect scope disposes.
-- The arrow element still needs its own absolute positioning, since `arrowStyles` only supplies inset offsets.
 
 ## Example
 
@@ -81,6 +90,6 @@ const { arrowStyles } = useArrow(node, {
 
 ## See Also
 
-- [`arrow`](/api/arrow)
-- [useFloatingNode](/api/use-floating-node)
-- [Keep Content in View](/guide/keep-content-in-view)
+- [`arrow`](/api/arrow) - Raw middleware for manual arrow placement
+- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
+- [Keep Content in View](/guide/keep-content-in-view) - Positioning workflow
