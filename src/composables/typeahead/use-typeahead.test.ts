@@ -1,159 +1,140 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { effectScope, nextTick, ref } from "vue";
-import { useCollection, useFloatingNode, useTypeahead } from "@/composables";
+import { render } from "vitest-browser-vue";
+import {
+  defineComponent,
+  h,
+  nextTick,
+  onMounted,
+  ref,
+  useTemplateRef,
+  type MaybeRefOrGetter,
+} from "vue";
+import {
+  useCollection,
+  useFloatingNode,
+  useTypeahead,
+  type TypeaheadFindMatchFn,
+} from "@/composables";
+import { dispatchKey, getTestEl } from "@/test-utils";
 
-const trackedElements: HTMLElement[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
+interface FixtureConfig {
+  withTypeableInput?: boolean;
 }
 
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
+interface SetupOptions {
+  values?: string[];
+  list?: readonly (string | null)[];
+  isValueDisabled?: (value: string) => boolean;
+  activeIndex?: MaybeRefOrGetter<number | null>;
+  selectedIndex?: MaybeRefOrGetter<number | null>;
+  onMatch?: (index: number, value: string) => void;
+  onTypingChange?: (isTyping: boolean) => void;
+  enabled?: MaybeRefOrGetter<boolean>;
+  resetMs?: MaybeRefOrGetter<number>;
+  ignoreKeys?: MaybeRefOrGetter<readonly string[]>;
+  findMatch?: TypeaheadFindMatchFn | null;
+  open?: boolean;
+}
+
+const DEFAULT_VALUES = ["Apple", "Apricot", "Avocado", "Banana", "Blueberry", "Cherry"];
+
+function createTestComponent(options: SetupOptions = {}, config: FixtureConfig = {}) {
+  let collection: ReturnType<typeof useCollection> | undefined;
+  let typeahead!: ReturnType<typeof useTypeahead>;
+  let node!: ReturnType<typeof useFloatingNode>;
+
+  const openRef = ref(options.open ?? true);
+
+  const Component = defineComponent(() => {
+    const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
+    const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+
+    node = useFloatingNode({
+      anchorEl,
+      floatingEl,
+      open: openRef,
+    });
+
+    if (!options.list) {
+      collection = useCollection({
+        values: options.values ?? DEFAULT_VALUES,
+        isValueDisabled: options.isValueDisabled,
+      });
     }
-  }
-  trackedElements.length = 0;
+
+    typeahead = useTypeahead(node, {
+      collection,
+      list: options.list,
+      activeIndex: options.activeIndex,
+      selectedIndex: options.selectedIndex,
+      onMatch: options.onMatch,
+      onTypingChange: options.onTypingChange,
+      enabled: options.enabled,
+      resetMs: options.resetMs,
+      ignoreKeys: options.ignoreKeys,
+      findMatch: options.findMatch,
+      isValueDisabled: options.isValueDisabled,
+    });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "anchor", "data-testid": "anchor" }, "Anchor"),
+        h(
+          "div",
+          { ref: "floating", "data-testid": "floating", tabindex: -1 },
+          config.withTypeableInput
+            ? ["Floating content", h("input", { "data-testid": "typeable", type: "text" })]
+            : "Floating content",
+        ),
+      ]);
+  });
+
+  return {
+    Component,
+    getCollection: () => collection,
+    getTypeahead: () => typeahead,
+    getNode: () => node,
+    openRef,
+  };
 }
 
-function dispatchKey(
-  target: EventTarget,
-  key: string,
-  options: {
-    ctrlKey?: boolean;
-    metaKey?: boolean;
-    altKey?: boolean;
-    cancelable?: boolean;
-  } = {},
-) {
-  const event = new KeyboardEvent("keydown", {
-    key,
-    bubbles: true,
-    cancelable: options.cancelable ?? true,
-    ctrlKey: options.ctrlKey ?? false,
-    metaKey: options.metaKey ?? false,
-    altKey: options.altKey ?? false,
-  });
-  target.dispatchEvent(event);
-  return event;
+async function renderTypeahead(options: SetupOptions = {}, config: FixtureConfig = {}) {
+  const fixture = createTestComponent(options, config);
+  await render(fixture.Component);
+  return {
+    anchorEl: getTestEl("anchor"),
+    floatingEl: getTestEl("floating"),
+    collection: fixture.getCollection(),
+    typeahead: fixture.getTypeahead(),
+    node: fixture.getNode(),
+    openRef: fixture.openRef,
+  };
 }
 
 describe("useTypeahead", () => {
-  let scope: ReturnType<typeof effectScope> | undefined;
-
   afterEach(() => {
-    scope?.stop();
-    scope = undefined;
-    clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  function setup(
-    options: {
-      values?: string[];
-      list?: any;
-      isValueDisabled?: (val: string) => boolean;
-      activeIndex?: any;
-      selectedIndex?: any;
-      onMatch?: (idx: number, val: string) => void;
-      onTypingChange?: (isTyping: boolean) => void;
-      enabled?: any;
-      resetMs?: any;
-      ignoreKeys?: any;
-      findMatch?: any;
-      open?: boolean;
-    } = {},
-  ) {
-    scope = effectScope();
-
-    const anchorEl = trackElement(document.createElement("button"));
-    const floatingEl = trackElement(document.createElement("div"));
-    document.body.appendChild(anchorEl);
-    document.body.appendChild(floatingEl);
-
-    const openRef = ref(options.open ?? true);
-    const anchorRef = ref(anchorEl);
-    const floatingRef = ref(floatingEl);
-
-    let resultContext: any;
-    let collection: ReturnType<typeof useCollection> | undefined;
-
-    scope.run(() => {
-      const node = useFloatingNode({
-        anchorEl: anchorRef,
-        floatingEl: floatingRef,
-        open: openRef,
-      });
-
-      if (!options.list) {
-        collection = useCollection({
-          values: options.values ?? [
-            "Apple",
-            "Apricot",
-            "Avocado",
-            "Banana",
-            "Blueberry",
-            "Cherry",
-          ],
-          isValueDisabled: options.isValueDisabled,
-        });
-      }
-
-      const typeahead = useTypeahead(node, {
-        collection,
-        list: options.list,
-        activeIndex: options.activeIndex,
-        selectedIndex: options.selectedIndex,
-        onMatch: options.onMatch,
-        onTypingChange: options.onTypingChange,
-        enabled: options.enabled,
-        resetMs: options.resetMs,
-        ignoreKeys: options.ignoreKeys,
-        findMatch: options.findMatch,
-        isValueDisabled: options.isValueDisabled,
-      });
-
-      resultContext = {
-        node,
-        typeahead,
-        collection,
-        anchorEl,
-        floatingEl,
-        openRef,
-      };
-    });
-
-    return resultContext as {
-      node: ReturnType<typeof useFloatingNode>;
-      typeahead: ReturnType<typeof useTypeahead>;
-      collection?: ReturnType<typeof useCollection>;
-      anchorEl: HTMLButtonElement;
-      floatingEl: HTMLDivElement;
-      openRef: ReturnType<typeof ref<boolean>>;
-    };
-  }
-
   describe("Basic Single-Character and Prefix Matching", () => {
-    it("matches single character and updates collection activeValue", () => {
-      const { floatingEl, collection } = setup();
+    it("matches single character and updates collection activeValue", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
 
       dispatchKey(floatingEl, "b");
       expect(collection?.activeValue.value).toBe("Banana");
     });
 
-    it("matches case-insensitively", () => {
-      const { floatingEl, collection } = setup();
+    it("matches case-insensitively", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
 
       dispatchKey(floatingEl, "C");
       expect(collection?.activeValue.value).toBe("Cherry");
     });
 
-    it("matches multi-character query in rapid succession", () => {
+    it("matches multi-character query in rapid succession", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
       vi.useFakeTimers();
-      const { floatingEl, collection } = setup();
 
       dispatchKey(floatingEl, "b");
       expect(collection?.activeValue.value).toBe("Banana");
@@ -163,11 +144,11 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBe("Blueberry");
     });
 
-    it("does not alternate between overlapping prefix items when typing a multi-character query", () => {
-      vi.useFakeTimers();
-      const { floatingEl, collection } = setup({
+    it("does not alternate between overlapping prefix items when typing a multi-character query", async () => {
+      const { floatingEl, collection } = await renderTypeahead({
         values: ["Grape", "Grapefruit", "Guava"],
       });
+      vi.useFakeTimers();
 
       // Type 'g'
       dispatchKey(floatingEl, "g");
@@ -194,9 +175,9 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBe("Grapefruit");
     });
 
-    it("resets buffer after resetMs timeout", () => {
+    it("resets buffer after resetMs timeout", async () => {
+      const { floatingEl, collection } = await renderTypeahead({ resetMs: 500 });
       vi.useFakeTimers();
-      const { floatingEl, collection } = setup({ resetMs: 500 });
 
       dispatchKey(floatingEl, "b");
       expect(collection?.activeValue.value).toBe("Banana");
@@ -211,9 +192,9 @@ describe("useTypeahead", () => {
   });
 
   describe("Repeated Character Cycling", () => {
-    it("cycles through all items starting with the same character", () => {
+    it("cycles through all items starting with the same character", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
       vi.useFakeTimers();
-      const { floatingEl, collection } = setup();
 
       // First 'a' -> Apple
       dispatchKey(floatingEl, "a");
@@ -234,12 +215,12 @@ describe("useTypeahead", () => {
   });
 
   describe("Collection Integration & Disabled Items (Issue #30)", () => {
-    it("skips disabled items during single-character search and cycling", () => {
-      vi.useFakeTimers();
-      const { floatingEl, collection } = setup({
+    it("skips disabled items during single-character search and cycling", async () => {
+      const { floatingEl, collection } = await renderTypeahead({
         values: ["Apple", "Apricot", "Avocado"],
         isValueDisabled: (val) => val === "Apricot",
       });
+      vi.useFakeTimers();
 
       // First 'a' -> Apple
       dispatchKey(floatingEl, "a");
@@ -254,12 +235,12 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBe("Apple");
     });
 
-    it("does not match a multi-character query if the item is disabled", () => {
-      vi.useFakeTimers();
-      const { floatingEl, collection } = setup({
+    it("does not match a multi-character query if the item is disabled", async () => {
+      const { floatingEl, collection } = await renderTypeahead({
         values: ["Apple", "Apricot", "Banana"],
         isValueDisabled: (val) => val === "Apricot",
       });
+      vi.useFakeTimers();
 
       dispatchKey(floatingEl, "a");
       expect(collection?.activeValue.value).toBe("Apple");
@@ -280,8 +261,8 @@ describe("useTypeahead", () => {
   });
 
   describe("Arrow Key Navigation Synchronization", () => {
-    it("starts typeahead search after current active item position", () => {
-      const { floatingEl, collection } = setup({
+    it("starts typeahead search after current active item position", async () => {
+      const { floatingEl, collection } = await renderTypeahead({
         values: ["Macadamia", "Mango", "Melon", "Mulberry"],
       });
 
@@ -295,11 +276,11 @@ describe("useTypeahead", () => {
   });
 
   describe("Custom List, onMatch, and Options", () => {
-    it("works with direct list and onMatch callback", () => {
+    it("works with direct list and onMatch callback", async () => {
       let matchedIndex = -1;
       let matchedValue = "";
 
-      const { floatingEl } = setup({
+      const { floatingEl } = await renderTypeahead({
         list: ["Dog", "Cat", "Duck", "Deer"],
         onMatch: (idx, val) => {
           matchedIndex = idx;
@@ -316,16 +297,12 @@ describe("useTypeahead", () => {
       expect(matchedValue).toBe("Duck");
     });
 
-    it("supports custom findMatch function", () => {
-      const customFindMatch = vi.fn(
-        (orderedList: readonly (string | null)[], typedString: string) => {
-          return orderedList.find((item) =>
-            item?.toLowerCase().includes(typedString.toLowerCase()),
-          );
-        },
+    it("supports custom findMatch function", async () => {
+      const customFindMatch = vi.fn<TypeaheadFindMatchFn>((orderedList, typedString) =>
+        orderedList.find((item) => item?.toLowerCase().includes(typedString.toLowerCase())),
       );
 
-      const { floatingEl, collection } = setup({
+      const { floatingEl, collection } = await renderTypeahead({
         findMatch: customFindMatch,
       });
 
@@ -340,19 +317,19 @@ describe("useTypeahead", () => {
   });
 
   describe("Space Key and Target Heuristics (Issue #29)", () => {
-    it("ignores Space when buffer is empty to preserve normal activate/click", () => {
-      const { floatingEl, collection } = setup();
+    it("ignores Space when buffer is empty to preserve normal activate/click", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
 
       const event = dispatchKey(floatingEl, " ");
       expect(event.defaultPrevented).toBe(false);
       expect(collection?.activeValue.value).toBeNull();
     });
 
-    it("captures Space when buffer is non-empty for multi-word queries", () => {
-      vi.useFakeTimers();
-      const { floatingEl, collection } = setup({
+    it("captures Space when buffer is non-empty for multi-word queries", async () => {
+      const { floatingEl, collection } = await renderTypeahead({
         values: ["New York", "New Jersey", "London"],
       });
+      vi.useFakeTimers();
 
       dispatchKey(floatingEl, "n");
       dispatchKey(floatingEl, "e");
@@ -366,22 +343,19 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBe("New Jersey");
     });
 
-    it("does not intercept typing when focused on a native typeable element", () => {
-      const { floatingEl, collection } = setup();
+    it("does not intercept typing when focused on a native typeable element", async () => {
+      const { collection } = await renderTypeahead({}, { withTypeableInput: true });
+      const inputEl = getTestEl("typeable");
 
-      const input = trackElement(document.createElement("input"));
-      input.type = "text";
-      floatingEl.appendChild(input);
-
-      const event = dispatchKey(input, "b");
+      const event = dispatchKey(inputEl, "b");
       expect(event.defaultPrevented).toBe(false);
       expect(collection?.activeValue.value).toBeNull();
     });
   });
 
   describe("Key Filtering and Modifiers", () => {
-    it("ignores modifier keys (ctrl, alt, meta)", () => {
-      const { floatingEl, collection } = setup();
+    it("ignores modifier keys (ctrl, alt, meta)", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
 
       dispatchKey(floatingEl, "b", { ctrlKey: true });
       dispatchKey(floatingEl, "b", { altKey: true });
@@ -390,8 +364,8 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBeNull();
     });
 
-    it("ignores keys specified in ignoreKeys", () => {
-      const { floatingEl, collection } = setup({
+    it("ignores keys specified in ignoreKeys", async () => {
+      const { floatingEl, collection } = await renderTypeahead({
         ignoreKeys: ["a", "b"],
       });
 
@@ -403,8 +377,8 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBe("Cherry");
     });
 
-    it("ignores non-character keys (e.g. Escape, Enter, ArrowDown)", () => {
-      const { floatingEl, collection } = setup();
+    it("ignores non-character keys (e.g. Escape, Enter, ArrowDown)", async () => {
+      const { floatingEl, collection } = await renderTypeahead();
 
       dispatchKey(floatingEl, "ArrowDown");
       dispatchKey(floatingEl, "Enter");
@@ -415,15 +389,15 @@ describe("useTypeahead", () => {
   });
 
   describe("isTyping Reactive State and onTypingChange", () => {
-    it("updates isTyping and triggers onTypingChange during typing session", () => {
-      vi.useFakeTimers();
+    it("updates isTyping and triggers onTypingChange during typing session", async () => {
       const typingStates: boolean[] = [];
 
-      const { floatingEl, typeahead } = setup({
+      const { floatingEl, typeahead } = await renderTypeahead({
         onTypingChange: (isTyping) => {
           typingStates.push(isTyping);
         },
       });
+      vi.useFakeTimers();
 
       expect(typeahead.isTyping.value).toBe(false);
 
@@ -440,7 +414,7 @@ describe("useTypeahead", () => {
   describe("Lifecycle & Dynamic Option Updates", () => {
     it("stops handling keys when enabled option changes to false", async () => {
       const enabledRef = ref(true);
-      const { floatingEl, collection } = setup({ enabled: enabledRef });
+      const { floatingEl, collection } = await renderTypeahead({ enabled: enabledRef });
 
       dispatchKey(floatingEl, "b");
       expect(collection?.activeValue.value).toBe("Banana");
@@ -452,9 +426,9 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBe("Banana");
     });
 
-    it("resets buffer and cleans up when cleanup() is called", () => {
+    it("resets buffer and cleans up when cleanup() is called", async () => {
+      const { floatingEl, collection, typeahead } = await renderTypeahead();
       vi.useFakeTimers();
-      const { floatingEl, collection, typeahead } = setup();
 
       typeahead.cleanup();
 
@@ -462,44 +436,56 @@ describe("useTypeahead", () => {
       expect(collection?.activeValue.value).toBeNull();
     });
 
-    it("handles key typing on the anchor element", () => {
-      const { anchorEl, collection } = setup({ open: true });
+    it("handles key typing on the anchor element", async () => {
+      const { anchorEl, collection } = await renderTypeahead({ open: true });
 
       dispatchKey(anchorEl, "b");
       expect(collection?.activeValue.value).toBe("Banana");
     });
 
-    it("handles virtual element anchors gracefully", () => {
-      scope = effectScope();
-      const nodeEl = trackElement(document.createElement("button"));
-      document.body.appendChild(nodeEl);
+    it("handles virtual element anchors gracefully", async () => {
+      let collection!: ReturnType<typeof useCollection>;
+      const Component = defineComponent(() => {
+        const contextEl = useTemplateRef<HTMLButtonElement>("context");
+        const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+        const anchorRef = ref({
+          contextElement: null as unknown as Element,
+          getBoundingClientRect: () => contextEl.value?.getBoundingClientRect() ?? new DOMRect(),
+        });
 
-      const floatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(floatingEl);
-
-      let collection: any;
-      scope.run(() => {
-        const virtualAnchor = {
-          contextElement: nodeEl,
-          getBoundingClientRect: () => nodeEl.getBoundingClientRect(),
-        };
         const node = useFloatingNode({
-          anchorEl: ref(virtualAnchor),
-          floatingEl: ref(floatingEl),
+          anchorEl: anchorRef,
+          floatingEl,
           open: ref(true),
         });
 
         collection = useCollection({ values: ["Apple", "Banana"] });
         useTypeahead(node, { collection });
+
+        // Publish the rendered button as the virtual anchor's context element.
+        // Assigned through the ref so the anchor computed re-resolves and the
+        // keydown listener re-binds to the button.
+        onMounted(() => {
+          anchorRef.value = { ...anchorRef.value, contextElement: contextEl.value! };
+        });
+
+        return () =>
+          h("div", { class: "test-wrapper" }, [
+            h("button", { ref: "context", "data-testid": "context" }, "Context"),
+            h("div", { ref: "floating", "data-testid": "floating", tabindex: -1 }, "Floating"),
+          ]);
       });
 
-      dispatchKey(nodeEl, "b");
+      await render(Component);
+      await nextTick();
+
+      dispatchKey(getTestEl("context"), "b");
       expect(collection.activeValue.value).toBe("Banana");
     });
 
-    it("skips null and empty strings in list gracefully", () => {
+    it("skips null and empty strings in list gracefully", async () => {
       let matched = -1;
-      const { floatingEl } = setup({
+      const { floatingEl } = await renderTypeahead({
         list: [null, "", "Banana", null, "Blueberry"],
         onMatch: (idx) => {
           matched = idx;
@@ -510,9 +496,9 @@ describe("useTypeahead", () => {
       expect(matched).toBe(2);
     });
 
-    it("allows manual reset via reset() method", () => {
+    it("allows manual reset via reset() method", async () => {
+      const { floatingEl, typeahead, collection } = await renderTypeahead();
       vi.useFakeTimers();
-      const { floatingEl, typeahead, collection } = setup();
 
       dispatchKey(floatingEl, "a");
       expect(typeahead.isTyping.value).toBe(true);
