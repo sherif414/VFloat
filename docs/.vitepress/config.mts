@@ -1,14 +1,8 @@
 import { fileURLToPath, URL } from "node:url";
-import type { Config as VueThemeConfig } from "@vue/theme";
-import vueThemeConfig from "@vue/theme/config";
-import { defineConfigWithTheme, type HeadConfig, type MarkdownOptions } from "vitepress";
+import { defineConfig, type HeadConfig, type MarkdownOptions } from "vitepress";
 import { demoMdPlugin } from "vitepress-plugin-demo";
 
-const vueThemeDeps = ["@vue/theme", "@vueuse/core", "body-scroll-lock", "v-float"];
-
-export default defineConfigWithTheme({
-  ...vueThemeConfig,
-
+export default defineConfig({
   // ============================================================================
   // SITE METADATA
   // ============================================================================
@@ -37,7 +31,6 @@ export default defineConfigWithTheme({
   // VITE BEHAVIOR
   // ============================================================================
   vite: {
-    ...vueThemeConfig.vite,
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("../../src", import.meta.url)),
@@ -46,12 +39,10 @@ export default defineConfigWithTheme({
     },
 
     ssr: {
-      ...vueThemeConfig.vite?.ssr,
-      noExternal: vueThemeDeps,
+      noExternal: ["v-float"],
     },
     optimizeDeps: {
-      ...vueThemeConfig.vite?.optimizeDeps,
-      exclude: vueThemeDeps,
+      exclude: ["v-float"],
     },
   },
 
@@ -59,7 +50,9 @@ export default defineConfigWithTheme({
   // MARKDOWN PIPELINE
   // ============================================================================
   markdown: {
-    ...vueThemeConfig.markdown,
+    headers: {
+      level: [2, 3],
+    },
     theme: "material-theme-palenight",
     config(md) {
       md.use(demoMdPlugin);
@@ -70,6 +63,13 @@ export default defineConfigWithTheme({
   // THEME UI
   // ============================================================================
   themeConfig: {
+    // ------------------------------------------------------------------------
+    // SEARCH
+    // ------------------------------------------------------------------------
+    search: {
+      provider: "local",
+    },
+
     // ------------------------------------------------------------------------
     // MAIN NAVIGATION
     // ------------------------------------------------------------------------
@@ -228,5 +228,5 @@ export default defineConfigWithTheme({
     // SOCIAL AND FOOTER LINKS
     // ------------------------------------------------------------------------
     socialLinks: [{ icon: "github", link: "https://github.com/sherif414/VFloat" }],
-  } satisfies VueThemeConfig,
+  },
 });

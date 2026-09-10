@@ -1,10 +1,10 @@
 import "../../../env.d.ts";
 
+import "./styles/vars.css";
 import "./styles/home.css";
-import { VPTheme } from "@vue/theme";
 import type { Theme } from "vitepress";
-import { useData } from "vitepress";
 import DefaultTheme from "vitepress/theme";
+import { useData } from "vitepress";
 import { defineComponent, h } from "vue";
 import DemoContainer from "./components/demo-container.vue";
 import HomeShowcase from "./components/home-showcase.vue";
@@ -13,16 +13,24 @@ import PackageSizeTable from "./components/package-size-table.vue";
 const renderLayout = h as any;
 
 const Layout = defineComponent({
-  name: "VFloatVueDocsLayout",
+  name: "VFloatDocsLayout",
   setup(_, { slots }) {
     const { frontmatter } = useData();
 
     return () =>
       renderLayout(
-        frontmatter.value.layout === "home" ? DefaultTheme.Layout : VPTheme.Layout,
+        DefaultTheme.Layout,
         null,
         {
           ...slots,
+          "nav-bar-title-before": () =>
+            h("img", {
+              class: "vf-mark",
+              src: "/vfloat-mark.svg",
+              alt: "",
+              width: 24,
+              height: 24,
+            }),
           "navbar-title": () => h("span", { class: "text" }, "VFloat"),
           ...(frontmatter.value.layout === "home"
             ? {
@@ -35,9 +43,9 @@ const Layout = defineComponent({
   },
 });
 
-/** VitePress theme entry for the VFloat docs site. */
+/** VitePress theme entry for the VFloat docs site. Extends the stock default theme with the VFloat skin. */
 export default {
-  ...VPTheme,
+  extends: DefaultTheme,
   Layout,
   enhanceApp({ app }) {
     app.component("demo-container", DemoContainer);

@@ -1,0 +1,30 @@
+/**
+ * VFloat docs skin. Extends the stock VitePress default theme with the
+ * Reading Room world: Vue-green accents, flat paper surfaces, restrained
+ * controls. The mark's cyan lives only inside its asset, never in the UI.
+ */
+
+/* Specificity note: the selectors below intentionally outrank the stock
+   theme (`html:root` beats `:root`, `html.dark` beats `.dark`) because the
+   inherited default styles load after this skin. */
+
+html:root {
+  --vp-c-brand-1: #18794e;
+  --vp-c-brand-2: #299764;
+  --vp-c-brand-3: #30a46c;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.14);
+}
+
+html.dark {
+  --vp-c-brand-1: #3dd68c;
+  --vp-c-brand-2: #30a46c;
+  --vp-c-brand-3: #298459;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.16);
+}
+
+/* Brand mark in the nav bar. */
+.vf-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
