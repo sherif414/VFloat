@@ -27,11 +27,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const storedReason = ref<OpenChangeReason | null>(null);
   const storedEvent = ref<Event | null>(null);
 
-  const lastOpenReason = computed<OpenChangeReason | null>(() =>
-    open.value ? storedReason.value : null,
-  );
-  const lastOpenEvent = computed<Event | null>(() => (open.value ? storedEvent.value : null));
-
   const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
     if (!value) {
       storedReason.value = null;
@@ -45,7 +40,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     options.onOpenChange?.(value, reason, event);
   };
 
-  const node: FloatingNode = {
+  return {
     id,
     refs: {
       anchorEl: options.anchorEl,
@@ -54,13 +49,13 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     },
     open,
     setOpen,
-    lastOpenReason,
-    lastOpenEvent,
+    lastOpenReason: computed<OpenChangeReason | null>(() =>
+      open.value ? storedReason.value : null,
+    ),
+    lastOpenEvent: computed<Event | null>(() => (open.value ? storedEvent.value : null)),
     isRoot: true,
     tree: null,
   };
-
-  return node;
 }
 
 //=======================================================================================
