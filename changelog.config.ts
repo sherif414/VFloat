@@ -23,8 +23,22 @@ export default <Partial<ChangelogConfig>>{
   // Avoid leaking author emails if GitHub username resolution fails
   hideAuthorEmail: true,
 
-  // Leave default type sections; can be customized later if needed
-  // types: { ... }
+  // Only render user-facing types. All other types are explicitly disabled
+  // because c12 deep-merges config and would otherwise keep defaults.
+  types: {
+    feat: { title: "🚀 Enhancements", semver: "minor" },
+    fix: { title: "🩹 Fixes", semver: "patch" },
+    perf: { title: "🔥 Performance", semver: "patch" },
+    refactor: false,
+    docs: false,
+    build: false,
+    types: false,
+    chore: false,
+    examples: false,
+    test: false,
+    style: false,
+    ci: false,
+  },
 
   // Optional publish defaults (only used when running with --publish)
   publish: {
