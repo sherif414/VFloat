@@ -10,13 +10,7 @@
     "vitest/no-conditional-expect": "warn",
     "vitest/expect-expect": "warn"
   },
-  "ignorePatterns": [
-    "dist/**",
-    "coverage/**",
-    "playground/**",
-    "docs/.vitepress/dist/**",
-    "docs/.vitepress/cache/**"
-  ],
+  "ignorePatterns": ["dist/**", "coverage/**", "playground/**", "docs/**"],
   "env": {
     "builtin": true,
     "browser": true,

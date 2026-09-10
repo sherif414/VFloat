@@ -27,7 +27,7 @@ import {
  * ```
  */
 export function useCollection(options: UseCollectionOptions = { values: [] }): UseCollectionReturn {
-  const { values: valuesOption = [], isValueDisabled: isValueDisabledOption } = options;
+  const { values: valuesOption, isValueDisabled: isValueDisabledOption } = options;
 
   const activeValue = ref<string | null>(null);
   const values = computed(() => toValue(valuesOption));

@@ -491,7 +491,7 @@ export function useFocusManager(
 
       if (isEnabled.value && open.value) {
         if (floatingElOption.value) {
-          nextTick(() => {
+          void nextTick(() => {
             activate();
           });
         }

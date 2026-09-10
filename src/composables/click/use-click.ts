@@ -232,8 +232,10 @@ export function useClick(node: UseClickContext, options: UseClickOptions = {}): 
 /**
  * Context required by `useClick`.
  */
-export interface UseClickContext
-  extends Pick<FloatingNode, "refs" | "open" | "setOpen" | "lastOpenReason"> {}
+export interface UseClickContext extends Pick<
+  FloatingNode,
+  "refs" | "open" | "setOpen" | "lastOpenReason"
+> {}
 
 /**
  * Options for configuring the useClick behavior.

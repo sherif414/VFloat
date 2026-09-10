@@ -53,7 +53,7 @@ Use a fixed set of verbs with non-overlapping meanings. Do not invent synonyms.
 | --------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `create`  | Factory that allocates a new object or closure. Always returns something new.                      | `createCleanupRegistry()`, `createBranch()`                                |
 | `get`     | Pure accessor that retrieves an existing value, reference, or internal state.                      | `getFloatingInternals()`, `getElement(idx)`, `getAnchorElement()`          |
-| `find`    | Searches a collection. May return `null`.                                                          | `findDeepestOpenFloatingNode()`, `findNextNavigableIndex()`             |
+| `find`    | Searches a collection. May return `null`.                                                          | `findDeepestOpenFloatingNode()`, `findNextNavigableIndex()`                |
 | `resolve` | Stateless calculation, transformation, or mapping derived purely from inputs without hidden state. | `resolveCollectionSize()`, `resolveKeyIntent()`, `resolveNavigableIndex()` |
 
 Do not use `build` or `make`.
