@@ -1,119 +1,133 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { effectScope, nextTick, ref } from "vue";
-import type { AnchorElement, FloatingElement } from "@/composables";
+import { render } from "vitest-browser-vue";
+import { defineComponent, h, nextTick, onMounted, ref, useTemplateRef } from "vue";
 import { useFloatingNode } from "@/composables";
 import { type UseRoleOptions, type UseRoleReturn, useRole } from "@/composables/role/use-role";
+import { getTestEl } from "@/test-utils";
 
-type RoleTestContext = {
-  anchorEl: HTMLButtonElement;
-  node: ReturnType<typeof useFloatingNode>;
-  floatingEl: HTMLDivElement;
-  items: HTMLButtonElement[];
-  listRef: ReturnType<typeof ref<Array<HTMLElement | null>>>;
-  openRef: ReturnType<typeof ref<boolean>>;
-  result: UseRoleReturn;
-  scope: ReturnType<typeof effectScope>;
-};
-
-const trackedElements: HTMLElement[] = [];
-const activeScopes: ReturnType<typeof effectScope>[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
+interface FixtureConfig {
+  itemCount?: number;
+  withChildMenu?: boolean;
+  anchorAttrs?: Record<string, string>;
 }
 
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-
-  trackedElements.length = 0;
-}
-
-function createButton(id: string) {
-  const button = trackElement(document.createElement("button"));
-  button.id = id;
-  button.type = "button";
-  button.textContent = id;
-  return button;
-}
-
-function createFloatingElement(id: string) {
-  const floatingEl = trackElement(document.createElement("div"));
-  floatingEl.id = id;
-  return floatingEl;
-}
-
-function createItems(container: HTMLElement, count = 3) {
-  return Array.from({ length: count }, (_, index) => {
-    const item = createButton(`item-${index}`);
-    container.appendChild(item);
-    return item;
-  });
-}
-
-async function flushRole() {
-  await nextTick();
-  await nextTick();
-}
-
-function setupRole(options: UseRoleOptions, initialOpen = false): RoleTestContext {
-  const anchorEl = createButton("anchor");
-  document.body.appendChild(anchorEl);
-
-  const floatingEl = createFloatingElement("floating");
-  document.body.appendChild(floatingEl);
-
-  const items = createItems(floatingEl);
-  const listRef = ref<Array<HTMLElement | null>>(items);
+function createTestComponent(
+  options: UseRoleOptions,
+  initialOpen = false,
+  config: FixtureConfig = {},
+) {
   const openRef = ref(initialOpen);
-  const anchorRef = ref<AnchorElement>(anchorEl);
-  const floatingRef = ref<FloatingElement>(floatingEl);
-  const node = useFloatingNode({
-    anchorEl: anchorRef,
-    floatingEl: floatingRef,
-    open: openRef,
-  });
-  const scope = effectScope();
-  activeScopes.push(scope);
-
+  const elementsList = ref<Array<HTMLElement | null>>([]);
+  let node!: ReturnType<typeof useFloatingNode>;
   let result!: UseRoleReturn;
-  scope.run(() => {
+
+  const childOpenRef = ref(false);
+  let childNode!: ReturnType<typeof useFloatingNode>;
+
+  const Component = defineComponent(() => {
+    const anchorEl = useTemplateRef<HTMLElement>("anchor");
+    const floatingEl = useTemplateRef<HTMLElement>("floating");
+    const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
+
+    node = useFloatingNode({
+      anchorEl,
+      floatingEl,
+      open: openRef,
+    });
+
+    const register = (el: Element | null, idx: number) => {
+      elementsList.value[idx] = el as HTMLElement | null;
+    };
+
     result = useRole(node, {
-      listRef,
+      listRef: elementsList,
       ...options,
     });
+
+    if (config.withChildMenu) {
+      onMounted(() => {
+        childNode = useFloatingNode({
+          anchorEl: ref(elementsList.value[1] ?? null),
+          floatingEl: childFloatingEl,
+          open: childOpenRef,
+        });
+        useRole(childNode, { role: "menu", label: "Child menu" });
+      });
+    }
+
+    const count = config.itemCount ?? 3;
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "anchor", "data-testid": "anchor", ...config.anchorAttrs }, "Trigger"),
+        h(
+          "div",
+          { id: "floating", ref: "floating", "data-testid": "floating" },
+          Array.from({ length: count }).map((_, idx) =>
+            h(
+              "button",
+              {
+                "data-testid": `item-${idx}`,
+                ref: (el) => register(el as Element | null, idx),
+              },
+              `item-${idx}`,
+            ),
+          ),
+        ),
+        ...(config.withChildMenu
+          ? [
+              h(
+                "div",
+                {
+                  id: "child-menu",
+                  ref: "child-floating",
+                  "data-testid": "child-floating",
+                },
+                "Child menu",
+              ),
+            ]
+          : []),
+      ]);
   });
 
   return {
-    anchorEl,
-    node,
-    floatingEl,
-    items,
-    listRef,
+    Component,
+    getNode: () => node,
+    getResult: () => result,
+    getChildNode: () => childNode,
     openRef,
-    result,
-    scope,
+    childOpenRef,
+  };
+}
+
+async function renderRole(
+  options: UseRoleOptions,
+  initialOpen = false,
+  config: FixtureConfig = {},
+) {
+  const fixture = createTestComponent(options, initialOpen, config);
+  const view = await render(fixture.Component);
+  await nextTick();
+  await nextTick();
+  return {
+    anchorEl: getTestEl("anchor", view.container),
+    floatingEl: getTestEl("floating", view.container),
+    getItemEl: (idx: number) => getTestEl(`item-${idx}`, view.container),
+    openRef: fixture.openRef,
+    childOpenRef: fixture.childOpenRef,
+    result: fixture.getResult(),
+    node: fixture.getNode(),
   };
 }
 
 describe("useRole", () => {
   afterEach(() => {
-    for (const scope of [...activeScopes].reverse()) {
-      scope.stop();
-    }
-
-    activeScopes.length = 0;
-    clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
   it("syncs menu trigger, floating, and item roles", async () => {
-    const ctx = setupRole(
+    const { anchorEl, floatingEl, getItemEl, openRef } = await renderRole(
       {
         role: "menu",
         label: "Actions",
@@ -122,130 +136,110 @@ describe("useRole", () => {
       false,
     );
 
-    await flushRole();
+    expect(anchorEl.getAttribute("aria-haspopup")).toBe("menu");
+    expect(anchorEl.getAttribute("aria-expanded")).toBe("false");
+    expect(anchorEl.getAttribute("aria-controls")).toBe("floating");
+    expect(floatingEl.getAttribute("role")).toBe("menu");
+    expect(floatingEl.getAttribute("aria-label")).toBe("Actions");
+    expect(getItemEl(0).getAttribute("role")).toBe("menuitem");
+    expect(getItemEl(0).hasAttribute("tabindex")).toBe(false);
+    expect(getItemEl(1).getAttribute("aria-disabled")).toBe("true");
 
-    expect(ctx.anchorEl.getAttribute("aria-haspopup")).toBe("menu");
-    expect(ctx.anchorEl.getAttribute("aria-expanded")).toBe("false");
-    expect(ctx.anchorEl.getAttribute("aria-controls")).toBe("floating");
-    expect(ctx.floatingEl.getAttribute("role")).toBe("menu");
-    expect(ctx.floatingEl.getAttribute("aria-label")).toBe("Actions");
-    expect(ctx.items[0].getAttribute("role")).toBe("menuitem");
-    expect(ctx.items[0].hasAttribute("tabindex")).toBe(false);
-    expect(ctx.items[1].getAttribute("aria-disabled")).toBe("true");
+    openRef.value = true;
+    await nextTick();
+    await nextTick();
 
-    ctx.openRef.value = true;
-    await flushRole();
-
-    expect(ctx.anchorEl.getAttribute("aria-expanded")).toBe("true");
+    expect(anchorEl.getAttribute("aria-expanded")).toBe("true");
   });
 
   it("supports per-item checkbox roles and checked state", async () => {
-    const ctx = setupRole({
+    const { getItemEl } = await renderRole({
       role: "menu",
       itemRole: (index) => (index === 0 ? "menuitemcheckbox" : "menuitem"),
       checkedIndices: [0],
     });
 
-    await flushRole();
-
-    expect(ctx.items[0].getAttribute("role")).toBe("menuitemcheckbox");
-    expect(ctx.items[0].getAttribute("aria-checked")).toBe("true");
-    expect(ctx.items[1].hasAttribute("aria-checked")).toBe(false);
+    expect(getItemEl(0).getAttribute("role")).toBe("menuitemcheckbox");
+    expect(getItemEl(0).getAttribute("aria-checked")).toBe("true");
+    expect(getItemEl(1).hasAttribute("aria-checked")).toBe(false);
   });
 
   it("syncs listbox options and selected state", async () => {
-    const ctx = setupRole({
+    const { floatingEl, getItemEl } = await renderRole({
       role: "listbox",
       selectedIndices: (index) => index === 2,
     });
 
-    await flushRole();
-
-    expect(ctx.floatingEl.getAttribute("role")).toBe("listbox");
-    expect(ctx.items[0].getAttribute("role")).toBe("option");
-    expect(ctx.items[2].getAttribute("aria-selected")).toBe("true");
+    expect(floatingEl.getAttribute("role")).toBe("listbox");
+    expect(getItemEl(0).getAttribute("role")).toBe("option");
+    expect(getItemEl(2).getAttribute("aria-selected")).toBe("true");
   });
 
   it("syncs tree and grid roles with items", async () => {
-    const treeCtx = setupRole({
+    const tree = await renderRole({
       role: "tree",
       selectedIndices: [1],
     });
 
-    await flushRole();
+    expect(tree.floatingEl.getAttribute("role")).toBe("tree");
+    expect(tree.getItemEl(0).getAttribute("role")).toBe("treeitem");
+    expect(tree.getItemEl(1).getAttribute("aria-selected")).toBe("true");
 
-    expect(treeCtx.floatingEl.getAttribute("role")).toBe("tree");
-    expect(treeCtx.items[0].getAttribute("role")).toBe("treeitem");
-    expect(treeCtx.items[1].getAttribute("aria-selected")).toBe("true");
-
-    const gridCtx = setupRole({
+    const grid = await renderRole({
       role: "grid",
       selectedIndices: [0],
     });
 
-    await flushRole();
-
-    expect(gridCtx.floatingEl.getAttribute("role")).toBe("grid");
-    expect(gridCtx.items[0].getAttribute("role")).toBe("gridcell");
-    expect(gridCtx.items[0].getAttribute("aria-selected")).toBe("true");
+    expect(grid.floatingEl.getAttribute("role")).toBe("grid");
+    expect(grid.getItemEl(0).getAttribute("role")).toBe("gridcell");
+    expect(grid.getItemEl(0).getAttribute("aria-selected")).toBe("true");
   });
 
   it("lets child menu nodes manage submenu trigger relationships", async () => {
-    const parent = setupRole({ role: "menu" }, true);
-    const childFloatingEl = createFloatingElement("child-menu");
-    document.body.appendChild(childFloatingEl);
-
-    const childOpen = ref(false);
-    const childNode = useFloatingNode({
-      anchorEl: ref<AnchorElement>(parent.items[1]),
-      floatingEl: ref<FloatingElement>(childFloatingEl),
-      open: childOpen,
-    });
-    const scope = effectScope();
-    activeScopes.push(scope);
-    scope.run(() => {
-      useRole(childNode, { role: "menu", label: "Child menu" });
+    const { getItemEl, childOpenRef } = await renderRole({ role: "menu" }, true, {
+      withChildMenu: true,
     });
 
-    await flushRole();
+    expect(getItemEl(1).getAttribute("role")).toBe("menuitem");
+    expect(getItemEl(1).getAttribute("aria-haspopup")).toBe("menu");
+    expect(getItemEl(1).getAttribute("aria-expanded")).toBe("false");
+    expect(getItemEl(1).getAttribute("aria-controls")).toBe("child-menu");
 
-    expect(parent.items[1].getAttribute("role")).toBe("menuitem");
-    expect(parent.items[1].getAttribute("aria-haspopup")).toBe("menu");
-    expect(parent.items[1].getAttribute("aria-expanded")).toBe("false");
-    expect(parent.items[1].getAttribute("aria-controls")).toBe("child-menu");
+    childOpenRef.value = true;
+    await nextTick();
+    await nextTick();
 
-    childOpen.value = true;
-    await flushRole();
-
-    expect(parent.items[1].getAttribute("aria-expanded")).toBe("true");
+    expect(getItemEl(1).getAttribute("aria-expanded")).toBe("true");
   });
 
   it("links tooltips to the anchor only while open", async () => {
-    const ctx = setupRole({ role: "tooltip" }, false);
+    const { anchorEl, floatingEl, openRef } = await renderRole({ role: "tooltip" }, false);
 
-    await flushRole();
+    expect(floatingEl.getAttribute("role")).toBe("tooltip");
+    expect(anchorEl.hasAttribute("aria-describedby")).toBe(false);
 
-    expect(ctx.floatingEl.getAttribute("role")).toBe("tooltip");
-    expect(ctx.anchorEl.hasAttribute("aria-describedby")).toBe(false);
+    openRef.value = true;
+    await nextTick();
+    await nextTick();
 
-    ctx.openRef.value = true;
-    await flushRole();
-
-    expect(ctx.anchorEl.getAttribute("aria-describedby")).toBe("floating");
+    expect(anchorEl.getAttribute("aria-describedby")).toBe("floating");
   });
 
   it("restores attributes on cleanup", async () => {
-    const ctx = setupRole({ role: "dialog", modal: true }, true);
-    ctx.anchorEl.setAttribute("aria-expanded", "template-value");
+    // The template value must exist before the first sync run so the
+    // composable captures it as the restore value.
+    const { anchorEl, floatingEl, result } = await renderRole(
+      { role: "dialog", modal: true },
+      true,
+      { anchorAttrs: { "aria-expanded": "template-value" } },
+    );
 
-    await flushRole();
+    expect(anchorEl.getAttribute("aria-expanded")).toBe("true");
 
-    expect(ctx.anchorEl.getAttribute("aria-expanded")).toBe("true");
+    result.cleanup();
 
-    ctx.result.cleanup();
-
-    expect(ctx.anchorEl.getAttribute("aria-expanded")).toBe("template-value");
-    expect(ctx.floatingEl.hasAttribute("role")).toBe(false);
-    expect(ctx.floatingEl.hasAttribute("aria-modal")).toBe(false);
+    expect(anchorEl.getAttribute("aria-expanded")).toBe("template-value");
+    expect(floatingEl.hasAttribute("role")).toBe(false);
+    expect(floatingEl.hasAttribute("aria-modal")).toBe(false);
   });
 });

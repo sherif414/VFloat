@@ -45,11 +45,33 @@ export function clearTrackedElements(): void {
 }
 
 /**
+ * Stubs getBoundingClientRect on a rendered element for geometry tests
+ * without layout. Missing fields fall back to a zero rect.
+ */
+export function stubElementRect(el: HTMLElement, rect: Partial<DOMRect> = {}): void {
+  el.getBoundingClientRect = () =>
+    ({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      toJSON: () => ({}),
+      ...rect,
+    }) as DOMRect;
+}
+
+/**
  * Queries a rendered element by test id. Throws when the fixture is missing
  * so failures point at the broken fixture instead of a null dereference.
+ * Pass a render container to scope the lookup when a test mounts multiple
+ * fixtures.
  */
-export function getTestEl(testId: string): HTMLElement {
-  const el = document.body.querySelector(`[data-testid="${testId}"]`);
+export function getTestEl(testId: string, root: ParentNode = document.body): HTMLElement {
+  const el = root.querySelector(`[data-testid="${testId}"]`);
   if (!el) throw new Error(`Missing rendered element [data-testid="${testId}"]`);
   return el as HTMLElement;
 }
