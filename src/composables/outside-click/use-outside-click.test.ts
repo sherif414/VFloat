@@ -39,7 +39,6 @@ function createTestComponent(options: UseOutsideClickOptions = {}) {
       },
       open: openRef,
       setOpen: setOpenMock as () => void,
-      tree: null,
     };
     useOutsideClick(node, options);
 
@@ -87,7 +86,7 @@ function createTreeComponent(target: "parent" | "child") {
     tree.addNode(parentNode);
     tree.addNode(childNode, parentNode.id);
 
-    useOutsideClick(target === "parent" ? parentNode : childNode, { event: "click" });
+    useOutsideClick(target === "parent" ? parentNode : childNode, { event: "click", tree });
 
     return () =>
       h("div", { class: "test-wrapper" }, [

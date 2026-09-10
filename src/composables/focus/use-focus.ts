@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
 import { getAnchorElement, isTargetWithinElements } from "@/shared/elements";
@@ -41,6 +41,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
     enabled: enabledOption = true,
     requireFocusVisible: requireFocusVisibleOption = true,
     ignoreFocusOut: ignoreFocusOutOption,
+    tree: treeOption,
   } = options;
   const globalDocument = getDocument();
   const globalWindow = getWindow();
@@ -57,11 +58,11 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
   const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
   const isEnabled = computed(() => toValue(enabledOption));
 
-  // Family check scoped to the node's own tree; standalone nodes fall back
-  // to their own anchor and floating elements.
+  // Family check scoped to the explicitly passed tree; standalone nodes fall
+  // back to their own anchor and floating elements.
   function isWithinFamily(target: EventTarget | null): boolean {
     return (
-      node.tree?.isTargetWithin(node, target) ??
+      toValue(treeOption)?.isTargetWithin(node, target) ??
       isTargetWithinElements(anchorElOption.value, node.refs.floatingEl.value, target)
     );
   }
@@ -254,10 +255,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
 /**
  * Context required by `useFocus`.
  */
-export interface UseFocusContext extends Pick<
-  FloatingNode,
-  "id" | "refs" | "open" | "setOpen" | "tree"
-> {}
+export interface UseFocusContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
 
 /**
  * Cleanup handle returned by `useFocus`.
@@ -279,6 +277,12 @@ export interface UseFocusOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Explicit floating tree for family-aware focus checks across nested surfaces.
+   * When omitted, only the node's own anchor and floating elements count as inside.
+   */
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
 
   /**
    * Whether the open state only changes if the focus event is considered

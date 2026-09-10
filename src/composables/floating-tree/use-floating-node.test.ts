@@ -185,7 +185,7 @@ describe("useFloatingNode", () => {
     expect(node.id).not.toBe(otherNode.id);
   });
 
-  it("creates standalone nodes with a null tree and root status", () => {
+  it("creates standalone nodes without tree linkage", () => {
     let node!: ReturnType<typeof useFloatingNode>;
     scope?.run(() => {
       node = useFloatingNode({
@@ -194,8 +194,8 @@ describe("useFloatingNode", () => {
       });
     });
 
-    expect(node.tree).toBeNull();
-    expect(node.isRoot).toBe(true);
+    expect(node.id).toBeDefined();
+    expect(node.open.value).toBe(false);
   });
 
   it("closes without cascading when standalone without a tree", () => {
@@ -403,12 +403,13 @@ describe("useFloatingNode", () => {
     expect(lengths).toEqual([1, 2]);
   });
 
-  it("sets isRoot to true for standalone nodes and false once added under a parent id", () => {
+  it("leaves hierarchy in the tree via getParent, not on the node", () => {
     let root!: ReturnType<typeof useFloatingNode>;
     let child!: ReturnType<typeof useFloatingNode>;
+    let tree!: ReturnType<typeof useFloatingTree>;
 
     scope?.run(() => {
-      const tree = useFloatingTree();
+      tree = useFloatingTree();
       root = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
@@ -421,8 +422,8 @@ describe("useFloatingNode", () => {
       tree.addNode(child, root.id);
     });
 
-    expect(root.isRoot).toBe(true);
-    expect(child.isRoot).toBe(false);
+    expect(tree.getParent(root.id)).toBeUndefined();
+    expect(tree.getParent(child.id)).toBe(root);
   });
 });
 

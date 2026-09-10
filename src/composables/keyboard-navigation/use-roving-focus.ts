@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
 import {
   getAnchorElement as resolveAnchorElement,
   isTargetWithinElements,
@@ -74,6 +74,7 @@ export function useRovingFocus(
     onEnter,
     onExit,
     onActiveIndexChange,
+    tree: treeOption,
   } = options;
 
   // --- Shared Options & Root State --------------------------------------------
@@ -130,14 +131,14 @@ export function useRovingFocus(
 
   /**
    * Tests whether a node is within this widget's container or any of its teleported
-   * descendant surfaces registered in the node's floating tree.
+   * descendant surfaces registered in the explicitly passed floating tree.
    */
   function isWithin(target: Node | null): boolean {
     if (!target) return false;
     const container = containerEl.value;
     if (container?.contains(target)) return true;
     return (
-      node.tree?.isTargetWithin(node, target) ??
+      toValue(treeOption)?.isTargetWithin(node, target) ??
       isTargetWithinElements(node.refs.anchorEl.value, node.refs.floatingEl.value, target)
     );
   }
@@ -308,7 +309,7 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        node.tree?.closeDescendants(node, "keyboard-exit");
+        toValue(treeOption)?.closeDescendants(node, "keyboard-exit");
       }
       focusIndex(targetIdx);
     }
@@ -355,7 +356,7 @@ export function useRovingFocus(
         if (result !== false) {
           e.preventDefault();
         }
-      } else if (!node.isRoot && node?.setOpen) {
+      } else if (toValue(treeOption)?.getParent(node.id) && node?.setOpen) {
         e.preventDefault();
         node.setOpen(false, "keyboard-exit", e);
         const anchor = resolveAnchorElement(node.refs.anchorEl?.value ?? null);
@@ -521,7 +522,7 @@ function resolveEntryIndex(
  */
 export interface UseRovingFocusContext extends Pick<
   FloatingNode,
-  "id" | "refs" | "open" | "setOpen" | "isRoot" | "tree"
+  "id" | "refs" | "open" | "setOpen"
 > {}
 
 /**
@@ -660,6 +661,13 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Explicit floating tree for family-aware focus checks and sibling
+   * submenu coordination across nested surfaces.
+   * When omitted, only the node's own anchor and floating elements count as inside.
+   */
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
 
   /**
    * Whether moving the pointer over an item moves DOM focus and the active

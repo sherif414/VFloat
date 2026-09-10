@@ -9,7 +9,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
 import { isHTMLElement } from "@/shared/dom";
 import {
   getAnchorElement as resolveAnchorElement,
@@ -69,6 +69,7 @@ export function useFocusManager(
     preventScroll: preventScrollOption = true,
     ignoreFocusOut,
     onError,
+    tree: treeOption,
   } = options;
 
   const isEnabled = computed(() => !!toValue(enabledOption));
@@ -115,18 +116,18 @@ export function useFocusManager(
     return el?.ownerDocument ?? getDocument();
   }
 
-  // Family checks scoped to the node's own tree; standalone nodes fall back
-  // to their own anchor and floating elements.
+  // Family checks scoped to the explicitly passed tree; standalone nodes fall
+  // back to their own anchor and floating elements.
   function isWithinFamily(target: EventTarget | null): boolean {
     return (
-      node.tree?.isTargetWithin(node, target) ??
+      toValue(treeOption)?.isTargetWithin(node, target) ??
       isTargetWithinElements(anchorElOption.value, floatingElOption.value, target)
     );
   }
 
   function getFamilyElements(): HTMLElement[] {
     const floating = getFloatingElement();
-    return node.tree?.getFloatingElements(node) ?? (floating ? [floating] : []);
+    return toValue(treeOption)?.getFloatingElements(node) ?? (floating ? [floating] : []);
   }
 
   // --- Focus Trapping & Keydown Navigation -----------------------------------
@@ -573,7 +574,7 @@ export function useFocusManager(
  */
 export interface UseFocusManagerContext extends Pick<
   FloatingNode,
-  "id" | "refs" | "open" | "setOpen" | "tree"
+  "id" | "refs" | "open" | "setOpen"
 > {}
 
 /**
@@ -605,6 +606,12 @@ export interface UseFocusManagerOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Explicit floating tree for family-aware focus checks across nested surfaces.
+   * When omitted, only the node's own anchor and floating elements count as inside.
+   */
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
 
   /**
    * Whether the floating surface acts as a modal dialog, strictly trapping focus inside

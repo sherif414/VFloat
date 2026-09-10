@@ -55,7 +55,6 @@ function createTestComponent(options: UseFocusManagerOptions = {}, initialOpen =
       },
       open: openRef,
       setOpen: setOpenMock as () => void,
-      tree: null,
     };
     result = useFocusManager(node, options);
 
@@ -98,7 +97,7 @@ function createTreeComponent() {
     });
     tree.addNode(parentNode);
     tree.addNode(childNode, parentNode.id);
-    result = useFocusManager(parentNode, { modal: false, closeOnFocusOut: true });
+    result = useFocusManager(parentNode, { modal: false, closeOnFocusOut: true, tree });
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -609,7 +608,6 @@ describe("useFocusManager", () => {
         },
         open,
         setOpen,
-        tree: null,
       };
 
       const scope = effectScope();

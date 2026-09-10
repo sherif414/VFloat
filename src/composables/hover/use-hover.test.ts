@@ -103,7 +103,7 @@ function createTreeComponent(
     tree.addNode(parentNode);
     tree.addNode(childNode, parentNode.id);
 
-    useHover(target === "parent" ? parentNode : childNode);
+    useHover(target === "parent" ? parentNode : childNode, { tree });
 
     return () =>
       h("div", { class: "test-wrapper" }, [

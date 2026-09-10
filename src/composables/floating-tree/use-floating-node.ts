@@ -3,7 +3,6 @@ import type { ComputedRef, MaybeRefOrGetter, Ref } from "vue";
 import { computed, ref } from "vue";
 import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
-import type { FloatingTree } from "./use-floating-tree";
 
 //=======================================================================================
 // 📌 Main
@@ -53,8 +52,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
       open.value ? storedReason.value : null,
     ),
     lastOpenEvent: computed<Event | null>(() => (open.value ? storedEvent.value : null)),
-    isRoot: true,
-    tree: null,
   };
 }
 
@@ -121,16 +118,6 @@ export interface FloatingNode {
    * Null when closed.
    */
   lastOpenEvent?: Readonly<Ref<Event | null>>;
-  /**
-   * Whether this is a top-level floating node without a parent node.
-   * Patched by `tree.addNode()` and `tree.removeNode()`; true for standalone nodes.
-   */
-  isRoot: boolean;
-  /**
-   * The tree this node is registered in, or null when standalone.
-   * Assigned by `tree.addNode()` and cleared by `tree.removeNode()`.
-   */
-  tree: FloatingTree | null;
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
 import { getAnchorElement, isTargetWithinElements } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";
@@ -40,6 +40,7 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     mouseOnly: mouseOnlyOption = false,
     safePolygon: safePolygonOption = false,
     ignorePointerLeave: ignorePointerLeaveOption,
+    tree: treeOption,
   } = options;
 
   const enabled = computed(() => toValue(enabledOption));
@@ -168,10 +169,10 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     const { clientX, clientY } = e;
     const relatedTarget = e.relatedTarget as Node | null;
 
-    // Family check scoped to the node's own tree; standalone nodes fall back
-    // to their own anchor and floating elements.
+    // Family check scoped to the explicitly passed tree; standalone nodes fall
+    // back to their own anchor and floating elements.
     const isWithinFamily =
-      node.tree?.isTargetWithin(node, relatedTarget) ??
+      toValue(treeOption)?.isTargetWithin(node, relatedTarget) ??
       isTargetWithinElements(anchorEl.value, floatingEl.value, relatedTarget);
     if (isWithinFamily) {
       return;
@@ -319,6 +320,12 @@ export interface UseHoverOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Explicit floating tree for family-aware pointer-leave checks across nested surfaces.
+   * When omitted, only the node's own anchor and floating elements count as inside.
+   */
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
 
   /**
    * Delay in milliseconds before showing/hiding the floating element.

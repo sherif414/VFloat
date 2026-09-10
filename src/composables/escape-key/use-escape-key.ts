@@ -1,6 +1,6 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "@/composables/escape-key/composition-state";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
 import { getDocument } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -42,6 +42,7 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
     preventDefault = false,
     onEscape,
     ignoreEscapeKey,
+    tree: treeOption,
   } = options;
   const { isComposing } = useComposition();
   const { open } = node;
@@ -71,7 +72,7 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
       return;
     }
 
-    const targetNode = node.tree?.getDeepestOpenContext(node) ?? node;
+    const targetNode = toValue(treeOption)?.getDeepestOpenContext(node) ?? node;
     targetNode.setOpen(false, "escape-key", event);
   };
 
@@ -86,10 +87,7 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
 /**
  * Context required by `useEscapeKey`.
  */
-export interface UseEscapeKeyContext extends Pick<
-  FloatingNode,
-  "id" | "open" | "setOpen" | "tree"
-> {}
+export interface UseEscapeKeyContext extends Pick<FloatingNode, "id" | "open" | "setOpen"> {}
 
 export interface UseEscapeKeyOptions {
   /**
@@ -97,6 +95,12 @@ export interface UseEscapeKeyOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Explicit floating tree for stacked dismissal across nested surfaces.
+   * When omitted, only the current node is closed.
+   */
+  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
 
   /**
    * Whether to use capture phase for document event listeners.

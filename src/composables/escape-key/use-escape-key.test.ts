@@ -18,7 +18,6 @@ function createMockFloatingNode(): UseEscapeKeyContext {
     id: Symbol("mock-node"),
     open,
     setOpen,
-    tree: null,
   };
 }
 
@@ -268,7 +267,7 @@ describe("useEscapeKey", () => {
         tree.addNode(child, root.id);
         tree.addNode(grandchild, child.id);
 
-        useEscapeKey(root);
+        useEscapeKey(root, { tree });
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -318,7 +317,7 @@ describe("useEscapeKey", () => {
         tree.addNode(secondChild, root.id);
         tree.addNode(secondGrandchild, secondChild.id);
 
-        useEscapeKey(root);
+        useEscapeKey(root, { tree });
       });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));

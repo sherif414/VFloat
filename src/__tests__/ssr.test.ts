@@ -121,8 +121,8 @@ describe("SSR Compatibility (Node Environment)", () => {
 
         VFloat.usePosition(parentNode);
         VFloat.usePosition(childNode);
-        VFloat.useOutsideClick(parentNode);
-        VFloat.useOutsideClick(childNode);
+        VFloat.useOutsideClick(parentNode, { tree });
+        VFloat.useOutsideClick(childNode, { tree });
 
         return () =>
           h("div", [

@@ -39,6 +39,8 @@ interface TreeQueryTarget {
  *
  * tree.addNode(rootNode);
  * tree.addNode(subNode, rootNode.id);
+ *
+ * useOutsideClick(rootNode, { tree });
  * ```
  */
 export function useFloatingTree(): FloatingTree {
@@ -47,7 +49,9 @@ export function useFloatingTree(): FloatingTree {
   /**
    * Registers a floating node in the tree and links it under `parentId`.
    * Automatically unregisters when the calling effect scope disposes.
-   * The node must belong to a single tree; re-registering it elsewhere steals it.
+   * The node object itself is never mutated; hierarchy lives in the tree's map.
+   * The same node may join multiple trees; pass the relevant tree explicitly
+   * to interaction composables via their `tree` option.
    */
   function addNode(child: FloatingNode, parentId: FloatingNodeId | null = null): void {
     const existing = nodes.get(child.id);
@@ -85,8 +89,6 @@ export function useFloatingTree(): FloatingTree {
       parentId: resolvedParentId,
       childIds: shallowRef(new Set()),
     });
-    child.tree = tree;
-    child.isRoot = resolvedParentId == null;
 
     tryOnScopeDispose(() => {
       removeNode(child.id);
@@ -94,8 +96,8 @@ export function useFloatingTree(): FloatingTree {
   }
 
   /**
-   * Removes a node from the tree, re-parents its immediate children to the
-   * removed node's parent (or to root level), and returns it to standalone state.
+   * Removes a node from the tree and re-parents its immediate children to the
+   * removed node's parent (or to root level).
    * Re-parenting keeps surviving subtrees reachable instead of orphaning them
    * with dangling parent links when a parent scope disposes first.
    */
@@ -110,7 +112,6 @@ export function useFloatingTree(): FloatingTree {
       const child = nodes.get(childId);
       if (!child) continue;
       child.parentId = inheritedParentId;
-      child.node.isRoot = inheritedParentId == null;
       if (parent && inheritedParentId != null) {
         parent.childIds.value = withAddedId(parent.childIds.value, childId);
       }
@@ -121,8 +122,6 @@ export function useFloatingTree(): FloatingTree {
     }
 
     nodes.delete(id);
-    entry.node.tree = null;
-    entry.node.isRoot = true;
   }
 
   /**
@@ -130,6 +129,16 @@ export function useFloatingTree(): FloatingTree {
    */
   function getNode(id: FloatingNodeId): FloatingNode | undefined {
     return nodes.get(id)?.node;
+  }
+
+  /**
+   * Returns the parent node for a given id, or undefined for roots and
+   * unregistered ids.
+   */
+  function getParent(id: FloatingNodeId): FloatingNode | undefined {
+    const entry = nodes.get(id);
+    if (!entry || entry.parentId == null) return undefined;
+    return nodes.get(entry.parentId)?.node;
   }
 
   /**
@@ -271,6 +280,7 @@ export function useFloatingTree(): FloatingTree {
     addNode,
     removeNode,
     getNode,
+    getParent,
     getChildren,
     getDescendants,
     getFloatingElements,
@@ -312,17 +322,23 @@ function withRemovedId(ids: Set<FloatingNodeId>, id: FloatingNodeId): Set<Floati
 export interface FloatingTree {
   /**
    * Registers a node and links it under `parentId` (`null` for roots).
+   * Never mutates the node object; hierarchy lives in the tree's map.
    */
   addNode: (child: FloatingNode, parentId?: FloatingNodeId | null) => void;
   /**
-   * Removes a node, re-parents its children to the removed node's parent,
-   * and returns it to standalone state.
+   * Removes a node and re-parents its children to the removed node's parent
+   * (or to root level).
    */
   removeNode: (id: FloatingNodeId) => void;
   /**
    * Retrieves a registered node by id.
    */
   getNode: (id: FloatingNodeId) => FloatingNode | undefined;
+  /**
+   * Returns the parent node for a given id, or undefined for roots and
+   * unregistered ids.
+   */
+  getParent: (id: FloatingNodeId) => FloatingNode | undefined;
   /**
    * Returns immediate child nodes for a given id.
    */

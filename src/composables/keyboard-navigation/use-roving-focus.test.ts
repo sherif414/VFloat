@@ -1765,6 +1765,7 @@ describe("useRovingFocus", () => {
 
         rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
+          tree,
         });
 
         const childAnchorEl = ref<HTMLElement | null>(null);
@@ -1777,6 +1778,7 @@ describe("useRovingFocus", () => {
 
         useRovingFocus(childNode, {
           elementsList: childElementsList,
+          tree,
         });
 
         return () =>
@@ -1858,6 +1860,7 @@ describe("useRovingFocus", () => {
 
         rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
+          tree,
         });
 
         const childAnchorEl = ref<HTMLElement | null>(null);
@@ -1944,6 +1947,7 @@ describe("useRovingFocus", () => {
 
         rootRoving = useRovingFocus(rootNode, {
           elementsList: rootElementsList,
+          tree,
         });
 
         const childAnchorEl = ref<HTMLElement | null>(null);
@@ -2032,6 +2036,7 @@ describe("useRovingFocus", () => {
 
         childRoving = useRovingFocus(childNode, {
           elementsList: childElementsList,
+          tree,
         });
 
         return () =>
@@ -2109,6 +2114,7 @@ describe("useRovingFocus", () => {
 
         childRoving = useRovingFocus(childNode, {
           elementsList: childElementsList,
+          tree,
           rtl: true,
         });
 
@@ -2179,6 +2185,7 @@ describe("useRovingFocus", () => {
 
         useRovingFocus(childNode, {
           elementsList: childElementsList,
+          tree,
           onExit: customOnExit,
         });
 

@@ -51,7 +51,6 @@ function createTestComponent(
       },
       open: openRef,
       setOpen: setOpenMock as () => void,
-      tree: null,
     };
     result = useFocus(node, options);
 
@@ -103,7 +102,7 @@ function createTreeComponent(target: "parent" | "child") {
     });
     tree.addNode(parentNode);
     tree.addNode(childNode, parentNode.id);
-    useFocus(target === "parent" ? parentNode : childNode, { requireFocusVisible: false });
+    useFocus(target === "parent" ? parentNode : childNode, { requireFocusVisible: false, tree });
 
     return () =>
       h("div", { class: "test-wrapper" }, [

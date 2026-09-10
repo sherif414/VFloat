@@ -24,8 +24,6 @@ function createMockNode(
     setOpen: vi.fn((value: boolean, _reason?: OpenChangeReason, _event?: Event) => {
       open.value = value;
     }),
-    isRoot: true,
-    tree: null,
     ...restOverrides,
   };
 }
@@ -47,7 +45,7 @@ describe("useFloatingTree", () => {
     it("adds nodes and links parent-child relationships by parent id", () => {
       const tree = useFloatingTree();
       const parent = createMockNode();
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
 
       tree.addNode(parent);
       tree.addNode(child, parent.id);
@@ -56,16 +54,14 @@ describe("useFloatingTree", () => {
       expect(tree.getNode(child.id)).toBe(child);
       expect(tree.getChildren(parent.id)).toEqual([child]);
       expect(tree.getDescendants(parent.id)).toEqual([child]);
-      expect(parent.tree).toBe(tree);
-      expect(child.tree).toBe(tree);
-      expect(parent.isRoot).toBe(true);
-      expect(child.isRoot).toBe(false);
+      expect(tree.getParent(parent.id)).toBeUndefined();
+      expect(tree.getParent(child.id)).toBe(parent);
     });
 
-    it("removes a node, unlinks it from its parent, and returns it to standalone state", () => {
+    it("removes a node and unlinks it from its parent", () => {
       const tree = useFloatingTree();
       const parent = createMockNode();
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
 
       tree.addNode(parent);
       tree.addNode(child, parent.id);
@@ -76,8 +72,7 @@ describe("useFloatingTree", () => {
 
       expect(tree.getNode(child.id)).toBeUndefined();
       expect(tree.getChildren(parent.id)).toHaveLength(0);
-      expect(child.tree).toBeNull();
-      expect(child.isRoot).toBe(true);
+      expect(tree.getParent(child.id)).toBeUndefined();
     });
 
     it("unregisters on scope disposal", () => {
@@ -87,7 +82,7 @@ describe("useFloatingTree", () => {
 
       const localScope = effectScope();
       localScope.run(() => {
-        const child = createMockNode({ isRoot: false });
+        const child = createMockNode();
         tree.addNode(child, parent.id);
       });
 
@@ -101,8 +96,8 @@ describe("useFloatingTree", () => {
     it("traverses depth-first descendants across multi-level hierarchy", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false });
-      const grandchild = createMockNode({ isRoot: false });
+      const child = createMockNode();
+      const grandchild = createMockNode();
 
       tree.addNode(root);
       tree.addNode(child, root.id);
@@ -131,7 +126,7 @@ describe("useFloatingTree", () => {
     it("returns root node when no descendants are open", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
 
       tree.addNode(root);
       tree.addNode(child, root.id);
@@ -142,8 +137,8 @@ describe("useFloatingTree", () => {
     it("returns deepest open descendant in a chain", () => {
       const tree = useFloatingTree();
       const root = createMockNode({ open: true });
-      const child = createMockNode({ isRoot: false, open: true });
-      const grandchild = createMockNode({ isRoot: false, open: true });
+      const child = createMockNode({ open: true });
+      const grandchild = createMockNode({ open: true });
 
       tree.addNode(root);
       tree.addNode(child, root.id);
@@ -155,9 +150,9 @@ describe("useFloatingTree", () => {
     it("finds deepest open node across multiple branches", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const branchA1 = createMockNode({ isRoot: false, open: true });
-      const branchB1 = createMockNode({ isRoot: false, open: true });
-      const branchB2 = createMockNode({ isRoot: false, open: true });
+      const branchA1 = createMockNode({ open: true });
+      const branchB1 = createMockNode({ open: true });
+      const branchB2 = createMockNode({ open: true });
 
       tree.addNode(root);
       tree.addNode(branchA1, root.id);
@@ -200,7 +195,7 @@ describe("useFloatingTree", () => {
       root.refs.anchorEl.value = rootAnchor;
       root.refs.floatingEl.value = rootFloating;
 
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
       child.refs.anchorEl.value = childAnchor;
       child.refs.floatingEl.value = childFloating;
 
@@ -242,7 +237,7 @@ describe("useFloatingTree", () => {
       const root = createMockNode();
       root.refs.floatingEl.value = rootFloatingEl;
 
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
       child.refs.floatingEl.value = childFloatingEl;
 
       tree.addNode(root);
@@ -283,12 +278,12 @@ describe("useFloatingTree", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const tree = useFloatingTree();
       const parent = createMockNode();
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
 
       tree.addNode(child, parent.id);
 
       // Falls back to root linkage without throwing
-      expect(child.isRoot).toBe(true);
+      expect(tree.getParent(child.id)).toBeUndefined();
       expect(tree.getDescendants(child.id)).toEqual([]);
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("parent node is not registered in the floating tree"),
@@ -304,7 +299,7 @@ describe("useFloatingTree", () => {
 
       tree.addNode(node, node.id);
 
-      expect(node.isRoot).toBe(true);
+      expect(tree.getParent(node.id)).toBeUndefined();
       expect(warnSpy).toHaveBeenCalledWith("[FloatingTree] A node cannot be its own parent.");
 
       warnSpy.mockRestore();
@@ -314,7 +309,7 @@ describe("useFloatingTree", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const tree = useFloatingTree();
       const parent = createMockNode();
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
 
       tree.addNode(parent);
       tree.addNode(child, parent.id);
@@ -336,8 +331,8 @@ describe("useFloatingTree", () => {
       const tree = useFloatingTree();
       const calls: string[] = [];
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false, open: true });
-      const grandchild = createMockNode({ isRoot: false, open: true });
+      const child = createMockNode({ open: true });
+      const grandchild = createMockNode({ open: true });
 
       child.setOpen = vi.fn((_open: boolean, reason?: OpenChangeReason) => {
         calls.push(`child:${reason}`);
@@ -361,8 +356,8 @@ describe("useFloatingTree", () => {
     it("skips already-closed descendants when closing", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false, open: false });
-      const grandchild = createMockNode({ isRoot: false, open: true });
+      const child = createMockNode({ open: false });
+      const grandchild = createMockNode({ open: true });
 
       child.setOpen = vi.fn();
       grandchild.setOpen = vi.fn();
@@ -382,8 +377,8 @@ describe("useFloatingTree", () => {
     it("re-parents children to the grandparent when a middle node is removed", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false });
-      const grandchild = createMockNode({ isRoot: false });
+      const child = createMockNode();
+      const grandchild = createMockNode();
 
       tree.addNode(root);
       tree.addNode(child, root.id);
@@ -394,16 +389,15 @@ describe("useFloatingTree", () => {
       expect(tree.getNode(child.id)).toBeUndefined();
       expect(tree.getNode(grandchild.id)).toBe(grandchild);
       expect(tree.getChildren(root.id)).toEqual([grandchild]);
-      expect(grandchild.isRoot).toBe(false);
-      expect(child.tree).toBeNull();
-      expect(child.isRoot).toBe(true);
+      expect(tree.getParent(grandchild.id)).toBe(root);
+      expect(tree.getParent(child.id)).toBeUndefined();
     });
 
     it("promotes children to roots when the root node is removed", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const child = createMockNode({ isRoot: false });
-      const grandchild = createMockNode({ isRoot: false });
+      const child = createMockNode();
+      const grandchild = createMockNode();
 
       tree.addNode(root);
       tree.addNode(child, root.id);
@@ -414,9 +408,22 @@ describe("useFloatingTree", () => {
       expect(tree.getNode(root.id)).toBeUndefined();
       expect(tree.getNode(child.id)).toBe(child);
       expect(tree.getNode(grandchild.id)).toBe(grandchild);
-      expect(child.isRoot).toBe(true);
+      expect(tree.getParent(child.id)).toBeUndefined();
       expect(tree.getDescendants(child.id)).toEqual([grandchild]);
       expect(tree.getChildren(child.id)).toEqual([grandchild]);
+    });
+
+    it("returns parent nodes and undefined for roots", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      const child = createMockNode();
+
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+
+      expect(tree.getParent(root.id)).toBeUndefined();
+      expect(tree.getParent(child.id)).toBe(root);
+      expect(tree.getParent(Symbol("missing"))).toBeUndefined();
     });
   });
 
@@ -446,7 +453,7 @@ describe("useFloatingTree", () => {
       const root = createMockNode();
       root.refs.floatingEl.value = rootHost;
 
-      const child = createMockNode({ isRoot: false });
+      const child = createMockNode();
       child.refs.floatingEl.value = childHost;
 
       const tree = useFloatingTree();
