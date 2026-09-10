@@ -96,25 +96,7 @@ function createFloatingNodeId(): FloatingNodeId {
  *
  * @internal
  */
-export class FloatingInternalsRegistry {
-  private readonly store = new WeakMap<FloatingNodeId, FloatingInternals>();
-
-  /**
-   * Reads internal state associated with the floating node identifier.
-   */
-  get(id: FloatingNodeId): FloatingInternals | undefined {
-    return this.store.get(id);
-  }
-
-  /**
-   * Attaches internal capabilities onto the floating node identifier.
-   */
-  set(id: FloatingNodeId, internals: FloatingInternals): void {
-    this.store.set(id, internals);
-  }
-}
-
-export const floatingInternals = new FloatingInternalsRegistry();
+export const floatingInternals = new WeakMap<FloatingNodeId, FloatingInternals>();
 
 //=======================================================================================
 // 📌 Types

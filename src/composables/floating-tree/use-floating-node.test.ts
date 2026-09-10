@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, ref, watchEffect } from "vue";
 import { useFloatingTree } from "./use-floating-tree";
-import { FloatingInternalsRegistry, floatingInternals, useFloatingNode } from "./use-floating-node";
+import { floatingInternals, useFloatingNode } from "./use-floating-node";
 
 const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -416,9 +416,8 @@ describe("useFloatingNode", () => {
   });
 });
 
-describe("FloatingInternalsRegistry", () => {
-  it("attaches and retrieves internal state on an object or symbol target", () => {
-    const registry = new FloatingInternalsRegistry();
+describe("floatingInternals", () => {
+  it("attaches and retrieves internal state on a symbol target", () => {
     const target = Symbol("test-target");
     const dummyInternals = {
       middlewareRegistry: {
@@ -429,13 +428,15 @@ describe("FloatingInternalsRegistry", () => {
       middlewareData: ref({}),
     };
 
-    expect(registry.get(target)).toBeUndefined();
+    expect(floatingInternals.get(target)).toBeUndefined();
 
-    registry.set(target, dummyInternals);
-    expect(registry.get(target)).toBe(dummyInternals);
+    floatingInternals.set(target, dummyInternals);
+    expect(floatingInternals.get(target)).toBe(dummyInternals);
+
+    floatingInternals.delete(target);
   });
 
-  it("provides a global singleton instance", () => {
-    expect(floatingInternals).toBeInstanceOf(FloatingInternalsRegistry);
+  it("exposes a shared WeakMap singleton", () => {
+    expect(floatingInternals).toBeInstanceOf(WeakMap);
   });
 });
