@@ -91,7 +91,7 @@ describe("useRovingFocus", () => {
   describe("sequential tab order & focus entry (WCAG single tab stop)", () => {
     it("enters the composite widget on the first enabled item when tabbing in", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -106,7 +106,7 @@ describe("useRovingFocus", () => {
 
     it("enters on initial activeIndex when tabbing into the widget", async () => {
       const { Component } = createTestComponent({ activeIndex: ref(2) });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -118,7 +118,7 @@ describe("useRovingFocus", () => {
 
     it("skips default item if disabled and tabs into the first enabled item", async () => {
       const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0, 1] });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -137,7 +137,7 @@ describe("useRovingFocus", () => {
 
     it("acts as a single tab stop and exits widget into the next page element on Tab", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -162,7 +162,7 @@ describe("useRovingFocus", () => {
   describe("vertical keyboard navigation", () => {
     it("navigates to next/previous item on ArrowDown/ArrowUp", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -183,7 +183,7 @@ describe("useRovingFocus", () => {
 
     it("jumps to first item on Home and last item on End", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option5 = page.getByRole("option", { name: "option 5" });
@@ -200,7 +200,7 @@ describe("useRovingFocus", () => {
 
     it("stops at boundaries when loop is false", async () => {
       const { Component } = createTestComponent({ loop: false });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option5 = page.getByRole("option", { name: "option 5" });
@@ -218,7 +218,7 @@ describe("useRovingFocus", () => {
 
     it("wraps around boundaries when loop is true", async () => {
       const { Component } = createTestComponent({ loop: true });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option5 = page.getByRole("option", { name: "option 5" });
@@ -236,7 +236,7 @@ describe("useRovingFocus", () => {
         {},
         { disabledIndices: [1], ariaDisabledIndices: [2] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option4 = page.getByRole("option", { name: "option 4" });
@@ -253,7 +253,7 @@ describe("useRovingFocus", () => {
   describe("horizontal & RTL navigation", () => {
     it("navigates on ArrowRight and ArrowLeft in horizontal orientation", async () => {
       const { Component } = createTestComponent({ orientation: "horizontal" });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -268,7 +268,7 @@ describe("useRovingFocus", () => {
 
     it("inverts horizontal arrow directions in RTL mode", async () => {
       const { Component } = createTestComponent({ orientation: "horizontal" }, { dir: "rtl" });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -286,7 +286,7 @@ describe("useRovingFocus", () => {
   describe("both orientation (radio group pattern)", () => {
     it("navigates with all four arrow keys when orientation is both", async () => {
       const { Component } = createTestComponent({ orientation: "both" });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -313,7 +313,7 @@ describe("useRovingFocus", () => {
 
     it("respects RTL inversion for horizontal keys in both orientation", async () => {
       const { Component } = createTestComponent({ orientation: "both" }, { dir: "rtl" });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -334,7 +334,7 @@ describe("useRovingFocus", () => {
     it("fires onSelect when Enter or Space is pressed on active item", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent({ onSelect: onSelectMock });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -353,7 +353,7 @@ describe("useRovingFocus", () => {
     it("fires onEnter when ArrowRight is pressed on active item in vertical orientation", async () => {
       const onEnterMock = vi.fn();
       const { Component } = createTestComponent({ onEnter: onEnterMock });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -369,7 +369,7 @@ describe("useRovingFocus", () => {
         { onEnter: onEnterMock, rtl: true },
         { dir: "rtl" },
       );
-      render(Component);
+      await render(Component);
 
       const option2 = page.getByRole("option", { name: "option 2" });
       await userEvent.click(option2);
@@ -385,7 +385,7 @@ describe("useRovingFocus", () => {
         orientation: "horizontal",
         onEnter: onEnterMock,
       });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -405,7 +405,7 @@ describe("useRovingFocus", () => {
         { activeIndex: ref(0), focusDisabledElements: true, onEnter: onEnterMock },
         { ariaDisabledIndices: [0] },
       );
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -421,7 +421,7 @@ describe("useRovingFocus", () => {
     it("fires onExit when ArrowLeft is pressed in vertical orientation", async () => {
       const onExitMock = vi.fn();
       const { Component } = createTestComponent({ onExit: onExitMock });
-      render(Component);
+      await render(Component);
 
       const option2 = page.getByRole("option", { name: "option 2" });
       await userEvent.click(option2);
@@ -434,7 +434,7 @@ describe("useRovingFocus", () => {
     it("fires onExit when ArrowRight is pressed in vertical RTL orientation", async () => {
       const onExitMock = vi.fn();
       const { Component } = createTestComponent({ onExit: onExitMock, rtl: true }, { dir: "rtl" });
-      render(Component);
+      await render(Component);
 
       const option2 = page.getByRole("option", { name: "option 2" });
       await userEvent.click(option2);
@@ -450,7 +450,7 @@ describe("useRovingFocus", () => {
         { activeIndex: ref(0), focusDisabledElements: true, onExit: onExitMock },
         { ariaDisabledIndices: [0] },
       );
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -472,7 +472,7 @@ describe("useRovingFocus", () => {
       });
 
       const { Component } = createTestComponent({ onEnter: onEnterReturnFalse });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -484,7 +484,7 @@ describe("useRovingFocus", () => {
 
     it("does not prevent default when onEnter/onExit are not provided", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -517,7 +517,7 @@ describe("useRovingFocus", () => {
           controlledIndex.value = idx;
         },
       });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -534,7 +534,7 @@ describe("useRovingFocus", () => {
     it("reflects external activeIndex changes in tabindex without stealing DOM focus", async () => {
       const controlledIndex = ref(0);
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -556,7 +556,7 @@ describe("useRovingFocus", () => {
         { activeIndex: controlledIndex },
         { disabledIndices: [1] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -575,7 +575,7 @@ describe("useRovingFocus", () => {
       const { Component } = createTestComponent({
         onActiveIndexChange: onActiveIndexChangeMock,
       });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -591,7 +591,7 @@ describe("useRovingFocus", () => {
   describe("focusOnHover option", () => {
     it("moves focus to hovered item when focusOnHover is true", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -605,7 +605,7 @@ describe("useRovingFocus", () => {
 
     it("does not move focus on hover when focusOnHover is false by default", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -619,7 +619,7 @@ describe("useRovingFocus", () => {
 
     it("skips disabled items when hovered", async () => {
       const { Component } = createTestComponent({ focusOnHover: true }, { disabledIndices: [1] });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -632,7 +632,7 @@ describe("useRovingFocus", () => {
 
     it("ignores touch pointer events", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -653,7 +653,7 @@ describe("useRovingFocus", () => {
   describe("programmatic navigation methods", () => {
     it("supports next, prev, first, last, and focusIndex methods", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -681,7 +681,7 @@ describe("useRovingFocus", () => {
 
     it("sets activeIndex state without moving DOM focus when setActiveIndex is called", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -699,7 +699,7 @@ describe("useRovingFocus", () => {
 
     it("continues from the last active item after activeIndex is cleared", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option3 = page.getByRole("option", { name: "option 3" });
       const option4 = page.getByRole("option", { name: "option 4" });
@@ -713,7 +713,7 @@ describe("useRovingFocus", () => {
 
     it("resets activeIndex and focus history when reset() is called", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
-      render(Component);
+      await render(Component);
 
       const option3 = page.getByRole("option", { name: "option 3" });
       await userEvent.click(option3);
@@ -732,7 +732,7 @@ describe("useRovingFocus", () => {
 
     it("exposes reactive tabStopIndex matching getTabindex resolution", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 0 });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -752,7 +752,7 @@ describe("useRovingFocus", () => {
   describe("disabled state & modifier key ignoring", () => {
     it("does not navigate when enabled is false", async () => {
       const { Component } = createTestComponent({ enabled: false });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -763,7 +763,7 @@ describe("useRovingFocus", () => {
 
     it("ignores key combinations with ctrl, alt, or meta keys", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -777,7 +777,7 @@ describe("useRovingFocus", () => {
 
     it("handles all options disabled safely", async () => {
       const { Component } = createTestComponent({}, { itemCount: 3, disabledIndices: [0, 1, 2] });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.keyboard("{ArrowDown}");
@@ -823,7 +823,7 @@ describe("useRovingFocus", () => {
           );
       });
 
-      render(DynamicComponent);
+      await render(DynamicComponent);
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
 
@@ -839,7 +839,7 @@ describe("useRovingFocus", () => {
   describe("tabindex resolution", () => {
     it("sets tabindex=0 on the first item and tabindex=-1 on all others by default", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -852,7 +852,7 @@ describe("useRovingFocus", () => {
 
     it("respects entryIndex when specified", async () => {
       const { Component } = createTestComponent({ entryIndex: 2 });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -863,7 +863,7 @@ describe("useRovingFocus", () => {
 
     it("skips hard-disabled items on mount and gives tabindex=0 to the first enabled item", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [0] });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -877,7 +877,7 @@ describe("useRovingFocus", () => {
         { focusDisabledElements: false },
         { ariaDisabledIndices: [0] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -888,7 +888,7 @@ describe("useRovingFocus", () => {
 
     it("designates a fallback tabindex=0 entry target when entryIndex is omitted", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -900,7 +900,7 @@ describe("useRovingFocus", () => {
 
     it("moves tabindex=0 on keyboard navigation", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -917,7 +917,7 @@ describe("useRovingFocus", () => {
 
     it("updates tabindex on mouse click selection", async () => {
       const { Component } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option4 = page.getByRole("option", { name: "option 4" });
@@ -930,7 +930,7 @@ describe("useRovingFocus", () => {
 
     it("skips disabled items during arrow navigation", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [1] });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -947,7 +947,7 @@ describe("useRovingFocus", () => {
 
     it("enters the widget at tabindex=0 and exits to next focusable element on Tab", async () => {
       const { Component } = createTestComponent({ entryIndex: 1 });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -964,7 +964,7 @@ describe("useRovingFocus", () => {
 
     it("enters back into the active item on Shift+Tab from outside", async () => {
       const { Component } = createTestComponent({ entryIndex: 2 });
-      render(Component);
+      await render(Component);
 
       const option3 = page.getByRole("option", { name: "option 3" });
       const afterBtn = page.getByRole("button", { name: "After Widget" });
@@ -977,7 +977,7 @@ describe("useRovingFocus", () => {
 
     it("updates getTabindex return values when setActiveIndex is called programmatically", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const roving = getRoving();
 
@@ -1001,7 +1001,7 @@ describe("useRovingFocus", () => {
         { activeIndex: ref(0), focusDisabledElements: true },
         { ariaDisabledIndices: [0] },
       );
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -1016,7 +1016,7 @@ describe("useRovingFocus", () => {
         { focusDisabledElements: true },
         { ariaDisabledIndices: [1, 2] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1049,7 +1049,7 @@ describe("useRovingFocus", () => {
         { focusDisabledElements: true, onSelect: onSelectMock },
         { ariaDisabledIndices: [1] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1073,7 +1073,7 @@ describe("useRovingFocus", () => {
         { focusDisabledElements: true, onSelect: onSelectMock },
         { ariaDisabledIndices: [1] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
@@ -1088,7 +1088,7 @@ describe("useRovingFocus", () => {
         { focusOnHover: true, focusDisabledElements: true },
         { ariaDisabledIndices: [1] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1105,7 +1105,7 @@ describe("useRovingFocus", () => {
         { focusDisabledElements: true },
         { ariaDisabledIndices: [1, 4] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1132,7 +1132,7 @@ describe("useRovingFocus", () => {
         },
         { ariaDisabledIndices: [1] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1152,7 +1152,7 @@ describe("useRovingFocus", () => {
         { focusDisabledElements: allowDisabledFocusRef },
         { ariaDisabledIndices: [0] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1184,7 +1184,7 @@ describe("useRovingFocus", () => {
   describe("focus stealing prevention & mount isolation", () => {
     it("does not steal document focus on mount when element 0 is disabled", async () => {
       const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0] });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1201,7 +1201,7 @@ describe("useRovingFocus", () => {
     it("does not steal focus when activeIndex changes externally while widget is unfocused", async () => {
       const controlledIndex = ref(0);
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -1222,7 +1222,7 @@ describe("useRovingFocus", () => {
   describe("uncontrolled entryIndex & async element mounting", () => {
     it("starts at entryIndex in uncontrolled mode", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 2 });
-      render(Component);
+      await render(Component);
 
       expect(getRoving().activeIndex.value).toBe(-1);
       expect(getRoving().getTabindex(2)).toBe(0);
@@ -1281,7 +1281,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(AsyncComponent);
+      await render(AsyncComponent);
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
 
       // Trigger async loading of elements
@@ -1299,7 +1299,7 @@ describe("useRovingFocus", () => {
   describe("unfocused (-1) initial state & sequential tab stop fallback", () => {
     it("initializes with activeIndex = -1 without highlighting an initial item", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       expect(getRoving().activeIndex.value).toBe(-1);
 
@@ -1313,7 +1313,7 @@ describe("useRovingFocus", () => {
 
     it("enters on fallback element when tabbing in with activeIndex = -1 and syncs activeIndex", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -1327,7 +1327,7 @@ describe("useRovingFocus", () => {
 
     it("navigates to first item on next() from initial activeIndex = -1", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
 
@@ -1339,7 +1339,7 @@ describe("useRovingFocus", () => {
 
     it("navigates to last item on prev() from initial activeIndex = -1", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option5 = page.getByRole("option", { name: "option 5" });
 
@@ -1353,7 +1353,7 @@ describe("useRovingFocus", () => {
   describe("focusin native focus synchronization", () => {
     it("synchronizes activeIndex when an item is clicked directly and navigates correctly thereafter", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option3 = page.getByRole("option", { name: "option 3" });
       const option4 = page.getByRole("option", { name: "option 4" });
@@ -1373,7 +1373,7 @@ describe("useRovingFocus", () => {
   describe("focusOnHover scroll prevention", () => {
     it("focuses hovered item without calling scrollIntoView", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -1394,7 +1394,7 @@ describe("useRovingFocus", () => {
     it("enters the composite widget on entryIndex when tabbing in", async () => {
       const selectedIndex = ref(2);
       const { Component } = createTestComponent({ entryIndex: selectedIndex });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -1409,7 +1409,7 @@ describe("useRovingFocus", () => {
     it("restores entry focus to entryIndex after a transient arrow preview is dismissed", async () => {
       const selectedIndex = ref(2);
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -1440,7 +1440,7 @@ describe("useRovingFocus", () => {
     it("reflects dynamic entryIndex updates in tabindex without stealing DOM focus", async () => {
       const selectedIndex = ref(1);
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
-      render(Component);
+      await render(Component);
 
       const option4 = page.getByRole("option", { name: "option 4" });
 
@@ -1469,7 +1469,7 @@ describe("useRovingFocus", () => {
         { entryIndex: selectedIndex },
         { disabledIndices: [1] },
       );
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1488,7 +1488,7 @@ describe("useRovingFocus", () => {
     it("falls back to first enabled item when entryIndex is null or undefined", async () => {
       const selectedIndex = ref<number | null>(null);
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       expect(getRoving().getTabindex(0)).toBe(0);
@@ -1502,7 +1502,7 @@ describe("useRovingFocus", () => {
 
     it("disables sequential tab-stop entry when entryIndex is explicitly -1", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: -1 });
-      render(Component);
+      await render(Component);
 
       expect(getRoving().getTabindex(0)).toBe(-1);
       expect(getRoving().getTabindex(1)).toBe(-1);
@@ -1512,7 +1512,7 @@ describe("useRovingFocus", () => {
   describe("focusout boundary handling", () => {
     it("clears activeIndex to -1 when focus leaves the container", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const afterBtn = page.getByRole("button", { name: "After Widget" });
@@ -1528,7 +1528,7 @@ describe("useRovingFocus", () => {
 
     it("does not clear activeIndex when focus moves between items inside the container", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1549,7 +1549,7 @@ describe("useRovingFocus", () => {
         entryIndex: 1,
         entryFocusMode: "last-focused",
       });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1580,7 +1580,7 @@ describe("useRovingFocus", () => {
         entryIndex: 1,
         entryFocusMode: "entry-index",
       });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1612,7 +1612,7 @@ describe("useRovingFocus", () => {
         entryIndex: entryIndexRef,
         entryFocusMode: "last-focused",
       });
-      render(Component);
+      await render(Component);
 
       const beforeBtn = page.getByRole("button", { name: "Before Widget" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1646,7 +1646,7 @@ describe("useRovingFocus", () => {
   describe("focus synchronization fast-path optimizations", () => {
     it("uses fast-path when activeIndex element receives focusin without linear scanning", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
       await nextTick();
 
       const roving = getRoving();
@@ -1674,7 +1674,7 @@ describe("useRovingFocus", () => {
 
     it("falls back to linear scan when focusin target differs from activeIndex", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
       await nextTick();
 
       const roving = getRoving();
@@ -1699,7 +1699,7 @@ describe("useRovingFocus", () => {
           activeIndexRef.value = idx;
         },
       });
-      render(Component);
+      await render(Component);
       await nextTick();
 
       const roving = getRoving();
@@ -1732,7 +1732,7 @@ describe("useRovingFocus", () => {
   describe("FloatingNode integration & nested floating surfaces", () => {
     it("resolves containerEl from node.refs.floatingEl by default", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -1821,7 +1821,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(RootWithChild);
+      await render(RootWithChild);
 
       const rootOption2 = page.getByRole("option", { name: "Root Option 2 (Sub Trigger)" });
       const childOption1 = page.getByRole("option", { name: "Child Option 1" });
@@ -1887,7 +1887,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(RootWithChild);
+      await render(RootWithChild);
 
       const rootOption1 = page.getByRole("option", { name: "Root Option 1" });
       await userEvent.click(rootOption1);
@@ -1909,7 +1909,7 @@ describe("useRovingFocus", () => {
 
     it("clears activeIndex on focusout when focus leaves to an external element outside the floating tree", async () => {
       const { Component, getRoving } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       const afterBtn = page.getByRole("button", { name: "After Widget" });
@@ -1984,7 +1984,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(RootWithChild);
+      await render(RootWithChild);
 
       const item1 = page.getByRole("option", { name: "Parent Item 1 (Submenu open)" });
       const item2 = page.getByRole("option", { name: "Parent Item 2" });
@@ -2055,7 +2055,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(SubmenuFixture);
+      await render(SubmenuFixture);
 
       const subTrigger = page.getByRole("button", { name: "Open Submenu" });
       const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
@@ -2131,7 +2131,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(SubmenuFixtureRtl);
+      await render(SubmenuFixtureRtl);
 
       const subTrigger = page.getByRole("button", { name: "Open Submenu" });
       const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
@@ -2200,7 +2200,7 @@ describe("useRovingFocus", () => {
           ]);
       });
 
-      render(SubmenuFixture);
+      await render(SubmenuFixture);
 
       const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
       await userEvent.click(subItem1);
@@ -2215,7 +2215,7 @@ describe("useRovingFocus", () => {
 
     it("automatically resets roving focus when node.open transitions to false", async () => {
       const { Component, getRoving, getContext } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option3 = page.getByRole("option", { name: "option 3" });
       await userEvent.click(option3);
@@ -2231,7 +2231,7 @@ describe("useRovingFocus", () => {
 
     it("does not exit or close root node on exit key when onExit is omitted", async () => {
       const { Component, getRoving, getContext } = createTestComponent();
-      render(Component);
+      await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
       await userEvent.click(option1);
