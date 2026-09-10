@@ -280,7 +280,6 @@ describe("useFloatingNode", () => {
     root.setOpen(false, "outside-pointer");
 
     expect(root.open.value).toBe(false);
-    // One outer pass plus one suppressed nested call per descendant.
     expect(closeCalls).toBeLessThanOrEqual(depth + 1);
   });
 

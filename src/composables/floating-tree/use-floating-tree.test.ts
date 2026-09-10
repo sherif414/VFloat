@@ -361,7 +361,6 @@ describe("useFloatingTree", () => {
     it("skips already-closed descendants when closing", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      // Closed descendants carry no reason metadata, so reaffirming the close is a no-op.
       const child = createMockNode({ isRoot: false, open: false });
       const grandchild = createMockNode({ isRoot: false, open: true });
 
@@ -392,7 +391,6 @@ describe("useFloatingTree", () => {
 
       tree.removeNode(child.id);
 
-      // No dangling parent links: the surviving grandchild stays reachable from the root.
       expect(tree.getNode(child.id)).toBeUndefined();
       expect(tree.getNode(grandchild.id)).toBe(grandchild);
       expect(tree.getChildren(root.id)).toEqual([grandchild]);
@@ -417,7 +415,6 @@ describe("useFloatingTree", () => {
       expect(tree.getNode(child.id)).toBe(child);
       expect(tree.getNode(grandchild.id)).toBe(grandchild);
       expect(child.isRoot).toBe(true);
-      // The surviving subtree stays linked: grandchild is still reachable via the child.
       expect(tree.getDescendants(child.id)).toEqual([grandchild]);
       expect(tree.getChildren(child.id)).toEqual([grandchild]);
     });

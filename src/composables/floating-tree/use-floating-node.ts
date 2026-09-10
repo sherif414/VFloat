@@ -27,8 +27,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const storedReason = ref<OpenChangeReason | null>(null);
   const storedEvent = ref<Event | null>(null);
 
-  // Derived so `open === false` with a non-null reason is structurally
-  // impossible: no watcher timing involved, sync and async readers agree.
   const lastOpenReason = computed<OpenChangeReason | null>(() =>
     open.value ? storedReason.value : null,
   );
@@ -38,8 +36,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     if (!value) {
       storedReason.value = null;
       storedEvent.value = null;
-      // Single traversal: closeDescendants closes each open descendant directly
-      // and suppresses nested sweeps internally, so reaffirmed closes stay cheap.
       node.tree?.closeDescendants(node, reason, event);
     } else {
       storedReason.value = reason;

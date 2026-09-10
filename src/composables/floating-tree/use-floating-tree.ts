@@ -43,9 +43,6 @@ interface TreeQueryTarget {
  */
 export function useFloatingTree(): FloatingTree {
   const nodes = new Map<FloatingNodeId, TreeEntry>();
-  // Guards re-entrant cascades: the outer closeDescendants pass already visits
-  // every descendant deepest-first, so nested sweeps triggered by each
-  // descendant's setOpen are redundant and would blow up exponentially.
   let isClosingDescendants = false;
 
   /**
@@ -108,7 +105,6 @@ export function useFloatingTree(): FloatingTree {
     if (!entry) return;
 
     const parent = entry.parentId != null ? nodes.get(entry.parentId) : undefined;
-    // A dangling parent link (parent already gone) degrades to root level.
     const inheritedParentId = parent ? entry.parentId : null;
 
     for (const childId of entry.childIds.value) {
@@ -270,7 +266,6 @@ export function useFloatingTree(): FloatingTree {
     try {
       for (let i = descendants.length - 1; i >= 0; i--) {
         const descendant = descendants[i]!;
-        // Skip already-closed nodes so reaffirmed closes stay cheap.
         if (!descendant.open.value) continue;
         descendant.setOpen(false, reason, event);
       }
