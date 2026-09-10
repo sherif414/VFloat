@@ -2,24 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import type { OpenChangeReason } from "@/types";
 import { useFloatingTree } from "./use-floating-tree";
+import { clearTrackedElements, trackElement } from "@/test-utils";
 import type { AnchorElement, FloatingElement, FloatingNode } from "./use-floating-node";
 
-const trackedElements: HTMLElement[] = [];
 let scope: ReturnType<typeof effectScope> | undefined;
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
-}
-
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
 
 function createMockNode(
   overrides: Omit<Partial<FloatingNode>, "open"> & { open?: boolean } = {},
