@@ -1,136 +1,190 @@
 import type { Strategy } from "@floating-ui/dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, effectScope, nextTick, ref } from "vue";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-vue";
+import {
+  computed,
+  defineComponent,
+  h,
+  nextTick,
+  onMounted,
+  ref,
+  shallowRef,
+  useTemplateRef,
+} from "vue";
 import type { FloatingNode } from "@/composables";
 import { type UseHoverOptions, useFloatingNode, useFloatingTree, useHover } from "@/composables";
+import { getTestEl, makePointerEvent, stubElementRect } from "@/test-utils";
 
-const trackedElements: HTMLElement[] = [];
-const activeScopes: ReturnType<typeof effectScope>[] = [];
-
-function trackElement<T extends HTMLElement>(el: T): T {
-  trackedElements.push(el);
-  return el;
+interface FixtureConfig {
+  withIgnored?: boolean;
 }
 
-function clearTrackedElements() {
-  for (const el of [...trackedElements].reverse()) {
-    if (el.isConnected) {
-      el.remove();
-    }
-  }
-  trackedElements.length = 0;
-}
-
-function makePointerEvent(
-  type: string,
-  opts: Partial<PointerEventInit & { relatedTarget?: EventTarget | null }> = {},
-): PointerEvent {
-  return new PointerEvent(type, {
-    bubbles: true,
-    cancelable: true,
-    pointerType: "mouse",
-    ...opts,
-  } as PointerEventInit);
-}
-
-function makeDOMRect(x: number, y: number, w: number, h: number): DOMRect {
-  return {
-    x,
-    y,
-    width: w,
-    height: h,
-    top: y,
-    right: x + w,
-    bottom: y + h,
-    left: x,
-    toJSON() {},
-  } as DOMRect;
-}
-
-type HoverTestContext = {
-  anchorEl: HTMLDivElement;
-  floatingEl: HTMLDivElement;
-  node: FloatingNode;
-  scope: ReturnType<typeof effectScope>;
-  setOpen: ReturnType<typeof vi.fn>;
-};
-
-async function createHoverContext(options: UseHoverOptions = {}): Promise<HoverTestContext> {
-  const anchorEl = trackElement(document.createElement("div"));
-  const floatingEl = trackElement(document.createElement("div"));
-
-  anchorEl.getBoundingClientRect = () => makeDOMRect(0, 0, 100, 100);
-  floatingEl.getBoundingClientRect = () => makeDOMRect(0, 110, 50, 50);
-
-  document.body.appendChild(anchorEl);
-  document.body.appendChild(floatingEl);
-
+function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfig = {}) {
   const open = ref(false);
   const setOpen = vi.fn((val: boolean) => {
     open.value = val;
   });
+  let node!: FloatingNode;
 
-  const node = {
-    refs: {
-      anchorEl: ref(anchorEl),
-      floatingEl: ref(floatingEl),
-      arrowEl: ref(null),
-    },
-    open,
-    setOpen,
-    position: {
-      placement: ref("bottom"),
-      strategy: ref("absolute" as Strategy),
-      middlewareData: ref({}),
-      x: ref(0),
-      y: ref(0),
-      isPositioned: ref(true),
-      update: vi.fn(),
-      styles: computed(() => ({
-        position: "absolute",
-        top: "0px",
-        left: "0px",
-      })),
-    },
-  } as unknown as FloatingNode;
+  const Component = defineComponent(() => {
+    const anchorTemplateEl = useTemplateRef<HTMLDivElement>("anchor");
+    const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+    // Writable mirror of the template ref so tests can reassign the anchor
+    // and verify listener reattachment. Synced on mount before any dispatch.
+    const anchorRef = shallowRef<HTMLDivElement | null>(null);
 
-  const scope = effectScope();
-  activeScopes.push(scope);
-  scope.run(() => {
+    node = {
+      refs: {
+        anchorEl: anchorRef,
+        floatingEl,
+        arrowEl: ref(null),
+      },
+      open,
+      setOpen,
+      position: {
+        placement: ref("bottom"),
+        strategy: ref("absolute" as Strategy),
+        middlewareData: ref({}),
+        x: ref(0),
+        y: ref(0),
+        isPositioned: ref(true),
+        update: vi.fn(),
+        styles: computed(() => ({
+          position: "absolute",
+          top: "0px",
+          left: "0px",
+        })),
+      },
+    } as unknown as FloatingNode;
+
     useHover(node, options);
+
+    onMounted(() => {
+      anchorRef.value = anchorTemplateEl.value;
+    });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("div", { ref: "anchor", "data-testid": "anchor" }, "Anchor"),
+        h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
+        h("div", { "data-testid": "anchor-2" }, "Anchor 2"),
+        ...(config.withIgnored ? [h("div", { "data-testid": "ignored" }, "Ignored")] : []),
+      ]);
   });
 
-  await nextTick();
-  await nextTick();
+  return { Component, getNode: () => node, open, setOpen };
+}
 
+function createTreeComponent(
+  target: "parent" | "child",
+  parentInitial: boolean,
+  childInitial: boolean,
+) {
+  const parentOpen = ref(parentInitial);
+  const childOpen = ref(childInitial);
+
+  const Component = defineComponent(() => {
+    const parentAnchorEl = useTemplateRef<HTMLDivElement>("parent-anchor");
+    const parentFloatingEl = useTemplateRef<HTMLDivElement>("parent-floating");
+    const childAnchorEl = useTemplateRef<HTMLDivElement>("child-anchor");
+    const childFloatingEl = useTemplateRef<HTMLDivElement>("child-floating");
+
+    const tree = useFloatingTree();
+    const parentNode = useFloatingNode({
+      anchorEl: parentAnchorEl,
+      floatingEl: parentFloatingEl,
+      open: parentOpen,
+    });
+    const childNode = useFloatingNode({
+      anchorEl: childAnchorEl,
+      floatingEl: childFloatingEl,
+      open: childOpen,
+    });
+    tree.addNode(parentNode);
+    tree.addNode(childNode, parentNode.id);
+
+    useHover(target === "parent" ? parentNode : childNode);
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("div", { ref: "parent-anchor", "data-testid": "parent-anchor" }, "Parent anchor"),
+        h("div", { ref: "parent-floating", "data-testid": "parent-floating" }, "Parent floating"),
+        h("div", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child anchor"),
+        h("div", { ref: "child-floating", "data-testid": "child-floating" }, "Child floating"),
+      ]);
+  });
+
+  return { Component, parentOpen, childOpen };
+}
+
+async function renderHover(options: UseHoverOptions = {}, config: FixtureConfig = {}) {
+  const fixture = createTestComponent(options, config);
+  const view = await render(fixture.Component);
+  const anchorEl = getTestEl("anchor", view.container);
+  const floatingEl = getTestEl("floating", view.container);
+  stubElementRect(anchorEl, {
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+    top: 0,
+    left: 0,
+    right: 100,
+    bottom: 100,
+  });
+  stubElementRect(floatingEl, {
+    x: 0,
+    y: 110,
+    width: 50,
+    height: 50,
+    top: 110,
+    left: 0,
+    right: 50,
+    bottom: 160,
+  });
+  vi.useFakeTimers();
+  await nextTick();
+  await nextTick();
   return {
     anchorEl,
     floatingEl,
-    node,
-    scope,
-    setOpen,
+    anchor2El: getTestEl("anchor-2", view.container),
+    ignoredEl: config.withIgnored ? getTestEl("ignored", view.container) : null,
+    view,
+    node: fixture.getNode(),
+    open: fixture.open,
+    setOpen: fixture.setOpen,
+  };
+}
+
+async function renderTreeHover(
+  target: "parent" | "child",
+  parentInitial: boolean,
+  childInitial: boolean,
+) {
+  const fixture = createTreeComponent(target, parentInitial, childInitial);
+  const view = await render(fixture.Component);
+  vi.useFakeTimers();
+  await nextTick();
+  return {
+    parentAnchorEl: getTestEl("parent-anchor", view.container),
+    parentFloatingEl: getTestEl("parent-floating", view.container),
+    childAnchorEl: getTestEl("child-anchor", view.container),
+    childFloatingEl: getTestEl("child-floating", view.container),
+    parentOpen: fixture.parentOpen,
+    childOpen: fixture.childOpen,
   };
 }
 
 describe("useHover", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(async () => {
-    for (const scope of [...activeScopes].reverse()) {
-      scope.stop();
-    }
-    activeScopes.length = 0;
-    clearTrackedElements();
-    await nextTick();
+  afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
   describe("core functionality", () => {
     it("opens when pointer enters reference element", async () => {
-      const ctx = await createHoverContext();
+      const ctx = await renderHover();
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -140,7 +194,7 @@ describe("useHover", () => {
     });
 
     it("closes when pointer leaves reference element", async () => {
-      const ctx = await createHoverContext();
+      const ctx = await renderHover();
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -155,7 +209,7 @@ describe("useHover", () => {
     });
 
     it("does not close immediately if pointer moves from reference to floating element", async () => {
-      const ctx = await createHoverContext({ delay: 10 });
+      const ctx = await renderHover({ delay: 10 });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
@@ -181,7 +235,7 @@ describe("useHover", () => {
     });
 
     it("attaches/reattaches listeners when element refs change", async () => {
-      const ctx = await createHoverContext();
+      const ctx = await renderHover();
       const oldRef = ctx.anchorEl;
 
       ctx.node.refs.anchorEl.value = null;
@@ -191,19 +245,17 @@ describe("useHover", () => {
       await nextTick();
       expect(ctx.node.open.value).toBe(false);
 
-      const newRef = trackElement(document.createElement("div"));
-      document.body.appendChild(newRef);
-      ctx.node.refs.anchorEl.value = newRef;
+      ctx.node.refs.anchorEl.value = ctx.anchor2El;
       await nextTick();
 
-      newRef.dispatchEvent(makePointerEvent("pointerenter"));
+      ctx.anchor2El.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       expect(ctx.node.open.value).toBe(true);
     });
 
     it("disables functionality when enabled becomes false", async () => {
       const enabled = ref(true);
-      const ctx = await createHoverContext({ enabled });
+      const ctx = await renderHover({ enabled });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -222,7 +274,7 @@ describe("useHover", () => {
 
   describe("delay configuration", () => {
     it("respects delay.open (object notation)", async () => {
-      const ctx = await createHoverContext({ delay: { open: 100 } });
+      const ctx = await renderHover({ delay: { open: 100 } });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -235,7 +287,7 @@ describe("useHover", () => {
     });
 
     it("respects delay.close (object notation)", async () => {
-      const ctx = await createHoverContext({ delay: { close: 100 } });
+      const ctx = await renderHover({ delay: { close: 100 } });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -254,7 +306,7 @@ describe("useHover", () => {
     });
 
     it("respects delay (number notation) for both open and close", async () => {
-      const ctx = await createHoverContext({ delay: 150 });
+      const ctx = await renderHover({ delay: 150 });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -276,64 +328,21 @@ describe("useHover", () => {
 
   describe("ignorePointerLeave predicate", () => {
     it("keeps the parent open when the pointer leaves into an ignored element", async () => {
-      const anchorEl = trackElement(document.createElement("div"));
-      const floatingEl = trackElement(document.createElement("div"));
-      const ignoredEl = trackElement(document.createElement("div"));
-
-      anchorEl.getBoundingClientRect = () => makeDOMRect(0, 0, 100, 100);
-      floatingEl.getBoundingClientRect = () => makeDOMRect(0, 110, 50, 50);
-
-      document.body.appendChild(anchorEl);
-      document.body.appendChild(floatingEl);
-      document.body.appendChild(ignoredEl);
-
-      const open = ref(false);
-      const setOpen = vi.fn((val: boolean) => {
-        open.value = val;
-      });
-
-      const scope = effectScope();
-      activeScopes.push(scope);
-      let rootNode!: FloatingNode;
-      scope.run(() => {
-        rootNode = {
-          refs: {
-            anchorEl: ref(anchorEl),
-            floatingEl: ref(floatingEl),
-            arrowEl: ref(null),
-          },
-          open,
-          setOpen,
-          position: {
-            placement: ref("bottom"),
-            strategy: ref("absolute"),
-            middlewareData: ref({}),
-            x: ref(0),
-            y: ref(0),
-            isPositioned: ref(true),
-            update: vi.fn(),
-            styles: computed(() => ({
-              position: "absolute",
-              top: "0px",
-              left: "0px",
-            })),
-          },
-        } as unknown as FloatingNode;
-
-        useHover(rootNode, {
+      let ignoredEl: HTMLElement | null = null;
+      const ctx = await renderHover(
+        {
           ignorePointerLeave: (target) => target === ignoredEl,
-        });
-      });
+        },
+        { withIgnored: true },
+      );
+      ignoredEl = ctx.ignoredEl;
 
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      await nextTick();
 
-      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
-      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
 
-      expect(rootNode.open.value).toBe(true);
-
-      anchorEl.dispatchEvent(
+      ctx.anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           relatedTarget: ignoredEl,
           clientX: 15,
@@ -342,115 +351,51 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(rootNode.open.value).toBe(true);
+      expect(ctx.node.open.value).toBe(true);
     });
   });
 
   describe("parent-linked nodes", () => {
     it("keeps a parent open when the pointer leaves into a child floating element", async () => {
-      const parentAnchorEl = trackElement(document.createElement("div"));
-      const parentFloatingEl = trackElement(document.createElement("div"));
-      const childAnchorEl = trackElement(document.createElement("div"));
-      const childFloatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(parentAnchorEl);
-      document.body.appendChild(parentFloatingEl);
-      document.body.appendChild(childAnchorEl);
-      document.body.appendChild(childFloatingEl);
+      const ctx = await renderTreeHover("parent", false, true);
 
-      const parentOpen = ref(false);
-      const childOpen = ref(true);
-      const scope = effectScope();
-      activeScopes.push(scope);
-      let parentNode!: FloatingNode;
-
-      scope.run(() => {
-        const tree = useFloatingTree();
-        parentNode = useFloatingNode({
-          anchorEl: ref(parentAnchorEl),
-          floatingEl: ref(parentFloatingEl),
-          open: parentOpen,
-        });
-        const childNode = useFloatingNode({
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-          open: childOpen,
-        });
-        tree.addNode(parentNode);
-        tree.addNode(childNode, parentNode.id);
-
-        useHover(parentNode);
-      });
-
-      await nextTick();
-      parentAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      ctx.parentAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(parentNode.open.value).toBe(true);
+      expect(ctx.parentOpen.value).toBe(true);
 
-      parentAnchorEl.dispatchEvent(
+      ctx.parentAnchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
-          relatedTarget: childFloatingEl,
+          relatedTarget: ctx.childFloatingEl,
         }),
       );
       await nextTick();
 
-      expect(parentNode.open.value).toBe(true);
+      expect(ctx.parentOpen.value).toBe(true);
     });
 
     it("closes a child when the pointer leaves into the parent floating element", async () => {
-      const parentAnchorEl = trackElement(document.createElement("div"));
-      const parentFloatingEl = trackElement(document.createElement("div"));
-      const childAnchorEl = trackElement(document.createElement("div"));
-      const childFloatingEl = trackElement(document.createElement("div"));
-      document.body.appendChild(parentAnchorEl);
-      document.body.appendChild(parentFloatingEl);
-      document.body.appendChild(childAnchorEl);
-      document.body.appendChild(childFloatingEl);
+      const ctx = await renderTreeHover("child", true, false);
 
-      const parentOpen = ref(true);
-      const childOpen = ref(false);
-      const scope = effectScope();
-      activeScopes.push(scope);
-      let childNode!: FloatingNode;
-
-      scope.run(() => {
-        const tree = useFloatingTree();
-        const parentNode = useFloatingNode({
-          anchorEl: ref(parentAnchorEl),
-          floatingEl: ref(parentFloatingEl),
-          open: parentOpen,
-        });
-        childNode = useFloatingNode({
-          anchorEl: ref(childAnchorEl),
-          floatingEl: ref(childFloatingEl),
-          open: childOpen,
-        });
-        tree.addNode(parentNode);
-        tree.addNode(childNode, parentNode.id);
-
-        useHover(childNode);
-      });
-
-      await nextTick();
-      childAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      ctx.childAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(childNode.open.value).toBe(true);
+      expect(ctx.childOpen.value).toBe(true);
 
-      childAnchorEl.dispatchEvent(
+      ctx.childAnchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
-          relatedTarget: parentFloatingEl,
+          relatedTarget: ctx.parentFloatingEl,
         }),
       );
       await nextTick();
 
-      expect(childNode.open.value).toBe(false);
+      expect(ctx.childOpen.value).toBe(false);
     });
   });
 
   describe("rest period (restMs)", () => {
     it("waits for restMs before opening if pointer rests", async () => {
-      const ctx = await createHoverContext({ restMs: 50 });
+      const ctx = await renderHover({ restMs: 50 });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
@@ -463,7 +408,7 @@ describe("useHover", () => {
     });
 
     it("resets rest timer if pointer moves significantly before restMs expires", async () => {
-      const ctx = await createHoverContext({ restMs: 50 });
+      const ctx = await renderHover({ restMs: 50 });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
@@ -483,7 +428,7 @@ describe("useHover", () => {
     });
 
     it("cancels rest period timer if pointer leaves before restMs expires", async () => {
-      const ctx = await createHoverContext({ restMs: 50 });
+      const ctx = await renderHover({ restMs: 50 });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
@@ -499,7 +444,7 @@ describe("useHover", () => {
     });
 
     it("ignores restMs if delay.open is greater than 0", async () => {
-      const ctx = await createHoverContext({
+      const ctx = await renderHover({
         delay: { open: 100 },
         restMs: 50,
       });
@@ -517,7 +462,7 @@ describe("useHover", () => {
 
   describe("mouse-only mode (mouseOnly)", () => {
     it("ignores non-mouse pointer types when mouseOnly is true", async () => {
-      const ctx = await createHoverContext({ mouseOnly: true });
+      const ctx = await renderHover({ mouseOnly: true });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "touch" }));
       vi.runAllTimers();
@@ -556,7 +501,7 @@ describe("useHover", () => {
 
   describe("edge case handling", () => {
     it("cancels pending open delay if pointer leaves reference", async () => {
-      const ctx = await createHoverContext({ delay: { open: 100 } });
+      const ctx = await renderHover({ delay: { open: 100 } });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -572,7 +517,7 @@ describe("useHover", () => {
     });
 
     it("cancels pending close delay if pointer re-enters reference", async () => {
-      const ctx = await createHoverContext({ delay: { close: 100 } });
+      const ctx = await renderHover({ delay: { close: 100 } });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -591,7 +536,7 @@ describe("useHover", () => {
     });
 
     it("closes (respecting delay) if pointer leaves floating element", async () => {
-      const ctx = await createHoverContext({ delay: { close: 100 } });
+      const ctx = await renderHover({ delay: { close: 100 } });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -616,7 +561,7 @@ describe("useHover", () => {
     });
 
     it("reacts to external state changes", async () => {
-      const ctx = await createHoverContext();
+      const ctx = await renderHover();
 
       ctx.node.setOpen(true);
       await nextTick();
@@ -640,7 +585,7 @@ describe("useHover", () => {
 
   describe("safePolygon behavior", () => {
     it("keeps open when leaving reference towards floating with safePolygon enabled", async () => {
-      const ctx = await createHoverContext({ safePolygon: true });
+      const ctx = await renderHover({ safePolygon: true });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
@@ -685,14 +630,14 @@ describe("useHover", () => {
   });
 
   describe("lifecycle & cleanup", () => {
-    it("removes event listeners on cleanup (simulated unmount)", async () => {
-      const ctx = await createHoverContext();
+    it("removes event listeners on unmount", async () => {
+      const ctx = await renderHover();
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       expect(ctx.node.open.value).toBe(true);
 
-      ctx.scope.stop();
+      await ctx.view.unmount();
       await nextTick();
 
       ctx.node.setOpen(false);
@@ -712,7 +657,7 @@ describe("useHover", () => {
     });
 
     it("cancels scheduled open when anchor element is removed from DOM during open delay", async () => {
-      const ctx = await createHoverContext({ delay: { open: 100 } });
+      const ctx = await renderHover({ delay: { open: 100 } });
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.advanceTimersByTime(50);
