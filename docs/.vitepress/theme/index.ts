@@ -7,6 +7,7 @@ import DefaultTheme from "vitepress/theme";
 import { useData } from "vitepress";
 import { defineComponent, h } from "vue";
 import DemoContainer from "./components/demo-container.vue";
+import HomeInstall from "./components/home-install.vue";
 import HomeShowcase from "./components/home-showcase.vue";
 import PackageSizeTable from "./components/package-size-table.vue";
 
@@ -18,28 +19,25 @@ const Layout = defineComponent({
     const { frontmatter } = useData();
 
     return () =>
-      renderLayout(
-        DefaultTheme.Layout,
-        null,
-        {
-          ...slots,
-          "nav-bar-title-before": () =>
-            h("img", {
-              class: "vf-mark",
-              src: "/vfloat-mark.svg",
-              alt: "",
-              width: 24,
-              height: 24,
-            }),
-          "navbar-title": () => h("span", { class: "text" }, "VFloat"),
-          ...(frontmatter.value.layout === "home"
-            ? {
-                "home-hero-after": () =>
-                  h("div", { class: "home-showcase-section" }, [h(HomeShowcase)]),
-              }
-            : {}),
-        } as any,
-      );
+      renderLayout(DefaultTheme.Layout, null, {
+        ...slots,
+        "nav-bar-title-before": () =>
+          h("img", {
+            class: "vf-mark",
+            src: "/vfloat-mark.svg",
+            alt: "",
+            width: 24,
+            height: 24,
+          }),
+        "navbar-title": () => h("span", { class: "text" }, "VFloat"),
+        ...(frontmatter.value.layout === "home"
+          ? {
+              "home-hero-actions-after": () => h(HomeInstall),
+              "home-hero-after": () =>
+                h("div", { class: "home-showcase-section" }, [h(HomeShowcase)]),
+            }
+          : {}),
+      } as any);
   },
 });
 

@@ -24,10 +24,42 @@
   gap: 0.75rem;
 }
 
+/* Compact hero: stock VitePress ships 48–80px top + 48–64px bottom padding.
+   That whitespace dominates on a Read-first docs home, so tighten the rhythm
+   while keeping the Display type scale untouched.
+   Specificity note: `html` prefixes outrank the stock scoped theme, which
+   loads after this skin (see vars.css). */
+html .VPHomeHero.VPHero {
+  padding-top: calc(var(--vp-nav-height) + 32px);
+  padding-bottom: 20px;
+}
+
+html .VPHomeHero .actions {
+  padding-top: 20px;
+}
+
 .home-showcase-section {
   max-width: 1152px;
   margin: 0 auto;
-  padding: 1.5rem 1.5rem 0.5rem;
+  padding: 0.5rem 1.5rem 0.5rem;
+}
+
+@media (min-width: 640px) {
+  html .VPHomeHero.VPHero {
+    padding-top: calc(var(--vp-nav-height) + 48px);
+    padding-bottom: 32px;
+  }
+
+  html .VPHomeHero .actions {
+    padding-top: 24px;
+  }
+}
+
+@media (min-width: 960px) {
+  html .VPHomeHero.VPHero {
+    padding-top: calc(var(--vp-nav-height) + 56px);
+    padding-bottom: 40px;
+  }
 }
 
 @media (max-width: 640px) {
