@@ -44,7 +44,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -66,7 +66,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -99,7 +99,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -111,7 +111,7 @@ useDismiss(context);
 <template>
   <button ref="anchorEl" type="button">Open popover</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="styles">
+  <div v-if="context.open.value" ref="floatingEl" :style=\"styles\">
     <p>Popover content goes here.</p>
     <button type="button">Action</button>
   </div>

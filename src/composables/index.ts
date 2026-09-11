@@ -88,7 +88,8 @@ export type {
   FloatingMiddlewareRegistry,
   FloatingPosition,
   FloatingStyles,
-  UsePositionMiddlewareOptions,
+  UsePositionArrowOptions,
+  UsePositionMiddlewaresOptions,
   UsePositionOptions,
 } from "./position";
 // Position

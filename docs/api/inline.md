@@ -32,7 +32,7 @@ interface InlineOptions {
 
 Without `inline`, an anchor that wraps across lines is measured as one bounding box and the floating element can detach from the line the pointer is actually over. `inline` measures each client rect instead, so the placement tracks the current line.
 
-In most cases you do not need this middleware directly. Pass `middleware: { inline: true }` (or an options object) to [`usePosition`](/api/use-position) and the declarative entry is added for you.
+In most cases you do not need this middleware directly. Pass `middlewares: { inline: true }` (or an options object) to [`usePosition`](/api/use-position) and the declarative entry is added for you.
 
 ## Example
 
@@ -49,7 +49,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     inline: { padding: 4 },
   },
 });
@@ -64,6 +64,6 @@ const { styles } = usePosition(node, {
 
 ## See Also
 
-- [`usePosition`](/api/use-position) - Declares `inline` through `middleware.inline`
+- [`usePosition`](/api/use-position) - Declares `inline` through `middlewares.inline`
 - [`offset`](/api/offset) - Adds spacing between the anchor and floating element
 - [`shift`](/api/shift) - Keeps the floating element in view

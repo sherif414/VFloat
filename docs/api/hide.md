@@ -60,7 +60,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { middlewareData, styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     custom: [hide()],
   },
 });

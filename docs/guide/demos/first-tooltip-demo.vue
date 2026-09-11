@@ -8,7 +8,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: {
+  middlewares: {
     offset: 10,
   },
 });

@@ -45,7 +45,7 @@ A numeric value is shorthand for `mainAxis`. Use an options object when you need
 
 ## Example
 
-Pass `offset` through the declarative `middleware` option on `usePosition`:
+Pass `offset` through the declarative `middlewares` option on `usePosition`:
 
 ```vue
 <script setup lang="ts">
@@ -58,7 +58,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     offset: 10,
   },
 });

@@ -65,7 +65,7 @@ tree.addNode(rootContext);
 
 const rootPosition = usePosition(rootContext, {
   placement: "bottom-start",
-  middleware: { offset: 8, flip: true, shift: { padding: 12 } },
+  middlewares: { offset: 8, flip: true, shift: { padding: 12 } },
 });
 
 provide("MenuRootContext", { tree, rootContext, rootPosition });
@@ -189,7 +189,7 @@ watchEffect(() => {
 
 const position = usePosition(subContext, {
   placement: "right-start",
-  middleware: { offset: 4, flip: true, shift: { padding: 12 } },
+  middlewares: { offset: 4, flip: true, shift: { padding: 12 } },
 });
 
 const { getTabindex } = useRovingFocus(subContext, {
@@ -219,7 +219,7 @@ provide("MenuLevelContext", { context: subContext, getTabindex, itemEls, parentL
 ## Edge Cases Solved
 
 - **Outside Click Safety:** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useOutsideClick`](/api/use-outside-click) with `tree` inspects all registered descendant floating elements.
-- **Deepest Escape First:** Pressing `Escape` dismisses only the innermost open submenu first when [`useEscapeKey`](/api/use-escape-key) receives the same `tree`.
+- **Deepest Escape First:** Pressing `Escape` dismisses only the innermost open submenu first when [`useEscapeKey`](/api/use-escape-key) receives the same `tree` platform.
 - **Explicit Cascading Teardown:** Closing the root menu does not cascade on its own. Call `tree.closeDescendants(rootContext, reason, event)` when parent teardown must close the family in reverse depth order.
 - **Safe Triangle:** Moving the cursor diagonally across sibling items to enter the submenu is protected by `useHover({ safePolygon: true })`.
 

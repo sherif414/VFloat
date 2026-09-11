@@ -40,7 +40,7 @@ The middleware writes its result to `middlewareData.value.arrow`. That data is u
 
 ## Example
 
-Compose `arrow` through `middleware.custom` and read its data for manual styles:
+Compose `arrow` through `middlewares.custom` and read its data for manual styles:
 
   ```vue
   <script setup lang="ts">
@@ -55,7 +55,7 @@ Compose `arrow` through `middleware.custom` and read its data for manual styles:
   const node = useFloatingNode({ anchorEl, floatingEl, open });
   const { middlewareData, styles } = usePosition(node, {
     placement: "top",
-    middleware: {
+    middlewares: {
       offset: 8,
       custom: [arrow({ element: arrowEl, padding: 8 })],
     },

@@ -45,7 +45,7 @@ const floatingEl = useTemplateRef("floatingEl");
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: { offset: 8 },
+  middlewares: { offset: 8 },
 });
 
 useHover(context);
@@ -71,7 +71,7 @@ const menuEl = useTemplateRef("menuEl");
 const context = useFloatingNode({ anchorEl: triggerEl, floatingEl: menuEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: { offset: 4, flip: true, shift: { padding: 8 } },
+  middlewares: { offset: 4, flip: true, shift: { padding: 8 } },
 });
 
 useClick(context);
@@ -103,7 +103,7 @@ const arrowEl = useTemplateRef("arrowEl");
 const context = useFloatingNode({ anchorEl, floatingEl: tooltipEl, arrowEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: { offset: 8, flip: true },
+  middlewares: { offset: 8, flip: true },
 });
 
 useHover(context);

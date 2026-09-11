@@ -30,7 +30,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom",
-  middleware: {
+  middlewares: {
     offset: 8,
     flip: true,
     shift: { padding: 8 },
@@ -45,7 +45,7 @@ That order reads naturally, and it matches the order VFloat applies semantic mid
 - choose a viable side
 - keep the surface visible
 
-Use `middleware` for these declarative options and `middlewares` for raw Floating UI middleware; `custom` entries run after the built-ins.
+Use `middlewares` for declarative options and `middlewares.custom` for raw Floating UI middleware; `custom` entries run after the built-ins.
 
 ## Next Step
 

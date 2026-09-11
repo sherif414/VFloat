@@ -39,7 +39,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -61,7 +61,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -97,7 +97,7 @@ Two accessibility details are worth calling out:
 
 ## Why `safePolygon` Matters
 
-Once you add `middleware.offset: 8`, there is a visible gap between the trigger and the tooltip. If hover closes immediately on `pointerleave`, the tooltip can disappear while the pointer is still moving naturally toward it.
+Once you add `middlewares.offset: 8`, there is a visible gap between the trigger and the tooltip. If hover closes immediately on `pointerleave`, the tooltip can disappear while the pointer is still moving naturally toward it.
 
 `safePolygon` protects that path between the anchor and the floating element.
 

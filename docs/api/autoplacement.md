@@ -48,7 +48,7 @@ If you want to keep a preferred placement and only fall back when needed, `flip(
 
 ## Example
 
-Add `autoPlacement` through `middleware.custom` with a limited placement list:
+Add `autoPlacement` through `middlewares.custom` with a limited placement list:
 
 ```vue
 <script setup lang="ts">
@@ -61,7 +61,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     custom: [
       autoPlacement({
         allowedPlacements: ["top", "bottom"],

@@ -36,7 +36,7 @@ const context = useFloatingNode({ anchorEl, floatingEl });
 // 2. WHERE: calculate coordinates and return styles
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: { offset: 8 },
+  middlewares: { offset: 8 },
 });
 
 // 3. WHEN: manage visibility based on user input

@@ -4,7 +4,7 @@ description: Keep floating content within the viewport with middleware and sizin
 
 # Keep Content in View
 
-Base placement gets you close. Real floating surfaces still run into viewport edges, scroll containers, and size limits. That is where `middleware` options help.
+Base placement gets you close. Real floating surfaces still run into viewport edges, scroll containers, and size limits. That is where `middlewares` options help.
 
 This guide treats middleware like a small set of fixes. When you notice a problem, pick the fix that matches it.
 
@@ -40,7 +40,7 @@ const context = useFloatingNode({
 });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
     flip: true,
     shift: { padding: 8 },
@@ -51,9 +51,9 @@ const { styles } = usePosition(context, {
 
 Read this stack from left to right:
 
-- `middleware.offset: 8` creates a visual gap
-- `middleware.flip: true` switches sides when the preferred side does not fit
-- `middleware.shift: { padding: 8 }` nudges the panel back into view when needed
+- `middlewares.offset: 8` creates a visual gap
+- `middlewares.flip: true` switches sides when the preferred side does not fit
+- `middlewares.shift: { padding: 8 }` nudges the panel back into view when needed
 
 ## Problem 1: "The Surface Feels Jammed Against The Trigger"
 
@@ -69,7 +69,7 @@ Use [`shift`](/api/shift).
 
 ## Problem 4: "The Panel Should Match Width Or Fit Height"
 
-Use [`size`](/api/size) through `middleware.custom`, since sizing is a raw middleware rather than a declarative key.
+Use [`size`](/api/size) through `middlewares.custom`, since sizing is a raw middleware rather than a declarative key.
 
 ```vue
 <script setup lang="ts">
@@ -87,7 +87,7 @@ const context = useFloatingNode({
 });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
     flip: true,
     shift: { padding: 8 },
@@ -110,7 +110,7 @@ const { styles } = usePosition(context, {
 
 ## Problem 5: "I Want The Best Side Automatically"
 
-Use [`autoPlacement`](/api/autoplacement) through `middleware.custom` (as `custom: [autoPlacement()]`) when the exact side is less important than finding the side with the most room.
+Use [`autoPlacement`](/api/autoplacement) through `middlewares.custom` (as `custom: [autoPlacement()]`) when the exact side is less important than finding the side with the most room.
 
 ## Problem 6: "I Need An Arrow"
 
@@ -133,7 +133,7 @@ const context = useFloatingNode({
   open,
 });
 const position = usePosition(context, {
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });

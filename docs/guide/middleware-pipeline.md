@@ -23,7 +23,7 @@ The easiest mistake is to think of middleware options as a list of independent f
 That is why the stack below is not equivalent to the same helpers in a different order.
 
 ```ts
-middleware: {
+middlewares: {
   offset: 8,
   flip: true,
   shift: { padding: 8 },
@@ -34,7 +34,7 @@ is not equivalent to the same helpers in a different order.
 
 ## Common Roles In The Pipeline
 
-VFloat's declarative `middleware` keys run in a fixed order: `inline`, `offset`, `flip`, `shift`, `matchWidth`, then `custom`.
+VFloat's declarative `middlewares` keys run in a fixed order: `inline`, `offset`, `flip`, `shift`, `matchWidth`, then `custom`.
 
 - `inline` positions relative to individual client rects for multi-line anchors.
 - `offset` adds distance from the anchor.
@@ -42,7 +42,7 @@ VFloat's declarative `middleware` keys run in a fixed order: `inline`, `offset`,
 - `shift` keeps the surface visible inside the clipping area.
 - `matchWidth` sizes the panel to the anchor width.
 - `custom` appends raw middleware after the built-ins, which is where helpers like [`size`](/api/size), [`autoPlacement`](/api/autoplacement), and [`hide`](/api/hide) belong.
-- `arrow` is not a `middleware` key at all: [`useArrow`](/api/use-arrow) registers the arrow middleware by name and exposes its styles.
+- `arrow` is not a `middlewares` key at all: [`useArrow`](/api/use-arrow) registers the arrow middleware by name and exposes its styles.
 
 ## A Good Mental Model
 

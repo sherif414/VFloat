@@ -40,7 +40,7 @@ interface FlipOptions {
 
 ## Example
 
-Pass `flip` through the declarative `middleware` option on `usePosition`:
+Pass `flip` through the declarative `middlewares` option on `usePosition`:
 
 ```vue
 <script setup lang="ts">
@@ -53,7 +53,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     flip: {
       fallbackPlacements: ["top", "right", "bottom"],
     },

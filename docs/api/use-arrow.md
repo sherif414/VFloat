@@ -66,7 +66,7 @@ const arrowEl = ref<HTMLElement | null>(null);
 const node = useFloatingNode({ anchorEl, floatingEl, arrowEl });
 const { styles } = usePosition(node, {
   placement: "top",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });

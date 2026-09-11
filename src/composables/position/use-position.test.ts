@@ -8,6 +8,7 @@ import { getTestEl, stubElementRect } from "@/test-utils";
 
 interface FixtureConfig {
   withArrow?: boolean;
+  callUseArrow?: boolean;
   open?: Ref<boolean>;
 }
 
@@ -27,7 +28,7 @@ function createTestComponent(options: UsePositionOptions = {}, config: FixtureCo
       ...(config.open ? { open: config.open } : {}),
     });
     position = usePosition(node, options);
-    if (config.withArrow) {
+    if (config.withArrow && config.callUseArrow !== false) {
       useArrow(node);
     }
 
@@ -113,7 +114,9 @@ describe("usePosition", () => {
     const middleware = createMiddleware("custom", { ok: true });
     const { position } = await renderPosition({
       placement,
-      middlewares: [middleware],
+      middlewares: {
+        custom: [middleware],
+      },
     });
 
     await position.update();
@@ -125,27 +128,58 @@ describe("usePosition", () => {
   });
 
   it("creates built-in middleware from declarative options", async () => {
-    const { node } = await renderPosition({
-      middleware: {
-        inline: true,
-        offset: 8,
-        flip: true,
-        shift: { padding: 8 },
-        matchWidth: true,
+    const { node } = await renderPosition(
+      {
+        middlewares: {
+          inline: true,
+          offset: 8,
+          flip: true,
+          autoPlacement: true,
+          shift: { padding: 8 },
+          matchWidth: true,
+          size: { apply() {} },
+          hide: true,
+          arrow: true,
+        },
       },
+      { withArrow: true, callUseArrow: false },
+    );
+
+    expect(
+      floatingInternals
+        .get(node.id)
+        ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
+    ).toEqual([
+      "inline",
+      "offset",
+      "flip",
+      "autoPlacement",
+      "shift",
+      "size",
+      "size",
+      "hide",
+      "arrow",
+    ]);
+  });
+
+  it("accepts a raw array of middlewares directly", async () => {
+    const middleware1 = createMiddleware("custom1", { a: 1 });
+    const middleware2 = createMiddleware("custom2", { b: 2 });
+    const { node } = await renderPosition({
+      middlewares: [middleware1, middleware2],
     });
 
     expect(
       floatingInternals
         .get(node.id)
         ?.middlewareRegistry?.middlewares.value.map((middleware) => middleware.name),
-    ).toEqual(["inline", "offset", "flip", "shift", "size"]);
+    ).toEqual(["custom1", "custom2"]);
   });
 
   it("appends custom middleware after declarative middleware", async () => {
     const middleware = createMiddleware("custom", { ok: true });
     const { node } = await renderPosition({
-      middleware: {
+      middlewares: {
         offset: 8,
         custom: [middleware],
       },

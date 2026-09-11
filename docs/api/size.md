@@ -54,7 +54,7 @@ When you only need the floating element to match the anchor width, prefer the `m
 
 ## Example
 
-Add `size` through `middleware.custom` when you need full control over the applied styles:
+Add `size` through `middlewares.custom` when you need full control over the applied styles:
 
 ```vue
 <script setup lang="ts">
@@ -67,7 +67,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     custom: [
       size({
         apply({ availableWidth, availableHeight, elements }) {

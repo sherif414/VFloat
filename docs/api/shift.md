@@ -49,7 +49,7 @@ Use it together with `flip()` when you want a stable preferred placement plus a 
 
 ## Example
 
-Pass `shift` through the declarative `middleware` option on `usePosition`:
+Pass `shift` through the declarative `middlewares` option on `usePosition`:
 
 ```vue
 <script setup lang="ts">
@@ -62,7 +62,7 @@ const open = ref(true);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(node, {
-  middleware: {
+  middlewares: {
     shift: { padding: 8, crossAxis: true },
   },
 });

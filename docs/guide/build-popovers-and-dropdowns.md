@@ -30,7 +30,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -52,7 +52,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
   },
 });
@@ -90,7 +90,7 @@ Now render the content the user actually came for.
 
 ## A Safer Default For Real Panels
 
-If the panel can run into the viewport edge, set `middleware.flip: true` and `middleware.shift`.
+If the panel can run into the viewport edge, set `middlewares.flip: true` and `middlewares.shift`.
 
 ```vue
 <script setup lang="ts">
@@ -103,7 +103,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "bottom-start",
-  middleware: {
+  middlewares: {
     offset: 8,
     flip: true,
     shift: { padding: 8 },

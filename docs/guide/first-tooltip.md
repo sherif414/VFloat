@@ -32,7 +32,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: { offset: 8 },
+  middlewares: { offset: 8 },
 });
 
 useHover(context);
@@ -81,7 +81,7 @@ The context doesn't position anything. It doesn't listen for hover or click even
 ```ts
 const { styles } = usePosition(context, {
   placement: "top",
-  middleware: { offset: 8 },
+  middlewares: { offset: 8 },
 });
 ```
 
@@ -91,7 +91,7 @@ Two options matter here:
 
 **`placement: "top"`** puts the tooltip above the button. VFloat supports all twelve placements: `top`, `top-start`, `top-end`, `bottom`, `bottom-start`, `bottom-end`, and the same six for `left` and `right`.
 
-**`middleware: { offset: 8 }`** adds an 8-pixel gap between the anchor and the tooltip. Without it, the tooltip sits flush against the button — technically correct, but visually cramped. [`offset`](/api/offset) is the simplest middleware, and the one you'll reach for most often.
+**`middlewares: { offset: 8 }`** adds an 8-pixel gap between the anchor and the tooltip. Without it, the tooltip sits flush against the button — technically correct, but visually cramped. [`offset`](/api/offset) is the simplest middleware, and the one you'll reach for most often.
 
 Middlewares are small functions that adjust the final position. You'll add more as the surface needs to respond to viewport edges ([`flip`](/api/flip), [`shift`](/api/shift)), constrain its size ([`size`](/api/size)), or point an arrow back at the anchor ([`arrow`](/api/arrow)). For a tooltip, offset alone is enough.
 
