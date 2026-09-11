@@ -8,7 +8,7 @@ VFloat owes a lot to Floating UI. It helped shape how many of us think about flo
 
 That said, VFloat is not meant to be read as a one-to-one port with renamed exports. Some ideas carry over cleanly, and some do not.
 
-## What Carries Over
+## What carries over
 
 If you have used Floating UI before, several things will feel familiar:
 
@@ -16,23 +16,23 @@ If you have used Floating UI before, several things will feel familiar:
 - middleware-driven refinement
 - virtual elements
 - collision handling concepts
-- API names such as `useFloatingNode`, `offset`, `flip`, and `shift`
+- middleware names such as `offset`, `flip`, and `shift`
 
-## What Does Not Carry Over Cleanly
+## What does not carry over directly
 
 Familiar names do not always mean identical API shape or identical mental model.
 
 VFloat has its own public vocabulary and its own grouping model:
 
 - the public root is centered around `useFloatingNode({ anchorEl, floatingEl, ... })`
-- the returned node is flat — `refs`, `open`, `setOpen`, `lastOpenReason`, and `lastOpenEvent` with no `state` wrapper
+- the returned node is flat: `refs`, `open`, `setOpen`, `lastOpenReason`, and `lastOpenEvent` with no `state` wrapper
 - `usePosition(context)` adds geometry when a surface needs JavaScript positioning
 - interaction composables are designed around the shared context
 - some composition patterns are Vue-specific and intentionally tailored to this library
 
 So the safest way to approach VFloat is this: let prior Floating UI experience help you recognize the broad ideas, but do not assume every detail maps directly.
 
-## Next Step
+## Where to go next
 
 - Read [Floating Context](/guide/floating-context) to understand the core VFloat model.
 - Read [Middleware Pipeline](/guide/middleware-pipeline) if you want to compare the positioning flow conceptually without assuming identical APIs.

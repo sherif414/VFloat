@@ -8,7 +8,7 @@ VFloat's interaction composables look separate on the surface, but they are mean
 
 That shared model is the difference between a pile of event helpers and a composable floating system.
 
-## The Core Idea
+## The core idea
 
 Interaction composables do not usually position anything themselves. They answer a different question:
 
@@ -22,9 +22,9 @@ Examples:
 - [`useFocus`](/api/use-focus) reacts to focus and blur
 - [`useFocusTrap`](/api/use-focus-trap) orchestrates focus while open
 
-[`useDismiss`](/api/use-dismiss) is itself a thin grouping over the internal Escape and outside-press channels. Reach for it by default; disable the channel you don't need with `escapeKey: false` or `outsidePress: false`.
+[`useDismiss`](/api/use-dismiss) is itself a thin grouping over the internal Escape and outside-press channels. Reach for it by default; disable the channel you do not need with `escapeKey: false` or `outsidePress: false`.
 
-## One Context, Many Behaviors
+## One context, many behaviors
 
 A floating surface often needs more than one interaction rule at once.
 
@@ -32,9 +32,9 @@ For example, an accessible tooltip may need hover for pointer users and focus fo
 
 Those are not competing systems if they all share one `context`. They are just different inputs acting on the same open state.
 
-## A Typical Combination
+## A typical combination
 
-This example shows a common click-driven combination.
+This example shows a common click-driven combination:
 
 ```vue
 <script setup lang="ts">
@@ -53,7 +53,7 @@ useDismiss(context);
 
 `useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and one shared `tree`. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`).
 
-## Next Step
+## Where to go next
 
 - Read [Choosing the Right Pattern](/guide/choosing-the-right-pattern) if you are deciding which interaction mix a surface should use.
 - Read [Floating Context](/guide/floating-context) if you want the deeper model behind the shared root.

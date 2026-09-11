@@ -23,3 +23,23 @@ features:
     details: Independent composables for positioning, hover, click, focus management, and keyboard navigation that connect cleanly through shared floating nodes and an explicit floating tree.
 footer: false
 ---
+
+## Installation
+
+Requires Vue 3.5 or later.
+
+::: code-group
+
+```sh [pnpm]
+pnpm add v-float
+```
+
+```sh [npm]
+npm install v-float
+```
+
+```sh [yarn]
+yarn add v-float
+```
+
+:::

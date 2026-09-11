@@ -8,7 +8,7 @@ The `context` is the shared node that keeps a floating surface together.
 
 If you understand the floating node, the rest of the library gets easier to follow. Most confusion in VFloat comes from treating the composables as separate helpers when they are really meant to cooperate through one shared object.
 
-## The Three Parts
+## The three parts
 
 Every floating surface in VFloat is built from three things:
 
@@ -18,7 +18,7 @@ Every floating surface in VFloat is built from three things:
 
 The anchor is the thing the surface is positioned against. The floating element is the surface that appears. The `context` is the node object returned by [`useFloatingNode`](/api/use-floating-node) that connects them and lets other composables work together.
 
-## Why The Node Exists
+## Why the node exists
 
 VFloat intentionally keeps the shared node small:
 
@@ -48,7 +48,7 @@ It includes:
 
 Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useDismiss`](/api/use-dismiss) all coordinate through this same open state, tagging each change with a reason such as `"hover"` or `"anchor-click"`.
 
-## Positioning Lives Next To The Node
+## Positioning lives next to the node
 
 The node itself does not compute coordinates, run middlewares, or wire auto-update listeners.
 
@@ -65,7 +65,7 @@ When a surface needs JavaScript positioning, call `usePosition(context)`. That r
 
 Most templates only need to bind `:style="styles"`, but the rest of the data is there when you need deeper control or helpers such as arrows.
 
-## The Core Loop
+## The core loop
 
 This is the loop to keep in your head:
 
@@ -74,11 +74,11 @@ This is the loop to keep in your head:
 3. `useFloatingNode()` returns the shared `context`.
 4. `usePosition(context)` adds positioning when the surface needs it.
 5. Other composables read from and write to the same `context`.
-6. Your template renders from `context.open` and the returned `styles`.
+6. Your template renders from `context.open.value` and the returned `styles`.
 
-## A Minimal Example
+## A minimal example
 
-This small example shows the node in use without much extra ceremony.
+This small example shows the node in use without extra ceremony.
 
 ```vue
 <script setup lang="ts">
@@ -102,11 +102,11 @@ useHover(context);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.open" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="context.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 
-## Next Step
+## Where to go next
 
 - Read [Placement and Positioning](/guide/placement-and-positioning) to understand what `position` is really computing.
 - Read [Interaction Model](/guide/interaction-model) to understand how composables cooperate through open state.

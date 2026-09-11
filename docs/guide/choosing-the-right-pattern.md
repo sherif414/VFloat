@@ -30,7 +30,7 @@ Choose a popover when:
 
 Start with [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns).
 
-## Dropdown Or Menu
+## Dropdown or menu
 
 Choose a menu-like dropdown when:
 
@@ -50,7 +50,7 @@ Choose a dialog when:
 
 Start with [Build Dialogs and Modals](/guide/build-dialogs-and-modals). Plan on [`useFocusTrap`](/api/use-focus-trap) for initial focus, modal trapping, and return focus.
 
-## Context Menu Or Pointer-Based Surface
+## Context menu or pointer-based surface
 
 Choose a pointer-driven surface when:
 
@@ -60,6 +60,6 @@ Choose a pointer-driven surface when:
 
 Start with [Use Virtual Anchors](/guide/use-virtual-anchors). Plan on [`useClientPoint`](/api/use-client-point) with `trackingMode: "follow"` for cursor-following surfaces or `"static"` for opening-point surfaces.
 
-## Next Step
+## Where to go next
 
 Pick the matching build guide from the sections above and then move into the relevant concept page if you want the deeper mental model.

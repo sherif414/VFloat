@@ -4,89 +4,13 @@ description: Build a click-driven popover and see how VFloat changes behavior wi
 
 # First Popover
 
-Let's build the next small surface: a popover.
-
 A popover uses the same basic VFloat shape as the tooltip, but the interaction changes. Instead of opening on hover, it opens on click and stays open while the user works inside it.
 
-By the end of this page, you will have a click-driven popover with outside-click and Escape handling.
+By the end of this page, you will have a click-driven popover with outside-click and Escape key handling.
 
-## A Few Words First
+## The complete example
 
-The names on this page should already feel familiar:
-
-- `anchorEl` is the button or trigger
-- `floatingEl` is the popover panel
-- `context` is the shared object returned by [`useFloatingNode`](/api/use-floating-node)
-
-The main difference from the tooltip page is the interaction layer. For a popover, we usually want:
-
-- Click to open
-- Click again to close
-- Click outside to close
-- Escape to close for keyboard users
-
-That means we will use [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useDismiss`](/api/use-dismiss), and [`offset`](/api/offset).
-
-If those names still feel abstract, that is fine. The example makes the shape easier to see.
-
-## Step 1: Build The Shared Context
-
-Start with the same refs and placement you used for the tooltip.
-
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useFloatingNode, usePosition } from "v-float";
-
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
-
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
-  placement: "bottom-start",
-  middlewares: {
-    offset: 8,
-  },
-});
-</script>
-```
-
-## Step 2: Add Click And Escape Behavior
-
-Now swap the hover behavior for click-based interaction.
-
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
-
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
-
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
-  placement: "bottom-start",
-  middlewares: {
-    offset: 8,
-  },
-});
-
-useClick(context);
-useDismiss(context);
-</script>
-```
-
-This gives you the behavior most popovers need:
-
-- Clicking the anchor toggles it
-- Clicking outside closes it
-- Pressing Escape closes it
-
-`useDismiss(context)` closes on outside pointer input and Escape behind one gate, so outside and Escape dismissal stay in sync.
-
-## Step 3: Render The Popover
-
-Now render the trigger and the panel with the shared `context`.
+Here is the full working component before we break it down:
 
 ```vue
 <script setup lang="ts">
@@ -111,25 +35,70 @@ useDismiss(context);
 <template>
   <button ref="anchorEl" type="button">Open popover</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style=\"styles\">
+  <div v-if="context.open.value" ref="floatingEl" :style="styles">
     <p>Popover content goes here.</p>
     <button type="button">Action</button>
   </div>
 </template>
 ```
 
-The template is still small on purpose. That is one of the nicer parts of VFloat: the rendering shape stays familiar even when the interaction changes.
+Notice how familiar this looks. The template and ref setup match the tooltip guide almost line for line. The only difference is in the interaction layer.
 
-## Recap
+## The shared context and positioning
 
-The popover uses the same core shape as the tooltip:
+```ts
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
 
-- `anchorEl`
-- `floatingEl`
-- `context`
+const context = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(context, {
+  placement: "bottom-start",
+  middlewares: {
+    offset: 8,
+  },
+});
+```
 
-The difference is that you replaced `useHover` with [`useClick`](/api/use-click) and [`useDismiss`](/api/use-dismiss).
+Just like the tooltip, [`useFloatingNode`](/api/use-floating-node) creates the shared `context` that coordinates element refs and open state.
 
-## Next Step
+[`usePosition`](/api/use-position) places the popover panel below the button aligned with its start edge (`"bottom-start"`), with an 8-pixel gap provided by [`offset`](/api/offset).
 
-Read [Control Open State](/guide/control-open-state) if you want to understand when the `context` should own open state and when the parent component should own it instead.
+## Swapping hover for click and dismissal
+
+```ts
+useClick(context);
+useDismiss(context);
+```
+
+This is where the popover departs from the tooltip:
+
+- **[`useClick`](/api/use-click)** toggles `context.open` when the anchor button is clicked, and prevents double-triggers on keyboard activation.
+- **[`useDismiss`](/api/use-dismiss)** listens for outside pointer input and Escape key presses through one shared gate, closing the popover when the user moves away or presses Escape.
+
+Both composables plug into the same `context`, so they share the exact same open state without manual event plumbing.
+
+## The template bindings
+
+```vue
+<button ref="anchorEl" type="button">Open popover</button>
+
+<div v-if="context.open.value" ref="floatingEl" :style="styles">
+  <p>Popover content goes here.</p>
+  <button type="button">Action</button>
+</div>
+```
+
+The template stays minimal:
+
+- `ref="anchorEl"` connects the trigger button.
+- `ref="floatingEl"` connects the floating panel.
+- `v-if="context.open.value"` renders the panel only when open.
+- `:style="styles"` applies the computed floating coordinates.
+
+Because the popover panel stays rendered while open, users can interact with form controls, buttons, or links inside it without the surface closing prematurely.
+
+## Where to go next
+
+- Read [Control Open State](/guide/control-open-state) to learn when to let VFloat manage open state and when the parent component should control it.
+- Read [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for production enhancements like viewport boundary collisions and focus rules.
+- Read [Floating Context](/guide/floating-context) for the complete reference on `context.refs`, `context.open`, and `context.setOpen`.

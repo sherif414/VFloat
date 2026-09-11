@@ -6,19 +6,26 @@ description: Handle list navigation edge cases in complex floating menus.
 
 List navigation bugs can feel subtle because the UI may look correct while the keyboard or screen reader behavior is slightly off.
 
-## Stable Item Values Matter
+## Stable DOM element arrays matter
 
-Keyboard navigation in VFloat is split across [`useCollection`](/api/use-collection) (string values), [`useRovingFocus`](/api/use-roving-focus) (physical focus), [`useAriaActivedescendant`](/api/use-aria-activedescendant) (virtual focus), and [`useTypeahead`](/api/use-typeahead) (search). The value layer depends on a collection with stable string values. With `useCollection()`, item values should be durable IDs that do not change between renders. If item values are unstable, active state and keyboard movement can drift away from the item the user sees.
+Keyboard navigation in VFloat is split across [`useRovingFocus`](/api/use-roving-focus) (physical DOM focus), [`useAriaActivedescendant`](/api/use-aria-activedescendant) (virtual focus), and [`useTypeahead`](/api/use-typeahead) (typeahead search).
 
-## Disabled Items Need Real Navigation Rules
+For [`useRovingFocus`](/api/use-roving-focus) and [`useAriaActivedescendant`](/api/use-aria-activedescendant), the navigation composables track element positions via `elementsList`. Ensure the array of element refs aligns with the rendered DOM order. If items are dynamically added, removed, or filtered, update `elementsList` so indices remain in sync with rendered DOM nodes.
 
-If an item is visually disabled but not accounted for in the collection's disabled predicate, keyboard navigation can land on something the user cannot actually use. Put disabled rules in `useCollection({ isValueDisabled })`, then mirror the same state into ARIA with `useRole({ disabledIndices })` when you render a list.
+## Disabled items need real navigation rules
 
-## Virtual Focus Needs Stable IDs
+If an item is visually disabled or marked with `disabled` in the data model, keyboard navigation must know to skip it.
 
-With virtual focus, your render layer should map the active value to `aria-activedescendant`. If option element IDs are unstable or missing, screen reader behavior becomes unreliable even when the visual highlight looks fine.
+- In [`useRole`](/api/use-role), provide `disabledIndices: (idx) => isItemDisabled(idx)` to communicate disabled status to assistive tech.
+- Ensure your roving focus or virtual focus ignores disabled indices so keyboard arrow navigation cannot land on inactive items.
 
-## Next Step
+## Virtual focus needs stable IDs
+
+With virtual focus ([`useAriaActivedescendant`](/api/use-aria-activedescendant)), physical focus stays on the input while `aria-activedescendant` points to the ID of the highlighted option.
+
+If option element IDs are unstable or missing, screen reader behavior becomes unreliable even when the visual highlight looks fine. Ensure each option rendered in your list has a deterministic, unique `id` attribute.
+
+## Where to go next
 
 - Read [Keyboard Navigation](/guide/keyboard-navigation) for the full setup.
 - Read [Build Nested Menus](/guide/build-nested-menus) for multi-level menus.

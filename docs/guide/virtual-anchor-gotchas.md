@@ -6,7 +6,7 @@ description: Avoid pitfalls when using virtual anchors for cursor-based position
 
 Virtual anchors are powerful because they let you position against geometry instead of a real element. They are also easier to misuse because the anchor is synthetic.
 
-## The First Trap: Choosing The Wrong Tracking Mode
+## The first trap: choosing the wrong tracking mode
 
 If the surface should stay at the opening point, use static tracking. If it should follow the cursor, use follow mode.
 
@@ -32,15 +32,15 @@ useClientPoint(context, {
 
 Most jumpy menu bugs come from using a moving anchor for a UI that should have stayed still.
 
-`useClientPoint` overwrites `node.refs.anchorEl` with a virtual element; the `anchorEl` you passed to `useFloatingNode` is only a placeholder. `trackingAreaEl` defaults to `document.documentElement`, `trackingMode` defaults to `"follow"`, and `trackingMode` is not reactive after setup — pick `"follow"` or `"static"` before the composable runs. When both `x` and `y` resolve to non-null numbers, the composable enters controlled mode and pointer tracking detaches.
+`useClientPoint` overwrites `node.refs.anchorEl` with a virtual element; the `anchorEl` you passed to `useFloatingNode` is only a placeholder. `trackingAreaEl` defaults to `document.documentElement`, `trackingMode` defaults to `"follow"`, and `trackingMode` is not reactive after setup; pick `"follow"` or `"static"` before the composable runs. When both `x` and `y` resolve to non-null numbers, the composable enters controlled mode and pointer tracking detaches.
 
-## The Second Trap: Forgetting The Anchor Is Not A Real Trigger
+## The second trap: forgetting the anchor is not a real trigger
 
 A virtual anchor has geometry, but it does not carry all the semantics of a real button or input.
 
 That means you still need to think carefully about focus ownership, ARIA relationships, and who actually triggers open and close.
 
-## Next Step
+## Where to go next
 
 - Read [Use Virtual Anchors](/guide/use-virtual-anchors) for the main workflows.
 - Read [Placement and Positioning](/guide/placement-and-positioning) if you want the geometry model behind virtual anchors.

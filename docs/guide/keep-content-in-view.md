@@ -8,7 +8,7 @@ Base placement gets you close. Real floating surfaces still run into viewport ed
 
 This guide treats middleware like a small set of fixes. When you notice a problem, pick the fix that matches it.
 
-## Start From The Problem
+## Start from the problem
 
 The easiest way to reason about middleware is to ask:
 
@@ -20,7 +20,7 @@ The easiest way to reason about middleware is to ask:
 
 Each of those problems maps to a middleware or helper.
 
-## Start With The Most Common Stack
+## The standard baseline stack
 
 This is the stack many production surfaces end up using first.
 
@@ -55,26 +55,47 @@ Read this stack from left to right:
 - `middlewares.flip: true` switches sides when the preferred side does not fit
 - `middlewares.shift: { padding: 8 }` nudges the panel back into view when needed
 
-## Problem 1: "The Surface Feels Jammed Against The Trigger"
+## Add space from the trigger
 
-Use [`offset`](/api/offset).
+Use [`offset`](/api/offset) to create space between the anchor and the floating panel:
 
-## Problem 2: "The Preferred Side Does Not Fit"
+```ts
+middlewares: {
+  offset: 8,
+}
+```
 
-Use [`flip`](/api/flip).
+## Flip when the preferred side runs out of room
 
-## Problem 3: "It Still Overflows Even After Flipping"
+Use [`flip`](/api/flip) to try opposite or fallback placements when the preferred side runs out of room:
 
-Use [`shift`](/api/shift).
+```ts
+middlewares: {
+  offset: 8,
+  flip: true,
+}
+```
 
-## Problem 4: "The Panel Should Match Width Or Fit Height"
+## Shift to stay inside viewport boundaries
 
-Use [`size`](/api/size) through `middlewares.custom`, since sizing is a raw middleware rather than a declarative key.
+Use [`shift`](/api/shift) to slide the floating panel along its cross-axis so it stays within the visible viewport:
+
+```ts
+middlewares: {
+  offset: 8,
+  flip: true,
+  shift: { padding: 8 },
+}
+```
+
+## Match anchor width or constrain height
+
+Use `matchWidth` to automatically lock the panel's width to the trigger's width (common for select dropdowns and comboboxes), or `size` for custom dimension constraints:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { size, useFloatingNode, usePosition } from "v-float";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -91,30 +112,38 @@ const { styles } = usePosition(context, {
     offset: 8,
     flip: true,
     shift: { padding: 8 },
-    custom: [
-      size({
-        apply({ rects, availableHeight }) {
-          if (!floatingEl.value) return;
+    matchWidth: true, // matches anchor element width
+    size: {
+      apply({ availableHeight }) {
+        if (!floatingEl.value) return;
 
-          Object.assign(floatingEl.value.style, {
-            minWidth: `${rects.reference.width}px`,
-            maxHeight: `${availableHeight - 16}px`,
-          });
-        },
-      }),
-    ],
+        Object.assign(floatingEl.value.style, {
+          maxHeight: `${availableHeight - 16}px`,
+        });
+      },
+    },
   },
 });
 </script>
 ```
 
-## Problem 5: "I Want The Best Side Automatically"
+## Pick the roomiest side with auto-placement
 
-Use [`autoPlacement`](/api/autoplacement) through `middlewares.custom` (as `custom: [autoPlacement()]`) when the exact side is less important than finding the side with the most room.
+Use [`autoPlacement`](/api/autoplacement) when you want VFloat to inspect available space across all sides and pick the roomiest side dynamically:
 
-## Problem 6: "I Need An Arrow"
+```ts
+middlewares: {
+  offset: 8,
+  autoPlacement: true,
+  shift: { padding: 8 },
+}
+```
 
-Use [`useArrow`](/api/use-arrow) to register the arrow middleware and read arrow styles.
+Note that `autoPlacement` and `flip` are mutually exclusive strategies. Choose `flip` when you have a preferred side with fallbacks, or `autoPlacement` when any roomy side is acceptable.
+
+## Point an arrow back at the anchor
+
+Use [`useArrow`](/api/use-arrow) to position a pointed indicator element and compute its alignment styles:
 
 ```vue
 <script setup lang="ts">
@@ -132,33 +161,39 @@ const context = useFloatingNode({
   arrowEl,
   open,
 });
-const position = usePosition(context, {
+const { styles } = usePosition(context, {
   middlewares: {
     offset: 8,
+    flip: true,
+    shift: { padding: 8 },
   },
 });
-const { styles } = position;
 
 const { arrowStyles } = useArrow(context);
 </script>
 ```
 
-## Middleware Order Matters
+`useArrow(context)` registers the arrow middleware into the positioning registry and returns reactive `arrowStyles` to bind to your arrow element.
 
-Order is not a formatting detail. It changes outcomes.
+## Middleware order matters
 
-A common baseline order is:
+Order is not a cosmetic detail. Middlewares run sequentially, each transforming the coordinates produced by earlier steps.
 
-1. `offset`
-2. `flip`, or `autoPlacement` through `custom`
-3. `shift`
-4. `matchWidth`, or `size` through `custom`
-5. `arrow` via `useArrow`, which registers itself by name
+When using declarative `middlewares` options, VFloat executes them in canonical order:
 
-If you want more detail, read [Middleware Pipeline](/guide/middleware-pipeline) and [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas).
+1. **`inline`.** Resolves multi-line anchor geometry.
+2. **`offset`.** Establishes the gap before collision checks.
+3. **`flip` or `autoPlacement`.** Selects the best viable placement.
+4. **`shift`.** Nudges the surface inside viewport boundaries.
+5. **`matchWidth` or `size`.** Applies width and height constraints.
+6. **`hide`.** Computes visibility when anchor is clipped.
+7. **`arrow`.** Centers the arrow against the final surface position.
+8. **`custom`.** Executes user-provided raw middleware functions.
 
-## Next Step
+If you pass a raw array to `middlewares` (`middlewares: [offset(8), flip(), shift()]`), you control the exact sequence yourself.
 
-- Read [Middleware Pipeline](/guide/middleware-pipeline) if you want the deeper mental model.
-- Read [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas) if a stack is behaving strangely.
-- Read [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) to see middleware inside a full click-driven surface.
+## Where to go next
+
+- Read [Middleware Pipeline](/guide/middleware-pipeline) for the architectural mental model.
+- Read [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas) to diagnose subtle collision bugs.
+- Read [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) to see middleware inside a real component.

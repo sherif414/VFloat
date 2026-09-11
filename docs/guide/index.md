@@ -4,23 +4,25 @@ description: What VFloat is, what problem it solves, and how the pieces fit toge
 
 # Introduction
 
-## What Is VFloat?
+## What is VFloat?
 
 VFloat is a Vue 3 library for building floating UI elements like tooltips, popovers, dropdown menus, and dialogs. It provides composable building blocks for positioning calculations, user interactions, focus management, and overlay coordination without imposing markup, styles, or prebuilt components.
 
-## Why Do You Need VFloat?
+## Why you need VFloat
 
 Building floating UI by hand requires solving geometric collisions, event timing, and focus management from scratch. A simple tooltip needs viewport detection to avoid clipping and hover delays to avoid flickering. A dropdown menu needs keyboard navigation, outside-click detection, and Escape key handling.
 
 Pre-built component libraries solve these problems, but they force their markup, styles, and design tokens on you. VFloat handles the positioning math, DOM listeners, and state coordination behind the scenes, letting you build custom, fully accessible floating surfaces using your own templates and styles.
 
-## How Does It Work?
+## How it works
 
 Every floating surface comes down to two questions: **where** should it appear, and **when** should it be visible? VFloat divides these responsibilities across dedicated composables connected by a shared context:
 
 - **`useFloatingNode`** holds the shared state used by the various composables.
 - **`usePosition`** handles the positioning calculations. It tells you where to place your floating element and returns reactive styles to bind to your template.
 - **`useHover`** decides when the floating element should be visible and when it should hide based on hover behavior.
+
+Here is a minimal tooltip that ties these three parts together:
 
 ```vue
 <script setup lang="ts">
@@ -55,7 +57,7 @@ useDismiss(context, { outsidePress: false });
 
 Because both composables plug into the same `context`, they work together automatically. When `useHover` opens the tooltip, `usePosition` computes its placement. The [first tooltip guide](/guide/first-tooltip) walks through the full component step by step.
 
-## How Do You Build Different Surfaces?
+## Building different surfaces
 
 You won't find a `<Menu>` component or a `useTooltip()` composable in VFloat. That's intentional. Instead, you get a set of focused composables that you mix and match to build whatever you need.
 
@@ -84,13 +86,13 @@ useFocusTrap(context, { modal: true });
 useDismiss(context);
 ```
 
-## How Does It Relate to Floating UI?
+## Relationship to Floating UI
 
 VFloat draws heavily from [Floating UI](https://floating-ui.com). The middleware pipeline (offset, flip, shift, size, arrow, hide, autoPlacement) follows the same mental model, and some composable names will look familiar.
 
 However, VFloat is a dedicated Vue 3 library with its own reactive API shape. If you are coming from Floating UI, the core concepts transfer, but the call sites and reactive state patterns do not.
 
-## What About Bundle Size and Performance?
+## Bundle size and performance
 
 Floating UI logic should not weigh down your application. VFloat is packaged as an ESM library with clean export boundaries and full tree-shaking support. You only ship the composables and middlewares your components actually import.
 
@@ -98,16 +100,16 @@ Floating UI logic should not weigh down your application. VFloat is packaged as 
 
 VFloat has zero styling baggage and no heavy runtime dependencies. Beyond Vue 3 and `@floating-ui/dom` for geometric collision math, there is nothing else in the bundle.
 
-## Where Should You Go Next?
+## Where to go next
 
 If this is your first time with VFloat, [build a tooltip](/guide/first-tooltip) step by step to see how all the pieces connect in a real component.
 
 If you already know what you're building, pick the closest guide:
 
-- [Build Accessible Tooltips](/guide/build-accessible-tooltips) — hover and focus triggers, ARIA roles, delay behavior
-- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) — click triggers, outside click dismissal, richer content
-- [Build Nested Menus](/guide/build-nested-menus) — keyboard navigation, submenus, tree coordination
-- [Build Dialogs and Modals](/guide/build-dialogs-and-modals) — focus trapping, modal behavior, return focus
-- [Use Virtual Anchors](/guide/use-virtual-anchors) — context menus, cursor-following surfaces, coordinate-based positioning
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips): hover and focus triggers, ARIA roles, delay behavior
+- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns): click triggers, outside click dismissal, richer content
+- [Build Nested Menus](/guide/build-nested-menus): keyboard navigation, submenus, tree coordination
+- [Build Dialogs and Modals](/guide/build-dialogs-and-modals): focus trapping, modal behavior, return focus
+- [Use Virtual Anchors](/guide/use-virtual-anchors): context menus, cursor-following surfaces, coordinate-based positioning
 
 When you need exact signatures and defaults, the [API Reference](/api/) has every option and return value documented.

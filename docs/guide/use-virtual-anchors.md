@@ -13,22 +13,22 @@ This guide covers two practical paths:
 - Pointer-driven positioning with [`useClientPoint`](/api/use-client-point)
 - Manual virtual anchors passed into [`useFloatingNode`](/api/use-floating-node)
 
-## When To Reach For A Virtual Anchor
+## When to use a virtual anchor
 
 Use a virtual anchor when:
 
 - The surface should appear at a pointer location
-- The anchor geometry is computed rather than tied to one element
+- The anchor geometry is computed rather than tied to one DOM element
 - You are building a context menu, inspection tool, or selection-based UI
 
-## Path 1: Follow The Pointer
+## Follow the pointer
 
-Point `trackingAreaEl` at the surface that should listen for pointer movement. `useClientPoint` replaces the node's anchor with a virtual element that follows the cursor, so the `anchorEl` passed to `useFloatingNode` is only a placeholder until tracking starts:
+Point `trackingAreaEl` at the container element that listens for pointer movement. `useClientPoint` replaces the node's anchor with a virtual element that tracks the cursor, so the initial `anchorEl` passed to `useFloatingNode` acts as a placeholder until tracking starts:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useFloatingNode, usePosition, useHover } from "v-float";
+import { useClientPoint, useFloatingNode, useHover, usePosition } from "v-float";
 
 const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
@@ -46,13 +46,23 @@ useClientPoint(context, {
 
 useHover(context);
 </script>
+
+<template>
+  <div ref="trackingAreaEl" class="interactive-canvas">
+    Hover anywhere in this area to inspect coordinates.
+
+    <div v-if="context.open.value" ref="floatingEl" class="cursor-tooltip" :style="styles">
+      Cursor inspection panel
+    </div>
+  </div>
+</template>
 ```
 
-In follow mode, pointer movement updates the virtual anchor and the floating surface keeps tracking while open.
+In `"follow"` mode, pointer movement continuously updates the virtual anchor and the floating surface tracks the cursor position while open.
 
-## Path 2: Keep The Opening Point Still
+## Keep the opening point static
 
-Sometimes you want the surface to open at the pointer location and stay there even if the pointer moves later.
+For context menus and right-click inspectors, you want the surface to open at the pointer's location at click time and remain fixed there even if the pointer moves afterward:
 
 ```vue
 <script setup lang="ts">
@@ -73,43 +83,46 @@ useClientPoint(context, {
   trackingMode: "static",
 });
 
-useDismiss(context, { outsidePress: false });
+useDismiss(context);
 
-function openMenu() {
+function onContextMenu(e: MouseEvent) {
+  e.preventDefault();
   context.setOpen(true);
 }
 </script>
+
+<template>
+  <div ref="areaEl" class="context-zone" @contextmenu="onContextMenu">
+    Right click inside this container.
+
+    <div v-if="context.open.value" ref="floatingEl" class="context-menu" :style="styles">
+      <ul>
+        <li>Inspect element</li>
+        <li>Copy link</li>
+        <li>Reload</li>
+      </ul>
+    </div>
+  </div>
+</template>
 ```
 
-Static mode matters because it prevents the menu from drifting as the pointer moves after open. The coordinate is captured at the opening interaction and held steady.
+Static mode captures coordinates at the triggering interaction and holds them steady, preventing the menu from drifting across the screen as the user moves toward menu items.
 
-## Manual Virtual Anchors
+## Manual virtual anchors
 
-If you already have coordinates or a computed rectangle, you do not need `useClientPoint()`. You can pass a manual virtual anchor to `useFloatingNode()`.
+If you already have coordinates or a computed bounding box (such as a browser `Selection.getRangeAt(0)`), you do not need `useClientPoint()`. You can pass a manual `VirtualElement` object directly as `anchorEl`:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, usePosition } from "v-float";
+import { type VirtualElement, useFloatingNode, usePosition } from "v-float";
 
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const virtualAnchor = {
+const virtualAnchor: VirtualElement = {
   getBoundingClientRect() {
-    return {
-      x: 160,
-      y: 120,
-      top: 120,
-      left: 160,
-      right: 160,
-      bottom: 120,
-      width: 0,
-      height: 0,
-      toJSON() {
-        return this;
-      },
-    };
+    return new DOMRect(160, 120, 0, 0);
   },
 };
 
@@ -118,9 +131,15 @@ const anchorEl = ref(virtualAnchor);
 const context = useFloatingNode({ anchorEl, floatingEl, open });
 const { styles } = usePosition(context);
 </script>
+
+<template>
+  <div v-if="context.open.value" ref="floatingEl" class="fixed-floating" :style="styles">
+    Anchored to coordinates (160, 120)
+  </div>
+</template>
 ```
 
-## Where To Go Next
+## Where to go next
 
-- Read [Virtual Anchor Gotchas](/guide/virtual-anchor-gotchas) for the sharp edges.
-- Read [Placement and Positioning](/guide/placement-and-positioning) if you want a deeper mental model of what VFloat computes around the anchor.
+- Read [Virtual Anchor Gotchas](/guide/virtual-anchor-gotchas) for common pitfalls with tracking modes and synthetic events.
+- Read [Placement and Positioning](/guide/placement-and-positioning) for the geometry model behind virtual anchors.
