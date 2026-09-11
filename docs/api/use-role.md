@@ -68,7 +68,7 @@ interface UseRoleReturn {
 
 ## Details
 
-`useRole` owns ARIA semantics, not interaction behavior. Pair it with [`useClick`](/api/use-click), [`useHover`](/api/use-hover), [`useEscapeKey`](/api/use-escape-key), [`useFocusManager`](/api/use-focus-manager), or keyboard navigation when the role promises keyboard, focus, or dismissal behavior.
+`useRole` owns ARIA semantics, not interaction behavior. Pair it with [`useClick`](/api/use-click), [`useHover`](/api/use-hover), [`useDismiss`](/api/use-dismiss), [`useFocusTrap`](/api/use-focus-trap), or keyboard navigation when the role promises keyboard, focus, or dismissal behavior.
 
 - `role: "tooltip"` applies `role="tooltip"` and links the anchor with `aria-describedby` while open.
 - Popup roles `"menu"`, `"listbox"`, `"tree"`, `"grid"`, and `"dialog"` set `aria-haspopup`, `aria-expanded` (`"true"`/`"false"`), and `aria-controls` on the anchor. `"menubar"` and `"tooltip"` are not treated as popups.

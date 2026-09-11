@@ -25,7 +25,7 @@ The main difference from the tooltip page is the interaction layer. For a popove
 - Click outside to close
 - Escape to close for keyboard users
 
-That means we will use [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`offset`](/api/offset).
+That means we will use [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useDismiss`](/api/use-dismiss), and [`offset`](/api/offset).
 
 If those names still feel abstract, that is fine. The example makes the shape easier to see.
 
@@ -58,7 +58,7 @@ Now swap the hover behavior for click-based interaction.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
+import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -72,8 +72,7 @@ const { styles } = usePosition(context, {
 });
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 </script>
 ```
 
@@ -83,6 +82,8 @@ This gives you the behavior most popovers need:
 - Clicking outside closes it
 - Pressing Escape closes it
 
+`useDismiss(context)` groups [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key) behind one gate, so outside and Escape dismissal stay in sync.
+
 ## Step 3: Render The Popover
 
 Now render the trigger and the panel with the shared `context`.
@@ -90,7 +91,7 @@ Now render the trigger and the panel with the shared `context`.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
+import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -104,8 +105,7 @@ const { styles } = usePosition(context, {
 });
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 </script>
 
 <template>
@@ -128,7 +128,7 @@ The popover uses the same core shape as the tooltip:
 - `floatingEl`
 - `context`
 
-The difference is that you replaced `useHover` with [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), and [`useEscapeKey`](/api/use-escape-key).
+The difference is that you replaced `useHover` with [`useClick`](/api/use-click) and [`useDismiss`](/api/use-dismiss).
 
 ## Next Step
 

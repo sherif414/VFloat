@@ -28,9 +28,10 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useClick(node);
         VFloat.useHover(node);
         VFloat.useFocus(node);
-        VFloat.useFocusManager(node, { modal: true });
+        VFloat.useFocusTrap(node, { modal: true });
         VFloat.useEscapeKey(node);
         VFloat.useOutsideClick(node);
+        VFloat.useDismiss(node);
         VFloat.useRole(node, { role: "menu", label: "Actions" });
         VFloat.useArrow(node);
         VFloat.useClientPoint(node);

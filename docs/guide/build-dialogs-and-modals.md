@@ -17,7 +17,7 @@ A dialog usually needs:
 - focus containment while open
 - clear semantics such as `role="dialog"` and `aria-modal="true"` for modal flows
 
-In VFloat terms, the core stack is usually [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click) or manual open state, [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useFocusManager`](/api/use-focus-manager).
+In VFloat terms, the core stack is usually [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click) or manual open state, [`useDismiss`](/api/use-dismiss), and [`useFocusTrap`](/api/use-focus-trap).
 
 ## Step 1: Build The Shared Context
 
@@ -45,10 +45,9 @@ Now add the behavior layer that makes the surface act like a dialog.
 import { ref } from "vue";
 import {
   useClick,
-  useEscapeKey,
+  useDismiss,
   useFloatingNode,
-  useFocusManager,
-  useOutsideClick,
+  useFocusTrap,
   usePosition,
 } from "v-float";
 
@@ -59,10 +58,9 @@ const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context);
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 
-useFocusManager(context, {
+useFocusTrap(context, {
   modal: true,
 });
 </script>

@@ -63,8 +63,7 @@ Want to turn the tooltip from above into a popover? Swap hover for click, and ad
 
 ```ts
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 ```
 
 Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
@@ -73,8 +72,7 @@ Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 useRovingFocus(context, { elementsList: itemEls });
 ```
 
@@ -82,8 +80,8 @@ Need a modal dialog? Add focus management to trap focus inside the dialog while 
 
 ```ts
 useClick(context);
-useFocusManager(context, { modal: true });
-useEscapeKey(context);
+useFocusTrap(context, { modal: true });
+useDismiss(context);
 ```
 
 ## How Does It Relate to Floating UI?

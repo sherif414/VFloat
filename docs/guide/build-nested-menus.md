@@ -41,7 +41,7 @@ Rather than creating an artificial data tree, VFloat uses the **floating tree** 
 1. **Overlay Linking:** Nodes stay standalone until they join a tree. Each submenu registers with `tree.addNode(subNode, parentNode.id)`.
 2. **Safe Cursor Movement:** [`useHover`](/api/use-hover) with `safePolygon: true` prevents diagonal cursor movements from closing the submenu.
 3. **Intent-Driven Keyboard Navigation:** [`useRovingFocus`](/api/use-roving-focus) calls `onEnter` (e.g. `ArrowRight`) to open a child submenu and `onExit` (e.g. `ArrowLeft`) to collapse back to the parent.
-4. **Stacked Escape & Outside Clicks:** [`useEscapeKey`](/api/use-escape-key) with `tree` closes the deepest open submenu first, while [`useOutsideClick`](/api/use-outside-click) with `tree` protects the parent menu from closing when clicking inside a child submenu portal.
+4. **Stacked Escape & Outside Clicks:** [`useDismiss`](/api/use-dismiss) with `tree` closes the deepest open submenu first on Escape, while protecting the parent menu from closing when clicking inside a child submenu portal — the tree is passed once and shared by both channels.
 
 ---
 
@@ -81,7 +81,7 @@ provide("MenuRootContext", { tree, rootContext, rootPosition });
 ```vue
 <script setup lang="ts">
 import { inject, ref, shallowRef, watchEffect, provide } from "vue";
-import { useRovingFocus, useEscapeKey, useOutsideClick } from "v-float";
+import { useRovingFocus, useDismiss } from "v-float";
 
 const { tree, rootContext, rootPosition } = inject<any>("MenuRootContext");
 const contentRef = ref<HTMLDivElement | null>(null);
@@ -97,8 +97,7 @@ const { getTabindex } = useRovingFocus(rootContext, {
   loop: true,
 });
 
-useEscapeKey(rootContext, { tree });
-useOutsideClick(rootContext, { tree });
+useDismiss(rootContext, { tree });
 
 provide("MenuLevelContext", { context: rootContext, getTabindex, itemEls });
 </script>

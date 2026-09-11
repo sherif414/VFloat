@@ -42,11 +42,11 @@ Hierarchy lives in the tree's map, never on the node objects. Each tree is isola
 
 When a user clicks inside a child submenu or select dropdown teleported to `<body>`, the parent's [`useOutsideClick`](/api/use-outside-click) handler checks:
 _"Is this click inside my floating element or any of my registered descendant floating elements?"_
-Because the child joined the same tree, the click is recognized as internal, preventing unwanted closures. Pass the tree explicitly: `useOutsideClick(rootNode, { tree })`.
+Because the child joined the same tree, the click is recognized as internal, preventing unwanted closures. Pass the tree explicitly: `useOutsideClick(rootNode, { tree })` — or `useDismiss(rootNode, { tree })` to share one tree across outside and Escape dismissal.
 
 ### 2. Stacked Escape Key Handling
 
-When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) with `tree` resolves the deepest open node and dismisses only that overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order.
+When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) with `tree` resolves the deepest open node and dismisses only that overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order. [`useDismiss`](/api/use-dismiss) forwards the same `tree` to both channels, so nested stacks stay consistent.
 
 ### 3. Explicit Cascading Teardown
 

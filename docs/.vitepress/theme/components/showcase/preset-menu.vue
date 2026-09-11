@@ -4,10 +4,9 @@ import { computed, shallowRef, watch } from "vue";
 import {
   useArrow,
   useClick,
-  useEscapeKey,
+  useDismiss,
   useFloatingNode,
-  useFocusManager,
-  useOutsideClick,
+  useFocusTrap,
   usePosition,
   useRole,
   useRovingFocus,
@@ -84,15 +83,11 @@ useClick(context, {
   enabled: () => props.isActive && !props.keepOpen,
 });
 
-useOutsideClick(context, {
+useDismiss(context, {
   enabled: () => props.isActive && !props.keepOpen,
 });
 
-useEscapeKey(context, {
-  enabled: () => props.isActive && !props.keepOpen,
-});
-
-useFocusManager(context, {
+useFocusTrap(context, {
   enabled: () => props.isActive,
   modal: false,
   initialFocus: floatingEl,

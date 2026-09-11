@@ -18,10 +18,11 @@ Examples:
 
 - [`useHover`](/api/use-hover) reacts to pointer movement
 - [`useClick`](/api/use-click) reacts to anchor activation
-- [`useOutsideClick`](/api/use-outside-click) reacts to outside pointer input
+- [`useDismiss`](/api/use-dismiss) reacts to Escape and outside pointer input through one gate
 - [`useFocus`](/api/use-focus) reacts to focus and blur
-- [`useEscapeKey`](/api/use-escape-key) reacts to Escape
-- [`useFocusManager`](/api/use-focus-manager) orchestrates focus while open
+- [`useFocusTrap`](/api/use-focus-trap) orchestrates focus while open
+
+[`useDismiss`](/api/use-dismiss) is itself a thin grouping over [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key). Reach for the grouping by default and drop to the primitives only when each channel needs its own reactive gate.
 
 ## One Context, Many Behaviors
 
@@ -38,7 +39,7 @@ This example shows a common click-driven combination.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useOutsideClick } from "v-float";
+import { useClick, useDismiss, useFloatingNode } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -46,10 +47,11 @@ const floatingEl = ref<HTMLElement | null>(null);
 const context = useFloatingNode({ anchorEl, floatingEl });
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 </script>
 ```
+
+`useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and one shared `tree`. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`) or compose [`useEscapeKey`](/api/use-escape-key) and [`useOutsideClick`](/api/use-outside-click) directly.
 
 ## Next Step
 

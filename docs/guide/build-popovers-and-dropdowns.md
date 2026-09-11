@@ -12,8 +12,7 @@ For a straightforward popover or dropdown, start with:
 
 - [`useFloatingNode`](/api/use-floating-node)
 - [`useClick`](/api/use-click)
-- [`useOutsideClick`](/api/use-outside-click)
-- [`useEscapeKey`](/api/use-escape-key)
+- [`useDismiss`](/api/use-dismiss)
 - [`offset`](/api/offset)
 
 ## Step 1: Create The Positioning Context
@@ -45,7 +44,7 @@ Now add the behavior that makes the surface feel like a popover.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
+import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -59,12 +58,11 @@ const { styles } = usePosition(context, {
 });
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 </script>
 ```
 
-That gives you a good default:
+That gives you a good default (`useDismiss` groups [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key) behind one gate):
 
 - Anchor click toggles the panel
 - Outside pointer interaction closes it
@@ -97,7 +95,7 @@ If the panel can run into the viewport edge, set `middleware.flip: true` and `mi
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
+import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -113,8 +111,7 @@ const { styles } = usePosition(context, {
 });
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 </script>
 ```
 

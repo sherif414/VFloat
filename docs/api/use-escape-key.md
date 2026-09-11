@@ -75,5 +75,6 @@ useEscapeKey(node);
 
 - [`useClick`](/api/use-click) - Opens on click
 - [`useFocus`](/api/use-focus) - Opens on focus
-- [`useFocusManager`](/api/use-focus-manager) - Traps and restores focus
+- [`useDismiss`](/api/use-dismiss) - Groups Escape and outside-press dismissal
+- [`useFocusTrap`](/api/use-focus-trap) - Traps and restores focus
 - [`useFloatingTree`](/api/use-floating-tree) - Coordinates nested dismissal

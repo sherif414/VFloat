@@ -30,7 +30,8 @@ Composable pages (`useX`) follow Type / Options / Returns / Details / Example / 
 - [`useClick`](/api/use-click) - Opens and closes floating content on click
 - [`useHover`](/api/use-hover) - Opens and closes floating content on hover
 - [`useFocus`](/api/use-focus) - Opens and closes floating content on focus
-- [`useFocusManager`](/api/use-focus-manager) - Orchestrates initial focus, trapping, guards, and return focus
+- [`useFocusTrap`](/api/use-focus-trap) - Orchestrates initial focus, trapping, guards, and return focus
+- [`useDismiss`](/api/use-dismiss) - Closes floating content on Escape and outside input through one gate
 - [`useEscapeKey`](/api/use-escape-key) - Closes floating content when Escape is pressed
 - [`useOutsideClick`](/api/use-outside-click) - Closes floating content when pointer input lands outside
 - [`useRole`](/api/use-role) - Synchronizes ARIA roles and states for floating surfaces

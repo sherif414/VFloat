@@ -63,7 +63,7 @@ useHover(context);
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloatingNode, usePosition, useClick, useEscapeKey, useOutsideClick } from "v-float";
+import { useFloatingNode, usePosition, useClick, useDismiss } from "v-float";
 
 const triggerEl = useTemplateRef("triggerEl");
 const menuEl = useTemplateRef("menuEl");
@@ -75,8 +75,7 @@ const { styles } = usePosition(context, {
 });
 
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 </script>
 
 <template>
@@ -159,7 +158,8 @@ const { arrowStyles } = useArrow(context, {
 - `**useClick**`: Click event handling with toggle and dismiss options
 - `**useHover**`: Hover interactions with configurable delays and safe polygon
 - `**useFocus**`: Focus/blur event handling for keyboard navigation
-- `**useFocusManager**`: Initial focus, modal trapping, guards, and return focus
+- `**useFocusTrap**`: Initial focus, modal trapping, guards, and return focus
+- `**useDismiss**`: Closes floating content on Escape and outside input through one gate
 - `**useEscapeKey**`: Closes floating content on Escape key press
 - `**useOutsideClick**`: Closes floating content when clicking outside
 - `**useRole**`: Synchronizes ARIA roles and states for floating surfaces

@@ -76,6 +76,7 @@ useEscapeKey(node);
 
 ## See Also
 
+- [`useDismiss`](/api/use-dismiss) - Groups Escape and outside-press dismissal
 - [`useClick`](/api/use-click) - Opens on click
 - [`useEscapeKey`](/api/use-escape-key) - Closes on Escape
 - [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state

@@ -3,10 +3,9 @@ import type { Placement } from "v-float";
 import { computed, shallowRef, watch } from "vue";
 import {
   useClick,
-  useEscapeKey,
+  useDismiss,
   useFloatingNode,
-  useFocusManager,
-  useOutsideClick,
+  useFocusTrap,
   usePosition,
   useRole,
   useRovingFocus,
@@ -70,9 +69,8 @@ const selectPosition = usePosition(selectContext, {
 });
 
 useClick(selectContext);
-useOutsideClick(selectContext);
-useEscapeKey(selectContext);
-useFocusManager(selectContext, {
+useDismiss(selectContext);
+useFocusTrap(selectContext, {
   modal: false,
   initialFocus: selectFloatingEl,
   returnFocus: true,

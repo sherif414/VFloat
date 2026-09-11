@@ -25,6 +25,14 @@ export type {
 } from "./collection";
 // Collection
 export { useCollection } from "./collection";
+export type {
+  UseDismissContext,
+  UseDismissEscapeOptions,
+  UseDismissOptions,
+  UseDismissOutsideOptions,
+} from "./dismiss";
+// Dismiss
+export { useDismiss } from "./dismiss";
 export type { UseEscapeKeyContext, UseEscapeKeyOptions } from "./escape-key/use-escape-key";
 // Escape Key
 export { useEscapeKey } from "./escape-key/use-escape-key";
@@ -43,13 +51,9 @@ export { useFloatingNode, useFloatingTree } from "./floating-tree";
 export type { UseFocusContext, UseFocusOptions } from "./focus/use-focus";
 // Focus
 export { useFocus } from "./focus/use-focus";
-export type {
-  UseFocusManagerContext,
-  UseFocusManagerOptions,
-  UseFocusManagerReturn,
-} from "./focus-manager";
-// Focus Manager
-export { useFocusManager } from "./focus-manager";
+export type { UseFocusTrapContext, UseFocusTrapOptions, UseFocusTrapReturn } from "./focus-trap";
+// Focus Trap
+export { useFocusTrap } from "./focus-trap";
 export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";

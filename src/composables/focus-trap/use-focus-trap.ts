@@ -44,16 +44,16 @@ import {
  * @example
  * ```ts
  * const node = useFloatingNode({ anchorEl, floatingEl });
- * useFocusManager(node, {
+ * useFocusTrap(node, {
  *   modal: true,
  *   returnFocus: true,
  * });
  * ```
  */
-export function useFocusManager(
-  node: UseFocusManagerContext,
-  options: UseFocusManagerOptions = {},
-): UseFocusManagerReturn {
+export function useFocusTrap(
+  node: UseFocusTrapContext,
+  options: UseFocusTrapOptions = {},
+): UseFocusTrapReturn {
   const { anchorEl: anchorElOption, floatingEl: floatingElOption } = node.refs;
   const { open, setOpen } = node;
 
@@ -86,8 +86,8 @@ export function useFocusManager(
   const shouldPreventScroll = computed(() => !!toValue(preventScrollOption));
   const shouldApplyGuards = computed(() => !!toValue(guardsOption));
 
-  const managerIsActive = shallowRef(false);
-  const isActive = computed(() => managerIsActive.value);
+  const trapIsActive = shallowRef(false);
+  const isActive = computed(() => trapIsActive.value);
 
   let previouslyActiveElement: HTMLElement | null = null;
   let guardHandles: FocusGuardHandles | null = null;
@@ -433,7 +433,7 @@ export function useFocusManager(
 
     const floating = getFloatingElement();
     if (!floating) {
-      managerIsActive.value = false;
+      trapIsActive.value = false;
       return;
     }
 
@@ -448,16 +448,16 @@ export function useFocusManager(
       setupIsolation();
       applyInitialFocus(floating);
 
-      managerIsActive.value = true;
+      trapIsActive.value = true;
     } catch (error) {
-      managerIsActive.value = false;
+      trapIsActive.value = false;
       cleanupGuards();
       cleanupIsolation();
 
       if (onError) {
         onError(error);
       } else if (import.meta.env.DEV) {
-        console.error("[useFocusManager] Activation failed:", error);
+        console.error("[useFocusTrap] Activation failed:", error);
       }
     }
   }
@@ -466,7 +466,7 @@ export function useFocusManager(
     cleanupGuards();
     cleanupIsolation();
     clearBlurTimeout();
-    managerIsActive.value = false;
+    trapIsActive.value = false;
 
     if (returnFocus) {
       restoreFocus();
@@ -570,17 +570,17 @@ export function useFocusManager(
 //=======================================================================================
 
 /**
- * Context required by `useFocusManager`.
+ * Context required by `useFocusTrap`.
  */
-export interface UseFocusManagerContext extends Pick<
+export interface UseFocusTrapContext extends Pick<
   FloatingNode,
   "id" | "refs" | "open" | "setOpen"
 > {}
 
 /**
- * Return shape for `useFocusManager`.
+ * Return shape for `useFocusTrap`.
  */
-export interface UseFocusManagerReturn {
+export interface UseFocusTrapReturn {
   /**
    * Whether focus management is currently active.
    */
@@ -598,9 +598,9 @@ export interface UseFocusManagerReturn {
 }
 
 /**
- * Configuration options for `useFocusManager`.
+ * Configuration options for `useFocusTrap`.
  */
-export interface UseFocusManagerOptions {
+export interface UseFocusTrapOptions {
   /**
    * Whether focus management is enabled.
    * @default true

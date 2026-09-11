@@ -63,8 +63,7 @@ import {
   useFloatingNode,
   usePosition,
   useClick,
-  useOutsideClick,
-  useEscapeKey${arrow ? ",\n  useArrow" : ""}
+  useDismiss${arrow ? ",\n  useArrow" : ""}
 } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
@@ -86,8 +85,7 @@ const { styles } = usePosition(context, {
 });
 ${arrow ? '\nconst { arrowStyles } = useArrow(context, { offset: "-5px" });' : ""}
 useClick(context);
-useOutsideClick(context);
-useEscapeKey(context);
+useDismiss(context);
 ${scriptEnd}
 
 <template>
@@ -114,10 +112,9 @@ import {
   useFloatingNode,
   usePosition,
   useClick,
-  useOutsideClick,
-  useEscapeKey,
+  useDismiss,
   useRovingFocus,
-  useFocusManager,
+  useFocusTrap,
   useRole${arrow ? ",\n  useArrow" : ""}
 } from "v-float";
 
@@ -141,6 +138,9 @@ const { styles } = usePosition(context, {
 
 const itemEls = ref<HTMLElement[]>([]);
 const { activeIndex, getTabindex } = useRovingFocus(context, { elementsList: itemEls, loop: true });
+useClick(context);
+useDismiss(context);
+useFocusTrap(context, { modal: false });
 useRole(context, { role: "menu" });
 ${scriptEnd}
 

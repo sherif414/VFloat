@@ -201,7 +201,7 @@ Here are the key events handled automatically by the focus models:
 | `End`        | Any                 | Moves to the last enabled item.                                                                                                  |
 | `PageUp`     | Any (virtual)       | Moves up by `pageSize` (default `10`) in `useAriaActivedescendant`.                                                              |
 | `PageDown`   | Any (virtual)       | Moves down by `pageSize` (default `10`) in `useAriaActivedescendant`.                                                            |
-| `Tab`        | Any                 | Passes through to document flow. In non-modal [`useFocusManager`](/api/use-focus-manager) surfaces, `closeOnTab` closes on exit. |
+| `Tab`        | Any                 | Passes through to document flow. In non-modal [`useFocusTrap`](/api/use-focus-trap) surfaces, `closeOnTab` closes on exit. |
 
 ---
 

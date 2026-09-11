@@ -2,21 +2,21 @@
 description: Manages initial focus, modal trapping, return focus, and portal boundary guards.
 ---
 
-# useFocusManager
+# useFocusTrap
 
-`useFocusManager` orchestrates focus for open floating surfaces. It handles initial focus on open, modal and non-modal focus containment, portal focus guards (sentinels), background isolation (`inert`), and return focus restoration on close.
+`useFocusTrap` orchestrates focus for open floating surfaces. It handles initial focus on open, modal and non-modal focus containment, portal focus guards (sentinels), background isolation (`inert`), and return focus restoration on close.
 
 ## Type
 
 ```ts
-function useFocusManager(
-  node: UseFocusManagerContext,
-  options?: UseFocusManagerOptions,
-): UseFocusManagerReturn;
+function useFocusTrap(
+  node: UseFocusTrapContext,
+  options?: UseFocusTrapOptions,
+): UseFocusTrapReturn;
 
-interface UseFocusManagerContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+interface UseFocusTrapContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
 
-interface UseFocusManagerOptions {
+interface UseFocusTrapOptions {
   /**
    * Whether focus management is enabled.
    * @default true
@@ -98,7 +98,7 @@ interface UseFocusManagerOptions {
   onError?: (error: unknown) => void;
 }
 
-interface UseFocusManagerReturn {
+interface UseFocusTrapReturn {
   /**
    * Whether focus management is currently active.
    */
@@ -144,7 +144,7 @@ interface UseFocusManagerReturn {
 
 ## Details
 
-`useFocusManager` is the central surface focus manager for dialogs, popovers, and modal overlays. It activates after open (once the floating element mounts) and deactivates on close or unmount:
+`useFocusTrap` is the central surface focus manager for dialogs, popovers, and modal overlays. It activates after open (once the floating element mounts) and deactivates on close or unmount:
 
 - **Initial Focus**: When the surface opens, focus is routed to the first tabbable child (or the element specified by `initialFocus`). If no tabbable children exist, it focuses the floating container (`tabindex="-1"`) to prevent focus loss. Custom targets must be connected to the document; disconnected targets fall back to the default.
 - **Modal Focus Trapping**: When `modal` is `true`, <kbd>Tab</kbd> wraps from the last tabbable element to the first, and <kbd>Shift+Tab</kbd> wraps from the first element to the last. If focus escapes anyway (for example, when the focused child unmounts), it is pulled back inside.
@@ -158,7 +158,7 @@ interface UseFocusManagerReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFocusManager, useFloatingNode } from "v-float";
+import { useFocusTrap, useFloatingNode } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -166,7 +166,7 @@ const open = ref(false);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
 
-useFocusManager(node, {
+useFocusTrap(node, {
   modal: true,
   returnFocus: true,
 });
@@ -190,6 +190,7 @@ useFocusManager(node, {
 ## See Also
 
 - [`useFocus`](/api/use-focus) - Trigger-level focus detection for anchors
+- [`useDismiss`](/api/use-dismiss) - Groups Escape and outside-press dismissal
 - [`useEscapeKey`](/api/use-escape-key) - Dismissal on Escape key press
 - [`useOutsideClick`](/api/use-outside-click) - Dismissal on pointer clicks outside
 - [`useFloatingTree`](/api/use-floating-tree) - Family-aware focus checks for nested surfaces

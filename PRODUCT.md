@@ -28,7 +28,7 @@ Developers work in Vue 3.5+ `<script setup>` with `useTemplateRef`-bound `anchor
 
 ## Capabilities and Constraints
 
-Confirmed capabilities: standalone nodes (`useFloatingNode`), related-node coordination (`useFloatingTree`), positioning (`usePosition`, `useArrow`, `useClientPoint`), interactions (`useClick`, `useHover`, `useFocus`, `useFocusManager`, `useEscapeKey`, `useOutsideClick`, `useRole`), keyboard-navigation collections (`useCollection`, `useRovingFocus`, `useAriaActivedescendant`, `useTypeahead`), and positioning middleware (`offset`, `flip`, `shift`, `hide`, `autoPlacement`, `size`, `inline`, `arrow`).
+Confirmed capabilities: standalone nodes (`useFloatingNode`), related-node coordination (`useFloatingTree`), positioning (`usePosition`, `useArrow`, `useClientPoint`), interactions (`useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useEscapeKey`, `useOutsideClick`, `useRole`), keyboard-navigation collections (`useCollection`, `useRovingFocus`, `useAriaActivedescendant`, `useTypeahead`), and positioning middleware (`offset`, `flip`, `shift`, `hide`, `autoPlacement`, `size`, `inline`, `arrow`).
 
 Durable constraints: WIP status — breaking changes land without deprecation windows and production use is not recommended yet; ESM-only `dist` with `peerDependencies` on `vue >= 3.5.0`; core positioning delegated to `@floating-ui/dom`; full suite ~14.7 kB min+gzip; MIT license; modern browsers plus iOS Safari / Chrome Mobile.
 

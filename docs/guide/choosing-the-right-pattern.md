@@ -48,7 +48,7 @@ Choose a dialog when:
 - focus should move into it and stay managed
 - the user must meaningfully engage with the content before moving on
 
-Start with [Build Dialogs and Modals](/guide/build-dialogs-and-modals). Plan on [`useFocusManager`](/api/use-focus-manager) for initial focus, modal trapping, and return focus.
+Start with [Build Dialogs and Modals](/guide/build-dialogs-and-modals). Plan on [`useFocusTrap`](/api/use-focus-trap) for initial focus, modal trapping, and return focus.
 
 ## Context Menu Or Pointer-Based Surface
 

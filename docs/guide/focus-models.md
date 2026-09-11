@@ -40,7 +40,7 @@ useFocus(context);
 
 Sometimes the floating content should become the focus destination. This is common for menus, action lists, dialogs, and modal content.
 
-- [`useFocusManager`](/api/use-focus-manager) handles the entire surface focus lifecycle: routing initial focus inside on open, trapping or wrapping <kbd>Tab</kbd> navigation, guarding portal boundaries from focus leaks, isolating outside content with `inert`, and returning focus to the trigger on close.
+- [`useFocusTrap`](/api/use-focus-trap) handles the entire surface focus lifecycle: routing initial focus inside on open, trapping or wrapping <kbd>Tab</kbd> navigation, guarding portal boundaries from focus leaks, isolating outside content with `inert`, and returning focus to the trigger on close.
 
 ## `useFocus()` And Focus-Visible Behavior
 
@@ -48,23 +48,23 @@ Sometimes the floating content should become the focus destination. This is comm
 
 One important detail is that it is keyboard-first by default. It respects focus-visible behavior (`requireFocusVisible: true`), which means pointer-triggered focus does not automatically behave the same way as keyboard-triggered focus. Blur handling is deferred a tick and reads `activeElement`, so Shadow DOM and programmatic focus moves close reliably.
 
-## `useFocusManager()`: Surface Focus Orchestration
+## `useFocusTrap()`: Surface Focus Orchestration
 
-[`useFocusManager`](/api/use-focus-manager) is for surfaces that take focus or must contain focus while open.
+[`useFocusTrap`](/api/use-focus-trap) is for surfaces that take focus or must contain focus while open.
 
 A modal surface takes the same shared node plus one option:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, useFocusManager } from "v-float";
+import { useFloatingNode, useFocusTrap } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const context = useFloatingNode({ anchorEl, floatingEl });
 
-useFocusManager(context, { modal: true });
+useFocusTrap(context, { modal: true });
 </script>
 ```
 
