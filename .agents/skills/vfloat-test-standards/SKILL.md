@@ -69,7 +69,7 @@ Reference: `use-aria-activedescendant.test.ts` Suites 18/21.
 
 Suites still using `trackElement` + manual `effectScope` (`use-click`,
 `use-hover`, `use-focus`, `use-position`, `use-arrow`, `use-role`,
-`use-outside-click`, `use-client-point`) keep the full cleanup below until
+`dismiss`, `use-client-point`) keep the full cleanup below until
 migrated. Do not copy this pattern into new files.
 
 ```typescript
