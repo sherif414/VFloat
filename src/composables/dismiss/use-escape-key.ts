@@ -1,5 +1,5 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
-import { useComposition } from "@/composables/escape-key/composition-state";
+import { useComposition } from "./composition-state";
 import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
 import { getDocument } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -13,25 +13,29 @@ import { useEventListener } from "@/shared/use-event-listener";
  *
  * When triggered, it will close the floating element by setting open to false.
  *
+ * @internal Consumed by `useDismiss`. Use `useDismiss(node, { escapeKey })` instead.
+ *
  * @param node - The floating node with open state and change handler.
  * @param options - {@link UseEscapeKeyOptions}
  *
  * @example Basic usage
  * ```ts
  * const node = useFloatingNode(...)
- * useEscapeKey(node) // Closes the floating element on escape
+ * useDismiss(node) // Closes the floating element on escape
  * ```
  *
  * @example Custom handler
  * ```ts
- * useEscapeKey(node, {
- *   onEscape: (event) => {
- *     if (hasUnsavedChanges.value) {
- *       showConfirmDialog.value = true
- *     } else {
- *       node.setOpen(false)
- *     }
- *   }
+ * useDismiss(node, {
+ *   escapeKey: {
+ *     onEscape: (event) => {
+ *       if (hasUnsavedChanges.value) {
+ *         showConfirmDialog.value = true
+ *       } else {
+ *         node.setOpen(false)
+ *       }
+ *     },
+ *   },
  * })
  * ```
  */

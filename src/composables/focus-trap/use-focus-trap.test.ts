@@ -427,7 +427,7 @@ describe("useFocusTrap", () => {
       // Simulate pointerdown on the outside button
       outsideButton.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
 
-      // Suppose the outside component or useOutsideClick closes the floating element synchronously
+      // Suppose the outside component or useDismiss closes the floating element synchronously
       ctx.node.setOpen(false, "outside-pointer", new Event("pointerdown"));
       await flushFocus();
 

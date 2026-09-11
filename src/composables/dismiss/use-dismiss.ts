@@ -1,7 +1,7 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
-import { useEscapeKey } from "@/composables/escape-key/use-escape-key";
+import { useEscapeKey } from "./use-escape-key";
 import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
-import { type OutsideClickPredicate, useOutsideClick } from "@/composables/outside-click/use-outside-click";
+import { type OutsideClickPredicate, useOutsideClick } from "./use-outside-click";
 
 //=======================================================================================
 // 📌 Main
@@ -10,10 +10,9 @@ import { type OutsideClickPredicate, useOutsideClick } from "@/composables/outsi
 /**
  * Closes a floating node on Escape and outside pointer input through one shared gate.
  *
- * Thin composition over `useEscapeKey` and `useOutsideClick`: `enabled` and `tree`
+ * Thin composition over the internal Escape and outside-press channels: `enabled` and `tree`
  * are declared once and forwarded to both channels, so nested surfaces stay
- * family-aware without repeating the tree on every dismissal primitive.
- * For independent reactive gates per channel, compose the primitives directly.
+ * family-aware without repeating the tree per channel.
  *
  * @param node - The floating node with refs and open state.
  * @param options - Shared gate plus per-channel Escape and outside-press config.

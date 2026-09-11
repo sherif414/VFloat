@@ -2,13 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
+import { useFloatingNode, useFloatingTree } from "@/composables";
 import {
   type UseOutsideClickContext,
   type UseOutsideClickOptions,
-  useFloatingNode,
-  useFloatingTree,
   useOutsideClick,
-} from "@/composables";
+} from "./use-outside-click";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
 
 const OUTSIDE_STYLE = {

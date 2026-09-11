@@ -22,7 +22,7 @@ const BLUR_CHECK_DELAY = 0;
 /**
  * Enables showing/hiding the floating element when the reference element receives or loses focus.
  *
- * Keyboard-only interaction hook. Compose with `useClick`, `useHover`, `useEscapeKey` for a complete UX.
+ * Keyboard-only interaction hook. Compose with `useClick`, `useHover`, `useDismiss` for a complete UX.
  *
  * @param node - The floating node with open state and change handler
  * @param options - Configuration options

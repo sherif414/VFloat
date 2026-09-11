@@ -1,7 +1,6 @@
 import { type ShallowRef, shallowRef } from "vue";
 import { isTargetWithinElements } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
-import type { OpenChangeReason } from "@/types";
 import type { FloatingNode, FloatingNodeElements, FloatingNodeId } from "./use-floating-node";
 
 const isDev = import.meta.env.DEV;
@@ -40,7 +39,7 @@ interface TreeQueryTarget {
  * tree.addNode(rootNode);
  * tree.addNode(subNode, rootNode.id);
  *
- * useOutsideClick(rootNode, { tree });
+ * useDismiss(rootNode, { tree });
  * ```
  */
 export function useFloatingTree(): FloatingTree {
@@ -258,21 +257,141 @@ export function useFloatingTree(): FloatingTree {
   }
 
   /**
-   * Closes all descendant nodes from innermost child to nearest parent.
-   * Call explicitly when parent teardown must cascade; `setOpen` stays
-   * tree-agnostic and never cascades on its own.
+   * Executes a callback for every node matching the given relationship to `target`.
+   * Halts iteration early if the callback explicitly returns `false`.
    */
-  function closeDescendants(
-    node: Pick<FloatingNode, "id">,
-    reason: OpenChangeReason = "programmatic",
-    event?: Event,
+  function forEach(
+    target: FloatingNodeId | Pick<FloatingNode, "id">,
+    relationship: RelationshipSelector,
+    action: (node: FloatingNode) => boolean | void,
+    options?: ForEachOptions,
   ): void {
-    const descendants = getDescendants(node.id);
-    if (descendants.length === 0) return;
-    for (let i = descendants.length - 1; i >= 0; i--) {
-      const descendant = descendants[i]!;
-      if (!descendant.open.value) continue;
-      descendant.setOpen(false, reason, event);
+    const targetId =
+      typeof target === "object" && target !== null && "id" in target ? target.id : target;
+    const targetEntry = nodes.get(targetId);
+
+    if (typeof relationship === "function") {
+      const targetNode =
+        targetEntry?.node ??
+        (typeof target === "object" && target !== null && "refs" in target
+          ? (target as FloatingNode)
+          : undefined);
+      if (!targetNode) return;
+
+      const matched = Array.from(relationship(targetNode, tree));
+      const list = options?.order === "bottom-up" ? matched.reverse() : matched;
+      for (const node of list) {
+        if (action(node) === false) break;
+      }
+      return;
+    }
+
+    if (!targetEntry) return;
+
+    if (relationship === "parent") {
+      if (targetEntry.parentId != null) {
+        const parentNode = nodes.get(targetEntry.parentId)?.node;
+        if (parentNode) {
+          action(parentNode);
+        }
+      }
+      return;
+    }
+
+    if (relationship === "children") {
+      const children = getChildren(targetId);
+      const list = options?.order === "bottom-up" ? children.slice().reverse() : children;
+      for (const child of list) {
+        if (action(child) === false) break;
+      }
+      return;
+    }
+
+    if (relationship === "siblings") {
+      const siblings: FloatingNode[] = [];
+      if (targetEntry.parentId != null) {
+        const parentEntry = nodes.get(targetEntry.parentId);
+        if (parentEntry) {
+          for (const childId of parentEntry.childIds.value) {
+            if (childId !== targetId) {
+              const sibling = nodes.get(childId);
+              if (sibling) siblings.push(sibling.node);
+            }
+          }
+        }
+      } else {
+        for (const entry of nodes.values()) {
+          if (entry.parentId == null && entry.node.id !== targetId) {
+            siblings.push(entry.node);
+          }
+        }
+      }
+      const list = options?.order === "bottom-up" ? siblings.reverse() : siblings;
+      for (const sibling of list) {
+        if (action(sibling) === false) break;
+      }
+      return;
+    }
+
+    if (relationship === "ancestors") {
+      const ancestors: FloatingNode[] = [];
+      const visited = new Set<FloatingNodeId>();
+      let curr = targetEntry;
+      while (curr && curr.parentId != null) {
+        if (visited.has(curr.parentId)) break;
+        visited.add(curr.parentId);
+        const parentEntry = nodes.get(curr.parentId);
+        if (!parentEntry) break;
+        ancestors.push(parentEntry.node);
+        curr = parentEntry;
+      }
+      const order = options?.order ?? "bottom-up";
+      const list = order === "top-down" ? ancestors.reverse() : ancestors;
+      for (const ancestor of list) {
+        if (action(ancestor) === false) break;
+      }
+      return;
+    }
+
+    if (relationship === "descendants") {
+      const order = options?.order ?? "top-down";
+      let list: FloatingNode[];
+      if (order === "bottom-up") {
+        list = [];
+        const visited = new Set<FloatingNodeId>();
+        const collectBottomUp = (currentId: FloatingNodeId) => {
+          if (visited.has(currentId)) return;
+          visited.add(currentId);
+          const entry = nodes.get(currentId);
+          if (!entry) return;
+          for (const childId of entry.childIds.value) {
+            collectBottomUp(childId);
+            const child = nodes.get(childId);
+            if (child) list.push(child.node);
+          }
+        };
+        collectBottomUp(targetId);
+      } else {
+        list = getDescendants(targetId);
+      }
+      for (const descendant of list) {
+        if (action(descendant) === false) break;
+      }
+      return;
+    }
+
+    if (relationship === "root") {
+      let curr = targetEntry;
+      const visited = new Set<FloatingNodeId>();
+      while (curr.parentId != null) {
+        if (visited.has(curr.parentId)) break;
+        visited.add(curr.parentId);
+        const parentEntry = nodes.get(curr.parentId);
+        if (!parentEntry) break;
+        curr = parentEntry;
+      }
+      action(curr.node);
+      return;
     }
   }
 
@@ -286,7 +405,7 @@ export function useFloatingTree(): FloatingTree {
     getFloatingElements,
     getDeepestOpenContext,
     isTargetWithin,
-    closeDescendants,
+    forEach,
   };
 
   return tree;
@@ -313,6 +432,44 @@ function withRemovedId(ids: Set<FloatingNodeId>, id: FloatingNodeId): Set<Floati
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Structural relationships supported in the floating tree.
+ */
+export type TreeRelationship =
+  | "parent"
+  | "children"
+  | "ancestors"
+  | "descendants"
+  | "siblings"
+  | "root";
+
+/**
+ * Target relationship selector for tree traversal in `tree.forEach()`.
+ * Either a standard relationship keyword or a custom resolver function.
+ */
+export type RelationshipSelector =
+  | TreeRelationship
+  | ((node: FloatingNode, tree: FloatingTree) => FloatingNode[] | Iterable<FloatingNode>);
+
+/**
+ * Options controlling traversal order in `tree.forEach()`.
+ */
+export interface ForEachOptions {
+  /**
+   * Traversal direction for hierarchical relationships ('descendants' and 'ancestors').
+   *
+   * Defaults:
+   * - `'ancestors'`: `'bottom-up'` (closest parent first, like DOM event bubbling)
+   * - `'descendants'`: `'top-down'` (shallow descendants first)
+   *
+   * For non-hierarchical relationships ('children', 'siblings', or custom functions),
+   * `'bottom-up'` reverses the natural order.
+   *
+   * @default 'top-down' (or 'bottom-up' for 'ancestors')
+   */
+  order?: "top-down" | "bottom-up";
+}
 
 /**
  * Explicit coordination scope for related floating nodes.
@@ -362,16 +519,17 @@ export interface FloatingTree {
    */
   isTargetWithin: (node: Pick<FloatingNode, "id" | "refs">, target: EventTarget | null) => boolean;
   /**
-   * Closes all descendant nodes from innermost child to nearest parent.
+   * Executes a callback for every node matching the given relationship to `target`.
+   * Return `false` from the callback to halt iteration early.
    */
-  closeDescendants: (
-    node: Pick<FloatingNode, "id">,
-    reason?: OpenChangeReason,
-    event?: Event,
+  forEach: (
+    target: FloatingNodeId | Pick<FloatingNode, "id">,
+    relationship: RelationshipSelector,
+    action: (node: FloatingNode) => boolean | void,
+    options?: ForEachOptions,
   ) => void;
 }
 
 /**
- * Return shape for `useFloatingTree`.
- */
+ * Return shape for `useFloatingTree`.\n */
 export type UseFloatingTreeReturn = FloatingTree;

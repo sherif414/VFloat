@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
-import {
-  type UseEscapeKeyContext,
-  type UseEscapeKeyOptions,
-  useEscapeKey,
-  useFloatingNode,
-  useFloatingTree,
-} from "@/composables";
+import { useFloatingNode, useFloatingTree } from "@/composables";
+import { type UseEscapeKeyContext, type UseEscapeKeyOptions, useEscapeKey } from "./use-escape-key";
 
 function createMockFloatingNode(): UseEscapeKeyContext {
   const open = ref(false);

@@ -33,9 +33,6 @@ export type {
 } from "./dismiss";
 // Dismiss
 export { useDismiss } from "./dismiss";
-export type { UseEscapeKeyContext, UseEscapeKeyOptions } from "./escape-key/use-escape-key";
-// Escape Key
-export { useEscapeKey } from "./escape-key/use-escape-key";
 export type {
   AnchorElement,
   FloatingNode,
@@ -43,6 +40,9 @@ export type {
   FloatingElement,
   FloatingNodeElements,
   FloatingTree,
+  ForEachOptions,
+  RelationshipSelector,
+  TreeRelationship,
   UseFloatingNodeOptions,
   UseFloatingTreeReturn,
 } from "./floating-tree";
@@ -77,13 +77,6 @@ export {
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";
-export type {
-  OutsideClickPredicate,
-  UseOutsideClickContext,
-  UseOutsideClickOptions,
-} from "./outside-click/use-outside-click";
-// Outside Click
-export { useOutsideClick } from "./outside-click/use-outside-click";
 export type {
   FloatingMiddlewareRegistry,
   FloatingPosition,
