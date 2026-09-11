@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { Placement, UsePositionMiddlewareOptions, VirtualElement } from "v-float";
+import type { Placement, UsePositionMiddlewaresOptions, VirtualElement } from "v-float";
 import { computed, shallowRef, watch } from "vue";
 import { useClientPoint, useFloatingNode, usePosition } from "v-float";
 
 interface Props {
   placement: Placement;
-  middlewareConfig: UsePositionMiddlewareOptions;
+  middlewareConfig: UsePositionMiddlewaresOptions;
   isActive: boolean;
   keepOpen?: boolean;
 }
@@ -30,7 +30,7 @@ const context = useFloatingNode({
 
 const position = usePosition(context, {
   placement: computed(() => props.placement),
-  middleware: computed(() => props.middlewareConfig),
+  middlewares: computed(() => props.middlewareConfig),
 });
 
 const { coordinates } = useClientPoint(context, {

@@ -30,7 +30,7 @@ const context = useFloatingNode({
 
 const { styles } = usePosition(context, {
   placement: "${placement}",
-  middleware: {
+  middlewares: {
     offset: ${offset},
     flip: ${flip},
     shift: ${shift},
@@ -77,7 +77,7 @@ const context = useFloatingNode({
 
 const { styles } = usePosition(context, {
   placement: "${placement}",
-  middleware: {
+  middlewares: {
     offset: ${offset},
     flip: ${flip},
     shift: ${shift},
@@ -129,7 +129,7 @@ const context = useFloatingNode({
 
 const { styles } = usePosition(context, {
   placement: "${placement}",
-  middleware: {
+  middlewares: {
     offset: ${offset},
     flip: ${flip},
     shift: ${shift},
@@ -182,7 +182,7 @@ const context = useFloatingNode({
 
 const { styles } = usePosition(context, {
   placement: "${placement}",
-  middleware: {
+  middlewares: {
     offset: ${offset},
     flip: ${flip},
     shift: ${shift},

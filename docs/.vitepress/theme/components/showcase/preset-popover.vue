@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import type { Placement, UsePositionMiddlewareOptions } from "v-float";
+import type { Placement, UsePositionMiddlewaresOptions } from "v-float";
 import { computed, shallowRef, watch } from "vue";
-import {
-  useArrow,
-  useClick,
-  useDismiss,
-  useFloatingNode,
-  usePosition,
-  useRole,
-} from "v-float";
+import { useArrow, useClick, useDismiss, useFloatingNode, usePosition, useRole } from "v-float";
 
 interface Props {
   placement: Placement;
-  middlewareConfig: UsePositionMiddlewareOptions;
+  middlewareConfig: UsePositionMiddlewaresOptions;
   enableArrow: boolean;
   anchorOffset: { x: number; y: number };
   isDragging: boolean;
@@ -41,7 +34,7 @@ const context = useFloatingNode({
 
 const position = usePosition(context, {
   placement: computed(() => props.placement),
-  middleware: computed(() => props.middlewareConfig),
+  middlewares: computed(() => props.middlewareConfig),
 });
 
 const { arrowStyles } = useArrow(context, {

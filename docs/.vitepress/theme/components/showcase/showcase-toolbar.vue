@@ -61,7 +61,7 @@ const selectContext = useFloatingNode({
 const selectPosition = usePosition(selectContext, {
   placement: "bottom-start",
   strategy: "fixed",
-  middleware: {
+  middlewares: {
     offset: 4,
     flip: true,
     shift: true,
