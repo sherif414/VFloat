@@ -20,7 +20,7 @@ import { useEventListener } from "@/shared/use-event-listener";
 //=======================================================================================
 
 /**
- * Provides typeahead keyboard search functionality for collections and list items.
+ * Provides typeahead keyboard search functionality for list items.
  *
  * Captures typing sequences and jumps to matching enabled items in menus, select
  * lists, or dropdowns.
@@ -29,13 +29,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  * @param options - Configuration options for typeahead matching.
  * @returns State and cleanup helpers for typeahead navigation.
  *
- * @example With useCollection
- * ```ts
- * const collection = useCollection({ values: ["Apple", "Banana", "Cherry"] });
- * useTypeahead(node, { collection });
- * ```
- *
- * @example With custom list and onMatch
+ * @example
  * ```ts
  * useTypeahead(node, {
  *   list: ["Apple", "Banana", "Cherry"],
@@ -51,7 +45,6 @@ export function useTypeahead(
   const { open } = node;
 
   const {
-    collection,
     list: listOption,
     activeIndex: activeIndexOption,
     selectedIndex: selectedIndexOption,
@@ -75,9 +68,6 @@ export function useTypeahead(
     if (listOption !== undefined) {
       return toValue(listOption);
     }
-    if (collection?.values) {
-      return toValue(collection.values);
-    }
     return [];
   });
 
@@ -97,7 +87,6 @@ export function useTypeahead(
   // --- Buffer Reset & State Helpers ------------------------------------------
 
   function isItemDisabled(value: string): boolean {
-    if (collection?.isItemDisabled?.(value)) return true;
     if (isValueDisabledOption?.(value)) return true;
     return false;
   }
@@ -127,11 +116,7 @@ export function useTypeahead(
   function syncPrevIndex() {
     if (typingBuffer !== "") return;
 
-    const currentList = list.value;
-    if (collection?.activeValue.value !== undefined && collection.activeValue.value !== null) {
-      const idx = currentList.indexOf(collection.activeValue.value);
-      prevIndex = idx !== -1 ? idx : null;
-    } else if (activeIndexOption !== undefined) {
+    if (activeIndexOption !== undefined) {
       prevIndex = toValue(activeIndexOption);
     } else if (selectedIndexOption !== undefined) {
       prevIndex = toValue(selectedIndexOption);
@@ -143,7 +128,6 @@ export function useTypeahead(
   // Synchronize prevIndex on active index / value changes
   watch(
     [
-      () => collection?.activeValue.value,
       () => (activeIndexOption !== undefined ? toValue(activeIndexOption) : undefined),
       () => (selectedIndexOption !== undefined ? toValue(selectedIndexOption) : undefined),
       list,
@@ -164,15 +148,39 @@ export function useTypeahead(
     { flush: "sync" },
   );
 
-  // --- Typeahead Keyboard Search ---------------------------------------------
+  // --- Key Event Listeners & Matching ----------------------------------------
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.defaultPrevented || !isEnabled.value) return;
+    if (!isEnabled.value || !open.value) return;
 
-    const target = e.target as Element | null;
-    if (target && isTypeableElement(target)) {
+    // Ignore composition / IME input
+    if (e.isComposing) return;
+
+    // Never interfere with native typing controls (inputs, textareas, contenteditable)
+    if (isTypeableElement(e.target as Element | null)) return;
+
+    // Ignore modifiers (except Shift which is natural for capitalized letters)
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    // Ignore navigation keys
+    if (
+      e.key === "Tab" ||
+      e.key === "Enter" ||
+      e.key === "Escape" ||
+      e.key === "ArrowUp" ||
+      e.key === "ArrowDown" ||
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.key === "Home" ||
+      e.key === "End" ||
+      e.key === "PageUp" ||
+      e.key === "PageDown"
+    ) {
       return;
     }
+
+    // Ignore explicit user-ignored keys
+    if (ignoreKeys.value.includes(e.key)) return;
 
     const currentList = list.value;
     if (currentList.length === 0) return;
@@ -181,71 +189,69 @@ export function useTypeahead(
       syncPrevIndex();
     }
 
-    // Space key handling: If typing buffer is active, capture space to allow multi-word searches.
-    if (typingBuffer.length > 0 && typingBuffer[0] !== " ") {
-      const match = findTypeaheadMatch(
-        currentList,
-        currentList,
-        typingBuffer,
-        findMatch.value,
-        (val) => isItemDisabled(val),
-      );
-      if (match === -1) {
-        setTypingState(false);
-      } else if (e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }
-
-    // Ignore non-printable, modifier, or explicit ignore keys
-    if (
-      ignoreKeys.value.includes(e.key) ||
-      e.key.length !== 1 ||
-      e.ctrlKey ||
-      e.metaKey ||
-      e.altKey
-    ) {
+    // Space key: if typing buffer is empty, space should not trigger typeahead
+    // (allows natural button click / checkbox toggling). If typing, space appends.
+    if (e.key === " " && typingBuffer === "") {
       return;
     }
 
-    // Capture non-space characters when open to prevent window scrolling
-    if (open.value && e.key !== " ") {
+    // Single character or append
+    if (e.key.length !== 1) return;
+
+    // Prevent scrolling on Space when actively typing a multi-word sequence
+    if (e.key === " ") {
       e.preventDefault();
-      e.stopPropagation();
-      setTypingState(true);
     }
-
-    // Repeated character cycling: when the user types the same single character repeatedly
-    // in rapid succession (e.g. "a" -> "a"), rotate search to the next matching item.
-    const isRepeatedChar =
-      typingBuffer.length > 0 &&
-      typingBuffer
-        .split("")
-        .every((char) => char.toLocaleLowerCase() === e.key.toLocaleLowerCase());
-
-    if (isRepeatedChar) {
-      typingBuffer = "";
-      prevIndex = matchIndex;
-    }
-
-    typingBuffer += e.key;
 
     clearResetTimeout();
     resetTimeoutId = window.setTimeout(() => {
-      typingBuffer = "";
-      prevIndex = matchIndex;
-      setTypingState(false);
+      resetTyping();
     }, resetMs.value);
 
-    // Build rotated search list starting after the previous match
-    const startIndex = prevIndex !== null && prevIndex >= 0 ? prevIndex + 1 : 0;
-    const orderedList = [...currentList.slice(startIndex), ...currentList.slice(0, startIndex)];
+    setTypingState(true);
+
+    const isRepeatedSingleChar =
+      typingBuffer.length > 0 &&
+      typingBuffer.split("").every((ch) => ch.toLowerCase() === e.key.toLowerCase());
+
+    if (isRepeatedSingleChar) {
+      // User is pressing the same key repeatedly (e.g. 'c', 'c', 'c').
+      // Cycle to the next item starting with that letter.
+      typingBuffer += e.key;
+    } else {
+      typingBuffer += e.key;
+    }
+
+    // Determine starting search offset:
+    // If repeated single char cycling, search from after matchIndex or prevIndex.
+    let startIndex = 0;
+
+    const isCycling =
+      typingBuffer.length > 1 &&
+      typingBuffer.split("").every((ch) => ch.toLowerCase() === typingBuffer[0]!.toLowerCase());
+
+    if (isCycling) {
+      const baseIdx = matchIndex ?? prevIndex ?? -1;
+      startIndex = (baseIdx + 1) % currentList.length;
+    } else if (matchIndex !== null && matchIndex >= 0) {
+      // Continuing a multi-character query: try to match from currently matched item or beginning
+      startIndex = 0;
+    } else if (prevIndex !== null && prevIndex >= 0) {
+      startIndex = (prevIndex + 1) % currentList.length;
+    }
+
+    // Create ordered candidate list wrapped from startIndex
+    const orderedList: (string | null)[] = Array.from({ length: currentList.length });
+    for (let i = 0; i < currentList.length; i++) {
+      orderedList[i] = currentList[(startIndex + i) % currentList.length] ?? null;
+    }
+
+    const queryToSearch = isCycling ? typingBuffer[0]! : typingBuffer;
 
     const matchedIndex = findTypeaheadMatch(
       currentList,
       orderedList,
-      typingBuffer,
+      queryToSearch,
       findMatch.value,
       (val) => isItemDisabled(val),
     );
@@ -254,10 +260,6 @@ export function useTypeahead(
       matchIndex = matchedIndex;
 
       const matchedValue = currentList[matchedIndex];
-      if (matchedValue !== null && matchedValue !== undefined) {
-        collection?.setActiveValue(matchedValue);
-      }
-
       onMatch?.(matchedIndex, matchedValue ?? "");
     } else if (e.key !== " ") {
       typingBuffer = "";
@@ -304,7 +306,7 @@ export function useTypeahead(
 //=======================================================================================
 
 /**
- * Searches for a matching string in the collection list.
+ * Searches for a matching string in the list.
  */
 function findTypeaheadMatch(
   originalList: readonly (string | null)[],
@@ -381,16 +383,6 @@ export interface UseTypeaheadReturn {
  * Configuration options for `useTypeahead`.
  */
 export interface UseTypeaheadOptions {
-  /**
-   * Optional collection manager instance to synchronize with typeahead search.
-   */
-  collection?: {
-    activeValue: Ref<string | null>;
-    setActiveValue: (value: string | null) => void;
-    isItemDisabled?: (value: string) => boolean;
-    values?: ComputedRef<readonly string[]> | Ref<readonly string[]> | readonly string[];
-  };
-
   /**
    * An array of item label strings to search through.
    */

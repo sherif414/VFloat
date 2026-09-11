@@ -10,7 +10,6 @@ import {
   type MaybeRefOrGetter,
 } from "vue";
 import {
-  useCollection,
   useFloatingNode,
   useTypeahead,
   type TypeaheadFindMatchFn,
@@ -39,7 +38,8 @@ interface SetupOptions {
 const DEFAULT_VALUES = ["Apple", "Apricot", "Avocado", "Banana", "Blueberry", "Cherry"];
 
 function createTestComponent(options: SetupOptions = {}, config: FixtureConfig = {}) {
-  let collection: ReturnType<typeof useCollection> | undefined;
+  const activeValue = ref<string | null>(null);
+  const activeIndex = ref<number | null>(null);
   let typeahead!: ReturnType<typeof useTypeahead>;
   let node!: ReturnType<typeof useFloatingNode>;
 
@@ -55,19 +55,17 @@ function createTestComponent(options: SetupOptions = {}, config: FixtureConfig =
       open: openRef,
     });
 
-    if (!options.list) {
-      collection = useCollection({
-        values: options.values ?? DEFAULT_VALUES,
-        isValueDisabled: options.isValueDisabled,
-      });
-    }
+    const list = options.list ?? options.values ?? DEFAULT_VALUES;
 
     typeahead = useTypeahead(node, {
-      collection,
-      list: options.list,
-      activeIndex: options.activeIndex,
+      list,
+      activeIndex: options.activeIndex ?? activeIndex,
       selectedIndex: options.selectedIndex,
-      onMatch: options.onMatch,
+      onMatch: (index, val) => {
+        activeIndex.value = index;
+        activeValue.value = val;
+        options.onMatch?.(index, val);
+      },
       onTypingChange: options.onTypingChange,
       enabled: options.enabled,
       resetMs: options.resetMs,
@@ -89,9 +87,19 @@ function createTestComponent(options: SetupOptions = {}, config: FixtureConfig =
       ]);
   });
 
+  const collectionState = {
+    activeValue,
+    setActiveValue: (val: string | null) => {
+      activeValue.value = val;
+      const list = options.list ?? options.values ?? DEFAULT_VALUES;
+      const idx = val ? list.indexOf(val) : -1;
+      activeIndex.value = idx !== -1 ? idx : null;
+    },
+  };
+
   return {
     Component,
-    getCollection: () => collection,
+    getCollection: () => collectionState,
     getTypeahead: () => typeahead,
     getNode: () => node,
     openRef,
@@ -444,7 +452,7 @@ describe("useTypeahead", () => {
     });
 
     it("handles virtual element anchors gracefully", async () => {
-      let collection!: ReturnType<typeof useCollection>;
+      const activeValue = ref<string | null>(null);
       const Component = defineComponent(() => {
         const contextEl = useTemplateRef<HTMLButtonElement>("context");
         const floatingEl = useTemplateRef<HTMLDivElement>("floating");
@@ -459,8 +467,12 @@ describe("useTypeahead", () => {
           open: ref(true),
         });
 
-        collection = useCollection({ values: ["Apple", "Banana"] });
-        useTypeahead(node, { collection });
+        useTypeahead(node, {
+          list: ["Apple", "Banana"],
+          onMatch: (_idx, val) => {
+            activeValue.value = val;
+          },
+        });
 
         // Publish the rendered button as the virtual anchor's context element.
         // Assigned through the ref so the anchor computed re-resolves and the
@@ -480,7 +492,7 @@ describe("useTypeahead", () => {
       await nextTick();
 
       dispatchKey(getTestEl("context"), "b");
-      expect(collection.activeValue.value).toBe("Banana");
+      expect(activeValue.value).toBe("Banana");
     });
 
     it("skips null and empty strings in list gracefully", async () => {

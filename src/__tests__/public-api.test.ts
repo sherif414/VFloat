@@ -20,7 +20,6 @@ describe("Public API Surface", () => {
       "useArrow",
       "useClick",
       "useClientPoint",
-      "useCollection",
       "useFloatingNode",
       "useFloatingTree",
       "useFocus",
@@ -52,6 +51,7 @@ describe("Public API Surface", () => {
       "isUsingKeyboard",
       "resolveKeyboardIntent",
       "useActiveDescendant",
+      "useCollection",
       "useRtl",
     ];
 

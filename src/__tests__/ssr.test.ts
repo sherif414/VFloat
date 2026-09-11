@@ -33,7 +33,6 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useRole(node, { role: "menu", label: "Actions" });
         VFloat.useArrow(node);
         VFloat.useClientPoint(node);
-        VFloat.useCollection();
         const items = ref<Array<HTMLElement | null>>([]);
         VFloat.useRovingFocus(node, { elementsList: items });
         VFloat.useAriaActivedescendant({

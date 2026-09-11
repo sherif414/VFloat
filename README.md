@@ -162,12 +162,11 @@ const { arrowStyles } = useArrow(context, {
 - `**useDismiss**`: Closes floating content on Escape and outside input through one gate
 - `**useRole**`: Synchronizes ARIA roles and states for floating surfaces
 
-### Collections
+### Keyboard Navigation
 
-- `**useCollection**`: Headless string-value model for keyboard navigation
 - `**useRovingFocus**`: Physical DOM focus with roving tabindex for menus, tabs, and toolbars
 - `**useAriaActivedescendant**`: Virtual focus for text-input widgets like comboboxes
-- `**useTypeahead**`: Type-to-focus search across collections
+- `**useTypeahead**`: Type-to-focus search across lists
 
 ### Middleware
 

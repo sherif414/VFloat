@@ -1,187 +1,97 @@
-import { fileURLToPath, URL } from "node:url";
-import { defineConfig, type HeadConfig, type MarkdownOptions } from "vitepress";
-import { demoMdPlugin } from "vitepress-plugin-demo";
+import { defineConfig } from "vitepress";
 
+// https://vitepress.dev/reference/site-config
 export default defineConfig({
-  // ============================================================================
-  // SITE METADATA
-  // ============================================================================
   title: "VFloat",
-  description: "A library for positioning floating elements",
-  ignoreDeadLinks: true,
-  base: "/",
+  description: "A headless, primitive floating library for Vue 3",
 
-  // ============================================================================
-  // DOCUMENT HEAD
-  // ============================================================================
-  head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: "/vfloat-mark.svg" }],
-    [
-      "link",
-      {
-        rel: "icon",
-        type: "image/png",
-        sizes: "1024x1024",
-        href: "/vfloat-mark.png",
-      },
-    ],
-  ] satisfies HeadConfig[],
-
-  // ============================================================================
-  // VITE BEHAVIOR
-  // ============================================================================
-  vite: {
-    resolve: {
-      alias: {
-        "@": fileURLToPath(new URL("../../src", import.meta.url)),
-        "v-float": fileURLToPath(new URL("../../src/index.ts", import.meta.url)),
-      },
-    },
-
-    ssr: {
-      noExternal: ["v-float"],
-    },
-    optimizeDeps: {
-      exclude: ["v-float"],
-    },
-  },
-
-  // ============================================================================
-  // MARKDOWN PIPELINE
-  // ============================================================================
-  markdown: {
-    headers: {
-      level: [2, 3],
-    },
-    theme: "material-theme-palenight",
-    config(md) {
-      md.use(demoMdPlugin);
-    },
-  } satisfies MarkdownOptions,
-
-  // ============================================================================
-  // THEME UI
-  // ============================================================================
   themeConfig: {
     // ------------------------------------------------------------------------
-    // SEARCH
-    // ------------------------------------------------------------------------
-    search: {
-      provider: "local",
-    },
-
-    // ------------------------------------------------------------------------
-    // MAIN NAVIGATION
+    // TOP NAVIGATION BAR
     // ------------------------------------------------------------------------
     nav: [
       { text: "Guide", link: "/guide/" },
-      { text: "API", link: "/api/" },
+      { text: "API Reference", link: "/api/" },
     ],
 
     // ------------------------------------------------------------------------
-    // SIDEBAR GROUPS
+    // MULTI-SIDEBAR DEFINITION
     // ------------------------------------------------------------------------
     sidebar: {
+      // 1. Guides Section Sidebar
       "/guide/": [
         {
           text: "Getting Started",
           items: [
-            { text: "Introduction", link: "/guide/" },
+            { text: "Overview", link: "/guide/" },
+            { text: "Why VFloat & Floating UI", link: "/guide/vfloat-and-floating-ui" },
+            { text: "Choosing the Right Pattern", link: "/guide/choosing-the-right-pattern" },
             { text: "First Tooltip", link: "/guide/first-tooltip" },
             { text: "First Popover", link: "/guide/first-popover" },
-            { text: "Control Open State", link: "/guide/control-open-state" },
           ],
         },
         {
-          text: "Guides",
-          items: [
-            {
-              text: "Build Accessible Tooltips",
-              link: "/guide/build-accessible-tooltips",
-            },
-            {
-              text: "Build Popovers and Dropdowns",
-              link: "/guide/build-popovers-and-dropdowns",
-            },
-            {
-              text: "Keep Content in View",
-              link: "/guide/keep-content-in-view",
-            },
-            { text: "Use Virtual Anchors", link: "/guide/use-virtual-anchors" },
-            { text: "Keyboard Navigation", link: "/guide/keyboard-navigation" },
-            { text: "Build Nested Menus", link: "/guide/build-nested-menus" },
-            {
-              text: "Build Dialogs and Modals",
-              link: "/guide/build-dialogs-and-modals",
-            },
-          ],
-        },
-        {
-          text: "Concepts",
+          text: "Core Concepts",
           items: [
             { text: "Floating Context", link: "/guide/floating-context" },
-            {
-              text: "Placement and Positioning",
-              link: "/guide/placement-and-positioning",
-            },
-            { text: "Middleware Pipeline", link: "/guide/middleware-pipeline" },
+            { text: "Placement & Positioning", link: "/guide/placement-and-positioning" },
             { text: "Interaction Model", link: "/guide/interaction-model" },
+            { text: "Tree Coordination Explained", link: "/guide/tree-coordination-explained" },
+          ],
+        },
+        {
+          text: "Components & Patterns",
+          items: [
+            { text: "Build Accessible Tooltips", link: "/guide/build-accessible-tooltips" },
+            { text: "Build Popovers & Dropdowns", link: "/guide/build-popovers-and-dropdowns" },
+            { text: "Build Dialogs & Modals", link: "/guide/build-dialogs-and-modals" },
+            { text: "Build Nested Menus", link: "/guide/build-nested-menus" },
+          ],
+        },
+        {
+          text: "Positioning & Middleware",
+          items: [
+            { text: "Keep Content in View", link: "/guide/keep-content-in-view" },
+            { text: "Use Virtual Anchors", link: "/guide/use-virtual-anchors" },
+            { text: "Middleware Pipeline", link: "/guide/middleware-pipeline" },
+          ],
+        },
+        {
+          text: "Focus & Accessibility",
+          items: [
+            { text: "Control Open State", link: "/guide/control-open-state" },
             { text: "Focus Models", link: "/guide/focus-models" },
+            { text: "Keyboard Navigation", link: "/guide/keyboard-navigation" },
           ],
         },
         {
-          text: "Design Notes",
+          text: "Advanced & Architecture",
           items: [
-            {
-              text: "Choosing the Right Pattern",
-              link: "/guide/choosing-the-right-pattern",
-            },
-            {
-              text: "Controlled vs Uncontrolled",
-              link: "/guide/controlled-vs-uncontrolled",
-            },
-            {
-              text: "VFloat and Floating UI",
-              link: "/guide/vfloat-and-floating-ui",
-            },
-            {
-              text: "Tree Coordination Explained",
-              link: "/guide/tree-coordination-explained",
-            },
-          ],
-        },
-        {
-          text: "Deep Dives",
-          items: [
-            {
-              text: "Safe Polygon Gotchas",
-              link: "/guide/safe-polygon-gotchas",
-            },
-            {
-              text: "Middleware Ordering Gotchas",
-              link: "/guide/middleware-ordering-gotchas",
-            },
-            {
-              text: "Virtual Anchor Gotchas",
-              link: "/guide/virtual-anchor-gotchas",
-            },
-            {
-              text: "List Navigation Gotchas",
-              link: "/guide/list-navigation-gotchas",
-            },
+            { text: "Controlled vs Uncontrolled", link: "/guide/controlled-vs-uncontrolled" },
+            { text: "Safe Polygon Gotchas", link: "/guide/safe-polygon-gotchas" },
+            { text: "Virtual Anchor Gotchas", link: "/guide/virtual-anchor-gotchas" },
+            { text: "Middleware Ordering Gotchas", link: "/guide/middleware-ordering-gotchas" },
+            { text: "List Navigation Gotchas", link: "/guide/list-navigation-gotchas" },
           ],
         },
       ],
+
+      // 2. API Reference Sidebar
       "/api/": [
         {
           text: "Reference",
           items: [{ text: "Overview", link: "/api/" }],
         },
         {
-          text: "Positioning",
+          text: "Core",
           items: [
             { text: "useFloatingNode", link: "/api/use-floating-node" },
             { text: "useFloatingTree", link: "/api/use-floating-tree" },
+          ],
+        },
+        {
+          text: "Positioning",
+          items: [
             { text: "usePosition", link: "/api/use-position" },
             { text: "useArrow", link: "/api/use-arrow" },
             { text: "useClientPoint", link: "/api/use-client-point" },
@@ -199,9 +109,8 @@ export default defineConfig({
           ],
         },
         {
-          text: "Collections",
+          text: "Keyboard Navigation",
           items: [
-            { text: "useCollection", link: "/api/use-collection" },
             { text: "useRovingFocus", link: "/api/use-roving-focus" },
             { text: "useAriaActivedescendant", link: "/api/use-aria-activedescendant" },
             { text: "useTypeahead", link: "/api/use-typeahead" },
@@ -213,11 +122,11 @@ export default defineConfig({
             { text: "offset", link: "/api/offset" },
             { text: "flip", link: "/api/flip" },
             { text: "shift", link: "/api/shift" },
-            { text: "size", link: "/api/size" },
             { text: "autoPlacement", link: "/api/autoplacement" },
-            { text: "hide", link: "/api/hide" },
+            { text: "size", link: "/api/size" },
             { text: "inline", link: "/api/inline" },
             { text: "arrow", link: "/api/arrow" },
+            { text: "hide", link: "/api/hide" },
           ],
         },
       ],

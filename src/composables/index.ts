@@ -19,13 +19,6 @@ export type {
 // Client Point
 export { useClientPoint } from "./client-point/use-client-point";
 export type {
-  CollectionNavigationOptions,
-  UseCollectionOptions,
-  UseCollectionReturn,
-} from "./collection";
-// Collection
-export { useCollection } from "./collection";
-export type {
   UseDismissContext,
   UseDismissEscapeOptions,
   UseDismissOptions,
