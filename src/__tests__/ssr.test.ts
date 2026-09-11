@@ -36,9 +36,7 @@ describe("SSR Compatibility (Node Environment)", () => {
         const items = ref<Array<HTMLElement | null>>([]);
         VFloat.useRovingFocus(node, { elementsList: items });
         VFloat.useTypeahead(node, { items: ["Apple", "Banana", "Cherry"] });
-        VFloat.useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: floatingEl,
+        VFloat.useAriaActivedescendant(node, {
           elementsList: items,
         });
 

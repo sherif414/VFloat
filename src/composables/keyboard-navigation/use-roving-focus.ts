@@ -9,6 +9,7 @@ import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
 import { resolveNavigableIndexByIntent } from "./navigation";
 import { useRtl } from "./rtl";
+import type { NavigationTarget, NavigationTargetOptions, NavigationTargetValue } from "./types";
 
 //=======================================================================================
 // 📌 Main
@@ -34,7 +35,7 @@ import { useRtl } from "./rtl";
  * const node = useFloatingNode({ anchorEl, floatingEl });
  * const elementsList = ref<Array<HTMLElement | null>>([]);
  *
- * const { activeIndex, next, prev } = useRovingFocus(node, {
+ * const { activeIndex, focusIndex } = useRovingFocus(node, {
  *   elementsList,
  *   entryIndex: 0,
  * });
@@ -80,12 +81,13 @@ export function useRovingFocus(
   // --- Shared Options & Root State --------------------------------------------
 
   const isEnabled = computed(() => toValue(enabled));
-  const orientation = computed(() => toValue(options.orientation ?? "vertical"));
+  const orientation = computed(() => toValue(options.orientation) ?? "vertical");
   const containerEl = computed(() => toValue(options.containerEl) ?? node.refs.floatingEl.value);
   const isRtl = useRtl(containerEl, { rtl });
   const isLoop = computed(() => !!toValue(loop));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
   const canFocusDisabled = computed(() => !!toValue(focusDisabledElements));
+  const currentPageSize = computed(() => Math.max(1, toValue(options.pageSize) ?? 10));
 
   const activeIndex = useControllableState({
     value: controlledActiveIndex,
@@ -109,12 +111,16 @@ export function useRovingFocus(
    * `focusDisabledElements` is enabled).
    */
   function isNavigable(idx: number): boolean {
-    const list = elementsList.value;
+    const list = toValue(elementsList);
     if (idx < 0 || idx >= list.length) return false;
     const el = list[idx];
     if (!el) return false;
     if (canFocusDisabled.value) return true;
-    return !el.hasAttribute("disabled") && el.getAttribute("aria-disabled") !== "true";
+    return (
+      !el.hasAttribute("disabled") &&
+      !("disabled" in el && Boolean((el as HTMLButtonElement).disabled)) &&
+      el.getAttribute("aria-disabled") !== "true"
+    );
   }
 
   /**
@@ -124,9 +130,13 @@ export function useRovingFocus(
    * focusable for discoverability but must not be activatable.
    */
   function isItemDisabled(idx: number): boolean {
-    const el = elementsList.value[idx];
+    const el = toValue(elementsList)[idx];
     if (!el) return true;
-    return el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
+    return (
+      el.hasAttribute("disabled") ||
+      ("disabled" in el && Boolean((el as HTMLButtonElement).disabled)) ||
+      el.getAttribute("aria-disabled") === "true"
+    );
   }
 
   /**
@@ -150,7 +160,7 @@ export function useRovingFocus(
    * Evaluates reactively based on active focus, APG history, and entry configuration.
    */
   const tabStopIndex = computed<number>(() => {
-    const list = elementsList.value;
+    const list = toValue(elementsList);
     const entry = toValue(entryIndexOption);
 
     // Initial / SSR pre-mount phase (DOM refs not yet registered)
@@ -222,22 +232,39 @@ export function useRovingFocus(
   }
 
   /**
-   * Sets the active index state AND physically focuses the element in the DOM.
+   * Sets the active index and physically focuses the element in the DOM, or navigates directionally.
    */
-  function focusIndex(idx: number, options: { preventScroll?: boolean } = {}): void {
-    const { preventScroll = false } = options;
-    setActiveIndex(idx);
-
-    if (isNavigable(idx)) {
-      const el = elementsList.value[idx];
-      if (!el) return;
-
-      el.focus({ preventScroll: true });
-
-      if (!preventScroll) {
-        el.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  function focusIndex(
+    target: NavigationTargetValue,
+    focusOptions: NavigationTargetOptions = {},
+  ): void {
+    if (typeof target === "number") {
+      if (target === -1) {
+        reset();
+        return;
       }
+      setActiveIndex(target);
+
+      if (isNavigable(target)) {
+        const el = toValue(elementsList)[target];
+        if (!el) return;
+
+        el.focus({ preventScroll: true });
+
+        if (!focusOptions.preventScroll) {
+          el.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+        }
+      }
+      return;
     }
+
+    if (target === "reset") {
+      reset();
+      return;
+    }
+
+    const intent = target === "prev" ? "previous" : target;
+    navigate(intent, focusOptions);
   }
 
   // --- Keyboard Navigation ----------------------------------------------------
@@ -256,7 +283,7 @@ export function useRovingFocus(
     const focused = doc.activeElement;
     if (!focused || !container.contains(focused)) return -1;
 
-    const elements = elementsList.value;
+    const elements = toValue(elementsList);
     const lastIdx = lastFocusedIndex.value;
     // Fast-path: check last focused item first before scanning the collection.
     if (lastIdx !== null && lastIdx >= 0) {
@@ -272,8 +299,9 @@ export function useRovingFocus(
     return -1;
   }
 
-  function navigate(intent: NavigationIntent): void {
-    const total = elementsList.value.length;
+  function navigate(intent: NavigationIntent, focusOptions: NavigationTargetOptions = {}): void {
+    const list = toValue(elementsList);
+    const total = list.length;
     if (total === 0) return;
 
     let current: number;
@@ -293,8 +321,8 @@ export function useRovingFocus(
           current = lastFocusedIndex.value;
         } else {
           // No DOM focus in widget — start from edge so the first step lands
-          // on the first (next/first) or last (previous/last) navigable item.
-          current = intent === "next" || intent === "first" ? -1 : total;
+          // on the first (next/first/page-down) or last (previous/last/page-up) navigable item.
+          current = intent === "next" || intent === "first" || intent === "page-down" ? -1 : total;
         }
       }
     }
@@ -305,6 +333,7 @@ export function useRovingFocus(
       total,
       (i) => !isNavigable(i),
       isLoop.value,
+      currentPageSize.value,
     );
 
     if (targetIdx !== null) {
@@ -320,7 +349,7 @@ export function useRovingFocus(
           { order: "bottom-up" },
         );
       }
-      focusIndex(targetIdx);
+      focusIndex(targetIdx, focusOptions);
     }
   }
 
@@ -338,7 +367,7 @@ export function useRovingFocus(
       // Guard: per WAI-ARIA APG, disabled items are focusable for discoverability
       // but must not be activatable. Check actual DOM disabled state, not the
       // navigation predicate (which is affected by focusDisabledElements).
-      if (idx >= 0 && idx < elementsList.value.length && !isItemDisabled(idx)) {
+      if (idx >= 0 && idx < toValue(elementsList).length && !isItemDisabled(idx)) {
         e.preventDefault();
         onSelect?.(idx, e);
       }
@@ -347,7 +376,7 @@ export function useRovingFocus(
 
     if (intent === "enter") {
       const idx = activeIndex.value >= 0 ? activeIndex.value : resolveFocusedIndex();
-      if (idx >= 0 && idx < elementsList.value.length && !isItemDisabled(idx)) {
+      if (idx >= 0 && idx < toValue(elementsList).length && !isItemDisabled(idx)) {
         if (onEnter) {
           const result = onEnter(idx, e);
           if (result !== false) {
@@ -374,7 +403,14 @@ export function useRovingFocus(
       return;
     }
 
-    if (intent === "first" || intent === "last" || intent === "next" || intent === "previous") {
+    if (
+      intent === "first" ||
+      intent === "last" ||
+      intent === "next" ||
+      intent === "previous" ||
+      intent === "page-up" ||
+      intent === "page-down"
+    ) {
       e.preventDefault();
       navigate(intent);
     }
@@ -387,7 +423,7 @@ export function useRovingFocus(
     const target = e.target as Node | null;
     if (!target) return;
 
-    const elements = elementsList.value;
+    const elements = toValue(elementsList);
     const activeIdx = activeIndex.value;
     const activeEl = activeIdx >= 0 ? elements[activeIdx] : null;
 
@@ -433,7 +469,7 @@ export function useRovingFocus(
       const target = e.target as Node | null;
       if (!target) return;
 
-      const elements = elementsList.value;
+      const elements = toValue(elementsList);
       const activeIdx = activeIndex.value;
 
       // Already on the hovered item — no-op
@@ -489,10 +525,6 @@ export function useRovingFocus(
     setActiveIndex,
     reset,
     focusIndex,
-    next: () => navigate("next"),
-    prev: () => navigate("previous"),
-    first: () => navigate("first"),
-    last: () => navigate("last"),
   };
 }
 
@@ -547,16 +579,16 @@ export type RovingEntryFocusMode = "last-focused" | "entry-index";
 /**
  * Return shape for `useRovingFocus`.
  */
-export interface UseRovingFocusReturn {
+export interface UseRovingFocusReturn extends NavigationTarget {
   /**
    * The currently active element index (-1 when unfocused).
    */
-  activeIndex: Readonly<Ref<number>>;
+  readonly activeIndex: Readonly<Ref<number>>;
 
   /**
    * The currently resolved tab-stop index designating which element owns `tabindex="0"`.
    */
-  tabStopIndex: Readonly<Ref<number>>;
+  readonly tabStopIndex: Readonly<Ref<number>>;
 
   /**
    * Sets the active index state without moving DOM focus.
@@ -571,34 +603,19 @@ export interface UseRovingFocusReturn {
   reset: () => void;
 
   /**
-   * Sets the active index and moves DOM focus to the element.
+   * Polymorphic navigation method.
+   *
+   * - Number: Sets the active index and moves DOM focus to that element.
+   * - `"reset"`: Resets active focus and restores the resting tab stop.
+   * - `"next"` | `"prev"` | `"previous"` | `"first"` | `"last"` | `"page-up"` | `"page-down"`:
+   *   Navigates to the corresponding enabled item and moves DOM focus.
    */
-  focusIndex: (index: number, options?: { preventScroll?: boolean }) => void;
+  focusIndex: (target: NavigationTargetValue, options?: NavigationTargetOptions) => void;
 
   /**
    * Computes the roving `tabindex` (`0` or `-1`) for an element at the specified index.
    */
   getTabindex: (index: number) => 0 | -1;
-
-  /**
-   * Moves focus to the next enabled element.
-   */
-  next: () => void;
-
-  /**
-   * Moves focus to the previous enabled element.
-   */
-  prev: () => void;
-
-  /**
-   * Moves focus to the first enabled element.
-   */
-  first: () => void;
-
-  /**
-   * Moves focus to the last enabled element.
-   */
-  last: () => void;
 }
 
 /**
@@ -608,7 +625,7 @@ export interface UseRovingFocusOptions {
   /**
    * The list of HTML element references representing navigable elements.
    */
-  elementsList: Readonly<Ref<(HTMLElement | null)[]>>;
+  elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>;
 
   /**
    * Optional custom container element that receives keyboard and pointer events and is used for RTL detection.
@@ -658,6 +675,12 @@ export interface UseRovingFocusOptions {
    * @default false
    */
   loop?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Number of items to jump during PageUp and PageDown keyboard navigation.
+   * @default 10
+   */
+  pageSize?: MaybeRefOrGetter<number>;
 
   /**
    * Whether the layout follows a Right-to-Left (RTL) reading order.

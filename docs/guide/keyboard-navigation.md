@@ -152,8 +152,7 @@ const filteredOptions = computed(() =>
   options.value.filter((o) => o.label.toLowerCase().includes(query.value.toLowerCase())),
 );
 
-const { activeIndex, getTargetProps, getItemProps } = useAriaActivedescendant({
-  targetEl: inputEl,
+const { activeIndex, getItemId } = useAriaActivedescendant(context, {
   elementsList: itemEls,
   onSelect: (index) => {
     query.value = filteredOptions.value[index]!.label;
@@ -170,7 +169,7 @@ useRole(context, {
 
 ### Template
 
-Spread `getTargetProps()` on the input trigger and `getItemProps(index)` on each option:
+Bind `:id="getItemId(index)"` on each option. The `aria-activedescendant` attribute on the input trigger is automatically synchronized by `useAriaActivedescendant`:
 
 ```vue
 <template>
@@ -181,7 +180,6 @@ Spread `getTargetProps()` on the input trigger and `getItemProps(index)` on each
     role="combobox"
     aria-autocomplete="list"
     :aria-expanded="context.open.value"
-    v-bind="getTargetProps()"
     @focus="context.setOpen(true)"
   />
 
@@ -189,9 +187,9 @@ Spread `getTargetProps()` on the input trigger and `getItemProps(index)` on each
     <li
       v-for="(item, index) in filteredOptions"
       :key="item.value"
+      :id="getItemId(index)"
       :ref="(el) => (itemEls[index] = el as HTMLElement | null)"
       role="option"
-      v-bind="getItemProps(index)"
       :aria-selected="activeIndex === index"
       :class="{ active: activeIndex === index }"
     >
@@ -217,8 +215,8 @@ Here are the key events handled automatically by the focus models:
 | `ArrowLeft`  | `"vertical"` (Menu) | Fires `onExit`; submenu panels use this to close the child floating node and return focus to the parent trigger.           |
 | `Home`       | Any                 | Moves to the first enabled item.                                                                                           |
 | `End`        | Any                 | Moves to the last enabled item.                                                                                            |
-| `PageUp`     | Any (virtual)       | Moves up by `pageSize` (default `10`) in `useAriaActivedescendant`.                                                        |
-| `PageDown`   | Any (virtual)       | Moves down by `pageSize` (default `10`) in `useAriaActivedescendant`.                                                      |
+| `PageUp`     | Any                 | Moves up by `pageSize` (default `10`) in `useRovingFocus` and `useAriaActivedescendant`.                                   |
+| `PageDown`   | Any                 | Moves down by `pageSize` (default `10`) in `useRovingFocus` and `useAriaActivedescendant`.                                 |
 | `Tab`        | Any                 | Passes through to document flow. In non-modal [`useFocusTrap`](/api/use-focus-trap) surfaces, `closeOnTab` closes on exit. |
 
 ---

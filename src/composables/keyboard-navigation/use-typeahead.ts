@@ -4,6 +4,7 @@ import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
+import type { NavigationTarget } from "./types";
 
 // File-private navigation keys owned by sibling behaviors (roving focus,
 // selection, dismissal). Typeahead never claims them.
@@ -40,18 +41,18 @@ const TYPEAHEAD_NAVIGATION_KEYS: ReadonlySet<string> = new Set([
  * claims trigger activation keys (Enter, idle Space, arrows).
  *
  * @param node - The floating node with open state and panel refs.
- * @param options - Item labels, active index offset, and matcher overrides.
+ * @param options - Item labels, active index offset, target protocol, and matcher overrides.
  * @returns The live search buffer and a manual reset action.
  *
- * @example Pairing with roving focus
+ * @example Pairing with roving focus using target option
  * ```ts
  * const context = useFloatingNode({ anchorEl, floatingEl });
  * const elementsList = ref<Array<HTMLElement | null>>([]);
- * const { focusIndex } = useRovingFocus(context, { elementsList });
+ * const roving = useRovingFocus(context, { elementsList });
  *
  * const { searchQuery } = useTypeahead(context, {
+ *   target: roving,
  *   items: ["Apple", "Banana", "Cherry"],
- *   onMatch: (index) => focusIndex(index),
  * });
  * ```
  */
@@ -60,11 +61,21 @@ export function useTypeahead(
   options: UseTypeaheadOptions = {},
 ): UseTypeaheadReturn {
   const { open } = node;
+  const target = options.target;
 
   // --- Shared Options & Root State --------------------------------------------------
 
-  const items = computed<readonly (string | null)[]>(() => toValue(options.items ?? []));
-  const activeIndex = computed<number>(() => toValue(options.activeIndex ?? -1));
+  const isEnabled = computed(() => toValue(options.enabled) ?? true);
+  const items = computed<readonly (string | null)[]>(() => toValue(options.items) ?? []);
+  const activeIndex = computed<number>(() => {
+    if (options.activeIndex !== undefined) {
+      return toValue(options.activeIndex);
+    }
+    if (target) {
+      return target.activeIndex.value;
+    }
+    return -1;
+  });
   const containerEl = computed(() => toValue(options.containerEl) ?? node.refs.floatingEl.value);
   const anchorTarget = computed(() => getAnchorElement(node.refs.anchorEl.value));
 
@@ -107,7 +118,7 @@ export function useTypeahead(
   // --- Container Keyboard Search ----------------------------------------------------
 
   function onKeyDown(e: KeyboardEvent) {
-    if (!toValue(options.enabled ?? true) || e.defaultPrevented) return;
+    if (!isEnabled.value || e.defaultPrevented) return;
 
     // Navigation, selection, and dismissal keys hand control to sibling
     // behaviors, so any pending query is abandoned instead of extended by
@@ -117,7 +128,7 @@ export function useTypeahead(
       return;
     }
 
-    if (isIgnoredKey(e, toValue(options.ignoreKeys ?? []))) return;
+    if (isIgnoredKey(e, toValue(options.ignoreKeys) ?? [])) return;
 
     const currentItems = items.value;
     if (currentItems.length === 0) return;
@@ -131,7 +142,7 @@ export function useTypeahead(
     if (e.key === " ") e.preventDefault();
 
     clearResetTimeout();
-    resetTimeoutId = setTimeout(reset, toValue(options.resetMs ?? 750));
+    resetTimeoutId = setTimeout(reset, toValue(options.resetMs) ?? 750);
 
     searchQuery.value += e.key;
     const matched = resolveSearchIndex(
@@ -149,7 +160,11 @@ export function useTypeahead(
       // (page scroll, find-as-you-type) in exotic containers.
       e.preventDefault();
       matchIndex = matched;
-      options.onMatch?.(matched);
+      if (options.onMatch) {
+        options.onMatch(matched);
+      } else if (target) {
+        target.focusIndex(matched);
+      }
     } else {
       // A failed query would poison the next keystroke, so drop it and idle.
       reset();
@@ -324,17 +339,24 @@ export interface UseTypeaheadOptions {
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
+   * Optional navigation target (such as the return of `useRovingFocus` or `useAriaActivedescendant`).
+   * When provided, `activeIndex` defaults to `target.activeIndex` and `onMatch`
+   * defaults to `(index) => target.focusIndex(index)` unless explicitly overridden.
+   */
+  target?: NavigationTarget;
+
+  /**
    * Currently active item index (`-1` when none). Read when a new query
    * starts to position repeat-character cycling after the current item.
    * Never written; forward matches via `onMatch`.
+   * When omitted and `target` is supplied, defaults to `target.activeIndex`.
    * @default -1
    */
   activeIndex?: MaybeRefOrGetter<number>;
 
   /**
-   * Callback invoked with the matched item index. Forward it to
-   * `useRovingFocus`'s `focusIndex` or `useAriaActivedescendant`'s
-   * `setActiveIndex`.
+   * Callback invoked with the matched item index.
+   * When omitted and `target` is supplied, defaults to `(index) => target.focusIndex(index)`.
    */
   onMatch?: (index: number) => void;
 

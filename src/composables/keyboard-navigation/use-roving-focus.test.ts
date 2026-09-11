@@ -248,6 +248,34 @@ describe("useRovingFocus", () => {
       await userEvent.keyboard("{ArrowUp}");
       await expect.element(option1).toHaveFocus();
     });
+
+    it("jumps by pageSize on PageDown and PageUp keys", async () => {
+      const { Component } = createTestComponent({ pageSize: 4 }, { itemCount: 15 });
+      await render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option5 = page.getByRole("option", { name: "option 5" });
+      const option9 = page.getByRole("option", { name: "option 9" });
+
+      await userEvent.click(option1);
+      await expect.element(option1).toHaveFocus();
+
+      await userEvent.keyboard("{PageDown}");
+      await expect.element(option5).toHaveFocus();
+
+      await userEvent.keyboard("{PageDown}");
+      await expect.element(option9).toHaveFocus();
+
+      await userEvent.keyboard("{PageUp}");
+      await expect.element(option5).toHaveFocus();
+
+      await userEvent.keyboard("{PageUp}");
+      await expect.element(option1).toHaveFocus();
+
+      // Stops at boundary when loop is false
+      await userEvent.keyboard("{PageUp}");
+      await expect.element(option1).toHaveFocus();
+    });
   });
 
   describe("horizontal & RTL navigation", () => {
@@ -662,16 +690,16 @@ describe("useRovingFocus", () => {
 
       await userEvent.click(option1);
 
-      getRoving().next();
+      getRoving().focusIndex("next");
       await expect.element(option2).toHaveFocus();
 
-      getRoving().last();
+      getRoving().focusIndex("last");
       await expect.element(option5).toHaveFocus();
 
-      getRoving().prev();
+      getRoving().focusIndex("prev");
       await expect.element(option4).toHaveFocus();
 
-      getRoving().first();
+      getRoving().focusIndex("first");
       await expect.element(option1).toHaveFocus();
 
       getRoving().focusIndex(2);
@@ -706,7 +734,7 @@ describe("useRovingFocus", () => {
 
       await userEvent.click(option3);
       getRoving().setActiveIndex(-1);
-      getRoving().next();
+      getRoving().focusIndex("next");
 
       await expect.element(option4).toHaveFocus();
     });
@@ -746,6 +774,61 @@ describe("useRovingFocus", () => {
       expect(getRoving().tabStopIndex.value).toBe(1);
       expect(getRoving().getTabindex(1)).toBe(0);
       expect(getRoving().getTabindex(0)).toBe(-1);
+    });
+
+    it("navigates directionally using focusIndex('page-down') and focusIndex('page-up')", async () => {
+      const { Component, getRoving } = createTestComponent({ pageSize: 3 }, { itemCount: 10 });
+      await render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option4 = page.getByRole("option", { name: "option 4" });
+      const option7 = page.getByRole("option", { name: "option 7" });
+
+      await userEvent.click(option1);
+      await expect.element(option1).toHaveFocus();
+
+      getRoving().focusIndex("page-down");
+      await expect.element(option4).toHaveFocus();
+
+      getRoving().focusIndex("page-down");
+      await expect.element(option7).toHaveFocus();
+
+      getRoving().focusIndex("page-up");
+      await expect.element(option4).toHaveFocus();
+    });
+
+    it("resets active focus when focusIndex('reset') is called", async () => {
+      const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
+      await render(Component);
+
+      const option3 = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(option3);
+      expect(getRoving().activeIndex.value).toBe(2);
+
+      getRoving().focusIndex("reset");
+      expect(getRoving().activeIndex.value).toBe(-1);
+      expect(getRoving().tabStopIndex.value).toBe(1);
+    });
+
+    it("handles undefined ref values for pageSize and orientation cleanly", async () => {
+      const pageSizeRef = ref<number | undefined>(undefined);
+      const orientationRef = ref<"vertical" | "horizontal" | undefined>(undefined);
+      const { Component, getRoving } = createTestComponent(
+        { pageSize: pageSizeRef as any, orientation: orientationRef as any },
+        { itemCount: 25 },
+      );
+      await render(Component);
+
+      const option1 = page.getByRole("option", { name: "option 1" });
+      const option11 = page.getByRole("option", { name: "option 11" });
+
+      await userEvent.click(option1);
+      await expect.element(option1).toHaveFocus();
+
+      // Should default to 10 and vertical orientation
+      await userEvent.keyboard("{PageDown}");
+      await expect.element(option11).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(10);
     });
   });
 
@@ -1113,10 +1196,10 @@ describe("useRovingFocus", () => {
 
       await userEvent.click(option1);
 
-      getRoving().next();
+      getRoving().focusIndex("next");
       await expect.element(option2).toHaveFocus();
 
-      getRoving().last();
+      getRoving().focusIndex("last");
       await expect.element(option5).toHaveFocus();
 
       getRoving().focusIndex(1);
@@ -1325,26 +1408,26 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(0);
     });
 
-    it("navigates to first item on next() from initial activeIndex = -1", async () => {
+    it("navigates to first item on focusIndex('next') from initial activeIndex = -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
       const option1 = page.getByRole("option", { name: "option 1" });
 
       // Programmatic next from -1 targets first enabled item
-      getRoving().next();
+      getRoving().focusIndex("next");
       await expect.element(option1).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(0);
     });
 
-    it("navigates to last item on prev() from initial activeIndex = -1", async () => {
+    it("navigates to last item on focusIndex('prev') from initial activeIndex = -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
       const option5 = page.getByRole("option", { name: "option 5" });
 
       // Programmatic prev from -1 targets last enabled item
-      getRoving().prev();
+      getRoving().focusIndex("prev");
       await expect.element(option5).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(4);
     });

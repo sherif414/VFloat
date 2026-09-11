@@ -16,6 +16,7 @@ interface UseTypeaheadContext extends Pick<FloatingNode, "refs" | "open"> {}
 interface UseTypeaheadOptions {
   items?: MaybeRefOrGetter<readonly (string | null)[]>;
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
+  target?: NavigationTarget;
   activeIndex?: MaybeRefOrGetter<number>;
   onMatch?: (index: number) => void;
   enabled?: MaybeRefOrGetter<boolean>;
@@ -43,8 +44,9 @@ interface UseTypeaheadReturn {
 | ---------------- | ----------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------- |
 | `items`          | `MaybeRefOrGetter<readonly (string \| null)[]>` | `[]`           | Array of text labels to match against. `null` entries are skipped.                                              |
 | `containerEl`    | `MaybeRefOrGetter<HTMLElement \| null>`         | Floating panel | Keyboard scope for typeahead search. Override for inline widgets whose list lives outside the panel.            |
-| `activeIndex`    | `MaybeRefOrGetter<number>`                      | `-1`           | Currently active index, used as the starting offset when cycling. Never written; forward matches via `onMatch`. |
-| `onMatch`        | `(index: number) => void`                       | `undefined`    | Callback invoked with the index of the matched item.                                                            |
+| `target`         | `NavigationTarget`                              | `undefined`    | Navigation target (e.g. `useRovingFocus` or `useAriaActivedescendant`). Auto-wires `activeIndex` and `onMatch`.  |
+| `activeIndex`    | `MaybeRefOrGetter<number>`                      | `target?.activeIndex ?? -1` | Currently active index, used as the starting offset when cycling. Never written; forward matches via `onMatch`. |
+| `onMatch`        | `(index: number) => void`                       | `(idx) => target?.focusIndex(idx)` | Callback invoked with the index of the matched item.                                                       |
 | `enabled`        | `MaybeRefOrGetter<boolean>`                     | `true`         | Whether typeahead search is active.                                                                             |
 | `resetMs`        | `MaybeRefOrGetter<number>`                      | `750`          | Inactivity timeout in milliseconds before clearing the typing buffer.                                           |
 | `ignoreKeys`     | `MaybeRefOrGetter<readonly string[]>`           | `[]`           | Additional keys to ignore during typeahead search.                                                              |
@@ -73,7 +75,18 @@ Typeahead listens on the floating panel, where the ARIA APG places type-ahead fo
 
 ### Pairing with Focus Composables
 
-Pass `onMatch` directly to `useRovingFocus`'s `focusIndex` or `useAriaActivedescendant`'s `setActiveIndex`:
+Pass `target` to automatically synchronize `activeIndex` and route matches to `focusIndex`:
+
+```ts
+const roving = useRovingFocus(context, { elementsList });
+
+const { searchQuery } = useTypeahead(context, {
+  target: roving,
+  items: countryNames,
+});
+```
+
+Or provide `onMatch` explicitly if custom interception is required:
 
 ```ts
 const { focusIndex } = useRovingFocus(context, { elementsList });
@@ -98,11 +111,11 @@ const elementsList = ref<Array<HTMLElement | null>>([]);
 const open = ref(true);
 
 const context = useFloatingNode({ anchorEl, floatingEl, open });
-const { activeIndex, getTabindex, focusIndex } = useRovingFocus(context, { elementsList });
+const roving = useRovingFocus(context, { elementsList });
 
 const { searchQuery } = useTypeahead(context, {
+  target: roving,
   items: countries,
-  onMatch: (idx) => focusIndex(idx),
 });
 </script>
 

@@ -51,7 +51,7 @@ export function findNextNavigableIndex(
 /**
  * Resolves the target index for a given semantic navigation intent.
  *
- * Maps high-level intents (`next`, `previous`, `first`, `last`) to concrete index
+ * Maps high-level intents (`next`, `previous`, `first`, `last`, `page-up`, `page-down`) to concrete index
  * lookups using {@link findNextNavigableIndex}. `first` and `last` always search
  * without looping so they land on the true boundary element.
  *
@@ -60,6 +60,7 @@ export function findNextNavigableIndex(
  * @param totalSize - Total number of items in the collection.
  * @param isNavigableElement - Predicate returning `true` for indices that should be skipped.
  * @param loop - Whether `next`/`previous` should wrap at boundaries.
+ * @param pageSize - Number of items to step for `page-up` and `page-down` navigation.
  * @returns The resolved target index, or `null` if no navigable item is found.
  */
 export function resolveNavigableIndexByIntent(
@@ -68,6 +69,7 @@ export function resolveNavigableIndexByIntent(
   totalSize: number,
   isNavigableElement: (idx: number) => boolean,
   loop: boolean,
+  pageSize = 10,
 ): number | null {
   if (totalSize === 0) return null;
 
@@ -84,6 +86,27 @@ export function resolveNavigableIndexByIntent(
       return findNextNavigableIndex(-1, 1, totalSize, isNavigableElement, false);
     case "last":
       return findNextNavigableIndex(totalSize, -1, totalSize, isNavigableElement, false);
+    case "page-up":
+    case "page-down": {
+      const delta = intent === "page-down" ? 1 : -1;
+      const size = Math.max(1, pageSize);
+      let probe =
+        currentIdx !== null && currentIdx >= 0 ? currentIdx : delta === 1 ? -1 : totalSize;
+      let found: number | null = currentIdx;
+
+      for (let step = 0; step < size; step++) {
+        const next = findNextNavigableIndex(probe, delta, totalSize, isNavigableElement, loop);
+        if (next === null) break;
+        found = next;
+        probe = next;
+      }
+
+      if (found !== null && found >= 0 && found !== currentIdx) {
+        return found;
+      }
+
+      return null;
+    }
     default:
       return null;
   }

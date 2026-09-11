@@ -1,7 +1,7 @@
-export { useTypeahead } from "./use-typeahead";
+export { useTypeahead } from "../keyboard-navigation";
 export type {
   TypeaheadFindMatchFn,
   UseTypeaheadContext,
   UseTypeaheadOptions,
   UseTypeaheadReturn,
-} from "./use-typeahead";
+} from "../keyboard-navigation";

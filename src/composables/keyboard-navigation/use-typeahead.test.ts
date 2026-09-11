@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, h, nextTick, ref, useTemplateRef, type MaybeRefOrGetter } from "vue";
-import { useFloatingNode, useTypeahead, type TypeaheadFindMatchFn } from "@/composables";
+import {
+  type NavigationTarget,
+  type TypeaheadFindMatchFn,
+  useAriaActivedescendant,
+  useFloatingNode,
+  useRovingFocus,
+  useTypeahead,
+} from "@/composables";
 import { dispatchKey, getTestEl } from "@/test-utils";
 
 interface FixtureConfig {
@@ -12,6 +19,7 @@ interface FixtureConfig {
 interface SetupOptions {
   items?: readonly (string | null)[];
   activeIndex?: MaybeRefOrGetter<number>;
+  target?: NavigationTarget;
   onMatch?: (index: number) => void;
   enabled?: MaybeRefOrGetter<boolean>;
   resetMs?: MaybeRefOrGetter<number>;
@@ -44,11 +52,14 @@ function createTestComponent(options: SetupOptions = {}, config: FixtureConfig =
     typeahead = useTypeahead(node, {
       items: options.items ?? DEFAULT_ITEMS,
       containerEl: config.withCustomContainer ? customEl : undefined,
+      target: options.target,
       activeIndex: options.activeIndex ?? activeIndexRef,
-      onMatch: (index) => {
-        activeIndexRef.value = index;
-        options.onMatch?.(index);
-      },
+      onMatch: options.onMatch
+        ? (index) => {
+            activeIndexRef.value = index;
+            options.onMatch?.(index);
+          }
+        : undefined,
       enabled: options.enabled,
       resetMs: options.resetMs,
       ignoreKeys: options.ignoreKeys,
@@ -82,7 +93,14 @@ function createTestComponent(options: SetupOptions = {}, config: FixtureConfig =
 }
 
 async function renderTypeahead(options: SetupOptions = {}, config: FixtureConfig = {}) {
-  const fixture = createTestComponent(options, config);
+  const onMatchMock = vi.fn();
+  const fixture = createTestComponent(
+    {
+      onMatch: options.onMatch ?? onMatchMock,
+      ...options,
+    },
+    config,
+  );
   await render(fixture.Component);
   return {
     anchorEl: getTestEl("anchor"),
@@ -416,8 +434,6 @@ describe("useTypeahead", () => {
     });
 
     it("flushes the buffer when space itself matches nothing", async () => {
-      // A trailing-space dead query can never match an extension under
-      // prefix search, so it flushes immediately instead of lingering.
       const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
         items: ["Newark", "London"],
       });
@@ -469,9 +485,6 @@ describe("useTypeahead", () => {
     });
 
     it("abandons the pending query when manual navigation takes over", async () => {
-      // Without this, typing "b", arrowing to the next item, then typing "a"
-      // would extend the stale buffer to "ba" and jump back instead of
-      // starting a fresh search from the manually focused item.
       const navigatedIndex = ref(-1);
       const { floatingEl, typeahead } = await renderTypeahead({
         activeIndex: navigatedIndex,
@@ -536,6 +549,147 @@ describe("useTypeahead", () => {
 
       dispatchKey(floatingEl, "c");
       expect(getActiveIndex()).toBe(3);
+    });
+  });
+
+  describe("NavigationTarget protocol integration", () => {
+    it("auto-wires activeIndex and focusIndex with useRovingFocus", async () => {
+      let roving!: ReturnType<typeof useRovingFocus>;
+
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
+        const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+        const elementsList = ref<Array<HTMLElement | null>>([]);
+
+        const node = useFloatingNode({ anchorEl, floatingEl, defaultOpen: true });
+        roving = useRovingFocus(node, { elementsList });
+        useTypeahead(node, {
+          target: roving,
+          items: DEFAULT_ITEMS,
+        });
+
+        return () =>
+          h("div", [
+            h("button", { ref: "anchor", "data-testid": "anchor" }, "Anchor"),
+            h(
+              "div",
+              { ref: "floating", "data-testid": "floating", tabindex: -1 },
+              DEFAULT_ITEMS.map((item, idx) =>
+                h(
+                  "button",
+                  {
+                    ref: (el) => (elementsList.value[idx] = el as HTMLElement | null),
+                    "data-testid": `item-${idx}`,
+                    tabindex: roving.getTabindex(idx),
+                  },
+                  item,
+                ),
+              ),
+            ),
+          ]);
+      });
+
+      await render(Component);
+      const floatingEl = getTestEl("floating");
+
+      dispatchKey(floatingEl, "b");
+      expect(roving.activeIndex.value).toBe(3);
+      const item3 = getTestEl("item-3");
+      expect(document.activeElement).toBe(item3);
+    });
+
+    it("auto-wires activeIndex and focusIndex with useAriaActivedescendant", async () => {
+      let descendant!: ReturnType<typeof useAriaActivedescendant>;
+
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
+        const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+        const elementsList = ref<Array<HTMLElement | null>>([]);
+
+        const node = useFloatingNode({ anchorEl, floatingEl, defaultOpen: true });
+        descendant = useAriaActivedescendant(node, { elementsList });
+        useTypeahead(node, {
+          target: descendant,
+          items: DEFAULT_ITEMS,
+        });
+
+        return () =>
+          h("div", [
+            h("input", { ref: "anchor", "data-testid": "anchor" }),
+            h(
+              "div",
+              { ref: "floating", "data-testid": "floating", tabindex: -1 },
+              DEFAULT_ITEMS.map((item, idx) =>
+                h(
+                  "div",
+                  {
+                    ref: (el) => (elementsList.value[idx] = el as HTMLElement | null),
+                    id: descendant.getItemId(idx),
+                    role: "option",
+                    "data-testid": `item-${idx}`,
+                  },
+                  item,
+                ),
+              ),
+            ),
+          ]);
+      });
+
+      await render(Component);
+      const floatingEl = getTestEl("floating");
+      const anchorEl = getTestEl("anchor");
+
+      dispatchKey(floatingEl, "b");
+      expect(descendant.activeIndex.value).toBe(3);
+      await nextTick();
+      expect(anchorEl.getAttribute("aria-activedescendant")).toBe(descendant.getItemId(3));
+    });
+
+    it("allows explicit onMatch to override target.focusIndex", async () => {
+      let roving!: ReturnType<typeof useRovingFocus>;
+      const customOnMatch = vi.fn();
+
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
+        const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+        const elementsList = ref<Array<HTMLElement | null>>([]);
+
+        const node = useFloatingNode({ anchorEl, floatingEl, defaultOpen: true });
+        roving = useRovingFocus(node, { elementsList });
+        useTypeahead(node, {
+          target: roving,
+          items: DEFAULT_ITEMS,
+          onMatch: customOnMatch,
+        });
+
+        return () =>
+          h("div", [
+            h("button", { ref: "anchor", "data-testid": "anchor" }, "Anchor"),
+            h("div", { ref: "floating", "data-testid": "floating", tabindex: -1 }),
+          ]);
+      });
+
+      await render(Component);
+      const floatingEl = getTestEl("floating");
+
+      dispatchKey(floatingEl, "b");
+      expect(customOnMatch).toHaveBeenCalledWith(3);
+      expect(roving.activeIndex.value).toBe(-1);
+    });
+
+    it("handles undefined ref values for items, enabled, and resetMs without throwing", async () => {
+      const itemsRef = ref<string[] | undefined>(undefined);
+      const enabledRef = ref<boolean | undefined>(undefined);
+      const resetMsRef = ref<number | undefined>(undefined);
+      const { floatingEl, getActiveIndex } = await renderTypeahead({
+        items: itemsRef as any,
+        enabled: enabledRef as any,
+        resetMs: resetMsRef as any,
+      });
+
+      // Typing when items is ref(undefined) must not throw and should safely no-op
+      expect(() => dispatchKey(floatingEl, "a")).not.toThrow();
+      expect(getActiveIndex()).toBe(-1);
     });
   });
 });

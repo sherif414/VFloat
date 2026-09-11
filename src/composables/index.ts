@@ -51,8 +51,11 @@ export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";
 export type {
-  AriaActivedescendantItemParam,
+  NavigationTarget,
+  NavigationTargetOptions,
+  NavigationTargetValue,
   RovingEntryFocusMode,
+  UseAriaActivedescendantContext,
   UseAriaActivedescendantOptions,
   UseAriaActivedescendantReturn,
   UseRovingFocusContext,

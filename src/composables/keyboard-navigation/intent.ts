@@ -30,6 +30,10 @@ export function resolveKeyIntent(
 
   if (key === "Home") return "first";
   if (key === "End") return "last";
+  if (key === "PageUp" || key === "PageDown") {
+    if (event.shiftKey) return null;
+    return key === "PageUp" ? "page-up" : "page-down";
+  }
   if (key === "Enter" || key === " ") return "select";
 
   if (orientation === "vertical") {
@@ -55,7 +59,16 @@ export function resolveKeyIntent(
 // 📌 Types
 //=======================================================================================
 
-export type NavigationIntent = "first" | "last" | "next" | "previous" | "enter" | "exit" | "select";
+export type NavigationIntent =
+  | "first"
+  | "last"
+  | "next"
+  | "previous"
+  | "page-up"
+  | "page-down"
+  | "enter"
+  | "exit"
+  | "select";
 
 export interface KeyboardIntentOptions {
   /**

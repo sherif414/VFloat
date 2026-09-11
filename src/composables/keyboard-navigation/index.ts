@@ -6,8 +6,10 @@
  * - {@link useRovingFocus}: Physical roving focus for standalone composite widgets.
  */
 
+export type { NavigationTarget, NavigationTargetOptions, NavigationTargetValue } from "./types";
+
 export type {
-  AriaActivedescendantItemParam,
+  UseAriaActivedescendantContext,
   UseAriaActivedescendantOptions,
   UseAriaActivedescendantReturn,
 } from "./use-aria-activedescendant";
@@ -20,6 +22,14 @@ export type {
   UseRovingFocusReturn,
 } from "./use-roving-focus";
 export { useRovingFocus } from "./use-roving-focus";
+
+export type {
+  TypeaheadFindMatchFn,
+  UseTypeaheadContext,
+  UseTypeaheadOptions,
+  UseTypeaheadReturn,
+} from "./use-typeahead";
+export { useTypeahead } from "./use-typeahead";
 
 export type { VirtualizerAdapter } from "./virtualizer-adapter";
 export { createCustomVirtualAdapter, createTanStackVirtualAdapter } from "./virtualizer-adapter";

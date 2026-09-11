@@ -11,27 +11,19 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { isTypeableElement } from "@/shared/dom";
+import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
-import { resolveKeyIntent } from "./intent";
-import { findNextNavigableIndex, resolveNavigableIndexByIntent } from "./navigation";
+import { type NavigationIntent, resolveKeyIntent } from "./intent";
+import { resolveNavigableIndexByIntent } from "./navigation";
 import { useRtl } from "./rtl";
+import type { NavigationTarget, NavigationTargetOptions, NavigationTargetValue } from "./types";
 import type { VirtualizerAdapter } from "./virtualizer-adapter";
 
 const WHITESPACE_REGEX = /\s/;
-
-const NON_EDITABLE_INPUT_TYPES = new Set([
-  "button",
-  "checkbox",
-  "color",
-  "file",
-  "hidden",
-  "image",
-  "radio",
-  "range",
-  "reset",
-  "submit",
-]);
 
 //=======================================================================================
 // 📌 Main
@@ -51,14 +43,11 @@ const NON_EDITABLE_INPUT_TYPES = new Set([
  *
  * @example Generic Combobox with static DOM list
  * ```ts
- * const targetEl = useTemplateRef<HTMLInputElement>("input");
- * const containerEl = useTemplateRef<HTMLElement>("listbox");
+ * const context = useFloatingNode({ anchorEl, floatingEl, open });
  * const elementsList = ref<Array<HTMLElement | null>>([]);
  *
- * const { activeIndex, activeId, getTargetProps, getItemProps } =
- *   useAriaActivedescendant({
- *     targetEl,
- *     containerEl,
+ * const { activeIndex, activeId, focusIndex, getItemId } =
+ *   useAriaActivedescendant(context, {
  *     elementsList,
  *     onSelect: (index) => selectItem(index),
  *   });
@@ -66,11 +55,10 @@ const NON_EDITABLE_INPUT_TYPES = new Set([
  *
  * @example Virtualized list with TanStack Virtual
  * ```ts
+ * const context = useFloatingNode({ anchorEl, floatingEl, open });
  * const adapter = createTanStackVirtualAdapter(virtualizer);
- * const { activeIndex, activeId, getTargetProps, getItemProps } =
- *   useAriaActivedescendant({
- *     targetEl,
- *     containerEl,
+ * const { activeIndex, activeId, focusIndex, getItemId } =
+ *   useAriaActivedescendant(context, {
  *     virtualizer: adapter,
  *     getItemKey: (idx) => items[idx].id,
  *     onSelect: (index) => selectItem(index),
@@ -78,7 +66,8 @@ const NON_EDITABLE_INPUT_TYPES = new Set([
  * ```
  */
 export function useAriaActivedescendant(
-  options: UseAriaActivedescendantOptions,
+  context: UseAriaActivedescendantContext,
+  options: UseAriaActivedescendantOptions = {},
 ): UseAriaActivedescendantReturn {
   const {
     targetEl,
@@ -111,21 +100,23 @@ export function useAriaActivedescendant(
   // --- Shared Options & Root State --------------------------------------------
 
   const isEnabled = computed(() => toValue(enabled));
-  const currentOrientation = computed(() => toValue(orientation));
+  const currentOrientation = computed(() => toValue(orientation) ?? "vertical");
   const isLoop = computed(() => !!toValue(loop));
   const isFocusOnHover = computed(() => !!toValue(focusOnHover));
   const canFocusDisabled = computed(() => !!toValue(focusDisabledElements));
   const isPreventPointerDown = computed(() => toValue(preventPointerDown) ?? true);
   const isScrollIntoView = computed(() => toValue(scrollIntoView) ?? true);
   const currentPageSize = computed(() => Math.max(1, toValue(pageSize) ?? 10));
-  const targetElement = computed(() => toValue(targetEl) ?? null);
-  const containerElement = computed(() => toValue(containerEl) ?? null);
+  const targetElement = computed(
+    () => toValue(targetEl) ?? resolveAnchorElement(context.refs.anchorEl.value),
+  );
+  const containerElement = computed(() => toValue(containerEl) ?? context.refs.floatingEl.value);
   const isRtl = useRtl(targetElement, { rtl });
 
   const isEditable = computed(() => {
     const opt = toValue(editable);
     if (typeof opt === "boolean") return opt;
-    return isEditableElement(targetElement.value);
+    return isTypeableElement(targetElement.value);
   });
 
   if (import.meta.env.DEV) {
@@ -380,6 +371,30 @@ export function useAriaActivedescendant(
 
   const activeId = computed<string | undefined>(() => committedActiveId.value);
 
+  // --- DOM Attribute Synchronization ------------------------------------------
+
+  watchPostEffect(() => {
+    const el = targetElement.value;
+    const id = activeId.value;
+    if (!el) return;
+
+    if (id) {
+      el.setAttribute("aria-activedescendant", id);
+    } else {
+      el.removeAttribute("aria-activedescendant");
+    }
+  });
+
+  watch(targetElement, (newEl, oldEl) => {
+    if (oldEl && oldEl !== newEl) {
+      oldEl.removeAttribute("aria-activedescendant");
+    }
+  });
+
+  tryOnScopeDispose(() => {
+    targetElement.value?.removeAttribute("aria-activedescendant");
+  });
+
   // --- Scroll & Virtualizer Coordination --------------------------------------
 
   function scrollToActiveItem(idx: number, force = false): void {
@@ -456,7 +471,7 @@ export function useAriaActivedescendant(
    * triggers scroll synchronization. Setting to `-1` clears the active
    * descendant without scrolling.
    */
-  function setVirtualFocus(idx: number, focusOptions: { preventScroll?: boolean } = {}): void {
+  function setVirtualFocus(idx: number, focusOptions: NavigationTargetOptions = {}): void {
     if (idx === -1) {
       activeIndex.value = -1;
       return;
@@ -464,76 +479,66 @@ export function useAriaActivedescendant(
 
     if (!isItemNavigable(idx)) return;
 
+    const wasActive = activeIndex.value === idx;
+    if (wasActive) {
+      if (!focusOptions.preventScroll && isScrollIntoView.value) {
+        scrollToActiveItem(idx);
+      }
+      return;
+    }
+
     if (focusOptions.preventScroll) {
       suppressNextScroll = true;
     } else {
       lastHoveredEl = null;
     }
 
-    const wasActive = activeIndex.value === idx;
     activeIndex.value = idx;
+  }
 
-    if (!focusOptions.preventScroll && isScrollIntoView.value) {
-      if (wasActive) {
-        scrollToActiveItem(idx);
+  /**
+   * Focuses an item by index or moves virtual focus directionally.
+   */
+  function focusIndex(
+    target: NavigationTargetValue,
+    focusOptions: NavigationTargetOptions = {},
+  ): void {
+    if (typeof target === "number") {
+      if (target === -1) {
+        setVirtualFocus(-1);
+        return;
       }
+      setVirtualFocus(target, focusOptions);
+      return;
     }
+
+    if (target === "reset") {
+      setVirtualFocus(-1);
+      return;
+    }
+
+    const intent = target === "prev" ? "previous" : target;
+    navigate(intent, focusOptions);
   }
 
   // --- Keyboard Navigation ----------------------------------------------------
 
-  function navigate(
-    intent: "first" | "last" | "next" | "previous" | "page-up" | "page-down",
-  ): void {
+  function navigate(intent: NavigationIntent, focusOptions: NavigationTargetOptions = {}): void {
     const total = totalCount.value;
     if (total === 0) return;
 
     const current = activeIndex.value >= 0 ? activeIndex.value : -1;
-    let targetIdx: number | null = null;
-
-    if (intent === "page-up" || intent === "page-down") {
-      const delta = intent === "page-down" ? 1 : -1;
-      const size = currentPageSize.value;
-      let probe = current >= 0 ? current : delta === 1 ? -1 : total;
-      let found = current;
-
-      for (let step = 0; step < size; step++) {
-        const next = findNextNavigableIndex(
-          probe,
-          delta,
-          total,
-          (i) => !isItemNavigable(i),
-          isLoop.value,
-        );
-        if (next === null) break;
-        found = next;
-        probe = next;
-      }
-
-      if (found >= 0 && found !== current) {
-        targetIdx = found;
-      } else if (!isLoop.value) {
-        // Clamp to edge boundary when unable to advance a full page
-        targetIdx = resolveNavigableIndexByIntent(
-          delta === 1 ? "last" : "first",
-          current,
-          total,
-          (i) => !isItemNavigable(i),
-          false,
-        );
-      }
-    } else {
-      targetIdx = resolveNavigableIndexByIntent(
-        intent,
-        current,
-        total,
-        (i) => !isItemNavigable(i),
-        isLoop.value,
-      );
-    }
+    const targetIdx = resolveNavigableIndexByIntent(
+      intent,
+      current,
+      total,
+      (i) => !isItemNavigable(i),
+      isLoop.value,
+      currentPageSize.value,
+    );
 
     if (targetIdx !== null) {
-      setVirtualFocus(targetIdx);
+      setVirtualFocus(targetIdx, focusOptions);
     }
   }
 
@@ -544,25 +549,13 @@ export function useAriaActivedescendant(
     if (isKeyHandled && !isKeyHandled(e)) return;
 
     const target = e.target as Element | null;
-    const editableTarget = isEditable.value || isEditableElement(target);
+    const editableTarget = isEditable.value || isTypeableElement(target);
 
     // If target is editable (e.g. text input), preserve native typing and caret navigation
     if (editableTarget) {
       if (e.key === " " || e.key === "Spacebar" || e.key === "Home" || e.key === "End") {
         return;
       }
-    }
-
-    if (e.key === "PageUp" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-      e.preventDefault();
-      navigate("page-up");
-      return;
-    }
-
-    if (e.key === "PageDown" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-      e.preventDefault();
-      navigate("page-down");
-      return;
     }
 
     const intent = resolveKeyIntent(e, {
@@ -584,7 +577,14 @@ export function useAriaActivedescendant(
       return;
     }
 
-    if (intent === "first" || intent === "last" || intent === "next" || intent === "previous") {
+    if (
+      intent === "first" ||
+      intent === "last" ||
+      intent === "next" ||
+      intent === "previous" ||
+      intent === "page-up" ||
+      intent === "page-down"
+    ) {
       e.preventDefault();
       navigate(intent);
     }
@@ -619,23 +619,36 @@ export function useAriaActivedescendant(
 
   // --- Pointer Hover & Focus Protection ---------------------------------------
 
-  function onItemPointerDown(e: PointerEvent): void {
-    if (!isPreventPointerDown.value) return;
+  useEventListener(
+    containerElement,
+    "pointerdown",
+    (e: PointerEvent) => {
+      if (!isPreventPointerDown.value) return;
 
-    const target = e.target as Element | null;
-    if (target) {
+      const target = e.target as Element | null;
+      if (!target) return;
+
+      const elements = toValue(elementsList);
+      const optionEl =
+        target.closest("[role='option'], [data-index]") ??
+        elements?.find((el) => el?.contains(target));
+
+      if (!optionEl) return;
+
       const interactive = target.closest(
         "button, a, input, select, textarea, [contenteditable], [data-interactive]",
       );
-      if (interactive && interactive !== e.currentTarget) {
+
+      if (interactive && interactive !== optionEl) {
         return;
       }
-    }
 
-    // Virtual Focus Strategy: prevent browser from blurring the target input, preserving
-    // the text cursor, IME composition, and mobile software keyboards.
-    e.preventDefault();
-  }
+      // Virtual Focus Strategy: prevent browser from blurring the target input, preserving
+      // the text cursor, IME composition, and mobile software keyboards.
+      e.preventDefault();
+    },
+    { capture: true },
+  );
 
   let lastHoveredEl: HTMLElement | null = null;
   let lastPointerX = -1;
@@ -721,57 +734,28 @@ export function useAriaActivedescendant(
     },
   );
 
-  // --- Props Normalization & Return -------------------------------------------
+  // --- Lifecycle Coordination -------------------------------------------------
 
-  const getTargetProps = () => ({
-    "aria-activedescendant": activeId.value,
-  });
-
-  const getContainerProps = () => ({
-    id: containerElement.value?.id || undefined,
-  });
-
-  const getItemProps = (itemOrIndex: AriaActivedescendantItemParam) => {
-    const { index, key } = resolveItemIndexAndKey(itemOrIndex);
-    const id = resolveItemId(index, key);
-    const isActive = activeIndex.value === index;
-    const disabled = isActualDisabled(index);
-
-    return {
-      id,
-      "data-active": isActive ? "" : undefined,
-      "data-index": index,
-      "data-key": key !== undefined ? String(key) : undefined,
-      "aria-disabled": disabled ? "true" : undefined,
-      onPointerdown: onItemPointerDown,
-    };
-  };
-
-  const getOptionProps = (index: number) => getItemProps(index);
-  const getVirtualItemProps = (virtualItem: { index: number; key?: string | number }) =>
-    getItemProps(virtualItem);
+  if (context?.open) {
+    watch(context.open, (isOpen) => {
+      if (!isOpen) {
+        setVirtualFocus(-1);
+      }
+    });
+  }
 
   return {
     activeIndex: readonly(activeIndex),
     activeId,
+    focusIndex,
     setActiveIndex: (index: number) => setVirtualFocus(index),
     clearActive: () => setVirtualFocus(-1),
-    next: () => navigate("next"),
-    prev: () => navigate("previous"),
-    first: () => navigate("first"),
-    last: () => navigate("last"),
-    pageUp: () => navigate("page-up"),
-    pageDown: () => navigate("page-down"),
     scrollToActive: () => {
       if (activeIndex.value >= 0) {
         scrollToActiveItem(activeIndex.value, true);
       }
     },
-    getTargetProps,
-    getContainerProps,
-    getItemProps,
-    getOptionProps,
-    getVirtualItemProps,
+    getItemId: resolveItemId,
   };
 }
 
@@ -798,36 +782,6 @@ function isElementDisabled(el: Element | null): boolean {
     ("disabled" in el && Boolean((el as HTMLButtonElement).disabled)) ||
     el.getAttribute("aria-disabled") === "true"
   );
-}
-
-/**
- * Checks whether an element is natively editable (text input, textarea, or contenteditable).
- *
- * Used to preserve native text editing and caret navigation (Space, Home, End).
- */
-function isEditableElement(el: Element | null): boolean {
-  if (!el || typeof HTMLElement === "undefined" || !(el instanceof HTMLElement)) return false;
-  if (el.isContentEditable) return true;
-  const tag = el.tagName.toLowerCase();
-  if (tag === "textarea") return true;
-  if (tag === "input") {
-    const type = (el as HTMLInputElement).type?.toLowerCase();
-    return !NON_EDITABLE_INPUT_TYPES.has(type);
-  }
-  return false;
-}
-
-/**
- * Resolves item index and optional key from polymorphic item argument.
- */
-function resolveItemIndexAndKey(param: AriaActivedescendantItemParam): {
-  index: number;
-  key?: string | number;
-} {
-  if (typeof param === "number") {
-    return { index: param };
-  }
-  return param;
 }
 
 /**
@@ -922,19 +876,35 @@ function resolveBoundedScrollDelta(
 //=======================================================================================
 
 /**
+ * Floating node required by `useAriaActivedescendant`.
+ */
+export interface UseAriaActivedescendantContext extends Pick<
+  FloatingNode,
+  "id" | "refs" | "open" | "setOpen"
+> {}
+
+/**
  * Return contract for `useAriaActivedescendant`.
  */
-export interface UseAriaActivedescendantReturn {
+export interface UseAriaActivedescendantReturn extends NavigationTarget {
   /**
    * Currently active element index (-1 when none is active).
    */
-  activeIndex: Readonly<Ref<number>>;
+  readonly activeIndex: Readonly<Ref<number>>;
 
   /**
    * The DOM ID of the currently active descendant, or `undefined` when inactive
    * or when the target item is not mounted in the DOM.
    */
   activeId: ComputedRef<string | undefined>;
+
+  /**
+   * Polymorphic navigation method to activate a specific item or move directionally.
+   *
+   * Accepts an index number, `"reset"` / `-1`, or semantic directional keywords
+   * (`"next"`, `"prev"`, `"previous"`, `"first"`, `"last"`, `"page-up"`, `"page-down"`).
+   */
+  focusIndex: (target: NavigationTargetValue, options?: NavigationTargetOptions) => void;
 
   /**
    * Sets the active index and triggers scroll synchronization.
@@ -948,71 +918,14 @@ export interface UseAriaActivedescendantReturn {
   clearActive: () => void;
 
   /**
-   * Navigates to the next enabled item.
-   */
-  next: () => void;
-
-  /**
-   * Navigates to the previous enabled item.
-   */
-  prev: () => void;
-
-  /**
-   * Navigates to the first enabled item.
-   */
-  first: () => void;
-
-  /**
-   * Navigates to the last enabled item.
-   */
-  last: () => void;
-
-  /**
-   * Navigates backward by a page of items (configured by `pageSize`).
-   */
-  pageUp: () => void;
-
-  /**
-   * Navigates forward by a page of items (configured by `pageSize`).
-   */
-  pageDown: () => void;
-
-  /**
    * Imperatively scrolls the currently active item into view.
    */
   scrollToActive: () => void;
 
   /**
-   * Generates ARIA props for the target/anchor element holding physical DOM focus.
-   *
-   * Returns `aria-activedescendant` (the mounted active item's ID or `undefined`).
+   * Resolves the DOM element ID for the item at `index` (with optional `key`).
    */
-  getTargetProps: () => Record<string, unknown>;
-
-  /**
-   * Generates container identity props.
-   */
-  getContainerProps: () => Record<string, unknown>;
-
-  /**
-   * Generates identity, state, and event props for an item at the given index or item descriptor.
-   *
-   * Includes `id`, `data-active`, `data-index`, `data-key`, `aria-disabled`, and `onPointerdown`.
-   */
-  getItemProps: (itemOrIndex: AriaActivedescendantItemParam) => Record<string, unknown>;
-
-  /**
-   * Alias for {@link getItemProps}.
-   */
-  getOptionProps: (index: number) => Record<string, unknown>;
-
-  /**
-   * Generates props for a virtualized item. Delegates to `getItemProps` using the virtual item's index and key.
-   */
-  getVirtualItemProps: (virtualItem: {
-    index: number;
-    key?: string | number;
-  }) => Record<string, unknown>;
+  getItemId: (index: number, key?: string | number) => string;
 }
 
 /**
@@ -1021,11 +934,13 @@ export interface UseAriaActivedescendantReturn {
 export interface UseAriaActivedescendantOptions {
   /**
    * Target element holding physical DOM focus and receiving `aria-activedescendant`.
+   * When omitted, defaults automatically to `context.refs.anchorEl`.
    */
   targetEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
    * Composite container element holding the items. Used for bounded scroll calculations and query validation.
+   * When omitted, defaults automatically to `context.refs.floatingEl`.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
 
@@ -1180,13 +1095,3 @@ export interface UseAriaActivedescendantOptions {
    */
   isKeyHandled?: (event: KeyboardEvent) => boolean;
 }
-
-/**
- * Polymorphic parameter accepted by `getItemProps`.
- */
-export type AriaActivedescendantItemParam =
-  | number
-  | {
-      index: number;
-      key?: string | number;
-    };

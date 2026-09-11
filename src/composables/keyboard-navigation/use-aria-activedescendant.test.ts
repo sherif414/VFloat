@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { useFloatingNode } from "@/composables/floating-tree";
 import {
+  type UseAriaActivedescendantContext,
   type UseAriaActivedescendantOptions,
   type UseAriaActivedescendantReturn,
   useAriaActivedescendant,
@@ -18,6 +21,7 @@ interface FixtureConfig {
   isButtonTarget?: boolean;
   itemKeys?: Array<string | number>;
   withInteractiveChild?: boolean;
+  node?: UseAriaActivedescendantContext;
 }
 
 const createTestComponent = (
@@ -25,6 +29,7 @@ const createTestComponent = (
   config: FixtureConfig = {},
 ) => {
   let composableReturn!: UseAriaActivedescendantReturn;
+  let testNode!: FloatingNode | UseAriaActivedescendantContext;
   const countRef = ref(config.itemCount ?? 5);
 
   const Component = defineComponent(() => {
@@ -32,8 +37,16 @@ const createTestComponent = (
     const listboxEl = useTemplateRef<HTMLElement>("listbox");
     const elementsList = ref<(HTMLElement | null)[]>([]);
 
-    composableReturn = useAriaActivedescendant({
-      targetEl: anchorEl,
+    const floatingNode =
+      config.node ??
+      useFloatingNode({
+        anchorEl,
+        floatingEl: listboxEl,
+        defaultOpen: true,
+      });
+    testNode = floatingNode;
+
+    composableReturn = useAriaActivedescendant(floatingNode, {
       containerEl: config.noListbox ? undefined : listboxEl,
       elementsList: config.noElementsList ? undefined : elementsList,
       ...options,
@@ -52,12 +65,10 @@ const createTestComponent = (
           ? h("button", {
               ref: "anchor",
               "aria-label": "anchor-button",
-              ...composableReturn.getTargetProps(),
             })
           : h("input", {
               ref: "anchor",
               "aria-label": "anchor",
-              ...composableReturn.getTargetProps(),
             }),
         h(
           "ul",
@@ -65,23 +76,25 @@ const createTestComponent = (
             ref: "listbox",
             role: "listbox",
             style: "max-height: 100px; max-width: 100px; overflow: auto;",
-            ...composableReturn.getContainerProps(),
           },
           Array.from({ length: countRef.value }).map((_, idx) => {
             const key = config.itemKeys?.[idx];
-            const itemProps =
-              key !== undefined
-                ? composableReturn.getItemProps({ index: idx, key })
-                : composableReturn.getOptionProps(idx);
+            const id = composableReturn.getItemId(idx, key);
+            const isActive = composableReturn.activeIndex.value === idx;
 
             return h(
               "li",
               {
+                id,
                 role: "option",
                 ref: (el) => register(el as Element, idx),
-                ...itemProps,
+                "data-active": isActive ? "" : undefined,
+                "data-index": idx,
+                ...(key !== undefined ? { "data-key": key } : {}),
                 disabled: disabledSet.has(idx) ? true : undefined,
-                ...(ariaDisabledSet.has(idx) ? { "aria-disabled": "true" } : {}),
+                ...(ariaDisabledSet.has(idx) || disabledSet.has(idx)
+                  ? { "aria-disabled": "true" }
+                  : {}),
                 style: "height: 50px; width: 50px; min-width: 50px;", // To ensure scrolling works
               },
               config.withInteractiveChild
@@ -96,7 +109,7 @@ const createTestComponent = (
       ]);
   });
 
-  return { Component, getReturn: () => composableReturn, countRef };
+  return { Component, getReturn: () => composableReturn, countRef, getNode: () => testNode };
 };
 
 describe("useAriaActivedescendant", () => {
@@ -104,15 +117,15 @@ describe("useAriaActivedescendant", () => {
     it("generates deterministic IDs using default prefix", async () => {
       const { Component, getReturn } = createTestComponent();
       await render(Component);
-      const props = getReturn().getOptionProps(0);
-      expect(props.id).toMatch(/^vfloat-.*-opt-0$/);
+      const id = getReturn().getItemId(0);
+      expect(id).toMatch(/^vfloat-.*-opt-0$/);
     });
 
     it("uses custom idPrefix when provided", async () => {
       const { Component, getReturn } = createTestComponent({ idPrefix: "custom-id" });
       await render(Component);
-      const props = getReturn().getOptionProps(1);
-      expect(props.id).toBe("custom-id-opt-1");
+      const id = getReturn().getItemId(1);
+      expect(id).toBe("custom-id-opt-1");
     });
 
     it("uses custom getItemId callback when provided", async () => {
@@ -120,8 +133,8 @@ describe("useAriaActivedescendant", () => {
         getItemId: (idx) => `item-${idx}`,
       });
       await render(Component);
-      const props = getReturn().getOptionProps(2);
-      expect(props.id).toBe("item-2");
+      const id = getReturn().getItemId(2);
+      expect(id).toBe("item-2");
     });
 
     it("uses getItemKey callback to generate stable key-based IDs", async () => {
@@ -130,17 +143,15 @@ describe("useAriaActivedescendant", () => {
         idPrefix: "test",
       });
       await render(Component);
-      const props = getReturn().getItemProps(2);
-      expect(props.id).toBe("test-opt-key-20");
+      const id = getReturn().getItemId(2);
+      expect(id).toBe("test-opt-key-20");
     });
 
-    it("supports polymorphic item parameter in getItemProps", async () => {
+    it("supports key parameter in getItemId", async () => {
       const { Component, getReturn } = createTestComponent({ idPrefix: "test" });
       await render(Component);
-      const props = getReturn().getItemProps({ index: 3, key: "alpha" });
-      expect(props.id).toBe("test-opt-alpha");
-      expect(props["data-key"]).toBe("alpha");
-      expect(props["data-index"]).toBe(3);
+      const id = getReturn().getItemId(3, "alpha");
+      expect(id).toBe("test-opt-alpha");
     });
   });
 
@@ -175,6 +186,33 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
 
+    it("updates aria-activedescendant directly without attribute removal churn during item transitions", async () => {
+      const { Component, getReturn } = createTestComponent({ defaultIndex: 0 });
+      await render(Component);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      const mutations: Array<string | null> = [];
+
+      const observer = new MutationObserver((records) => {
+        for (const _r of records) {
+          mutations.push(anchor.element().getAttribute("aria-activedescendant"));
+        }
+      });
+      observer.observe(anchor.element(), {
+        attributes: true,
+        attributeFilter: ["aria-activedescendant"],
+      });
+
+      // Transition from item 0 to item 1
+      getReturn().focusIndex(1);
+      await nextTick();
+
+      observer.disconnect();
+
+      // Must be a single direct attribute transition, never removing the attribute in an intermediate state
+      expect(mutations.length).toBe(1);
+      expect(mutations[0]).toBe(getReturn().getItemId(1));
+    });
+
     it("does NOT emit dangling ID when active item is not mounted in the DOM", async () => {
       // In virtual lists where items are not in the DOM, activeId should be undefined
       const virtualizer = { scrollToIndex: vi.fn(), count: 100 };
@@ -194,9 +232,13 @@ describe("useAriaActivedescendant", () => {
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
         const virtualizer = { scrollToIndex: vi.fn(), count: 100 };
 
-        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: listboxEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId } = useAriaActivedescendant(node, {
           defaultIndex: 50,
           virtualizer,
           idPrefix: "virt",
@@ -204,13 +246,11 @@ describe("useAriaActivedescendant", () => {
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor" }),
             h(
               "ul",
               { ref: "listbox", role: "listbox" },
-              isRendered.value
-                ? [h("li", { role: "option", ...getOptionProps(50) }, "Item 50")]
-                : [],
+              isRendered.value ? [h("li", { id: getItemId(50), role: "option" }, "Item 50")] : [],
             ),
           ]);
       });
@@ -259,9 +299,13 @@ describe("useAriaActivedescendant", () => {
       const targetEl = ref(input);
       const containerEl = ref(listbox);
 
-      const { activeId } = useAriaActivedescendant({
-        targetEl,
-        containerEl,
+      const node = useFloatingNode({
+        anchorEl: targetEl,
+        floatingEl: containerEl,
+        defaultOpen: true,
+      });
+
+      const { activeId } = useAriaActivedescendant(node, {
         itemCount: 1,
         defaultIndex: 0,
         idPrefix: "shadow",
@@ -759,21 +803,34 @@ describe("useAriaActivedescendant", () => {
         const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
 
-        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: listboxEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId, activeIndex } = useAriaActivedescendant(node, {
           itemCount: 10,
           focusOnHover: true,
         });
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor" }),
             h(
               "ul",
               { ref: "listbox", role: "listbox" },
               Array.from({ length: 5 }).map((_, idx) =>
-                h("li", { role: "option", ...getOptionProps(idx) }, `virtual ${idx}`),
+                h(
+                  "li",
+                  {
+                    id: getItemId(idx),
+                    role: "option",
+                    "data-index": idx,
+                    "data-active": activeIndex.value === idx ? "" : undefined,
+                  },
+                  `virtual ${idx}`,
+                ),
               ),
             ),
           ]);
@@ -806,7 +863,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(0);
 
       // Keyboard navigation advances activeIndex to option 2 (item 1)
-      getReturn().next();
+      getReturn().focusIndex("next");
       await nextTick();
       expect(getReturn().activeIndex.value).toBe(1);
 
@@ -874,6 +931,20 @@ describe("useAriaActivedescendant", () => {
         if (e.defaultPrevented) prevented = true;
       });
       option1
+        .element()
+        .dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+      expect(prevented).toBe(false);
+    });
+
+    it("does NOT prevent default when clicking non-option container surfaces", async () => {
+      const { Component } = createTestComponent();
+      await render(Component);
+      const listbox = page.getByRole("listbox");
+      let prevented = false;
+      listbox.element().addEventListener("pointerdown", (e) => {
+        if (e.defaultPrevented) prevented = true;
+      });
+      listbox
         .element()
         .dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
       expect(prevented).toBe(false);
@@ -960,9 +1031,13 @@ describe("useAriaActivedescendant", () => {
         const containerEl = useTemplateRef<HTMLElement>("container");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: containerEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId } = useAriaActivedescendant(node, {
           elementsList,
           orientation: "horizontal",
           defaultIndex: 0,
@@ -970,7 +1045,7 @@ describe("useAriaActivedescendant", () => {
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor" }),
             h(
               "div",
               {
@@ -981,8 +1056,8 @@ describe("useAriaActivedescendant", () => {
                 h(
                   "div",
                   {
+                    id: getItemId(idx),
                     ref: (el) => (elementsList.value[idx] = el as HTMLElement),
-                    ...getOptionProps(idx),
                     style: "min-width: 60px; height: 30px;",
                   },
                   `Item ${idx}`,
@@ -1022,12 +1097,11 @@ describe("useAriaActivedescendant", () => {
       expect(virtualizer.scrollToIndex).toHaveBeenCalledWith(42, { align: "auto" });
     });
 
-    it("generates stable key-based ID from getVirtualItemProps", async () => {
+    it("generates stable key-based ID from getItemId with key", async () => {
       const { Component, getReturn } = createTestComponent({ idPrefix: "virt" });
       await render(Component);
-      const props = getReturn().getVirtualItemProps({ index: 5, key: "unique-row-5" });
-      expect(props.id).toBe("virt-opt-unique-row-5");
-      expect(props["data-key"]).toBe("unique-row-5");
+      const id = getReturn().getItemId(5, "unique-row-5");
+      expect(id).toBe("virt-opt-unique-row-5");
     });
   });
 
@@ -1054,13 +1128,17 @@ describe("useAriaActivedescendant", () => {
   });
 
   describe("Suite 20: generic API surface", () => {
-    it("provides getTargetProps, getContainerProps, and getItemProps", async () => {
+    it("provides activeIndex, activeId, focusIndex, and getItemId", async () => {
       const { Component, getReturn } = createTestComponent();
       await render(Component);
       const ret = getReturn();
-      expect(ret.getTargetProps).toBeDefined();
-      expect(ret.getContainerProps).toBeDefined();
-      expect(ret.getItemProps).toBeDefined();
+      expect(ret.activeIndex).toBeDefined();
+      expect(ret.activeId).toBeDefined();
+      expect(ret.focusIndex).toBeDefined();
+      expect(ret.setActiveIndex).toBeDefined();
+      expect(ret.clearActive).toBeDefined();
+      expect(ret.scrollToActive).toBeDefined();
+      expect(ret.getItemId).toBeDefined();
     });
   });
 
@@ -1177,18 +1255,18 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(4);
     });
 
-    it("supports programmatic pageUp and pageDown methods", async () => {
+    it("supports programmatic page-up and page-down via focusIndex", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 2, pageSize: 4 },
         { itemCount: 15 },
       );
       await render(Component);
 
-      getReturn().pageDown();
+      getReturn().focusIndex("page-down");
       await nextTick();
       expect(getReturn().activeIndex.value).toBe(6);
 
-      getReturn().pageUp();
+      getReturn().focusIndex("page-up");
       await nextTick();
       expect(getReturn().activeIndex.value).toBe(2);
     });
@@ -1269,9 +1347,13 @@ describe("useAriaActivedescendant", () => {
         const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
 
-        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: listboxEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId } = useAriaActivedescendant(node, {
           defaultIndex: 10,
           virtualizer,
           idPrefix: "virt",
@@ -1279,13 +1361,11 @@ describe("useAriaActivedescendant", () => {
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", "aria-label": "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor", "aria-label": "anchor" }),
             h(
               "ul",
               { ref: "listbox", role: "listbox" },
-              isMounted.value
-                ? [h("li", { role: "option", ...getOptionProps(10) }, "Item 10")]
-                : [],
+              isMounted.value ? [h("li", { id: getItemId(10), role: "option" }, "Item 10")] : [],
             ),
           ]);
       });
@@ -1332,6 +1412,21 @@ describe("useAriaActivedescendant", () => {
       expect(listbox.scrollTop).toBe(0);
 
       getReturn().scrollToActive();
+      await nextTick();
+      expect(listbox.scrollTop).toBeGreaterThan(0);
+    });
+
+    it("does not leak preventScroll suppression across subsequent navigation actions", async () => {
+      const { Component, getReturn } = createTestComponent({ defaultIndex: 0 }, { itemCount: 10 });
+      await render(Component);
+      const listbox = page.getByRole("listbox").element() as HTMLElement;
+
+      // Calling focusIndex on current item with preventScroll must not leak suppression
+      getReturn().focusIndex(0, { preventScroll: true });
+      await nextTick();
+
+      // Subsequent navigation to item 9 without preventScroll MUST scroll into view
+      getReturn().focusIndex(9);
       await nextTick();
       expect(listbox.scrollTop).toBeGreaterThan(0);
     });
@@ -1470,16 +1565,20 @@ describe("useAriaActivedescendant", () => {
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const { getTargetProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: listboxEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId } = useAriaActivedescendant(node, {
           elementsList,
           defaultIndex: 0,
         });
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor" }),
             h(
               "ul",
               { ref: "listbox", role: "listbox", style: "max-height: 100px; overflow: auto;" },
@@ -1487,8 +1586,8 @@ describe("useAriaActivedescendant", () => {
                 h(
                   "li",
                   {
+                    id: getItemId(0),
                     ref: (el) => (elementsList.value[0] = el as HTMLElement),
-                    ...getOptionProps(0),
                     style: "height: 50px;",
                   },
                   "Item 0",
@@ -1496,8 +1595,8 @@ describe("useAriaActivedescendant", () => {
                 h(
                   "li",
                   {
+                    id: getItemId(1),
                     ref: (el) => (elementsList.value[1] = el as HTMLElement),
-                    ...getOptionProps(1),
                     style: "height: 200px;", // Taller than 100px container
                   },
                   "Oversized Item 1",
@@ -1530,30 +1629,33 @@ describe("useAriaActivedescendant", () => {
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const { getTargetProps, getContainerProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: listboxEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId } = useAriaActivedescendant(node, {
           elementsList,
           scrollIntoView: true,
         });
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor" }),
             h(
               "ul",
               {
                 ref: "listbox",
                 role: "listbox",
                 style: "position: relative; height: 100px; overflow-y: auto;",
-                ...getContainerProps(),
               },
               Array.from({ length: 5 }).map((_, idx) =>
                 h(
                   "li",
                   {
+                    id: getItemId(idx),
                     ref: (el) => (elementsList.value[idx] = el as HTMLElement),
-                    ...getOptionProps(idx),
                     style: "height: 50px;",
                   },
                   `Item ${idx}`,
@@ -1603,16 +1705,20 @@ describe("useAriaActivedescendant", () => {
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
         const elementsList = ref<(HTMLElement | null)[]>([]);
 
-        const { getTargetProps, getContainerProps, getOptionProps } = useAriaActivedescendant({
-          targetEl: anchorEl,
-          containerEl: listboxEl,
+        const node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          defaultOpen: true,
+        });
+
+        const { getItemId } = useAriaActivedescendant(node, {
           elementsList,
           scrollIntoView: true,
         });
 
         return () =>
           h("div", [
-            h("input", { ref: "anchor", ...getTargetProps() }),
+            h("input", { ref: "anchor" }),
             h(
               "ul",
               {
@@ -1620,14 +1726,13 @@ describe("useAriaActivedescendant", () => {
                 role: "listbox",
                 // Unpositioned container (position: static default)
                 style: "height: 100px; overflow-y: auto;",
-                ...getContainerProps(),
               },
               Array.from({ length: 5 }).map((_, idx) =>
                 h(
                   "li",
                   {
+                    id: getItemId(idx),
                     ref: (el) => (elementsList.value[idx] = el as HTMLElement),
-                    ...getOptionProps(idx),
                     style: "height: 50px;",
                   },
                   `Item ${idx}`,
@@ -1663,6 +1768,32 @@ describe("useAriaActivedescendant", () => {
       expect(targetRectSpy).toHaveBeenCalled();
 
       targetRectSpy.mockRestore();
+    });
+  });
+
+  describe("Suite 29: open state coordination (context.open)", () => {
+    it("resets activeIndex to -1 and removes aria-activedescendant when context.open becomes false", async () => {
+      const open = ref(true);
+      const anchorEl = ref<HTMLElement | null>(null);
+      const floatingEl = ref<HTMLElement | null>(null);
+
+      const node = useFloatingNode({
+        anchorEl,
+        floatingEl,
+        open,
+      });
+
+      const { Component, getReturn } = createTestComponent({ defaultIndex: 2 }, { node });
+      await render(Component);
+
+      expect(getReturn().activeIndex.value).toBe(2);
+
+      open.value = false;
+      await nextTick();
+
+      expect(getReturn().activeIndex.value).toBe(-1);
+      const anchor = page.getByRole("textbox", { name: "anchor" });
+      await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
   });
 });
