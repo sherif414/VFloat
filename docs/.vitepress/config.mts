@@ -195,8 +195,6 @@ export default defineConfig({
             { text: "useFocus", link: "/api/use-focus" },
             { text: "useFocusTrap", link: "/api/use-focus-trap" },
             { text: "useDismiss", link: "/api/use-dismiss" },
-            { text: "useEscapeKey", link: "/api/use-escape-key" },
-            { text: "useOutsideClick", link: "/api/use-outside-click" },
             { text: "useRole", link: "/api/use-role" },
           ],
         },

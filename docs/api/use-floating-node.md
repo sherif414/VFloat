@@ -98,14 +98,14 @@ This dialog uses node state and behavior without JavaScript positioning.
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useEscapeKey, useFloatingNode, useRole } from "v-float";
+import { useDismiss, useFloatingNode, useRole } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
 
-useEscapeKey(node);
+useDismiss(node, { outsidePress: false });
 useRole(node, { role: "dialog" });
 </script>
 

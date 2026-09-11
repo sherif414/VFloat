@@ -27,11 +27,28 @@ interface FloatingTree {
     node: T,
   ) => T | FloatingNode;
   isTargetWithin: (node: Pick<FloatingNode, "id" | "refs">, target: EventTarget | null) => boolean;
-  closeDescendants: (
-    node: Pick<FloatingNode, "id">,
-    reason?: OpenChangeReason,
-    event?: Event,
+  forEach: (
+    target: FloatingNodeId | Pick<FloatingNode, "id">,
+    relationship: RelationshipSelector,
+    action: (node: FloatingNode) => boolean | void,
+    options?: ForEachOptions,
   ) => void;
+}
+
+type TreeRelationship =
+  | "parent"
+  | "children"
+  | "ancestors"
+  | "descendants"
+  | "siblings"
+  | "root";
+
+type RelationshipSelector =
+  | TreeRelationship
+  | ((node: FloatingNode, tree: FloatingTree) => FloatingNode[] | Iterable<FloatingNode>);
+
+interface ForEachOptions {
+  order?: "top-down" | "bottom-up";
 }
 ```
 
@@ -44,7 +61,13 @@ Each tree owns its own node map, so multiple trees stay fully isolated from each
 - A node cannot be its own parent, and registering the same node twice is a no-op with a development warning.
 - `addNode` automatically unregisters when the calling effect scope disposes.
 - `removeNode(id)` removes a node and re-parents its immediate children to the removed node's parent (or to root level), so surviving subtrees stay reachable.
-- `closeDescendants(node, reason = "programmatic", event?)` closes open descendants from innermost child to nearest parent. Call it explicitly when parent teardown must cascade; `node.setOpen` stays tree-agnostic and never cascades on its own.
+- `forEach(target, relationship, action, options?)` executes a callback on all nodes matching the specified structural relationship to `target` (or a custom selector function). Returning `false` halts iteration early.
+  - `'ancestors'`: Walks up parent links to the root. Defaults to `'bottom-up'` (immediate parent first).
+  - `'descendants'`: Walks all subtrees. Defaults to `'top-down'` (shallow first). Pass `{ order: "bottom-up" }` for cascading teardown where children must close before parents.
+  - `'siblings'`: All other nodes that share target's parent (or other root nodes if target is a root).
+  - `'children'`: Immediate child nodes.
+  - `'parent'`: Immediate parent node.
+  - `'root'`: The topmost root node of target's branch.
 - `isTargetWithin(node, target)` checks the node's own anchor and floating elements plus every descendant's, which is what lets outside-click and focus checks treat a menu family as one surface.
 - `getDeepestOpenContext(node)` finds the deepest currently open node in the subtree for stacked dismissal.
 - Writing a controlled `open` ref directly does not cascade and does not call `onOpenChange`.
@@ -56,7 +79,7 @@ This menu registers a root node and a submenu node, then treats outside pointer 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, useFloatingTree, useOutsideClick } from "v-float";
+import { useDismiss, useFloatingNode, useFloatingTree } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -70,13 +93,29 @@ const subNode = useFloatingNode({ anchorEl: subAnchorEl, floatingEl: subFloating
 tree.addNode(node);
 tree.addNode(subNode, node.id);
 
-useOutsideClick(node, { tree });
+useDismiss(node, { tree });
 </script>
+```
+
+### Cascading Teardown with `tree.forEach`
+
+When closing a parent must cascade down the open tree, walk descendants bottom-up:
+
+```ts
+tree.forEach(
+  rootNode.id,
+  "descendants",
+  (descendant) => {
+    if (descendant.open.value) {
+      descendant.setOpen(false, "programmatic");
+    }
+  },
+  { order: "bottom-up" },
+);
 ```
 
 ## See Also
 
 - [`useFloatingNode`](/api/use-floating-node) - Create the standalone nodes that join a tree
-- [`useOutsideClick`](/api/use-outside-click) - Dismiss a whole node family on outside input
-- [`useEscapeKey`](/api/use-escape-key) - Stacked dismissal through the deepest open node
+- [`useDismiss`](/api/use-dismiss) - Dismiss a whole node family on Escape and outside input
 - [Tree Coordination Explained](/guide/tree-coordination-explained) - Why linkage is explicit

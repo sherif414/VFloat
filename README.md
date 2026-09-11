@@ -160,8 +160,6 @@ const { arrowStyles } = useArrow(context, {
 - `**useFocus**`: Focus/blur event handling for keyboard navigation
 - `**useFocusTrap**`: Initial focus, modal trapping, guards, and return focus
 - `**useDismiss**`: Closes floating content on Escape and outside input through one gate
-- `**useEscapeKey**`: Closes floating content on Escape key press
-- `**useOutsideClick**`: Closes floating content when clicking outside
 - `**useRole**`: Synchronizes ARIA roles and states for floating surfaces
 
 ### Collections

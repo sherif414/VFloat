@@ -82,7 +82,7 @@ This gives you the behavior most popovers need:
 - Clicking outside closes it
 - Pressing Escape closes it
 
-`useDismiss(context)` groups [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key) behind one gate, so outside and Escape dismissal stay in sync.
+`useDismiss(context)` closes on outside pointer input and Escape behind one gate, so outside and Escape dismissal stay in sync.
 
 ## Step 3: Render The Popover
 

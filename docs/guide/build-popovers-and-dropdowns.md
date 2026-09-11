@@ -62,7 +62,7 @@ useDismiss(context);
 </script>
 ```
 
-That gives you a good default (`useDismiss` groups [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key) behind one gate):
+That gives you a good default (`useDismiss` closes on outside pointer input and Escape behind one gate):
 
 - Anchor click toggles the panel
 - Outside pointer interaction closes it

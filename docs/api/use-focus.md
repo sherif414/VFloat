@@ -78,5 +78,5 @@ useFocus(node);
 
 - [`useHover`](/api/use-hover) - Opens on hover
 - [`useClick`](/api/use-click) - Opens on click
-- [`useEscapeKey`](/api/use-escape-key) - Closes on Escape
+- [`useDismiss`](/api/use-dismiss) - Closes on Escape and outside pointer input
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Focus workflow

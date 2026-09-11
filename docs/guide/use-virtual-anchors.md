@@ -57,7 +57,7 @@ Sometimes you want the surface to open at the pointer location and stay there ev
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useEscapeKey, useFloatingNode, usePosition } from "v-float";
+import { useClientPoint, useDismiss, useFloatingNode, usePosition } from "v-float";
 
 const areaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
@@ -73,7 +73,7 @@ useClientPoint(context, {
   trackingMode: "static",
 });
 
-useEscapeKey(context);
+useDismiss(context, { outsidePress: false });
 
 function openMenu() {
   context.setOpen(true);

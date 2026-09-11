@@ -40,17 +40,32 @@ Hierarchy lives in the tree's map, never on the node objects. Each tree is isola
 
 ### 1. Teleportation-Safe Outside Clicks
 
-When a user clicks inside a child submenu or select dropdown teleported to `<body>`, the parent's [`useOutsideClick`](/api/use-outside-click) handler checks:
+When a user clicks inside a child submenu or select dropdown teleported to `<body>`, the parent's [`useDismiss`](/api/use-dismiss) outside-press handler checks:
 _"Is this click inside my floating element or any of my registered descendant floating elements?"_
-Because the child joined the same tree, the click is recognized as internal, preventing unwanted closures. Pass the tree explicitly: `useOutsideClick(rootNode, { tree })` — or `useDismiss(rootNode, { tree })` to share one tree across outside and Escape dismissal.
+Because the child joined the same tree, the click is recognized as internal, preventing unwanted closures. Pass the tree explicitly: `useDismiss(rootNode, { tree })` to share one tree across outside and Escape dismissal.
 
 ### 2. Stacked Escape Key Handling
 
-When `Escape` is pressed, [`useEscapeKey`](/api/use-escape-key) with `tree` resolves the deepest open node and dismisses only that overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order. [`useDismiss`](/api/use-dismiss) forwards the same `tree` to both channels, so nested stacks stay consistent.
+When `Escape` is pressed, [`useDismiss`](/api/use-dismiss) with `tree` resolves the deepest open node and dismisses only that overlay first. Subsequent `Escape` presses pop each remaining overlay in reverse order, and the same `tree` keeps the outside-press channel consistent across nested stacks.
 
 ### 3. Explicit Cascading Teardown
 
-Closing a parent never cascades on its own: `node.setOpen` stays tree-agnostic. When parent teardown must close the family, call `tree.closeDescendants(node, reason, event)`, which closes open descendants from the innermost child outward so no orphaned submenus remain visible.
+Closing a parent never cascades on its own: `node.setOpen` stays tree-agnostic. When parent teardown must close the family, execute across descendants bottom-up using [`tree.forEach`](/api/use-floating-tree):
+
+```ts
+tree.forEach(
+  rootNode.id,
+  "descendants",
+  (descendant) => {
+    if (descendant.open.value) {
+      descendant.setOpen(false, "programmatic");
+    }
+  },
+  { order: "bottom-up" },
+);
+```
+
+Walking `'bottom-up'` closes open descendants from the innermost child outward so no orphaned submenus remain visible.
 
 ---
 

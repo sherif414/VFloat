@@ -46,7 +46,7 @@ It includes:
 - `open`
 - `setOpen`
 
-Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useEscapeKey`](/api/use-escape-key) all coordinate through this same open state, tagging each change with a reason such as `"hover"` or `"anchor-click"`.
+Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useDismiss`](/api/use-dismiss) all coordinate through this same open state, tagging each change with a reason such as `"hover"` or `"anchor-click"`.
 
 ## Positioning Lives Next To The Node
 

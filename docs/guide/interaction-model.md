@@ -22,7 +22,7 @@ Examples:
 - [`useFocus`](/api/use-focus) reacts to focus and blur
 - [`useFocusTrap`](/api/use-focus-trap) orchestrates focus while open
 
-[`useDismiss`](/api/use-dismiss) is itself a thin grouping over [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key). Reach for the grouping by default and drop to the primitives only when each channel needs its own reactive gate.
+[`useDismiss`](/api/use-dismiss) is itself a thin grouping over the internal Escape and outside-press channels. Reach for it by default; disable the channel you don't need with `escapeKey: false` or `outsidePress: false`.
 
 ## One Context, Many Behaviors
 
@@ -51,7 +51,7 @@ useDismiss(context);
 </script>
 ```
 
-`useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and one shared `tree`. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`) or compose [`useEscapeKey`](/api/use-escape-key) and [`useOutsideClick`](/api/use-outside-click) directly.
+`useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and one shared `tree`. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`).
 
 ## Next Step
 

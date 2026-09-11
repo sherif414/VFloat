@@ -25,7 +25,7 @@ Every floating surface comes down to two questions: **where** should it appear, 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, usePosition, useHover, useEscapeKey } from "v-float";
+import { useDismiss, useFloatingNode, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -41,7 +41,7 @@ const { styles } = usePosition(context, {
 
 // 3. WHEN: manage visibility based on user input
 useHover(context);
-useEscapeKey(context);
+useDismiss(context, { outsidePress: false });
 </script>
 
 <template>

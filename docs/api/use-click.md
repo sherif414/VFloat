@@ -4,7 +4,7 @@ description: Opens and closes floating content on click.
 
 # useClick
 
-`useClick` toggles a floating node from pointer and keyboard activation. Pair it with [`useOutsideClick`](/api/use-outside-click) when the same surface should close on outside pointer input.
+`useClick` toggles a floating node from pointer and keyboard activation. Pair it with [`useDismiss`](/api/use-dismiss) when the same surface should close on Escape or outside pointer input.
 
 ## Type
 
@@ -60,7 +60,7 @@ Start with a minimal click toggle:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, usePosition } from "v-float";
+import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -68,7 +68,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const node = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(node);
 useClick(node);
-useEscapeKey(node);
+useDismiss(node, { outsidePress: false });
 </script>
 
 <template>
@@ -78,13 +78,12 @@ useEscapeKey(node);
 </template>
 ```
 
-Pair with [`useOutsideClick`](/api/use-outside-click) when the same surface should close on outside pointer input. See [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for the dismissal workflow.
+Pair with [`useDismiss`](/api/use-dismiss) when the same surface should close on Escape or outside pointer input. See [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for the dismissal workflow.
 
 ## See Also
 
 - [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
 - [`useHover`](/api/use-hover) - Opens on hover; pairs with `stickIfOpen`
 - [`useFocus`](/api/use-focus) - Opens on focus
-- [`useOutsideClick`](/api/use-outside-click) - Closes on outside pointer input
-- [`useEscapeKey`](/api/use-escape-key) - Closes on Escape
+- [`useDismiss`](/api/use-dismiss) - Closes on Escape and outside pointer input
 - [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) - Click workflow

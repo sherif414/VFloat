@@ -190,7 +190,5 @@ useFocusTrap(node, {
 ## See Also
 
 - [`useFocus`](/api/use-focus) - Trigger-level focus detection for anchors
-- [`useDismiss`](/api/use-dismiss) - Groups Escape and outside-press dismissal
-- [`useEscapeKey`](/api/use-escape-key) - Dismissal on Escape key press
-- [`useOutsideClick`](/api/use-outside-click) - Dismissal on pointer clicks outside
+- [`useDismiss`](/api/use-dismiss) - Escape and outside-press dismissal
 - [`useFloatingTree`](/api/use-floating-tree) - Family-aware focus checks for nested surfaces
