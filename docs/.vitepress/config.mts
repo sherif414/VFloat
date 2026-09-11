@@ -1,9 +1,48 @@
 import { defineConfig } from "vitepress";
 
+const SITE_ORIGIN = "https://vfloat.pages.dev";
+const SITE_TITLE = "VFloat";
+const SITE_DESCRIPTION = "A headless, primitive floating library for Vue 3";
+const SOCIAL_IMAGE = `${SITE_ORIGIN}/vfloat-mark.png`;
+
+// Mirrors how the built site is actually served: `guide/index.md` is at
+// `/guide/`, and every other page drops both `.md` and the trailing slash.
+function pageUrl(relativePath: string): string {
+  const path = relativePath.replace(/\.md$/, "");
+  if (path === "index") return `${SITE_ORIGIN}/`;
+  if (path.endsWith("/index")) return `${SITE_ORIGIN}/${path.slice(0, -"index".length)}`;
+  return `${SITE_ORIGIN}/${path}`;
+}
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "VFloat",
-  description: "A headless, primitive floating library for Vue 3",
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+
+  // Site-wide social card tags. Per-page title/description/url are added in
+  // transformPageData below.
+  head: [
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:site_name", content: SITE_TITLE }],
+    ["meta", { property: "og:image", content: SOCIAL_IMAGE }],
+    ["meta", { property: "og:image:width", content: "1024" }],
+    ["meta", { property: "og:image:height", content: "1024" }],
+    ["meta", { property: "og:image:alt", content: SITE_TITLE }],
+    ["meta", { name: "twitter:card", content: "summary" }],
+  ],
+
+  transformPageData(pageData) {
+    const title = pageData.frontmatter.title ?? pageData.title ?? SITE_TITLE;
+    const description =
+      pageData.frontmatter.description ?? pageData.description ?? SITE_DESCRIPTION;
+
+    pageData.frontmatter.head ??= [];
+    pageData.frontmatter.head.push(
+      ["meta", { property: "og:title", content: title }],
+      ["meta", { property: "og:description", content: description }],
+      ["meta", { property: "og:url", content: pageUrl(pageData.relativePath) }],
+    );
+  },
 
   themeConfig: {
     // ------------------------------------------------------------------------
