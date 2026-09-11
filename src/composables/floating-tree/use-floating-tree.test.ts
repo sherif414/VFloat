@@ -326,14 +326,118 @@ describe("useFloatingTree", () => {
     });
   });
 
-  describe("descendant actions", () => {
-    it("closes descendant nodes from innermost child to nearest parent with reason and event", () => {
+  describe("forEach relationship traversal", () => {
+    it("executes action on immediate parent or no-ops for roots", () => {
       const tree = useFloatingTree();
-      const calls: string[] = [];
+      const root = createMockNode();
+      const child = createMockNode();
+
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+
+      const parentVisited: FloatingNode[] = [];
+      tree.forEach(child.id, "parent", (node) => {
+        parentVisited.push(node);
+      });
+      expect(parentVisited).toEqual([root]);
+
+      const rootParentVisited: FloatingNode[] = [];
+      tree.forEach(root.id, "parent", (node) => {
+        rootParentVisited.push(node);
+      });
+      expect(rootParentVisited).toEqual([]);
+    });
+
+    it("executes action on children in natural order and bottom-up order", () => {
+      const tree = useFloatingTree();
+      const parent = createMockNode();
+      const child1 = createMockNode();
+      const child2 = createMockNode();
+
+      tree.addNode(parent);
+      tree.addNode(child1, parent.id);
+      tree.addNode(child2, parent.id);
+
+      const natural: FloatingNode[] = [];
+      tree.forEach(parent, "children", (node) => {
+        natural.push(node);
+      });
+      expect(natural).toEqual([child1, child2]);
+
+      const reversed: FloatingNode[] = [];
+      tree.forEach(
+        parent.id,
+        "children",
+        (node) => {
+          reversed.push(node);
+        },
+        { order: "bottom-up" },
+      );
+      expect(reversed).toEqual([child2, child1]);
+    });
+
+    it("executes action on siblings excluding target for both nested nodes and roots", () => {
+      const tree = useFloatingTree();
+      const root1 = createMockNode();
+      const root2 = createMockNode();
+      const root3 = createMockNode();
+      const child1 = createMockNode();
+      const child2 = createMockNode();
+
+      tree.addNode(root1);
+      tree.addNode(root2);
+      tree.addNode(root3);
+      tree.addNode(child1, root1.id);
+      tree.addNode(child2, root1.id);
+
+      const rootSiblings: FloatingNode[] = [];
+      tree.forEach(root2.id, "siblings", (node) => {
+        rootSiblings.push(node);
+      });
+      expect(rootSiblings).toEqual([root1, root3]);
+
+      const childSiblings: FloatingNode[] = [];
+      tree.forEach(child1.id, "siblings", (node) => {
+        childSiblings.push(node);
+      });
+      expect(childSiblings).toEqual([child2]);
+    });
+
+    it("traverses ancestors defaulting to bottom-up (closest parent first) and top-down", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      const child = createMockNode();
+      const grandchild = createMockNode();
+
+      tree.addNode(root);
+      tree.addNode(child, root.id);
+      tree.addNode(grandchild, child.id);
+
+      const bottomUp: FloatingNode[] = [];
+      tree.forEach(grandchild.id, "ancestors", (node) => {
+        bottomUp.push(node);
+      });
+      expect(bottomUp).toEqual([child, root]);
+
+      const topDown: FloatingNode[] = [];
+      tree.forEach(
+        grandchild.id,
+        "ancestors",
+        (node) => {
+          topDown.push(node);
+        },
+        { order: "top-down" },
+      );
+      expect(topDown).toEqual([root, child]);
+    });
+
+    it("traverses descendants defaulting to top-down and bottom-up for cascading teardown", () => {
+      const tree = useFloatingTree();
       const root = createMockNode();
       const child = createMockNode({ open: true });
       const grandchild = createMockNode({ open: true });
 
+      const calls: string[] = [];
       child.setOpen = vi.fn((_open: boolean, reason?: OpenChangeReason) => {
         calls.push(`child:${reason}`);
       });
@@ -345,31 +449,109 @@ describe("useFloatingTree", () => {
       tree.addNode(child, root.id);
       tree.addNode(grandchild, child.id);
 
+      const topDown: FloatingNode[] = [];
+      tree.forEach(root.id, "descendants", (node) => {
+        topDown.push(node);
+      });
+      expect(topDown).toEqual([child, grandchild]);
+
       const event = new MouseEvent("pointerdown");
-      tree.closeDescendants(root, "outside-pointer", event);
+      tree.forEach(
+        root.id,
+        "descendants",
+        (descendant) => {
+          if (descendant.open.value) {
+            descendant.setOpen(false, "outside-pointer", event);
+          }
+        },
+        { order: "bottom-up" },
+      );
 
       expect(calls).toEqual(["grandchild:outside-pointer", "child:outside-pointer"]);
       expect(grandchild.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
       expect(child.setOpen).toHaveBeenCalledWith(false, "outside-pointer", event);
     });
 
-    it("skips already-closed descendants when closing", () => {
+    it("resolves the branch root node", () => {
       const tree = useFloatingTree();
       const root = createMockNode();
-      const child = createMockNode({ open: false });
-      const grandchild = createMockNode({ open: true });
-
-      child.setOpen = vi.fn();
-      grandchild.setOpen = vi.fn();
+      const child = createMockNode();
+      const grandchild = createMockNode();
 
       tree.addNode(root);
       tree.addNode(child, root.id);
       tree.addNode(grandchild, child.id);
 
-      tree.closeDescendants(root, "outside-pointer");
+      const fromGrandchild: FloatingNode[] = [];
+      tree.forEach(grandchild.id, "root", (node) => {
+        fromGrandchild.push(node);
+      });
+      expect(fromGrandchild).toEqual([root]);
 
-      expect(child.setOpen).not.toHaveBeenCalled();
-      expect(grandchild.setOpen).toHaveBeenCalledWith(false, "outside-pointer", undefined);
+      const fromRoot: FloatingNode[] = [];
+      tree.forEach(root.id, "root", (node) => {
+        fromRoot.push(node);
+      });
+      expect(fromRoot).toEqual([root]);
+    });
+
+    it("supports a custom relationship resolver function", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      const child1 = createMockNode();
+      const child2 = createMockNode();
+
+      tree.addNode(root);
+      tree.addNode(child1, root.id);
+      tree.addNode(child2, root.id);
+
+      const customVisited: FloatingNode[] = [];
+      tree.forEach(
+        root.id,
+        (node, currentTree) => {
+          return currentTree.getChildren(node.id).filter((_, idx) => idx === 1);
+        },
+        (matched) => {
+          customVisited.push(matched);
+        },
+      );
+
+      expect(customVisited).toEqual([child2]);
+    });
+
+    it("short-circuits traversal when action returns false", () => {
+      const tree = useFloatingTree();
+      const root = createMockNode();
+      const child1 = createMockNode();
+      const child2 = createMockNode();
+      const child3 = createMockNode();
+
+      tree.addNode(root);
+      tree.addNode(child1, root.id);
+      tree.addNode(child2, root.id);
+      tree.addNode(child3, root.id);
+
+      const visited: FloatingNode[] = [];
+      tree.forEach(root.id, "children", (node) => {
+        visited.push(node);
+        if (node === child2) return false;
+      });
+
+      expect(visited).toEqual([child1, child2]);
+    });
+
+    it("safely handles unregistered target ids without throwing", () => {
+      const tree = useFloatingTree();
+      const unregId = Symbol("unregistered");
+      let count = 0;
+
+      expect(() => {
+        tree.forEach(unregId, "descendants", () => {
+          count++;
+        });
+      }).not.toThrow();
+
+      expect(count).toBe(0);
     });
   });
 

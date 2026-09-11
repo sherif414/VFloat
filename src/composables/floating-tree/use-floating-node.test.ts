@@ -212,7 +212,7 @@ describe("useFloatingNode", () => {
     expect(node.open.value).toBe(false);
   });
 
-  it("does not close descendants when the parent closes; cascade is explicit via tree.closeDescendants", () => {
+  it("does not close descendants when the parent closes; cascade is explicit via tree.forEach", () => {
     const calls: string[] = [];
     const rootOpen = ref(true);
     const childOpen = ref(true);

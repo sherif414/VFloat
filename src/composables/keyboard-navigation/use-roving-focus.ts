@@ -309,7 +309,16 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        treeOption?.closeDescendants(node, "keyboard-exit");
+        treeOption?.forEach(
+          node.id,
+          "descendants",
+          (descendant) => {
+            if (descendant.open.value) {
+              descendant.setOpen(false, "keyboard-exit");
+            }
+          },
+          { order: "bottom-up" },
+        );
       }
       focusIndex(targetIdx);
     }

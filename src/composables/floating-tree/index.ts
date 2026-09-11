@@ -1,4 +1,10 @@
-export type { FloatingTree, UseFloatingTreeReturn } from "./use-floating-tree";
+export type {
+  FloatingTree,
+  ForEachOptions,
+  RelationshipSelector,
+  TreeRelationship,
+  UseFloatingTreeReturn,
+} from "./use-floating-tree";
 export { useFloatingTree } from "./use-floating-tree";
 export type {
   AnchorElement,
