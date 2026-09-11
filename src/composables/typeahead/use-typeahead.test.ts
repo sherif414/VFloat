@@ -104,8 +104,9 @@ describe("useTypeahead", () => {
     it("matches a single character", async () => {
       const { floatingEl, getActiveIndex } = await renderTypeahead();
 
-      dispatchKey(floatingEl, "b");
+      const event = dispatchKey(floatingEl, "b");
       expect(getActiveIndex()).toBe(3);
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it("matches case-insensitively", async () => {
@@ -357,6 +358,24 @@ describe("useTypeahead", () => {
 
       dispatchKey(floatingEl, "j");
       expect(getActiveIndex()).toBe(1);
+    });
+
+    it("flushes the buffer when space itself matches nothing", async () => {
+      // A trailing-space dead query can never match an extension under
+      // prefix search, so it flushes immediately instead of lingering.
+      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+        items: ["Newark", "London"],
+      });
+      vi.useFakeTimers();
+
+      dispatchKey(floatingEl, "n");
+      dispatchKey(floatingEl, "e");
+      dispatchKey(floatingEl, "w");
+      expect(getActiveIndex()).toBe(0);
+
+      dispatchKey(floatingEl, " ");
+      expect(typeahead.searchQuery.value).toBe("");
+      expect(getActiveIndex()).toBe(0);
     });
   });
 

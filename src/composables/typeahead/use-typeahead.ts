@@ -141,9 +141,12 @@ export function useTypeahead(
     );
 
     if (matched !== -1) {
+      // Claim matched keystrokes so they can't trigger competing defaults
+      // (page scroll, find-as-you-type) in exotic containers.
+      e.preventDefault();
       matchIndex = matched;
       options.onMatch?.(matched);
-    } else if (e.key !== " ") {
+    } else {
       // A failed query would poison the next keystroke, so drop it and idle.
       reset();
     }
