@@ -11,13 +11,5 @@
   "arrowParens": "always",
   "bracketSameLine": false,
   "bracketSpacing": true,
-  "ignorePatterns": [
-    "**/dist",
-    "**/coverage",
-    "**/playground",
-    "**/docs/.vitepress/dist",
-    "**/docs/.vitepress/cache",
-    "CHANGELOG.md",
-    "pnpm-lock.yaml"
-  ]
+  "ignorePatterns": ["/*", "/.*", "!/src"]
 }

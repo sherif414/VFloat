@@ -316,9 +316,7 @@ function getMiddlewares(
 
   if (options.arrow !== undefined && options.arrow !== false) {
     const arrowEl =
-      options.arrow === true
-        ? node.refs.arrowEl
-        : (options.arrow.element ?? node.refs.arrowEl);
+      options.arrow === true ? node.refs.arrowEl : (options.arrow.element ?? node.refs.arrowEl);
     if (arrowEl) {
       middlewares.push(
         arrow({
