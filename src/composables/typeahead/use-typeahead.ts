@@ -1,6 +1,7 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
 import { isTypeableElement } from "@/shared/dom";
+import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -32,9 +33,11 @@ const TYPEAHEAD_NAVIGATION_KEYS: ReadonlySet<string> = new Set([
  * character repeatedly cycles through items starting with that character,
  * per the APG menu and listbox patterns.
  *
- * The keyboard scope is the floating panel (where APG places typeahead for
- * menus, listboxes, trees, and grids), never the trigger: the trigger keeps
- * its Space/Enter activation semantics while the popup is open.
+ * The keyboard scope covers the floating panel and the anchor trigger.
+ * The panel is where APG places typeahead for menus, listboxes, trees, and
+ * grids; the trigger stays searchable while the popup is closed so collapsed
+ * selects can preselect. The engine never changes open state and never
+ * claims trigger activation keys (Enter, idle Space, arrows).
  *
  * @param node - The floating node with open state and panel refs.
  * @param options - Item labels, active index offset, and matcher overrides.
@@ -63,6 +66,7 @@ export function useTypeahead(
   const items = computed<readonly (string | null)[]>(() => toValue(options.items ?? []));
   const activeIndex = computed<number>(() => toValue(options.activeIndex ?? -1));
   const containerEl = computed(() => toValue(options.containerEl) ?? node.refs.floatingEl.value);
+  const anchorTarget = computed(() => getAnchorElement(node.refs.anchorEl.value));
 
   const searchQuery = ref("");
   let resetTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -103,7 +107,7 @@ export function useTypeahead(
   // --- Container Keyboard Search ----------------------------------------------------
 
   function onKeyDown(e: KeyboardEvent) {
-    if (!toValue(options.enabled ?? true) || !open.value || e.defaultPrevented) return;
+    if (!toValue(options.enabled ?? true) || e.defaultPrevented) return;
 
     // Navigation, selection, and dismissal keys hand control to sibling
     // behaviors, so any pending query is abandoned instead of extended by
@@ -152,7 +156,17 @@ export function useTypeahead(
     }
   }
 
-  useEventListener(containerEl, "keydown", onKeyDown);
+  // The panel can only receive focus while open; stray events on a
+  // mounted-but-hidden panel must not search. The trigger is always
+  // focusable, so it stays searchable in both states without ever
+  // affecting open state.
+  function onContainerKeyDown(e: KeyboardEvent) {
+    if (!open.value) return;
+    onKeyDown(e);
+  }
+
+  useEventListener(containerEl, "keydown", onContainerKeyDown);
+  useEventListener(anchorTarget, "keydown", onKeyDown);
 
   return {
     searchQuery: readonly(searchQuery),
@@ -304,6 +318,7 @@ export interface UseTypeaheadOptions {
   /**
    * Keyboard scope for typeahead search. Defaults to the floating panel,
    * where APG places typeahead for menus, listboxes, trees, and grids.
+   * The anchor trigger stays searchable alongside it in both open states.
    * Override for inline widgets whose list lives outside the panel.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;

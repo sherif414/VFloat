@@ -60,9 +60,9 @@ interface UseTypeaheadReturn {
 
 ## Details
 
-### Keyboard Scope Follows the APG List Container
+### Keyboard Scope Follows the Trigger and the List Container
 
-Typeahead listens on the floating panel, where the ARIA APG places type-ahead for menus, listboxes, trees, and grids. Typing on the trigger while open does nothing, so the trigger keeps its Space/Enter activation semantics. The composable only searches while `open` is `true` and never steals keystrokes from native typing controls such as combobox inputs.
+Typeahead listens on the floating panel, where the ARIA APG places type-ahead for menus, listboxes, trees, and grids, and on the anchor trigger, which stays searchable while the popup is closed so collapsed selects can preselect. Typing on the trigger never changes open state: it only emits `onMatch`, leaving opening to the trigger's own activation keys. Idle Space and navigation keys pass through untouched on both targets.
 
 ### Query Buffering and Cycling
 

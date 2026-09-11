@@ -159,7 +159,7 @@ describe("useTypeahead", () => {
       expect(getActiveIndex()).toBe(5);
     });
 
-    it("ignores typing while closed", async () => {
+    it("ignores typing on the panel while closed", async () => {
       const { floatingEl, getActiveIndex } = await renderTypeahead({ open: false });
 
       dispatchKey(floatingEl, "b");
@@ -298,14 +298,69 @@ describe("useTypeahead", () => {
     });
   });
 
-  describe("APG keyboard scope", () => {
-    it("ignores typing on the anchor element since typeahead belongs to the list container", async () => {
-      const { anchorEl, getActiveIndex } = await renderTypeahead();
+  describe("closed trigger typing", () => {
+    it("emits matches for letters typed on the closed trigger without opening", async () => {
+      const onMatch = vi.fn();
+      const { anchorEl, node, typeahead } = await renderTypeahead({
+        onMatch,
+        open: false,
+      });
 
       dispatchKey(anchorEl, "b");
-      expect(getActiveIndex()).toBe(-1);
+
+      expect(onMatch).toHaveBeenCalledWith(3);
+      expect(typeahead.searchQuery.value).toBe("b");
+      expect(node.open.value).toBe(false);
     });
 
+    it("leaves idle space on the closed trigger untouched", async () => {
+      const onMatch = vi.fn();
+      const { anchorEl, node } = await renderTypeahead({ onMatch, open: false });
+
+      const event = dispatchKey(anchorEl, " ");
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(onMatch).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(false);
+    });
+
+    it("extends multi-word queries on the closed trigger", async () => {
+      const { anchorEl, getActiveIndex } = await renderTypeahead({
+        items: ["New York", "New Jersey", "London"],
+        open: false,
+      });
+      vi.useFakeTimers();
+
+      for (const char of "new") {
+        dispatchKey(anchorEl, char);
+      }
+      expect(getActiveIndex()).toBe(0);
+
+      const spaceEvent = dispatchKey(anchorEl, " ");
+      expect(spaceEvent.defaultPrevented).toBe(true);
+
+      dispatchKey(anchorEl, "j");
+      expect(getActiveIndex()).toBe(1);
+    });
+
+    it("resets the buffer on trigger navigation keys without claiming them", async () => {
+      const { anchorEl, typeahead, getActiveIndex } = await renderTypeahead({ open: false });
+      vi.useFakeTimers();
+
+      dispatchKey(anchorEl, "b");
+      expect(typeahead.searchQuery.value).toBe("b");
+
+      const arrowEvent = dispatchKey(anchorEl, "ArrowDown");
+      expect(arrowEvent.defaultPrevented).toBe(false);
+      expect(typeahead.searchQuery.value).toBe("");
+
+      const enterEvent = dispatchKey(anchorEl, "Enter");
+      expect(enterEvent.defaultPrevented).toBe(false);
+      expect(getActiveIndex()).toBe(3);
+    });
+  });
+
+  describe("panel keyboard scope", () => {
     it("searches within an explicit containerEl override instead of the panel", async () => {
       const onMatch = vi.fn();
 
