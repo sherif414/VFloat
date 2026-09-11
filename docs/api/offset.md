@@ -1,51 +1,51 @@
 ---
-description: Adds distance between the anchor and floating element.
+description: Adds distance between the anchor and the floating element along axes.
 ---
 
 # offset
 
-`offset` adds distance between the anchor element and the floating element. Use it when the surface needs breathing room from its trigger.
+`offset` adds space between the anchor and the floating element. Use it to create a gap along the main axis, nudge the element along the cross axis, or apply dynamic offsets based on placement.
 
 ## Type
 
-The factory signature and its value shapes:
-
 ```ts
-function offset(value?: OffsetValue | OffsetFunction): Middleware;
+function offset(options?: OffsetOptions): Middleware;
 
-type OffsetValue = number | OffsetOptions;
-type OffsetFunction = (args: OffsetFunctionArgs) => OffsetValue;
-
-interface OffsetOptions {
-  mainAxis?: number;
-  crossAxis?: number;
-  alignmentAxis?: number | null;
-}
-
-interface OffsetFunctionArgs {
-  placement: Placement;
-  rects: ElementRects;
-  elements: Elements;
-}
+type OffsetOptions =
+  | number
+  | {
+      mainAxis?: number;
+      crossAxis?: number;
+      alignmentAxis?: number | null;
+    }
+  | ((state: MiddlewareArguments) => OffsetOptions);
 ```
 
 ## Options
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `mainAxis` | `number` | Distance along the placement direction. A bare number is shorthand for this. |
-| `crossAxis` | `number` | Distance perpendicular to the placement direction. |
-| `alignmentAxis` | `number \| null` | Overrides cross-axis offset for aligned placements such as `top-start`. |
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `mainAxis` | `number` | `0` | Distance in pixels along the placement direction (e.g. gap below anchor for `placement: "bottom"`). |
+| `crossAxis` | `number` | `0` | Distance in pixels perpendicular to the placement direction. |
+| `alignmentAxis` | `number \| null` | `null` | Distance along the alignment axis for aligned placements (such as `"top-start"`). |
+
+You can also pass a plain `number` directly (e.g. `offset(8)` or `middlewares: { offset: 8 }`), which assigns the value to `mainAxis`.
+
+## Returns
+
+`offset` returns a `Middleware` object with `name: "offset"`. It does not write to `middlewareData`.
 
 ## Details
 
-A numeric value is shorthand for `mainAxis`. Use an options object when you need separate control over the main axis, cross axis, or alignment axis. Use a function when the offset needs to depend on the current placement or element sizes.
+### Pipeline Placement
 
-`mainAxis` follows the placement direction, `crossAxis` is perpendicular to it, and `alignmentAxis` overrides the cross-axis offset for aligned placements such as `top-start`.
+`offset` should run **first** in your middleware pipeline (or immediately after `inline`). Running `offset` before `flip` and `shift` ensures that collision detection algorithms evaluate the panel's boundary including its spacing gap. If `flip` runs before `offset`, the panel might flip prematurely or collide with the viewport edge.
+
+When using the declarative `middlewares` object in [`usePosition`](/api/use-position), VFloat automatically orders `offset` before `flip` and `shift`.
 
 ## Example
 
-Pass `offset` through the declarative `middlewares` option on `usePosition`:
+### Declarative Usage (Recommended)
 
 ```vue
 <script setup lang="ts">
@@ -54,25 +54,38 @@ import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
-const open = ref(true);
 
-const node = useFloatingNode({ anchorEl, floatingEl, open });
+const node = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(node, {
+  placement: "bottom-start",
   middlewares: {
-    offset: 10,
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
   },
 });
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
-
-  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">8px offset panel</div>
 </template>
+```
+
+### Multi-Axis Offset Object
+
+```ts
+usePosition(node, {
+  placement: "right-start",
+  middlewares: {
+    offset: { mainAxis: 12, crossAxis: -4 },
+  },
+});
 ```
 
 ## See Also
 
-- [`arrow`](/api/arrow) - Keeps the arrow away from the edge
-- [`flip`](/api/flip) - Chooses another placement when space is limited
-- [`shift`](/api/shift) - Keeps the floating element in view
+- [`usePosition`](/api/use-position) - Positioning engine and declarative middleware configuration
+- [`flip`](/api/flip) - Fallback placements when space is constrained
+- [`shift`](/api/shift) - Viewport containment
+- [Middleware Ordering Gotchas](/guide/middleware-ordering-gotchas) - Why pipeline order matters

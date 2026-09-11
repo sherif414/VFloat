@@ -4,7 +4,7 @@ description: Closes floating content on Escape and outside pointer input through
 
 # useDismiss
 
-`useDismiss` closes a floating node on Escape and outside pointer input through one shared `enabled` gate and one shared [`useFloatingTree`](/api/use-floating-tree). Pass `tree` once instead of repeating it per channel.
+`useDismiss` closes a floating node when the user presses Escape or clicks outside the surface. Both channels share one reactive `enabled` gate and coordinate through an optional [`useFloatingTree`](/api/use-floating-tree).
 
 ## Type
 
@@ -41,47 +41,51 @@ interface UseDismissOutsideOptions {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Shared reactive gate for both channels. |
-| `tree` | `FloatingTree \| null \| undefined` | — | Forwarded to both channels; descendant surfaces count as inside. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Shared reactive gate for Escape and outside press channels. |
+| `tree` | `FloatingTree \| null` | `undefined` | Forwarded to both channels; descendant surfaces count as inside. |
 | `escapeKey` | `boolean \| UseDismissEscapeOptions` | `true` | `false` disables Escape dismissal; an object configures it. |
 | `outsidePress` | `boolean \| UseDismissOutsideOptions` | `true` | `false` disables outside-press dismissal; an object configures it. |
 
-Escape-channel fields (`escapeKey` object):
+### Escape Channel Options (`escapeKey` object)
 
-| Name | Type | Default | Notes |
+| Option | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `capture` | `boolean` | `false` | Plain boolean, read once. |
-| `preventDefault` | `boolean` | `false` | Plain boolean, read once. |
-| `onEscape` | `(event: KeyboardEvent) => void` | — | Replaces the default close behavior. |
-| `ignoreEscapeKey` | `(event: KeyboardEvent) => boolean` | — | Runs before close; lets children handle Escape first. |
+| `capture` | `boolean` | `false` | Attaches keydown listener during the capture phase. Read once. |
+| `preventDefault` | `boolean` | `false` | Calls `event.preventDefault()` on handled Escape presses. |
+| `onEscape` | `(event: KeyboardEvent) => void` | `undefined` | Custom handler. Replaces default `node.setOpen(false)`. |
+| `ignoreEscapeKey` | `(event: KeyboardEvent) => boolean` | `undefined` | Predicate to let children or custom inputs consume Escape first. |
 
-Outside-press channel fields (`outsidePress` object):
+### Outside Press Channel Options (`outsidePress` object)
 
-| Name | Type | Default | Notes |
+| Option | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `event` | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event dismisses. |
-| `capture` | `MaybeRefOrGetter<boolean>` | `true` | Listener capture phase. |
-| `ignoreClick` | `(event: MouseEvent, target: EventTarget \| null) => boolean` | — | Skips selected outside presses; runs after the family check. |
-| `onClick` | `(event: MouseEvent) => void` | — | Replaces the default close behavior. |
-| `ignoreScrollbar` | `MaybeRefOrGetter<boolean>` | `true` | Scrollbar interaction inside the panel does not close. |
-| `ignoreDrag` | `MaybeRefOrGetter<boolean>` | `true` | Ignores `click` finishing outside after a drag from inside. Only for `event: "click"`. |
+| `event` | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event triggers dismissal. |
+| `capture` | `MaybeRefOrGetter<boolean>` | `true` | Runs during listener capture phase before bubbling completes. |
+| `ignoreClick` | `(event, target) => boolean` | `undefined` | Skips selected clicks; runs after the family check. |
+| `onClick` | `(event: MouseEvent) => void` | `undefined` | Custom handler. Replaces default `node.setOpen(false)`. |
+| `ignoreScrollbar` | `MaybeRefOrGetter<boolean>` | `true` | Clicking scrollbars inside the panel does not trigger dismissal. |
+| `ignoreDrag` | `MaybeRefOrGetter<boolean>` | `true` | For `event: "click"`, ignores mouseup outside after dragging from inside. |
 
 ## Returns
 
-Returns `void`. Closes with the `escape-key` reason for Escape and the `"outside-pointer"` reason for outside input.
+`useDismiss` returns `void`. When dismissed, it updates open state with reason `"escape-key"` for Escape presses and `"outside-pointer"` for outside clicks.
 
 ## Details
 
-`useDismiss(node)` with no options enables both channels with the same `enabled` and `tree`. It exists so the common popover/dialog dismissal stack stays one line and the tree cannot drift between channels:
+### Stacked Dismissal with Trees
 
-- Disable one channel with `escapeKey: false` or `outsidePress: false`.
-- Configure a channel with an object, for example `outsidePress: { event: "click" }` or `escapeKey: { onEscape }`.
-- The Escape channel listens on `document` and ignores Escape while IME composition is active. Presses already handled elsewhere (`defaultPrevented`), non-Escape keys, and presses while the node is closed are ignored.
-- When nested nodes share an explicit [`useFloatingTree`](/api/use-floating-tree) passed via `tree`, outside presses inside descendant surfaces count as inside, and one Escape press closes only the deepest open node. Repeated presses walk the stack from the innermost surface outward. Without `tree`, only the current node's own anchor and floating elements count as inside.
+When multiple floating panels are open simultaneously (such as a dropdown menu with submenus):
+
+- Without `tree`, pressing Escape or clicking outside can dismiss all layers at once because each node only recognizes its own anchor and floating element.
+- Passing `tree` coordinates the stack: clicking inside a submenu is considered inside the parent menu, and pressing Escape dismisses only the innermost active submenu. Repeated Escape presses walk backward through the stack.
+
+### Outside Press Detection
+
+- By default, outside presses trigger on `"pointerdown"` in the capture phase. This dismisses the surface before any blur or pointerup handlers run on other page elements.
+- `ignoreScrollbar: true` prevents dismissal when users drag scrollbars on overflowing panels.
+- `ignoreDrag: true` prevents closing when a user selects text inside the panel and releases the mouse cursor outside.
 
 ## Example
-
-This popover toggles on click and dismisses on Escape or outside input:
 
 ```vue
 <script setup lang="ts">
@@ -95,18 +99,24 @@ const node = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(node);
 
 useClick(node);
-useDismiss(node);
+useDismiss(node, {
+  outsidePress: { event: "pointerdown" },
+  escapeKey: { preventDefault: true },
+});
 </script>
 
 <template>
-  <button ref="anchorEl">Toggle</button>
+  <button ref="anchorEl">Toggle Popover</button>
 
-  <div v-if="node.open" ref="floatingEl" :style="styles">Press Escape or click outside</div>
+  <div v-if="node.open" ref="floatingEl" class="popover" :style="styles">
+    <p>Press Escape or click outside to dismiss</p>
+  </div>
 </template>
 ```
 
 ## See Also
 
-- [`useClick`](/api/use-click) - Opens on click
-- [`useFocusTrap`](/api/use-focus-trap) - Traps and restores focus
-- [`useFloatingTree`](/api/use-floating-tree) - Coordinates nested dismissal
+- [`useClick`](/api/use-click) - Toggle open on click
+- [`useFloatingTree`](/api/use-floating-tree) - Coordinate nested dismissal
+- [`useFocusTrap`](/api/use-focus-trap) - Retain focus inside modal dialogs
+- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) - Click and dismiss guide

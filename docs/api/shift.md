@@ -1,14 +1,12 @@
 ---
-description: Keeps the floating element within the available viewport space.
+description: Keeps the floating element within the available viewport boundary.
 ---
 
 # shift
 
-`shift` nudges the floating element back into view after placement has been chosen. Use it when you want to preserve the chosen placement and only adjust coordinates enough to stay visible.
+`shift` nudges the floating element along its placement axis to keep it visible inside the boundary. Use it to preserve the chosen placement while adjusting coordinates to prevent clipping against viewport edges.
 
 ## Type
-
-The factory signature and its options shape:
 
 ```ts
 function shift(options?: ShiftOptions): Middleware;
@@ -30,26 +28,33 @@ interface ShiftOptions {
 
 ## Options
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `mainAxis` | `boolean` | Allows shifting on the main axis. |
-| `crossAxis` | `boolean` | Allows shifting on the cross axis. |
-| `limiter` | `{ fn, options? }` | Constrains shift movement. |
-| `padding` | `Padding` | Inset from the clipping edge. |
-| `boundary` | `Boundary` | Clipping boundary. |
-| `rootBoundary` | `RootBoundary` | Root clipping boundary. |
-| `elementContext` | `ElementContext` | Element the boundary applies to. |
-| `altBoundary` | `boolean` | Uses the alternate boundary. |
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `mainAxis` | `boolean` | `true` | Allows shifting along the placement's cross-direction to prevent clipping against side edges. |
+| `crossAxis` | `boolean` | `false` | Allows shifting along the placement direction (e.g. moving closer to or further from the anchor). |
+| `limiter` | `{ fn, options? }` | `undefined` | Constrains shifting so the panel never slides beyond the anchor edge (e.g. `limitShift()`). |
+| `padding` | `Padding` | `0` | Inset padding from the clipping viewport boundary. |
+| `boundary` | `Boundary` | `"clippingAncestors"` | Clipping boundary element or rect. |
+| `rootBoundary` | `RootBoundary` | `"viewport"` | Root boundary context (`"viewport"` or `"document"`). |
+| `altBoundary` | `boolean` | `false` | When `true`, checks boundaries of the floating element instead of the anchor. |
+
+## Returns
+
+`shift` returns a `Middleware` object with `name: "shift"`. It writes `{ x: number, y: number }` adjustments to `middlewareData.value.shift`.
 
 ## Details
 
-`shift` is the right choice when you want to preserve the chosen placement and only adjust the coordinates enough to keep the floating element visible. It can shift on the main axis, the cross axis, or both.
+### Pipeline Placement
 
-Use it together with `flip()` when you want a stable preferred placement plus a fallback if that placement cannot fit.
+`shift` runs **after `flip`**:
+
+1. `offset` creates separation.
+2. `flip` picks the placement side with adequate room.
+3. `shift` adjusts coordinates within that side to prevent the floating panel from overflowing the viewport boundaries.
+
+Running `shift` after `flip` ensures that your surface only slides sideways after confirming that the current side fits.
 
 ## Example
-
-Pass `shift` through the declarative `middlewares` option on `usePosition`:
 
 ```vue
 <script setup lang="ts">
@@ -58,25 +63,29 @@ import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
-const open = ref(true);
 
-const node = useFloatingNode({ anchorEl, floatingEl, open });
+const node = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(node, {
+  placement: "bottom-start",
   middlewares: {
-    shift: { padding: 8, crossAxis: true },
+    offset: 8,
+    flip: true,
+    shift: { padding: 12, crossAxis: false },
   },
 });
 </script>
 
 <template>
   <button ref="anchorEl">Anchor</button>
-
-  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">
+    Shifted floating content stays within viewport padding
+  </div>
 </template>
 ```
 
 ## See Also
 
-- [`flip`](/api/flip) - Chooses another placement when the preferred one overflows
-- [`offset`](/api/offset) - Adds spacing before shifting
-- [`size`](/api/size) - Adjusts the floating element to the available space
+- [`flip`](/api/flip) - Chooses alternate placements when space is constrained
+- [`offset`](/api/offset) - Adds spacing before shift checks run
+- [`size`](/api/size) - Resizes the floating element when shifting is insufficient
+- [Keep Content in View](/guide/keep-content-in-view) - Guide to collision and viewport management

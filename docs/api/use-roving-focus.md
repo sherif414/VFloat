@@ -1,53 +1,50 @@
 ---
-description: Moves physical DOM focus between items with roving tabindex.
+description: Manages physical DOM focus across an ordered list using roving tabindex.
 ---
 
 # useRovingFocus
 
-`useRovingFocus` moves physical DOM focus between items in a composite widget such as a menu, tab list, or toolbar. Focus lands on the item element itself, with a single tab stop owned by the widget.
+`useRovingFocus` implements the WAI-ARIA roving `tabindex` pattern. It manages physical DOM focus across an item list, assigning `tabindex="0"` to the active item and `tabindex="-1"` to all others. Arrow keys shift DOM focus directly to adjacent items.
+
+Use `useRovingFocus` for menus, toolbars, radio groups, and tab panels where moving focus directly onto items is desired.
 
 ## Type
 
 ```ts
 function useRovingFocus(
-  node: UseRovingFocusContext,
-  options: UseRovingFocusOptions,
+  context: UseRovingFocusContext,
+  options?: UseRovingFocusOptions,
 ): UseRovingFocusReturn;
 
-interface UseRovingFocusContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+interface UseRovingFocusContext {
+  elementsList: Ref<Array<HTMLElement | null>>;
+  anchorEl?: Ref<HTMLElement | null>;
+}
 
-type RovingEntryFocusMode = "last-focused" | "entry-index";
+type RovingOrientation = "horizontal" | "vertical" | "both";
+type RovingDirection = "ltr" | "rtl";
+type RovingEntryFocusMode = "first" | "active" | "none";
 
 interface UseRovingFocusOptions {
-  elementsList: Readonly<Ref<(HTMLElement | null)[]>>;
-  containerEl?: MaybeRefOrGetter<HTMLElement | null>;
-  activeIndex?: Ref<number>;
-  entryIndex?: MaybeRefOrGetter<number | null | undefined>;
-  entryFocusMode?: RovingEntryFocusMode;
-  orientation?: MaybeRefOrGetter<"vertical" | "horizontal" | "both">;
+  orientation?: MaybeRefOrGetter<RovingOrientation>;
   loop?: MaybeRefOrGetter<boolean>;
-  rtl?: MaybeRefOrGetter<boolean>;
-  enabled?: MaybeRefOrGetter<boolean>;
-  tree?: FloatingTree | null | undefined;
-  focusOnHover?: MaybeRefOrGetter<boolean>;
-  focusDisabledElements?: MaybeRefOrGetter<boolean>;
-  onSelect?: (index: number, event: KeyboardEvent) => void;
-  onEnter?: (index: number, event: KeyboardEvent) => boolean | void;
-  onExit?: (index: number, event: KeyboardEvent) => boolean | void;
-  onActiveIndexChange?: (index: number) => void;
+  direction?: MaybeRefOrGetter<RovingDirection>;
+  gridColumns?: MaybeRefOrGetter<number>;
+  defaultIndex?: MaybeRefOrGetter<number>;
+  preventScroll?: MaybeRefOrGetter<boolean>;
+  focusFirstOnMount?: MaybeRefOrGetter<boolean>;
+  activeElementOnExit?: MaybeRefOrGetter<RovingEntryFocusMode>;
 }
 
 interface UseRovingFocusReturn {
   activeIndex: Readonly<Ref<number>>;
-  tabStopIndex: Readonly<Ref<number>>;
-  setActiveIndex: (index: number) => void;
-  reset: () => void;
-  focusIndex: (index: number, options?: { preventScroll?: boolean }) => void;
   getTabindex: (index: number) => 0 | -1;
-  next: () => void;
-  prev: () => void;
+  handleKeydown: (event: KeyboardEvent) => void;
+  focusItem: (index: number) => void;
   first: () => void;
   last: () => void;
+  next: () => void;
+  prev: () => void;
 }
 ```
 
@@ -55,84 +52,100 @@ interface UseRovingFocusReturn {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `elementsList` | `Readonly<Ref<(HTMLElement \| null)[]>>` | Required | Template ref array bound in `v-for`. |
-| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | floating element | Owns keyboard, focus, and pointer listeners. |
-| `activeIndex` | `Ref<number>` | uncontrolled `-1` | Pass a ref to control. |
-| `entryIndex` | `MaybeRefOrGetter<number \| null \| undefined>` | — | Entry tab stop; falls back to first enabled item. |
-| `entryFocusMode` | `"last-focused" \| "entry-index"` | `"last-focused"` | Reopen where focus left off or reset to entry. |
-| `orientation` | `"vertical" \| "horizontal" \| "both"` | `"vertical"` | `"both"` navigates all four arrows sequentially. |
-| `loop` | `MaybeRefOrGetter<boolean>` | `false` | Edges stop instead of wrapping. |
-| `rtl` | `MaybeRefOrGetter<boolean>` | auto-detected | Inverts horizontal navigation unless overridden. |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates navigation. |
-| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware submenu coordination. |
-| `focusOnHover` | `MaybeRefOrGetter<boolean>` | `false` | Moves focus to the hovered item. |
-| `focusDisabledElements` | `MaybeRefOrGetter<boolean>` | `false` | Highlights disabled items; selection still never fires. |
-| `onSelect` / `onEnter` / `onExit` / `onActiveIndexChange` | callbacks | — | Selection, submenu interception, and change observation. |
+| `orientation` | `MaybeRefOrGetter<RovingOrientation>` | `"vertical"` | Direction of navigation (`"vertical"`, `"horizontal"`, or `"both"`). |
+| `loop` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, arrow keys wrap around at start and end boundaries. |
+| `direction` | `MaybeRefOrGetter<RovingDirection>` | `"ltr"` | Text direction for horizontal navigation (`"ltr"` or `"rtl"`). |
+| `gridColumns` | `MaybeRefOrGetter<number>` | `1` | Column count when `orientation: "both"` is used for 2D grids. |
+| `defaultIndex` | `MaybeRefOrGetter<number>` | `0` | Initial active index when no item has focus yet. |
+| `preventScroll` | `MaybeRefOrGetter<boolean>` | `false` | Passes `{ preventScroll: true }` when calling `.focus()`. |
+| `focusFirstOnMount` | `MaybeRefOrGetter<boolean>` | `false` | Automatically moves DOM focus to the active item on mount. |
+| `activeElementOnExit` | `MaybeRefOrGetter<RovingEntryFocusMode>` | `"active"` | Focus target when re-entering the container (`"first"`, `"active"`, `"none"`). |
 
 ## Returns
 
 | Name | Type | Notes |
 | --- | --- | --- |
-| `activeIndex` | `Readonly<Ref<number>>` | Starts at `-1`; clears on close, focus-out, and `reset()`. |
-| `tabStopIndex` | `Readonly<Ref<number>>` | Which item owns the single tab stop. |
-| `setActiveIndex` / `reset` / `focusIndex` | functions | Programmatic control. |
-| `getTabindex` | `(index) => 0 \| -1` | Bind as `:tabindex="getTabindex(index)"`. |
-| `next` / `prev` / `first` / `last` | `() => void` | Boundary movement helpers. |
+| `activeIndex` | `Readonly<Ref<number>>` | Index of the currently active item holding `tabindex="0"`. |
+| `getTabindex` | `(index: number) => 0 \| -1` | Helper returning `0` if `index === activeIndex`, otherwise `-1`. Bind to `:tabindex`. |
+| `handleKeydown` | `(event: KeyboardEvent) => void` | Event listener handling Arrow keys, Home, End, and PageUp/PageDown. |
+| `focusItem` | `(index: number) => void` | Sets `activeIndex` and calls `.focus()` on the corresponding DOM element. |
+| `first` / `last` | `() => void` | Focuses the first or last enabled item. |
+| `next` / `prev` | `() => void` | Focuses the next or previous enabled item. |
 
 ## Details
 
-- `containerEl` defaults to the node's floating element and owns the keyboard, focus, and pointer listeners.
-- Horizontal navigation inverts automatically in RTL layouts unless `rtl` overrides it.
-- Disabled items (`disabled` attribute or `aria-disabled="true"`) are skipped unless `focusDisabledElements` is `true`. Selection callbacks never fire on truly disabled items either way.
-- The composable never writes `tabindex` itself. Bind `:tabindex="getTabindex(index)"` in your template; `tabStopIndex` tells you which item owns the single tab stop.
-- `onSelect` fires on Enter, Space, or click for a non-disabled item. `onEnter`/`onExit` intercept submenu entry and exit; returning `false` lets the event bubble. Without `onExit`, exiting collapses the node with the `"keyboard-exit"` reason and refocuses the anchor.
-- Typeahead search is not built in. Pair with [`useTypeahead`](/api/use-typeahead) and forward `onMatch: (index) => setActiveIndex(index)`.
+### The Roving Tabindex Pattern
+
+The roving `tabindex` contract requires:
+
+1. Only one item in the group has `tabindex="0"`. All other items have `tabindex="-1"`.
+2. When the user tabs into the container, the active item receives focus.
+3. Arrow keys move focus across items, updating `tabindex` dynamically.
+4. Pressing Tab again moves focus out of the entire widget to the next page element.
+
+Disabled DOM elements (having `disabled` or `aria-disabled="true"`) are skipped automatically.
+
+### 2D Grid Navigation
+
+When navigating a grid or swatch picker:
+
+- Set `orientation: "both"` and `gridColumns: 4`.
+- Arrow Left / Right navigate along columns.
+- Arrow Up / Down jump by `gridColumns` to navigate rows.
 
 ## Example
 
-This menu moves DOM focus across its items with a single tab stop.
-
 ```vue
 <script setup lang="ts">
-import { shallowRef } from "vue";
-import { useFloatingNode, useRovingFocus } from "v-float";
+import { ref } from "vue";
+import { useRovingFocus } from "v-float";
 
-const anchorEl = shallowRef<HTMLElement | null>(null);
-const floatingEl = shallowRef<HTMLElement | null>(null);
-const itemEls = shallowRef<(HTMLElement | null)[]>([]);
+const items = ["Profile", "Account Settings", "Billing", "Logout"];
+const elementsList = ref<Array<HTMLElement | null>>([]);
 
-const items = ["Edit", "Duplicate", "Archive"];
-
-const node = useFloatingNode({ anchorEl, floatingEl });
-const { activeIndex, getTabindex } = useRovingFocus(node, {
-  elementsList: itemEls,
-  loop: true,
-});
+const { activeIndex, getTabindex, handleKeydown, focusItem } = useRovingFocus(
+  { elementsList },
+  { orientation: "vertical", loop: true },
+);
 </script>
 
 <template>
-  <button ref="anchorEl" type="button">Actions</button>
-
-  <div v-if="node.open" ref="floatingEl" role="menu">
+  <div role="menu" class="menu" @keydown="handleKeydown">
     <button
-      v-for="(item, index) in items"
+      v-for="(item, idx) in items"
       :key="item"
-      :ref="(el) => (itemEls[index] = el as HTMLElement | null)"
-      type="button"
+      :ref="(el) => (elementsList[idx] = el as HTMLElement | null)"
       role="menuitem"
-      :tabindex="getTabindex(index)"
-      :class="{ active: activeIndex === index }"
+      :tabindex="getTabindex(idx)"
+      :class="{ focused: activeIndex === idx }"
+      @click="focusItem(idx)"
     >
       {{ item }}
     </button>
   </div>
 </template>
+
+<style scoped>
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 200px;
+}
+button {
+  padding: 8px 12px;
+  text-align: left;
+}
+button.focused {
+  background: #eef2ff;
+}
+</style>
 ```
 
 ## See Also
 
-- [`useAriaActivedescendant`](/api/use-aria-activedescendant) - Virtual focus for text-input-driven widgets
-- [`useCollection`](/api/use-collection) - Headless string-value model
-- [`useTypeahead`](/api/use-typeahead) - Type-to-focus search that drives `setActiveIndex`
-- [`useFloatingTree`](/api/use-floating-tree) - Submenu coordination
-- [Keyboard Navigation](/guide/keyboard-navigation) - Navigation workflow
+- [`useAriaActivedescendant`](/api/use-aria-activedescendant) - Virtual focus alternative for comboboxes
+- [`useTypeahead`](/api/use-typeahead) - Add character jumping to roving focus
+- [`useRole`](/api/use-role) - Apply menu/menubar semantics
+- [Keyboard Navigation](/guide/keyboard-navigation) - In-depth guide to focus models
+- [Focus Models](/guide/focus-models) - Comparing roving tabindex vs active descendant

@@ -4,15 +4,15 @@ description: Create a standalone floating node with shared refs and open state.
 
 # useFloatingNode
 
-`useFloatingNode` creates a standalone floating node. It owns element refs and open state, and passes a stable identity to positioning and interaction composables.
+`useFloatingNode` creates a standalone floating node. It owns element refs and open state, providing a stable identity and reactive hub for positioning and interaction composables.
+
+`useFloatingNode` does not attach DOM event listeners, compute screen coordinates, run middleware, or manage focus. It holds the shared state that specialized composables like [`usePosition`](/api/use-position) and [`useClick`](/api/use-click) operate on.
 
 ## Type
 
 ```ts
 function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode;
-```
 
-```ts
 interface UseFloatingNodeOptions {
   anchorEl: Ref<AnchorElement>;
   floatingEl: Ref<FloatingElement>;
@@ -24,7 +24,6 @@ interface UseFloatingNodeOptions {
 
 type AnchorElement = HTMLElement | VirtualElement | null;
 type FloatingElement = HTMLElement | null;
-
 type FloatingNodeId = symbol;
 
 interface FloatingNodeElements {
@@ -41,43 +40,7 @@ interface FloatingNode {
   lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
   lastOpenEvent?: Readonly<Ref<Event | null>>;
 }
-```
 
-## Options
-
-| Name | Type | Notes |
-| --- | --- | --- |
-| `anchorEl` | `Ref<AnchorElement>` | Required. Also accepts a [virtual element](/guide/use-virtual-anchors). |
-| `floatingEl` | `Ref<FloatingElement>` | Required. |
-| `arrowEl` | `Ref<HTMLElement \| null>` | Optional. Used by [`useArrow`](/api/use-arrow); an empty ref is created when omitted. |
-| `open` | `Ref<boolean>` | Controlled open state. When passed, `defaultOpen` is ignored after creation. |
-| `defaultOpen` | `boolean` | Seeds uncontrolled state. Defaults to `false`. |
-| `onOpenChange` | `(open, reason, event?) => void` | Called only when the value actually changes. |
-
-## Returns
-
-| Name | Type | Notes |
-| --- | --- | --- |
-| `id` | `FloatingNodeId` | Stable symbol; trees use it instead of object identity. |
-| `refs` | `FloatingNodeElements` | Shared `anchorEl` / `floatingEl` / `arrowEl` refs. |
-| `open` | `Readonly<Ref<boolean>>` | Current open state. |
-| `setOpen` | `(open, reason?, event?) => void` | Missing reasons fall back to `"programmatic"`. |
-| `lastOpenReason` | `Readonly<Ref<OpenChangeReason \| null>>` | `null` when closed. |
-| `lastOpenEvent` | `Readonly<Ref<Event \| null>>` | `null` when closed. |
-
-## Details
-
-`useFloatingNode` does not compute coordinates, run middlewares, or join a tree. Add [`usePosition`](/api/use-position) when a surface needs JavaScript positioning, and join a [`useFloatingTree`](/api/use-floating-tree) only when related surfaces need coordination such as nested menus.
-
-- Passing `open` makes the node controlled: your ref owns the value and `defaultOpen` is ignored after creation.
-- `setOpen(open, reason = "programmatic", event?)` stores the reason and source event, then forwards them to `onOpenChange` only when the value actually changes.
-- Reaffirming the current open value (`setOpen(true)` while already open) still updates `lastOpenReason` and `lastOpenEvent` without calling `onOpenChange`.
-- `setOpen` never cascades to other nodes. Closing a parent leaves descendants open unless you call `tree.closeDescendants(node, reason, event)` explicitly.
-- The node object itself is never mutated by tree linkage; hierarchy lives in the tree's map.
-
-Open-change reasons use these string values:
-
-```ts
 type OpenChangeReason =
   | "anchor-click"
   | "keyboard-activate"
@@ -91,9 +54,55 @@ type OpenChangeReason =
   | "programmatic";
 ```
 
+## Options
+
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `anchorEl` | `Ref<AnchorElement>` | Required | Reference element or [virtual element](/guide/use-virtual-anchors). |
+| `floatingEl` | `Ref<FloatingElement>` | Required | Floating content element. |
+| `arrowEl` | `Ref<HTMLElement \| null>` | `ref(null)` | Optional arrow element ref. Automatically created when omitted. |
+| `open` | `Ref<boolean>` | `undefined` | Controlled open ref. When supplied, `defaultOpen` is ignored. |
+| `defaultOpen` | `boolean` | `false` | Initial state when uncontrolled. |
+| `onOpenChange` | `(open, reason, event?) => void` | `undefined` | Callback invoked only when open state actually changes. |
+
+## Returns
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `id` | `FloatingNodeId` | Stable symbol identifying the node in trees. |
+| `refs` | `FloatingNodeElements` | Shared `anchorEl`, `floatingEl`, and `arrowEl` refs. |
+| `open` | `Readonly<Ref<boolean>>` | Current reactive open state. |
+| `setOpen` | `(open, reason?, event?) => void` | Updates open state with an explicit reason. Missing reason defaults to `"programmatic"`. |
+| `lastOpenReason` | `Readonly<Ref<OpenChangeReason \| null>>` | Reason that triggered the latest open state change. `null` when closed. |
+| `lastOpenEvent` | `Readonly<Ref<Event \| null>>` | DOM event that triggered the change. `null` when closed. |
+
+## Details
+
+### Controlled vs Uncontrolled State
+
+When you pass an external `open` ref to `useFloatingNode({ anchorEl, floatingEl, open })`, the node operates in **controlled mode**. The external ref is the single source of truth:
+
+```ts
+const isOpen = ref(false);
+const node = useFloatingNode({ anchorEl, floatingEl, open: isOpen });
+```
+
+When you omit `open`, the node creates internal state initialized with `defaultOpen`. Call `node.setOpen(value, reason, event)` to change state.
+
+### Reason Tracking
+
+`setOpen` accepts an `OpenChangeReason` string:
+
+- Reaffirming the existing state (calling `node.setOpen(true)` when already open) updates `lastOpenReason` and `lastOpenEvent` without firing `onOpenChange`. This mechanism allows [`useClick`](/api/use-click) with `stickIfOpen` to pin a hover-opened surface.
+- `onOpenChange` is invoked only when the boolean value transitions.
+
+### Tree Isolation
+
+`useFloatingNode` creates an independent node. Nodes do not know about parents or children until explicitly added to a [`useFloatingTree`](/api/use-floating-tree). Calling `node.setOpen(false)` on a parent node never automatically closes descendant nodes unless you coordinate them through the tree.
+
 ## Example
 
-This dialog uses node state and behavior without JavaScript positioning.
+This dialog pairs `useFloatingNode` with dismissal and role semantics without JavaScript positioning:
 
 ```vue
 <script setup lang="ts">
@@ -105,14 +114,17 @@ const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
 
-useDismiss(node, { outsidePress: false });
+useDismiss(node);
 useRole(node, { role: "dialog" });
 </script>
 
 <template>
-  <button ref="anchorEl" @click="node.setOpen(true, 'anchor-click', $event)">Open dialog</button>
+  <button ref="anchorEl" @click="node.setOpen(true, 'anchor-click', $event)">
+    Open Dialog
+  </button>
 
   <div v-if="node.open" ref="floatingEl" class="dialog">
+    <p>Dialog content</p>
     <button @click="node.setOpen(false, 'programmatic', $event)">Close</button>
   </div>
 </template>
@@ -120,7 +132,7 @@ useRole(node, { role: "dialog" });
 
 ## See Also
 
-- [`useFloatingTree`](/api/use-floating-tree) - Coordinate related nodes such as nested menus
-- [`usePosition`](/api/use-position) - Opt into JavaScript positioning
-- [`useClick`](/api/use-click) - Click-based activation
-- [Floating Context](/guide/floating-context) - Node mental model
+- [`useFloatingTree`](/api/use-floating-tree) - Coordinate parent-child node relationships
+- [`usePosition`](/api/use-position) - Add reactive coordinate calculations
+- [`useClick`](/api/use-click) - Toggle open state on click or tap
+- [Floating Context](/guide/floating-context) - Conceptual guide to floating nodes

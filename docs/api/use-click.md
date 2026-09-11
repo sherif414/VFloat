@@ -1,14 +1,12 @@
 ---
-description: Opens and closes floating content on click.
+description: Opens and closes floating content on click, tap, or keyboard activation.
 ---
 
 # useClick
 
-`useClick` toggles a floating node from pointer and keyboard activation. Pair it with [`useDismiss`](/api/use-dismiss) when the same surface should close on Escape or outside pointer input.
+`useClick` toggles a floating node from pointer and keyboard activation on the anchor element. Pair it with [`useDismiss`](/api/use-dismiss) when the surface should close on outside clicks or Escape key presses.
 
 ## Type
-
-The full call signature and its context and options shapes:
 
 ```ts
 function useClick(node: UseClickContext, options?: UseClickOptions): void;
@@ -33,29 +31,37 @@ interface UseClickOptions {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates all anchor listeners. |
-| `event` | `MaybeRefOrGetter<"click" \| "mousedown">` | `"click"` | With `"mousedown"`, only the left button toggles; keyboard handling is unchanged. |
-| `toggle` | `MaybeRefOrGetter<boolean>` | `true` | With `false`, clicks open but never close. |
-| `stickIfOpen` | `MaybeRefOrGetter<boolean>` | `false` | Pins a hover- or focus-opened surface on first click. |
-| `ignoreMouse` | `MaybeRefOrGetter<boolean>` | `false` | Ignores mouse input only; pen still toggles. |
-| `ignoreKeyboard` | `MaybeRefOrGetter<boolean>` | `false` | Disables Enter and Space handling. |
-| `ignoreTouch` | `MaybeRefOrGetter<boolean>` | `false` | Ignores touch input only. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Disabling removes all anchor listeners. |
+| `event` | `MaybeRefOrGetter<"click" \| "mousedown">` | `"click"` | Which DOM event triggers opening. `"mousedown"` fires immediately on press. |
+| `toggle` | `MaybeRefOrGetter<boolean>` | `true` | When `false`, clicking opens the surface but never toggles it closed. |
+| `stickIfOpen` | `MaybeRefOrGetter<boolean>` | `false` | Pins an open surface when first opened by hover or focus. |
+| `ignoreMouse` | `MaybeRefOrGetter<boolean>` | `false` | Ignores mouse clicks only; pen and touch events still trigger. |
+| `ignoreKeyboard` | `MaybeRefOrGetter<boolean>` | `false` | Disables Enter and Space keyboard activation. |
+| `ignoreTouch` | `MaybeRefOrGetter<boolean>` | `false` | Ignores touch taps only. |
 
 ## Returns
 
-Returns `void`. All behavior is anchor listeners that reattach when the anchor element or `enabled` changes.
+`useClick` returns `void`. It manages listeners on `node.refs.anchorEl` that automatically reattach when elements change or unmount.
 
 ## Details
 
-`useClick` attaches trigger handlers to `refs.anchorEl`. It supports mouse, touch, and keyboard activation, including Enter and Space on non-button triggers.
+### Pointer and Keyboard Activation
 
-- `stickIfOpen` keeps an already-open floating element open (pins it) when opened by another trigger like `useHover` or `useFocus`. When set to `true`, the first click pins the element open (transitioning its reason to `"anchor-click"` and preventing hover dismissal on pointer leave), while subsequent clicks toggle it closed.
-- `ignoreMouse` ignores mouse input only; pen input still toggles. `ignoreTouch` ignores touch input only. `ignoreKeyboard` disables Enter and Space handling and swallows the synthetic clicks they produce on native buttons.
-- Opens with the `"anchor-click"` reason, or `"keyboard-activate"` when Enter or Space is handled on a non-native trigger. Native buttons, links with `href`, and typeable elements keep their default behavior instead of emitting `"keyboard-activate"`.
+`useClick` attaches listeners directly to `node.refs.anchorEl`. It handles mouse clicks, touchscreen taps, and keyboard activation:
+
+- Pressing Enter or Space on non-button elements (e.g. a `<div>` with `tabindex="0"`) dispatches `node.setOpen(..., "keyboard-activate")`.
+- Native `<button>` and `<a>` elements retain native activation semantics and emit `"anchor-click"`.
+
+### Pinning with `stickIfOpen`
+
+When combining hover previews with click actions (such as an interactive tooltip or popover card):
+
+1. User hovers over the trigger &rarr; [`useHover`](/api/use-hover) opens the surface with reason `"hover"`.
+2. User clicks the trigger &rarr; `useClick` with `stickIfOpen: true` catches the click and changes the reason to `"anchor-click"`.
+3. User moves the mouse away &rarr; `useHover` detects the pin reason and will not close the surface on pointer leave.
+4. User clicks the trigger again &rarr; `useClick` toggles the pinned surface closed.
 
 ## Example
-
-Start with a minimal click toggle:
 
 ```vue
 <script setup lang="ts">
@@ -66,24 +72,33 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node);
+const { styles } = usePosition(node, {
+  placement: "bottom-start",
+  middlewares: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+  },
+});
+
 useClick(node);
-useDismiss(node, { outsidePress: false });
+useDismiss(node);
 </script>
 
 <template>
-  <button ref="anchorEl">Toggle</button>
+  <button ref="anchorEl">Toggle Menu</button>
 
-  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" class="dropdown" :style="styles">
+    <button @click="node.setOpen(false)">Profile</button>
+    <button @click="node.setOpen(false)">Settings</button>
+    <button @click="node.setOpen(false)">Logout</button>
+  </div>
 </template>
 ```
 
-Pair with [`useDismiss`](/api/use-dismiss) when the same surface should close on Escape or outside pointer input. See [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for the dismissal workflow.
-
 ## See Also
 
-- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
-- [`useHover`](/api/use-hover) - Opens on hover; pairs with `stickIfOpen`
-- [`useFocus`](/api/use-focus) - Opens on focus
-- [`useDismiss`](/api/use-dismiss) - Closes on Escape and outside pointer input
-- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) - Click workflow
+- [`useHover`](/api/use-hover) - Open on pointer hover; pairs with `stickIfOpen`
+- [`useDismiss`](/api/use-dismiss) - Dismiss on Escape and outside pointer events
+- [`useFocus`](/api/use-focus) - Trigger on keyboard focus
+- [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) - Click and dismissal workflow

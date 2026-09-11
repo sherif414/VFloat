@@ -1,18 +1,16 @@
 ---
-description: Add opt-in JavaScript positioning to a floating node.
+description: Add reactive positioning styles to a floating node using Floating UI.
 ---
 
 # usePosition
 
-`usePosition` adds JavaScript geometry to an existing floating node. It owns placement, strategy, middleware configuration, generated styles, auto-update wiring, and manual updates.
+`usePosition` computes reactive screen coordinates and inline styles for an existing floating node. It configures the middleware pipeline, sets placement and positioning strategy, auto-updates on scroll and resize, and exposes a ready-to-bind style object.
 
 ## Type
 
 ```ts
 function usePosition(node: FloatingNode, options?: UsePositionOptions): FloatingPosition;
-```
 
-```ts
 interface UsePositionOptions {
   placement?: MaybeRefOrGetter<Placement | undefined>;
   strategy?: MaybeRefOrGetter<Strategy | undefined>;
@@ -20,11 +18,6 @@ interface UsePositionOptions {
   middlewares?: MaybeRefOrGetter<UsePositionMiddlewaresOptions | Middleware[] | undefined>;
   autoUpdate?: MaybeRefOrGetter<boolean | AutoUpdateOptions | undefined>;
   enabled?: MaybeRefOrGetter<boolean>;
-}
-
-interface UsePositionArrowOptions {
-  element?: Ref<HTMLElement | null>;
-  padding?: Padding;
 }
 
 interface UsePositionMiddlewaresOptions {
@@ -38,6 +31,11 @@ interface UsePositionMiddlewaresOptions {
   hide?: true | false | HideOptions;
   arrow?: true | false | UsePositionArrowOptions;
   custom?: MaybeRefOrGetter<Middleware[] | undefined>;
+}
+
+interface UsePositionArrowOptions {
+  element?: Ref<HTMLElement | null>;
+  padding?: Padding;
 }
 
 interface FloatingPosition {
@@ -66,64 +64,80 @@ type FloatingStyles = {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `placement` | `MaybeRefOrGetter<Placement \| undefined>` | `"bottom"` | Reactive; changing triggers recompute. |
-| `strategy` | `MaybeRefOrGetter<Strategy \| undefined>` | `"absolute"` | Reactive; `"absolute"` or `"fixed"`. |
-| `transform` | `MaybeRefOrGetter<boolean \| undefined>` | `true` | Writes coordinates as CSS `transform`; `false` writes `left`/`top`. |
-| `middlewares` | `MaybeRefOrGetter<UsePositionMiddlewaresOptions \| Middleware[] \| undefined>` | `[]` | Declarative object resolving built-in middlewares or a raw `Middleware[]` array. |
-| `autoUpdate` | `MaybeRefOrGetter<boolean \| AutoUpdateOptions \| undefined>` | `true` | `false` disables; wiring runs only while `enabled` and both elements are mounted. |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates computation and listeners without tying to open state. |
+| `placement` | `MaybeRefOrGetter<Placement>` | `"bottom"` | Desired side and alignment (e.g. `"bottom-start"`). Reactive. |
+| `strategy` | `MaybeRefOrGetter<Strategy>` | `"absolute"` | CSS positioning strategy: `"absolute"` or `"fixed"`. Reactive. |
+| `transform` | `MaybeRefOrGetter<boolean>` | `true` | `true` uses CSS `transform: translate(x, y)`. `false` sets `top` and `left`. |
+| `middlewares` | `MaybeRefOrGetter<UsePositionMiddlewaresOptions \| Middleware[]>` | `{}` | Declarative middleware configuration or a raw `Middleware[]` array. |
+| `autoUpdate` | `MaybeRefOrGetter<boolean \| AutoUpdateOptions>` | `true` | Automatically recomputes on resize, scroll, and layout changes. Set `false` to disable. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Controls whether positioning computations and viewport listeners are active. |
 
-### Middlewares Options
+### Declarative Middleware Options
 
-When passing an options object to `middlewares`, entries are resolved in standard pipeline order:
+When passing an object to `middlewares`, VFloat resolves built-in middlewares in the recommended pipeline order:
 
-1. `inline`: Positions relative to individual client rects for multi-line inline triggers.
-2. `offset`: Adds spacing between trigger and floating element.
-3. `flip`: Flips floating element to opposite placement when overflowing.
-4. `autoPlacement`: Chooses placement with the most available space (cannot combine with `flip`).
-5. `shift`: Shifts floating element along its axis to remain in the viewport.
-6. `matchWidth`: Resizes floating element to match trigger element width (`size` middleware).
-7. `size`: Measures available space and runs custom resize logic.
-8. `hide`: Identifies when trigger or floating element is clipped or escapes view.
-9. `arrow`: Positions an arrow element (uses `node.refs.arrowEl` or custom element ref).
-10. `custom`: Array of custom Floating UI middleware instances appended at the end.
+| Option | Type | Pipeline Step | Purpose |
+| --- | --- | --- | --- |
+| `inline` | `boolean \| InlineOptions` | 1 | Dissects multi-line inline triggers into individual client rects. |
+| `offset` | `number \| OffsetOptions` | 2 | Adds distance between the anchor and the floating panel. |
+| `flip` | `boolean \| FlipOptions` | 3 | Flips to alternate placements when space is constrained. |
+| `autoPlacement` | `boolean \| AutoPlacementOptions` | 4 | Chooses the placement with the most available space (mutually exclusive with `flip`). |
+| `shift` | `boolean \| ShiftOptions` | 5 | Nudges the element along the viewport boundary to stay visible. |
+| `matchWidth` | `boolean` | 6 | Sets panel width to match the anchor's measured width via `size`. |
+| `size` | `SizeOptions` | 7 | Measures boundary limits and invokes a custom resizing function. |
+| `hide` | `boolean \| HideOptions` | 8 | Flags whether the anchor is clipped or the panel escaped boundaries. |
+| `arrow` | `boolean \| UsePositionArrowOptions` | 9 | Calculates offsets for an arrow element using `node.refs.arrowEl`. |
+| `custom` | `Middleware[]` | 10 | Appends custom Floating UI middleware instances at the end of the pipeline. |
 
-Alternatively, pass a raw `Middleware[]` array directly to `middlewares` for full control over middleware instances and pipeline ordering.
+Alternatively, you can pass a raw `Middleware[]` array to `middlewares` to fully customize the middleware instances and execution order.
 
 ## Returns
 
 | Name | Type | Notes |
 | --- | --- | --- |
-| `x` / `y` | `Readonly<Ref<number>>` | Last computed coordinates. |
-| `strategy` / `placement` | `Readonly<Ref<…>>` | Last computed strategy and placement. |
-| `middlewareData` | `Readonly<Ref<MiddlewareData>>` | Raw middleware output from the pipeline. |
-| `isPositioned` | `Readonly<Ref<boolean>>` | `true` after compute completes with mounted elements; resets to `false` when unmounted or disabled. |
-| `styles` | `Readonly<Ref<FloatingStyles>>` | Inline style object with subpixel-rounded coordinates. Safe base styles rendered during SSR. |
-| `update` | `() => Promise<void>` | Manual recompute; no-op while disabled or elements are missing. |
+| `x` / `y` | `Readonly<Ref<number>>` | Computed horizontal and vertical coordinates in pixels. |
+| `strategy` | `Readonly<Ref<Strategy>>` | Active positioning strategy (`"absolute"` or `"fixed"`). |
+| `placement` | `Readonly<Ref<Placement>>` | Effective placement after middleware execution (e.g. after flipping). |
+| `middlewareData` | `Readonly<Ref<MiddlewareData>>` | Raw output produced by middlewares (such as arrow coordinates or hide flags). |
+| `isPositioned` | `Readonly<Ref<boolean>>` | Becomes `true` once coordinates are computed for mounted elements. Resets to `false` on unmount. |
+| `styles` | `Readonly<Ref<FloatingStyles>>` | Reactive inline style object with device-pixel-ratio subpixel rounding. Bind directly to `:style="styles"`. |
+| `update` | `() => Promise<void>` | Imperatively forces an immediate coordinate recomputation. |
 
 ## Details
 
-`usePosition` reads `node.refs.anchorEl` and `node.refs.floatingEl`. It never creates or mutates open state.
+### Subpixel Snapping and Performance
 
-- `middlewares.custom` appends raw middleware after declarative entries.
-- Passing a raw `Middleware[]` array directly to `middlewares: [...]` replaces declarative assembly entirely.
-- Companion composables such as [`useArrow`](/api/use-arrow) register their middleware dynamically into the node's internal middleware registry.
-- `placement`, `strategy`, `middlewares`, and `enabled` all accept reactive values. Changing them automatically triggers a recompute.
+`styles` applies `Math.round(val * dpr) / dpr` to coordinate outputs using `window.devicePixelRatio`. This prevents blurred text and rendering artifacts on high-DPI displays. On displays with DPR &ge; 1.5, `will-change: transform` is automatically applied.
+
+### Server-Side Rendering (SSR)
+
+`usePosition` is safe to run in SSR environments. On the server, `styles` renders safe baseline rules:
+
+```css
+position: absolute;
+left: 0;
+top: 0;
+```
+
+Full coordinate calculation begins once components mount in the browser.
+
+### Dynamic Middleware Contributions
+
+Companion composables such as [`useArrow`](/api/use-arrow) dynamically register their middleware into the node's internal registry. You do not need to configure arrow middleware manually when calling `useArrow(node)`.
 
 ## Example
 
-### Declarative Middlewares
+### Declarative Middleware Configuration
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, useHover, usePosition, useRole } from "v-float";
+import { useFloatingNode, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+const { styles, placement } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -134,22 +148,24 @@ const { styles } = usePosition(node, {
 });
 
 useHover(node);
-useRole(node, { role: "tooltip" });
 </script>
 
 <template>
   <button ref="anchorEl">Hover me</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles">Helpful detail</div>
+  <div v-if="node.open" ref="floatingEl" :style="styles" :data-placement="placement">
+    Tooltip content
+  </div>
 </template>
 ```
 
-### Raw Middleware Array
+### Match Anchor Width
+
+For dropdowns and select menus where the panel should match the trigger width:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { flip, offset, shift } from "@floating-ui/dom";
-import { useFloatingNode, usePosition } from "v-float";
+import { useClick, useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -157,18 +173,28 @@ const floatingEl = ref<HTMLElement | null>(null);
 const node = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(node, {
   placement: "bottom-start",
-  middlewares: [
-    offset(10),
-    flip(),
-    shift({ padding: 12 }),
-  ],
+  middlewares: {
+    offset: 4,
+    matchWidth: true,
+  },
 });
+
+useClick(node);
 </script>
+
+<template>
+  <button ref="anchorEl" style="width: 240px">Select an option</button>
+  <div v-if="node.open" ref="floatingEl" :style="styles">
+    Matches anchor width (240px)
+  </div>
+</template>
 ```
 
 ## See Also
 
-- [`useFloatingNode`](/api/use-floating-node) - Shared refs and open state
-- [`useArrow`](/api/use-arrow) - Arrow element positioning and styles
-- [`offset`](/api/offset) - Add space between anchor and floating element
-- [Placement and Positioning](/guide/placement-and-positioning) - Positioning mental model
+- [`useFloatingNode`](/api/use-floating-node) - Provides element refs and open state
+- [`useArrow`](/api/use-arrow) - Connects and styles an arrow element
+- [`offset`](/api/offset) - Distance middleware
+- [`flip`](/api/flip) - Placement fallback middleware
+- [`shift`](/api/shift) - Viewport containment middleware
+- [Placement and Positioning](/guide/placement-and-positioning) - Positioning concepts and pipeline

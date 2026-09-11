@@ -1,14 +1,14 @@
 ---
-description: Positions the arrow so it stays aligned with the reference element.
+description: Calculates offsets to align an arrow element with the anchor.
 ---
 
 # arrow
 
-`arrow` positions an arrow element so it points toward the anchor element and exposes the resulting coordinates through the node middleware data. Use it when the floating panel needs a visual pointer.
+`arrow` calculates the horizontal or vertical offset required to keep an arrow element aligned with the anchor while staying within the floating panel's bounds.
+
+In most applications, prefer [`useArrow`](/api/use-arrow), which automates element measurement, middleware registration, and CSS inset style generation. Use this low-level middleware when building custom positioning pipelines.
 
 ## Type
-
-The factory signature and its data shapes:
 
 ```ts
 function arrow(options: ArrowMiddlewareOptions): Middleware;
@@ -22,69 +22,109 @@ interface ArrowData {
   x?: number;
   y?: number;
   centerOffset: number;
+  alignmentOffset?: number;
 }
 ```
 
 ## Options
 
-| Name | Type | Notes |
+| Name | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `element` | `Ref<HTMLElement \| null>` | Required | Vue ref holding the arrow DOM element to measure. |
+| `padding` | `Padding` | `0` | Minimum clearance keeping the arrow away from the floating element's rounded corners. |
+
+## Returns
+
+`arrow` returns a `Middleware` object with `name: "arrow"`. It writes calculated coordinates to `middlewareData.value.arrow`:
+
+| Field | Type | Notes |
 | --- | --- | --- |
-| `element` | `Ref<HTMLElement \| null>` | Arrow element ref. When `null`, the middleware returns no data. |
-| `padding` | `Padding` | Keeps the arrow away from the floating edges. |
+| `x` | `number \| undefined` | Horizontal offset in pixels for top and bottom placements. |
+| `y` | `number \| undefined` | Vertical offset in pixels for left and right placements. |
+| `centerOffset` | `number` | Distance in pixels from the arrow center to the anchor center. |
+| `alignmentOffset` | `number \| undefined` | Offset relative to alignment edges. |
 
 ## Details
 
-`arrow` is a thin wrapper around Floating UI's arrow middleware. Pass the arrow element ref through `element`, and use `padding` to keep the arrow away from the edges of the floating element. When `element` is `null`, the middleware returns no data instead of measuring.
+### Pipeline Placement
 
-The middleware writes its result to `middlewareData.value.arrow`. That data is usually consumed by `useArrow()`, or by a small computed style object when you want to place the arrow manually. Prefer `useArrow()` when you want registration, RTL-aware inset styles, and scope cleanup handled for you.
+`arrow` must run **near the end of the pipeline**, specifically **after `shift`**:
+
+1. `flip` and `shift` determine where the panel sits on screen.
+2. If `arrow` ran before `shift`, shifting the panel sideways would leave the arrow misaligned with the anchor.
+3. Running `arrow` after `shift` ensures the arrow offset can adapt to the panel's shifted position.
 
 ## Example
 
-Compose `arrow` through `middlewares.custom` and read its data for manual styles:
+```vue
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { arrow, useFloatingNode, usePosition } from "v-float";
 
-  ```vue
-  <script setup lang="ts">
-  import { computed, ref } from "vue";
-  import { arrow, useFloatingNode, usePosition } from "v-float";
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+const arrowEl = ref<HTMLElement | null>(null);
 
-  const anchorEl = ref<HTMLElement | null>(null);
-  const floatingEl = ref<HTMLElement | null>(null);
-  const arrowEl = ref<HTMLElement | null>(null);
-  const open = ref(true);
+const node = useFloatingNode({ anchorEl, floatingEl, arrowEl });
+const { styles, middlewareData, placement } = usePosition(node, {
+  placement: "top",
+  middlewares: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+    arrow: { element: arrowEl, padding: 4 },
+  },
+});
 
-  const node = useFloatingNode({ anchorEl, floatingEl, open });
-  const { middlewareData, styles } = usePosition(node, {
-    placement: "top",
-    middlewares: {
-      offset: 8,
-      custom: [arrow({ element: arrowEl, padding: 8 })],
-    },
-  });
+const arrowStyle = computed(() => {
+  const data = middlewareData.value.arrow;
+  if (!data) return {};
 
-  const arrowStyles = computed(() => {
-    const data = middlewareData.value.arrow;
-    const nextStyles: Record<string, string> = {};
+  const side = placement.value.split("-")[0];
+  const staticSide = {
+    top: "bottom",
+    right: "left",
+    bottom: "top",
+    left: "right",
+  }[side]!;
 
-    if (!data) return nextStyles;
-    if (data.x != null) nextStyles.left = `${data.x}px`;
-    if (data.y != null) nextStyles.top = `${data.y}px`;
+  return {
+    left: data.x != null ? `${data.x}px` : "",
+    top: data.y != null ? `${data.y}px` : "",
+    [staticSide]: "-4px",
+  };
+});
+</script>
 
-    return nextStyles;
-  });
-  </script>
+<template>
+  <button ref="anchorEl">Anchor</button>
 
-  <template>
-    <button ref="anchorEl">Anchor</button>
+  <div v-if="node.open" ref="floatingEl" class="panel" :style="styles">
+    Tooltip panel
+    <div ref="arrowEl" class="arrow" :style="arrowStyle" />
+  </div>
+</template>
 
-    <div v-if="node.open" ref="floatingEl" :style="styles">
-      <div ref="arrowEl" style="position: absolute" :style="arrowStyles">^</div>
-      Floating content
-    </div>
-  </template>
-  ```
+<style scoped>
+.panel {
+  position: relative;
+  background: black;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+.arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: black;
+  transform: rotate(45deg);
+}
+</style>
+```
 
 ## See Also
 
-- [`useArrow`](/api/use-arrow) - Registers and styles the arrow element from the floating node
-- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
-- [`offset`](/api/offset) - Adds spacing between the anchor and floating element
+- [`useArrow`](/api/use-arrow) - High-level composable that generates ready-to-bind arrow styles
+- [`usePosition`](/api/use-position) - Positioning engine
+- [`shift`](/api/shift) - Viewport containment middleware

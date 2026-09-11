@@ -1,10 +1,10 @@
 ---
-description: Opens and closes floating content on hover.
+description: Opens and closes floating content on pointer hover.
 ---
 
 # useHover
 
-`useHover` opens and closes a floating node when the pointer enters or leaves the anchor or floating element.
+`useHover` opens and closes a floating node when the pointer enters or leaves the anchor or floating element. It supports open/close delays, rest-before-open timers, and safe polygons that bridge the gap between trigger and floating panel.
 
 ## Type
 
@@ -32,38 +32,50 @@ interface SafePolygonOptions {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates all hover listeners. |
-| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware leave checks for nested surfaces. |
-| `delay` | `MaybeRefOrGetter<number \| { open?: number; close?: number }>` | `0` | Single number or separate open/close values. |
-| `restMs` | `MaybeRefOrGetter<number>` | `0` | Requires pointer rest before opening. |
-| `mouseOnly` | `MaybeRefOrGetter<boolean>` | `false` | Limits to `pointerType === "mouse"`. |
-| `safePolygon` | `MaybeRefOrGetter<boolean \| SafePolygonOptions>` | `false` | Keeps open while moving between trigger and panel. |
-| `ignorePointerLeave` | `(target: EventTarget \| null) => boolean` | — | Skips selected leave events. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Gates all hover listeners. |
+| `tree` | `FloatingTree \| null` | `undefined` | Tree context for family-aware leave checks across nested surfaces. |
+| `delay` | `MaybeRefOrGetter<number \| { open?: number; close?: number }>` | `0` | Debounce duration in milliseconds for open and close transitions. |
+| `restMs` | `MaybeRefOrGetter<number>` | `0` | Duration the pointer must rest stationary over the anchor before opening. |
+| `mouseOnly` | `MaybeRefOrGetter<boolean>` | `false` | When `true`, ignores touch or pen hover events. |
+| `safePolygon` | `MaybeRefOrGetter<boolean \| SafePolygonOptions>` | `false` | Keeps panel open while the pointer travels across the gap between anchor and floating panel. |
+| `ignorePointerLeave` | `(target: EventTarget \| null) => boolean` | `undefined` | Callback returning `true` to ignore selected pointer-leave events. |
+
+### Safe Polygon Options
+
+When `safePolygon` is `true` or an object, an invisible directional polygon is calculated between the pointer and the floating panel:
+
+| Option | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `buffer` | `number` | `1` | Extra pixel padding added around the travel corridor. |
+| `requireIntent` | `boolean` | `true` | Requires pointer velocity and direction to point toward the floating element. |
+| `onPolygonChange` | `(polygon: Polygon) => void` | `undefined` | Callback receiving updated polygon coordinates for debugging or visualization. |
 
 ## Returns
 
-Returns `void`. Hover shares the node's open state and never closes a surface pinned by another reason.
+`useHover` returns `void`. It manages listeners on the anchor and floating elements that automatically clean up when components unmount.
 
 ## Details
 
-`useHover` is the right fit for tooltips, previews, and other surfaces that should follow pointer intent. It shares the node's open state, so hover can coexist with click or focus on the same surface: hover never closes a surface pinned by another reason, and `stickIfOpen` in [`useClick`](/api/use-click) re-affirms the reason so hover leave stops dismissing after a pinning click.
+### Preventing Accidental Triggers with `restMs`
 
-- `delay` can be a single number or separate open and close values. A missing side falls back to `0`. Leaving cancels a pending open; re-entering cancels a pending close.
-- `restMs` only matters when the open delay is `0`: pointer movement beyond a small threshold re-arms the timer, and leaving the anchor cancels it.
-- `safePolygon` infers travel direction from rendered rectangles, so it does not depend on `usePosition`. Pass `true` for defaults (`buffer: 1`, `requireIntent: true`) or a `SafePolygonOptions` object to tune them. Clearing the polygon (on close or re-enter) reports an empty polygon through `onPolygonChange`.
-- `tree` makes pointer-leave checks family-aware across nested surfaces: moving into a descendant's elements does not close the parent. When omitted, only the node's own anchor and floating elements count as inside.
-- `ignorePointerLeave` runs after the family check.
+When users quickly skim across a row of buttons or table cells, instant tooltips create visual noise. Setting `restMs: 150` waits until the pointer stops moving before opening.
 
-`useHover` opens and closes with the `hover` reason.
+### Bridging Gaps with `safePolygon`
+
+If your floating panel is separated from the anchor by an offset margin, moving the mouse to click an item in the panel would trigger a `pointerleave` event on the anchor and dismiss the panel.
+
+Enabling `safePolygon: true` tracks the pointer trajectory. As long as the cursor moves toward the floating panel inside the dynamic cone, the surface remains open.
+
+### Pinning and Reason Protection
+
+`useHover` opens and closes with reason `"hover"`. If another interaction composable (such as [`useClick`](/api/use-click)) pins the surface with another reason, `useHover` detects the change and will not dismiss the surface on pointer leave.
 
 ## Example
-
-Open a tooltip on hover with open/close delays:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, usePosition, useHover } from "v-float";
+import { useFloatingNode, useHover, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -71,24 +83,33 @@ const floatingEl = ref<HTMLElement | null>(null);
 const node = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(node, {
   placement: "top",
+  middlewares: {
+    offset: 8,
+    flip: true,
+    shift: { padding: 8 },
+  },
 });
 
 useHover(node, {
-  delay: { open: 100, close: 150 },
+  delay: { open: 150, close: 100 },
   safePolygon: true,
 });
 </script>
 
 <template>
-  <button ref="anchorEl">Hover me</button>
+  <button ref="anchorEl">Hover for details</button>
 
-  <div v-if="node.open" ref="floatingEl" :style="styles">Tooltip content</div>
+  <div v-if="node.open" ref="floatingEl" class="card" :style="styles">
+    <p>Interactive floating card with links</p>
+    <a href="#more">Read documentation</a>
+  </div>
 </template>
 ```
 
 ## See Also
 
-- [`useClick`](/api/use-click) - Opens on click; pairs with hover pinning
-- [`useFocus`](/api/use-focus) - Opens on focus
-- [`useFloatingNode`](/api/use-floating-node) - Creates shared refs and open state
-- [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Hover workflow
+- [`useClick`](/api/use-click) - Click toggle; supports hover pinning with `stickIfOpen`
+- [`useFocus`](/api/use-focus) - Keyboard focus trigger for accessible tooltips
+- [`useFloatingTree`](/api/use-floating-tree) - Prevents parent dismissal when hovering nested menus
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Tooltip patterns and best practices
+- [Safe Polygon Gotchas](/guide/safe-polygon-gotchas) - Deep dive on polygon mathematics

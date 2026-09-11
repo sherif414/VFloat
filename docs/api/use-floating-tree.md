@@ -4,17 +4,15 @@ description: Coordinate related floating nodes such as nested menus in an explic
 
 # useFloatingTree
 
-`useFloatingTree` creates an explicit coordination scope for related floating nodes. Nodes stay standalone until they join a tree with `tree.addNode()`.
+`useFloatingTree` creates an explicit coordination scope for related floating nodes. Nodes remain independent until registered with `tree.addNode()`.
+
+Trees coordinate complex UI hierarchies, such as multi-level dropdowns, nested cascading menus, and stacked popovers. When you pass `tree` to [`useDismiss`](/api/use-dismiss) or [`useHover`](/api/use-hover), interactions become family-aware: pointer events or clicks inside a child surface do not dismiss the parent surface.
 
 ## Type
 
-The factory signature and the tree coordination surface:
-
 ```ts
 function useFloatingTree(): FloatingTree;
-```
 
-```ts
 interface FloatingTree {
   addNode: (child: FloatingNode, parentId?: FloatingNodeId | null) => void;
   removeNode: (id: FloatingNodeId) => void;
@@ -52,54 +50,46 @@ interface ForEachOptions {
 }
 ```
 
+## Options
+
+`useFloatingTree` takes no parameters.
+
+## Returns
+
+`useFloatingTree` returns a `FloatingTree` instance with the following methods:
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `addNode` | `(child, parentId?) => void` | Registers a node in the tree. Pass `parentId` to link under an existing node (`null` for roots). |
+| `removeNode` | `(id) => void` | Removes a node and re-parents surviving children to the removed node's parent. |
+| `getNode` | `(id) => FloatingNode \| undefined` | Looks up a registered node by its stable id symbol. |
+| `getParent` | `(id) => FloatingNode \| undefined` | Retrieves the immediate parent node. |
+| `getChildren` | `(id) => FloatingNode[]` | Returns immediate child nodes. |
+| `getDescendants` | `(id) => FloatingNode[]` | Returns all descendants across all levels. |
+| `getFloatingElements` | `(node) => HTMLElement[]` | Collects the floating DOM elements for the given node and all its descendants. |
+| `getDeepestOpenContext` | `(node) => FloatingNode` | Returns the deepest open descendant in the current active branch. |
+| `isTargetWithin` | `(node, target) => boolean` | Checks whether an event target is contained within the node or any of its descendants. |
+| `forEach` | `(target, rel, action, options?) => void` | Traverses related nodes matching a structural relationship (`ancestors`, `descendants`, `siblings`). |
+
 ## Details
 
-Each tree owns its own node map, so multiple trees stay fully isolated from each other. The same node may join more than one tree; pass the relevant tree explicitly to interaction composables through their `tree` option.
+### Tree Lifecycles and Scope
 
-- `addNode(child, parentId = null)` registers a node and links it under `parentId` (`null` for roots). It never mutates the node object.
-- Register parents before children. Registering under an unknown parent leaves the node as a root and warns in development.
-- A node cannot be its own parent, and registering the same node twice is a no-op with a development warning.
-- `addNode` automatically unregisters when the calling effect scope disposes.
-- `removeNode(id)` removes a node and re-parents its immediate children to the removed node's parent (or to root level), so surviving subtrees stay reachable.
-- `forEach(target, relationship, action, options?)` executes a callback on all nodes matching the specified structural relationship to `target` (or a custom selector function). Returning `false` halts iteration early.
-  - `'ancestors'`: Walks up parent links to the root. Defaults to `'bottom-up'` (immediate parent first).
-  - `'descendants'`: Walks all subtrees. Defaults to `'top-down'` (shallow first). Pass `{ order: "bottom-up" }` for cascading teardown where children must close before parents.
-  - `'siblings'`: All other nodes that share target's parent (or other root nodes if target is a root).
-  - `'children'`: Immediate child nodes.
-  - `'parent'`: Immediate parent node.
-  - `'root'`: The topmost root node of target's branch.
-- `isTargetWithin(node, target)` checks the node's own anchor and floating elements plus every descendant's, which is what lets outside-click and focus checks treat a menu family as one surface.
-- `getDeepestOpenContext(node)` finds the deepest currently open node in the subtree for stacked dismissal.
-- Writing a controlled `open` ref directly does not cascade and does not call `onOpenChange`.
+- Each tree owns an isolated map of nodes. Different components or modals can maintain independent trees without interference.
+- `tree.addNode()` automatically unregisters the node when the calling component's Vue effect scope disposes.
+- When registering child nodes, ensure parent nodes are registered first. Registering under an unrecognized parent leaves the node as a root node and issues a development warning.
 
-## Example
+### Family-Aware Interaction Checks
 
-This menu registers a root node and a submenu node, then treats outside pointer input against the whole family.
+Passing `tree` to interaction composables enables family-wide boundaries:
 
-```vue
-<script setup lang="ts">
-import { ref } from "vue";
-import { useDismiss, useFloatingNode, useFloatingTree } from "v-float";
-
-const anchorEl = ref<HTMLElement | null>(null);
-const floatingEl = ref<HTMLElement | null>(null);
-const subAnchorEl = ref<HTMLElement | null>(null);
-const subFloatingEl = ref<HTMLElement | null>(null);
-
-const tree = useFloatingTree();
-const node = useFloatingNode({ anchorEl, floatingEl });
-const subNode = useFloatingNode({ anchorEl: subAnchorEl, floatingEl: subFloatingEl });
-
-tree.addNode(node);
-tree.addNode(subNode, node.id);
-
-useDismiss(node, { tree });
-</script>
-```
+- **Outside Click (`useDismiss`):** Clicking inside a submenu does not trigger an outside-press event on the parent menu.
+- **Escape Dismissal (`useDismiss`):** Pressing Escape closes the deepest open submenu first, rather than collapsing the entire menu tree at once.
+- **Hover Transitions (`useHover`):** Moving the cursor from a parent menu item into a child submenu panel does not trigger pointer-leave dismissal on the parent.
 
 ### Cascading Teardown with `tree.forEach`
 
-When closing a parent must cascade down the open tree, walk descendants bottom-up:
+When a parent menu collapses, you often want to close open child menus bottom-up:
 
 ```ts
 tree.forEach(
@@ -114,8 +104,56 @@ tree.forEach(
 );
 ```
 
+## Example
+
+This nested menu registers a root node and a submenu node, sharing one dismissal gate:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useClick, useDismiss, useFloatingNode, useFloatingTree, usePosition } from "v-float";
+
+const menuAnchorEl = ref<HTMLElement | null>(null);
+const menuFloatingEl = ref<HTMLElement | null>(null);
+const subMenuAnchorEl = ref<HTMLElement | null>(null);
+const subMenuFloatingEl = ref<HTMLElement | null>(null);
+
+const tree = useFloatingTree();
+
+const rootNode = useFloatingNode({ anchorEl: menuAnchorEl, floatingEl: menuFloatingEl });
+const subNode = useFloatingNode({ anchorEl: subMenuAnchorEl, floatingEl: subMenuFloatingEl });
+
+tree.addNode(rootNode);
+tree.addNode(subNode, rootNode.id);
+
+const rootPos = usePosition(rootNode, { placement: "bottom-start" });
+const subPos = usePosition(subNode, { placement: "right-start" });
+
+useClick(rootNode);
+useClick(subNode);
+
+useDismiss(rootNode, { tree });
+useDismiss(subNode, { tree });
+</script>
+
+<template>
+  <button ref="menuAnchorEl">Options</button>
+
+  <div v-if="rootNode.open" ref="menuFloatingEl" :style="rootPos.styles">
+    <button>Account Settings</button>
+    <button ref="subMenuAnchorEl">More Options &rarr;</button>
+
+    <div v-if="subNode.open" ref="subMenuFloatingEl" :style="subPos.styles">
+      <button>Export Data</button>
+      <button>Delete Account</button>
+    </div>
+  </div>
+</template>
+```
+
 ## See Also
 
-- [`useFloatingNode`](/api/use-floating-node) - Create the standalone nodes that join a tree
-- [`useDismiss`](/api/use-dismiss) - Dismiss a whole node family on Escape and outside input
-- [Tree Coordination Explained](/guide/tree-coordination-explained) - Why linkage is explicit
+- [`useFloatingNode`](/api/use-floating-node) - Create nodes that join a tree
+- [`useDismiss`](/api/use-dismiss) - Dismiss nested nodes sequentially on Escape or outside click
+- [Tree Coordination Explained](/guide/tree-coordination-explained) - Architecture behind explicit tree linkage
+- [Build Nested Menus](/guide/build-nested-menus) - Practical guide to multi-tier menus

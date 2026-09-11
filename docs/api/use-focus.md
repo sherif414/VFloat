@@ -1,10 +1,10 @@
 ---
-description: Opens and closes floating content on focus.
+description: Opens and closes floating content on keyboard focus.
 ---
 
 # useFocus
 
-`useFocus` opens and closes a floating node when the anchor gains or loses focus.
+`useFocus` opens and closes a floating node when the anchor gains or loses focus. By default, it activates only for keyboard focus (`:focus-visible`), preventing unwanted tooltips when clicking with a mouse.
 
 ## Type
 
@@ -29,54 +29,74 @@ interface UseFocusReturn {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Fully reactive. |
-| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware focus checks for nested surfaces. |
-| `requireFocusVisible` | `MaybeRefOrGetter<boolean>` | `true` | Keyboard focus opens; pointer-only focus usually does not. |
-| `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | — | Keeps open when focus moves to selected outside targets. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Disabling removes all focus listeners. |
+| `tree` | `FloatingTree \| null` | `undefined` | Tree context for family-aware focus checks in nested structures. |
+| `requireFocusVisible` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, opens only for keyboard navigation, ignoring pointer clicks. |
+| `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | `undefined` | Predicate to prevent closing when focus transitions to selected elements. |
 
 ## Returns
 
 | Name | Type | Notes |
 | --- | --- | --- |
-| `cleanup` | `() => void` | Removes listeners manually; also runs on scope dispose. |
+| `cleanup` | `() => void` | Manually unregisters all focus listeners. Also executes on component unmount. |
 
 ## Details
 
-`useFocus` is a keyboard-first interaction layer. It opens with the `focus` reason and closes with the `blur` reason, which keeps focus-driven surfaces easy to trace alongside hover and click interactions.
+### Focus Visible Heuristic
 
-- With the default `requireFocusVisible: true`, keyboard focus opens the surface while pointer-only focus usually does not.
-- Focus can move into the floating element, or stay within the anchor subtree, without immediately closing the surface.
-- `tree` makes focus checks family-aware across nested surfaces. When omitted, only the node's own anchor and floating elements count as inside.
-- Blur handling is deferred a tick and reads `activeElement` (rather than trusting `relatedTarget`), so Shadow DOM and programmatic focus moves close reliably. Tab-switching away and back does not reopen a closed surface.
-- Safari, window blur, and cross-document focus edge cases are handled internally.
+Most browsers set focus on a button when clicked with a mouse or tapped on mobile. If focus listeners opened a tooltip unconditionally, clicking a button would leave a sticky tooltip floating on screen.
+
+With `requireFocusVisible: true` (the default), `useFocus` inspects the browser's `:focus-visible` pseudo-class. Tabbing into a button opens the tooltip; clicking the button does not.
+
+### Deferred Blur and Focus Movement
+
+When focus leaves the anchor, dismissal is deferred to the next tick to verify where focus landed:
+
+- If focus moved into the floating panel, the surface remains open.
+- If focus moved into a registered child submenu (when passing `tree`), the parent remains open.
+- Switching tabs in the browser and returning will not reopen a closed surface.
+
+### Accessibility Pairing
+
+Combine `useFocus` with [`useHover`](/api/use-hover) and [`useRole(node, { role: "tooltip" })`](/api/use-role) to fulfill WCAG Success Criterion 1.4.13 (Content on Hover or Focus).
 
 ## Example
-
-Open on keyboard focus:
 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useFloatingNode, usePosition, useFocus } from "v-float";
+import { useFloatingNode, useFocus, useHover, usePosition, useRole } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node);
+const { styles } = usePosition(node, {
+  placement: "top",
+  middlewares: {
+    offset: 6,
+    flip: true,
+    shift: { padding: 8 },
+  },
+});
+
+useHover(node);
 useFocus(node);
+useRole(node, { role: "tooltip" });
 </script>
 
 <template>
-  <button ref="anchorEl">Focus me</button>
+  <button ref="anchorEl">Tab to focus me</button>
 
-  <div v-if="node.open" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open" ref="floatingEl" role="tooltip" :style="styles">
+    Helpful keyboard-accessible hint
+  </div>
 </template>
 ```
 
 ## See Also
 
-- [`useHover`](/api/use-hover) - Opens on hover
-- [`useClick`](/api/use-click) - Opens on click
-- [`useDismiss`](/api/use-dismiss) - Closes on Escape and outside pointer input
-- [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Focus workflow
+- [`useHover`](/api/use-hover) - Pointer hover trigger
+- [`useRole`](/api/use-role) - ARIA role and `aria-describedby` synchronization
+- [`useDismiss`](/api/use-dismiss) - Dismissal on Escape key
+- [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Complete tooltip pattern guide
