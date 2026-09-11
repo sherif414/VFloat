@@ -211,7 +211,6 @@ our [GitHub repository](https://github.com/sherif414/VFloat).
 VFloat is built on top of the excellent work of:
 
 - [Floating UI](https://floating-ui.com/) - For the core positioning and collision detection algorithms
-- [VueUse](https://vueuse.org/) - For Vue composition utilities and best practices
 
 ## License
 

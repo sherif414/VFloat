@@ -36,7 +36,7 @@ Explicitly undecided: API freeze / stable-release criteria; formal browser matri
 
 ## Brand Commitments
 
-Name VFloat. Heavily inspired by Floating UI, explicitly not a fork and not a direct API copy — VFloat naming (`useX`, `anchorEl` / `floatingEl` / `arrowEl`, kebab-case reasons) wins over Floating UI terminology. Credits: Floating UI (positioning algorithms), VueUse (composition practices). No binding visual identity, logo, palette, or type commitment volunteered — none recorded.
+Name VFloat. Heavily inspired by Floating UI, explicitly not a fork and not a direct API copy — VFloat naming (`useX`, `anchorEl` / `floatingEl` / `arrowEl`, kebab-case reasons) wins over Floating UI terminology. Credits: Floating UI (positioning algorithms). No binding visual identity, logo, palette, or type commitment volunteered — none recorded.
 
 ## Evidence on Hand
 
