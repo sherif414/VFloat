@@ -65,7 +65,7 @@ Automated changelog generators and release tools (such as `changelogen` or `sema
 - A `scope` **MAY** be provided after a type.
 - If provided, the scope **MUST** be lowercase kebab-case describing the target module or subsystem.
 - **Canonical Library Scopes (`src/`)**:
-  - `floating-context`, `hover`, `click`, `focus-manager`, `list-navigation`, `arrow`, `dismiss`, `client-point`, `position`, `types`
+  - `floating-context`, `hover`, `click`, `focus-trap`, `list-navigation`, `arrow`, `dismiss`, `client-point`, `position`, `types`
 - **Canonical Tooling / Maintainer Scopes**:
   - `skills`, `agents`, `rules`, `release`, `size`, `ci`, `docs`, `deps`, `lint`, `test`, `repo`
 - **Example:** `feat(hover):`, `fix(floating-context):`, `chore(skills):`, `ci(release):`
