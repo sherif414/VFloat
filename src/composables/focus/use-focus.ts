@@ -62,7 +62,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
   // back to their own anchor and floating elements.
   function isWithinFamily(target: EventTarget | null): boolean {
     return (
-      toValue(treeOption)?.isTargetWithin(node, target) ??
+      treeOption?.isTargetWithin(node, target) ??
       isTargetWithinElements(anchorElOption.value, node.refs.floatingEl.value, target)
     );
   }
@@ -282,7 +282,7 @@ export interface UseFocusOptions {
    * Explicit floating tree for family-aware focus checks across nested surfaces.
    * When omitted, only the node's own anchor and floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether the open state only changes if the focus event is considered

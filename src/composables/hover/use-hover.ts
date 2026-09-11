@@ -172,7 +172,7 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     // Family check scoped to the explicitly passed tree; standalone nodes fall
     // back to their own anchor and floating elements.
     const isWithinFamily =
-      toValue(treeOption)?.isTargetWithin(node, relatedTarget) ??
+      treeOption?.isTargetWithin(node, relatedTarget) ??
       isTargetWithinElements(anchorEl.value, floatingEl.value, relatedTarget);
     if (isWithinFamily) {
       return;
@@ -325,7 +325,7 @@ export interface UseHoverOptions {
    * Explicit floating tree for family-aware pointer-leave checks across nested surfaces.
    * When omitted, only the node's own anchor and floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Delay in milliseconds before showing/hiding the floating element.

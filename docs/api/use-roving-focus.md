@@ -28,7 +28,7 @@ interface UseRovingFocusOptions {
   loop?: MaybeRefOrGetter<boolean>;
   rtl?: MaybeRefOrGetter<boolean>;
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
   focusOnHover?: MaybeRefOrGetter<boolean>;
   focusDisabledElements?: MaybeRefOrGetter<boolean>;
   onSelect?: (index: number, event: KeyboardEvent) => void;
@@ -64,7 +64,7 @@ interface UseRovingFocusReturn {
 | `loop` | `MaybeRefOrGetter<boolean>` | `false` | Edges stop instead of wrapping. |
 | `rtl` | `MaybeRefOrGetter<boolean>` | auto-detected | Inverts horizontal navigation unless overridden. |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates navigation. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware submenu coordination. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware submenu coordination. |
 | `focusOnHover` | `MaybeRefOrGetter<boolean>` | `false` | Moves focus to the hovered item. |
 | `focusDisabledElements` | `MaybeRefOrGetter<boolean>` | `false` | Highlights disabled items; selection still never fires. |
 | `onSelect` / `onEnter` / `onExit` / `onActiveIndexChange` | callbacks | — | Selection, submenu interception, and change observation. |

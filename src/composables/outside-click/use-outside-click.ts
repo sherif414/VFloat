@@ -54,7 +54,7 @@ export function useOutsideClick(
   // back to their own anchor and floating elements.
   function isWithinFamily(target: EventTarget | null): boolean {
     return (
-      toValue(treeOption)?.isTargetWithin(node, target) ??
+      treeOption?.isTargetWithin(node, target) ??
       isTargetWithinElements(node.refs.anchorEl.value, node.refs.floatingEl.value, target)
     );
   }
@@ -173,7 +173,7 @@ export interface UseOutsideClickOptions {
    * Explicit floating tree for family-aware dismissal across nested surfaces.
    * When omitted, only the node's own anchor and floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * The event to use for click detection.

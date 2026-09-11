@@ -138,7 +138,7 @@ export function useRovingFocus(
     const container = containerEl.value;
     if (container?.contains(target)) return true;
     return (
-      toValue(treeOption)?.isTargetWithin(node, target) ??
+      treeOption?.isTargetWithin(node, target) ??
       isTargetWithinElements(node.refs.anchorEl.value, node.refs.floatingEl.value, target)
     );
   }
@@ -309,7 +309,7 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        toValue(treeOption)?.closeDescendants(node, "keyboard-exit");
+        treeOption?.closeDescendants(node, "keyboard-exit");
       }
       focusIndex(targetIdx);
     }
@@ -356,7 +356,7 @@ export function useRovingFocus(
         if (result !== false) {
           e.preventDefault();
         }
-      } else if (toValue(treeOption)?.getParent(node.id) && node?.setOpen) {
+      } else if (treeOption?.getParent(node.id) && node?.setOpen) {
         e.preventDefault();
         node.setOpen(false, "keyboard-exit", e);
         const anchor = resolveAnchorElement(node.refs.anchorEl?.value ?? null);
@@ -667,7 +667,7 @@ export interface UseRovingFocusOptions {
    * submenu coordination across nested surfaces.
    * When omitted, only the node's own anchor and floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether moving the pointer over an item moves DOM focus and the active

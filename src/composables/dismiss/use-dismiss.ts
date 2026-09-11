@@ -149,7 +149,7 @@ export interface UseDismissOptions {
    * across nested surfaces. When omitted, only the node's own anchor and
    * floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Escape-channel config. `false` disables Escape dismissal.

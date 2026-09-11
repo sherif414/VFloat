@@ -15,7 +15,7 @@ interface UseEscapeKeyContext extends Pick<FloatingNode, "id" | "open" | "setOpe
 
 interface UseEscapeKeyOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
   capture?: boolean;
   preventDefault?: boolean;
   onEscape?: (event: KeyboardEvent) => void;
@@ -28,7 +28,7 @@ interface UseEscapeKeyOptions {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive on/off switch. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Closes only the deepest open node. Reactive. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Closes only the deepest open node. |
 | `capture` | `boolean` | `false` | Plain boolean, read once. |
 | `preventDefault` | `boolean` | `false` | Plain boolean, read once. |
 | `onEscape` | `(event: KeyboardEvent) => void` | — | Replaces the default close behavior. |

@@ -15,7 +15,7 @@ interface UseDismissContext extends Pick<FloatingNode, "id" | "refs" | "open" | 
 
 interface UseDismissOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
   escapeKey?: boolean | UseDismissEscapeOptions;
   outsidePress?: boolean | UseDismissOutsideOptions;
 }
@@ -42,7 +42,7 @@ interface UseDismissOutsideOptions {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Shared reactive gate for both channels. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Forwarded to both channels; descendant surfaces count as inside. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Forwarded to both channels; descendant surfaces count as inside. |
 | `escapeKey` | `boolean \| UseDismissEscapeOptions` | `true` | `false` disables Escape dismissal; an object configures it. |
 | `outsidePress` | `boolean \| UseDismissOutsideOptions` | `true` | `false` disables outside-press dismissal; an object configures it. |
 

@@ -120,14 +120,14 @@ export function useFocusTrap(
   // back to their own anchor and floating elements.
   function isWithinFamily(target: EventTarget | null): boolean {
     return (
-      toValue(treeOption)?.isTargetWithin(node, target) ??
+      treeOption?.isTargetWithin(node, target) ??
       isTargetWithinElements(anchorElOption.value, floatingElOption.value, target)
     );
   }
 
   function getFamilyElements(): HTMLElement[] {
     const floating = getFloatingElement();
-    return toValue(treeOption)?.getFloatingElements(node) ?? (floating ? [floating] : []);
+    return treeOption?.getFloatingElements(node) ?? (floating ? [floating] : []);
   }
 
   // --- Focus Trapping & Keydown Navigation -----------------------------------
@@ -611,7 +611,7 @@ export interface UseFocusTrapOptions {
    * Explicit floating tree for family-aware focus checks across nested surfaces.
    * When omitted, only the node's own anchor and floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether the floating surface acts as a modal dialog, strictly trapping focus inside

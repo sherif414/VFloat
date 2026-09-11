@@ -15,7 +15,7 @@ interface UseFocusContext extends Pick<FloatingNode, "id" | "refs" | "open" | "s
 
 interface UseFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
   requireFocusVisible?: MaybeRefOrGetter<boolean>;
   ignoreFocusOut?: (target: EventTarget | null) => boolean;
 }
@@ -30,7 +30,7 @@ interface UseFocusReturn {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Fully reactive. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware focus checks for nested surfaces. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware focus checks for nested surfaces. |
 | `requireFocusVisible` | `MaybeRefOrGetter<boolean>` | `true` | Keyboard focus opens; pointer-only focus usually does not. |
 | `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | — | Keeps open when focus moves to selected outside targets. |
 

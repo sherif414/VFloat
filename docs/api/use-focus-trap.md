@@ -27,7 +27,7 @@ interface UseFocusTrapOptions {
    * Explicit floating tree for family-aware focus checks across nested surfaces.
    * When omitted, only the node's own anchor and floating elements count as inside.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether the floating surface acts as a modal dialog, strictly trapping focus inside
@@ -122,7 +122,7 @@ interface UseFocusTrapReturn {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates activation. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware focus checks; nested families stay interactive. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware focus checks; nested families stay interactive. |
 | `modal` | `MaybeRefOrGetter<boolean>` | `true` | Traps focus and isolates background. |
 | `initialFocus` | element, ref, fn, or `false` | — | `false` skips; omitted focuses first tabbable child or container. |
 | `returnFocus` | `boolean \| element \| ref` | `true` | Restores to trigger, custom element, or nothing. |

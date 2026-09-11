@@ -72,7 +72,7 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
       return;
     }
 
-    const targetNode = toValue(treeOption)?.getDeepestOpenContext(node) ?? node;
+    const targetNode = treeOption?.getDeepestOpenContext(node) ?? node;
     targetNode.setOpen(false, "escape-key", event);
   };
 
@@ -100,7 +100,7 @@ export interface UseEscapeKeyOptions {
    * Explicit floating tree for stacked dismissal across nested surfaces.
    * When omitted, only the current node is closed.
    */
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether to use capture phase for document event listeners.

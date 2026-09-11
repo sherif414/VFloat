@@ -15,7 +15,7 @@ interface UseOutsideClickContext extends Pick<FloatingNode, "id" | "refs" | "ope
 
 interface UseOutsideClickOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
   event?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
   capture?: MaybeRefOrGetter<boolean>;
   ignoreClick?: OutsideClickPredicate;
@@ -32,7 +32,7 @@ type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | null) => 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Set to `false` to disable dismissal. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Clicks inside descendant surfaces count as inside. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Clicks inside descendant surfaces count as inside. |
 | `event` | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event dismisses. |
 | `capture` | `MaybeRefOrGetter<boolean>` | `true` | Listener capture phase. |
 | `ignoreClick` | `OutsideClickPredicate` | — | Skips selected outside clicks; runs after the family check. |

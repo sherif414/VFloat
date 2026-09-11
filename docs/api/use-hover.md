@@ -13,7 +13,7 @@ function useHover(node: FloatingNode, options?: UseHoverOptions): void;
 
 interface UseHoverOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: MaybeRefOrGetter<FloatingTree | null | undefined>;
+  tree?: FloatingTree | null | undefined;
   delay?: MaybeRefOrGetter<number | { open?: number; close?: number }>;
   restMs?: MaybeRefOrGetter<number>;
   mouseOnly?: MaybeRefOrGetter<boolean>;
@@ -33,7 +33,7 @@ interface SafePolygonOptions {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Gates all hover listeners. |
-| `tree` | `MaybeRefOrGetter<FloatingTree \| null \| undefined>` | — | Family-aware leave checks for nested surfaces. |
+| `tree` | `FloatingTree \| null \| undefined` | — | Family-aware leave checks for nested surfaces. |
 | `delay` | `MaybeRefOrGetter<number \| { open?: number; close?: number }>` | `0` | Single number or separate open/close values. |
 | `restMs` | `MaybeRefOrGetter<number>` | `0` | Requires pointer rest before opening. |
 | `mouseOnly` | `MaybeRefOrGetter<boolean>` | `false` | Limits to `pointerType === "mouse"`. |

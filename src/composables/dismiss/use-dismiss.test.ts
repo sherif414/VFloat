@@ -12,7 +12,7 @@ import { getTestEl, makePointerEvent } from "@/test-utils";
 
 function createTestComponent(options: UseDismissOptions = {}) {
   const openRef = ref(true);
-  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn();
+  const setOpenMock = vi.fn();
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
