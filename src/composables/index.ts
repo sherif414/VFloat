@@ -55,20 +55,25 @@ export type {
   NavigationTargetOptions,
   NavigationTargetValue,
   RovingEntryFocusMode,
+  TypeaheadFindMatchFn,
   UseAriaActivedescendantContext,
   UseAriaActivedescendantOptions,
   UseAriaActivedescendantReturn,
   UseRovingFocusContext,
   UseRovingFocusOptions,
   UseRovingFocusReturn,
+  UseTypeaheadContext,
+  UseTypeaheadOptions,
+  UseTypeaheadReturn,
   VirtualizerAdapter,
 } from "./keyboard-navigation";
-// Keyboard Navigation (Virtual Focus & Physical Roving Focus)
+// Keyboard Navigation (Virtual Focus, Physical Roving Focus & Typeahead)
 export {
   createCustomVirtualAdapter,
   createTanStackVirtualAdapter,
   useAriaActivedescendant,
   useRovingFocus,
+  useTypeahead,
 } from "./keyboard-navigation";
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
@@ -91,11 +96,3 @@ export type {
 } from "./role/use-role";
 // Role
 export { useRole } from "./role/use-role";
-export type {
-  TypeaheadFindMatchFn,
-  UseTypeaheadContext,
-  UseTypeaheadOptions,
-  UseTypeaheadReturn,
-} from "./typeahead";
-// Typeahead
-export { useTypeahead } from "./typeahead";
