@@ -236,7 +236,7 @@ describe("useTypeahead", () => {
       dispatchKey(floatingEl, "p");
       expect(getActiveIndex()).toBe(0);
 
-      vi.advanceTimersByTime(750);
+      vi.advanceTimersByTime(1000);
       dispatchKey(floatingEl, "a");
       dispatchKey(floatingEl, "p");
       dispatchKey(floatingEl, "r");
@@ -296,10 +296,14 @@ describe("useTypeahead", () => {
         findMatch: () => 99,
         onMatch,
       });
+      vi.useFakeTimers();
 
       dispatchKey(floatingEl, "b");
       expect(onMatch).not.toHaveBeenCalled();
       expect(getActiveIndex()).toBe(-1);
+      expect(typeahead.searchQuery.value).toBe("b");
+
+      vi.advanceTimersByTime(1000);
       expect(typeahead.searchQuery.value).toBe("");
     });
 
@@ -433,7 +437,7 @@ describe("useTypeahead", () => {
       expect(getActiveIndex()).toBe(1);
     });
 
-    it("flushes the buffer when space itself matches nothing", async () => {
+    it("retains the buffer when space itself matches nothing until timeout", async () => {
       const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
         items: ["Newark", "London"],
       });
@@ -445,6 +449,10 @@ describe("useTypeahead", () => {
       expect(getActiveIndex()).toBe(0);
 
       dispatchKey(floatingEl, " ");
+      expect(typeahead.searchQuery.value).toBe("new ");
+      expect(getActiveIndex()).toBe(0);
+
+      vi.advanceTimersByTime(1000);
       expect(typeahead.searchQuery.value).toBe("");
       expect(getActiveIndex()).toBe(0);
     });
@@ -519,7 +527,59 @@ describe("useTypeahead", () => {
       dispatchKey(floatingEl, "l");
       expect(typeahead.searchQuery.value).toBe("bl");
 
-      vi.advanceTimersByTime(750);
+      vi.advanceTimersByTime(1000);
+      expect(typeahead.searchQuery.value).toBe("");
+    });
+
+    it("retains the search buffer on mismatch until the timeout expires without moving focus", async () => {
+      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+        items: ["Apple", "Banana", "Blood Orange", "Dragonfruit"],
+      });
+      vi.useFakeTimers();
+
+      dispatchKey(floatingEl, "b");
+      dispatchKey(floatingEl, "l");
+      dispatchKey(floatingEl, "o");
+      expect(typeahead.searchQuery.value).toBe("blo");
+      expect(getActiveIndex()).toBe(2);
+
+      // Typing 'd' produces "blod" (mismatch: Blood Orange has double 'o').
+      // It must NOT reset immediately and must NOT jump to Dragonfruit.
+      dispatchKey(floatingEl, "d");
+      expect(typeahead.searchQuery.value).toBe("blod");
+      expect(getActiveIndex()).toBe(2);
+
+      // Advancing timer clears the buffer.
+      vi.advanceTimersByTime(1000);
+      expect(typeahead.searchQuery.value).toBe("");
+      expect(getActiveIndex()).toBe(2);
+    });
+
+    it("supports Backspace to trim the search buffer and re-evaluate matches", async () => {
+      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+        items: ["Apple", "Apricot", "Banana", "Blueberry"],
+      });
+      vi.useFakeTimers();
+
+      dispatchKey(floatingEl, "b");
+      dispatchKey(floatingEl, "a");
+      expect(typeahead.searchQuery.value).toBe("ba");
+      expect(getActiveIndex()).toBe(2);
+
+      // Backspace trims "ba" -> "b", matching Banana.
+      dispatchKey(floatingEl, "Backspace");
+      expect(typeahead.searchQuery.value).toBe("b");
+      expect(getActiveIndex()).toBe(2);
+
+      // Typing 'l' extends to "bl", jumping to Blueberry.
+      dispatchKey(floatingEl, "l");
+      expect(typeahead.searchQuery.value).toBe("bl");
+      expect(getActiveIndex()).toBe(3);
+
+      // Backspacing all characters clears the buffer and resets.
+      dispatchKey(floatingEl, "Backspace");
+      expect(typeahead.searchQuery.value).toBe("b");
+      dispatchKey(floatingEl, "Backspace");
       expect(typeahead.searchQuery.value).toBe("");
     });
 

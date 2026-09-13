@@ -48,7 +48,7 @@ interface UseTypeaheadReturn {
 | `activeIndex`    | `MaybeRefOrGetter<number>`                      | `target?.activeIndex ?? -1` | Currently active index, used as the starting offset when cycling. Never written; forward matches via `onMatch`. |
 | `onMatch`        | `(index: number) => void`                       | `(idx) => target?.focusIndex(idx)` | Callback invoked with the index of the matched item.                                                       |
 | `enabled`        | `MaybeRefOrGetter<boolean>`                     | `true`         | Whether typeahead search is active.                                                                             |
-| `resetMs`        | `MaybeRefOrGetter<number>`                      | `750`          | Inactivity timeout in milliseconds before clearing the typing buffer.                                           |
+| `resetMs`        | `MaybeRefOrGetter<number>`                      | `1000`         | Inactivity timeout in milliseconds before clearing the typing buffer.                                           |
 | `ignoreKeys`     | `MaybeRefOrGetter<readonly string[]>`           | `[]`           | Additional keys to ignore during typeahead search.                                                              |
 | `findMatch`      | `TypeaheadFindMatchFn`                          | Prefix search  | Custom matcher returning the matching item index, or `-1`. Out-of-range or disabled results count as no match.  |
 | `isItemDisabled` | `(index: number) => boolean`                    | `undefined`    | Predicate for skipping disabled items during matching.                                                          |
@@ -71,7 +71,8 @@ Typeahead listens on the floating panel, where the ARIA APG places type-ahead fo
 - **Multi-character matching:** Typing "c" followed quickly by "a" searches for items starting with "ca" (e.g. "Canada").
 - **Repeated single-character cycling:** Typing "c", "c", "c" in rapid succession cycles through items starting with "c" (cycling from "Cambodia" &rarr; "Cameroon" &rarr; "Canada"), resuming after the current `activeIndex`.
 - **Space handling:** When the buffer is empty, pressing Space preserves normal button or option activation. When the buffer already contains text, Space appends to the search query, allowing multi-word searches (e.g. "san francisco").
-- **Failed queries:** A query with no match clears the buffer so the next keystroke starts fresh instead of extending a dead query.
+- **Failed queries:** When a keystroke produces no match, the buffer is retained until the inactivity timeout expires without moving focus, preventing typos from scattering focus across the list.
+- **Backspace support:** Pressing Backspace trims the active typing buffer and updates the match accordingly.
 
 ### Pairing with Focus Composables
 

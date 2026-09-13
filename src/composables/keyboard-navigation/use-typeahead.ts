@@ -115,16 +115,57 @@ export function useTypeahead(
 
   tryOnScopeDispose(clearResetTimeout);
 
+  function scheduleReset() {
+    clearResetTimeout();
+    resetTimeoutId = setTimeout(reset, toValue(options.resetMs) ?? 1000);
+  }
+
+  function applyQueryMatch(query: string) {
+    const matched = resolveSearchIndex(
+      items.value,
+      query,
+      activeIndex.value,
+      prevIndex,
+      matchIndex,
+      options.findMatch,
+      (idx) => options.isItemDisabled?.(idx) ?? false,
+    );
+
+    if (matched !== -1) {
+      matchIndex = matched;
+      if (options.onMatch) {
+        options.onMatch(matched);
+      } else if (target) {
+        target.focusIndex(matched);
+      }
+    }
+  }
+
   // --- Container Keyboard Search ----------------------------------------------------
 
   function onKeyDown(e: KeyboardEvent) {
     if (!isEnabled.value || e.defaultPrevented) return;
+    if (isTypeableElement(e.target as Element | null)) return;
 
     // Navigation, selection, and dismissal keys hand control to sibling
     // behaviors, so any pending query is abandoned instead of extended by
     // the next keystroke.
     if (TYPEAHEAD_NAVIGATION_KEYS.has(e.key)) {
       reset();
+      return;
+    }
+
+    // Backspace trims the active query buffer.
+    if (e.key === "Backspace" && searchQuery.value.length > 0) {
+      e.preventDefault();
+      searchQuery.value = searchQuery.value.slice(0, -1);
+      if (searchQuery.value === "") {
+        reset();
+        return;
+      }
+
+      scheduleReset();
+      applyQueryMatch(searchQuery.value);
       return;
     }
 
@@ -138,37 +179,12 @@ export function useTypeahead(
     // An idle Space preserves native trigger and option activation.
     if (e.key === " " && searchQuery.value === "") return;
 
-    // Prevent page scroll while extending a multi-word query.
-    if (e.key === " ") e.preventDefault();
+    // Prevent page scroll while extending a multi-word query or typing printable characters.
+    e.preventDefault();
 
-    clearResetTimeout();
-    resetTimeoutId = setTimeout(reset, toValue(options.resetMs) ?? 750);
-
+    scheduleReset();
     searchQuery.value += e.key;
-    const matched = resolveSearchIndex(
-      currentItems,
-      searchQuery.value,
-      activeIndex.value,
-      prevIndex,
-      matchIndex,
-      options.findMatch,
-      (idx) => options.isItemDisabled?.(idx) ?? false,
-    );
-
-    if (matched !== -1) {
-      // Claim matched keystrokes so they can't trigger competing defaults
-      // (page scroll, find-as-you-type) in exotic containers.
-      e.preventDefault();
-      matchIndex = matched;
-      if (options.onMatch) {
-        options.onMatch(matched);
-      } else if (target) {
-        target.focusIndex(matched);
-      }
-    } else {
-      // A failed query would poison the next keystroke, so drop it and idle.
-      reset();
-    }
+    applyQueryMatch(searchQuery.value);
   }
 
   // The panel can only receive focus while open; stray events on a
@@ -180,7 +196,7 @@ export function useTypeahead(
     onKeyDown(e);
   }
 
-  useEventListener(containerEl, "keydown", onContainerKeyDown);
+  useEventListener(containerEl, "keydown", onContainerKeyDown, { capture: true });
   useEventListener(anchorTarget, "keydown", onKeyDown);
 
   return {
@@ -195,13 +211,11 @@ export function useTypeahead(
 
 /**
  * Whether a keydown can never extend a typeahead query: IME composition,
- * native typing targets such as combobox inputs, shortcut modifiers (Shift
- * stays allowed for capitalized letters), user-ignored keys, and
- * non-printable keys.
+ * shortcut modifiers (Shift stays allowed for capitalized letters),
+ * user-ignored keys, and non-printable keys.
  */
 function isIgnoredKey(e: KeyboardEvent, ignoreKeys: readonly string[]): boolean {
   if (e.isComposing) return true;
-  if (isTypeableElement(e.target as Element | null)) return true;
   if (e.ctrlKey || e.metaKey || e.altKey) return true;
   if (ignoreKeys.includes(e.key)) return true;
   return e.key.length !== 1;
@@ -368,7 +382,7 @@ export interface UseTypeaheadOptions {
 
   /**
    * Inactivity delay in milliseconds before the typing buffer clears.
-   * @default 750
+   * @default 1000
    */
   resetMs?: MaybeRefOrGetter<number>;
 
