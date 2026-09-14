@@ -9,12 +9,7 @@ description: Opens and closes floating content on click, tap, or keyboard activa
 ## Type
 
 ```ts
-function useClick(node: UseClickContext, options?: UseClickOptions): void;
-
-interface UseClickContext extends Pick<
-  FloatingNode,
-  "refs" | "open" | "setOpen" | "lastOpenReason"
-> {}
+function useClick(node: FloatingNode, options?: UseClickOptions): void;
 
 interface UseClickOptions {
   enabled?: MaybeRefOrGetter<boolean>;

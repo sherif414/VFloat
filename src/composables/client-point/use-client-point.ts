@@ -39,7 +39,7 @@ import { createVirtualElement } from "./virtual-element-factory";
  * ```
  */
 export function useClientPoint(
-  node: UseClientPointContext,
+  node: FloatingNode,
   options: UseClientPointOptions = {},
 ): UseClientPointReturn {
   const {
@@ -163,9 +163,7 @@ function getDefaultTrackingArea(): HTMLElement | null {
 /**
  * Minimal floating node shape required by `useClientPoint()`.
  */
-export interface UseClientPointContext extends Pick<FloatingNode, "open"> {
-  refs: Pick<FloatingNode["refs"], "anchorEl">;
-}
+export type UseClientPointContext = FloatingNode;
 
 /**
  * Coordinates returned by `useClientPoint()`.

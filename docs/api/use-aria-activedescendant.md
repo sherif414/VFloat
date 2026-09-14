@@ -12,14 +12,9 @@ description: Manages virtual focus for comboboxes and listboxes using aria-activ
 
 ```ts
 function useAriaActivedescendant(
-  context: UseAriaActivedescendantContext,
+  node: FloatingNode,
   options?: UseAriaActivedescendantOptions,
 ): UseAriaActivedescendantReturn;
-
-interface UseAriaActivedescendantContext extends Pick<
-  FloatingNode,
-  "id" | "refs" | "open" | "setOpen"
-> {}
 
 interface UseAriaActivedescendantOptions {
   targetEl?: MaybeRefOrGetter<HTMLElement | null>;

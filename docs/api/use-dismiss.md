@@ -9,9 +9,7 @@ description: Closes floating content on Escape and outside pointer input through
 ## Type
 
 ```ts
-function useDismiss(node: UseDismissContext, options?: UseDismissOptions): void;
-
-interface UseDismissContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+function useDismiss(node: FloatingNode, options?: UseDismissOptions): void;
 
 interface UseDismissOptions {
   enabled?: MaybeRefOrGetter<boolean>;

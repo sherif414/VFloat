@@ -2,12 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import { useFloatingNode, useFloatingTree } from "@/composables";
-import {
-  type UseOutsideClickContext,
-  type UseOutsideClickOptions,
-  useOutsideClick,
-} from "./use-outside-click";
+import { type FloatingNode, useFloatingNode } from "@/composables";
+import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
 
 const OUTSIDE_STYLE = {
@@ -20,25 +16,23 @@ const OUTSIDE_STYLE = {
 
 function createTestComponent(options: UseOutsideClickOptions = {}) {
   const openRef = ref(true);
-  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn((open: boolean) => {
+  const setOpenMock = vi.fn((open: boolean, _reason?: any, _event?: any) => {
     openRef.value = open;
   });
-  let node!: UseOutsideClickContext;
+  let node!: FloatingNode;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
     const floatingEl = useTemplateRef<HTMLElement>("floating");
 
-    node = {
-      id: Symbol("mock-node"),
-      refs: {
-        anchorEl,
-        floatingEl,
-        arrowEl: ref<HTMLElement | null>(null),
-      },
+    node = useFloatingNode({
+      anchorEl,
+      floatingEl,
       open: openRef,
-      setOpen: setOpenMock as () => void,
-    };
+      onOpenChange: (open, reason, event) => {
+        setOpenMock(open, reason, event);
+      },
+    });
     useOutsideClick(node, options);
 
     return () =>
@@ -70,7 +64,6 @@ function createTreeComponent(target: "parent" | "child") {
     const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
 
-    const tree = useFloatingTree();
     parentNode = useFloatingNode({
       anchorEl,
       floatingEl,
@@ -81,11 +74,10 @@ function createTreeComponent(target: "parent" | "child") {
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
+      parent: parentNode,
     });
-    tree.addNode(parentNode);
-    tree.addNode(childNode, parentNode.id);
 
-    useOutsideClick(target === "parent" ? parentNode : childNode, { event: "click", tree });
+    useOutsideClick(target === "parent" ? parentNode : childNode, { event: "click" });
 
     return () =>
       h("div", { class: "test-wrapper" }, [

@@ -101,8 +101,6 @@ describe("SSR Compatibility (Node Environment)", () => {
         const childAnchorEl = ref<HTMLElement | null>(null);
         const childFloatingEl = ref<HTMLElement | null>(null);
 
-        const tree = VFloat.useFloatingTree();
-
         const parentNode = VFloat.useFloatingNode({
           anchorEl: parentAnchorEl,
           floatingEl: parentFloatingEl,
@@ -111,15 +109,13 @@ describe("SSR Compatibility (Node Environment)", () => {
         const childNode = VFloat.useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childFloatingEl,
+          parent: parentNode,
         });
-
-        tree.addNode(parentNode);
-        tree.addNode(childNode, parentNode.id);
 
         VFloat.usePosition(parentNode);
         VFloat.usePosition(childNode);
-        VFloat.useDismiss(parentNode, { tree });
-        VFloat.useDismiss(childNode, { tree });
+        VFloat.useDismiss(parentNode);
+        VFloat.useDismiss(childNode);
 
         return () =>
           h("div", [

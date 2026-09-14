@@ -12,13 +12,9 @@ Use it for cursor-following tooltips, image hover previews, and right-click cont
 
 ```ts
 function useClientPoint(
-  node: UseClientPointContext,
+  node: FloatingNode,
   options?: UseClientPointOptions,
 ): UseClientPointReturn;
-
-interface UseClientPointContext extends Pick<FloatingNode, "open"> {
-  refs: Pick<FloatingNode["refs"], "anchorEl">;
-}
 
 type TrackingMode = "follow" | "static";
 

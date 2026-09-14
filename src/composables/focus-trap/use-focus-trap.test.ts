@@ -11,11 +11,10 @@ import {
   useTemplateRef,
 } from "vue";
 import {
-  type UseFocusTrapContext,
+  type FloatingNode,
   type UseFocusTrapOptions,
   type UseFocusTrapReturn,
   useFloatingNode,
-  useFloatingTree,
   useFocusTrap,
 } from "@/composables";
 import { clearTrackedElements, getTestEl, trackElement } from "@/test-utils";
@@ -33,11 +32,9 @@ function createOutsideButton(id = "outside"): HTMLButtonElement {
 
 function createTestComponent(options: UseFocusTrapOptions = {}, initialOpen = false) {
   const openRef = ref(initialOpen);
-  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn((value: boolean) => {
-    openRef.value = value;
-  });
-  let node!: UseFocusTrapContext;
+  let node!: FloatingNode;
   let result!: UseFocusTrapReturn;
+  let setOpenMock!: ReturnType<typeof vi.fn>;
 
   const Component = defineComponent(() => {
     const anchorTemplateEl = useTemplateRef<HTMLButtonElement>("anchor");
@@ -46,16 +43,12 @@ function createTestComponent(options: UseFocusTrapOptions = {}, initialOpen = fa
     const anchorRef = shallowRef<HTMLButtonElement | null>(null);
     const floatingRef = shallowRef<HTMLDivElement | null>(null);
 
-    node = {
-      id: Symbol("mock-node"),
-      refs: {
-        anchorEl: anchorRef,
-        floatingEl: floatingRef,
-        arrowEl: ref<HTMLElement | null>(null),
-      },
+    node = useFloatingNode({
+      anchorEl: anchorRef,
+      floatingEl: floatingRef,
       open: openRef,
-      setOpen: setOpenMock as () => void,
-    };
+    });
+    setOpenMock = vi.spyOn(node, "setOpen");
     result = useFocusTrap(node, options);
 
     onMounted(() => {
@@ -70,7 +63,13 @@ function createTestComponent(options: UseFocusTrapOptions = {}, initialOpen = fa
       ]);
   });
 
-  return { Component, getNode: () => node, getResult: () => result, openRef, setOpenMock };
+  return {
+    Component,
+    getNode: () => node,
+    getResult: () => result,
+    openRef,
+    getSetOpenMock: () => setOpenMock,
+  };
 }
 
 function createTreeComponent() {
@@ -84,35 +83,36 @@ function createTreeComponent() {
     const childAnchorEl = useTemplateRef<HTMLButtonElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLDivElement>("child-floating");
 
-    const tree = useFloatingTree();
     const parentNode = useFloatingNode({
       anchorEl: parentAnchorEl,
       floatingEl: parentFloatingEl,
       open: parentOpen,
     });
-    const childNode = useFloatingNode({
+    useFloatingNode({
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
+      parent: parentNode,
     });
-    tree.addNode(parentNode);
-    tree.addNode(childNode, parentNode.id);
-    result = useFocusTrap(parentNode, { modal: false, closeOnFocusOut: true, tree });
+    result = useFocusTrap(parentNode, { modal: true });
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "parent-anchor", "data-testid": "parent-anchor" }, "Parent anchor"),
-        h(
-          "div",
-          { ref: "parent-floating", "data-testid": "parent-floating", tabindex: -1 },
-          "Parent floating",
-        ),
-        h("button", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child anchor"),
-        h(
-          "div",
-          { ref: "child-floating", "data-testid": "child-floating", tabindex: -1 },
-          "Child floating",
-        ),
+        h("button", { ref: "parent-anchor", "data-testid": "parent-anchor", type: "button" }, [
+          "Parent anchor",
+        ]),
+        h("div", { ref: "parent-floating", "data-testid": "parent-floating", tabindex: -1 }, [
+          "Parent panel",
+          h("button", { "data-testid": "parent-inside", type: "button" }, "Parent inside"),
+          h("button", { ref: "child-anchor", "data-testid": "child-anchor", type: "button" }, [
+            "Child anchor",
+          ]),
+        ]),
+        h("div", { ref: "child-floating", "data-testid": "child-floating", tabindex: -1 }, [
+          "Child panel",
+          h("button", { "data-testid": "child-inside", type: "button" }, "Child inside"),
+        ]),
+        h("button", { "data-testid": "outside", type: "button" }, "Outside"),
       ]);
   });
 
@@ -131,14 +131,12 @@ async function flushFocus() {
   await nextTick();
   await vi.runAllTimersAsync();
   await nextTick();
-  await vi.runAllTimersAsync();
-  await nextTick();
 }
 
 interface TrapFixture {
   anchorEl: HTMLButtonElement;
   floatingEl: HTMLDivElement;
-  node: UseFocusTrapContext;
+  node: FloatingNode;
   openRef: ReturnType<typeof ref<boolean>>;
   result: UseFocusTrapReturn;
   setOpenMock: ReturnType<typeof vi.fn>;
@@ -158,7 +156,7 @@ async function renderTrap(
     node: fixture.getNode(),
     openRef: fixture.openRef,
     result: fixture.getResult(),
-    setOpenMock: fixture.setOpenMock,
+    setOpenMock: fixture.getSetOpenMock(),
   };
 }
 
@@ -599,16 +597,14 @@ describe("useFocusTrap", () => {
         open.value = val;
       });
 
-      const node: UseFocusTrapContext = {
-        id: Symbol("mock-node"),
-        refs: {
-          anchorEl: ref(anchorEl),
-          floatingEl: ref(floatingEl),
-          arrowEl: ref(null),
-        },
+      const node: FloatingNode = useFloatingNode({
+        anchorEl: ref(anchorEl),
+        floatingEl: ref(floatingEl),
         open,
-        setOpen,
-      };
+        onOpenChange: (val) => {
+          setOpen(val);
+        },
+      });
 
       const scope = effectScope();
 

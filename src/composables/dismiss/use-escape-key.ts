@@ -1,7 +1,12 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "./composition-state";
-import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
+import {
+  isTargetInOtherActiveHierarchy,
+  registerActiveFloatingNode,
+} from "@/composables/floating-tree/active-nodes";
 import { getDocument } from "@/shared/env";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
@@ -39,17 +44,21 @@ import { useEventListener } from "@/shared/use-event-listener";
  * })
  * ```
  */
-export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOptions = {}): void {
+export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = {}): void {
   const {
     enabled = true,
     capture = false,
     preventDefault = false,
     onEscape,
     ignoreEscapeKey,
-    tree: treeOption,
   } = options;
   const { isComposing } = useComposition();
   const { open } = node;
+
+  if (typeof window !== "undefined") {
+    const unregister = registerActiveFloatingNode(node);
+    tryOnScopeDispose(unregister);
+  }
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
@@ -66,6 +75,52 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
       return;
     }
 
+    // Leaf-first protocol:
+    // 1. Ancestor nodes with open children NEVER consume Escape:
+    //    they allow the event to pass through to the open leaf.
+    const hasOpenChildren =
+      node.children?.value && Array.from(node.children.value).some((child) => child.open.value);
+    if (hasOpenChildren) {
+      return;
+    }
+
+    // 2. Resolve root of this composite hierarchy
+    let root: FloatingNode = node;
+    while (root.parent?.value) {
+      root = root.parent.value;
+    }
+
+    const target = event.target as Node | null;
+    const isTargetWithinRoot =
+      typeof (root as FloatingNode).contains === "function" &&
+      target !== null &&
+      (root as FloatingNode).contains(target);
+
+    if (isTargetWithinRoot && target !== null) {
+      // Event happened within this composite hierarchy.
+      // Find the most specific node containing the target and resolve its deepest leaf.
+      const targetOwner = findTargetOwner(root, target);
+      const activeLeaf = findDeepestOpenDescendant(targetOwner) ?? targetOwner;
+
+      if (activeLeaf && activeLeaf.id !== node.id && activeLeaf.open.value) {
+        return;
+      }
+    } else {
+      // Event target is outside this hierarchy.
+      // If the target is inside another open floating hierarchy (e.g. an independent tree),
+      // do not steal the escape event from that hierarchy.
+      if (isTargetInOtherActiveHierarchy(node, target)) {
+        return;
+      }
+
+      // Event target is outside or not spatially resolved (e.g. document body, external page element, or headless tests):
+      // Resolve topologically using deepest open descendant of root.
+      const deepest = findDeepestOpenDescendant(root);
+      if (deepest && deepest.id !== node.id) {
+        return;
+      }
+    }
+
     if (preventDefault) {
       event.preventDefault();
     }
@@ -76,12 +131,47 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
       return;
     }
 
-    const targetNode = treeOption?.getDeepestOpenContext(node) ?? node;
-    targetNode.setOpen(false, "escape-key", event);
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    node.setOpen(false, "escape-key", event);
   };
 
   // Event listener setup
   useEventListener(() => getDocument(), "keydown", handleEscape, capture);
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+function findDeepestOpenDescendant(root: FloatingNode): FloatingNode | null {
+  if (!root.open.value) return null;
+
+  let deepest: FloatingNode = root;
+  let maxDepth = 0;
+
+  if (typeof root.traverse === "function") {
+    root.traverse((current, depth) => {
+      if (!current.open.value) return false;
+      if (depth >= maxDepth) {
+        maxDepth = depth;
+        deepest = current;
+      }
+    });
+  }
+
+  return deepest;
+}
+
+function findTargetOwner(current: FloatingNode, targetNode: Node): FloatingNode {
+  if (current.children?.value) {
+    for (const child of Array.from(current.children.value)) {
+      if (child.open.value && typeof child.contains === "function" && child.contains(targetNode)) {
+        return findTargetOwner(child, targetNode);
+      }
+    }
+  }
+  return current;
 }
 
 //=======================================================================================
@@ -91,7 +181,7 @@ export function useEscapeKey(node: UseEscapeKeyContext, options: UseEscapeKeyOpt
 /**
  * Context required by `useEscapeKey`.
  */
-export interface UseEscapeKeyContext extends Pick<FloatingNode, "id" | "open" | "setOpen"> {}
+export type UseEscapeKeyContext = FloatingNode;
 
 export interface UseEscapeKeyOptions {
   /**
@@ -99,12 +189,6 @@ export interface UseEscapeKeyOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Explicit floating tree for stacked dismissal across nested surfaces.
-   * When omitted, only the current node is closed.
-   */
-  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether to use capture phase for document event listeners.

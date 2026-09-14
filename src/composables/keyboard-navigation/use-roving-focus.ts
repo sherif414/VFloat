@@ -1,9 +1,6 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
-import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
-import {
-  getAnchorElement as resolveAnchorElement,
-  isTargetWithinElements,
-} from "@/shared/elements";
+import type { FloatingNode } from "@/composables/floating-tree";
+import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";
 import { type NavigationIntent, resolveKeyIntent } from "./intent";
@@ -20,7 +17,7 @@ import type { NavigationTarget, NavigationTargetOptions, NavigationTargetValue }
  * within a floating node.
  *
  * Automatically resolves `containerEl` from `node.refs.floatingEl`, integrates with
- * the node's floating tree to protect active focus across teleported submenus, automatically closes sibling submenus during
+ * the unified composite node to protect active focus across teleported submenus, automatically closes sibling submenus during
  * arrow navigation, and handles default submenu collapse on exit.
  *
  * For text-input-driven components (comboboxes, autocompletes, searchable selects),
@@ -43,14 +40,12 @@ import type { NavigationTarget, NavigationTargetOptions, NavigationTargetValue }
  *
  * @example Submenu Navigation (Enter / Exit)
  * ```ts
- * const tree = useFloatingTree();
  * const rootNode = useFloatingNode({ anchorEl, floatingEl });
  * const subNode = useFloatingNode({
  *   anchorEl: triggerEl,
  *   floatingEl: subMenuEl,
+ *   parent: rootNode,
  * });
- * tree.addNode(rootNode);
- * tree.addNode(subNode, rootNode.id);
  *
  * useRovingFocus(subNode, {
  *   elementsList: subItemsList,
@@ -58,7 +53,7 @@ import type { NavigationTarget, NavigationTargetOptions, NavigationTargetValue }
  * ```
  */
 export function useRovingFocus(
-  node: UseRovingFocusContext,
+  node: FloatingNode,
   options: UseRovingFocusOptions,
 ): UseRovingFocusReturn {
   const {
@@ -75,7 +70,6 @@ export function useRovingFocus(
     onEnter,
     onExit,
     onActiveIndexChange,
-    tree: treeOption,
   } = options;
 
   // --- Shared Options & Root State --------------------------------------------
@@ -141,16 +135,13 @@ export function useRovingFocus(
 
   /**
    * Tests whether a node is within this widget's container or any of its teleported
-   * descendant surfaces registered in the explicitly passed floating tree.
+   * descendant surfaces.
    */
   function isWithin(target: Node | null): boolean {
     if (!target) return false;
     const container = containerEl.value;
     if (container?.contains(target)) return true;
-    return (
-      treeOption?.isTargetWithin(node, target) ??
-      isTargetWithinElements(node.refs.anchorEl.value, node.refs.floatingEl.value, target)
-    );
+    return node.contains(target);
   }
 
   // --- DOM Tabindex Resolution ------------------------------------------------
@@ -338,16 +329,7 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        treeOption?.forEach(
-          node.id,
-          "descendants",
-          (descendant) => {
-            if (descendant.open.value) {
-              descendant.setOpen(false, "keyboard-exit");
-            }
-          },
-          { order: "bottom-up" },
-        );
+        node.closeDescendants?.("keyboard-exit");
       }
       focusIndex(targetIdx, focusOptions);
     }
@@ -394,7 +376,7 @@ export function useRovingFocus(
         if (result !== false) {
           e.preventDefault();
         }
-      } else if (treeOption?.getParent(node.id) && node?.setOpen) {
+      } else if (node.parent?.value && node?.setOpen) {
         e.preventDefault();
         node.setOpen(false, "keyboard-exit", e);
         const anchor = resolveAnchorElement(node.refs.anchorEl?.value ?? null);
@@ -561,10 +543,7 @@ function resolveEntryIndex(
 /**
  * Floating node required by `useRovingFocus`.
  */
-export interface UseRovingFocusContext extends Pick<
-  FloatingNode,
-  "id" | "refs" | "open" | "setOpen"
-> {}
+export type UseRovingFocusContext = FloatingNode;
 
 /**
  * Mode defining how the composite widget handles sequential tab entry after blur.
@@ -693,13 +672,6 @@ export interface UseRovingFocusOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Explicit floating tree for family-aware focus checks and sibling
-   * submenu coordination across nested surfaces.
-   * When omitted, only the node's own anchor and floating elements count as inside.
-   */
-  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether moving the pointer over an item moves DOM focus and the active

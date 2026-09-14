@@ -88,8 +88,10 @@ export interface FloatingNode {
 
   // Unified Spatial & Topological Queries
   contains: (target: EventTarget | null) => boolean;
-  getDeepestOpenDescendant: () => FloatingNode;
-  getFloatingElements: () => HTMLElement[];
+  traverse: (
+    visitor: (node: FloatingNode, depth: number) => boolean | void,
+    options?: TraverseOptions,
+  ) => void;
   closeDescendants: (reason?: OpenChangeReason) => void;
 }
 ```
@@ -97,22 +99,25 @@ export interface FloatingNode {
 #### Uniform Spatial Predicate (`node.contains`)
 ```ts
 function contains(target: EventTarget | null): boolean {
-  // 1. Fast Path: Physical DOM containment
-  if (isTargetWithinElements(refs.anchorEl.value, refs.floatingEl.value, target)) {
-    return true;
-  }
+  if (!target) return false;
 
-  // 2. Teleported Branch: Check open children recursively
-  for (const child of children.value) {
-    if (child.open.value && child.contains(target)) {
-      return true;
+  let found = false;
+
+  traverse((current, depth) => {
+    if (found || (depth > 0 && !current.open.value)) {
+      return false;
     }
-  }
 
-  return false;
+    if (isTargetWithinElements(current.refs.anchorEl.value, current.refs.floatingEl.value, target)) {
+      found = true;
+      return false;
+    }
+  });
+
+  return found;
 }
 ```
-When $N = 0$, the children loop never executes. The code is 100% uniform with zero branching across all composables.
+When $N = 0$, `traverse` executes only on the root node and returns immediately. The code is 100% uniform with zero branching across all composables.
 
 ---
 
@@ -319,7 +324,7 @@ With Contextual Teleportation (Pillar 2), controls inside a modal teleport into 
 ## 7. Next Steps & Implementation Plan
 
 1. **Phase 1: Update `FloatingNode` Interface** (`use-floating-node.ts`)
-   - Add `parent`, `children`, `appendChild()`, `removeChild()`, `contains()`, `getDeepestOpenDescendant()`, `closeDescendants()`.
+   - Add `parent`, `children`, `appendChild()`, `removeChild()`, `contains()`, `traverse()`, `closeDescendants()`.
    - Implement explicit `parent?: MaybeRefOrGetter<FloatingNode | null>` binding.
 2. **Phase 2: Refactor Interaction Composables**
    - Update `useDismiss`, `useOutsideClick`, `useEscapeKey`, `useHover`, `useFocusTrap`, `useRovingFocus` to call `node.contains()`.

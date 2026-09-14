@@ -1,7 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
-import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
-import { isTargetWithinElements } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -35,10 +34,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  * })
  * ```
  */
-export function useOutsideClick(
-  node: UseOutsideClickContext,
-  options: UseOutsideClickOptions = {},
-): void {
+export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOptions = {}): void {
   const { open, setOpen } = node;
   const {
     enabled: enabledOption = true,
@@ -48,20 +44,10 @@ export function useOutsideClick(
     onClick: onClickOption,
     ignoreScrollbar: ignoreScrollbarOption = true,
     ignoreDrag: ignoreDragOption = true,
-    tree: treeOption,
   } = options;
 
   const isEnabled = computed(() => toValue(enabledOption));
   const floatingEl = computed(() => node.refs.floatingEl.value);
-
-  // Family check scoped to the explicitly passed tree; standalone nodes fall
-  // back to their own anchor and floating elements.
-  function isWithinFamily(target: EventTarget | null): boolean {
-    return (
-      treeOption?.isTargetWithin(node, target) ??
-      isTargetWithinElements(node.refs.anchorEl.value, node.refs.floatingEl.value, target)
-    );
-  }
 
   let dragStartedInside = false;
   let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -86,13 +72,13 @@ export function useOutsideClick(
       toValue(ignoreScrollbarOption) &&
       isHTMLElement(target) &&
       floatingEl.value &&
-      (floatingEl.value.contains(target) || isWithinFamily(target)) &&
+      node.contains(target) &&
       isClickOnScrollbar(event, target)
     ) {
       return;
     }
 
-    if (isWithinFamily(target)) {
+    if (node.contains(target)) {
       return;
     }
 
@@ -158,10 +144,7 @@ export function useOutsideClick(
 /**
  * Context required by `useOutsideClick`.
  */
-export interface UseOutsideClickContext extends Pick<
-  FloatingNode,
-  "id" | "refs" | "open" | "setOpen"
-> {}
+export type UseOutsideClickContext = FloatingNode;
 
 /**
  * Options for configuring outside-click dismissal.
@@ -172,12 +155,6 @@ export interface UseOutsideClickOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Explicit floating tree for family-aware dismissal across nested surfaces.
-   * When omitted, only the node's own anchor and floating elements count as inside.
-   */
-  tree?: FloatingTree | null | undefined;
 
   /**
    * The event to use for click detection.

@@ -1,6 +1,6 @@
 import type { Padding } from "@floating-ui/dom";
 import { type ComputedRef, computed, getCurrentInstance, onMounted, toValue } from "vue";
-import type { FloatingNode, FloatingNodeId } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import {
   floatingInternals,
   type FloatingInternals,
@@ -50,7 +50,7 @@ import { arrow } from "../middlewares";
  * </template>
  * ```
  */
-export function useArrow(node: UseArrowContext, options: UseArrowOptions = {}): UseArrowReturn {
+export function useArrow(node: FloatingNode, options: UseArrowOptions = {}): UseArrowReturn {
   const { refs } = node;
   const { arrowEl } = refs;
   const { offset = "-4px", padding } = options;
@@ -147,17 +147,7 @@ export function useArrow(node: UseArrowContext, options: UseArrowOptions = {}): 
 /**
  * Context required by `useArrow`.
  */
-export interface UseArrowContext {
-  /**
-   * The unique identifier for the floating node.
-   */
-  id: FloatingNodeId;
-
-  /**
-   * The reactive refs exposed by the floating node.
-   */
-  refs: FloatingNode["refs"];
-}
+export type UseArrowContext = FloatingNode;
 
 /**
  * Computed arrow coordinates and styles returned by `useArrow()`.

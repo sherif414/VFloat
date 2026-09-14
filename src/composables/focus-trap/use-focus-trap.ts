@@ -9,12 +9,9 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { isHTMLElement } from "@/shared/dom";
-import {
-  getAnchorElement as resolveAnchorElement,
-  isTargetWithinElements,
-} from "@/shared/elements";
+import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -51,7 +48,7 @@ import {
  * ```
  */
 export function useFocusTrap(
-  node: UseFocusTrapContext,
+  node: FloatingNode,
   options: UseFocusTrapOptions = {},
 ): UseFocusTrapReturn {
   const { anchorEl: anchorElOption, floatingEl: floatingElOption } = node.refs;
@@ -69,7 +66,6 @@ export function useFocusTrap(
     preventScroll: preventScrollOption = true,
     ignoreFocusOut,
     onError,
-    tree: treeOption,
   } = options;
 
   const isEnabled = computed(() => !!toValue(enabledOption));
@@ -116,18 +112,20 @@ export function useFocusTrap(
     return el?.ownerDocument ?? getDocument();
   }
 
-  // Family checks scoped to the explicitly passed tree; standalone nodes fall
-  // back to their own anchor and floating elements.
-  function isWithinFamily(target: EventTarget | null): boolean {
-    return (
-      treeOption?.isTargetWithin(node, target) ??
-      isTargetWithinElements(anchorElOption.value, floatingElOption.value, target)
-    );
-  }
-
   function getFamilyElements(): HTMLElement[] {
+    if (typeof node?.traverse === "function") {
+      const elements: HTMLElement[] = [];
+      node.traverse((current) => {
+        if (!current.open.value) return false;
+        const el = current.refs.floatingEl.value;
+        if (el) {
+          elements.push(el);
+        }
+      });
+      return elements;
+    }
     const floating = getFloatingElement();
-    return treeOption?.getFloatingElements(node) ?? (floating ? [floating] : []);
+    return floating ? [floating] : [];
   }
 
   // --- Focus Trapping & Keydown Navigation -----------------------------------
@@ -185,7 +183,7 @@ export function useFocusTrap(
     if (!floating) return;
 
     const relatedTarget = event.relatedTarget as Node | null;
-    if (relatedTarget && isWithinFamily(relatedTarget)) {
+    if (relatedTarget && node.contains(relatedTarget)) {
       return;
     }
 
@@ -198,7 +196,7 @@ export function useFocusTrap(
       const doc = currentFloating.ownerDocument ?? getDocument();
       const currentActive = doc?.activeElement;
 
-      if (currentActive === doc?.body || !currentActive || !isWithinFamily(currentActive)) {
+      if (currentActive === doc?.body || !currentActive || !node.contains(currentActive)) {
         if (isPointerDownOutside) return;
 
         const firstTabbable = getFirstTabbableElement(currentFloating);
@@ -281,7 +279,7 @@ export function useFocusTrap(
     if (!target) return;
 
     // If the interaction is outside this floating tree, prevent focus hijacking
-    if (!isWithinFamily(target)) {
+    if (!node.contains(target)) {
       isPointerDownOutside = true;
       if (pointerDownOutsideTimeoutId) clearTimeout(pointerDownOutsideTimeoutId);
       pointerDownOutsideTimeoutId = setTimeout(() => {
@@ -341,7 +339,7 @@ export function useFocusTrap(
     const doc = getTargetDocument();
     const activeEl = doc?.activeElement ?? null;
     const isFocusOnBody = activeEl === doc?.body;
-    const isFocusInside = activeEl ? isWithinFamily(activeEl) : false;
+    const isFocusInside = activeEl ? node.contains(activeEl) : false;
 
     // If focus has naturally moved to an outside element, don't steal it back.
     const focusMovedOutside = activeEl && !isFocusOnBody && !isFocusInside;
@@ -392,7 +390,7 @@ export function useFocusTrap(
     const target = event.target as Node | null;
     if (!target) return;
 
-    if (isWithinFamily(target)) {
+    if (node.contains(target)) {
       return;
     }
 
@@ -411,7 +409,7 @@ export function useFocusTrap(
     const target = event.target as Node | null;
     if (!target) return;
 
-    if (isWithinFamily(target)) {
+    if (node.contains(target)) {
       return;
     }
 
@@ -572,10 +570,7 @@ export function useFocusTrap(
 /**
  * Context required by `useFocusTrap`.
  */
-export interface UseFocusTrapContext extends Pick<
-  FloatingNode,
-  "id" | "refs" | "open" | "setOpen"
-> {}
+export type UseFocusTrapContext = FloatingNode;
 
 /**
  * Return shape for `useFocusTrap`.
@@ -606,12 +601,6 @@ export interface UseFocusTrapOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Explicit floating tree for family-aware focus checks across nested surfaces.
-   * When omitted, only the node's own anchor and floating elements count as inside.
-   */
-  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether the floating surface acts as a modal dialog, strictly trapping focus inside

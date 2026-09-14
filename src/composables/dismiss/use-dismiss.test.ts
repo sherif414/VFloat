@@ -2,12 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import {
-  useDismiss,
-  useFloatingNode,
-  useFloatingTree,
-  type UseDismissOptions,
-} from "@/composables";
+import { useDismiss, useFloatingNode, type UseDismissOptions } from "@/composables";
 import { getTestEl, makePointerEvent } from "@/test-utils";
 
 function createTestComponent(options: UseDismissOptions = {}) {
@@ -48,17 +43,16 @@ function createTreeComponent() {
     const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
 
-    const tree = useFloatingTree();
     const parentNode = useFloatingNode({ anchorEl, floatingEl, open: parentOpen });
     const childNode = useFloatingNode({
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
+      parent: parentNode,
     });
-    tree.addNode(parentNode);
-    tree.addNode(childNode, parentNode.id);
 
-    useDismiss(parentNode, { tree });
+    useDismiss(parentNode);
+    useDismiss(childNode);
 
     return () =>
       h("div", { class: "test-wrapper" }, [

@@ -5,7 +5,6 @@ import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
 import { useFloatingNode } from "@/composables/floating-tree";
 import {
-  type UseAriaActivedescendantContext,
   type UseAriaActivedescendantOptions,
   type UseAriaActivedescendantReturn,
   useAriaActivedescendant,
@@ -21,7 +20,7 @@ interface FixtureConfig {
   isButtonTarget?: boolean;
   itemKeys?: Array<string | number>;
   withInteractiveChild?: boolean;
-  node?: UseAriaActivedescendantContext;
+  node?: FloatingNode;
 }
 
 const createTestComponent = (
@@ -29,7 +28,7 @@ const createTestComponent = (
   config: FixtureConfig = {},
 ) => {
   let composableReturn!: UseAriaActivedescendantReturn;
-  let testNode!: FloatingNode | UseAriaActivedescendantContext;
+  let testNode!: FloatingNode;
   const countRef = ref(config.itemCount ?? 5);
 
   const Component = defineComponent(() => {

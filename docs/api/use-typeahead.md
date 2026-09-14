@@ -9,9 +9,7 @@ description: Captures typing sequences to jump to matching items in a list.
 ## Type
 
 ```ts
-function useTypeahead(node: UseTypeaheadContext, options?: UseTypeaheadOptions): UseTypeaheadReturn;
-
-interface UseTypeaheadContext extends Pick<FloatingNode, "refs" | "open"> {}
+function useTypeahead(node: FloatingNode, options?: UseTypeaheadOptions): UseTypeaheadReturn;
 
 interface UseTypeaheadOptions {
   items?: MaybeRefOrGetter<readonly (string | null)[]>;

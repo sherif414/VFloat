@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import { useEscapeKey } from "./use-escape-key";
-import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { type OutsideClickPredicate, useOutsideClick } from "./use-outside-click";
 
 //=======================================================================================
@@ -10,9 +10,8 @@ import { type OutsideClickPredicate, useOutsideClick } from "./use-outside-click
 /**
  * Closes a floating node on Escape and outside pointer input through one shared gate.
  *
- * Thin composition over the internal Escape and outside-press channels: `enabled` and `tree`
- * are declared once and forwarded to both channels, so nested surfaces stay
- * family-aware without repeating the tree per channel.
+ * Thin composition over the internal Escape and outside-press channels: `enabled` is declared once
+ * and forwarded to both channels. Nested surfaces stay family-aware via the unified composite node.
  *
  * @param node - The floating node with refs and open state.
  * @param options - Shared gate plus per-channel Escape and outside-press config.
@@ -28,7 +27,7 @@ import { type OutsideClickPredicate, useOutsideClick } from "./use-outside-click
  * useDismiss(node, { outsidePress: false })
  * ```
  */
-export function useDismiss(node: UseDismissContext, options: UseDismissOptions = {}): void {
+export function useDismiss(node: FloatingNode, options: UseDismissOptions = {}): void {
   const isEscapeEnabled = computed(
     () => toValue(options.enabled ?? true) && options.escapeKey !== false,
   );
@@ -38,13 +37,11 @@ export function useDismiss(node: UseDismissContext, options: UseDismissOptions =
 
   useEscapeKey(node, {
     enabled: isEscapeEnabled,
-    tree: options.tree,
     ...(typeof options.escapeKey === "object" ? options.escapeKey : {}),
   });
 
   useOutsideClick(node, {
     enabled: isOutsideEnabled,
-    tree: options.tree,
     ...(typeof options.outsidePress === "object" ? options.outsidePress : {}),
   });
 }
@@ -56,7 +53,7 @@ export function useDismiss(node: UseDismissContext, options: UseDismissOptions =
 /**
  * Context required by `useDismiss`.
  */
-export interface UseDismissContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+export type UseDismissContext = FloatingNode;
 
 /**
  * Escape-channel config for `useDismiss`, without the shared `enabled` / `tree` gate.
@@ -142,13 +139,6 @@ export interface UseDismissOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Explicit floating tree shared by both channels for family-aware dismissal
-   * across nested surfaces. When omitted, only the node's own anchor and
-   * floating elements count as inside.
-   */
-  tree?: FloatingTree | null | undefined;
 
   /**
    * Escape-channel config. `false` disables Escape dismissal.

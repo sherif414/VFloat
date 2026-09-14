@@ -37,7 +37,7 @@ type PointerType = "mouse" | "touch" | "pen";
  * useClick(node)
  * ```
  */
-export function useClick(node: UseClickContext, options: UseClickOptions = {}): void {
+export function useClick(node: FloatingNode, options: UseClickOptions = {}): void {
   const { open, setOpen } = node;
   const refs = node.refs;
   const {
@@ -232,10 +232,7 @@ export function useClick(node: UseClickContext, options: UseClickOptions = {}): 
 /**
  * Context required by `useClick`.
  */
-export interface UseClickContext extends Pick<
-  FloatingNode,
-  "refs" | "open" | "setOpen" | "lastOpenReason"
-> {}
+export type UseClickContext = FloatingNode;
 
 /**
  * Options for configuring the useClick behavior.

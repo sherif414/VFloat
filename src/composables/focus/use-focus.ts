@@ -1,8 +1,8 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingNode, FloatingTree } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-tree";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
-import { getAnchorElement, isTargetWithinElements } from "@/shared/elements";
+import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
@@ -33,7 +33,7 @@ const BLUR_CHECK_DELAY = 0;
  * useFocus(ctx)
  * ```
  */
-export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): UseFocusReturn {
+export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): UseFocusReturn {
   const { open, setOpen } = node;
   const { anchorEl: anchorElOption } = node.refs;
 
@@ -41,7 +41,6 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
     enabled: enabledOption = true,
     requireFocusVisible: requireFocusVisibleOption = true,
     ignoreFocusOut: ignoreFocusOutOption,
-    tree: treeOption,
   } = options;
   const globalDocument = getDocument();
   const globalWindow = getWindow();
@@ -57,15 +56,6 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
   const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? globalDocument);
   const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
   const isEnabled = computed(() => toValue(enabledOption));
-
-  // Family check scoped to the explicitly passed tree; standalone nodes fall
-  // back to their own anchor and floating elements.
-  function isWithinFamily(target: EventTarget | null): boolean {
-    return (
-      treeOption?.isTargetWithin(node, target) ??
-      isTargetWithinElements(anchorElOption.value, node.refs.floatingEl.value, target)
-    );
-  }
 
   let isFocusBlocked = false;
   const isSafariOnMac = isMac() && isSafari();
@@ -174,7 +164,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
         return;
       }
 
-      if (isWithinFamily(activeEl)) {
+      if (node.contains(activeEl)) {
         return;
       }
 
@@ -200,7 +190,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
         const target = e.target;
         if (!(target instanceof Element)) return;
 
-        if (isWithinFamily(target)) return;
+        if (node.contains(target)) return;
 
         if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
 
@@ -255,7 +245,7 @@ export function useFocus(node: UseFocusContext, options: UseFocusOptions = {}): 
 /**
  * Context required by `useFocus`.
  */
-export interface UseFocusContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+export type UseFocusContext = FloatingNode;
 
 /**
  * Cleanup handle returned by `useFocus`.
@@ -277,12 +267,6 @@ export interface UseFocusOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Explicit floating tree for family-aware focus checks across nested surfaces.
-   * When omitted, only the node's own anchor and floating elements count as inside.
-   */
-  tree?: FloatingTree | null | undefined;
 
   /**
    * Whether the open state only changes if the focus event is considered

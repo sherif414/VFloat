@@ -11,12 +11,7 @@ Use `useArrow` instead of the low-level [`arrow`](/api/arrow) middleware when yo
 ## Type
 
 ```ts
-function useArrow(node: UseArrowContext, options?: UseArrowOptions): UseArrowReturn;
-
-interface UseArrowContext {
-  id: FloatingNodeId;
-  refs: FloatingNode["refs"];
-}
+function useArrow(node: FloatingNode, options?: UseArrowOptions): UseArrowReturn;
 
 interface UseArrowOptions {
   offset?: string;

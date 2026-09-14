@@ -9,9 +9,7 @@ description: Opens and closes floating content on keyboard focus.
 ## Type
 
 ```ts
-function useFocus(node: UseFocusContext, options?: UseFocusOptions): UseFocusReturn;
-
-interface UseFocusContext extends Pick<FloatingNode, "id" | "refs" | "open" | "setOpen"> {}
+function useFocus(node: FloatingNode, options?: UseFocusOptions): UseFocusReturn;
 
 interface UseFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;

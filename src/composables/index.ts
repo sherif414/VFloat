@@ -28,19 +28,16 @@ export type {
 export { useDismiss } from "./dismiss";
 export type {
   AnchorElement,
-  FloatingNode,
-  FloatingNodeId,
   FloatingElement,
+  FloatingNode,
   FloatingNodeElements,
-  FloatingTree,
-  ForEachOptions,
-  RelationshipSelector,
-  TreeRelationship,
+  FloatingNodeId,
+  TraversalOrder,
+  TraverseOptions,
   UseFloatingNodeOptions,
-  UseFloatingTreeReturn,
 } from "./floating-tree";
 // Floating Node
-export { useFloatingNode, useFloatingTree } from "./floating-tree";
+export { useFloatingNode } from "./floating-tree";
 export type { UseFocusContext, UseFocusOptions } from "./focus/use-focus";
 // Focus
 export { useFocus } from "./focus/use-focus";

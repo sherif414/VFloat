@@ -1,18 +1,8 @@
-import type { Strategy } from "@floating-ui/dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 import { render } from "vitest-browser-vue";
-import {
-  computed,
-  defineComponent,
-  h,
-  nextTick,
-  onMounted,
-  ref,
-  shallowRef,
-  useTemplateRef,
-} from "vue";
+import { defineComponent, h, nextTick, onMounted, ref, shallowRef, useTemplateRef } from "vue";
 import type { FloatingNode } from "@/composables";
-import { type UseHoverOptions, useFloatingNode, useFloatingTree, useHover } from "@/composables";
+import { type UseHoverOptions, useFloatingNode, useHover } from "@/composables";
 import { getTestEl, makePointerEvent, stubElementRect } from "@/test-utils";
 
 interface FixtureConfig {
@@ -21,10 +11,8 @@ interface FixtureConfig {
 
 function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfig = {}) {
   const open = ref(false);
-  const setOpen = vi.fn((val: boolean) => {
-    open.value = val;
-  });
   let node!: FloatingNode;
+  let setOpen!: Mock<FloatingNode["setOpen"]>;
 
   const Component = defineComponent(() => {
     const anchorTemplateEl = useTemplateRef<HTMLDivElement>("anchor");
@@ -33,29 +21,15 @@ function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfi
     // and verify listener reattachment. Synced on mount before any dispatch.
     const anchorRef = shallowRef<HTMLDivElement | null>(null);
 
-    node = {
-      refs: {
-        anchorEl: anchorRef,
-        floatingEl,
-        arrowEl: ref(null),
-      },
+    node = useFloatingNode({
+      anchorEl: anchorRef,
+      floatingEl,
       open,
-      setOpen,
-      position: {
-        placement: ref("bottom"),
-        strategy: ref("absolute" as Strategy),
-        middlewareData: ref({}),
-        x: ref(0),
-        y: ref(0),
-        isPositioned: ref(true),
-        update: vi.fn(),
-        styles: computed(() => ({
-          position: "absolute",
-          top: "0px",
-          left: "0px",
-        })),
-      },
-    } as unknown as FloatingNode;
+    });
+    // Delegating spy installed before useHover captures setOpen, so assertions
+    // observe calls while open state still updates through the real implementation.
+    setOpen = vi.fn(node.setOpen);
+    node.setOpen = setOpen;
 
     useHover(node, options);
 
@@ -72,7 +46,14 @@ function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfi
       ]);
   });
 
-  return { Component, getNode: () => node, open, setOpen };
+  return {
+    Component,
+    getNode: () => node,
+    open,
+    get setOpen() {
+      return setOpen;
+    },
+  };
 }
 
 function createTreeComponent(
@@ -89,7 +70,6 @@ function createTreeComponent(
     const childAnchorEl = useTemplateRef<HTMLDivElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLDivElement>("child-floating");
 
-    const tree = useFloatingTree();
     const parentNode = useFloatingNode({
       anchorEl: parentAnchorEl,
       floatingEl: parentFloatingEl,
@@ -99,11 +79,10 @@ function createTreeComponent(
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
+      parent: parentNode,
     });
-    tree.addNode(parentNode);
-    tree.addNode(childNode, parentNode.id);
 
-    useHover(target === "parent" ? parentNode : childNode, { tree });
+    useHover(target === "parent" ? parentNode : childNode);
 
     return () =>
       h("div", { class: "test-wrapper" }, [

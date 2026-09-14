@@ -43,11 +43,11 @@ const WHITESPACE_REGEX = /\s/;
  *
  * @example Generic Combobox with static DOM list
  * ```ts
- * const context = useFloatingNode({ anchorEl, floatingEl, open });
+ * const node = useFloatingNode({ anchorEl, floatingEl, open });
  * const elementsList = ref<Array<HTMLElement | null>>([]);
  *
  * const { activeIndex, activeId, focusIndex, getItemId } =
- *   useAriaActivedescendant(context, {
+ *   useAriaActivedescendant(node, {
  *     elementsList,
  *     onSelect: (index) => selectItem(index),
  *   });
@@ -55,10 +55,10 @@ const WHITESPACE_REGEX = /\s/;
  *
  * @example Virtualized list with TanStack Virtual
  * ```ts
- * const context = useFloatingNode({ anchorEl, floatingEl, open });
+ * const node = useFloatingNode({ anchorEl, floatingEl, open });
  * const adapter = createTanStackVirtualAdapter(virtualizer);
  * const { activeIndex, activeId, focusIndex, getItemId } =
- *   useAriaActivedescendant(context, {
+ *   useAriaActivedescendant(node, {
  *     virtualizer: adapter,
  *     getItemKey: (idx) => items[idx].id,
  *     onSelect: (index) => selectItem(index),
@@ -66,7 +66,7 @@ const WHITESPACE_REGEX = /\s/;
  * ```
  */
 export function useAriaActivedescendant(
-  context: UseAriaActivedescendantContext,
+  node: FloatingNode,
   options: UseAriaActivedescendantOptions = {},
 ): UseAriaActivedescendantReturn {
   const {
@@ -108,9 +108,9 @@ export function useAriaActivedescendant(
   const isScrollIntoView = computed(() => toValue(scrollIntoView) ?? true);
   const currentPageSize = computed(() => Math.max(1, toValue(pageSize) ?? 10));
   const targetElement = computed(
-    () => toValue(targetEl) ?? resolveAnchorElement(context.refs.anchorEl.value),
+    () => toValue(targetEl) ?? resolveAnchorElement(node.refs.anchorEl.value),
   );
-  const containerElement = computed(() => toValue(containerEl) ?? context.refs.floatingEl.value);
+  const containerElement = computed(() => toValue(containerEl) ?? node.refs.floatingEl.value);
   const isRtl = useRtl(targetElement, { rtl });
 
   const isEditable = computed(() => {
@@ -736,8 +736,8 @@ export function useAriaActivedescendant(
 
   // --- Lifecycle Coordination -------------------------------------------------
 
-  if (context?.open) {
-    watch(context.open, (isOpen) => {
+  if (node?.open) {
+    watch(node.open, (isOpen) => {
       if (!isOpen) {
         setVirtualFocus(-1);
       }
@@ -878,10 +878,7 @@ function resolveBoundedScrollDelta(
 /**
  * Floating node required by `useAriaActivedescendant`.
  */
-export interface UseAriaActivedescendantContext extends Pick<
-  FloatingNode,
-  "id" | "refs" | "open" | "setOpen"
-> {}
+export type UseAriaActivedescendantContext = FloatingNode;
 
 /**
  * Return contract for `useAriaActivedescendant`.
@@ -934,13 +931,13 @@ export interface UseAriaActivedescendantReturn extends NavigationTarget {
 export interface UseAriaActivedescendantOptions {
   /**
    * Target element holding physical DOM focus and receiving `aria-activedescendant`.
-   * When omitted, defaults automatically to `context.refs.anchorEl`.
+   * When omitted, defaults automatically to `node.refs.anchorEl`.
    */
   targetEl?: MaybeRefOrGetter<HTMLElement | null>;
 
   /**
    * Composite container element holding the items. Used for bounded scroll calculations and query validation.
-   * When omitted, defaults automatically to `context.refs.floatingEl`.
+   * When omitted, defaults automatically to `node.refs.floatingEl`.
    */
   containerEl?: MaybeRefOrGetter<HTMLElement | null>;
 

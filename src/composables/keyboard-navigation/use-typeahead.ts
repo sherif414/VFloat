@@ -57,7 +57,7 @@ const TYPEAHEAD_NAVIGATION_KEYS: ReadonlySet<string> = new Set([
  * ```
  */
 export function useTypeahead(
-  node: UseTypeaheadContext,
+  node: FloatingNode,
   options: UseTypeaheadOptions = {},
 ): UseTypeaheadReturn {
   const { open } = node;
@@ -306,7 +306,7 @@ function resolvePrefixMatch(
 /**
  * Context required by `useTypeahead`.
  */
-export interface UseTypeaheadContext extends Pick<FloatingNode, "refs" | "open"> {}
+export type UseTypeaheadContext = FloatingNode;
 
 /**
  * Return shape for `useTypeahead`.

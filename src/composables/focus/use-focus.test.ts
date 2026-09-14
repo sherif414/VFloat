@@ -1,13 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import {
-  type UseFocusContext,
-  type UseFocusOptions,
-  useFloatingNode,
-  useFloatingTree,
-  useFocus,
-} from "@/composables";
+import { type FloatingNode, type UseFocusOptions, useFloatingNode, useFocus } from "@/composables";
 import { getTestEl } from "@/test-utils";
 
 vi.mock("@/shared/platform", async (importOriginal) => {
@@ -32,26 +26,20 @@ function createTestComponent(
   config: FixtureConfig = {},
 ) {
   const openRef = ref(initialOpen);
-  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn((value: boolean) => {
-    openRef.value = value;
-  });
-  let node!: UseFocusContext;
+  let node!: FloatingNode;
   let result!: ReturnType<typeof useFocus>;
+  let setOpenMock!: ReturnType<typeof vi.fn>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
     const floatingEl = useTemplateRef<HTMLElement>("floating");
 
-    node = {
-      id: Symbol("mock-node"),
-      refs: {
-        anchorEl,
-        floatingEl,
-        arrowEl: ref<HTMLElement | null>(null),
-      },
+    node = useFloatingNode({
+      anchorEl,
+      floatingEl,
       open: openRef,
-      setOpen: setOpenMock as () => void,
-    };
+    });
+    setOpenMock = vi.spyOn(node, "setOpen");
     result = useFocus(node, options);
 
     const anchorKind = config.anchorKind ?? "button";
@@ -74,7 +62,13 @@ function createTestComponent(
       ]);
   });
 
-  return { Component, getNode: () => node, getResult: () => result, openRef, setOpenMock };
+  return {
+    Component,
+    getNode: () => node,
+    getResult: () => result,
+    openRef,
+    getSetOpenMock: () => setOpenMock,
+  };
 }
 
 function createTreeComponent(target: "parent" | "child") {
@@ -88,7 +82,6 @@ function createTreeComponent(target: "parent" | "child") {
     const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
 
-    const tree = useFloatingTree();
     const parentNode = useFloatingNode({
       anchorEl: parentAnchorEl,
       floatingEl: parentFloatingEl,
@@ -99,10 +92,9 @@ function createTreeComponent(target: "parent" | "child") {
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
+      parent: parentNode,
     });
-    tree.addNode(parentNode);
-    tree.addNode(childNode, parentNode.id);
-    useFocus(target === "parent" ? parentNode : childNode, { requireFocusVisible: false, tree });
+    useFocus(target === "parent" ? parentNode : childNode, { requireFocusVisible: false });
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -126,7 +118,7 @@ async function flushFocus() {
 interface FocusFixture {
   anchorEl: HTMLElement;
   floatingEl: HTMLElement;
-  node: UseFocusContext;
+  node: FloatingNode;
   openRef: ReturnType<typeof ref<boolean>>;
   result: ReturnType<typeof useFocus>;
   setOpenMock: ReturnType<typeof vi.fn>;
@@ -150,7 +142,7 @@ async function renderFocus(
     node: fixture.getNode(),
     openRef: fixture.openRef,
     result: fixture.getResult(),
-    setOpenMock: fixture.setOpenMock,
+    setOpenMock: fixture.getSetOpenMock(),
     childInputEl: config.anchorKind === "anchor-subtree" ? getTestEl("anchor-child") : null,
     outsideEl: config.withOutside || config.withIgnored ? getTestEl("outside") : null,
     ignoredEl: config.withIgnored ? getTestEl("ignored") : null,

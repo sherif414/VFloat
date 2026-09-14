@@ -12,11 +12,9 @@ Implements the [`NavigationTarget`](/api/types#navigationtarget) protocol for se
 
 ```ts
 function useRovingFocus(
-  context: UseRovingFocusContext,
+  context: FloatingNode,
   options: UseRovingFocusOptions,
 ): UseRovingFocusReturn;
-
-interface UseRovingFocusContext extends Pick<FloatingNode, "id" | "refs" | "open"> {}
 
 type RovingEntryFocusMode = "entry-index" | "last-focused";
 

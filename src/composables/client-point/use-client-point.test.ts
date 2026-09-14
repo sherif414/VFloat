@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, h, nextTick, onMounted, ref, shallowRef, useTemplateRef } from "vue";
-import type { AnchorElement } from "@/composables";
 import {
-  type UseClientPointContext,
+  type AnchorElement,
+  type FloatingElement,
+  type FloatingNode,
+  useFloatingNode,
+} from "@/composables";
+import {
   type UseClientPointOptions,
   useClientPoint,
 } from "@/composables/client-point/use-client-point";
@@ -37,18 +41,17 @@ function createTestComponent(
   const open = ref(false);
   // Writable mirror so tests can swap or clear the tracking target mid-flight.
   const trackingAreaRef = shallowRef<HTMLElement | null>(null);
-  let node!: UseClientPointContext;
+  let node!: FloatingNode;
   let result!: ReturnType<typeof useClientPoint>;
 
   const Component = defineComponent(() => {
     const trackingTemplateEl = useTemplateRef<HTMLElement>("tracking-area");
 
-    node = {
+    node = useFloatingNode({
+      anchorEl: ref<AnchorElement>(config.initialAnchor ?? null),
+      floatingEl: ref<FloatingElement>(null),
       open,
-      refs: {
-        anchorEl: ref<AnchorElement>(config.initialAnchor ?? null),
-      },
-    };
+    });
     result = useClientPoint(node, {
       trackingAreaEl: trackingAreaRef,
       ...options,

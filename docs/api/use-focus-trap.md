@@ -10,11 +10,9 @@ description: Manages modal focus containment, sentinels, background inert isolat
 
 ```ts
 function useFocusTrap(
-  node: UseFocusTrapContext,
+  node: FloatingNode,
   options?: UseFocusTrapOptions,
 ): UseFocusTrapReturn;
-
-interface UseFocusTrapContext extends Pick<FloatingNode, "refs" | "open" | "setOpen"> {}
 
 interface UseFocusTrapOptions {
   enabled?: MaybeRefOrGetter<boolean>;

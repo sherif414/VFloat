@@ -3,7 +3,7 @@ import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef, type VNode } from "vue";
 import {
-  type UseClickContext,
+  type FloatingNode,
   type UseClickOptions,
   useClick,
   useFloatingNode,
@@ -55,24 +55,19 @@ function renderAnchor(kind: AnchorKind): VNode {
 
 function createTestComponent(options: UseClickOptions = {}, config: FixtureConfig = {}) {
   const openRef = ref(false);
-  const setOpenMock: ReturnType<typeof vi.fn> = vi.fn((open: boolean) => {
-    openRef.value = open;
-  });
-  let node!: UseClickContext;
+  let node!: FloatingNode;
+  let setOpenMock!: ReturnType<typeof vi.fn>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
     const floatingEl = useTemplateRef<HTMLElement>("floating");
 
-    node = {
-      refs: {
-        anchorEl,
-        floatingEl,
-        arrowEl: ref<HTMLElement | null>(null),
-      },
+    node = useFloatingNode({
+      anchorEl,
+      floatingEl,
       open: openRef,
-      setOpen: setOpenMock as () => void,
-    };
+    });
+    setOpenMock = vi.spyOn(node, "setOpen");
     useClick(node, options);
 
     return () =>
@@ -82,7 +77,7 @@ function createTestComponent(options: UseClickOptions = {}, config: FixtureConfi
       ]);
   });
 
-  return { Component, getNode: () => node, openRef, setOpenMock };
+  return { Component, getNode: () => node, openRef, getSetOpenMock: () => setOpenMock };
 }
 
 function createHoverClickComponent() {
@@ -115,7 +110,7 @@ async function renderClick(options: UseClickOptions = {}, config: FixtureConfig 
     floatingEl: getTestEl("floating"),
     node: fixture.getNode(),
     openRef: fixture.openRef,
-    setOpenMock: fixture.setOpenMock,
+    setOpenMock: fixture.getSetOpenMock(),
   };
 }
 

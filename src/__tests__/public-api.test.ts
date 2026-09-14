@@ -21,7 +21,6 @@ describe("Public API Surface", () => {
       "useClick",
       "useClientPoint",
       "useFloatingNode",
-      "useFloatingTree",
       "useFocus",
       "useDismiss",
       "useFocusTrap",
@@ -37,6 +36,7 @@ describe("Public API Surface", () => {
 
   it("does not expose internal utilities, classes, or singletons", () => {
     const forbidden = [
+      "useFloatingTree",
       "floatingTree",
       "FloatingTree",
       "FloatingTreeNode",
