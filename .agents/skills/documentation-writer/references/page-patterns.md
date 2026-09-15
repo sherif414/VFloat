@@ -96,13 +96,13 @@ Typical shape:
 Rules:
 
 - Show the complete working code first, then take it apart. Readers need the whole picture before the explanation lands.
-- Name sections after what the code does: "The Context Ties Everything Together" over "Step 2: Create The Floating Context."
+- Name sections after what the code does: "The Node Ties Everything Together" over "Step 2: Create The Floating Node."
 - Open with the user's concrete goal and friction before naming the abstraction.
 - Teach the smallest working setup first.
 - Introduce each code block with one sentence.
 - Add complexity gradually across the disassembly sections.
 - Explain why the pattern is chosen, not just the raw calls.
-- Keep the reader oriented around the recurring VFloat pieces: context, positioning, interaction, and DOM bindings.
+- Keep the reader oriented around the recurring VFloat pieces: node, positioning, interaction, and DOM bindings.
 - Include a lifecycle trace that walks through the runtime behavior (e.g., pointer enters → open state flips → position computes → pointer leaves → surface closes).
 - Link API pages for exact signatures or option details.
 
@@ -152,7 +152,7 @@ Rules:
 
 - Make the reader understand why floating UI gets hard before explaining VFloat.
 - Present VFloat as composable primitives, not prebuilt components or named modes.
-- Keep the central model compact enough to remember. For VFloat, prefer context, positioning, and interaction.
+- Keep the central model compact enough to remember. For VFloat, prefer node, positioning, and interaction.
 - Use code blocks as proof points, not as exhaustive examples.
 - Say explicitly which details transfer from Floating UI and which call-site assumptions do not.
 - Route readers by what they are trying to build next.

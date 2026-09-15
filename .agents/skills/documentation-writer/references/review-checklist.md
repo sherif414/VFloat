@@ -28,7 +28,7 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 - Keep intros short and useful. Get to the example, concept, or next step quickly.
 - Check that guide intros start from a concrete problem, task, or confusion before introducing abstractions.
 - Check that concept pages teach a reusable mental model rather than listing pieces.
-- Use contrast where it clarifies boundaries: components vs composables, context vs positioning, VFloat concepts vs Floating UI call sites.
+- Use contrast where it clarifies boundaries: components vs composables, node vs positioning, VFloat concepts vs Floating UI call sites.
 - Make responsibility boundaries explicit when relevant: what VFloat handles and what the user's app still owns.
 - Explain terms near first use instead of front-loading a large glossary.
 - In tutorials, check that the complete working example appears before the disassembly begins.

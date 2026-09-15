@@ -32,9 +32,9 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
    - If the page type and the page family disagree, fix the page type first.
 4. Draft the page.
    - Start from the reader's concrete pain, friction, or decision. Make the reader feel why the page exists before naming the abstraction.
-   - Turn the page around one clear mental model, such as the three VFloat layers: context, positioning, and interaction.
+   - Turn the page around one clear mental model, such as the three VFloat layers: node, positioning, and interaction.
    - In tutorials, show the complete working example first, then disassemble it section by section. Readers need the whole picture before the explanation lands.
-   - Name sections after what the code does, not after step numbers. Prefer "The Context Ties Everything Together" over "Step 2: Create The Floating Context."
+   - Name sections after what the code does, not after step numbers. Prefer "The Node Ties Everything Together" over "Step 2: Create The Floating Node."
    - Use contrast to define boundaries: what VFloat handles, what the user owns, and what should not be assumed from Floating UI.
    - Argue for the design, don't just describe it. "That three-layer split is the whole idea" is stronger than "VFloat uses three layers."
    - Introduce every code block with one sentence.
@@ -53,14 +53,14 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 ## Repo Gotchas
 
 - VFloat is inspired by Floating UI but not a fork. Verify behavior in this repo before reusing wording, defaults, or examples.
-- Use project terminology literally: `useFloatingNode`, `useFloatingTree`, `usePosition`, `useClick`, `useHover`, `useCollection`, `middlewares`, `open`, `context`, and `FloatingNode`.
+- Use project terminology literally: `useFloatingNode`, `usePosition`, `useClick`, `useHover`, `useCollection`, `middlewares`, `open`, `node`, and `FloatingNode`.
 - Examples should import from `v-float`.
 - Use `middlewares` (plural) when referring to the middleware array or the `src/composables/middlewares` module.
 - Prefer `<script setup lang="ts">` for Vue examples.
-- Destructure `styles` directly from the `usePosition` return value: `const { styles } = usePosition(context, ...)`. Bind `styles` (or `styles.value` in non-template contexts) in examples.
+- Destructure `styles` directly from the `usePosition` return value: `const { styles } = usePosition(node, ...)`. Bind `styles` (or `styles.value` in non-template contexts) in examples.
 - Do not restate full option interfaces inside guides when the API page already owns that contract.
 - Middleware API pages currently use an older family style in this repo. Preserve that family for focused edits unless the task is to standardize the whole family together.
-- Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloatingNode`, `useFloatingTree`, `usePosition`, `useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useRovingFocus`, `useAriaActivedescendant`, `useCollection`, `useTypeahead`, `useClientPoint`, `useRole`, `useArrow`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `inline`, `arrow`, `safePolygon`, `context`, `middlewares`, `virtual elements`, and `overlay hierarchy coordination`.
+- Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloatingNode`, `usePosition`, `useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useRovingFocus`, `useAriaActivedescendant`, `useCollection`, `useTypeahead`, `useClientPoint`, `useRole`, `useArrow`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `inline`, `arrow`, `safePolygon`, `node`, `middlewares`, `virtual elements`, and `overlay hierarchy coordination`.
 - If you add or rename a docs page, update `docs/.vitepress/config.mts` and the relevant overview page such as `docs/api/index.md` or `docs/guide/index.md`.
 
 ## Tone
@@ -70,7 +70,7 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 - Prefer short sentences, short paragraphs, and plain language over polished or corporate-sounding copy.
 - Start with a concrete pain, task, or decision. Make the reader feel why the page exists before naming the abstraction.
 - Use sharper declarative sentences when they clarify the model. Example rhythm: "They don't know about positioning. They don't need to."
-- Explain through contrast when it helps: components vs composables, context vs positioning, VFloat concepts vs Floating UI call sites. Contrast gives the docs identity without becoming marketing copy.
+- Explain through contrast when it helps: components vs composables, node vs positioning, VFloat concepts vs Floating UI call sites. Contrast gives the docs identity without becoming marketing copy.
 - Introduce terminology right before the reader needs it. Do not front-load a glossary unless the page genuinely depends on it.
 - In tutorials, show the complete working example first, then walk backward through it. Assemble-then-disassemble beats step-by-step assembly because the reader has something concrete to anchor the explanation.
 - In concept pages, give the reader a durable frame they can reuse across the library. Avoid merely listing parts.
