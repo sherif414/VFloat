@@ -22,7 +22,8 @@ const emit = defineEmits<{
 // Preset Tabs Navigation Indicator
 const tabNavEl = ref<HTMLElement | null>(null);
 const tabButtonRefs = ref<Record<string, HTMLElement | null>>({});
-const isReady = ref(false);
+const isPositioned = ref(false);
+const isAnimated = ref(false);
 
 const indicatorStyle = ref<{
   transform: string;
@@ -71,9 +72,12 @@ let resizeObserver: ResizeObserver | null = null;
 onMounted(() => {
   void nextTick(() => {
     updateIndicator();
+    isPositioned.value = true;
 
     requestAnimationFrame(() => {
-      isReady.value = true;
+      requestAnimationFrame(() => {
+        isAnimated.value = true;
+      });
     });
 
     if (typeof ResizeObserver !== "undefined" && tabNavEl.value) {
@@ -150,7 +154,11 @@ function selectPlacementOption(val: Placement) {
   <div class="showcase-header">
     <!-- 1. Preset Navigation -->
     <div ref="tabNavEl" class="preset-nav" role="tablist" aria-label="Component examples">
-      <div class="preset-tab-indicator" :class="{ 'is-ready': isReady }" :style="indicatorStyle" />
+      <div
+        class="preset-tab-indicator"
+        :class="{ 'is-positioned': isPositioned, 'is-animated': isAnimated }"
+        :style="indicatorStyle"
+      />
 
       <button
         v-for="p in presets"
@@ -315,12 +323,14 @@ function selectPlacementOption(val: Placement) {
   opacity: 0;
 }
 
-.preset-tab-indicator.is-ready {
+.preset-tab-indicator.is-positioned {
   opacity: 1;
+}
+
+.preset-tab-indicator.is-animated {
   transition:
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.15s ease;
+    width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .preset-tab {
