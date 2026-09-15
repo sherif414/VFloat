@@ -119,15 +119,15 @@ defineExpose({
   </div>
 </template>
 
-<style>
-.showcase-card .cursor-zone {
+<style scoped>
+.cursor-zone {
   position: absolute;
   inset: 0;
   cursor: crosshair;
   touch-action: none;
 }
 
-.showcase-card .floating-panel {
+.floating-panel {
   position: absolute;
   top: 0;
   left: 0;
@@ -139,7 +139,7 @@ defineExpose({
   border-radius: 8px;
 }
 
-.showcase-card .panel-cursor {
+.panel-cursor {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -150,7 +150,7 @@ defineExpose({
   font-family: var(--vp-font-family-mono, monospace);
 }
 
-.showcase-card .panel-cursor__indicator {
+.panel-cursor__indicator {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -158,7 +158,7 @@ defineExpose({
   box-shadow: 0 0 6px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.4));
 }
 
-.showcase-card .panel-cursor__coords {
+.panel-cursor__coords {
   color: var(--vp-c-text-2);
 }
 </style>

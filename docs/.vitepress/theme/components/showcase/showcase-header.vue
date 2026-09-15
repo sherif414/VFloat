@@ -170,7 +170,7 @@ function onSelectView(mode: ViewMode) {
   </div>
 </template>
 
-<style>
+<style scoped>
 .showcase-header {
   display: flex;
   flex-wrap: wrap;
@@ -185,7 +185,7 @@ function onSelectView(mode: ViewMode) {
 /* ============================================================================
    Preset Navigation & Sliding Indicator
    ============================================================================ */
-.showcase-header .preset-nav {
+.preset-nav {
   position: relative;
   display: flex;
   gap: 0.25rem;
@@ -196,11 +196,11 @@ function onSelectView(mode: ViewMode) {
   -webkit-overflow-scrolling: touch;
 }
 
-.showcase-header .preset-nav::-webkit-scrollbar {
+.preset-nav::-webkit-scrollbar {
   display: none;
 }
 
-.showcase-header .preset-tab-indicator {
+.preset-tab-indicator {
   position: absolute;
   top: 2px;
   left: 0;
@@ -214,7 +214,7 @@ function onSelectView(mode: ViewMode) {
   opacity: 0;
 }
 
-.showcase-header .preset-tab-indicator.is-ready {
+.preset-tab-indicator.is-ready {
   opacity: 1;
   transition:
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -222,7 +222,7 @@ function onSelectView(mode: ViewMode) {
     opacity 0.15s ease;
 }
 
-.showcase-header .preset-tab {
+.preset-tab {
   position: relative;
   z-index: 2;
   padding: 0.4rem 0.75rem;
@@ -241,11 +241,11 @@ function onSelectView(mode: ViewMode) {
   transition: color 0.18s ease;
 }
 
-.showcase-header .preset-tab:hover {
+.preset-tab:hover {
   color: var(--vp-c-text-1);
 }
 
-.showcase-header .preset-tab.is-active {
+.preset-tab.is-active {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
@@ -253,10 +253,10 @@ function onSelectView(mode: ViewMode) {
 /* ============================================================================
    View Switch & Micro-Sliding Highlight
    ============================================================================ */
-.showcase-header .view-switch {
+.view-switch {
   position: relative;
   display: flex;
-  width: 172px;
+  width: 168px;
   background: var(--vp-c-bg-alt);
   padding: 2px;
   border-radius: 6px;
@@ -264,7 +264,7 @@ function onSelectView(mode: ViewMode) {
   overflow: hidden;
 }
 
-.showcase-header .view-switch-indicator {
+.view-switch-indicator {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -280,11 +280,11 @@ function onSelectView(mode: ViewMode) {
   transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.showcase-header .view-switch-indicator.is-code {
+.view-switch-indicator.is-code {
   transform: translateX(100%);
 }
 
-.showcase-header .view-switch__btn {
+.view-switch__btn {
   position: relative;
   z-index: 2;
   flex: 1;
@@ -292,7 +292,7 @@ function onSelectView(mode: ViewMode) {
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  padding: 0.28rem 0.55rem;
+  padding: 0.28rem 0.5rem;
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -306,22 +306,28 @@ function onSelectView(mode: ViewMode) {
   transition: color 0.18s ease;
 }
 
-.showcase-header .view-switch__btn:hover {
+.view-switch__btn:hover {
   color: var(--vp-c-text-1);
 }
 
-.showcase-header .view-switch__btn.is-active {
+.view-switch__btn.is-active {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
 
-.showcase-header .view-switch__icon {
+.view-switch__btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 1px;
+}
+
+.view-switch__icon {
   width: 13px;
   height: 13px;
   opacity: 0.85;
+  flex-shrink: 0;
 }
 
-.showcase-header .view-switch__btn.is-active .view-switch__icon {
+.view-switch__btn.is-active .view-switch__icon {
   opacity: 1;
   color: var(--vp-c-brand-1);
 }
@@ -334,13 +340,13 @@ function onSelectView(mode: ViewMode) {
     gap: 0.5rem;
   }
 
-  .showcase-header .view-switch {
+  .view-switch {
     width: 100%;
     max-width: 280px;
     align-self: center;
   }
 
-  .showcase-header .preset-tab {
+  .preset-tab {
     font-size: 0.8rem;
     padding: 0.35rem 0.65rem;
   }

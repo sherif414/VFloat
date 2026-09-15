@@ -167,62 +167,70 @@ defineExpose({
   </div>
 </template>
 
-<style>
-.showcase-card .preset-wrapper {
+<style scoped>
+.preset-wrapper {
   display: contents;
 }
 
-.showcase-card .anchor-slot {
+.anchor-slot {
   position: relative;
   touch-action: none;
   z-index: 5;
 }
 
-.showcase-card .anchor-btn {
+.anchor-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   padding: 0.55rem 0.95rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
-  background: var(--vp-c-bg);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
   font: inherit;
   font-size: 0.88rem;
   font-weight: 500;
   cursor: grab;
-  box-shadow: var(--vp-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.05));
   user-select: none;
+  touch-action: manipulation;
+  box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
     border-color 0.15s ease,
+    background-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
-.showcase-card .anchor-btn:hover {
+.anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-bg-soft);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
-.showcase-card .anchor-btn:hover .anchor-btn__drag-icon {
+.anchor-btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+.anchor-btn:hover .anchor-btn__drag-icon {
   color: var(--vp-c-brand-1);
 }
 
-.showcase-card .anchor-btn.is-active {
+.anchor-btn.is-active {
   border-color: var(--vp-c-brand-1);
 }
 
-.showcase-card .anchor-btn.is-dragging {
+.anchor-btn.is-dragging {
   cursor: grabbing;
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
-.showcase-card .anchor-btn__drag-icon {
+.anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
 }
 
-.showcase-card .floating-panel {
+.floating-panel {
   position: absolute;
   top: 0;
   left: 0;
@@ -234,26 +242,26 @@ defineExpose({
   border-radius: 8px;
 }
 
-.showcase-card .panel-popover {
+.panel-popover {
   width: 260px;
   max-width: calc(100% - 16px);
   padding: 0.85rem;
   border-radius: 10px;
 }
 
-.showcase-card .popover-header {
+.popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.4rem;
 }
 
-.showcase-card .popover-title {
+.popover-title {
   font-size: 0.85rem;
   font-weight: 600;
 }
 
-.showcase-card .popover-close-btn {
+.popover-close-btn {
   border: none;
   background: transparent;
   color: var(--vp-c-text-3);
@@ -264,25 +272,25 @@ defineExpose({
   touch-action: manipulation;
 }
 
-.showcase-card .popover-close-btn:hover {
+.popover-close-btn:hover {
   color: var(--vp-c-text-1);
   background: var(--vp-c-bg-soft);
 }
 
-.showcase-card .popover-description {
+.popover-description {
   margin: 0 0 0.75rem;
   font-size: 0.78rem;
   color: var(--vp-c-text-2);
   line-height: 1.4;
 }
 
-.showcase-card .popover-footer {
+.popover-footer {
   display: flex;
   gap: 0.4rem;
   justify-content: flex-end;
 }
 
-.showcase-card .action-btn {
+.action-btn {
   padding: 0.32rem 0.65rem;
   border-radius: 6px;
   font: inherit;
@@ -293,24 +301,24 @@ defineExpose({
   transition: all 0.12s ease;
 }
 
-.showcase-card .action-btn--primary {
+.action-btn--primary {
   border: none;
   background: var(--vp-c-brand-1);
   color: var(--vp-c-white, #ffffff);
 }
 
-.showcase-card .action-btn--primary:hover {
+.action-btn--primary:hover {
   background: var(--vp-c-brand-2, var(--vp-c-brand-1));
   opacity: 0.95;
 }
 
-.showcase-card .action-btn--secondary {
+.action-btn--secondary {
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
 }
 
-.showcase-card .action-btn--secondary:hover {
+.action-btn--secondary:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
 }

@@ -227,7 +227,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style>
+<style scoped>
 .showcase-card {
   margin: 1.5rem 0 2rem;
   border: 1px solid var(--vp-c-divider);
@@ -238,35 +238,35 @@ onMounted(() => {
   font-family: var(--vp-font-family-base, sans-serif);
 }
 
-.showcase-card .showcase-body {
+.showcase-body {
   position: relative;
   min-height: 380px;
   background: var(--vp-c-bg);
 }
 
-.showcase-card .view-fade-enter-active {
+.view-fade-enter-active {
   transition:
     opacity 0.16s ease-out,
     transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.showcase-card .view-fade-leave-active {
+.view-fade-leave-active {
   transition:
     opacity 0.1s ease-in,
     transform 0.1s ease-in;
 }
 
-.showcase-card .view-fade-enter-from {
+.view-fade-enter-from {
   opacity: 0;
   transform: translateY(2px);
 }
 
-.showcase-card .view-fade-leave-to {
+.view-fade-leave-to {
   opacity: 0;
   transform: translateY(-2px);
 }
 
-.showcase-card .sandbox {
+.sandbox {
   position: relative;
   height: 380px;
   width: 100%;
@@ -276,7 +276,7 @@ onMounted(() => {
   background: var(--vp-c-bg-alt);
 }
 
-.showcase-card .sandbox-caption {
+.sandbox-caption {
   position: absolute;
   bottom: 0.75rem;
   left: 50%;
@@ -292,7 +292,7 @@ onMounted(() => {
   text-wrap: balance;
 }
 
-.showcase-card .sandbox-caption kbd {
+.sandbox-caption kbd {
   display: inline-block;
   padding: 0.05rem 0.3rem;
   font-size: 0.72rem;
@@ -303,7 +303,7 @@ onMounted(() => {
   color: var(--vp-c-text-2);
 }
 
-.showcase-card .reset-position-btn {
+.reset-position-btn {
   position: absolute;
   top: 0.85rem;
   right: 0.85rem;
@@ -320,7 +320,7 @@ onMounted(() => {
   transition: all 0.15s ease;
 }
 
-.showcase-card .reset-position-btn:hover {
+.reset-position-btn:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
   background: var(--vp-c-bg-soft);
@@ -332,22 +332,22 @@ onMounted(() => {
     border-radius: 10px;
   }
 
-  .showcase-card .showcase-body {
+  .showcase-body {
     min-height: 320px;
   }
 
-  .showcase-card .sandbox {
+  .sandbox {
     height: 320px;
   }
 
-  .showcase-card .reset-position-btn {
+  .reset-position-btn {
     top: 0.5rem;
     right: 0.5rem;
     padding: 0.2rem 0.45rem;
     font-size: 0.72rem;
   }
 
-  .showcase-card .sandbox-caption {
+  .sandbox-caption {
     bottom: 0.5rem;
     font-size: 0.72rem;
   }

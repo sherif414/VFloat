@@ -190,67 +190,75 @@ defineExpose({
   </div>
 </template>
 
-<style>
-.showcase-card .preset-wrapper {
+<style scoped>
+.preset-wrapper {
   display: contents;
 }
 
-.showcase-card .anchor-slot {
+.anchor-slot {
   position: relative;
   touch-action: none;
   z-index: 5;
 }
 
-.showcase-card .anchor-btn {
+.anchor-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   padding: 0.55rem 0.95rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
-  background: var(--vp-c-bg);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
   font: inherit;
   font-size: 0.88rem;
   font-weight: 500;
   cursor: grab;
-  box-shadow: var(--vp-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.05));
   user-select: none;
+  touch-action: manipulation;
+  box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
     border-color 0.15s ease,
+    background-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
-.showcase-card .anchor-btn:hover {
+.anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-bg-soft);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
-.showcase-card .anchor-btn:hover .anchor-btn__drag-icon {
+.anchor-btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+.anchor-btn:hover .anchor-btn__drag-icon {
   color: var(--vp-c-brand-1);
 }
 
-.showcase-card .anchor-btn.is-active {
+.anchor-btn.is-active {
   border-color: var(--vp-c-brand-1);
 }
 
-.showcase-card .anchor-btn.is-dragging {
+.anchor-btn.is-dragging {
   cursor: grabbing;
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
-.showcase-card .anchor-btn__drag-icon {
+.anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
 }
 
-.showcase-card .anchor-btn__chevron {
+.anchor-btn__chevron {
   font-size: 0.75rem;
   color: var(--vp-c-text-3);
 }
 
-.showcase-card .floating-panel {
+.floating-panel {
   position: absolute;
   top: 0;
   left: 0;
@@ -262,7 +270,7 @@ defineExpose({
   border-radius: 8px;
 }
 
-.showcase-card .panel-menu {
+.panel-menu {
   width: 180px;
   max-width: calc(100% - 16px);
   padding: 0.3rem;
@@ -270,7 +278,7 @@ defineExpose({
   outline: none;
 }
 
-.showcase-card .menu-item {
+.menu-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -283,23 +291,23 @@ defineExpose({
   transition: background-color 0.1s ease;
 }
 
-.showcase-card .menu-item:hover,
-.showcase-card .menu-item.is-active {
+.menu-item:hover,
+.menu-item.is-active {
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-brand-1);
 }
 
-.showcase-card .menu-item.is-danger {
+.menu-item.is-danger {
   color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
 }
 
-.showcase-card .menu-item.is-danger:hover,
-.showcase-card .menu-item.is-danger.is-active {
+.menu-item.is-danger:hover,
+.menu-item.is-danger.is-active {
   background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.1)));
   color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
 }
 
-.showcase-card .menu-item__shortcut {
+.menu-item__shortcut {
   font-size: 0.7rem;
   font-family: var(--vp-font-family-mono, monospace);
   color: var(--vp-c-text-3);
