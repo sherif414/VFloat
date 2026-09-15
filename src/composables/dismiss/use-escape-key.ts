@@ -152,7 +152,7 @@ function findDeepestOpenDescendant(root: FloatingNode): FloatingNode | null {
 
   if (typeof root.traverse === "function") {
     root.traverse((current, depth) => {
-      if (!current.open.value) return false;
+      if (!current.open.value) return "skip";
       if (depth >= maxDepth) {
         maxDepth = depth;
         deepest = current;

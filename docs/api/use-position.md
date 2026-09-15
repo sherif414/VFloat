@@ -18,7 +18,13 @@ interface UsePositionOptions {
   middlewares?: MaybeRefOrGetter<UsePositionMiddlewaresOptions | Middleware[] | undefined>;
   autoUpdate?: MaybeRefOrGetter<boolean | AutoUpdateOptions | undefined>;
   enabled?: MaybeRefOrGetter<boolean>;
+  applyStyles?: MaybeRef<boolean | undefined> | ApplyStylesFn;
 }
+
+type ApplyStylesFn = (
+  element: HTMLElement,
+  styles: FloatingStyles,
+) => void | (() => void);
 
 interface UsePositionMiddlewaresOptions {
   inline?: true | false | InlineOptions;
@@ -70,6 +76,7 @@ type FloatingStyles = {
 | `middlewares` | `MaybeRefOrGetter<UsePositionMiddlewaresOptions \| Middleware[]>` | `{}` | Declarative middleware configuration or a raw `Middleware[]` array. |
 | `autoUpdate` | `MaybeRefOrGetter<boolean \| AutoUpdateOptions>` | `true` | Automatically recomputes on resize, scroll, and layout changes. Set `false` to disable. |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Controls whether positioning computations and viewport listeners are active. |
+| `applyStyles` | `MaybeRef<boolean> \| ApplyStylesFn` | `true` | Automatically synchronizes computed styles to `node.refs.floatingEl`. Pass `false` to disable or a custom function to override. |
 
 ### Declarative Middleware Options
 
@@ -119,6 +126,26 @@ top: 0;
 ```
 
 Full coordinate calculation begins once components mount in the browser.
+
+### Automatic Style Binding & Overrides
+
+By default (`applyStyles: true`), `usePosition` automatically synchronizes positioning styles (`position`, `left`, `top`, `transform`, `will-change`, and custom CSS variables) directly to `node.refs.floatingEl.value.style`. You do not need to bind `:style="styles"` in your template.
+
+If you need full control over style application, you can:
+
+1. **Opt out of automatic binding** by setting `applyStyles: false`. `styles` remains reactive and available on the return object to bind via `:style="styles"`.
+2. **Provide a custom applicator callback**:
+   ```ts
+   usePosition(node, {
+     applyStyles(el, styles) {
+       Object.assign(el.style, styles);
+       // Custom style application or animation logic
+       return () => {
+         // Optional cleanup callback
+       };
+     },
+   });
+   ```
 
 ### Dynamic Middleware Contributions
 

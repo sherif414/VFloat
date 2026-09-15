@@ -28,9 +28,11 @@ That matters because VFloat's positioning model is based on geometry, not on the
 
 ## Positioning is computed, not hardcoded
 
-[`usePosition`](/api/use-position) gives you the current computed result.
+[`usePosition`](/api/use-position) calculates the active coordinates and styles for your floating node.
 
-In everyday template code, the most important field is `styles`, a computed ref you bind directly with `:style="styles"` (read as `styles.value` inside `<script setup>`).
+By default, `usePosition` automatically binds the computed positioning styles directly to your floating element (`node.refs.floatingEl`), so you don't even need to write `:style="styles"` in your template.
+
+If you need manual control or custom animations, `styles` is also exposed on the returned object (read as `styles.value` inside `<script setup>`), and automatic binding can be disabled or customized with `applyStyles: false` or a custom applicator callback.
 
 When you need more insight, you can also inspect `placement`, `middlewareData`, `isPositioned`, and `update`.
 

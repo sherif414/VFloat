@@ -5,6 +5,7 @@ export type {
   FloatingNodeElements,
   FloatingNodeId,
   TraversalOrder,
+  TraverseAction,
   TraverseOptions,
   UseFloatingNodeOptions,
 } from "./use-floating-node";

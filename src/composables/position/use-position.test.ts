@@ -225,4 +225,124 @@ describe("usePosition", () => {
     expect(internals?.placement).toBe(position.placement);
     expect(internals?.middlewareData).toBe(position.middlewareData);
   });
+
+  it("automatically binds computed styles to floating element by default", async () => {
+    const { floatingEl, position } = await renderPosition({
+      strategy: "fixed",
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(floatingEl.style.position).toBe("fixed");
+    expect(floatingEl.style.transform).toContain("translate");
+  });
+
+  it("skips style mutation when applyStyles is false", async () => {
+    const { floatingEl, position } = await renderPosition({
+      strategy: "fixed",
+      applyStyles: false,
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(floatingEl.style.position).toBe("");
+    expect(floatingEl.style.transform).toBe("");
+    expect(position.styles.value.position).toBe("fixed");
+  });
+
+  it("invokes custom applyStyles callback and executes its cleanup", async () => {
+    const customCleanup = vi.fn();
+    const customApply = vi.fn().mockImplementation(() => customCleanup);
+
+    const { floatingEl, position } = await renderPosition({
+      applyStyles: customApply,
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(customApply).toHaveBeenCalledWith(
+      floatingEl,
+      expect.objectContaining({ position: "absolute" }),
+    );
+
+    await position.update();
+    await nextTick();
+
+    expect(customCleanup).toHaveBeenCalled();
+  });
+
+  it("reactively removes styles when applyStyles toggles to false", async () => {
+    const applyStyles = ref(true);
+    const { floatingEl, position } = await renderPosition({
+      applyStyles,
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(floatingEl.style.position).toBe("absolute");
+
+    applyStyles.value = false;
+    await nextTick();
+
+    expect(floatingEl.style.position).toBe("");
+    expect(floatingEl.style.transform).toBe("");
+  });
+
+  it("clears transform style when transform option toggles to false", async () => {
+    const transform = ref(true);
+    const { floatingEl, position } = await renderPosition({
+      transform,
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(floatingEl.style.transform).toContain("translate");
+
+    transform.value = false;
+    await nextTick();
+
+    expect(floatingEl.style.transform).toBe("");
+    expect(floatingEl.style.top).toBeDefined();
+    expect(floatingEl.style.left).toBeDefined();
+  });
+
+  it("restores styles when enabled toggles to false", async () => {
+    const enabled = ref(true);
+    const { floatingEl, position } = await renderPosition({
+      enabled,
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(floatingEl.style.position).toBe("absolute");
+
+    enabled.value = false;
+    await nextTick();
+
+    expect(floatingEl.style.position).toBe("");
+    expect(floatingEl.style.transform).toBe("");
+  });
+
+  it("removes property when its style value transitions to null or undefined", async () => {
+    const transform = ref<boolean | undefined>(true);
+    const { floatingEl, position } = await renderPosition({
+      transform,
+    });
+
+    await position.update();
+    await nextTick();
+
+    expect(floatingEl.style.transform).toContain("translate");
+
+    transform.value = false;
+    await nextTick();
+
+    expect(floatingEl.style.transform).toBe("");
+  });
 });

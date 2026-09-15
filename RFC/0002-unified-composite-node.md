@@ -20,8 +20,7 @@ By grounding our design in the **Composite Pattern (GoF)**, explicit JavaScript 
 
 | Discarded Concept | Why It Was Killed |
 | :--- | :--- |
-| **Separate `FloatingTree` Class** | A single node and a tree are the exact same data structure ($N=0$ vs $N>0$). Maintaining dual APIs (`node` vs `tree`) poisoned the entire codebase with `if (tree)` branches and copy-pasted fallbacks. |
-| **Implicit DI (`provide` / `inject`)** | `provide`/`inject` fails in flat components that define submenus within the same `<script setup>` (Vue `provide` only delivers to child components). It also creates invisible, non-deterministic coupling. Hierarchy must be **100% explicit**. |
+| **Separate `FloatingTree` Class / Coordinator Component** | A single node and a tree are the exact same data structure ($N=0$ vs $N>0$). Maintaining dual APIs (`node` vs `tree`) poisoned the entire codebase with `if (tree)` branches and copy-pasted fallbacks. `useFloatingNode` manages both standalone and tree topologies directly. |
 | **The Global Event WeakSet** | Broke independent outside-clicks for multiple simultaneous popovers, starved nested dismissals, and assumed an inverted event listener execution order. |
 | **`pendingChildren` & Deferred Linking** | Vue’s `setup()` executes **strictly top-down** (parents always initialize before children, even across `async setup` and `<Suspense>`). Accommodating inverted/out-of-order hierarchies was solving an anti-pattern at the cost of memory retention risks. |
 | **Blanket `teleport to="body"`** | Teleporting every floating element to `body` needlessly severs physical DOM ancestry, breaking native focus traps, `.contains()` checks, and `<dialog>` top-layer mechanics. |
@@ -53,7 +52,10 @@ By grounding our design in the **Composite Pattern (GoF)**, explicit JavaScript 
 Every floating surface is represented by a `FloatingNode`. There is no separate `FloatingTree` class or external coordinator.
 - A standalone surface (e.g. simple tooltip) is simply a composite node with $N = 0$ children.
 - A nested menu or modal is a composite node with $N > 0$ children.
-- Hierarchy is established **strictly and explicitly** via direct object references: `useFloatingNode({ parent: rootNode })`.
+- Hierarchy is established through a three-tier model:
+  1. **Implicit DI (Default / Omitted)**: Child components automatically inject the parent node from Vue component context.
+  2. **Explicit Standalone (`parent: null`)**: Explicitly opts out of DI to remain an independent surface.
+  3. **Explicit Reference (`parent: rootNode`)**: Direct object reference for flat single-component `<script setup>` definitions.
 - Composables (`useDismiss`, `useHover`, `useFocusTrap`, `useRovingFocus`) **never** branch on `if (tree)`. They interact with the uniform node contract:
 
 ```ts
@@ -66,10 +68,12 @@ export interface UseFloatingNodeOptions {
   onOpenChange?: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
 
   /**
-   * Explicit parent node reference for nested surfaces (submenus, cascades).
-   * 100% explicit: works in flat `<script setup>`, across components via props, or in unit tests.
+   * Parent node reference:
+   * - Omitted / `undefined` (default): Implicitly registers via Dependency Injection.
+   * - `null`: Standalone surface, bypasses DI.
+   * - `FloatingNode` / `Ref` / `getter`: Explicitly links to the given parent node.
    */
-  parent?: MaybeRefOrGetter<FloatingNode | null>;
+  parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
 }
 
 export interface FloatingNode {
@@ -160,15 +164,29 @@ Nodes expose DOM-style hierarchical mutators that guarantee atomic, bi-direction
 - `parent.removeChild(child: FloatingNode): void`
   - Clears `child.parent.value = null` and removes `child` from `parent.children`.
 
-**Declarative Usage (via `parent: rootNode` option):**
+**Declarative Usage (3-Tier Resolution):**
 ```ts
-watchEffect((onCleanup) => {
-  const parentNode = toValue(options.parent);
-  if (!parentNode) return;
-
-  const unbind = parentNode.appendChild(node);
-  onCleanup(unbind);
-});
+if (options.parent === null) {
+  // Explicitly standalone: bypasses DI
+} else if (options.parent !== undefined) {
+  // Explicit parent passed: watch and link/unlink
+  watch(
+    () => toValue(options.parent),
+    (parentNode, _oldParent, onCleanup) => {
+      if (!parentNode) return;
+      const unbind = parentNode.appendChild(node);
+      onCleanup(unbind);
+    },
+    { immediate: true },
+  );
+} else {
+  // Default (parent is undefined): inject from Vue DI context
+  const injectedParent = hasInjectionContext() ? inject(FLOATING_NODE_KEY, null) : null;
+  if (injectedParent) {
+    const unbind = injectedParent.appendChild(node);
+    tryOnScopeDispose(unbind);
+  }
+}
 ```
 
 **Imperative Usage (DOM parity):**
@@ -272,7 +290,7 @@ if (targetIndex !== currentIndex) {
 
 ## 5. Developer Experience (DX) Comparison
 
-### Single-Component Flat Script (Previously Painful, Now Trivial)
+### Single-Component Flat Script (Explicit Parent)
 ```vue
 <script setup>
 import { useFloatingNode, usePosition, useDismiss } from "v-float";
@@ -285,17 +303,17 @@ useDismiss(sub);
 </script>
 ```
 
-### Multi-Component Submenu (Explicit & Typed)
+### Multi-Component Submenu (Implicit DI — Zero Prop Drilling)
 ```vue
 <!-- RootMenu.vue -->
 <script setup>
+// Automatically provides rootNode to child components via DI
 const rootNode = useFloatingNode({ anchorEl, floatingEl });
 </script>
 <template>
   <button ref="anchorEl">Menu</button>
   <div ref="floatingEl">
-    <!-- Pass parent directly as a typed prop -->
-    <SubMenu :parent="rootNode" />
+    <SubMenu />
   </div>
 </template>
 ```
@@ -303,8 +321,17 @@ const rootNode = useFloatingNode({ anchorEl, floatingEl });
 ```vue
 <!-- SubMenu.vue -->
 <script setup>
-const props = defineProps<{ parent: FloatingNode }>();
-const subNode = useFloatingNode({ anchorEl, floatingEl, parent: () => props.parent });
+// Omitted parent automatically injects rootNode from RootMenu
+const subNode = useFloatingNode({ anchorEl, floatingEl });
+</script>
+```
+
+### Standalone Controls in Overlays (Explicit `parent: null`)
+```vue
+<!-- ModalInsideMenu.vue -->
+<script setup>
+// Explicitly pass parent: null to opt out of DI hierarchy
+const dialogNode = useFloatingNode({ anchorEl, floatingEl, parent: null });
 </script>
 ```
 

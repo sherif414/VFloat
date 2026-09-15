@@ -27,12 +27,16 @@ import {
 import {
   type ComputedRef,
   computed,
+  isRef,
+  type MaybeRef,
   type MaybeRefOrGetter,
+  onWatcherCleanup,
   type Ref,
   ref,
   shallowRef,
   toValue,
   watch,
+  watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-tree";
 import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
@@ -66,7 +70,7 @@ import { arrow } from "../middlewares";
  * const floatingEl = ref<HTMLElement | null>(null);
  *
  * const node = useFloatingNode({ anchorEl, floatingEl });
- * const { styles } = usePosition(node, {
+ * usePosition(node, {
  *   placement: "bottom-start",
  *   middlewares: {
  *     offset: 8,
@@ -78,7 +82,7 @@ import { arrow } from "../middlewares";
  *
  * <template>
  *   <button ref="anchorEl">Anchor</button>
- *   <div v-if="node.open" ref="floatingEl" :style="styles">Floating panel</div>
+ *   <div v-if="node.open" ref="floatingEl">Floating panel</div>
  * </template>
  * ```
  */
@@ -215,6 +219,72 @@ export function usePosition(
       transform: `translate(${roundedX}px, ${roundedY}px)`,
       ...(getDPR(el) >= 1.5 ? { "will-change": "transform" } : {}),
     };
+  });
+
+  // --- DOM Style Synchronization --------------------------------------------
+
+  let lastEl: HTMLElement | null = null;
+  let appliedKeys: string[] = [];
+
+  watchPostEffect(() => {
+    if (isServer) return;
+
+    const el = floatingEl.value;
+    const enabled = isEnabled.value;
+    const rawApplyStyles = options.applyStyles;
+    const applyOption = isRef(rawApplyStyles)
+      ? (rawApplyStyles.value ?? true)
+      : (rawApplyStyles ?? true);
+
+    // Clean up previous element if element changed, disabled, or applyStyles turned off
+    if (lastEl && (lastEl !== el || !enabled || !applyOption)) {
+      for (const key of appliedKeys) {
+        lastEl.style.removeProperty(key);
+      }
+      appliedKeys = [];
+    }
+
+    lastEl = el;
+
+    if (!el || !enabled || !applyOption) return;
+
+    const currentStyles = styles.value;
+
+    if (typeof applyOption === "function") {
+      const cleanup = applyOption(el, currentStyles);
+      if (typeof cleanup === "function") {
+        onWatcherCleanup(cleanup);
+      }
+      return;
+    }
+
+    // Remove any stale properties from previous runs or properties whose new value is nullish
+    for (const key of appliedKeys) {
+      const val = currentStyles[key as keyof FloatingStyles];
+      if (!(key in currentStyles) || val == null) {
+        el.style.removeProperty(key);
+      }
+    }
+
+    // Apply new/updated styles in-place and track non-null keys
+    const nextAppliedKeys: string[] = [];
+    for (const [key, val] of Object.entries(currentStyles)) {
+      if (val != null) {
+        el.style.setProperty(key, String(val));
+        nextAppliedKeys.push(key);
+      }
+    }
+
+    appliedKeys = nextAppliedKeys;
+  });
+
+  tryOnScopeDispose(() => {
+    if (lastEl && appliedKeys.length > 0) {
+      for (const key of appliedKeys) {
+        lastEl.style.removeProperty(key);
+      }
+      appliedKeys = [];
+    }
   });
 
   const position: FloatingPosition = {
@@ -444,6 +514,14 @@ export interface UsePositionMiddlewaresOptions {
 }
 
 /**
+ * Custom style applicator function to override automatic positioning style binding.
+ *
+ * Receives the target floating HTMLElement and the resolved positioning styles.
+ * Can optionally return a cleanup function that runs before the next update or on unmount.
+ */
+export type ApplyStylesFn = (element: HTMLElement, styles: FloatingStyles) => void | (() => void);
+
+/**
  * Options for configuring the positioning behavior.
  */
 export interface UsePositionOptions {
@@ -462,6 +540,7 @@ export interface UsePositionOptions {
   /**
    * Whether computed coordinates should be applied with `transform`
    * instead of `top` and `left`.
+   * @default true
    */
   transform?: MaybeRefOrGetter<boolean | undefined>;
 
@@ -474,11 +553,22 @@ export interface UsePositionOptions {
   /**
    * Whether automatic re-positioning while positioning is active.
    * Pass an options object to customize `autoUpdate`.
+   * @default true
    */
   autoUpdate?: MaybeRefOrGetter<boolean | AutoUpdateOptions | undefined>;
 
   /**
    * Whether positioning computation and auto-update wiring is enabled.
+   * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Controls whether positioning styles are automatically applied to the floating element.
+   * - `true` (default): Automatically synchronizes computed styles to `node.refs.floatingEl.value.style`.
+   * - `false`: Disables automatic style application, allowing manual template `:style="styles"` binding.
+   * - Function: A custom applicator callback `(element, styles) => void | (() => void)` to override how styles are applied.
+   * @default true
+   */
+  applyStyles?: MaybeRef<boolean | undefined> | ApplyStylesFn;
 }

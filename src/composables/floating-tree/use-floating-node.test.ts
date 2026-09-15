@@ -243,20 +243,6 @@ describe("useFloatingNode", () => {
 
       expect(visited).toEqual([{ node, depth: 0 }]);
     });
-
-    it("closeDescendants() is a safe no-op on a standalone node", () => {
-      let node!: FloatingNode;
-      scope?.run(() => {
-        node = useFloatingNode({
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-          defaultOpen: true,
-        });
-      });
-
-      expect(() => node.closeDescendants()).not.toThrow();
-      expect(node.open.value).toBe(true);
-    });
   });
 
   describe("Criterion 2: Single-component nested hierarchy via parent option", () => {
@@ -312,7 +298,51 @@ describe("useFloatingNode", () => {
       expect(root.contains(childFloating)).toBe(true);
     });
 
-    it("traverse() executes top-down (default) and prunes branches when returning false", () => {
+    it("contains() terminates early when target is found without scanning subsequent branches", () => {
+      const rootAnchor = trackElement(document.createElement("button"));
+      const rootFloating = trackElement(document.createElement("div"));
+      const child1Floating = trackElement(document.createElement("div"));
+      const child2Floating = trackElement(document.createElement("div"));
+
+      let root!: FloatingNode;
+      let child1!: FloatingNode;
+      let child2!: FloatingNode;
+
+      scope?.run(() => {
+        root = useFloatingNode({
+          anchorEl: ref(rootAnchor),
+          floatingEl: ref(rootFloating),
+          defaultOpen: true,
+        });
+        child1 = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(child1Floating),
+          defaultOpen: true,
+          parent: root,
+        });
+        child2 = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(child2Floating),
+          defaultOpen: true,
+          parent: root,
+        });
+      });
+
+      const child1TraverseSpy = vi.spyOn(child1, "traverse");
+      const child2TraverseSpy = vi.spyOn(child2, "traverse");
+
+      // Target in root: neither child is scanned
+      expect(root.contains(rootFloating)).toBe(true);
+      expect(child1TraverseSpy).not.toHaveBeenCalled();
+      expect(child2TraverseSpy).not.toHaveBeenCalled();
+
+      // Target in child1: child1 is scanned, child2 is NOT scanned
+      expect(root.contains(child1Floating)).toBe(true);
+      expect(child1TraverseSpy).toHaveBeenCalledTimes(1);
+      expect(child2TraverseSpy).not.toHaveBeenCalled();
+    });
+
+    it("traverse() executes top-down (default) and prunes branches when returning 'skip'", () => {
       let root!: FloatingNode;
       let childA!: FloatingNode;
       let childB!: FloatingNode;
@@ -342,10 +372,11 @@ describe("useFloatingNode", () => {
 
       // Full top-down traversal
       const fullVisited: { node: FloatingNode; depth: number }[] = [];
-      root.traverse((node, depth) => {
+      const completed = root.traverse((node, depth) => {
         fullVisited.push({ node, depth });
       });
 
+      expect(completed).toBe(true);
       expect(fullVisited).toEqual([
         { node: root, depth: 0 },
         { node: childA, depth: 1 },
@@ -353,16 +384,56 @@ describe("useFloatingNode", () => {
         { node: childB, depth: 1 },
       ]);
 
-      // Pruning: skip childA's subtree
+      // Pruning: skip childA's subtree but visit childB
       const prunedVisited: FloatingNode[] = [];
-      root.traverse((node) => {
+      const prunedResult = root.traverse((node) => {
         prunedVisited.push(node);
         if (node === childA) {
-          return false;
+          return "skip";
         }
       });
 
+      expect(prunedResult).toBe(true);
       expect(prunedVisited).toEqual([root, childA, childB]);
+    });
+
+    it("traverse() executes top-down and aborts globally when returning 'stop'", () => {
+      let root!: FloatingNode;
+      let childA!: FloatingNode;
+
+      scope?.run(() => {
+        root = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        });
+        childA = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: root,
+        });
+        useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: root,
+        });
+        useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: childA,
+        });
+      });
+
+      const visited: FloatingNode[] = [];
+      const result = root.traverse((node) => {
+        visited.push(node);
+        if (node === childA) {
+          return "stop";
+        }
+      });
+
+      expect(result).toBe(false);
+      // Aborted at childA: neither grandchildA nor childB is visited
+      expect(visited).toEqual([root, childA]);
     });
 
     it("traverse() executes bottom-up (post-order) visiting leaves before parents", () => {
@@ -388,18 +459,98 @@ describe("useFloatingNode", () => {
       });
 
       const visited: { node: FloatingNode; depth: number }[] = [];
-      root.traverse(
+      const result = root.traverse(
         (node, depth) => {
           visited.push({ node, depth });
         },
         { order: "bottom-up" },
       );
 
+      expect(result).toBe(true);
       expect(visited).toEqual([
         { node: grandchild, depth: 2 },
         { node: child, depth: 1 },
         { node: root, depth: 0 },
       ]);
+    });
+
+    it("traverse() executes bottom-up and aborts globally when returning 'stop'", () => {
+      let root!: FloatingNode;
+      let grandchildA!: FloatingNode;
+
+      scope?.run(() => {
+        root = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        });
+        const childA = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: root,
+        });
+        useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: root,
+        });
+        grandchildA = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: childA,
+        });
+      });
+
+      const visited: FloatingNode[] = [];
+      const result = root.traverse(
+        (node) => {
+          visited.push(node);
+          if (node === grandchildA) {
+            return "stop";
+          }
+        },
+        { order: "bottom-up" },
+      );
+
+      expect(result).toBe(false);
+      // Aborted at grandchildA: childA, childB, and root are not visited
+      expect(visited).toEqual([grandchildA]);
+    });
+
+    it("traverse() treats 'skip' as safe no-op in bottom-up order", () => {
+      let root!: FloatingNode;
+      let child!: FloatingNode;
+      let grandchild!: FloatingNode;
+
+      scope?.run(() => {
+        root = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        });
+        child = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: root,
+        });
+        grandchild = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          parent: child,
+        });
+      });
+
+      const visited: FloatingNode[] = [];
+      const result = root.traverse(
+        (node) => {
+          visited.push(node);
+          if (node === grandchild) {
+            return "skip";
+          }
+        },
+        { order: "bottom-up" },
+      );
+
+      expect(result).toBe(true);
+      expect(visited).toEqual([grandchild, child, root]);
     });
 
     it("traverse() allows consumers to collect active floating elements across open branches", () => {
@@ -434,7 +585,7 @@ describe("useFloatingNode", () => {
       const collectFloatingElements = (startNode: FloatingNode): HTMLElement[] => {
         const elements: HTMLElement[] = [];
         startNode.traverse((current) => {
-          if (!current.open.value) return false;
+          if (!current.open.value) return "skip";
           const el = current.refs.floatingEl.value;
           if (el) {
             elements.push(el);
@@ -454,51 +605,6 @@ describe("useFloatingNode", () => {
 
       childOpen.value = false;
       expect(collectFloatingElements(root)).toEqual([rootFloating]);
-    });
-
-    it("closeDescendants() closes all active descendants bottom-up without closing the root", () => {
-      const calls: string[] = [];
-      const rootOpen = ref(true);
-      const childOpen = ref(true);
-      const grandchildOpen = ref(true);
-
-      let root!: FloatingNode;
-
-      scope?.run(() => {
-        root = useFloatingNode({
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-          open: rootOpen,
-          onOpenChange: () => calls.push("root"),
-        });
-        const child = useFloatingNode({
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-          open: childOpen,
-          parent: root,
-          onOpenChange: (val) => {
-            childOpen.value = val;
-            calls.push("child");
-          },
-        });
-        useFloatingNode({
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-          open: grandchildOpen,
-          parent: child,
-          onOpenChange: (val) => {
-            grandchildOpen.value = val;
-            calls.push("grandchild");
-          },
-        });
-      });
-
-      root.closeDescendants("outside-pointer");
-
-      expect(grandchildOpen.value).toBe(false);
-      expect(childOpen.value).toBe(false);
-      expect(rootOpen.value).toBe(true);
-      expect(calls).toEqual(["grandchild", "child"]);
     });
 
     it("supports dynamically switching parent node via reactive ref", async () => {
@@ -878,43 +984,243 @@ describe("useFloatingNode", () => {
 
       expect(visited).toEqual([root, branchA, branchB]);
     });
+  });
 
-    it("closeDescendants() safely handles child unlinking during setOpen invocation", () => {
-      let root!: FloatingNode;
-      let child1!: FloatingNode;
-      let child2!: FloatingNode;
+  describe("Criterion 7: Implicit registration via Dependency Injection (DI)", () => {
+    it("implicitly registers child component node under parent component node when parent is omitted", async () => {
+      let parentNode!: FloatingNode;
+      let childNode!: FloatingNode;
 
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      await render(ParentComponent);
+
+      expect(childNode.parent.value).toBe(parentNode);
+      expect(parentNode.children.value.has(childNode)).toBe(true);
+    });
+
+    it("supports multi-level hierarchical chaining (Grandparent -> Parent -> Child) via DI", async () => {
+      let gpNode!: FloatingNode;
+      let pNode!: FloatingNode;
+      let cNode!: FloatingNode;
+
+      const ChildComponent = defineComponent({
+        setup() {
+          cNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          pNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      const GrandparentComponent = defineComponent({
+        setup() {
+          gpNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "grandparent" }, [h(ParentComponent)]);
+        },
+      });
+
+      await render(GrandparentComponent);
+
+      expect(pNode.parent.value).toBe(gpNode);
+      expect(cNode.parent.value).toBe(pNode);
+      expect(gpNode.children.value.has(pNode)).toBe(true);
+      expect(pNode.children.value.has(cNode)).toBe(true);
+      expect(gpNode.children.value.has(cNode)).toBe(false);
+    });
+
+    it("bypasses DI and creates standalone node when parent: null is explicitly passed", async () => {
+      let parentNode!: FloatingNode;
+      let childNode!: FloatingNode;
+
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            parent: null,
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      await render(ParentComponent);
+
+      expect(childNode.parent.value).toBeNull();
+      expect(parentNode.children.value.has(childNode)).toBe(false);
+    });
+
+    it("overrides DI parent when an explicit parent node is passed", async () => {
+      let parentNode!: FloatingNode;
+      let externalNode!: FloatingNode;
+      let childNode!: FloatingNode;
+
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            parent: externalNode,
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          externalNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            parent: null,
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      await render(ParentComponent);
+
+      expect(childNode.parent.value).toBe(externalNode);
+      expect(externalNode.children.value.has(childNode)).toBe(true);
+      expect(parentNode.children.value.has(childNode)).toBe(false);
+    });
+
+    it("detaches child from injected parent when child component is unmounted", async () => {
+      let parentNode!: FloatingNode;
+      let childNode!: FloatingNode;
+      const showChild = ref(true);
+
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () =>
+            h("div", { "data-testid": "parent" }, [showChild.value ? h(ChildComponent) : null]);
+        },
+      });
+
+      await render(ParentComponent);
+
+      expect(parentNode.children.value.size).toBe(1);
+      expect(childNode.parent.value).toBe(parentNode);
+
+      showChild.value = false;
+      await nextTick();
+
+      expect(parentNode.children.value.size).toBe(0);
+      expect(childNode.parent.value).toBeNull();
+    });
+
+    it("clears child parent reference when parent component is unmounted", async () => {
+      let parentNode!: FloatingNode;
+      let childNode!: FloatingNode;
+      const showParent = ref(true);
+
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      const RootComponent = defineComponent({
+        setup() {
+          return () =>
+            h("div", { "data-testid": "root" }, [showParent.value ? h(ParentComponent) : null]);
+        },
+      });
+
+      await render(RootComponent);
+
+      expect(childNode.parent.value).toBe(parentNode);
+
+      showParent.value = false;
+      await nextTick();
+
+      expect(childNode.parent.value).toBeNull();
+    });
+
+    it("operates cleanly as standalone root when called outside component context (e.g. effectScope)", () => {
+      let node!: FloatingNode;
       scope?.run(() => {
-        root = useFloatingNode({
+        node = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          defaultOpen: true,
-        });
-        child1 = useFloatingNode({
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-          parent: root,
-          defaultOpen: true,
-          onOpenChange: (open) => {
-            if (!open) {
-              // Simulate reactive component teardown unlinking child1 from root
-              root.removeChild(child1);
-            }
-          },
-        });
-        child2 = useFloatingNode({
-          anchorEl: ref(null),
-          floatingEl: ref(null),
-          parent: root,
-          defaultOpen: true,
         });
       });
 
-      expect(() => root.closeDescendants()).not.toThrow();
-      expect(child1.open.value).toBe(false);
-      expect(child2.open.value).toBe(false);
-      expect(root.children.value.has(child1)).toBe(false);
-      expect(root.children.value.has(child2)).toBe(true);
+      expect(node.parent.value).toBeNull();
+      expect(node.children.value.size).toBe(0);
     });
   });
 });

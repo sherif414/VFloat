@@ -329,7 +329,14 @@ export function useRovingFocus(
 
     if (targetIdx !== null) {
       if (targetIdx !== current) {
-        node.closeDescendants?.("keyboard-exit");
+        node.traverse?.(
+          (current, depth) => {
+            if (depth > 0 && current.open.value) {
+              current.setOpen(false, "keyboard-exit");
+            }
+          },
+          { order: "bottom-up" },
+        );
       }
       focusIndex(targetIdx, focusOptions);
     }

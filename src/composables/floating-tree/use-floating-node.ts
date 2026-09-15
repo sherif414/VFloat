@@ -2,7 +2,12 @@ import type { Middleware, MiddlewareData, Placement } from "@floating-ui/dom";
 import {
   computed,
   type ComputedRef,
+  getCurrentInstance,
+  hasInjectionContext,
+  inject,
+  type InjectionKey,
   type MaybeRefOrGetter,
+  provide,
   type Ref,
   ref,
   type ShallowRef,
@@ -17,7 +22,8 @@ import { useControllableState } from "@/shared/use-controllable-state";
 import type { OpenChangeReason, VirtualElement } from "@/types";
 import { registerActiveFloatingNode } from "./active-nodes";
 
-const internalParentMap = new WeakMap<FloatingNode, ShallowRef<FloatingNode | null>>();
+const FLOATING_NODE_KEY: InjectionKey<FloatingNode> = Symbol("v-float-node-context");
+const internalParentMap = new WeakMap<FloatingNodeId, ShallowRef<FloatingNode | null>>();
 
 /**
  * Internal registry storing non-public capabilities (middleware registries)
@@ -33,8 +39,13 @@ export const floatingInternals = new WeakMap<FloatingNodeId, FloatingInternals>(
 
 /**
  * Creates a unified composite floating node used by interaction and positioning composables.
- * Supports standalone surfaces (N = 0) and nested composite hierarchies (N > 0) uniformly
- * via explicit `parent` option.
+ * Supports standalone surfaces ($N = 0$) and nested composite hierarchies ($N > 0$) uniformly.
+ *
+ * Parenting resolution follows three tiers:
+ * - **Explicit Parent (`parent: node | ref | getter`)**: Explicitly links to the provided node, bypassing DI.
+ * - **Explicit Standalone (`parent: null`)**: Explicitly isolates the node with no parent, bypassing DI.
+ * - **Implicit DI (Default / Omitted / `parent: undefined`)**: Injects the nearest ancestor `FloatingNode`
+ *   from the Vue component context via Dependency Injection.
  *
  * @param options - Configuration options for the floating node.
  * @returns The composite FloatingNode instance.
@@ -102,7 +113,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
 
     // Update child's parent reference
     const childParentRef =
-      internalParentMap.get(child) ?? (child.parent as ShallowRef<FloatingNode | null>);
+      internalParentMap.get(child.id) ?? (child.parent as ShallowRef<FloatingNode | null>);
     if (childParentRef && "value" in childParentRef) {
       try {
         childParentRef.value = node;
@@ -133,7 +144,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
 
     if (isSameFloatingNode(child.parent.value, node)) {
       const parent =
-        internalParentMap.get(child) ?? (child.parent as ShallowRef<FloatingNode | null>);
+        internalParentMap.get(child.id) ?? (child.parent as ShallowRef<FloatingNode | null>);
       if (parent && "value" in parent) {
         try {
           parent.value = null;
@@ -145,57 +156,52 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   };
 
   const traverse = (
-    visitor: (node: FloatingNode, depth: number) => boolean | void,
+    visitor: (node: FloatingNode, depth: number) => TraverseAction,
     options: TraverseOptions = {},
     depth = 0,
-  ): void => {
+  ): boolean => {
     const order = options.order ?? "top-down";
 
     if (order === "top-down") {
-      if (visitor(node, depth) === false) {
-        return;
+      const action = visitor(node, depth);
+      if (action === "stop") {
+        return false;
       }
-      for (const child of children.value) {
-        child.traverse(visitor, options, depth + 1);
+      if (action !== "skip") {
+        for (const child of children.value) {
+          if (!child.traverse(visitor, options, depth + 1)) {
+            return false;
+          }
+        }
       }
     } else {
       for (const child of children.value) {
-        child.traverse(visitor, options, depth + 1);
+        if (!child.traverse(visitor, options, depth + 1)) {
+          return false;
+        }
       }
-      visitor(node, depth);
+      const action = visitor(node, depth);
+      if (action === "stop") {
+        return false;
+      }
     }
+
+    return true;
   };
 
   const contains = (target: EventTarget | null): boolean => {
     if (!target) return false;
 
-    let found = false;
-
-    traverse((current, depth) => {
-      if (found || (depth > 0 && !current.open.value)) {
-        return false;
+    return !traverse((current, depth) => {
+      if (depth > 0 && !current.open.value) {
+        return "skip";
       }
-
       if (
         isTargetWithinElements(current.refs.anchorEl.value, current.refs.floatingEl.value, target)
       ) {
-        found = true;
-        return false;
+        return "stop";
       }
     });
-
-    return found;
-  };
-
-  const closeDescendants = (reason: OpenChangeReason = "programmatic"): void => {
-    traverse(
-      (current, depth) => {
-        if (depth > 0 && current.open.value) {
-          current.setOpen(false, reason);
-        }
-      },
-      { order: "bottom-up" },
-    );
   };
 
   const node: FloatingNode = {
@@ -217,18 +223,24 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     removeChild,
     contains,
     traverse,
-    closeDescendants,
   };
 
-  internalParentMap.set(node, parent);
+  internalParentMap.set(id, parent);
+
+  if (getCurrentInstance()) {
+    provide(FLOATING_NODE_KEY, node);
+  }
 
   if (typeof window !== "undefined") {
     const unregisterNode = registerActiveFloatingNode(node);
     tryOnScopeDispose(unregisterNode);
   }
 
-  // Declarative parent binding via options.parent
-  if (options.parent !== undefined) {
+  // Declarative parent binding via options.parent or implicit DI
+  if (options.parent === null) {
+    // Explicit null: standalone surface, explicitly bypasses DI
+  } else if (options.parent !== undefined) {
+    // Explicit parent option passed (node, ref, or getter): use it, do not use DI
     watch(
       () => toValue(options.parent),
       (parentNode, _oldParent, onCleanup) => {
@@ -238,16 +250,22 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
       },
       { immediate: true },
     );
+  } else {
+    // Default: nothing passed (undefined), use DI
+    const injectedParent = hasInjectionContext() ? inject(FLOATING_NODE_KEY, null) : null;
+    if (injectedParent) {
+      const unbind = injectedParent.appendChild(node);
+      tryOnScopeDispose(unbind);
+    }
   }
 
-  // Teardown on scope disposal
+  // Teardown on scope disposal: severs bi-directional links (both upstream parent
+  // and downstream children) as a fail-safe for independent lifecycles or imperative usage.
   tryOnScopeDispose(() => {
-    // Detach self from parent if still linked
     if (parent.value) {
       parent.value.removeChild(node);
     }
-    // Detach all children
-    for (const child of Array.from(children.value)) {
+    for (const child of children.value) {
       removeChild(child);
     }
   });
@@ -291,6 +309,14 @@ function findChildById(
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Return action from a tree visitor to control traversal flow:
+ * - `"stop"`: Immediately terminates the entire traversal across all nodes and branches.
+ * - `"skip"`: In `"top-down"` order, skips descending into the current node's children while continuing sibling traversal.
+ * - `void` / `undefined`: Continues traversal normally.
+ */
+export type TraverseAction = void | "skip" | "stop";
 
 /**
  * Traversal direction for the floating node tree.
@@ -377,22 +403,19 @@ export interface FloatingNode {
 
   /**
    * Recursively traverses this node and its descendants in depth-first order.
-   * In `"top-down"` order, returning `false` from the visitor halts traversal into that node's sub-branch.
+   * - Returning `"skip"` in `"top-down"` order skips descending into that node's children.
+   * - Returning `"stop"` immediately halts the entire traversal across the tree.
    *
    * @param visitor - Callback invoked for each node with `(node, depth)`.
    * @param options - Traversal configuration options including order.
    * @param depth - Current recursion depth (used internally).
+   * @returns `false` if traversal was terminated early via `"stop"`, `true` if completed.
    */
   traverse: (
-    visitor: (node: FloatingNode, depth: number) => boolean | void,
+    visitor: (node: FloatingNode, depth: number) => TraverseAction,
     options?: TraverseOptions,
     depth?: number,
-  ) => void;
-
-  /**
-   * Closes all active descendant floating nodes bottom-up.
-   */
-  closeDescendants: (reason?: OpenChangeReason) => void;
+  ) => boolean;
 }
 
 /**
@@ -430,7 +453,12 @@ export interface UseFloatingNodeOptions {
   onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 
   /**
-   * Explicit parent node reference for nested composite surfaces (submenus, cascades).
+   * Parent node reference for establishing composite hierarchies (submenus, cascades).
+   *
+   * - **Omitted / `undefined` (default)**: Implicitly registers with the nearest ancestor `FloatingNode`
+   *   via Vue Dependency Injection (`provide` / `inject`).
+   * - **`null`**: Explicitly marks the node as standalone, bypassing DI even if an ancestor node exists.
+   * - **`FloatingNode` / `Ref` / `getter`**: Explicitly links to the given parent node, bypassing DI.
    */
   parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
 }

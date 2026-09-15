@@ -33,6 +33,7 @@ export type {
   FloatingNodeElements,
   FloatingNodeId,
   TraversalOrder,
+  TraverseAction,
   TraverseOptions,
   UseFloatingNodeOptions,
 } from "./floating-tree";
@@ -76,6 +77,7 @@ export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewar
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";
 export type {
+  ApplyStylesFn,
   FloatingMiddlewareRegistry,
   FloatingPosition,
   FloatingStyles,

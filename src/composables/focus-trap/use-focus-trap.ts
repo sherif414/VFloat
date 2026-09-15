@@ -116,7 +116,7 @@ export function useFocusTrap(
     if (typeof node?.traverse === "function") {
       const elements: HTMLElement[] = [];
       node.traverse((current) => {
-        if (!current.open.value) return false;
+        if (!current.open.value) return "skip";
         const el = current.refs.floatingEl.value;
         if (el) {
           elements.push(el);

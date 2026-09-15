@@ -1,4 +1,5 @@
 export type {
+  ApplyStylesFn,
   FloatingMiddlewareRegistry,
   FloatingPosition,
   FloatingStyles,
