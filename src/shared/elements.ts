@@ -1,6 +1,6 @@
 import { getDomPath, isElement, isHTMLElement, isNode } from "@/shared/dom";
 import { getDocument } from "@/shared/env";
-import type { AnchorElement, FloatingElement } from "@/composables/floating-tree/use-floating-node";
+import type { AnchorElement, FloatingElement } from "@/composables/floating-node/use-floating-node";
 
 //=======================================================================================
 // 📌 Main

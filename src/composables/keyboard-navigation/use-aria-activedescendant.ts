@@ -11,7 +11,7 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";

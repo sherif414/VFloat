@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import { clearTrackedElements, trackElement } from "@/test-utils";
 import { type FloatingNode, useFloatingNode } from "@/composables";
-import { clearActiveFloatingNodes } from "@/composables/floating-tree/active-nodes";
+import { clearActiveFloatingNodes } from "@/composables/floating-node/active-nodes";
 import { type UseEscapeKeyOptions, useEscapeKey } from "./use-escape-key";
 
 function createMockFloatingNode(): FloatingNode {

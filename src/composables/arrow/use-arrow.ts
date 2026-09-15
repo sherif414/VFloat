@@ -11,11 +11,11 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import {
   floatingInternals,
   type FloatingInternals,
-} from "@/composables/floating-tree/use-floating-node";
+} from "@/composables/floating-node/use-floating-node";
 import { isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { arrow } from "../middlewares";

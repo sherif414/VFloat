@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import type { AnchorElement, FloatingElement } from "@/composables/floating-tree";
+import type { AnchorElement, FloatingElement } from "@/composables/floating-node";
 import {
   clearTimeoutIfSet,
   contains,

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, h, nextTick, ref, useTemplateRef, type Ref } from "vue";
 import { useArrow, useFloatingNode, usePosition, type UsePositionOptions } from "@/composables";
-import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
+import { floatingInternals } from "@/composables/floating-node/use-floating-node";
 import { getTestEl, stubElementRect } from "@/test-utils";
 
 interface FixtureConfig {

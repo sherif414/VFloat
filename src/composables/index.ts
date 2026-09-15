@@ -41,9 +41,9 @@ export type {
   TraverseAction,
   TraverseOptions,
   UseFloatingNodeOptions,
-} from "./floating-tree";
+} from "./floating-node";
 // Floating Node
-export { useFloatingNode } from "./floating-tree";
+export { useFloatingNode } from "./floating-node";
 export type { UseFocusContext, UseFocusOptions } from "./focus/use-focus";
 // Focus
 export { useFocus } from "./focus/use-focus";

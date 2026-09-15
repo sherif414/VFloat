@@ -7,7 +7,7 @@ import {
   useId,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { isHTMLElement } from "@/shared/dom";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 

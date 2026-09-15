@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, type Ref, toValue, watch, watchEffect } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { getDocument } from "@/shared/env";
 import { createClientPointState } from "./client-point-state";
 import { FollowTracker, StaticTracker } from "./tracking-strategies";

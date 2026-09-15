@@ -1,6 +1,6 @@
 import type { Coords } from "@floating-ui/dom";
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonOptions, safePolygon } from "./polygon";

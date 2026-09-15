@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
 import { isHTMLElement, isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";

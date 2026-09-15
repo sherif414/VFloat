@@ -6,7 +6,7 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import {
   isButtonTarget,
   isLinkTarget,

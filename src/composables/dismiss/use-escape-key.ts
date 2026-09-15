@@ -1,10 +1,10 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import { useComposition } from "./composition-state";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import {
   isTargetInOtherActiveHierarchy,
   registerActiveFloatingNode,
-} from "@/composables/floating-tree/active-nodes";
+} from "@/composables/floating-node/active-nodes";
 import { getDocument } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";

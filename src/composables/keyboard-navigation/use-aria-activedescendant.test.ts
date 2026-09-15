@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
-import { useFloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
+import { useFloatingNode } from "@/composables/floating-node";
 import {
   type UseAriaActivedescendantOptions,
   type UseAriaActivedescendantReturn,

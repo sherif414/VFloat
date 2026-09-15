@@ -9,7 +9,7 @@ import {
   toValue,
   watchPostEffect,
 } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { isHTMLElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";

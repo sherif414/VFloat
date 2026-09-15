@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
 import { getDocument } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";

@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { useControllableState } from "@/shared/use-controllable-state";
 import { useEventListener } from "@/shared/use-event-listener";

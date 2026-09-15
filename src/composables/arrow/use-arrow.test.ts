@@ -4,7 +4,7 @@ import type { Ref, ShallowRef } from "vue";
 import { computed, effectScope, nextTick, ref, shallowRef } from "vue";
 import type { AnchorElement, FloatingNode, FloatingElement } from "@/composables";
 import { useArrow, useFloatingNode, usePosition } from "@/composables";
-import { floatingInternals } from "@/composables/floating-tree/use-floating-node";
+import { floatingInternals } from "@/composables/floating-node/use-floating-node";
 import { clearTrackedElements, trackElement } from "@/test-utils";
 
 let scope: ReturnType<typeof effectScope> | undefined;

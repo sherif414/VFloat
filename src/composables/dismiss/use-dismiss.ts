@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import { useEscapeKey } from "./use-escape-key";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { type OutsideClickPredicate, useOutsideClick } from "./use-outside-click";
 
 //=======================================================================================

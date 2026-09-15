@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
-import type { FloatingNode } from "@/composables/floating-tree";
+import type { FloatingNode } from "@/composables/floating-node";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";

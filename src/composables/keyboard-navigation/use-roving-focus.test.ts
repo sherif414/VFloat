@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import { type FloatingNode, useFloatingNode } from "../floating-tree";
+import { type FloatingNode, useFloatingNode } from "../floating-node";
 import {
   type UseRovingFocusOptions,
   type UseRovingFocusReturn,
