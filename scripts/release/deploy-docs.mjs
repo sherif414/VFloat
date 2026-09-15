@@ -46,7 +46,6 @@ if (!options.dryRun) {
 }
 
 if (!options.skipBuild) {
-  run("pnpm", ["run", "size"]);
   run("pnpm", ["run", "docs:build"]);
 }
 

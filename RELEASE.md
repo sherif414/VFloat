@@ -67,7 +67,7 @@ Releases are triggered directly from GitHub:
 2. Runs `lint`, `type-check`, `test`, and `build`.
 3. Bumps `package.json` version.
 4. Generates `CHANGELOG.md` entries via `changelogen`.
-5. Updates `docs/.vitepress/data/package-size.json` bundle metrics.
+5. Measures bundle size.
 6. Commits `chore: release vX.Y.Z` and creates tag `vX.Y.Z`.
 7. Pushes commit & tag to `origin/main`.
 8. Creates the GitHub Release with extracted changelog release notes.

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import zlib from "node:zlib";
@@ -8,7 +8,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "../..");
 const distFile = join(rootDir, "dist/index.mjs");
 const packageJsonFile = join(rootDir, "package.json");
-const outputJsonFile = join(rootDir, "docs/.vitepress/data/package-size.json");
 
 const args = process.argv.slice(2);
 const isJsonOutput = args.includes("--json");
@@ -61,12 +60,6 @@ export function measurePackageSize(options = {}) {
     brotliFormatted: formatBytes(brotliBytes),
   };
 
-  mkdirSync(dirname(outputJsonFile), { recursive: true });
-  const outputContent = JSON.stringify(data, null, 2) + "\n";
-  if (!existsSync(outputJsonFile) || readFileSync(outputJsonFile, "utf8") !== outputContent) {
-    writeFileSync(outputJsonFile, outputContent, "utf8");
-  }
-
   return data;
 }
 
@@ -88,9 +81,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         `Minified + Gzip:    ${data.gzipFormatted} (${data.gzipBytes.toLocaleString()} bytes)`,
       );
       console.log(
-        `Minified + Brotli:  ${data.brotliFormatted} (${data.brotliBytes.toLocaleString()} bytes)`,
+        `Minified + Brotli:  ${data.brotliFormatted} (${data.brotliBytes.toLocaleString()} bytes)\n`,
       );
-      console.log(`Data saved to:      docs/.vitepress/data/package-size.json\n`);
     }
   } catch (error) {
     console.error(`[measure-size] Error: ${error.message}`);

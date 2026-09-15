@@ -17,7 +17,6 @@ const explicitVersion = getArgValue("--version");
 
 const pkgPath = resolve(process.cwd(), "package.json");
 const changelogPath = resolve(process.cwd(), "CHANGELOG.md");
-const sizeJsonPath = resolve(process.cwd(), "docs/.vitepress/data/package-size.json");
 
 if (!existsSync(pkgPath)) {
   fail("Could not find package.json in current working directory.");
@@ -26,9 +25,6 @@ if (!existsSync(pkgPath)) {
 const originalPkgContent = readFileSync(pkgPath, "utf8");
 const originalChangelogContent = existsSync(changelogPath)
   ? readFileSync(changelogPath, "utf8")
-  : null;
-const originalSizeJsonContent = existsSync(sizeJsonPath)
-  ? readFileSync(sizeJsonPath, "utf8")
   : null;
 
 const pkg = JSON.parse(originalPkgContent);
@@ -97,11 +93,6 @@ if (isDryRun) {
   } else if (existsSync(changelogPath)) {
     unlinkSync(changelogPath);
   }
-  if (originalSizeJsonContent !== null) {
-    writeFileSync(sizeJsonPath, originalSizeJsonContent, "utf8");
-  } else if (existsSync(sizeJsonPath)) {
-    unlinkSync(sizeJsonPath);
-  }
 
   console.log("\n[release] Dry-run simulation completed successfully.");
   console.log("[release] No changes were committed, pushed, released, or published.");
@@ -117,7 +108,7 @@ if (process.env.GITHUB_ACTIONS) {
 }
 
 // Step 1: Stage and commit release artifacts locally
-run("git", ["add", "package.json", "CHANGELOG.md", "docs/.vitepress/data/package-size.json"]);
+run("git", ["add", "package.json", "CHANGELOG.md"]);
 run("git", ["commit", "-m", `chore: release v${targetVersion}`]);
 run("git", ["tag", "-a", `v${targetVersion}`, "-m", `v${targetVersion}`]);
 

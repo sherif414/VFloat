@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitepress";
 import { demoMdPlugin } from "vitepress-plugin-demo";
 import { loadPackageSize } from "./data/package-size.data";
@@ -6,6 +7,15 @@ import { loadPackageSize } from "./data/package-size.data";
 export default defineConfig({
   title: "VFloat",
   description: "A headless, primitive floating library for Vue 3",
+
+  vite: {
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("../../src", import.meta.url)),
+        "v-float": fileURLToPath(new URL("../../src/index.ts", import.meta.url)),
+      },
+    },
+  },
 
   markdown: {
     config(md) {
