@@ -8,7 +8,6 @@ import PresetPopover from "./showcase/preset-popover.vue";
 import PresetTooltip from "./showcase/preset-tooltip.vue";
 import ShowcaseCodePanel from "./showcase/showcase-code-panel.vue";
 import ShowcaseHeader from "./showcase/showcase-header.vue";
-import ShowcaseToolbar from "./showcase/showcase-toolbar.vue";
 import type { PresetType, ShowcasePresetMeta, ViewMode } from "./showcase/types";
 import { useShowcaseDrag } from "./showcase/use-showcase-drag";
 
@@ -74,9 +73,22 @@ function handleResetPosition() {
   });
 }
 
+function handleResetDemo() {
+  selectedPlacement.value = "top";
+  keepOpen.value = false;
+  handleResetPosition();
+}
+
+const isModified = computed(() => {
+  const hasOffset = activePreset.value !== "cursor" && (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
+  const hasCustomPlacement = selectedPlacement.value !== "top";
+  const isKeepOpen = keepOpen.value;
+  return hasOffset || hasCustomPlacement || isKeepOpen;
+});
+
 function onSwitchPreset(preset: PresetType) {
   activePreset.value = preset;
-  handleResetPosition();
+  handleResetDemo();
 }
 
 function onResolvedPlacementUpdate(val: Placement) {
@@ -103,30 +115,23 @@ onMounted(() => {
 
 <template>
   <div class="showcase-card">
-    <!-- 1. Header Navigation -->
+    <!-- 1. Unified Single Header Navigation -->
     <ShowcaseHeader
       :model-value="activePreset"
       :view-mode="activeView"
       :presets="presets"
+      :placement="selectedPlacement"
+      :keep-open="keepOpen"
       @update:model-value="onSwitchPreset"
       @update:view-mode="activeView = $event"
+      @update:placement="selectedPlacement = $event"
+      @update:keep-open="keepOpen = $event"
     />
 
-    <!-- 2. Controls Toolbar -->
-    <ShowcaseToolbar
-      v-model:placement="selectedPlacement"
-      v-model:offset="offsetValue"
-      v-model:flip="enableFlip"
-      v-model:shift="enableShift"
-      v-model:arrow="enableArrow"
-      v-model:keep-open="keepOpen"
-      :active-preset="activePreset"
-      :resolved-placement="resolvedPlacement"
-    />
-
-    <!-- 3. Main Workspace -->
+    <!-- 2. Main Workspace -->
     <div class="showcase-body">
       <Transition name="view-fade" mode="out-in">
+        <!-- 1. Interactive Stage Canvas -->
         <div
           v-if="activeView === 'preview'"
           key="preview"
@@ -148,14 +153,27 @@ onMounted(() => {
             <template v-else> Move your cursor across this area to track coordinates. </template>
           </div>
 
-          <!-- Reset Button -->
+          <!-- Reset Button (Icon-Only, Resets Position & Options) -->
           <button
-            v-if="activePreset !== 'cursor' && (anchorOffset.x !== 0 || anchorOffset.y !== 0)"
+            v-if="isModified"
             type="button"
-            class="reset-position-btn"
-            @click="handleResetPosition"
+            class="reset-icon-btn"
+            title="Reset position and settings"
+            aria-label="Reset position and settings"
+            @click="handleResetDemo"
           >
-            Reset anchor
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2.5 2.5v4h4" />
+              <path d="M2.8 10a6 6 0 1 0 1.4-6.3L2.5 6.5" />
+            </svg>
           </button>
 
           <!-- Tooltip Preset -->
@@ -303,27 +321,44 @@ onMounted(() => {
   color: var(--vp-c-text-2);
 }
 
-.reset-position-btn {
+.reset-icon-btn {
   position: absolute;
-  top: 0.85rem;
+  bottom: 0.75rem;
   right: 0.85rem;
   z-index: 10;
-  padding: 0.25rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-2);
-  font: inherit;
-  font-size: 0.75rem;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.reset-position-btn:hover {
+.reset-icon-btn:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
-  background: var(--vp-c-bg-soft);
+  background: var(--vp-c-soft);
+  transform: rotate(-30deg);
+}
+
+.reset-icon-btn:active {
+  transform: rotate(-90deg);
+}
+
+.reset-icon-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 @media (max-width: 640px) {
@@ -340,11 +375,11 @@ onMounted(() => {
     height: 320px;
   }
 
-  .reset-position-btn {
-    top: 0.5rem;
+  .reset-icon-btn {
+    bottom: 0.5rem;
     right: 0.5rem;
-    padding: 0.2rem 0.45rem;
-    font-size: 0.72rem;
+    width: 26px;
+    height: 26px;
   }
 
   .sandbox-caption {
