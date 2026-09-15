@@ -57,22 +57,16 @@ export function loadPackageSize(): PackageSizeData {
   if (existsSync(jsonFile)) {
     try {
       return JSON.parse(readFileSync(jsonFile, "utf8"));
-    } catch {
-      // Fall through to default fallback
+    } catch (error) {
+      throw new Error(
+        `Failed to parse package size data from ${jsonFile}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  return {
-    version: "0.12.0",
-    rawBytes: 55479,
-    rawFormatted: "54.18 kB",
-    minifiedBytes: 55479,
-    minifiedFormatted: "54.18 kB",
-    gzipBytes: 15069,
-    gzipFormatted: "14.72 kB",
-    brotliBytes: 13377,
-    brotliFormatted: "13.06 kB",
-  };
+  throw new Error(
+    `Package size data could not be loaded. Neither build artifact (${distFile}) nor saved metrics (${jsonFile}) were found. Run "pnpm run build" or "pnpm run size" to generate them.`,
+  );
 }
 
 declare const data: PackageSizeData;
