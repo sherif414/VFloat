@@ -68,7 +68,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles, middlewareData } = usePosition(node, {
+const { middlewareData } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -91,7 +91,7 @@ const isHidden = computed(() => {
       v-if="node.open"
       ref="floatingEl"
       class="tooltip"
-      :style="[styles, { visibility: isHidden ? 'hidden' : 'visible' }]"
+      :style="{ visibility: isHidden ? 'hidden' : 'visible' }"
     >
       Hides when anchor scrolls out of view
     </div>

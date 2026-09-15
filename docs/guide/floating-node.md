@@ -64,7 +64,7 @@ When a surface needs JavaScript positioning, call `usePosition(node)`. That retu
 - `styles`
 - `update`
 
-Most templates only need to bind `:style="styles"`, but the rest of the data is there when you need deeper control or helpers such as arrows.
+Most templates do not even need to bind styles manually because `usePosition` synchronizes them directly to `node.refs.floatingEl`. But the return values (including reactive `styles`) are there when you need manual control or deeper integration.
 
 ## The core loop
 
@@ -73,9 +73,9 @@ This is the loop to keep in your head:
 1. You create refs for the anchor and floating element.
 2. You pass them into [`useFloatingNode`](/api/use-floating-node).
 3. `useFloatingNode()` returns the shared `node`.
-4. `usePosition(node)` adds positioning when the surface needs it.
+4. `usePosition(node)` adds positioning and automatically synchronizes styles to the floating element.
 5. Other composables read from and write to the same `node`.
-6. Your template renders from `node.open.value` and the returned `styles`.
+6. Your template renders from `node.open.value`.
 
 ## A minimal example
 
@@ -90,7 +90,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom",
   middlewares: {
     offset: 8,
@@ -103,7 +103,7 @@ useHover(node);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="node.open.value" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open.value" ref="floatingEl">Floating content</div>
 </template>
 ```
 

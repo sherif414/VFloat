@@ -100,7 +100,7 @@ const itemsRef = ref<Array<HTMLElement | null>>([]);
 const items = ["Profile", "Settings", "Billing"];
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node);
+usePosition(node);
 
 useClick(node);
 useDismiss(node);
@@ -114,7 +114,7 @@ useRole(node, {
 <template>
   <button ref="anchorEl" type="button">User Menu</button>
 
-  <div v-if="node.open" ref="floatingEl" :style="styles">
+  <div v-if="node.open" ref="floatingEl">
     <div
       v-for="(item, idx) in items"
       :key="item"

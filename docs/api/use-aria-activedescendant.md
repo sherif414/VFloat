@@ -161,7 +161,7 @@ const filtered = computed(() =>
 );
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, { placement: "bottom-start" });
+usePosition(node, { placement: "bottom-start" });
 
 const { activeIndex, getItemId } = useAriaActivedescendant(node, {
   elementsList,
@@ -194,7 +194,6 @@ function onInput() {
       ref="floatingEl"
       role="listbox"
       class="listbox"
-      :style="styles"
     >
       <li
         v-for="(item, idx) in filtered"

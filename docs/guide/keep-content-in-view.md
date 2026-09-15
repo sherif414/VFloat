@@ -38,7 +38,7 @@ const node = useFloatingNode({
   floatingEl,
   open,
 });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -106,7 +106,7 @@ const node = useFloatingNode({
   floatingEl,
   open,
 });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -161,7 +161,7 @@ const node = useFloatingNode({
   arrowEl,
   open,
 });
-const { styles } = usePosition(node, {
+usePosition(node, {
   middlewares: {
     offset: 8,
     flip: true,
@@ -169,11 +169,12 @@ const { styles } = usePosition(node, {
   },
 });
 
-const { arrowStyles } = useArrow(node);
+// Automatically registers arrow middleware and synchronizes styles to arrowEl
+useArrow(node);
 </script>
 ```
 
-`useArrow(node)` registers the arrow middleware into the positioning registry and returns reactive `arrowStyles` to bind to your arrow element.
+`useArrow(node)` registers the arrow middleware into the positioning registry and automatically applies the computed physical inset styles (`top`, `bottom`, `left`, `right`) directly to `node.refs.arrowEl`.
 
 ## Middleware order matters
 

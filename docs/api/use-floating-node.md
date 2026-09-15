@@ -149,13 +149,13 @@ const floatingEl = ref<HTMLElement | null>(null);
 
 // Automatically provides this node to child components
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node);
+usePosition(node);
 useDismiss(node);
 </script>
 
 <template>
   <button ref="anchorEl" @click="node.setOpen(!node.open.value)">Menu</button>
-  <div v-if="node.open.value" ref="floatingEl" :style="styles" class="menu">
+  <div v-if="node.open.value" ref="floatingEl" class="menu">
     <SubMenu />
   </div>
 </template>
@@ -172,13 +172,13 @@ const floatingEl = ref<HTMLElement | null>(null);
 
 // Omitted parent defaults to DI: automatically injects RootMenu node
 const subNode = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(subNode, { placement: "right-start" });
+usePosition(subNode, { placement: "right-start" });
 useDismiss(subNode);
 </script>
 
 <template>
   <button ref="anchorEl" @click="subNode.setOpen(!subNode.open.value)">Submenu</button>
-  <div v-if="subNode.open.value" ref="floatingEl" :style="styles" class="submenu">
+  <div v-if="subNode.open.value" ref="floatingEl" class="submenu">
     <p>Submenu items</p>
   </div>
 </template>

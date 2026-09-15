@@ -66,7 +66,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles, placement } = usePosition(node, {
+const { placement } = usePosition(node, {
   middlewares: {
     offset: 8,
     autoPlacement: {
@@ -80,7 +80,7 @@ const { styles, placement } = usePosition(node, {
 
 <template>
   <button ref="anchorEl">Anchor</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles" :data-placement="placement">
+  <div v-if="node.open" ref="floatingEl" :data-placement="placement">
     Automatically placed on whichever side fits best
   </div>
 </template>

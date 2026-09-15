@@ -265,6 +265,41 @@ Custom style applicator callback for `usePosition({ applyStyles: fn })`.
 type ApplyStylesFn = (element: HTMLElement, styles: FloatingStyles) => void | (() => void);
 ```
 
+### `UseArrowReturn`
+
+Computed arrow coordinates and styles returned by [`useArrow`](/api/use-arrow).
+
+```ts
+interface UseArrowReturn {
+  arrowX: ComputedRef<number>;
+  arrowY: ComputedRef<number>;
+  arrowStyles: ComputedRef<Record<string, string>>;
+}
+```
+
+### `UseArrowOptions`
+
+Options for configuring arrow positioning in [`useArrow`](/api/use-arrow).
+
+```ts
+interface UseArrowOptions {
+  offset?: MaybeRefOrGetter<string>;
+  padding?: MaybeRefOrGetter<Padding>;
+  applyStyles?: MaybeRef<boolean | undefined> | ApplyArrowStylesFn;
+}
+```
+
+### `ApplyArrowStylesFn`
+
+Custom style applicator callback for `useArrow({ applyStyles: fn })`.
+
+```ts
+type ApplyArrowStylesFn = (
+  element: HTMLElement,
+  styles: Record<string, string>,
+) => void | (() => void);
+```
+
 ---
 
 ## Role & Semantics Types

@@ -102,7 +102,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     flip: true,
@@ -131,7 +131,7 @@ function onContextMenu(event: MouseEvent) {
   >
     Right-click inside this container
 
-    <div v-if="node.open" ref="floatingEl" class="context-menu" :style="styles">
+    <div v-if="node.open" ref="floatingEl" class="context-menu">
       <button @click="node.setOpen(false)">Cut</button>
       <button @click="node.setOpen(false)">Copy</button>
       <button @click="node.setOpen(false)">Paste</button>

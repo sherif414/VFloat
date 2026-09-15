@@ -57,7 +57,7 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 - Examples should import from `v-float`.
 - Use `middlewares` (plural) when referring to the middleware array or the `src/composables/middlewares` module.
 - Prefer `<script setup lang="ts">` for Vue examples.
-- Destructure `styles` directly from the `usePosition` return value: `const { styles } = usePosition(node, ...)`. Bind `styles` (or `styles.value` in non-template contexts) in examples.
+- `usePosition` and `useArrow` automatically apply styles to `floatingEl` and `arrowEl` by default (`applyStyles: true`), so manual `:style` binding is omitted from standard examples unless demonstrating manual opt-out (`applyStyles: false`).
 - Do not restate full option interfaces inside guides when the API page already owns that contract.
 - Middleware API pages currently use an older family style in this repo. Preserve that family for focused edits unless the task is to standardize the whole family together.
 - Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloatingNode`, `usePosition`, `useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useRovingFocus`, `useAriaActivedescendant`, `useCollection`, `useTypeahead`, `useClientPoint`, `useRole`, `useArrow`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `inline`, `arrow`, `safePolygon`, `node`, `middlewares`, `virtual elements`, and `overlay hierarchy coordination`.

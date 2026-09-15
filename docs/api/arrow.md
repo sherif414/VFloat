@@ -6,7 +6,7 @@ description: Calculates offsets to align an arrow element with the anchor.
 
 `arrow` calculates the horizontal or vertical offset required to keep an arrow element aligned with the anchor while staying within the floating panel's bounds.
 
-In most applications, prefer [`useArrow`](/api/use-arrow), which automates element measurement, middleware registration, and CSS inset style generation. Use this low-level middleware when building custom positioning pipelines.
+In most applications, prefer [`useArrow`](/api/use-arrow), which automates element measurement, middleware registration, and automatic DOM style synchronization. Use this low-level middleware when building custom positioning pipelines.
 
 ## Type
 
@@ -66,7 +66,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl, arrowEl });
-const { styles, middlewareData, placement } = usePosition(node, {
+const { middlewareData, placement } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -99,7 +99,7 @@ const arrowStyle = computed(() => {
 <template>
   <button ref="anchorEl">Anchor</button>
 
-  <div v-if="node.open" ref="floatingEl" class="panel" :style="styles">
+  <div v-if="node.open" ref="floatingEl" class="panel">
     Tooltip panel
     <div ref="arrowEl" class="arrow" :style="arrowStyle" />
   </div>
@@ -125,6 +125,6 @@ const arrowStyle = computed(() => {
 
 ## See Also
 
-- [`useArrow`](/api/use-arrow) - High-level composable that generates ready-to-bind arrow styles
+- [`useArrow`](/api/use-arrow) - High-level composable that automatically positions and styles an arrow element
 - [`usePosition`](/api/use-position) - Positioning engine
 - [`shift`](/api/shift) - Viewport containment middleware

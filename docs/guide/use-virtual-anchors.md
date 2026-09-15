@@ -35,7 +35,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "right-start",
 });
 
@@ -51,7 +51,7 @@ useHover(node);
   <div ref="trackingAreaEl" class="interactive-canvas">
     Hover anywhere in this area to inspect coordinates.
 
-    <div v-if="node.open.value" ref="floatingEl" class="cursor-tooltip" :style="styles">
+    <div v-if="node.open.value" ref="floatingEl" class="cursor-tooltip">
       Cursor inspection panel
     </div>
   </div>
@@ -74,7 +74,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
 });
 
@@ -95,7 +95,7 @@ function onContextMenu(e: MouseEvent) {
   <div ref="areaEl" class="context-zone" @contextmenu="onContextMenu">
     Right click inside this container.
 
-    <div v-if="node.open.value" ref="floatingEl" class="context-menu" :style="styles">
+    <div v-if="node.open.value" ref="floatingEl" class="context-menu">
       <ul>
         <li>Inspect element</li>
         <li>Copy link</li>
@@ -129,11 +129,11 @@ const virtualAnchor: VirtualElement = {
 const anchorEl = ref(virtualAnchor);
 
 const node = useFloatingNode({ anchorEl, floatingEl, open });
-const { styles } = usePosition(node);
+usePosition(node);
 </script>
 
 <template>
-  <div v-if="node.open.value" ref="floatingEl" class="fixed-floating" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" class="fixed-floating">
     Anchored to coordinates (160, 120)
   </div>
 </template>

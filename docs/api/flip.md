@@ -74,7 +74,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles, placement } = usePosition(node, {
+const { placement } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -89,7 +89,7 @@ const { styles, placement } = usePosition(node, {
 
 <template>
   <button ref="anchorEl">Anchor</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles" :data-placement="placement">
+  <div v-if="node.open" ref="floatingEl" :data-placement="placement">
     Flipping floating panel
   </div>
 </template>

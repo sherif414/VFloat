@@ -4,7 +4,7 @@ description: Add reactive positioning styles to a floating node using Floating U
 
 # usePosition
 
-`usePosition` computes reactive screen coordinates and inline styles for an existing floating node. It configures the middleware pipeline, sets placement and positioning strategy, auto-updates on scroll and resize, and exposes a ready-to-bind style object.
+`usePosition` computes reactive screen coordinates and inline styles for an existing floating node. It configures the middleware pipeline, sets placement and positioning strategy, auto-updates on scroll and resize, and automatically synchronizes positioning styles to the floating DOM element.
 
 ## Type
 
@@ -106,7 +106,7 @@ Alternatively, you can pass a raw `Middleware[]` array to `middlewares` to fully
 | `placement` | `Readonly<Ref<Placement>>` | Effective placement after middleware execution (e.g. after flipping). |
 | `middlewareData` | `Readonly<Ref<MiddlewareData>>` | Raw output produced by middlewares (such as arrow coordinates or hide flags). |
 | `isPositioned` | `Readonly<Ref<boolean>>` | Becomes `true` once coordinates are computed for mounted elements. Resets to `false` on unmount. |
-| `styles` | `Readonly<Ref<FloatingStyles>>` | Reactive inline style object with device-pixel-ratio subpixel rounding. Bind directly to `:style="styles"`. |
+| `styles` | `Readonly<Ref<FloatingStyles>>` | Reactive inline style object with device-pixel-ratio subpixel rounding. Synchronized directly to `node.refs.floatingEl` by default (`applyStyles: true`), or manually bindable via `:style="styles"` when `applyStyles: false`. |
 | `update` | `() => Promise<void>` | Imperatively forces an immediate coordinate recomputation. |
 
 ## Details
@@ -153,7 +153,7 @@ Companion composables such as [`useArrow`](/api/use-arrow) dynamically register 
 
 ## Example
 
-### Declarative Middleware Configuration
+### Declarative Middleware Configuration (Automatic Styling)
 
 ```vue
 <script setup lang="ts">
@@ -164,7 +164,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles, placement } = usePosition(node, {
+const { placement } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -179,7 +179,7 @@ useHover(node);
 
 <template>
   <button ref="anchorEl">Hover me</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles" :data-placement="placement">
+  <div v-if="node.open" ref="floatingEl" :data-placement="placement">
     Tooltip content
   </div>
 </template>
@@ -198,7 +198,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 4,
@@ -211,8 +211,35 @@ useClick(node);
 
 <template>
   <button ref="anchorEl" style="width: 240px">Select an option</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles">
+  <div v-if="node.open" ref="floatingEl">
     Matches anchor width (240px)
+  </div>
+</template>
+```
+
+### Manual Style Binding (`applyStyles: false`)
+
+If you want to manage style bindings manually in your template:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useFloatingNode, usePosition } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
+  placement: "bottom",
+  applyStyles: false,
+});
+</script>
+
+<template>
+  <button ref="anchorEl">Trigger</button>
+  <div v-if="node.open" ref="floatingEl" :style="styles">
+    Manual style binding
   </div>
 </template>
 ```

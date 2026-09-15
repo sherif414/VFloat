@@ -92,7 +92,7 @@ Modal dialogs often center in the viewport using CSS Flexbox or Grid over a full
 When building an **anchored dialog** (such as a callout dialog, rich popover dialog, or contextual confirmation bubble next to a button), add `usePosition`:
 
 ```ts
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -102,7 +102,7 @@ const { styles } = usePosition(node, {
 });
 ```
 
-And bind `:style="styles"` to `floatingEl`. VFloat allows you to mix and match focus trapping with or without JavaScript positioning based on your UI needs.
+`usePosition` will automatically apply the calculated positioning coordinates to `floatingEl`. VFloat allows you to mix and match focus trapping with or without JavaScript positioning based on your UI needs.
 
 ## When a popover should become a dialog
 

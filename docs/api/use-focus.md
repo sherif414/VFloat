@@ -67,7 +67,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 6,
@@ -84,7 +84,7 @@ useRole(node, { role: "tooltip" });
 <template>
   <button ref="anchorEl">Tab to focus me</button>
 
-  <div v-if="node.open.value" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip">
     Helpful keyboard-accessible hint
   </div>
 </template>

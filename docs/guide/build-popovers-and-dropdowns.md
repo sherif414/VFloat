@@ -26,7 +26,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -42,7 +42,7 @@ useDismiss(node);
 <template>
   <button ref="anchorEl" type="button" class="trigger">Open actions</button>
 
-  <div v-if="node.open.value" ref="floatingEl" class="panel" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" class="panel">
     <h2>Quick actions</h2>
     <p>Choose the next step for this record.</p>
     <div class="actions">
@@ -57,7 +57,7 @@ useDismiss(node);
 ## Robust positioning with collision detection
 
 ```ts
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -73,7 +73,7 @@ A production popover needs more than just a base placement:
 - **`flip: true`** checks if the bottom placement fits in the viewport. If the bottom overflows, it flips to `top-start` automatically.
 - **`shift: { padding: 8 }`** prevents the panel from overflowing horizontal screen edges by nudging it inward with an 8-pixel margin.
 
-This three-middleware stack (`offset` → `flip` → `shift`) represents the battle-tested default for dropdown panels.
+This three-middleware stack (`offset` → `flip` → `shift`) represents the battle-tested default for dropdown panels. `usePosition` automatically applies the resulting GPU-accelerated CSS transforms directly onto `node.refs.floatingEl`.
 
 ## Coordinating click and dismissal
 
@@ -94,7 +94,7 @@ When a user clicks inside the popover panel (such as on the "Edit" or "Duplicate
 ```vue
 <button ref="anchorEl" type="button" class="trigger">Open actions</button>
 
-<div v-if="node.open.value" ref="floatingEl" class="panel" :style="styles">
+<div v-if="node.open.value" ref="floatingEl" class="panel">
   ...
 </div>
 ```
@@ -102,9 +102,8 @@ When a user clicks inside the popover panel (such as on the "Edit" or "Duplicate
 The template maintains a clean contract:
 
 - `ref="anchorEl"` associates the trigger button with the positioning engine.
-- `ref="floatingEl"` associates the popover container.
+- `ref="floatingEl"` associates the popover container (automatically positioned by `usePosition`).
 - `v-if="node.open.value"` mounts the panel when active.
-- `:style="styles"` applies GPU-accelerated CSS transform coordinates.
 
 ## Where to go next
 

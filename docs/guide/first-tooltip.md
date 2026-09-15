@@ -30,7 +30,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: { offset: 8 },
 });
@@ -41,7 +41,7 @@ useHover(node);
 <template>
   <button ref="anchorEl" type="button">Save changes</button>
 
-  <div v-if="node.open.value" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip">
     This button saves your changes.
   </div>
 </template>
@@ -76,16 +76,16 @@ The node also exposes `lastOpenReason` and `lastOpenEvent` so you can inspect wh
 
 The node does not position elements and does not bind DOM event listeners. It acts as the shared coordinator that every other composable plugs into. Nothing happens without it, but it delegates the actual work to the other composables.
 
-## Positioning computes the coordinates
+## Positioning computes and applies coordinates
 
 ```ts
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: { offset: 8 },
 });
 ```
 
-[`usePosition`](/api/use-position) reads the anchor and floating element from the node, computes where the floating element should go, and returns `styles`, a ref you bind directly to the template with `:style="styles"`.
+[`usePosition`](/api/use-position) reads the anchor and floating element from the node, computes where the floating element should go, and automatically applies the positioning styles directly to the floating DOM element (`node.refs.floatingEl`). You don't need to manually bind `:style` in your template.
 
 Two options matter here:
 
@@ -103,21 +103,22 @@ useHover(node);
 
 [`useHover`](/api/use-hover) listens for pointer enter and leave events on the anchor and updates `node.open` automatically. You do not need to write event handlers or manage timeout IDs. The composable reads the element refs from the node and writes open state back to it.
 
-## The template has three key bindings
+## The template has two key bindings
 
 ```vue
 <button ref="anchorEl" type="button">Save changes</button>
 
-<div v-if="node.open.value" ref="floatingEl" role="tooltip" :style="styles">
+<div v-if="node.open.value" ref="floatingEl" role="tooltip">
   This button saves your changes.
 </div>
 ```
 
-Three lines do real work:
+Two lines do the structural work:
 
 - **`ref="anchorEl"` and `ref="floatingEl"`** give VFloat access to the rendered DOM nodes. Without these, the composables have nothing to position and nothing to listen to.
 - **`v-if="node.open.value"`** mounts and unmounts the tooltip based on the shared open state. When `useHover` sets it to `true`, the tooltip appears. When it sets it to `false`, the tooltip disappears.
-- **`:style="styles"`** applies the computed position. This is the output of `usePosition`: the coordinates that place the tooltip above the button with an 8-pixel gap.
+
+Notice that there is no `:style` binding on `floatingEl`. `usePosition` automatically synchronizes positioning transforms directly onto the element. If you ever need manual control, you can pass `{ applyStyles: false }` to `usePosition` and bind `:style="styles"` yourself.
 
 The `role="tooltip"` attribute tells assistive technology what the element is. It is not required for VFloat to function, but it matters for accessibility.
 
@@ -129,7 +130,7 @@ Tracing the full lifecycle clarifies how the pieces fit together:
 2. The button renders and `anchorEl` receives a real DOM node.
 3. The user hovers over the button. `useHover` detects `pointerenter` and calls `node.setOpen(true, "hover", event)`.
 4. `node.open.value` becomes `true`. The `v-if` mounts the tooltip. `floatingEl` receives a real DOM node.
-5. `usePosition` reads both element rects, applies `placement: "top"` and `offset: 8`, and writes the result to `styles`.
+5. `usePosition` reads both element rects, applies `placement: "top"` and `offset: 8`, and applies the positioning styles directly to `floatingEl`.
 6. The tooltip appears above the button with the correct gap.
 7. The pointer leaves. `useHover` calls `setOpen(false, "hover", event)`. The `v-if` unmounts the tooltip.
 

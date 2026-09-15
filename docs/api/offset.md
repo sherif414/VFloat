@@ -56,7 +56,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -68,7 +68,7 @@ const { styles } = usePosition(node, {
 
 <template>
   <button ref="anchorEl">Anchor</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles">8px offset panel</div>
+  <div v-if="node.open" ref="floatingEl">8px offset panel</div>
 </template>
 ```
 

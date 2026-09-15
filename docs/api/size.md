@@ -80,7 +80,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -101,7 +101,7 @@ const { styles } = usePosition(node, {
 <template>
   <button ref="anchorEl">Toggle List</button>
 
-  <div v-if="node.open" ref="floatingEl" class="scroll-list" :style="styles">
+  <div v-if="node.open" ref="floatingEl" class="scroll-list">
     <div v-for="i in 50" :key="i" class="item">Item {{ i }}</div>
   </div>
 </template>

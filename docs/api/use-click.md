@@ -67,7 +67,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -83,7 +83,7 @@ useDismiss(node);
 <template>
   <button ref="anchorEl">Toggle Menu</button>
 
-  <div v-if="node.open" ref="floatingEl" class="dropdown" :style="styles">
+  <div v-if="node.open" ref="floatingEl" class="dropdown">
     <button @click="node.setOpen(false)">Profile</button>
     <button @click="node.setOpen(false)">Settings</button>
     <button @click="node.setOpen(false)">Logout</button>

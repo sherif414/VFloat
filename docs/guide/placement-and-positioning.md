@@ -30,11 +30,22 @@ That matters because VFloat's positioning model is based on geometry, not on the
 
 [`usePosition`](/api/use-position) calculates the active coordinates and styles for your floating node.
 
-By default, `usePosition` automatically binds the computed positioning styles directly to your floating element (`node.refs.floatingEl`), so you don't even need to write `:style="styles"` in your template.
+### Automatic style application by default
 
-If you need manual control or custom animations, `styles` is also exposed on the returned object (read as `styles.value` inside `<script setup>`), and automatic binding can be disabled or customized with `applyStyles: false` or a custom applicator callback.
+By default (`applyStyles: true`), `usePosition` automatically synchronizes positioning styles (`position`, `top`, `left`, `transform`, `will-change`) directly onto your floating DOM element (`node.refs.floatingEl`).
 
-When you need more insight, you can also inspect `placement`, `middlewareData`, `isPositioned`, and `update`.
+Similarly, [`useArrow`](/api/use-arrow) automatically synchronizes computed physical insets (`top`, `bottom`, `left`, `right`) directly onto your arrow DOM element (`node.refs.arrowEl`).
+
+This means you do not need to bind `:style="styles"` or `:style="arrowStyles"` in your templates for standard floating surfaces.
+
+### Manual control and custom applicators
+
+When you need custom styling pipelines, transitions, or manual binding:
+
+- **Disable automatic binding:** Pass `{ applyStyles: false }` to `usePosition` or `useArrow`. Reactive `styles` (or `arrowStyles`) remains available on the returned object to bind manually with `:style="styles"`.
+- **Custom style applicators:** Pass a custom callback `applyStyles(element, styles)` to `usePosition` or `useArrow` to intercept and apply styles with custom animation libraries, CSS transforms, or cleanup routines.
+
+When you need deeper inspection into layout math, `usePosition` also returns `placement`, `middlewareData`, `isPositioned`, and `update`.
 
 ## Positioning does not equal interaction
 

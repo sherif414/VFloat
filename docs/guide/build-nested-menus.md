@@ -90,12 +90,12 @@ const floatingEl = ref<HTMLElement | null>(null);
 // Automatically provides rootNode to descendant components via DI
 const rootNode = useFloatingNode({ anchorEl, floatingEl });
 
-const { styles } = usePosition(rootNode, {
+usePosition(rootNode, {
   placement: "bottom-start",
   middlewares: { offset: 8, flip: true, shift: { padding: 12 } },
 });
 
-provide("MenuRootContext", { rootNode, styles });
+provide("MenuRootContext", { rootNode });
 </script>
 
 <template>
@@ -140,7 +140,7 @@ useClick(rootNode);
 import { inject, ref, shallowRef, watchEffect, provide } from "vue";
 import { useDismiss, useRovingFocus } from "v-float";
 
-const { rootNode, styles } = inject<any>("MenuRootContext");
+const { rootNode } = inject<any>("MenuRootContext");
 const contentRef = ref<HTMLDivElement | null>(null);
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
@@ -160,7 +160,7 @@ provide("MenuLevelContext", { node: rootNode, getTabindex, itemEls });
 
 <template>
   <Teleport to="body">
-    <div v-if="rootNode.open.value" ref="contentRef" role="menu" :style="styles">
+    <div v-if="rootNode.open.value" ref="contentRef" role="menu">
       <slot />
     </div>
   </Teleport>
@@ -241,7 +241,7 @@ watchEffect(() => {
   subNode.refs.floatingEl.value = contentRef.value;
 });
 
-const { styles } = usePosition(subNode, {
+usePosition(subNode, {
   placement: "right-start",
   middlewares: { offset: 4, flip: true, shift: { padding: 12 } },
 });
@@ -262,7 +262,7 @@ provide("MenuLevelContext", { node: subNode, getTabindex, itemEls });
 
 <template>
   <Teleport to="body">
-    <div v-if="subNode.open.value" ref="contentRef" role="menu" :style="styles">
+    <div v-if="subNode.open.value" ref="contentRef" role="menu">
       <slot />
     </div>
   </Teleport>

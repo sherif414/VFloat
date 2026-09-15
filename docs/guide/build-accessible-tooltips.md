@@ -24,7 +24,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -41,7 +41,7 @@ useFocus(node);
 <template>
   <button ref="anchorEl" type="button" aria-describedby="save-tooltip">Save draft</button>
 
-  <div v-if="node.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" id="save-tooltip" ref="floatingEl" role="tooltip">
     Save the current draft without publishing it.
   </div>
 </template>
@@ -85,7 +85,7 @@ For deeper tuning options like `buffer` and `requireIntent`, read [Safe Polygon 
 ```vue
 <button ref="anchorEl" type="button" aria-describedby="save-tooltip">Save draft</button>
 
-<div v-if="node.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
+<div v-if="node.open.value" id="save-tooltip" ref="floatingEl" role="tooltip">
   Save the current draft without publishing it.
 </div>
 ```

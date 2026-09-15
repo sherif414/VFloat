@@ -83,7 +83,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -101,7 +101,7 @@ useHover(node, {
 <template>
   <button ref="anchorEl">Hover for details</button>
 
-  <div v-if="node.open.value" ref="floatingEl" class="card" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" class="card">
     <p>Interactive floating card with links</p>
     <a href="#more">Read documentation</a>
   </div>

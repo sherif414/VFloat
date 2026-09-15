@@ -75,6 +75,8 @@ If you prefer manual template binding, pass `{ applyStyles: false }` and bind `:
 
 ## Example
 
+### Automatic Arrow and Position Styling
+
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
@@ -85,7 +87,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl, arrowEl });
-const { styles, placement } = usePosition(node, {
+const { placement } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -110,7 +112,6 @@ useHover(node);
     v-if="node.open"
     ref="floatingEl"
     class="tooltip"
-    :style="styles"
     :data-placement="placement"
   >
     <span>Tooltip message</span>

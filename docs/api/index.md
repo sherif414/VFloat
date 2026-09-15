@@ -37,8 +37,8 @@ Positioning composables compute screen coordinates, run the middleware pipeline,
 
 | Composable | Description |
 | --- | --- |
-| [`usePosition`](/api/use-position) | Computes reactive coordinates and inline styles for a floating node using Floating UI. |
-| [`useArrow`](/api/use-arrow) | Registers an arrow element with the positioning pipeline and returns computed arrow styles. |
+| [`usePosition`](/api/use-position) | Computes reactive coordinates and automatically applies inline positioning styles to the floating element. |
+| [`useArrow`](/api/use-arrow) | Registers an arrow element with the positioning pipeline and automatically applies computed arrow styles. |
 | [`useClientPoint`](/api/use-client-point) | Positions a floating element relative to pointer coordinates using a virtual anchor. |
 
 ## Interactions
@@ -85,4 +85,4 @@ Configure them declaratively inside `usePosition(node, { middlewares: { ... } })
 
 - **Reactivity:** Options accept plain values, Vue refs, or getter functions (`MaybeRefOrGetter<T>`). Changes automatically re-evaluate active composables.
 - **Node Coupling:** Every composable in a floating surface accepts the same `FloatingNode` created by [`useFloatingNode`](/api/use-floating-node).
-- **Style Binding:** By default (`applyStyles: true`), `usePosition` automatically synchronizes positioning styles to `node.refs.floatingEl`. Alternatively, set `applyStyles: false` and bind `:style="styles"` directly in templates.
+- **Style Binding:** By default (`applyStyles: true`), `usePosition` and `useArrow` automatically synchronize positioning and arrow styles directly to `node.refs.floatingEl` and `node.refs.arrowEl`. Alternatively, set `applyStyles: false` and bind `:style="styles"` or `:style="arrowStyles"` manually in templates.

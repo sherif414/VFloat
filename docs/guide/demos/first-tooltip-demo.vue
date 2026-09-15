@@ -6,7 +6,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -27,7 +27,6 @@ useHover(node);
       ref="floatingEl"
       class="tooltip-demo__floating"
       role="tooltip"
-      :style="styles"
     >
       <span>This button saves your changes.</span>
     </div>

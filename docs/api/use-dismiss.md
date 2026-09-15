@@ -92,7 +92,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node);
+usePosition(node);
 
 useClick(node);
 useDismiss(node, {
@@ -104,7 +104,7 @@ useDismiss(node, {
 <template>
   <button ref="anchorEl">Toggle Popover</button>
 
-  <div v-if="node.open.value" ref="floatingEl" class="popover" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" class="popover">
     <p>Press Escape or click outside to dismiss</p>
   </div>
 </template>

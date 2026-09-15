@@ -55,7 +55,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "top",
   middlewares: {
     inline: true,
@@ -75,7 +75,7 @@ useHover(node);
     inside a paragraph.
   </p>
 
-  <div v-if="node.open" ref="floatingEl" class="tooltip" :style="styles">
+  <div v-if="node.open" ref="floatingEl" class="tooltip">
     Anchored to the specific active line
   </div>
 </template>

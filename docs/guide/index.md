@@ -19,7 +19,7 @@ Pre-built component libraries solve these problems, but they force their markup,
 Every floating surface comes down to two questions: **where** should it appear, and **when** should it be visible? VFloat divides these responsibilities across dedicated composables connected by a shared floating node:
 
 - **`useFloatingNode`** holds the shared state and element references used by the various composables.
-- **`usePosition`** handles the positioning calculations. It tells you where to place your floating element and returns reactive styles to bind to your template.
+- **`usePosition`** handles the positioning calculations. It computes where to place your floating element and automatically applies the computed positioning styles to your floating element.
 - **`useHover`** decides when the floating element should be visible and when it should hide based on hover behavior.
 
 Here is a minimal tooltip that ties these three parts together:
@@ -35,8 +35,8 @@ const floatingEl = ref<HTMLElement | null>(null);
 // 1. Hold shared state and element refs
 const node = useFloatingNode({ anchorEl, floatingEl });
 
-// 2. WHERE: calculate coordinates and return styles
-const { styles } = usePosition(node, {
+// 2. WHERE: calculate coordinates and auto-apply styles
+usePosition(node, {
   placement: "top",
   middlewares: { offset: 8 },
 });
@@ -49,7 +49,7 @@ useDismiss(node, { outsidePress: false });
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="node.open.value" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip">
     Tooltip content
   </div>
 </template>

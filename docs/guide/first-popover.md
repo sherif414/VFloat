@@ -21,7 +21,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -35,7 +35,7 @@ useDismiss(node);
 <template>
   <button ref="anchorEl" type="button">Open popover</button>
 
-  <div v-if="node.open.value" ref="floatingEl" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl">
     <p>Popover content goes here.</p>
     <button type="button">Action</button>
   </div>
@@ -51,7 +51,7 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -61,7 +61,7 @@ const { styles } = usePosition(node, {
 
 Just like the tooltip, [`useFloatingNode`](/api/use-floating-node) creates the shared `node` that coordinates element refs and open state.
 
-[`usePosition`](/api/use-position) places the popover panel below the button aligned with its start edge (`"bottom-start"`), with an 8-pixel gap provided by [`offset`](/api/offset).
+[`usePosition`](/api/use-position) places the popover panel below the button aligned with its start edge (`"bottom-start"`), with an 8-pixel gap provided by [`offset`](/api/offset), and applies the positioning styles automatically to `floatingEl`.
 
 ## Swapping hover for click and dismissal
 
@@ -82,7 +82,7 @@ Both composables plug into the same `node`, so they share the exact same open st
 ```vue
 <button ref="anchorEl" type="button">Open popover</button>
 
-<div v-if="node.open.value" ref="floatingEl" :style="styles">
+<div v-if="node.open.value" ref="floatingEl">
   <p>Popover content goes here.</p>
   <button type="button">Action</button>
 </div>
@@ -91,9 +91,8 @@ Both composables plug into the same `node`, so they share the exact same open st
 The template stays minimal:
 
 - `ref="anchorEl"` connects the trigger button.
-- `ref="floatingEl"` connects the floating panel.
+- `ref="floatingEl"` connects the floating panel (positioned automatically).
 - `v-if="node.open.value"` renders the panel only when open.
-- `:style="styles"` applies the computed floating coordinates.
 
 Because the popover panel stays rendered while open, users can interact with form controls, buttons, or links inside it without the surface closing prematurely.
 

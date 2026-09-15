@@ -51,7 +51,7 @@ const floatingEl = ref<HTMLElement | null>(null);
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 const node = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(node);
+usePosition(node);
 
 // 1. Move physical DOM focus across items
 const { activeIndex, getTabindex } = useRovingFocus(node, {
@@ -79,7 +79,7 @@ Render item elements with roving `tabindex` from `getTabindex` and bind dynamic 
     Menu Options
   </button>
 
-  <ul v-if="node.open.value" ref="floatingEl" role="menu" :style="styles">
+  <ul v-if="node.open.value" ref="floatingEl" role="menu">
     <li
       v-for="(item, index) in items"
       :key="item.id"
@@ -138,7 +138,7 @@ const node = useFloatingNode({
   open: isOpen,
 });
 
-const { styles } = usePosition(node, {
+usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 4,
@@ -183,7 +183,7 @@ Bind `:id="getItemId(index)"` on each option. The `aria-activedescendant` attrib
     @focus="node.setOpen(true)"
   />
 
-  <ul v-if="node.open.value" ref="floatingEl" role="listbox" :style="styles">
+  <ul v-if="node.open.value" ref="floatingEl" role="listbox">
     <li
       v-for="(item, index) in filteredOptions"
       :key="item.value"
