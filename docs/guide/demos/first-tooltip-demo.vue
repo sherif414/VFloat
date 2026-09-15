@@ -9,7 +9,7 @@ const context = useFloatingNode({ anchorEl, floatingEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middlewares: {
-    offset: 10,
+    offset: 8,
   },
 });
 
@@ -18,9 +18,9 @@ useHover(context);
 
 <template>
   <div class="tooltip-demo">
-    <div class="tooltip-demo__hint">Hover the button</div>
-
-    <button ref="anchorEl" class="tooltip-demo__button" type="button">Save changes</button>
+    <button ref="anchorEl" class="tooltip-demo__button" type="button">
+      Save changes
+    </button>
 
     <div
       v-if="context.open.value"
@@ -29,7 +29,7 @@ useHover(context);
       role="tooltip"
       :style="styles"
     >
-      This button saves your changes.
+      <span>This button saves your changes.</span>
     </div>
   </div>
 </template>
@@ -37,38 +37,39 @@ useHover(context);
 <style scoped>
 .tooltip-demo {
   position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 0.85rem;
-  min-height: 180px;
-  padding: 1.75rem 1rem;
-}
-
-.tooltip-demo__hint {
-  font-size: 0.9rem;
-  color: var(--vp-c-text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .tooltip-demo__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 10px;
-  padding: 0.6rem 0.85rem;
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--vp-c-text-1);
+  border-radius: 8px;
   background: var(--vp-c-bg-elv);
+  color: var(--vp-c-text-1);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
   cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .tooltip-demo__button:hover {
-  border-color: var(--vp-c-text-3);
+  border-color: var(--vp-c-brand-1);
   background: var(--vp-c-bg-soft);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
 .tooltip-demo__button:focus-visible {
@@ -77,15 +78,20 @@ useHover(context);
 }
 
 .tooltip-demo__floating {
-  max-width: 240px;
-  padding: 0.7rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
-  color: var(--vp-c-text-1);
+  border-radius: 8px;
   background: var(--vp-c-bg-elv);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
-  text-align: center;
-  font-size: 0.92rem;
+  color: var(--vp-c-text-1);
+  font-size: 0.82rem;
+  font-weight: 500;
   line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
+  pointer-events: none;
+  z-index: 20;
 }
 </style>

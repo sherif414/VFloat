@@ -1,9 +1,16 @@
 import { defineConfig } from "vitepress";
+import { demoMdPlugin } from "vitepress-plugin-demo";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "VFloat",
   description: "A headless, primitive floating library for Vue 3",
+
+  markdown: {
+    config(md) {
+      md.use(demoMdPlugin);
+    },
+  },
 
   themeConfig: {
     // ------------------------------------------------------------------------
