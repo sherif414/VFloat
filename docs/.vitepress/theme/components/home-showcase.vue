@@ -126,104 +126,108 @@ onMounted(() => {
 
     <!-- 3. Main Workspace -->
     <div class="showcase-body">
-      <div
-        v-show="activeView === 'preview'"
-        ref="sandboxEl"
-        class="sandbox"
-        :class="{ 'is-cursor-mode': activePreset === 'cursor' }"
-      >
-        <!-- Caption Helper -->
-        <div class="sandbox-caption">
-          <template v-if="activePreset === 'tooltip'">
-            Hover to open. Drag anchor to test collision flipping.
-          </template>
-          <template v-else-if="activePreset === 'popover'">
-            Click to open card. Drag anchor near edges to observe placement adaptation.
-          </template>
-          <template v-else-if="activePreset === 'menu'">
-            Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.
-          </template>
-          <template v-else> Move your cursor across this area to track coordinates. </template>
+      <Transition name="view-fade" mode="out-in">
+        <div
+          v-if="activeView === 'preview'"
+          key="preview"
+          ref="sandboxEl"
+          class="sandbox"
+          :class="{ 'is-cursor-mode': activePreset === 'cursor' }"
+        >
+          <!-- Caption Helper -->
+          <div class="sandbox-caption">
+            <template v-if="activePreset === 'tooltip'">
+              Hover to open. Drag anchor to test collision flipping.
+            </template>
+            <template v-else-if="activePreset === 'popover'">
+              Click to open card. Drag anchor near edges to observe placement adaptation.
+            </template>
+            <template v-else-if="activePreset === 'menu'">
+              Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.
+            </template>
+            <template v-else> Move your cursor across this area to track coordinates. </template>
+          </div>
+
+          <!-- Reset Button -->
+          <button
+            v-if="activePreset !== 'cursor' && (anchorOffset.x !== 0 || anchorOffset.y !== 0)"
+            type="button"
+            class="reset-position-btn"
+            @click="handleResetPosition"
+          >
+            Reset anchor
+          </button>
+
+          <!-- Tooltip Preset -->
+          <PresetTooltip
+            v-if="activePreset === 'tooltip'"
+            ref="tooltipPresetRef"
+            :placement="selectedPlacement"
+            :middleware-config="middlewareConfig"
+            :enable-arrow="enableArrow"
+            :anchor-offset="anchorOffset"
+            :is-dragging="isDragging"
+            :is-active="activePreset === 'tooltip'"
+            :keep-open="keepOpen"
+            @pointerdown="handlePointerDown"
+            @update:resolved-placement="onResolvedPlacementUpdate"
+          />
+
+          <!-- Popover Preset -->
+          <PresetPopover
+            v-if="activePreset === 'popover'"
+            ref="popoverPresetRef"
+            :placement="selectedPlacement"
+            :middleware-config="middlewareConfig"
+            :enable-arrow="enableArrow"
+            :anchor-offset="anchorOffset"
+            :is-dragging="isDragging"
+            :is-active="activePreset === 'popover'"
+            :keep-open="keepOpen"
+            @pointerdown="handlePointerDown"
+            @update:resolved-placement="onResolvedPlacementUpdate"
+          />
+
+          <!-- Menu Preset -->
+          <PresetMenu
+            v-if="activePreset === 'menu'"
+            ref="menuPresetRef"
+            :placement="selectedPlacement"
+            :middleware-config="middlewareConfig"
+            :enable-arrow="enableArrow"
+            :anchor-offset="anchorOffset"
+            :is-dragging="isDragging"
+            :is-active="activePreset === 'menu'"
+            :keep-open="keepOpen"
+            @pointerdown="handlePointerDown"
+            @update:resolved-placement="onResolvedPlacementUpdate"
+          />
+
+          <!-- Cursor Follower Preset -->
+          <PresetCursor
+            v-if="activePreset === 'cursor'"
+            ref="cursorPresetRef"
+            :placement="selectedPlacement"
+            :middleware-config="middlewareConfig"
+            :is-active="activePreset === 'cursor'"
+            :keep-open="keepOpen"
+            @update:resolved-placement="onResolvedPlacementUpdate"
+          />
         </div>
 
-        <!-- Reset Button -->
-        <button
-          v-if="activePreset !== 'cursor' && (anchorOffset.x !== 0 || anchorOffset.y !== 0)"
-          type="button"
-          class="reset-position-btn"
-          @click="handleResetPosition"
-        >
-          Reset anchor
-        </button>
-
-        <!-- Tooltip Preset -->
-        <PresetTooltip
-          v-if="activePreset === 'tooltip'"
-          ref="tooltipPresetRef"
-          :placement="selectedPlacement"
-          :middleware-config="middlewareConfig"
-          :enable-arrow="enableArrow"
-          :anchor-offset="anchorOffset"
-          :is-dragging="isDragging"
-          :is-active="activePreset === 'tooltip'"
-          :keep-open="keepOpen"
-          @pointerdown="handlePointerDown"
-          @update:resolved-placement="onResolvedPlacementUpdate"
+        <!-- Live Code Panel -->
+        <ShowcaseCodePanel
+          v-else
+          key="code"
+          :code="generatedCode"
+          :active-preset="activePreset"
         />
-
-        <!-- Popover Preset -->
-        <PresetPopover
-          v-if="activePreset === 'popover'"
-          ref="popoverPresetRef"
-          :placement="selectedPlacement"
-          :middleware-config="middlewareConfig"
-          :enable-arrow="enableArrow"
-          :anchor-offset="anchorOffset"
-          :is-dragging="isDragging"
-          :is-active="activePreset === 'popover'"
-          :keep-open="keepOpen"
-          @pointerdown="handlePointerDown"
-          @update:resolved-placement="onResolvedPlacementUpdate"
-        />
-
-        <!-- Menu Preset -->
-        <PresetMenu
-          v-if="activePreset === 'menu'"
-          ref="menuPresetRef"
-          :placement="selectedPlacement"
-          :middleware-config="middlewareConfig"
-          :enable-arrow="enableArrow"
-          :anchor-offset="anchorOffset"
-          :is-dragging="isDragging"
-          :is-active="activePreset === 'menu'"
-          :keep-open="keepOpen"
-          @pointerdown="handlePointerDown"
-          @update:resolved-placement="onResolvedPlacementUpdate"
-        />
-
-        <!-- Cursor Follower Preset -->
-        <PresetCursor
-          v-if="activePreset === 'cursor'"
-          ref="cursorPresetRef"
-          :placement="selectedPlacement"
-          :middleware-config="middlewareConfig"
-          :is-active="activePreset === 'cursor'"
-          :keep-open="keepOpen"
-          @update:resolved-placement="onResolvedPlacementUpdate"
-        />
-      </div>
-
-      <!-- Live Code Panel -->
-      <ShowcaseCodePanel
-        v-show="activeView === 'code'"
-        :code="generatedCode"
-        :active-preset="activePreset"
-      />
+      </Transition>
     </div>
   </div>
 </template>
 
-<style scoped>
+<style>
 .showcase-card {
   margin: 1.5rem 0 2rem;
   border: 1px solid var(--vp-c-divider);
@@ -238,6 +242,28 @@ onMounted(() => {
   position: relative;
   min-height: 380px;
   background: var(--vp-c-bg);
+}
+
+.view-fade-enter-active {
+  transition:
+    opacity 0.16s ease-out,
+    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.view-fade-leave-active {
+  transition:
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
+}
+
+.view-fade-enter-from {
+  opacity: 0;
+  transform: translateY(2px);
+}
+
+.view-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
 }
 
 .sandbox {

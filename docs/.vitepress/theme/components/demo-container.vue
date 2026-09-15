@@ -115,70 +115,73 @@ onBeforeUnmount(() => {
 
     <!-- 2. Main Workspace -->
     <div class="demo-body">
-      <!-- Preview Stage (Sandbox) -->
-      <div
-        v-show="!hasCode || activeView === 'preview'"
-        class="demo-sandbox"
-        role="tabpanel"
-      >
-        <slot />
-      </div>
-
-      <!-- Code View Panel with Fixed Top-Right Icon Copy Button -->
-      <div
-        v-if="hasCode"
-        v-show="activeView === 'code'"
-        ref="codePanelEl"
-        class="code-view"
-        role="tabpanel"
-      >
-        <button
-          type="button"
-          class="code-copy-btn"
-          :class="{ 'is-copied': copied }"
-          :disabled="copied"
-          :title="copied ? 'Copied!' : 'Copy code'"
-          :aria-label="copied ? 'Copied!' : 'Copy code'"
-          @click="copyCode"
+      <Transition name="view-fade" mode="out-in">
+        <!-- Preview Stage (Sandbox) -->
+        <div
+          v-if="!hasCode || activeView === 'preview'"
+          key="preview"
+          class="demo-sandbox"
+          role="tabpanel"
         >
-          <svg
-            v-if="copied"
-            class="copy-icon is-check"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-          </svg>
-          <svg
-            v-else
-            class="copy-icon"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" />
-            <path d="M3.5 10.5V3.5A1.5 1.5 0 0 1 5 2h5.5" />
-          </svg>
-        </button>
-
-        <div class="code-view__content">
-          <slot v-if="hasTypescript" name="md:typescript" />
-          <slot v-else-if="hasJavascript" name="md:javascript" />
-          <slot v-else />
+          <slot />
         </div>
-      </div>
+
+        <!-- Code View Panel with Fixed Top-Right Icon Copy Button -->
+        <div
+          v-else-if="activeView === 'code'"
+          key="code"
+          ref="codePanelEl"
+          class="code-view"
+          role="tabpanel"
+        >
+          <button
+            type="button"
+            class="code-copy-btn"
+            :class="{ 'is-copied': copied }"
+            :disabled="copied"
+            :title="copied ? 'Copied!' : 'Copy code'"
+            :aria-label="copied ? 'Copied!' : 'Copy code'"
+            @click="copyCode"
+          >
+            <svg
+              v-if="copied"
+              class="copy-icon is-check"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
+            </svg>
+            <svg
+              v-else
+              class="copy-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" />
+              <path d="M3.5 10.5V3.5A1.5 1.5 0 0 1 5 2h5.5" />
+            </svg>
+          </button>
+
+          <div class="code-view__content">
+            <slot v-if="hasTypescript" name="md:typescript" />
+            <slot v-else-if="hasJavascript" name="md:javascript" />
+            <slot v-else />
+          </div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
 
-<style scoped>
+<style>
 .demo-card {
   margin: 1.5rem 0 2rem;
   border: 1px solid var(--vp-c-divider);
@@ -306,6 +309,28 @@ onBeforeUnmount(() => {
   position: relative;
   min-height: 240px;
   background: var(--vp-c-bg);
+}
+
+.view-fade-enter-active {
+  transition:
+    opacity 0.16s ease-out,
+    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.view-fade-leave-active {
+  transition:
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
+}
+
+.view-fade-enter-from {
+  opacity: 0;
+  transform: translateY(2px);
+}
+
+.view-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
 }
 
 .demo-sandbox {
