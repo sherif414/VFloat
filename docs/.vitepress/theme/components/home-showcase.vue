@@ -1,18 +1,15 @@
 <script setup lang="ts">
 import type { Placement } from "v-float";
 import { computed, nextTick, onMounted, ref, shallowRef } from "vue";
-import { generateShowcaseCode } from "./showcase/code-generator";
 import PresetCursor from "./showcase/preset-cursor.vue";
 import PresetMenu from "./showcase/preset-menu.vue";
 import PresetPopover from "./showcase/preset-popover.vue";
 import PresetTooltip from "./showcase/preset-tooltip.vue";
-import ShowcaseCodePanel from "./showcase/showcase-code-panel.vue";
 import ShowcaseHeader from "./showcase/showcase-header.vue";
-import type { PresetType, ShowcasePresetMeta, ViewMode } from "./showcase/types";
+import type { PresetType, ShowcasePresetMeta } from "./showcase/types";
 import { useShowcaseDrag } from "./showcase/use-showcase-drag";
 
 const activePreset = ref<PresetType>("tooltip");
-const activeView = ref<ViewMode>("preview");
 
 const selectedPlacement = ref<Placement>("top");
 const offsetValue = ref<number>(8);
@@ -95,17 +92,6 @@ function onResolvedPlacementUpdate(val: Placement) {
   resolvedPlacement.value = val;
 }
 
-const generatedCode = computed(() =>
-  generateShowcaseCode({
-    activePreset: activePreset.value,
-    placement: selectedPlacement.value,
-    offset: offsetValue.value,
-    flip: enableFlip.value,
-    shift: enableShift.value,
-    arrow: enableArrow.value,
-  }),
-);
-
 onMounted(() => {
   void nextTick(() => {
     void getActivePresetInstance()?.update();
@@ -118,27 +104,22 @@ onMounted(() => {
     <!-- 1. Unified Single Header Navigation -->
     <ShowcaseHeader
       :model-value="activePreset"
-      :view-mode="activeView"
       :presets="presets"
       :placement="selectedPlacement"
       :keep-open="keepOpen"
       @update:model-value="onSwitchPreset"
-      @update:view-mode="activeView = $event"
       @update:placement="selectedPlacement = $event"
       @update:keep-open="keepOpen = $event"
     />
 
     <!-- 2. Main Workspace -->
     <div class="showcase-body">
-      <Transition name="view-fade" mode="out-in">
-        <!-- 1. Interactive Stage Canvas -->
-        <div
-          v-if="activeView === 'preview'"
-          key="preview"
-          ref="sandboxEl"
-          class="sandbox"
-          :class="{ 'is-cursor-mode': activePreset === 'cursor' }"
-        >
+      <!-- 1. Interactive Stage Canvas -->
+      <div
+        ref="sandboxEl"
+        class="sandbox"
+        :class="{ 'is-cursor-mode': activePreset === 'cursor' }"
+      >
           <!-- Caption Helper -->
           <div class="sandbox-caption">
             <template v-if="activePreset === 'tooltip'">
@@ -231,16 +212,7 @@ onMounted(() => {
             :keep-open="keepOpen"
             @update:resolved-placement="onResolvedPlacementUpdate"
           />
-        </div>
-
-        <!-- Live Code Panel -->
-        <ShowcaseCodePanel
-          v-else
-          key="code"
-          :code="generatedCode"
-          :active-preset="activePreset"
-        />
-      </Transition>
+      </div>
     </div>
   </div>
 </template>
@@ -260,28 +232,6 @@ onMounted(() => {
   position: relative;
   min-height: 380px;
   background: var(--vp-c-bg);
-}
-
-.view-fade-enter-active {
-  transition:
-    opacity 0.16s ease-out,
-    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.view-fade-leave-active {
-  transition:
-    opacity 0.1s ease-in,
-    transform 0.1s ease-in;
-}
-
-.view-fade-enter-from {
-  opacity: 0;
-  transform: translateY(2px);
-}
-
-.view-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-2px);
 }
 
 .sandbox {

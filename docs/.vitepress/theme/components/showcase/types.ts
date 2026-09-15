@@ -1,7 +1,6 @@
 import type { Placement } from "v-float";
 
 export type PresetType = "tooltip" | "popover" | "menu" | "cursor";
-export type ViewMode = "preview" | "code";
 
 export interface ShowcasePresetMeta {
   id: PresetType;

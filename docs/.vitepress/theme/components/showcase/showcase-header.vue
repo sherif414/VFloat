@@ -2,11 +2,10 @@
 import type { Placement } from "v-float";
 import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import type { PresetType, ShowcasePresetMeta, ViewMode } from "./types";
+import type { PresetType, ShowcasePresetMeta } from "./types";
 
 interface Props {
   modelValue: PresetType;
-  viewMode: ViewMode;
   presets: ShowcasePresetMeta[];
   placement: Placement;
   keepOpen: boolean;
@@ -16,7 +15,6 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: PresetType): void;
-  (e: "update:viewMode", value: ViewMode): void;
   (e: "update:placement", value: Placement): void;
   (e: "update:keepOpen", value: boolean): void;
 }>();
@@ -94,11 +92,6 @@ onBeforeUnmount(() => {
 
 function onSelectPreset(preset: PresetType) {
   emit("update:modelValue", preset);
-}
-
-function onToggleView() {
-  const nextMode: ViewMode = props.viewMode === "code" ? "preview" : "code";
-  emit("update:viewMode", nextMode);
 }
 
 // ============================================================================
@@ -181,7 +174,7 @@ function selectPlacementOption(val: Placement) {
     <!-- 2. Header Actions -->
     <div class="header-actions">
       <!-- Demo Options (Placement & Keep Open) -->
-      <div v-if="viewMode === 'preview'" class="header-actions__options">
+      <div class="header-actions__options">
         <!-- Small Placement Dropdown -->
         <div class="placement-control">
           <button
@@ -274,32 +267,6 @@ function selectPlacementOption(val: Placement) {
           <span class="action-btn__text">Keep open</span>
         </button>
       </div>
-
-      <!-- Unified Code Action Toggle Button -->
-      <button
-        type="button"
-        class="action-btn code-toggle-btn"
-        :class="{ 'is-active': viewMode === 'code' }"
-        :title="viewMode === 'code' ? 'Switch to interactive preview' : 'View component code'"
-        :aria-label="viewMode === 'code' ? 'Switch to interactive preview' : 'View component code'"
-        :aria-pressed="viewMode === 'code'"
-        @click="onToggleView"
-      >
-        <svg
-          class="action-btn__icon"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="5.5 4.5 2 8 5.5 11.5" />
-          <polyline points="10.5 4.5 14 8 10.5 11.5" />
-        </svg>
-        <span class="action-btn__text">Code</span>
-      </button>
     </div>
   </div>
 </template>
@@ -481,9 +448,6 @@ function selectPlacementOption(val: Placement) {
   height: 12px;
 }
 
-.code-toggle-btn {
-  margin-left: auto;
-}
 
 @media (max-width: 640px) {
   .showcase-header {
