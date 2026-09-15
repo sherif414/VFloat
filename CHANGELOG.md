@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.13.3
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.13.2...v0.13.3)
+
+### 🚀 Enhancements
+
+- **click:** Add stickIfOpen option and pin tracking ([d0dbf3c](https://github.com/sherif414/VFloat/commit/d0dbf3c))
+- **position:** Support inline middleware in usePosition and public exports ([670c68e](https://github.com/sherif414/VFloat/commit/670c68e))
+- **typeahead:** Implement useTypeahead composable for collection keyboard search ([9ccb74c](https://github.com/sherif414/VFloat/commit/9ccb74c))
+- **list-navigation:** Add automatic rtl layout inference ([736cdd0](https://github.com/sherif414/VFloat/commit/736cdd0))
+- **list-navigation:** Isolate nested submenu boundaries in DOM queries and event delegation ([d13c31f](https://github.com/sherif414/VFloat/commit/d13c31f))
+- **list-navigation:** Manage item tabindex internally ([5f7ecba](https://github.com/sherif414/VFloat/commit/5f7ecba))
+- **keyboard-navigation:** Add useRovingFocus with decoupled domain drivers ([dbb97ab](https://github.com/sherif414/VFloat/commit/dbb97ab))
+- **keyboard-navigation:** Add openOnArrowDown option to useRovingFocus ([6006c0c](https://github.com/sherif414/VFloat/commit/6006c0c))
+- **keyboard-navigation:** Add focusItemOnHover option to useRovingFocus ([7e88aee](https://github.com/sherif414/VFloat/commit/7e88aee))
+- **keyboard-navigation:** Add onActiveIndexChange option to useRovingFocus ([ef2eec6](https://github.com/sherif414/VFloat/commit/ef2eec6))
+- **keyboard-navigation:** Add disableAutoTabindex option to useRovingFocus ([883e184](https://github.com/sherif414/VFloat/commit/883e184))
+- **keyboard-navigation:** Add allowFocusOnDisabledElements option to useRovingFocus ([4133156](https://github.com/sherif414/VFloat/commit/4133156))
+- **list-navigation:** Add entryFocusMode option to useRovingFocus ([f9afab5](https://github.com/sherif414/VFloat/commit/f9afab5))
+- **keyboard-navigation:** Implement useAriaActivedescendant composable and virtualizer adapters ([e3a2e80](https://github.com/sherif414/VFloat/commit/e3a2e80))
+- **keyboard-navigation:** Enhance useAriaActivedescendant with bounds correction, page navigation, and performance optimizations ([ee63b0e](https://github.com/sherif414/VFloat/commit/ee63b0e))
+- **keyboard-navigation:** ⚠️  Redesign useRovingFocus as first-class floating companion ([640110a](https://github.com/sherif414/VFloat/commit/640110a))
+- **floating-tree:** ⚠️  Replace singleton tree with explicit useFloatingTree composable ([ef6a9bb](https://github.com/sherif414/VFloat/commit/ef6a9bb))
+- ⚠️  Group Escape and outside dismissal and rename focus manager ([0152a68](https://github.com/sherif414/VFloat/commit/0152a68))
+- **typeahead:** Search from the anchor trigger while closed ([6cef50c](https://github.com/sherif414/VFloat/commit/6cef50c))
+- **typeahead:** Add backspace editing and buffer retention on mismatch ([6729ab2](https://github.com/sherif414/VFloat/commit/6729ab2))
+- **position:** Support auto applyStyles and refine floating node integration ([66e98ef](https://github.com/sherif414/VFloat/commit/66e98ef))
+
+### 🔥 Performance
+
+- **keyboard-navigation:** Optimize focus events and scroll alignment ([d660106](https://github.com/sherif414/VFloat/commit/d660106))
+
+### 🩹 Fixes
+
+- **click:** Handle keyboard and click activation across diverse element types ([3eed842](https://github.com/sherif414/VFloat/commit/3eed842))
+- **focus-manager:** Portaled element in non-portaled floating tree closes parent on focus guard transition ([805c1bd](https://github.com/sherif414/VFloat/commit/805c1bd))
+- **dom:** Cross-realm HTMLElement and Element type guards fail in popup windows and iframes ([8c66594](https://github.com/sherif414/VFloat/commit/8c66594))
+- **use-hover:** Cancel open when anchor element unmounts during delay ([a64d311](https://github.com/sherif414/VFloat/commit/a64d311))
+- **focus-manager:** Prioritize anchor trigger over previouslyActiveElement in restoreFocus ([80ebeb2](https://github.com/sherif414/VFloat/commit/80ebeb2))
+- **focus-manager:** Recover focus when active child element is removed in modal ([fb4931d](https://github.com/sherif414/VFloat/commit/fb4931d))
+- **virtual-element:** Support getClientRects on VirtualElement for inline middleware ([1aad851](https://github.com/sherif414/VFloat/commit/1aad851))
+- **focus-manager:** Resolve ownerDocument and defaultView dynamically for iframe support ([baac64b](https://github.com/sherif414/VFloat/commit/baac64b))
+- **list-navigation:** Remove flush sync on itemsList watcher ([f2a47eb](https://github.com/sherif414/VFloat/commit/f2a47eb))
+- **keyboard-navigation:** Prevent focus stealing on mount and improve roving focus state ([c5c0691](https://github.com/sherif414/VFloat/commit/c5c0691))
+- **keyboard-navigation:** Ignore IME composition keydown events in useAriaActivedescendant ([1ea1fd3](https://github.com/sherif414/VFloat/commit/1ea1fd3))
+- **keyboard-navigation:** Prevent synthetic pointermove on scroll from hijacking active descendant ([821668e](https://github.com/sherif414/VFloat/commit/821668e))
+- **keyboard-navigation:** Preserve native text selection for Shift PageUp and PageDown ([2698a06](https://github.com/sherif414/VFloat/commit/2698a06))
+- **keyboard-navigation:** Resolve active descendant elements inside Shadow DOM ([6551d8f](https://github.com/sherif414/VFloat/commit/6551d8f))
+- **floating-tree:** Resolve exponential close cascade, orphaned nodes, and stale reason state ([0ade1b4](https://github.com/sherif414/VFloat/commit/0ade1b4))
+- **typeahead:** Claim matched keys and flush dead space queries ([6eff555](https://github.com/sherif414/VFloat/commit/6eff555))
+
+#### ⚠️ Breaking Changes
+
+- **keyboard-navigation:** ⚠️  Redesign useRovingFocus as first-class floating companion ([640110a](https://github.com/sherif414/VFloat/commit/640110a))
+- **floating-tree:** ⚠️  Replace singleton tree with explicit useFloatingTree composable ([ef6a9bb](https://github.com/sherif414/VFloat/commit/ef6a9bb))
+- ⚠️  Group Escape and outside dismissal and rename focus manager ([0152a68](https://github.com/sherif414/VFloat/commit/0152a68))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.13.2
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.13.1...v0.13.2)
