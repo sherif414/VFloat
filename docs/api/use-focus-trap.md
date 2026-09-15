@@ -110,7 +110,7 @@ useRole(node, { role: "dialog", modal: true });
   </div>
 </template>
 
-<style scoped>
+<style>
 .dialog-backdrop {
   position: fixed;
   inset: 0;

@@ -190,18 +190,18 @@ defineExpose({
   </div>
 </template>
 
-<style scoped>
-.preset-wrapper {
+<style>
+.showcase-card .preset-wrapper {
   display: contents;
 }
 
-.anchor-slot {
+.showcase-card .anchor-slot {
   position: relative;
   touch-action: none;
   z-index: 5;
 }
 
-.anchor-btn {
+.showcase-card .anchor-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -221,36 +221,36 @@ defineExpose({
     box-shadow 0.15s ease;
 }
 
-.anchor-btn:hover {
+.showcase-card .anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
-.anchor-btn:hover .anchor-btn__drag-icon {
+.showcase-card .anchor-btn:hover .anchor-btn__drag-icon {
   color: var(--vp-c-brand-1);
 }
 
-.anchor-btn.is-active {
+.showcase-card .anchor-btn.is-active {
   border-color: var(--vp-c-brand-1);
 }
 
-.anchor-btn.is-dragging {
+.showcase-card .anchor-btn.is-dragging {
   cursor: grabbing;
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
-.anchor-btn__drag-icon {
+.showcase-card .anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
 }
 
-.anchor-btn__chevron {
+.showcase-card .anchor-btn__chevron {
   font-size: 0.75rem;
   color: var(--vp-c-text-3);
 }
 
-.floating-panel {
+.showcase-card .floating-panel {
   position: absolute;
   top: 0;
   left: 0;
@@ -262,7 +262,7 @@ defineExpose({
   border-radius: 8px;
 }
 
-.panel-menu {
+.showcase-card .panel-menu {
   width: 180px;
   max-width: calc(100% - 16px);
   padding: 0.3rem;
@@ -270,7 +270,7 @@ defineExpose({
   outline: none;
 }
 
-.menu-item {
+.showcase-card .menu-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -283,23 +283,23 @@ defineExpose({
   transition: background-color 0.1s ease;
 }
 
-.menu-item:hover,
-.menu-item.is-active {
+.showcase-card .menu-item:hover,
+.showcase-card .menu-item.is-active {
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-brand-1);
 }
 
-.menu-item.is-danger {
+.showcase-card .menu-item.is-danger {
   color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
 }
 
-.menu-item.is-danger:hover,
-.menu-item.is-danger.is-active {
+.showcase-card .menu-item.is-danger:hover,
+.showcase-card .menu-item.is-danger.is-active {
   background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.1)));
   color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
 }
 
-.menu-item__shortcut {
+.showcase-card .menu-item__shortcut {
   font-size: 0.7rem;
   font-family: var(--vp-font-family-mono, monospace);
   color: var(--vp-c-text-3);

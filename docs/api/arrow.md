@@ -105,7 +105,7 @@ const arrowStyle = computed(() => {
   </div>
 </template>
 
-<style scoped>
+<style>
 .panel {
   position: relative;
   background: black;

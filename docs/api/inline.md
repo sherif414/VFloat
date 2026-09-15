@@ -80,7 +80,7 @@ useHover(node);
   </div>
 </template>
 
-<style scoped>
+<style>
 .tooltip {
   background: #333;
   color: white;

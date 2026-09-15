@@ -302,7 +302,7 @@ function onOptionSelect(val: Placement) {
   </div>
 </template>
 
-<style scoped>
+<style>
 .showcase-controls {
   display: flex;
   flex-wrap: wrap;
@@ -314,19 +314,19 @@ function onOptionSelect(val: Placement) {
   font-size: 0.82rem;
 }
 
-.control-unit {
+.showcase-controls .control-unit {
   display: flex;
   align-items: center;
   gap: 0.45rem;
 }
 
-.control-unit__label {
+.showcase-controls .control-unit__label {
   font-weight: 500;
   color: var(--vp-c-text-3);
   font-size: 0.8rem;
 }
 
-.control-select-btn {
+.showcase-controls .control-select-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -344,23 +344,23 @@ function onOptionSelect(val: Placement) {
   transition: all 0.15s ease;
 }
 
-.control-select-btn:hover {
+.showcase-controls .control-select-btn:hover {
   border-color: var(--vp-c-brand-1);
 }
 
-.control-select-btn.is-open {
+.showcase-controls .control-select-btn.is-open {
   border-color: var(--vp-c-brand-1);
   box-shadow: 0 0 0 2px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.2));
 }
 
-.control-select-btn__chevron {
+.showcase-controls .control-select-btn__chevron {
   width: 12px;
   height: 12px;
   color: var(--vp-c-text-3);
   transition: transform 0.2s ease;
 }
 
-.control-select-btn.is-open .control-select-btn__chevron {
+.showcase-controls .control-select-btn.is-open .control-select-btn__chevron {
   transform: rotate(180deg);
 }
 
@@ -379,7 +379,7 @@ function onOptionSelect(val: Placement) {
   outline: none;
 }
 
-.control-select-option {
+.control-select-dropdown .control-select-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -396,31 +396,31 @@ function onOptionSelect(val: Placement) {
     color 0.1s ease;
 }
 
-.control-select-option:hover,
-.control-select-option.is-active {
+.control-select-dropdown .control-select-option:hover,
+.control-select-dropdown .control-select-option.is-active {
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-1);
 }
 
-.control-select-option.is-selected {
+.control-select-dropdown .control-select-option.is-selected {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
 
-.control-select-option__check {
+.control-select-dropdown .control-select-option__check {
   width: 12px;
   height: 12px;
   color: var(--vp-c-brand-1);
 }
 
-.segmented-control {
+.showcase-controls .segmented-control {
   display: flex;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   overflow: hidden;
 }
 
-.segmented-btn {
+.showcase-controls .segmented-btn {
   padding: 0.22rem 0.5rem;
   border: none;
   border-right: 1px solid var(--vp-c-divider);
@@ -434,15 +434,15 @@ function onOptionSelect(val: Placement) {
   transition: all 0.12s ease;
 }
 
-.segmented-btn:last-child {
+.showcase-controls .segmented-btn:last-child {
   border-right: none;
 }
 
-.segmented-btn:hover {
+.showcase-controls .segmented-btn:hover {
   color: var(--vp-c-text-1);
 }
 
-.segmented-btn.is-active {
+.showcase-controls .segmented-btn.is-active {
   background: var(--vp-c-text-1);
   color: var(--vp-c-bg);
 }
@@ -450,14 +450,14 @@ function onOptionSelect(val: Placement) {
 /* ============================================================================
    Custom Precision Checkboxes
    ============================================================================ */
-.control-unit--toggles {
+.showcase-controls .control-unit--toggles {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem 0.85rem;
 }
 
-.custom-toggle {
+.showcase-controls .custom-toggle {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -471,11 +471,11 @@ function onOptionSelect(val: Placement) {
   transition: color 0.15s ease;
 }
 
-.custom-toggle:hover {
+.showcase-controls .custom-toggle:hover {
   color: var(--vp-c-text-1);
 }
 
-.custom-toggle__input {
+.showcase-controls .custom-toggle__input {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -484,7 +484,7 @@ function onOptionSelect(val: Placement) {
   pointer-events: none;
 }
 
-.custom-toggle__box {
+.showcase-controls .custom-toggle__box {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -500,22 +500,22 @@ function onOptionSelect(val: Placement) {
     box-shadow 0.15s ease;
 }
 
-.custom-toggle:hover .custom-toggle__box {
+.showcase-controls .custom-toggle:hover .custom-toggle__box {
   border-color: var(--vp-c-text-3);
 }
 
-.custom-toggle__input:focus-visible + .custom-toggle__box {
+.showcase-controls .custom-toggle__input:focus-visible + .custom-toggle__box {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 2px;
 }
 
-.custom-toggle__input:checked + .custom-toggle__box {
+.showcase-controls .custom-toggle__input:checked + .custom-toggle__box {
   background: var(--vp-c-brand-1);
   border-color: var(--vp-c-brand-1);
   box-shadow: 0 1px 4px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.3));
 }
 
-.custom-toggle__check {
+.showcase-controls .custom-toggle__check {
   width: 10px;
   height: 10px;
   color: var(--vp-c-white, #ffffff);
@@ -526,26 +526,26 @@ function onOptionSelect(val: Placement) {
     opacity 0.12s ease;
 }
 
-.custom-toggle__input:checked + .custom-toggle__box .custom-toggle__check {
+.showcase-controls .custom-toggle__input:checked + .custom-toggle__box .custom-toggle__check {
   opacity: 1;
   transform: scale(1);
 }
 
-.custom-toggle__label {
+.showcase-controls .custom-toggle__label {
   line-height: 1;
 }
 
-.control-unit--status {
+.showcase-controls .control-unit--status {
   margin-left: auto;
 }
 
-.placement-badge {
+.showcase-controls .placement-badge {
   font-size: 0.76rem;
   color: var(--vp-c-text-3);
   font-family: var(--vp-font-family-mono, monospace);
 }
 
-.placement-badge code {
+.showcase-controls .placement-badge code {
   color: var(--vp-c-brand-1);
   font-weight: 600;
   background: var(--vp-c-bg-soft);
@@ -560,7 +560,7 @@ function onOptionSelect(val: Placement) {
     gap: 0.65rem 0.85rem;
   }
 
-  .control-unit--status {
+  .showcase-controls .control-unit--status {
     width: 100%;
     margin-left: 0;
     justify-content: flex-start;

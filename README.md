@@ -122,7 +122,7 @@ const { arrowStyles } = useArrow(context, {
   </div>
 </template>
 
-<style scoped>
+<style>
 .tooltip {
   background: white;
   border: 1px solid #ddd;

@@ -139,7 +139,7 @@ function onContextMenu(event: MouseEvent) {
   </div>
 </template>
 
-<style scoped>
+<style>
 .canvas-area {
   height: 240px;
   border: 1px dashed #ccc;

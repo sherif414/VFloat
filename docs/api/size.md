@@ -106,7 +106,7 @@ const { styles } = usePosition(node, {
   </div>
 </template>
 
-<style scoped>
+<style>
 .scroll-list {
   overflow-y: auto;
   border: 1px solid #ccc;

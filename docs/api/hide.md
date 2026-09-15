@@ -98,7 +98,7 @@ const isHidden = computed(() => {
   </div>
 </template>
 
-<style scoped>
+<style>
 .scroll-container {
   overflow-y: auto;
   height: 180px;

@@ -110,7 +110,7 @@ useHover(node);
   </div>
 </template>
 
-<style scoped>
+<style>
 .tooltip {
   position: relative;
   background: #222;

@@ -104,7 +104,7 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
+<style>
 .vf-install {
   width: min(420px, 100%);
   margin: 1.25rem auto 0;

@@ -30,7 +30,7 @@ withDefaults(defineProps<Props>(), {
   </div>
 </template>
 
-<style scoped>
+<style>
 .package-size-badges {
   display: flex;
   flex-wrap: wrap;
@@ -39,7 +39,7 @@ withDefaults(defineProps<Props>(), {
   margin: 1.25rem 0;
 }
 
-.size-badge {
+.package-size-badges .size-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -54,32 +54,32 @@ withDefaults(defineProps<Props>(), {
     background-color 0.2s ease;
 }
 
-.badge-label {
+.package-size-badges .badge-label {
   color: var(--vp-c-text-2);
   font-weight: 500;
 }
 
-.badge-value {
+.package-size-badges .badge-value {
   font-family: var(--vp-font-family-mono, monospace);
   font-weight: 600;
   color: var(--vp-c-text-1);
 }
 
-.size-badge.is-highlight {
+.package-size-badges .size-badge.is-highlight {
   background: var(--vp-c-brand-soft);
   border-color: var(--vp-c-brand-1);
 }
 
-.size-badge.is-highlight .badge-label {
+.package-size-badges .size-badge.is-highlight .badge-label {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
 
-.size-badge.is-highlight .badge-value {
+.package-size-badges .size-badge.is-highlight .badge-value {
   color: var(--vp-c-brand-1);
 }
 
-.badge-dot {
+.package-size-badges .badge-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;

@@ -137,7 +137,7 @@ const { searchQuery } = useTypeahead(context, {
   </div>
 </template>
 
-<style scoped>
+<style>
 .listbox {
   width: 220px;
   border: 1px solid #ccc;

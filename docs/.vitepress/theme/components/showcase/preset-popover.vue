@@ -167,18 +167,18 @@ defineExpose({
   </div>
 </template>
 
-<style scoped>
-.preset-wrapper {
+<style>
+.showcase-card .preset-wrapper {
   display: contents;
 }
 
-.anchor-slot {
+.showcase-card .anchor-slot {
   position: relative;
   touch-action: none;
   z-index: 5;
 }
 
-.anchor-btn {
+.showcase-card .anchor-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -198,31 +198,31 @@ defineExpose({
     box-shadow 0.15s ease;
 }
 
-.anchor-btn:hover {
+.showcase-card .anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
-.anchor-btn:hover .anchor-btn__drag-icon {
+.showcase-card .anchor-btn:hover .anchor-btn__drag-icon {
   color: var(--vp-c-brand-1);
 }
 
-.anchor-btn.is-active {
+.showcase-card .anchor-btn.is-active {
   border-color: var(--vp-c-brand-1);
 }
 
-.anchor-btn.is-dragging {
+.showcase-card .anchor-btn.is-dragging {
   cursor: grabbing;
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
-.anchor-btn__drag-icon {
+.showcase-card .anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
 }
 
-.floating-panel {
+.showcase-card .floating-panel {
   position: absolute;
   top: 0;
   left: 0;
@@ -234,26 +234,26 @@ defineExpose({
   border-radius: 8px;
 }
 
-.panel-popover {
+.showcase-card .panel-popover {
   width: 260px;
   max-width: calc(100% - 16px);
   padding: 0.85rem;
   border-radius: 10px;
 }
 
-.popover-header {
+.showcase-card .popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.4rem;
 }
 
-.popover-title {
+.showcase-card .popover-title {
   font-size: 0.85rem;
   font-weight: 600;
 }
 
-.popover-close-btn {
+.showcase-card .popover-close-btn {
   border: none;
   background: transparent;
   color: var(--vp-c-text-3);
@@ -264,25 +264,25 @@ defineExpose({
   touch-action: manipulation;
 }
 
-.popover-close-btn:hover {
+.showcase-card .popover-close-btn:hover {
   color: var(--vp-c-text-1);
   background: var(--vp-c-bg-soft);
 }
 
-.popover-description {
+.showcase-card .popover-description {
   margin: 0 0 0.75rem;
   font-size: 0.78rem;
   color: var(--vp-c-text-2);
   line-height: 1.4;
 }
 
-.popover-footer {
+.showcase-card .popover-footer {
   display: flex;
   gap: 0.4rem;
   justify-content: flex-end;
 }
 
-.action-btn {
+.showcase-card .action-btn {
   padding: 0.32rem 0.65rem;
   border-radius: 6px;
   font: inherit;
@@ -293,24 +293,24 @@ defineExpose({
   transition: all 0.12s ease;
 }
 
-.action-btn--primary {
+.showcase-card .action-btn--primary {
   border: none;
   background: var(--vp-c-brand-1);
   color: var(--vp-c-white, #ffffff);
 }
 
-.action-btn--primary:hover {
+.showcase-card .action-btn--primary:hover {
   background: var(--vp-c-brand-2, var(--vp-c-brand-1));
   opacity: 0.95;
 }
 
-.action-btn--secondary {
+.showcase-card .action-btn--secondary {
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
 }
 
-.action-btn--secondary:hover {
+.showcase-card .action-btn--secondary:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
 }

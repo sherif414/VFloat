@@ -192,7 +192,7 @@ onBeforeUnmount(() => {
   font-family: var(--vp-font-family-base, sans-serif);
 }
 
-.demo-header {
+.demo-card .demo-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -202,19 +202,19 @@ onBeforeUnmount(() => {
   background: var(--vp-c-bg-soft);
 }
 
-.demo-header__left {
+.demo-card .demo-header__left {
   display: inline-flex;
   align-items: center;
 }
 
-.demo-title {
+.demo-card .demo-title {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--vp-c-text-1);
   letter-spacing: -0.01em;
 }
 
-.demo-header__actions {
+.demo-card .demo-header__actions {
   display: inline-flex;
   align-items: center;
 }
@@ -222,7 +222,7 @@ onBeforeUnmount(() => {
 /* ============================================================================
    View Switch & Micro-Sliding Highlight
    ============================================================================ */
-.view-switch {
+.demo-card .view-switch {
   position: relative;
   display: flex;
   width: 168px;
@@ -233,7 +233,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.view-switch-indicator {
+.demo-card .view-switch-indicator {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -249,11 +249,11 @@ onBeforeUnmount(() => {
   transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.view-switch-indicator.is-code {
+.demo-card .view-switch-indicator.is-code {
   transform: translateX(100%);
 }
 
-.view-switch__btn {
+.demo-card .view-switch__btn {
   position: relative;
   z-index: 2;
   flex: 1;
@@ -276,28 +276,28 @@ onBeforeUnmount(() => {
   transition: color 0.18s ease;
 }
 
-.view-switch__btn:hover {
+.demo-card .view-switch__btn:hover {
   color: var(--vp-c-text-1);
 }
 
-.view-switch__btn.is-active {
+.demo-card .view-switch__btn.is-active {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
 
-.view-switch__btn:focus-visible {
+.demo-card .view-switch__btn:focus-visible {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 1px;
 }
 
-.view-switch__icon {
+.demo-card .view-switch__icon {
   width: 13px;
   height: 13px;
   opacity: 0.85;
   flex-shrink: 0;
 }
 
-.view-switch__btn.is-active .view-switch__icon {
+.demo-card .view-switch__btn.is-active .view-switch__icon {
   opacity: 1;
   color: var(--vp-c-brand-1);
 }
@@ -305,35 +305,35 @@ onBeforeUnmount(() => {
 /* ============================================================================
    Main Stage & Preview Sandbox
    ============================================================================ */
-.demo-body {
+.demo-card .demo-body {
   position: relative;
   min-height: 240px;
   background: var(--vp-c-bg);
 }
 
-.view-fade-enter-active {
+.demo-card .view-fade-enter-active {
   transition:
     opacity 0.16s ease-out,
     transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.view-fade-leave-active {
+.demo-card .view-fade-leave-active {
   transition:
     opacity 0.1s ease-in,
     transform 0.1s ease-in;
 }
 
-.view-fade-enter-from {
+.demo-card .view-fade-enter-from {
   opacity: 0;
   transform: translateY(2px);
 }
 
-.view-fade-leave-to {
+.demo-card .view-fade-leave-to {
   opacity: 0;
   transform: translateY(-2px);
 }
 
-.demo-sandbox {
+.demo-card .demo-sandbox {
   position: relative;
   min-height: 240px;
   height: clamp(16rem, 45vh, 22rem);
@@ -348,7 +348,7 @@ onBeforeUnmount(() => {
 /* ============================================================================
    Code View Panel & Floating Top-Right Copy Button
    ============================================================================ */
-.code-view {
+.demo-card .code-view {
   position: relative;
   height: clamp(16rem, 45vh, 22rem);
   display: flex;
@@ -357,7 +357,7 @@ onBeforeUnmount(() => {
   transition: background-color 0.2s ease;
 }
 
-.code-copy-btn {
+.demo-card .code-copy-btn {
   position: absolute;
   top: 0.85rem;
   right: 1.5rem;
@@ -378,19 +378,19 @@ onBeforeUnmount(() => {
   transition: all 0.15s ease;
 }
 
-.code-copy-btn:hover {
+.demo-card .code-copy-btn:hover {
   background: var(--vp-c-bg-soft);
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-brand-1);
 }
 
-.code-copy-btn:focus-visible {
+.demo-card .code-copy-btn:focus-visible {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 2px;
 }
 
-.code-copy-btn.is-copied,
-.code-copy-btn:disabled {
+.demo-card .code-copy-btn.is-copied,
+.demo-card .code-copy-btn:disabled {
   background: var(--vp-c-bg-soft);
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-brand-1);
@@ -398,18 +398,18 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.copy-icon {
+.demo-card .copy-icon {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
 }
 
-.copy-icon.is-check {
+.demo-card .copy-icon.is-check {
   color: var(--vp-c-brand-1);
   stroke: var(--vp-c-brand-1);
 }
 
-.code-view__content {
+.demo-card .code-view__content {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -422,7 +422,7 @@ onBeforeUnmount(() => {
   color: var(--vp-c-text-1);
 }
 
-.code-view__content :deep(div[class*="language-"]) {
+.demo-card .code-view__content div[class*="language-"] {
   position: relative;
   z-index: 0;
   margin: 0 !important;
@@ -431,7 +431,7 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-.code-view__content :deep(pre) {
+.demo-card .code-view__content pre {
   position: relative;
   z-index: 0;
   height: 100%;
@@ -446,7 +446,7 @@ onBeforeUnmount(() => {
   line-height: 1.55;
 }
 
-.code-view__content :deep(pre code) {
+.demo-card .code-view__content pre code {
   display: block;
   width: fit-content;
   min-width: 100%;
@@ -455,7 +455,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .demo-header {
+  .demo-card .demo-header {
     padding: 0.5rem 0.75rem;
     gap: 0.5rem;
   }
@@ -467,28 +467,28 @@ onBeforeUnmount(() => {
     border-radius: 10px;
   }
 
-  .demo-body {
+  .demo-card .demo-body {
     min-height: 200px;
   }
 
-  .demo-sandbox,
-  .code-view {
+  .demo-card .demo-sandbox,
+  .demo-card .code-view {
     height: 300px;
   }
 
-  .code-copy-btn {
+  .demo-card .code-copy-btn {
     top: 0.65rem;
     right: 1.15rem;
     width: 28px;
     height: 28px;
   }
 
-  .copy-icon {
+  .demo-card .copy-icon {
     width: 13px;
     height: 13px;
   }
 
-  .code-view__content :deep(pre) {
+  .demo-card .code-view__content pre {
     padding: 0.75rem 3.5rem 0.75rem 0.85rem !important;
     font-size: 0.76rem;
     -webkit-overflow-scrolling: touch;

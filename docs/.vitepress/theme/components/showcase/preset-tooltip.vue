@@ -133,18 +133,18 @@ defineExpose({
   </div>
 </template>
 
-<style scoped>
-.preset-wrapper {
+<style>
+.showcase-card .preset-wrapper {
   display: contents;
 }
 
-.anchor-slot {
+.showcase-card .anchor-slot {
   position: relative;
   touch-action: none;
   z-index: 5;
 }
 
-.anchor-btn {
+.showcase-card .anchor-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -164,27 +164,27 @@ defineExpose({
     box-shadow 0.15s ease;
 }
 
-.anchor-btn:hover {
+.showcase-card .anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
-.anchor-btn:hover .anchor-btn__drag-icon {
+.showcase-card .anchor-btn:hover .anchor-btn__drag-icon {
   color: var(--vp-c-brand-1);
 }
 
-.anchor-btn.is-dragging {
+.showcase-card .anchor-btn.is-dragging {
   cursor: grabbing;
   border-color: var(--vp-c-brand-1);
   box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
 }
 
-.anchor-btn__drag-icon {
+.showcase-card .anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
 }
 
-.floating-panel {
+.showcase-card .floating-panel {
   position: absolute;
   top: 0;
   left: 0;
@@ -196,7 +196,7 @@ defineExpose({
   border-radius: 8px;
 }
 
-.panel-tooltip {
+.showcase-card .panel-tooltip {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -207,7 +207,7 @@ defineExpose({
   white-space: nowrap;
 }
 
-.shortcut-tag {
+.showcase-card .shortcut-tag {
   font-size: 0.7rem;
   font-family: var(--vp-font-family-mono, monospace);
   padding: 0.08rem 0.3rem;

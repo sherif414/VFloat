@@ -34,7 +34,7 @@ useHover(context);
   </div>
 </template>
 
-<style scoped>
+<style>
 .tooltip-demo {
   position: relative;
   display: flex;

@@ -58,24 +58,24 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="code-view">
-    <div class="code-view__bar">
-      <span class="code-view__tag">{{ activePreset.toUpperCase() }} COMPONENT</span>
-      <button type="button" class="code-copy-btn" @click="copySnippet">
+  <div class="code-view showcase-code-view">
+    <div class="showcase-code-view__bar">
+      <span class="showcase-code-view__tag">{{ activePreset.toUpperCase() }} COMPONENT</span>
+      <button type="button" class="showcase-code-view__copy-btn" @click="copySnippet">
         {{ copyButtonText }}
       </button>
     </div>
     <div
       v-if="highlightedHtml"
-      class="code-view__content is-highlighted"
+      class="showcase-code-view__content is-highlighted"
       v-html="highlightedHtml"
     />
-    <pre v-else class="code-view__content"><code>{{ code }}</code></pre>
+    <pre v-else class="showcase-code-view__content"><code>{{ code }}</code></pre>
   </div>
 </template>
 
-<style scoped>
-.code-view {
+<style>
+.showcase-code-view {
   position: relative;
   height: 380px;
   display: flex;
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
   transition: background-color 0.2s ease;
 }
 
-.code-view__bar {
+.showcase-code-view__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
     border-color 0.2s ease;
 }
 
-.code-view__tag {
+.showcase-code-view__tag {
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
 }
 
-.code-copy-btn {
+.showcase-code-view__copy-btn {
   padding: 0.25rem 0.55rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 5px;
@@ -119,13 +119,13 @@ onBeforeUnmount(() => {
   transition: all 0.15s ease;
 }
 
-.code-copy-btn:hover {
+.showcase-code-view__copy-btn:hover {
   background: var(--vp-c-bg-soft);
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-brand-1);
 }
 
-.code-view__content {
+.showcase-code-view__content {
   margin: 0;
   padding: 0.85rem 1rem;
   height: 100%;
@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
   color: var(--vp-c-text-1);
 }
 
-.code-view__content code {
+.showcase-code-view__content code {
   color: inherit;
   background: transparent;
   padding: 0;
@@ -146,14 +146,14 @@ onBeforeUnmount(() => {
   font-size: inherit;
 }
 
-.code-view__content.is-highlighted {
+.showcase-code-view__content.is-highlighted {
   padding: 0;
 }
 
 /* ============================================================================
    Shiki Syntax Highlighting & Token Theming
    ============================================================================ */
-.code-view :deep(pre.shiki) {
+.showcase-code-view pre.shiki {
   margin: 0;
   padding: 0.85rem 1rem;
   height: 100%;
@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
   color: var(--shiki-light, var(--vp-c-text-1));
 }
 
-.code-view :deep(pre.shiki code) {
+.showcase-code-view pre.shiki code {
   display: block;
   width: fit-content;
   min-width: 100%;
@@ -174,23 +174,23 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
-.code-view :deep(.shiki-themes),
-.code-view :deep(.shiki-themes span) {
+.showcase-code-view .shiki-themes,
+.showcase-code-view .shiki-themes span {
   color: var(--shiki-light);
   font-style: var(--shiki-light-font-style, inherit);
   font-weight: var(--shiki-light-font-weight, inherit);
   text-decoration: var(--shiki-light-text-decoration, inherit);
 }
 
-:root.dark .code-view :deep(pre.shiki),
-html.dark .code-view :deep(pre.shiki) {
+:root.dark .showcase-code-view pre.shiki,
+html.dark .showcase-code-view pre.shiki {
   color: var(--shiki-dark, var(--vp-c-text-1));
 }
 
-:root.dark .code-view :deep(.shiki-themes),
-:root.dark .code-view :deep(.shiki-themes span),
-html.dark .code-view :deep(.shiki-themes),
-html.dark .code-view :deep(.shiki-themes span) {
+:root.dark .showcase-code-view .shiki-themes,
+:root.dark .showcase-code-view .shiki-themes span,
+html.dark .showcase-code-view .shiki-themes,
+html.dark .showcase-code-view .shiki-themes span {
   color: var(--shiki-dark);
   font-style: var(--shiki-dark-font-style, inherit);
   font-weight: var(--shiki-dark-font-weight, inherit);
@@ -198,31 +198,31 @@ html.dark .code-view :deep(.shiki-themes span) {
 }
 
 @media (max-width: 640px) {
-  .code-view {
+  .showcase-code-view {
     height: 320px;
   }
 
-  .code-view__bar {
+  .showcase-code-view__bar {
     padding: 0.4rem 0.65rem;
   }
 
-  .code-view__tag {
+  .showcase-code-view__tag {
     font-size: 0.68rem;
   }
 
-  .code-copy-btn {
+  .showcase-code-view__copy-btn {
     padding: 0.2rem 0.45rem;
     font-size: 0.72rem;
     touch-action: manipulation;
   }
 
-  .code-view__content {
+  .showcase-code-view__content {
     padding: 0.6rem 0.75rem;
     font-size: 0.76rem;
     -webkit-overflow-scrolling: touch;
   }
 
-  .code-view :deep(pre.shiki) {
+  .showcase-code-view pre.shiki {
     padding: 0.6rem 0.75rem;
     font-size: 0.76rem;
     -webkit-overflow-scrolling: touch;
