@@ -50,6 +50,8 @@ watch(
   ([keep, active]) => {
     if (active && keep) {
       context.setOpen(true);
+    } else {
+      context.setOpen(false);
     }
   },
   { immediate: true },

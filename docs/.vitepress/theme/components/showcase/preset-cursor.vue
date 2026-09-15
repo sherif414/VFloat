@@ -56,18 +56,11 @@ watch(
   ([keep, active]) => {
     if (active && keep) {
       context.setOpen(true);
-    }
-  },
-  { immediate: true },
-);
-
-watch(
-  () => props.isActive,
-  (active) => {
-    if (!active) {
+    } else {
       context.setOpen(false);
     }
   },
+  { immediate: true },
 );
 
 watch(
