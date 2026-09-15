@@ -80,14 +80,14 @@ export default defineConfig({
       "/api/": [
         {
           text: "Reference",
-          items: [{ text: "Overview", link: "/api/" }],
+          items: [
+            { text: "Overview", link: "/api/" },
+            { text: "Types & Interfaces", link: "/api/types" },
+          ],
         },
         {
           text: "Core",
-          items: [
-            { text: "useFloatingNode", link: "/api/use-floating-node" },
-            { text: "useFloatingTree", link: "/api/use-floating-tree" },
-          ],
+          items: [{ text: "useFloatingNode", link: "/api/use-floating-node" }],
         },
         {
           text: "Positioning",

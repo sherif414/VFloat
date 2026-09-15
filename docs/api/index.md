@@ -19,17 +19,17 @@ Pick the combination of composables and middleware that matches your interface p
 | **Dialog / Modal** | [`useFloatingNode`](/api/use-floating-node), [`useFocusTrap`](/api/use-focus-trap), [`useDismiss`](/api/use-dismiss), [`useRole`](/api/use-role) | None (CSS centered) | [Build Dialogs and Modals](/guide/build-dialogs-and-modals) |
 | **ContextMenu / Cursor** | [`useFloatingNode`](/api/use-floating-node), [`useClientPoint`](/api/use-client-point), [`useDismiss`](/api/use-dismiss), [`usePosition`](/api/use-position) | `flip`, `shift` | [Use Virtual Anchors](/guide/use-virtual-anchors) |
 | **Menu with Roving Focus** | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useClick`](/api/use-click), [`useDismiss`](/api/use-dismiss) | `offset`, `flip`, `shift` | [Keyboard Navigation](/guide/keyboard-navigation) |
-| **Nested Menu Tree** | [`useFloatingTree`](/api/use-floating-tree), [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useDismiss`](/api/use-dismiss) | `offset`, `flip` | [Build Nested Menus](/guide/build-nested-menus) |
+| **Nested Menu Tree** | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useDismiss`](/api/use-dismiss) | `offset`, `flip` | [Build Nested Menus](/guide/build-nested-menus) |
 | **Combobox / Autocomplete** | [`useAriaActivedescendant`](/api/use-aria-activedescendant), [`useTypeahead`](/api/use-typeahead), [`usePosition`](/api/use-position) | `offset`, `flip`, `size` | [Keyboard Navigation](/guide/keyboard-navigation) |
 
 ## Core
 
-Core primitives manage node identity, shared element references, open/close lifecycle, and multi-node tree hierarchies.
+Core primitives manage node identity, shared element references, open/close lifecycle, and composite tree hierarchies.
 
 | Composable | Description |
 | --- | --- |
-| [`useFloatingNode`](/api/use-floating-node) | Creates a standalone floating node with element refs, open state, and change reasons. |
-| [`useFloatingTree`](/api/use-floating-tree) | Coordinates related nodes in a tree hierarchy for nested menus, cascades, and family dismissal. |
+| [`useFloatingNode`](/api/use-floating-node) | Creates a composite floating node managing element refs, open state, and parent-child hierarchy. |
+| [Types & Interfaces](/api/types) | Canonical types, navigation protocols, and data structures exported by VFloat. |
 
 ## Positioning
 
@@ -85,4 +85,4 @@ Configure them declaratively inside `usePosition(node, { middlewares: { ... } })
 
 - **Reactivity:** Options accept plain values, Vue refs, or getter functions (`MaybeRefOrGetter<T>`). Changes automatically re-evaluate active composables.
 - **Node Coupling:** Every composable in a floating surface accepts the same `FloatingNode` created by [`useFloatingNode`](/api/use-floating-node).
-- **Style Binding:** `usePosition` returns `{ styles }`, a readonly ref to inline CSS properties (`position`, `left`, `top`, `transform`). Bind it directly in templates with `:style="styles"`.
+- **Style Binding:** By default (`applyStyles: true`), `usePosition` automatically synchronizes positioning styles to `node.refs.floatingEl`. Alternatively, set `applyStyles: false` and bind `:style="styles"` directly in templates.

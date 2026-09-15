@@ -40,7 +40,7 @@ The more forgiving the corridor becomes, the less tightly it matches the visible
 
 If the behavior feels surprising, pass `safePolygon: { onPolygonChange }` to inspect the polygon while debugging. Clearing the corridor (on close or re-enter) reports an empty polygon.
 
-For nested menus, pass the same `tree` from [`useFloatingTree`](/api/use-floating-tree) to `useHover` so moving into a descendant's elements does not close the parent.
+For nested menus, [`useHover`](/api/use-hover) uses intrinsic family awareness (`node.contains()`) so moving into a descendant surface's anchor or floating element does not prematurely close the parent.
 
 ## Where to go next
 

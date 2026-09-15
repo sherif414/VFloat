@@ -20,12 +20,13 @@ The anchor is the thing the surface is positioned against. The floating element 
 
 ## Why the node exists
 
-VFloat intentionally keeps the shared node small:
+VFloat intentionally keeps the shared [`FloatingNode`](/api/types#floatingnode) small and focused:
 
-- `refs`
+- `refs` (`anchorEl`, `floatingEl`, `arrowEl`)
 - `open` and `setOpen`
+- Hierarchy relations (`parentId`, `children`) and tree methods (`contains`, `traverse`)
 
-That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions. Positioning is added separately with [`usePosition`](/api/use-position), which reads the same node and returns the computed geometry. Related surfaces coordinate through an explicit [`useFloatingTree`](/api/use-floating-tree) that nodes join with `tree.addNode()`.
+That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions. Positioning is added separately with [`usePosition`](/api/use-position), which reads the same node and applies computed geometry. Related surfaces coordinate naturally through the composite node hierarchy without requiring an external tree wrapper.
 
 ## `refs`
 

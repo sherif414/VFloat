@@ -34,7 +34,7 @@ useFocus(context);
 </script>
 ```
 
-`useFocus(context)` opens and closes the same node every other interaction composable reads, so it composes with hover or click without extra state. Pass the same `tree` you gave [`useFloatingTree`](/api/use-floating-tree) when nested surfaces should count as inside the family.
+`useFocus(context)` opens and closes the same node every other interaction composable reads, so it composes with hover or click without extra state. Nested surfaces are recognized automatically as inside the family via `context.contains()`.
 
 ## Focus moves into the surface
 
@@ -74,7 +74,7 @@ Defaults are modal-first: `modal: true`, `guards: true`, `returnFocus: true`, an
 - **Non-modal surfaces.** Focus is managed without trapping. Opt in to `closeOnFocusOut` or `closeOnTab` when leaving should dismiss.
 - **Portal guards.** Automatically places invisible sentinels around portaled floating panels to keep focus from escaping into the browser chrome.
 - **Return focus.** Safely restores focus to the trigger on close without viewport jumps.
-- **Nested families.** Pass the same `tree` from [`useFloatingTree`](/api/use-floating-tree) so focus checks stay family-aware. Closing a parent never cascades on its own; call `tree.forEach(context.id, "descendants", (descendant) => descendant.setOpen(false, "programmatic"), { order: "bottom-up" })` when teardown must close the family.
+- **Nested families.** Family awareness is built into the node via `context.contains()`. Closing a parent never cascades on its own; call `context.traverse((descendant) => descendant.setOpen(false, "programmatic"), { order: "bottom-up" })` when teardown must close the entire family cascade.
 
 ## Where to go next
 

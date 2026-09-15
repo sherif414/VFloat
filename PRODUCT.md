@@ -20,7 +20,7 @@ Success means a Vue developer can compose a tooltip, popover, menu, or dialog fr
 
 ## Positioning
 
-Vue-native Composition API — not a fork or direct copy of Floating UI. Neighboring products (Floating UI React/DOM wrappers) could not truthfully copy the grouped `refs`/`state` node shape, the separate `usePosition` positioning step, and the `useFloatingNode` / `useFloatingTree` coordination model without becoming VFloat.
+Vue-native Composition API — not a fork or direct copy of Floating UI. Neighboring products (Floating UI React/DOM wrappers) could not truthfully copy the grouped `refs`/`state` node shape, the separate `usePosition` positioning step, and the unified composite `useFloatingNode` coordination model without becoming VFloat.
 
 ## Operating Context
 
@@ -28,7 +28,7 @@ Developers work in Vue 3.5+ `<script setup>` with `useTemplateRef`-bound `anchor
 
 ## Capabilities and Constraints
 
-Confirmed capabilities: standalone nodes (`useFloatingNode`), related-node coordination (`useFloatingTree`), positioning (`usePosition`, `useArrow`, `useClientPoint`), interactions (`useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useRole`), keyboard navigation (`useRovingFocus`, `useAriaActivedescendant`, `useTypeahead`), and positioning middleware (`offset`, `flip`, `shift`, `hide`, `autoPlacement`, `size`, `inline`, `arrow`).
+Confirmed capabilities: composite nodes and hierarchy coordination (`useFloatingNode`), positioning (`usePosition`, `useArrow`, `useClientPoint`), interactions (`useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useRole`), keyboard navigation (`useRovingFocus`, `useAriaActivedescendant`, `useTypeahead`), and positioning middleware (`offset`, `flip`, `shift`, `hide`, `autoPlacement`, `size`, `inline`, `arrow`).
 
 Durable constraints: WIP status — breaking changes land without deprecation windows and production use is not recommended yet; ESM-only `dist` with `peerDependencies` on `vue >= 3.5.0`; core positioning delegated to `@floating-ui/dom`; full suite ~14.7 kB min+gzip; MIT license; modern browsers plus iOS Safari / Chrome Mobile.
 

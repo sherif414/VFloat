@@ -13,7 +13,6 @@ function useHover(node: FloatingNode, options?: UseHoverOptions): void;
 
 interface UseHoverOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: FloatingTree | null | undefined;
   delay?: MaybeRefOrGetter<number | { open?: number; close?: number }>;
   restMs?: MaybeRefOrGetter<number>;
   mouseOnly?: MaybeRefOrGetter<boolean>;
@@ -33,7 +32,6 @@ interface SafePolygonOptions {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Gates all hover listeners. |
-| `tree` | `FloatingTree \| null` | `undefined` | Tree context for family-aware leave checks across nested surfaces. |
 | `delay` | `MaybeRefOrGetter<number \| { open?: number; close?: number }>` | `0` | Debounce duration in milliseconds for open and close transitions. |
 | `restMs` | `MaybeRefOrGetter<number>` | `0` | Duration the pointer must rest stationary over the anchor before opening. |
 | `mouseOnly` | `MaybeRefOrGetter<boolean>` | `false` | When `true`, ignores touch or pen hover events. |
@@ -65,6 +63,10 @@ When users quickly skim across a row of buttons or table cells, instant tooltips
 If your floating panel is separated from the anchor by an offset margin, moving the mouse to click an item in the panel would trigger a `pointerleave` event on the anchor and dismiss the panel.
 
 Enabling `safePolygon: true` tracks the pointer trajectory. As long as the cursor moves toward the floating panel inside the dynamic cone, the surface remains open.
+
+### Spatial Family Awareness
+
+When moving the pointer into a child submenu or nested floating surface, `useHover` verifies whether the pointer's destination (`e.relatedTarget`) is contained in the node family via `node.contains(e.relatedTarget)`. Parent surfaces stay open without extra manual listener wiring.
 
 ### Pinning and Reason Protection
 
@@ -99,7 +101,7 @@ useHover(node, {
 <template>
   <button ref="anchorEl">Hover for details</button>
 
-  <div v-if="node.open" ref="floatingEl" class="card" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" class="card" :style="styles">
     <p>Interactive floating card with links</p>
     <a href="#more">Read documentation</a>
   </div>
@@ -110,6 +112,6 @@ useHover(node, {
 
 - [`useClick`](/api/use-click) - Click toggle; supports hover pinning with `stickIfOpen`
 - [`useFocus`](/api/use-focus) - Keyboard focus trigger for accessible tooltips
-- [`useFloatingTree`](/api/use-floating-tree) - Prevents parent dismissal when hovering nested menus
+- [`useFloatingNode`](/api/use-floating-node) - Composite node with parent-child coordination
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Tooltip patterns and best practices
 - [Safe Polygon Gotchas](/guide/safe-polygon-gotchas) - Deep dive on polygon mathematics

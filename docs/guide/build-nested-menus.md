@@ -1,49 +1,55 @@
 ---
-description: Build nested multi-level menus with an explicit floating tree and safe cursor polygons.
+description: Build nested multi-level submenus with composite floating nodes, implicit DI, and safe cursor corridors.
 ---
 
 # Build Nested Menus
 
-Nested menus (submenus) introduce state challenges beyond standard one-dimensional list navigation:
+Nested menus (submenus) introduce coordination challenges beyond single-level list navigation:
 
 - Which submenus are currently open?
-- When the user presses the expand key (e.g., `ArrowRight`), how does focus enter the child submenu?
-- When the user presses the collapse key (e.g., `ArrowLeft`), how does focus return to the parent trigger item?
-- How do diagonal mouse movements towards the submenu avoid closing it prematurely?
-- When pressing `Escape`, how does the system close only the deepest open submenu?
+- When the user presses the expand key (`ArrowRight`), how does focus enter the child submenu?
+- When the user presses the collapse key (`ArrowLeft`), how does focus return to the parent trigger item?
+- How do diagonal mouse movements toward the submenu avoid closing it prematurely?
+- When pressing `Escape`, how does the system close only the deepest open submenu first?
 
-In VFloat, these questions are resolved by linking nodes in an explicit [`useFloatingTree`](/api/use-floating-tree) and pairing each menu level with [`useRovingFocus`](/api/use-roving-focus) for physical item focus.
+In VFloat, these questions are resolved by the **Unified Composite Node Architecture**. Submenus link directly into their parent floating node (either implicitly via Vue's Dependency Injection or explicitly via `parent: rootNode`), and pair each menu level with [`useRovingFocus`](/api/use-roving-focus) for physical item focus.
 
----\n\n## The floating-first menu model
+---
 
-Rather than creating an artificial data tree, VFloat uses the **floating tree** as the single source of truth for all overlay relationships:
+## The Composite Menu Architecture
+
+Rather than creating a separate coordinator component, every menu level is a `FloatingNode`:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Root Menu Node                           │
 │  • anchorEl: Button                                         │
 │  • floatingEl: RootMenuPanel                                │
-│  • tree.addNode(rootNode)                                   │
+│  • provides itself to descendants via Vue DI                │
 └──────────────────────────────┬──────────────────────────────┘
                                │
-                tree.addNode(subNode, rootNode.id)
+                Implicit DI (or parent: rootNode)
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Submenu Node                             │
-│  • anchorEl: 'export' Item                                  │
+│  • anchorEl: 'Share' Item Trigger                           │
 │  • floatingEl: SubmenuPanel                                 │
+│  • child of Root Menu Node                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-1. **Overlay linking:** Nodes stay standalone until they join a tree. Each submenu registers with `tree.addNode(subNode, parentNode.id)`.
-2. **Safe cursor movement:** [`useHover`](/api/use-hover) with `safePolygon: true` and `tree` prevents diagonal cursor movements from closing the submenu prematurely.
-3. **Intent-driven keyboard navigation:** [`useRovingFocus`](/api/use-roving-focus) calls `onEnter` (such as `ArrowRight`) to open a child submenu and `onExit` (such as `ArrowLeft`) to collapse back to the parent.
-4. **Stacked Escape and outside clicks:** [`useDismiss`](/api/use-dismiss) with `tree` closes the deepest open submenu first on Escape, while protecting the parent menu from closing when clicking inside a child submenu portal.
+1. **Composite linking:** Submenus automatically discover their parent node through Dependency Injection (`provide` / `inject`).
+2. **Family-aware interactions:** [`useDismiss`](/api/use-dismiss) and [`useHover`](/api/use-hover) use `node.contains()` to treat child submenus as internal to the parent, preventing accidental dismissals.
+3. **Safe cursor corridors:** [`useHover`](/api/use-hover) with `safePolygon: true` keeps the submenu open while the cursor travels diagonally toward the submenu panel.
+4. **Intent-driven navigation:** [`useRovingFocus`](/api/use-roving-focus) fires `onEnter` (`ArrowRight`) to open the child submenu and `onExit` (`ArrowLeft`) to collapse back to the parent trigger.
+5. **Leaf-first Escape:** Pressing `Escape` closes the innermost open submenu first with zero global event maps.
 
----\n\n## Complete nested menu example
+---
 
-Here is how the compound menu primitives assemble in an application template:
+## Complete Multi-Component Example
+
+Here is how compound menu primitives assemble in an application template:
 
 ```vue
 <template>
@@ -52,6 +58,7 @@ Here is how the compound menu primitives assemble in an application template:
     <MenuContent>
       <button role="menuitem" type="button">New document</button>
       <button role="menuitem" type="button">Duplicate</button>
+
       <MenuSub>
         <MenuSubTrigger>Share</MenuSubTrigger>
         <MenuSubContent>
@@ -59,6 +66,7 @@ Here is how the compound menu primitives assemble in an application template:
           <button role="menuitem" type="button">Email invite</button>
         </MenuSubContent>
       </MenuSub>
+
       <button role="menuitem" type="button">Delete</button>
     </MenuContent>
   </MenuRoot>
@@ -67,26 +75,27 @@ Here is how the compound menu primitives assemble in an application template:
 
 Here are the compound primitives that make this structure work.
 
-### Root menu (`MenuRoot.vue`)
+### 1. Root Menu (`MenuRoot.vue`)
+
+`useFloatingNode` automatically provides itself to all child components via Vue DI:
 
 ```vue
 <script setup lang="ts">
-import { ref, provide } from "vue";
-import { useFloatingNode, useFloatingTree, usePosition } from "v-float";
+import { provide, ref } from "vue";
+import { useFloatingNode, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const tree = useFloatingTree();
-const rootContext = useFloatingNode({ anchorEl, floatingEl });
-tree.addNode(rootContext);
+// Automatically provides rootNode to descendant components via DI
+const rootNode = useFloatingNode({ anchorEl, floatingEl });
 
-const { styles } = usePosition(rootContext, {
+const { styles } = usePosition(rootNode, {
   placement: "bottom-start",
   middlewares: { offset: 8, flip: true, shift: { padding: 12 } },
 });
 
-provide("MenuRootContext", { tree, rootContext, styles });
+provide("MenuRootContext", { rootNode, styles });
 </script>
 
 <template>
@@ -94,21 +103,21 @@ provide("MenuRootContext", { tree, rootContext, styles });
 </template>
 ```
 
-### Root trigger (`MenuTrigger.vue`)
+### 2. Root Trigger (`MenuTrigger.vue`)
 
 ```vue
 <script setup lang="ts">
 import { inject, ref, watchEffect } from "vue";
 import { useClick } from "v-float";
 
-const { rootContext } = inject<any>("MenuRootContext");
+const { rootNode } = inject<any>("MenuRootContext");
 const triggerRef = ref<HTMLButtonElement | null>(null);
 
 watchEffect(() => {
-  rootContext.refs.anchorEl.value = triggerRef.value;
+  rootNode.refs.anchorEl.value = triggerRef.value;
 });
 
-useClick(rootContext);
+useClick(rootNode);
 </script>
 
 <template>
@@ -116,67 +125,65 @@ useClick(rootContext);
     ref="triggerRef"
     type="button"
     aria-haspopup="menu"
-    :aria-expanded="rootContext.open.value"
-    @click="rootContext.setOpen(!rootContext.open.value)"
+    :aria-expanded="rootNode.open.value"
+    @click="rootNode.setOpen(!rootNode.open.value)"
   >
     <slot />
   </button>
 </template>
 ```
 
-### Root content (`MenuContent.vue`)
+### 3. Root Content (`MenuContent.vue`)
 
 ```vue
 <script setup lang="ts">
 import { inject, ref, shallowRef, watchEffect, provide } from "vue";
-import { useRovingFocus, useDismiss } from "v-float";
+import { useDismiss, useRovingFocus } from "v-float";
 
-const { tree, rootContext, styles } = inject<any>("MenuRootContext");
+const { rootNode, styles } = inject<any>("MenuRootContext");
 const contentRef = ref<HTMLDivElement | null>(null);
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 watchEffect(() => {
-  rootContext.refs.floatingEl.value = contentRef.value;
+  rootNode.refs.floatingEl.value = contentRef.value;
 });
 
-const { getTabindex } = useRovingFocus(rootContext, {
+const { getTabindex } = useRovingFocus(rootNode, {
   elementsList: itemEls,
-  tree,
   loop: true,
 });
 
-useDismiss(rootContext, { tree });
+useDismiss(rootNode);
 
-provide("MenuLevelContext", { context: rootContext, getTabindex, itemEls });
+provide("MenuLevelContext", { node: rootNode, getTabindex, itemEls });
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="rootContext.open.value" ref="contentRef" role="menu" :style="styles">
+    <div v-if="rootNode.open.value" ref="contentRef" role="menu" :style="styles">
       <slot />
     </div>
   </Teleport>
 </template>
 ```
 
-### Submenu (`MenuSub.vue`)
+### 4. Submenu Container (`MenuSub.vue`)
+
+Calling `useFloatingNode()` with an omitted `parent` automatically injects `rootNode` as its parent:
 
 ```vue
 <script setup lang="ts">
-import { inject, ref, provide } from "vue";
+import { inject, provide, ref } from "vue";
 import { useFloatingNode } from "v-float";
-
-const { tree } = inject<any>("MenuRootContext");
-const parentLevel = inject<any>("MenuLevelContext");
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-const subContext = useFloatingNode({ anchorEl, floatingEl, open });
-tree.addNode(subContext, parentLevel.context.id);
+// Omitted parent automatically links to rootNode via Vue Dependency Injection
+const subNode = useFloatingNode({ anchorEl, floatingEl, open });
 
-provide("MenuSubContext", { subContext, parentLevel });
+provide("MenuSubContext", { subNode });
 </script>
 
 <template>
@@ -184,25 +191,23 @@ provide("MenuSubContext", { subContext, parentLevel });
 </template>
 ```
 
-### Submenu trigger (`MenuSubTrigger.vue`)
+### 5. Submenu Trigger (`MenuSubTrigger.vue`)
 
 ```vue
 <script setup lang="ts">
 import { inject, ref, watchEffect } from "vue";
 import { useHover } from "v-float";
 
-const { tree } = inject<any>("MenuRootContext");
-const { subContext, parentLevel } = inject<any>("MenuSubContext");
+const { subNode } = inject<any>("MenuSubContext");
 const triggerRef = ref<HTMLButtonElement | null>(null);
 
 watchEffect(() => {
-  subContext.refs.anchorEl.value = triggerRef.value;
+  subNode.refs.anchorEl.value = triggerRef.value;
 });
 
-useHover(subContext, {
+useHover(subNode, {
   delay: { open: 100, close: 200 },
   safePolygon: true,
-  tree,
 });
 </script>
 
@@ -212,8 +217,8 @@ useHover(subContext, {
     type="button"
     role="menuitem"
     aria-haspopup="menu"
-    :aria-expanded="subContext.open.value"
-    @click="subContext.setOpen(!subContext.open.value)"
+    :aria-expanded="subNode.open.value"
+    @click="subNode.setOpen(!subNode.open.value)"
   >
     <slot />
     <span>›</span>
@@ -221,43 +226,43 @@ useHover(subContext, {
 </template>
 ```
 
-### Submenu content (`MenuSubContent.vue`)
+### 6. Submenu Content (`MenuSubContent.vue`)
 
 ```vue
 <script setup lang="ts">
-import { inject, ref, shallowRef, watchEffect, provide } from "vue";
-import { useRovingFocus, usePosition } from "v-float";
+import { inject, provide, ref, shallowRef, watchEffect } from "vue";
+import { useDismiss, usePosition, useRovingFocus } from "v-float";
 
-const { tree } = inject<any>("MenuRootContext");
-const { subContext, parentLevel } = inject<any>("MenuSubContext");
+const { subNode } = inject<any>("MenuSubContext");
 const contentRef = ref<HTMLDivElement | null>(null);
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 watchEffect(() => {
-  subContext.refs.floatingEl.value = contentRef.value;
+  subNode.refs.floatingEl.value = contentRef.value;
 });
 
-const { styles } = usePosition(subContext, {
+const { styles } = usePosition(subNode, {
   placement: "right-start",
   middlewares: { offset: 4, flip: true, shift: { padding: 12 } },
 });
 
-const { getTabindex } = useRovingFocus(subContext, {
+const { getTabindex } = useRovingFocus(subNode, {
   elementsList: itemEls,
-  tree,
   loop: true,
   onExit: () => {
-    // ArrowLeft collapses the child submenu and restores focus to the parent trigger
-    subContext.setOpen(false);
+    // ArrowLeft closes this submenu and returns focus to its parent trigger
+    subNode.setOpen(false, "keyboard-exit");
   },
 });
 
-provide("MenuLevelContext", { context: subContext, getTabindex, itemEls, parentLevel });
+useDismiss(subNode);
+
+provide("MenuLevelContext", { node: subNode, getTabindex, itemEls });
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="subContext.open.value" ref="contentRef" role="menu" :style="styles">
+    <div v-if="subNode.open.value" ref="contentRef" role="menu" :style="styles">
       <slot />
     </div>
   </Teleport>
@@ -266,19 +271,60 @@ provide("MenuLevelContext", { context: subContext, getTabindex, itemEls, parentL
 
 ---
 
-## Edge cases solved
+## Single-Component Flat Script Pattern
 
-- **Outside click safety.** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useDismiss`](/api/use-dismiss) with `tree` inspects all registered descendant floating elements.
-- **Deepest Escape first.** Pressing `Escape` dismisses only the innermost open submenu first when [`useDismiss`](/api/use-dismiss) receives the same `tree`.
-- **Explicit cascading teardown.** Closing the root menu does not cascade on its own. Call `tree.forEach(rootContext.id, "descendants", (descendant) => descendant.setOpen(false, "programmatic"), { order: "bottom-up" })` when parent teardown must close the family in reverse depth order.
-- **Safe triangle.** Moving the cursor diagonally across sibling items to enter the submenu is protected by `useHover({ safePolygon: true, tree })`.
+If you prefer defining nested menus within a single flat `<script setup>`, link the parent node explicitly:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useClick, useDismiss, useFloatingNode, useHover, usePosition, useRovingFocus } from "v-float";
+
+const rootAnchorEl = ref<HTMLElement | null>(null);
+const rootFloatingEl = ref<HTMLElement | null>(null);
+const subAnchorEl = ref<HTMLElement | null>(null);
+const subFloatingEl = ref<HTMLElement | null>(null);
+
+const rootItems = ref<(HTMLElement | null)[]>([]);
+const subItems = ref<(HTMLElement | null)[]>([]);
+
+// 1. Create nodes with explicit parent reference
+const root = useFloatingNode({ anchorEl: rootAnchorEl, floatingEl: rootFloatingEl });
+const sub = useFloatingNode({ anchorEl: subAnchorEl, floatingEl: subFloatingEl, parent: root });
+
+// 2. Add positioning
+const rootPos = usePosition(root, { placement: "bottom-start" });
+const subPos = usePosition(sub, { placement: "right-start" });
+
+// 3. Add interactions
+useClick(root);
+useDismiss(root);
+useRovingFocus(root, { elementsList: rootItems });
+
+useHover(sub, { delay: { open: 100, close: 200 }, safePolygon: true });
+useDismiss(sub);
+useRovingFocus(sub, {
+  elementsList: subItems,
+  onExit: () => sub.setOpen(false, "keyboard-exit"),
+});
+</script>
+```
 
 ---
 
-## Where to go next
+## Edge Cases Solved
 
-- [`useFloatingNode`](/api/use-floating-node)
-- [`useFloatingTree`](/api/use-floating-tree)
-- [`useRovingFocus`](/api/use-roving-focus)
-- [`useHover`](/api/use-hover)
-- [Keyboard Navigation Guide](/guide/keyboard-navigation)
+- **Outside Click Safety:** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useDismiss`](/api/use-dismiss) invokes `node.contains(target)`, which recursively checks open descendants.
+- **Deepest Escape First:** Pressing `Escape` dismisses only the innermost active submenu first through the deterministic leaf-first Escape protocol.
+- **Cascading Teardown:** When the root menu closes, you can tear down all open descendants using `rootNode.traverse((node) => node.setOpen(false, "programmatic"), { order: "bottom-up" })`.
+- **Safe Traversal Corridor:** Moving the cursor diagonally across sibling items to enter the submenu is protected by `useHover({ safePolygon: true })`.
+
+---
+
+## Where to Go Next
+
+- Read [Tree Coordination Explained](/guide/tree-coordination-explained) for the architectural deep dive.
+- Read the [useFloatingNode API Reference](/api/use-floating-node).
+- Read the [useRovingFocus API Reference](/api/use-roving-focus).
+- Read the [useHover API Reference](/api/use-hover).
+- Read the [Keyboard Navigation Guide](/guide/keyboard-navigation).

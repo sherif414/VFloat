@@ -17,27 +17,21 @@ function useFocusTrap(
 interface UseFocusTrapOptions {
   enabled?: MaybeRefOrGetter<boolean>;
   modal?: MaybeRefOrGetter<boolean>;
-  initialFocus?: MaybeRefOrGetter<
-    HTMLElement | null | false | string | ((container: HTMLElement) => HTMLElement | null)
-  >;
-  fallbackFocus?: MaybeRefOrGetter<
-    HTMLElement | null | string | ((container: HTMLElement) => HTMLElement | null)
-  >;
-  returnFocus?: MaybeRefOrGetter<
-    boolean | HTMLElement | null | string | ((anchor: HTMLElement | null) => HTMLElement | null)
-  >;
+  initialFocus?: HTMLElement | Ref<HTMLElement | null> | (() => HTMLElement | null | false) | false;
+  returnFocus?: MaybeRefOrGetter<boolean | HTMLElement | Ref<HTMLElement | null>>;
+  guards?: MaybeRefOrGetter<boolean>;
   closeOnFocusOut?: MaybeRefOrGetter<boolean>;
   closeOnTab?: MaybeRefOrGetter<boolean>;
-  escapeDeactivates?: MaybeRefOrGetter<boolean>;
-  outsidePressDeactivates?: MaybeRefOrGetter<boolean>;
+  outsideElementsInert?: MaybeRefOrGetter<boolean>;
+  preventScroll?: MaybeRefOrGetter<boolean>;
+  ignoreFocusOut?: (target: EventTarget | null) => boolean;
+  onError?: (error: unknown) => void;
 }
 
 interface UseFocusTrapReturn {
+  isActive: ComputedRef<boolean>;
   activate: () => void;
   deactivate: () => void;
-  pause: () => void;
-  unpause: () => void;
-  isPaused: Readonly<Ref<boolean>>;
 }
 ```
 
@@ -45,38 +39,37 @@ interface UseFocusTrapReturn {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Activates the trap while `node.open` is `true`. |
-| `modal` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, sets `inert` on siblings and cycles Tab inside the panel. |
-| `initialFocus` | Element, selector, function, or `false` | First tabbable element | Element to focus when the trap activates. `false` prevents moving focus. |
-| `fallbackFocus` | Element, selector, or function | Container element | Fallback element to focus if the panel contains no tabbable elements. |
-| `returnFocus` | `boolean`, element, selector, or function | `true` | Restores focus to the anchor element when the trap deactivates. |
-| `closeOnFocusOut` | `MaybeRefOrGetter<boolean>` | `false` | Closes `node` if focus escapes the container. Enabled by default for non-modal traps. |
-| `closeOnTab` | `MaybeRefOrGetter<boolean>` | `false` | For non-modal popovers: pressing Tab on the boundary closes the surface. |
-| `escapeDeactivates` | `MaybeRefOrGetter<boolean>` | `true` | Deactivates the trap when Escape is pressed. |
-| `outsidePressDeactivates` | `MaybeRefOrGetter<boolean>` | `true` | Deactivates the trap when clicking outside the panel. |
+| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Activates focus management while `node.open` is `true`. |
+| `modal` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, isolates outside DOM elements and strictly traps Tab navigation inside. |
+| `initialFocus` | Element, ref, function, or `false` | First tabbable element | Specifies element to receive focus upon opening. `false` prevents initial focus. |
+| `returnFocus` | `boolean`, Element, or ref | `true` | Restores focus to the trigger or target element when the trap deactivates. |
+| `guards` | `MaybeRefOrGetter<boolean>` | `true` | Injects invisible boundary sentinels around the floating element to catch portal leaks. |
+| `closeOnFocusOut` | `MaybeRefOrGetter<boolean>` | `false` | When `modal: false`, closes `node` when focus leaves the floating family. |
+| `closeOnTab` | `MaybeRefOrGetter<boolean>` | `false` | When `modal: false`, closes `node` when pressing Tab on boundaries. |
+| `outsideElementsInert` | `MaybeRefOrGetter<boolean>` | `modal` | Isolates background elements using `inert`. Defaults to `true` when `modal: true`. |
+| `preventScroll` | `MaybeRefOrGetter<boolean>` | `true` | Prevents browser viewport scrolling when shifting focus. |
+| `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | `undefined` | Custom predicate to ignore focus loss to specific target elements. |
+| `onError` | `(error: unknown) => void` | `undefined` | Optional error handler callback if trap activation fails. |
 
 ## Returns
 
 | Name | Type | Notes |
 | --- | --- | --- |
-| `activate` | `() => void` | Imperatively activates the trap and shifts focus to `initialFocus`. |
-| `deactivate` | `() => void` | Imperatively deactivates the trap, removes sentinels, and restores focus. |
-| `pause` | `() => void` | Temporarily pauses trap enforcement (e.g. while a nested modal is active). |
-| `unpause` | `() => void` | Resumes an existing paused trap without re-running `initialFocus`. |
-| `isPaused` | `Readonly<Ref<boolean>>` | Indicates whether the trap is currently in a paused state. |
+| `isActive` | `ComputedRef<boolean>` | Reactive status indicating whether focus trapping is currently active. |
+| `activate` | `() => void` | Manually activates focus management. |
+| `deactivate` | `() => void` | Manually deactivates focus management and restores focus. |
 
 ## Details
 
-### Modal Traps vs Non-Modal Popovers
+### Modal Traps vs Non-Modal Overlays
 
-- **Modal Dialogs (`modal: true`):** The trap inserts invisible boundary sentinels at the top and bottom of the panel. When tabbing past the last element, focus loops back to the first. Background DOM nodes outside the floating tree are marked `inert="true"` and `aria-hidden="true"` to prevent screen readers or pointer interactions from escaping.
-- **Non-Modal Popovers (`modal: false`):** Sentinels are omitted. Tabbing out of the panel allows natural document tab order, while `closeOnFocusOut: true` dismisses the popover gracefully.
+- **Modal Dialogs (`modal: true`):** Focus sentinels wrap the panel. Pressing <kbd>Tab</kbd> on the last element wraps back to the first. Background DOM elements outside the floating family are marked `inert` to prevent screen readers or pointer clicks from escaping.
+- **Non-Modal Overlays (`modal: false`):** Sentinels are omitted. <kbd>Tab</kbd> allows natural document flow, while `closeOnFocusOut: true` or `closeOnTab: true` gracefully dismisses the panel when focus moves away.
 
 ### Initial and Return Focus
 
-- When `initialFocus` is omitted, the trap searches for the first visible element matching interactive selectors (`button:not([disabled])`, `input`, `a[href]`, `[tabindex="0"]`).
-- If no tabbable children exist, focus lands on the panel container (`fallbackFocus`).
-- When deactivated (e.g. on close), focus smoothly returns to the trigger button stored in `node.refs.anchorEl`.
+- When `initialFocus` is omitted, the trap automatically focuses the first tabbable child (falling back to the floating container).
+- When deactivated (e.g. on dialog close), focus smoothly returns to the trigger button stored in `node.refs.anchorEl`.
 
 ## Example
 
@@ -93,7 +86,7 @@ const node = useFloatingNode({ anchorEl, floatingEl });
 
 useFocusTrap(node, {
   modal: true,
-  initialFocus: () => nameInput.value,
+  initialFocus: nameInput,
   returnFocus: true,
 });
 
@@ -104,7 +97,7 @@ useRole(node, { role: "dialog", modal: true });
 <template>
   <button ref="anchorEl" @click="node.setOpen(true)">Edit Profile</button>
 
-  <div v-if="node.open" class="dialog-backdrop">
+  <div v-if="node.open.value" class="dialog-backdrop">
     <div ref="floatingEl" class="dialog-panel">
       <h2>Edit Profile</h2>
       <input ref="nameInput" placeholder="Full name" />

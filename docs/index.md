@@ -20,6 +20,6 @@ features:
   - title: Lightweight & Tree-Shakable
     details: Minimal bundle footprint (~14.7 kB gzip for the entire library) — import only the composables and middlewares you use.
   - title: Composable Primitives
-    details: Independent composables for positioning, hover, click, focus management, and keyboard navigation that connect cleanly through shared floating nodes and an explicit floating tree.
+    details: Independent composables for positioning, hover, click, focus management, and keyboard navigation that connect cleanly through unified composite floating nodes.
 footer: false
 ---

@@ -51,7 +51,7 @@ useDismiss(context);
 </script>
 ```
 
-`useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and one shared `tree`. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`).
+`useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and intrinsic family awareness. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`).
 
 ## Where to go next
 

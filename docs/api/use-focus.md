@@ -13,7 +13,6 @@ function useFocus(node: FloatingNode, options?: UseFocusOptions): UseFocusReturn
 
 interface UseFocusOptions {
   enabled?: MaybeRefOrGetter<boolean>;
-  tree?: FloatingTree | null | undefined;
   requireFocusVisible?: MaybeRefOrGetter<boolean>;
   ignoreFocusOut?: (target: EventTarget | null) => boolean;
 }
@@ -28,7 +27,6 @@ interface UseFocusReturn {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Disabling removes all focus listeners. |
-| `tree` | `FloatingTree \| null` | `undefined` | Tree context for family-aware focus checks in nested structures. |
 | `requireFocusVisible` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, opens only for keyboard navigation, ignoring pointer clicks. |
 | `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | `undefined` | Predicate to prevent closing when focus transitions to selected elements. |
 
@@ -46,12 +44,12 @@ Most browsers set focus on a button when clicked with a mouse or tapped on mobil
 
 With `requireFocusVisible: true` (the default), `useFocus` inspects the browser's `:focus-visible` pseudo-class. Tabbing into a button opens the tooltip; clicking the button does not.
 
-### Deferred Blur and Focus Movement
+### Deferred Blur and Family Awareness
 
 When focus leaves the anchor, dismissal is deferred to the next tick to verify where focus landed:
 
 - If focus moved into the floating panel, the surface remains open.
-- If focus moved into a registered child submenu (when passing `tree`), the parent remains open.
+- If focus moved into a child submenu or descendant overlay, `node.contains(activeEl)` keeps the parent surface open.
 - Switching tabs in the browser and returning will not reopen a closed surface.
 
 ### Accessibility Pairing
@@ -86,7 +84,7 @@ useRole(node, { role: "tooltip" });
 <template>
   <button ref="anchorEl">Tab to focus me</button>
 
-  <div v-if="node.open" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip" :style="styles">
     Helpful keyboard-accessible hint
   </div>
 </template>

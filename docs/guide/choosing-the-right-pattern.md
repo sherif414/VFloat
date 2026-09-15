@@ -38,7 +38,7 @@ Choose a menu-like dropdown when:
 - arrow-key navigation matters
 - one item may lead to a child branch
 
-Start with [Keyboard Navigation](/guide/keyboard-navigation) and [Build Nested Menus](/guide/build-nested-menus). Plan on [`useRovingFocus`](/api/use-roving-focus) for physical item focus (or [`useAriaActivedescendant`](/api/use-aria-activedescendant) for input-driven lists), with related nodes joined through [`useFloatingTree`](/api/use-floating-tree) via `tree.addNode(child, parentId)`.
+Start with [Keyboard Navigation](/guide/keyboard-navigation) and [Build Nested Menus](/guide/build-nested-menus). Plan on [`useRovingFocus`](/api/use-roving-focus) for physical item focus (or [`useAriaActivedescendant`](/api/use-aria-activedescendant) for input-driven lists), with related nodes connected automatically via [`useFloatingNode`](/api/use-floating-node) composite hierarchy.
 
 ## Dialog
 

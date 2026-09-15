@@ -147,8 +147,7 @@ const { arrowStyles } = useArrow(context, {
 
 ### Positioning
 
-- `**useFloatingNode**`: Creates a standalone node with shared refs and open state
-- `**useFloatingTree**`: Coordinates related nodes such as nested menus
+- `**useFloatingNode**`: Creates a composite node with shared refs, open state, and hierarchy coordination
 - `**usePosition**`: Positions a floating element relative to an anchor with middleware support
 - `**useArrow**`: Positions arrow elements pointing to the anchor
 - `**useClientPoint**`: Positions floating elements at cursor/touch coordinates
