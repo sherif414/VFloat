@@ -142,12 +142,16 @@ defineExpose({
 .panel-cursor {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 172px;
   gap: 0.45rem;
   padding: 0.35rem 0.6rem;
   border-radius: 6px;
   pointer-events: none;
   font-size: 0.76rem;
   font-family: var(--vp-font-family-mono, monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .panel-cursor__indicator {
@@ -156,9 +160,11 @@ defineExpose({
   border-radius: 50%;
   background: var(--vp-c-brand-1);
   box-shadow: 0 0 6px var(--vp-c-brand-soft, rgba(66, 184, 131, 0.4));
+  flex-shrink: 0;
 }
 
 .panel-cursor__coords {
   color: var(--vp-c-text-2);
+  font-variant-numeric: tabular-nums;
 }
 </style>
