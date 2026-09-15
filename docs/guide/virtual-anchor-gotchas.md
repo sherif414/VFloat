@@ -21,9 +21,9 @@ const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
+const node = useFloatingNode({ anchorEl, floatingEl });
 
-useClientPoint(context, {
+useClientPoint(node, {
   trackingAreaEl,
   trackingMode: "follow",
 });

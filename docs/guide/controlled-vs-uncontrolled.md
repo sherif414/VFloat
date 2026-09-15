@@ -10,7 +10,7 @@ This page is about that design choice.
 
 ## Uncontrolled: the surface owns itself
 
-In the uncontrolled model, the floating surface owns its own open state through the `context`.
+In the uncontrolled model, the floating surface owns its own open state through the `node`.
 
 To start an uncontrolled surface open, pass `defaultOpen`. It is a plain initial value, not a reactive input.
 

@@ -12,7 +12,7 @@ Implements the [`NavigationTarget`](/api/types#navigationtarget) protocol for se
 
 ```ts
 function useRovingFocus(
-  context: FloatingNode,
+  node: FloatingNode,
   options: UseRovingFocusOptions,
 ): UseRovingFocusReturn;
 
@@ -56,7 +56,7 @@ interface UseRovingFocusReturn extends NavigationTarget {
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `elementsList` | `MaybeRefOrGetter<Array<HTMLElement \| null>>` | **Required** | The list of HTML element references representing navigable elements. |
-| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `context.refs.floatingEl` | Container receiving keyboard and pointer events and used for RTL detection. |
+| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `node.refs.floatingEl` | Container receiving keyboard and pointer events and used for RTL detection. |
 | `activeIndex` | `Ref<number>` | `undefined` | Controlled active index ref. |
 | `entryIndex` | `MaybeRefOrGetter<number \| null \| undefined>` | `0` | Default entry item holding `tabindex="0"` when idle. Set `-1` for menus. |
 | `entryFocusMode` | `MaybeRefOrGetter<RovingEntryFocusMode>` | `"entry-index"` | Whether re-entry restores `"entry-index"` or `"last-focused"`. |
@@ -98,9 +98,9 @@ const anchorEl = shallowRef<HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 const elementsList = shallowRef<Array<HTMLElement | null>>([]);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
+const node = useFloatingNode({ anchorEl, floatingEl });
 
-const { activeIndex, getTabindex, focusIndex } = useRovingFocus(context, {
+const { activeIndex, getTabindex, focusIndex } = useRovingFocus(node, {
   elementsList,
   orientation: "vertical",
   loop: true,
@@ -108,12 +108,12 @@ const { activeIndex, getTabindex, focusIndex } = useRovingFocus(context, {
 </script>
 
 <template>
-  <button ref="anchorEl" type="button" @click="context.setOpen(!context.open.value)">
+  <button ref="anchorEl" type="button" @click="node.setOpen(!node.open.value)">
     Options
   </button>
 
   <div
-    v-if="context.open.value"
+    v-if="node.open.value"
     ref="floatingEl"
     role="menu"
     class="menu"

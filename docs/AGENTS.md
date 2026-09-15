@@ -71,7 +71,7 @@ When implementing interactive floating menus, dropdowns, or tooltips inside demo
 ### 3. Code Example Standards
 - Use `<script setup lang="ts">` for all Vue examples.
 - Import library exports from `v-float` (not relative source paths).
-- Destructure `styles` directly from `usePosition(context, ...)`:
+- Destructure `styles` directly from `usePosition(node, ...)`:
   ```vue
   <script setup lang="ts">
   import { ref } from 'vue'
@@ -79,8 +79,8 @@ When implementing interactive floating menus, dropdowns, or tooltips inside demo
 
   const anchorEl = ref<HTMLElement | null>(null)
   const floatingEl = ref<HTMLElement | null>(null)
-  const context = useFloatingNode({ anchorEl, floatingEl })
-  const { styles } = usePosition(context)
+  const node = useFloatingNode({ anchorEl, floatingEl })
+  const { styles } = usePosition(node)
   </script>
   ```
 - Keep examples concise, complete, and runnable.

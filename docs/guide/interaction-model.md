@@ -24,13 +24,13 @@ Examples:
 
 [`useDismiss`](/api/use-dismiss) is itself a thin grouping over the internal Escape and outside-press channels. Reach for it by default; disable the channel you do not need with `escapeKey: false` or `outsidePress: false`.
 
-## One context, many behaviors
+## One node, many behaviors
 
 A floating surface often needs more than one interaction rule at once.
 
 For example, an accessible tooltip may need hover for pointer users and focus for keyboard users. A popover may need click to open, outside click to close, and Escape to close.
 
-Those are not competing systems if they all share one `context`. They are just different inputs acting on the same open state.
+Those are not competing systems if they all share one `node`. They are just different inputs acting on the same open state.
 
 ## A typical combination
 
@@ -44,16 +44,16 @@ import { useClick, useDismiss, useFloatingNode } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
+const node = useFloatingNode({ anchorEl, floatingEl });
 
-useClick(context);
-useDismiss(context);
+useClick(node);
+useDismiss(node);
 </script>
 ```
 
-`useDismiss(context)` closes on Escape and outside pointer input with one shared `enabled` gate and intrinsic family awareness. When a surface needs only one channel, disable the other (`useDismiss(context, { outsidePress: false })`).
+`useDismiss(node)` closes on Escape and outside pointer input with one shared `enabled` gate and intrinsic family awareness. When a surface needs only one channel, disable the other (`useDismiss(node, { outsidePress: false })`).
 
 ## Where to go next
 
-- Read [Floating Context](/guide/floating-context) if you want the deeper model behind the shared root.
+- Read [Floating Node](/guide/floating-node) if you want the deeper model behind the shared root.
 - Read [Build Accessible Tooltips](/guide/build-accessible-tooltips) or [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for concrete combinations.

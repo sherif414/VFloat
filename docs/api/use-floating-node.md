@@ -213,4 +213,4 @@ useDismiss(sub);
 - [`usePosition`](/api/use-position) - Add reactive coordinate calculations
 - [`useDismiss`](/api/use-dismiss) - Coordinate outside clicks and Escape key dismissals across node hierarchies
 - [`useClick`](/api/use-click) - Toggle open state on click or tap
-- [Floating Context](/guide/floating-context) - Conceptual guide to floating nodes
+- [Floating Node](/guide/floating-node) - Conceptual guide to floating nodes

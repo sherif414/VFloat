@@ -25,8 +25,8 @@ import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -35,14 +35,14 @@ const { styles } = usePosition(context, {
   },
 });
 
-useClick(context);
-useDismiss(context);
+useClick(node);
+useDismiss(node);
 </script>
 
 <template>
   <button ref="anchorEl" type="button" class="trigger">Open actions</button>
 
-  <div v-if="context.open.value" ref="floatingEl" class="panel" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" class="panel" :style="styles">
     <h2>Quick actions</h2>
     <p>Choose the next step for this record.</p>
     <div class="actions">
@@ -57,7 +57,7 @@ useDismiss(context);
 ## Robust positioning with collision detection
 
 ```ts
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -78,23 +78,23 @@ This three-middleware stack (`offset` → `flip` → `shift`) represents the bat
 ## Coordinating click and dismissal
 
 ```ts
-useClick(context);
-useDismiss(context);
+useClick(node);
+useDismiss(node);
 ```
 
-These two composables cooperate through the shared `context`:
+These two composables cooperate through the shared `node`:
 
 - **[`useClick`](/api/use-click)** opens the popover when the trigger button is clicked, and closes it if clicked again. It safely ignores modifier keys and right clicks.
 - **[`useDismiss`](/api/use-dismiss)** registers document-level listeners for outside pointer interactions and the Escape key. It automatically keeps outside press and Escape handling in sync behind one shared gate.
 
-When a user clicks inside the popover panel (such as on the "Edit" or "Duplicate" buttons), `useDismiss` detects that the click occurred within `context.refs.floatingEl` and keeps the popover open.
+When a user clicks inside the popover panel (such as on the "Edit" or "Duplicate" buttons), `useDismiss` detects that the click occurred within `node.refs.floatingEl` and keeps the popover open.
 
 ## The template bindings
 
 ```vue
 <button ref="anchorEl" type="button" class="trigger">Open actions</button>
 
-<div v-if="context.open.value" ref="floatingEl" class="panel" :style="styles">
+<div v-if="node.open.value" ref="floatingEl" class="panel" :style="styles">
   ...
 </div>
 ```
@@ -103,7 +103,7 @@ The template maintains a clean contract:
 
 - `ref="anchorEl"` associates the trigger button with the positioning engine.
 - `ref="floatingEl"` associates the popover container.
-- `v-if="context.open.value"` mounts the panel when active.
+- `v-if="node.open.value"` mounts the panel when active.
 - `:style="styles"` applies GPU-accelerated CSS transform coordinates.
 
 ## Where to go next

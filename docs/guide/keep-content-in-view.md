@@ -33,12 +33,12 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingNode({
+const node = useFloatingNode({
   anchorEl,
   floatingEl,
   open,
 });
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -101,12 +101,12 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingNode({
+const node = useFloatingNode({
   anchorEl,
   floatingEl,
   open,
 });
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,
@@ -155,13 +155,13 @@ const floatingEl = ref<HTMLElement | null>(null);
 const arrowEl = ref<HTMLElement | null>(null);
 const open = ref(true);
 
-const context = useFloatingNode({
+const node = useFloatingNode({
   anchorEl,
   floatingEl,
   arrowEl,
   open,
 });
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   middlewares: {
     offset: 8,
     flip: true,
@@ -169,11 +169,11 @@ const { styles } = usePosition(context, {
   },
 });
 
-const { arrowStyles } = useArrow(context);
+const { arrowStyles } = useArrow(node);
 </script>
 ```
 
-`useArrow(context)` registers the arrow middleware into the positioning registry and returns reactive `arrowStyles` to bind to your arrow element.
+`useArrow(node)` registers the arrow middleware into the positioning registry and returns reactive `arrowStyles` to bind to your arrow element.
 
 ## Middleware order matters
 

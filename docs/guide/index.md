@@ -16,9 +16,9 @@ Pre-built component libraries solve these problems, but they force their markup,
 
 ## How it works
 
-Every floating surface comes down to two questions: **where** should it appear, and **when** should it be visible? VFloat divides these responsibilities across dedicated composables connected by a shared context:
+Every floating surface comes down to two questions: **where** should it appear, and **when** should it be visible? VFloat divides these responsibilities across dedicated composables connected by a shared floating node:
 
-- **`useFloatingNode`** holds the shared state used by the various composables.
+- **`useFloatingNode`** holds the shared state and element references used by the various composables.
 - **`usePosition`** handles the positioning calculations. It tells you where to place your floating element and returns reactive styles to bind to your template.
 - **`useHover`** decides when the floating element should be visible and when it should hide based on hover behavior.
 
@@ -33,29 +33,29 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
 // 1. Hold shared state and element refs
-const context = useFloatingNode({ anchorEl, floatingEl });
+const node = useFloatingNode({ anchorEl, floatingEl });
 
 // 2. WHERE: calculate coordinates and return styles
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   placement: "top",
   middlewares: { offset: 8 },
 });
 
 // 3. WHEN: manage visibility based on user input
-useHover(context);
-useDismiss(context, { outsidePress: false });
+useHover(node);
+useDismiss(node, { outsidePress: false });
 </script>
 
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip" :style="styles">
     Tooltip content
   </div>
 </template>
 ```
 
-Because both composables plug into the same `context`, they work together automatically. When `useHover` opens the tooltip, `usePosition` computes its placement. The [first tooltip guide](/guide/first-tooltip) walks through the full component step by step.
+Because both composables plug into the same `node`, they work together automatically. When `useHover` opens the tooltip, `usePosition` computes its placement. The [first tooltip guide](/guide/first-tooltip) walks through the full component step by step.
 
 ## Building different surfaces
 
@@ -64,8 +64,8 @@ You won't find a `<Menu>` component or a `useTooltip()` composable in VFloat. Th
 Want to turn the tooltip from above into a popover? Swap hover for click, and add outside-click dismissal:
 
 ```ts
-useClick(context);
-useDismiss(context);
+useClick(node);
+useDismiss(node);
 ```
 
 Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
@@ -73,17 +73,17 @@ Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
 ```ts
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
-useClick(context);
-useDismiss(context);
-useRovingFocus(context, { elementsList: itemEls });
+useClick(node);
+useDismiss(node);
+useRovingFocus(node, { elementsList: itemEls });
 ```
 
 Need a modal dialog? Add focus management to trap focus inside the dialog while it's open:
 
 ```ts
-useClick(context);
-useFocusTrap(context, { modal: true });
-useDismiss(context);
+useClick(node);
+useFocusTrap(node, { modal: true });
+useDismiss(node);
 ```
 
 ## Relationship to Floating UI

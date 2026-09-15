@@ -64,7 +64,7 @@ export default defineConfig({
         {
           text: "Core Concepts",
           items: [
-            { text: "Floating Context", link: "/guide/floating-context" },
+            { text: "Floating Node", link: "/guide/floating-node" },
             { text: "Placement & Positioning", link: "/guide/placement-and-positioning" },
             { text: "Interaction Model", link: "/guide/interaction-model" },
             { text: "Tree Coordination Explained", link: "/guide/tree-coordination-explained" },

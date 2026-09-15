@@ -50,18 +50,18 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context);
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node);
 
 // 1. Move physical DOM focus across items
-const { activeIndex, getTabindex } = useRovingFocus(context, {
+const { activeIndex, getTabindex } = useRovingFocus(node, {
   elementsList: itemEls,
   orientation: "vertical",
   loop: true,
 });
 
 // 2. Keep ARIA roles synchronized
-useRole(context, {
+useRole(node, {
   role: "menu",
   listRef: itemEls,
   disabledIndices: (idx) => !!items.value[idx]?.disabled,
@@ -75,11 +75,11 @@ Render item elements with roving `tabindex` from `getTabindex` and bind dynamic 
 
 ```vue
 <template>
-  <button ref="anchorEl" type="button" @click="context.setOpen(!context.open.value)">
+  <button ref="anchorEl" type="button" @click="node.setOpen(!node.open.value)">
     Menu Options
   </button>
 
-  <ul v-if="context.open.value" ref="floatingEl" role="menu" :style="styles">
+  <ul v-if="node.open.value" ref="floatingEl" role="menu" :style="styles">
     <li
       v-for="(item, index) in items"
       :key="item.id"
@@ -132,13 +132,13 @@ const floatingEl = ref<HTMLElement | null>(null);
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 // The input element itself acts as the positioning anchor
-const context = useFloatingNode({
+const node = useFloatingNode({
   anchorEl: inputEl,
   floatingEl,
   open: isOpen,
 });
 
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 4,
@@ -146,21 +146,21 @@ const { styles } = usePosition(context, {
   },
 });
 
-useDismiss(context);
+useDismiss(node);
 
 const filteredOptions = computed(() =>
   options.value.filter((o) => o.label.toLowerCase().includes(query.value.toLowerCase())),
 );
 
-const { activeIndex, getItemId } = useAriaActivedescendant(context, {
+const { activeIndex, getItemId } = useAriaActivedescendant(node, {
   elementsList: itemEls,
   onSelect: (index) => {
     query.value = filteredOptions.value[index]!.label;
-    context.setOpen(false);
+    node.setOpen(false);
   },
 });
 
-useRole(context, {
+useRole(node, {
   role: "listbox",
   listRef: itemEls,
 });
@@ -179,11 +179,11 @@ Bind `:id="getItemId(index)"` on each option. The `aria-activedescendant` attrib
     type="text"
     role="combobox"
     aria-autocomplete="list"
-    :aria-expanded="context.open.value"
-    @focus="context.setOpen(true)"
+    :aria-expanded="node.open.value"
+    @focus="node.setOpen(true)"
   />
 
-  <ul v-if="context.open.value" ref="floatingEl" role="listbox" :style="styles">
+  <ul v-if="node.open.value" ref="floatingEl" role="listbox" :style="styles">
     <li
       v-for="(item, index) in filteredOptions"
       :key="item.value"

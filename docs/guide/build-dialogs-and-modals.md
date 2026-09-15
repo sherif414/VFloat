@@ -33,12 +33,12 @@ import { useClick, useDismiss, useFloatingNode, useFocusTrap } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
+const node = useFloatingNode({ anchorEl, floatingEl });
 
-useClick(context);
-useDismiss(context);
+useClick(node);
+useDismiss(node);
 
-useFocusTrap(context, {
+useFocusTrap(node, {
   modal: true,
 });
 </script>
@@ -47,7 +47,7 @@ useFocusTrap(context, {
   <button ref="anchorEl" type="button">Edit profile</button>
 
   <Teleport to="body">
-    <div v-if="context.open.value" class="dialog-backdrop">
+    <div v-if="node.open.value" class="dialog-backdrop">
       <div
         ref="floatingEl"
         role="dialog"
@@ -59,10 +59,10 @@ useFocusTrap(context, {
         <h2 id="dialog-title">Edit profile</h2>
         <p>Update your display name and email address.</p>
 
-        <form @submit.prevent="context.setOpen(false)">
+        <form @submit.prevent="node.setOpen(false)">
           <input type="text" placeholder="Your name" />
           <button type="submit">Save</button>
-          <button type="button" @click="context.setOpen(false)">Cancel</button>
+          <button type="button" @click="node.setOpen(false)">Cancel</button>
         </form>
       </div>
     </div>
@@ -73,7 +73,7 @@ useFocusTrap(context, {
 ## Focus trapping and page isolation
 
 ```ts
-useFocusTrap(context, {
+useFocusTrap(node, {
   modal: true,
 });
 ```
@@ -92,7 +92,7 @@ Modal dialogs often center in the viewport using CSS Flexbox or Grid over a full
 When building an **anchored dialog** (such as a callout dialog, rich popover dialog, or contextual confirmation bubble next to a button), add `usePosition`:
 
 ```ts
-const { styles } = usePosition(context, {
+const { styles } = usePosition(node, {
   placement: "bottom-start",
   middlewares: {
     offset: 8,

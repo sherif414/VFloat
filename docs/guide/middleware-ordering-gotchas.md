@@ -27,8 +27,8 @@ import { useFloatingNode, usePosition } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
   placement: "bottom",
   middlewares: {
     offset: 8,

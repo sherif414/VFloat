@@ -24,9 +24,9 @@ import { useFloatingNode, useHover } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
+const node = useFloatingNode({ anchorEl, floatingEl });
 
-useHover(context, { safePolygon: true });
+useHover(node, { safePolygon: true });
 </script>
 ```
 

@@ -60,8 +60,8 @@ interface UseAriaActivedescendantReturn extends NavigationTarget {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `targetEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `context.refs.anchorEl` | Target element holding physical DOM focus and receiving `aria-activedescendant`. |
-| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `context.refs.floatingEl` | Container element holding the items. Used for bounded scroll calculations. |
+| `targetEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `node.refs.anchorEl` | Target element holding physical DOM focus and receiving `aria-activedescendant`. |
+| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `node.refs.floatingEl` | Container element holding the items. Used for bounded scroll calculations. |
 | `elementsList` | `MaybeRefOrGetter<Array<HTMLElement \| null>>` | `undefined` | List of element references for static or dynamic DOM lists. |
 | `itemCount` | `MaybeRefOrGetter<number>` | Inferred / `0` | Total number of items when using virtualized lists. |
 | `activeIndex` | `Ref<number>` | `undefined` | Optional controlled active index ref. |
@@ -125,7 +125,7 @@ const rowVirtualizer = useVirtualizer({
 
 const adapter = createTanStackVirtualAdapter(rowVirtualizer);
 
-const { activeIndex, getItemId } = useAriaActivedescendant(context, {
+const { activeIndex, getItemId } = useAriaActivedescendant(node, {
   virtualizer: adapter,
   getItemKey: (idx) => items[idx].id,
 });
@@ -160,19 +160,19 @@ const filtered = computed(() =>
   allItems.filter((item) => item.toLowerCase().includes(query.value.toLowerCase())),
 );
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, { placement: "bottom-start" });
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, { placement: "bottom-start" });
 
-const { activeIndex, getItemId } = useAriaActivedescendant(context, {
+const { activeIndex, getItemId } = useAriaActivedescendant(node, {
   elementsList,
   onSelect: (index) => {
     query.value = filtered.value[index]!;
-    context.setOpen(false);
+    node.setOpen(false);
   },
 });
 
 function onInput() {
-  if (!context.open.value) context.setOpen(true);
+  if (!node.open.value) node.setOpen(true);
 }
 </script>
 
@@ -183,14 +183,14 @@ function onInput() {
       v-model="query"
       role="combobox"
       aria-autocomplete="list"
-      :aria-expanded="context.open.value"
+      :aria-expanded="node.open.value"
       placeholder="Type a framework..."
       @input="onInput"
-      @focus="context.setOpen(true)"
+      @focus="node.setOpen(true)"
     />
 
     <ul
-      v-if="context.open.value && filtered.length"
+      v-if="node.open.value && filtered.length"
       ref="floatingEl"
       role="listbox"
       class="listbox"

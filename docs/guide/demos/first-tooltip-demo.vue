@@ -5,15 +5,15 @@ import { ref } from "vue";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
   },
 });
 
-useHover(context);
+useHover(node);
 </script>
 
 <template>
@@ -23,7 +23,7 @@ useHover(context);
     </button>
 
     <div
-      v-if="context.open.value"
+      v-if="node.open.value"
       ref="floatingEl"
       class="tooltip-demo__floating"
       role="tooltip"

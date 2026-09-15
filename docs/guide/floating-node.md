@@ -2,11 +2,11 @@
 description: Understand the shared node object that ties VFloat behavior together.
 ---
 
-# Floating Context
+# Floating Node
 
-The `context` is the shared node that keeps a floating surface together.
+The `FloatingNode` is the shared object that keeps a floating surface together.
 
-If you understand the floating node, the rest of the library gets easier to follow. Most confusion in VFloat comes from treating the composables as separate helpers when they are really meant to cooperate through one shared object.
+If you understand the floating node, the rest of the library gets easier to follow. Most confusion in VFloat comes from treating the composables as separate helpers when they are really meant to cooperate through one shared node.
 
 ## The three parts
 
@@ -14,9 +14,9 @@ Every floating surface in VFloat is built from three things:
 
 - an anchor element
 - a floating element
-- a shared `context`
+- a shared `FloatingNode`
 
-The anchor is the thing the surface is positioned against. The floating element is the surface that appears. The `context` is the node object returned by [`useFloatingNode`](/api/use-floating-node) that connects them and lets other composables work together.
+The anchor is the thing the surface is positioned against. The floating element is the surface that appears. The `FloatingNode` is the composite object returned by [`useFloatingNode`](/api/use-floating-node) that connects them and lets companion composables coordinate without manual event wiring.
 
 ## Why the node exists
 
@@ -24,7 +24,7 @@ VFloat intentionally keeps the shared [`FloatingNode`](/api/types#floatingnode) 
 
 - `refs` (`anchorEl`, `floatingEl`, `arrowEl`)
 - `open` and `setOpen`
-- Hierarchy relations (`parentId`, `children`) and tree methods (`contains`, `traverse`)
+- Hierarchy relations (`parent`, `children`) and tree methods (`contains`, `traverse`)
 
 That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions. Positioning is added separately with [`usePosition`](/api/use-position), which reads the same node and applies computed geometry. Related surfaces coordinate naturally through the composite node hierarchy without requiring an external tree wrapper.
 
@@ -53,7 +53,7 @@ Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/
 
 The node itself does not compute coordinates, run middlewares, or wire auto-update listeners.
 
-When a surface needs JavaScript positioning, call `usePosition(context)`. That returns geometry fields such as:
+When a surface needs JavaScript positioning, call `usePosition(node)`. That returns geometry fields such as:
 
 - `x`
 - `y`
@@ -72,10 +72,10 @@ This is the loop to keep in your head:
 
 1. You create refs for the anchor and floating element.
 2. You pass them into [`useFloatingNode`](/api/use-floating-node).
-3. `useFloatingNode()` returns the shared `context`.
-4. `usePosition(context)` adds positioning when the surface needs it.
-5. Other composables read from and write to the same `context`.
-6. Your template renders from `context.open.value` and the returned `styles`.
+3. `useFloatingNode()` returns the shared `node`.
+4. `usePosition(node)` adds positioning when the surface needs it.
+5. Other composables read from and write to the same `node`.
+6. Your template renders from `node.open.value` and the returned `styles`.
 
 ## A minimal example
 
@@ -89,21 +89,21 @@ import { useFloatingNode, usePosition, useHover } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
   placement: "bottom",
   middlewares: {
     offset: 8,
   },
 });
 
-useHover(context);
+useHover(node);
 </script>
 
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="context.open.value" ref="floatingEl" :style="styles">Floating content</div>
+  <div v-if="node.open.value" ref="floatingEl" :style="styles">Floating content</div>
 </template>
 ```
 

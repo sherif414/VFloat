@@ -23,25 +23,25 @@ import { useFloatingNode, usePosition, useFocus, useHover } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-const context = useFloatingNode({ anchorEl, floatingEl });
-const { styles } = usePosition(context, {
+const node = useFloatingNode({ anchorEl, floatingEl });
+const { styles } = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
   },
 });
 
-useHover(context, {
+useHover(node, {
   safePolygon: true,
 });
 
-useFocus(context);
+useFocus(node);
 </script>
 
 <template>
   <button ref="anchorEl" type="button" aria-describedby="save-tooltip">Save draft</button>
 
-  <div v-if="context.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
+  <div v-if="node.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
     Save the current draft without publishing it.
   </div>
 </template>
@@ -50,19 +50,19 @@ useFocus(context);
 ## Pointer and keyboard triggers
 
 ```ts
-useHover(context, {
+useHover(node, {
   safePolygon: true,
 });
 
-useFocus(context);
+useFocus(node);
 ```
 
-Two composables share the same `context`:
+Two composables share the same `node`:
 
 - **[`useHover`](/api/use-hover)** opens the tooltip on pointer enter and closes it on pointer leave. Setting `safePolygon: true` keeps the tooltip open while the pointer travels across the 8-pixel gap toward the tooltip content.
 - **[`useFocus`](/api/use-focus)** opens the tooltip when a keyboard user tabs to the button, respecting `:focus-visible` so mouse clicks do not spuriously re-trigger focus tooltips.
 
-Because both composables update the same `context.open` state, pointer and keyboard interactions never fight each other.
+Because both composables update the same `node.open` state, pointer and keyboard interactions never fight each other.
 
 ## Why `safePolygon` matters
 
@@ -85,7 +85,7 @@ For deeper tuning options like `buffer` and `requireIntent`, read [Safe Polygon 
 ```vue
 <button ref="anchorEl" type="button" aria-describedby="save-tooltip">Save draft</button>
 
-<div v-if="context.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
+<div v-if="node.open.value" id="save-tooltip" ref="floatingEl" role="tooltip" :style="styles">
   Save the current draft without publishing it.
 </div>
 ```

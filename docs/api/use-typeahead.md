@@ -77,9 +77,9 @@ Typeahead listens on the floating panel, where the ARIA APG places type-ahead fo
 Pass `target` to automatically synchronize `activeIndex` and route matches to `focusIndex`:
 
 ```ts
-const roving = useRovingFocus(context, { elementsList });
+const roving = useRovingFocus(node, { elementsList });
 
-const { searchQuery } = useTypeahead(context, {
+const { searchQuery } = useTypeahead(node, {
   target: roving,
   items: countryNames,
 });
@@ -88,9 +88,9 @@ const { searchQuery } = useTypeahead(context, {
 Or provide `onMatch` explicitly if custom interception is required:
 
 ```ts
-const { focusIndex } = useRovingFocus(context, { elementsList });
+const { focusIndex } = useRovingFocus(node, { elementsList });
 
-const { searchQuery } = useTypeahead(context, {
+const { searchQuery } = useTypeahead(node, {
   items: countryNames,
   onMatch: (index) => focusIndex(index),
 });
@@ -109,10 +109,10 @@ const floatingEl = useTemplateRef<HTMLElement>("floating");
 const elementsList = ref<Array<HTMLElement | null>>([]);
 const open = ref(true);
 
-const context = useFloatingNode({ anchorEl, floatingEl, open });
-const roving = useRovingFocus(context, { elementsList });
+const node = useFloatingNode({ anchorEl, floatingEl, open });
+const roving = useRovingFocus(node, { elementsList });
 
-const { searchQuery } = useTypeahead(context, {
+const { searchQuery } = useTypeahead(node, {
   target: roving,
   items: countries,
 });
