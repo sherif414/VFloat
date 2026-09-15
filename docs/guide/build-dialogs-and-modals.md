@@ -111,5 +111,4 @@ If your surface captures user attention for a critical flow, contains multiple i
 ## Where to go next
 
 - Read [Controlled vs Uncontrolled](/guide/controlled-vs-uncontrolled) to decide whether the component or an outside router/store should own open state.
-- Read [Choosing the Right Pattern](/guide/choosing-the-right-pattern) to evaluate tradeoffs between popovers, menus, and dialogs.
 - Read [Focus Models](/guide/focus-models) for the deeper mental model behind focus management.

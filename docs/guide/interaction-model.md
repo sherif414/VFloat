@@ -55,6 +55,5 @@ useDismiss(context);
 
 ## Where to go next
 
-- Read [Choosing the Right Pattern](/guide/choosing-the-right-pattern) if you are deciding which interaction mix a surface should use.
 - Read [Floating Context](/guide/floating-context) if you want the deeper model behind the shared root.
 - Read [Build Accessible Tooltips](/guide/build-accessible-tooltips) or [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for concrete combinations.

@@ -24,8 +24,6 @@ export default defineConfig({
           text: "Getting Started",
           items: [
             { text: "Overview", link: "/guide/" },
-            { text: "Why VFloat & Floating UI", link: "/guide/vfloat-and-floating-ui" },
-            { text: "Choosing the Right Pattern", link: "/guide/choosing-the-right-pattern" },
             { text: "First Tooltip", link: "/guide/first-tooltip" },
             { text: "First Popover", link: "/guide/first-popover" },
           ],

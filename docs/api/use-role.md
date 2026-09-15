@@ -131,4 +131,3 @@ useRole(node, {
 - [`useFloatingNode`](/api/use-floating-node) - Shared node instance
 - [`useRovingFocus`](/api/use-roving-focus) - Keyboard navigation for menus
 - [`useFocusTrap`](/api/use-focus-trap) - Traps focus for `role: "dialog"`
-- [Choosing the Right Pattern](/guide/choosing-the-right-pattern) - How to pick roles according to WAI-ARIA
