@@ -1,5 +1,6 @@
 import { defineConfig } from "vitepress";
 import { demoMdPlugin } from "vitepress-plugin-demo";
+import { loadPackageSize } from "./data/package-size.data";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -10,6 +11,21 @@ export default defineConfig({
     config(md) {
       md.use(demoMdPlugin);
     },
+  },
+
+  transformPageData(pageData) {
+    if (pageData.relativePath === "index.md" && Array.isArray(pageData.frontmatter?.features)) {
+      const sizeData = loadPackageSize();
+      pageData.frontmatter.features = pageData.frontmatter.features.map((feature: any) => {
+        if (feature?.title === "Lightweight & Tree-Shakable") {
+          return {
+            ...feature,
+            details: `Minimal bundle footprint (~${sizeData.gzipFormatted} gzip for the entire library) — import only the composables and middlewares you use.`,
+          };
+        }
+        return feature;
+      });
+    }
   },
 
   themeConfig: {
