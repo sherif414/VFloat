@@ -267,7 +267,7 @@ describe("useArrow", () => {
     });
 
     describe("placement: bottom", () => {
-      it("uses inset-inline-start for X and inset-block-start for the offset", () => {
+      it("uses left for X and top for the offset", () => {
         const arrowEl = node.refs.arrowEl;
         arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
@@ -282,14 +282,14 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-inline-start": "16px",
-          "inset-block-start": "-4px",
+          left: "16px",
+          top: "-4px",
         });
       });
     });
 
     describe("placement: top", () => {
-      it("uses inset-inline-start for X and inset-block-end for the offset", () => {
+      it("uses left for X and bottom for the offset", () => {
         const arrowEl = node.refs.arrowEl;
         arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
@@ -304,14 +304,14 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-inline-start": "20px",
-          "inset-block-end": "-4px",
+          left: "20px",
+          bottom: "-4px",
         });
       });
     });
 
     describe("placement: right", () => {
-      it("uses inset-block-start for Y and inset-inline-start for the offset", () => {
+      it("uses top for Y and left for the offset", () => {
         const arrowEl = node.refs.arrowEl;
         arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
@@ -326,14 +326,14 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-block-start": "12px",
-          "inset-inline-start": "-4px",
+          top: "12px",
+          left: "-4px",
         });
       });
     });
 
     describe("placement: left", () => {
-      it("uses inset-block-start for Y and inset-inline-end for the offset", () => {
+      it("uses top for Y and right for the offset", () => {
         const arrowEl = node.refs.arrowEl;
         arrowEl.value = createStubElement("div");
         setupPositionInternals(node, {
@@ -348,8 +348,8 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-block-start": "8px",
-          "inset-inline-end": "-4px",
+          top: "8px",
+          right: "-4px",
         });
       });
     });
@@ -370,8 +370,8 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-inline-start": "10px",
-          "inset-block-start": "-4px",
+          left: "10px",
+          top: "-4px",
         });
       });
 
@@ -390,8 +390,8 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-inline-start": "30px",
-          "inset-block-end": "-4px",
+          left: "30px",
+          bottom: "-4px",
         });
       });
 
@@ -410,8 +410,8 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-block-start": "4px",
-          "inset-inline-end": "-4px",
+          top: "4px",
+          right: "-4px",
         });
       });
 
@@ -430,8 +430,8 @@ describe("useArrow", () => {
         });
 
         expect(arrowStyles.value).toEqual({
-          "inset-block-start": "18px",
-          "inset-inline-start": "-4px",
+          top: "18px",
+          left: "-4px",
         });
       });
     });
@@ -453,7 +453,7 @@ describe("useArrow", () => {
           arrowStyles = result.arrowStyles;
         });
 
-        expect(arrowStyles.value["inset-block-start"]).toBe("-8px");
+        expect(arrowStyles.value.top).toBe("-8px");
       });
     });
 
@@ -471,13 +471,13 @@ describe("useArrow", () => {
           const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
-        expect(arrowStyles.value).toHaveProperty("inset-block-end");
+        expect(arrowStyles.value).toHaveProperty("bottom");
 
         stub._placement.value = "bottom";
         await nextTick();
 
-        expect(arrowStyles.value).toHaveProperty("inset-block-start");
-        expect(arrowStyles.value).not.toHaveProperty("inset-block-end");
+        expect(arrowStyles.value).toHaveProperty("top");
+        expect(arrowStyles.value).not.toHaveProperty("bottom");
       });
 
       it("recomputes styles when middlewareData changes", async () => {
@@ -493,14 +493,134 @@ describe("useArrow", () => {
           const result = useArrow(node);
           arrowStyles = result.arrowStyles;
         });
-        expect(arrowStyles.value["inset-inline-start"]).toBe("5px");
+        expect(arrowStyles.value.left).toBe("5px");
 
         stub._middlewareData.value = {
           arrow: { x: 99, y: 0, centerOffset: 0 },
         };
         await nextTick();
 
-        expect(arrowStyles.value["inset-inline-start"]).toBe("99px");
+        expect(arrowStyles.value.left).toBe("99px");
+      });
+    });
+
+    describe("DOM style synchronization (applyStyles)", () => {
+      it("automatically applies computed styles to arrowEl style by default", async () => {
+        const arrowEl = node.refs.arrowEl;
+        const el = createStubElement("div");
+        arrowEl.value = el;
+        setupPositionInternals(node, {
+          placement: "bottom",
+          middlewareData: { arrow: { x: 24, y: 0, centerOffset: 0 } },
+        });
+
+        scope?.run(() => {
+          useArrow(node);
+        });
+        await nextTick();
+
+        expect(el.style.left).toBe("24px");
+        expect(el.style.top).toBe("-4px");
+      });
+
+      it("does not apply styles when applyStyles is false", async () => {
+        const arrowEl = node.refs.arrowEl;
+        const el = createStubElement("div");
+        arrowEl.value = el;
+        setupPositionInternals(node, {
+          placement: "bottom",
+          middlewareData: { arrow: { x: 24, y: 0, centerOffset: 0 } },
+        });
+
+        scope?.run(() => {
+          useArrow(node, { applyStyles: false });
+        });
+        await nextTick();
+
+        expect(el.style.left).toBe("");
+        expect(el.style.top).toBe("");
+      });
+
+      it("invokes custom applyStyles function and runs cleanup on change", async () => {
+        const arrowEl = node.refs.arrowEl;
+        const el = createStubElement("div");
+        arrowEl.value = el;
+        const stub = setupPositionInternals(node, {
+          placement: "bottom",
+          middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
+        });
+
+        const customCleanup = vi.fn();
+        const customApply = vi.fn().mockImplementation(() => customCleanup);
+
+        scope?.run(() => {
+          useArrow(node, { applyStyles: customApply });
+        });
+        await nextTick();
+
+        expect(customApply).toHaveBeenCalledWith(
+          el,
+          expect.objectContaining({ left: "10px", top: "-4px" }),
+        );
+
+        stub._middlewareData.value = { arrow: { x: 30, y: 0, centerOffset: 0 } };
+        await nextTick();
+
+        expect(customCleanup).toHaveBeenCalled();
+        expect(customApply).toHaveBeenCalledWith(
+          el,
+          expect.objectContaining({ left: "30px", top: "-4px" }),
+        );
+      });
+
+      it("removes applied styles when applyStyles transitions from true to false", async () => {
+        const arrowEl = node.refs.arrowEl;
+        const el = createStubElement("div");
+        arrowEl.value = el;
+        setupPositionInternals(node, {
+          placement: "top",
+          middlewareData: { arrow: { x: 15, y: 0, centerOffset: 0 } },
+        });
+
+        const applyStyles = ref(true);
+
+        scope?.run(() => {
+          useArrow(node, { applyStyles });
+        });
+        await nextTick();
+
+        expect(el.style.left).toBe("15px");
+        expect(el.style.bottom).toBe("-4px");
+
+        applyStyles.value = false;
+        await nextTick();
+
+        expect(el.style.left).toBe("");
+        expect(el.style.bottom).toBe("");
+      });
+
+      it("reactively updates styles when offset ref changes", async () => {
+        const arrowEl = node.refs.arrowEl;
+        const el = createStubElement("div");
+        arrowEl.value = el;
+        setupPositionInternals(node, {
+          placement: "bottom",
+          middlewareData: { arrow: { x: 10, y: 0, centerOffset: 0 } },
+        });
+
+        const offset = ref("-4px");
+
+        scope?.run(() => {
+          useArrow(node, { offset });
+        });
+        await nextTick();
+
+        expect(el.style.top).toBe("-4px");
+
+        offset.value = "-10px";
+        await nextTick();
+
+        expect(el.style.top).toBe("-10px");
       });
     });
   });

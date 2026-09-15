@@ -4,18 +4,24 @@ description: Connects an arrow element to a floating node and computes inset sty
 
 # useArrow
 
-`useArrow` connects an arrow element to a floating node, registers arrow positioning into the node's middleware pipeline, and computes logical inset styles for the arrow.
+`useArrow` connects an arrow element to a floating node, registers arrow positioning into the node's middleware pipeline, computes physical inset styles (`top`, `bottom`, `left`, `right`), and automatically applies them to the arrow DOM element.
 
-Use `useArrow` instead of the low-level [`arrow`](/api/arrow) middleware when you want automated middleware registration, LTR/RTL-aware side placement, and scope cleanup.
+Use `useArrow` instead of the low-level [`arrow`](/api/arrow) middleware when you want automated middleware registration, automatic DOM style synchronization, and scope cleanup.
 
 ## Type
 
 ```ts
 function useArrow(node: FloatingNode, options?: UseArrowOptions): UseArrowReturn;
 
+type ApplyArrowStylesFn = (
+  element: HTMLElement,
+  styles: Record<string, string>,
+) => void | (() => void);
+
 interface UseArrowOptions {
-  offset?: string;
-  padding?: Padding;
+  offset?: MaybeRefOrGetter<string>;
+  padding?: MaybeRefOrGetter<Padding>;
+  applyStyles?: MaybeRef<boolean | undefined> | ApplyArrowStylesFn;
 }
 
 interface UseArrowReturn {
@@ -29,8 +35,9 @@ interface UseArrowReturn {
 
 | Name | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `offset` | `string` | `"-4px"` | Gap or overlap between the arrow tip and the floating element edge. |
-| `padding` | `Padding` | `0` | Minimum clearance keeping the arrow away from the floating element corners. |
+| `offset` | `MaybeRefOrGetter<string>` | `"-4px"` | Gap or overlap between the arrow tip and the floating element edge. |
+| `padding` | `MaybeRefOrGetter<Padding>` | `0` | Minimum clearance keeping the arrow away from the floating element corners. |
+| `applyStyles` | `MaybeRef<boolean> \| ApplyArrowStylesFn` | `true` | Whether to automatically synchronize positioning styles to `node.refs.arrowEl.value.style`. Pass `false` for manual template binding, or a custom applicator function. |
 
 ## Returns
 
@@ -38,7 +45,7 @@ interface UseArrowReturn {
 | --- | --- | --- |
 | `arrowX` | `ComputedRef<number>` | Computed horizontal position in pixels. Falls back to `0` before positioning runs. |
 | `arrowY` | `ComputedRef<number>` | Computed vertical position in pixels. Falls back to `0` before positioning runs. |
-| `arrowStyles` | `ComputedRef<Record<string, string>>` | Computed CSS style object with logical insets (`top`, `bottom`, `left`, `right`). Empty `{}` before positioned. |
+| `arrowStyles` | `ComputedRef<Record<string, string>>` | Computed CSS style object with physical insets (`top`, `bottom`, `left`, `right`). Empty `{}` before positioned. |
 
 ## Details
 
@@ -48,16 +55,14 @@ When called, `useArrow` inspects the node's internal middleware registry provide
 
 The registration is automatically cleaned up when the calling component unmounts.
 
-### Arrow Element Binding
+### Arrow Element Binding & Automatic Styling
 
 `useArrow` measures the element stored in `node.refs.arrowEl`. Bind `ref="arrowEl"` to the arrow tag in your template and pass it into `useFloatingNode({ anchorEl, floatingEl, arrowEl })`.
 
-### Styling the Arrow
-
-`arrowStyles` outputs the placement-specific coordinates (such as `top: -4px` and `left: 42px`). Your CSS must provide baseline styling:
+By default (`applyStyles: true`), `useArrow` automatically applies the computed physical insets (`top`, `bottom`, `left`, `right`) directly to `arrowEl.value.style`. You only need to provide static CSS for the arrow's shape:
 
 ```css
-.arrow {
+.tooltip-arrow {
   position: absolute;
   width: 8px;
   height: 8px;
@@ -65,6 +70,8 @@ The registration is automatically cleaned up when the calling component unmounts
   transform: rotate(45deg);
 }
 ```
+
+If you prefer manual template binding, pass `{ applyStyles: false }` and bind `:style="arrowStyles"`.
 
 ## Example
 
@@ -87,7 +94,8 @@ const { styles, placement } = usePosition(node, {
   },
 });
 
-const { arrowStyles } = useArrow(node, {
+// Automatically synchronizes positioning styles onto arrowEl
+useArrow(node, {
   offset: "-4px",
   padding: 6,
 });
@@ -106,7 +114,7 @@ useHover(node);
     :data-placement="placement"
   >
     <span>Tooltip message</span>
-    <div ref="arrowEl" class="tooltip-arrow" :style="arrowStyles" />
+    <div ref="arrowEl" class="tooltip-arrow" />
   </div>
 </template>
 

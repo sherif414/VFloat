@@ -3,7 +3,12 @@
 // Core Types
 export type { OpenChangeReason, VirtualElement } from "@/types";
 
-export type { UseArrowContext, UseArrowOptions, UseArrowReturn } from "./arrow/use-arrow";
+export type {
+  ApplyArrowStylesFn,
+  UseArrowContext,
+  UseArrowOptions,
+  UseArrowReturn,
+} from "./arrow/use-arrow";
 // Arrow
 export { useArrow } from "./arrow/use-arrow";
 export type { UseClickContext, UseClickOptions } from "./click/use-click";
