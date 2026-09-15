@@ -96,8 +96,9 @@ function onSelectPreset(preset: PresetType) {
   emit("update:modelValue", preset);
 }
 
-function onSelectView(mode: ViewMode) {
-  emit("update:viewMode", mode);
+function onToggleView() {
+  const nextMode: ViewMode = props.viewMode === "code" ? "preview" : "code";
+  emit("update:viewMode", nextMode);
 }
 
 // ============================================================================
@@ -179,82 +180,110 @@ function selectPlacementOption(val: Placement) {
 
     <!-- 2. Header Actions -->
     <div class="header-actions">
-      <!-- Small Placement Dropdown -->
-      <div v-if="viewMode === 'preview'" class="placement-control">
+      <!-- Demo Options (Placement & Keep Open) -->
+      <div v-if="viewMode === 'preview'" class="header-actions__options">
+        <!-- Small Placement Dropdown -->
+        <div class="placement-control">
+          <button
+            ref="placementAnchorEl"
+            type="button"
+            class="placement-btn"
+            :class="{ 'is-open': placementContext.open.value }"
+            aria-haspopup="listbox"
+            :aria-expanded="placementContext.open.value"
+            title="Placement alignment"
+          >
+            <span class="placement-btn__label">{{ currentPlacementLabel }}</span>
+            <svg
+              class="placement-btn__chevron"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 6l4 4 4-4" />
+            </svg>
+          </button>
+
+          <Teleport to="body">
+            <div
+              v-if="placementContext.open.value"
+              ref="placementFloatingEl"
+              class="placement-floating-wrapper"
+              :style="[
+                placementPosition.styles.value,
+                { visibility: placementPosition.isPositioned.value ? 'visible' : 'hidden' },
+              ]"
+            >
+              <Transition name="dropdown-pop" appear>
+                <div class="placement-dropdown-menu" role="listbox">
+                  <button
+                    v-for="opt in placementOptions"
+                    :key="opt.value"
+                    type="button"
+                    role="option"
+                    :aria-selected="placement === opt.value"
+                    class="placement-dropdown-item"
+                    :class="{ 'is-active': placement === opt.value }"
+                    @click="selectPlacementOption(opt.value)"
+                  >
+                    <span>{{ opt.label }}</span>
+                    <svg
+                      v-if="placement === opt.value"
+                      class="check-icon"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
+                    </svg>
+                  </button>
+                </div>
+              </Transition>
+            </div>
+          </Teleport>
+        </div>
+
+        <!-- Small Keep Open Toggle (Pushpin Icon) -->
         <button
-          ref="placementAnchorEl"
           type="button"
-          class="placement-btn"
-          :class="{ 'is-open': placementContext.open.value }"
-          aria-haspopup="listbox"
-          :aria-expanded="placementContext.open.value"
-          title="Placement alignment"
+          class="action-btn"
+          :class="{ 'is-active': keepOpen }"
+          :title="keepOpen ? 'Disable keep open' : 'Keep open to inspect in devtools'"
+          :aria-pressed="keepOpen"
+          @click="emit('update:keepOpen', !keepOpen)"
         >
-          <span class="placement-btn__label">{{ currentPlacementLabel }}</span>
           <svg
-            class="placement-btn__chevron"
+            class="action-btn__icon"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="1.7"
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path d="M4 6l4 4 4-4" />
+            <path d="M4.5 2.5h7l-.5 4.5 2 2v1h-4.5v4.5l-.5.5-.5-.5V10H3v-1l2-2-.5-4.5z" />
           </svg>
+          <span class="action-btn__text">Keep open</span>
         </button>
-
-        <Teleport to="body">
-          <div
-            v-if="placementContext.open.value"
-            ref="placementFloatingEl"
-            class="placement-floating-wrapper"
-            :style="[
-              placementPosition.styles.value,
-              { visibility: placementPosition.isPositioned.value ? 'visible' : 'hidden' },
-            ]"
-          >
-            <Transition name="dropdown-pop" appear>
-              <div class="placement-dropdown-menu" role="listbox">
-                <button
-                  v-for="opt in placementOptions"
-                  :key="opt.value"
-                  type="button"
-                  role="option"
-                  :aria-selected="placement === opt.value"
-                  class="placement-dropdown-item"
-                  :class="{ 'is-active': placement === opt.value }"
-                  @click="selectPlacementOption(opt.value)"
-                >
-                  <span>{{ opt.label }}</span>
-                  <svg
-                    v-if="placement === opt.value"
-                    class="check-icon"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-                  </svg>
-                </button>
-              </div>
-            </Transition>
-          </div>
-        </Teleport>
       </div>
 
-      <!-- Small Keep Open Toggle -->
+      <!-- Unified Code Action Toggle Button -->
       <button
-        v-if="viewMode === 'preview'"
         type="button"
-        class="action-btn"
-        :class="{ 'is-active': keepOpen }"
-        :title="keepOpen ? 'Disable keep open' : 'Keep open to inspect in devtools'"
-        @click="emit('update:keepOpen', !keepOpen)"
+        class="action-btn code-toggle-btn"
+        :class="{ 'is-active': viewMode === 'code' }"
+        :title="viewMode === 'code' ? 'Switch to interactive preview' : 'View component code'"
+        :aria-label="viewMode === 'code' ? 'Switch to interactive preview' : 'View component code'"
+        :aria-pressed="viewMode === 'code'"
+        @click="onToggleView"
       >
         <svg
           class="action-btn__icon"
@@ -266,60 +295,11 @@ function selectPlacementOption(val: Placement) {
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" />
-          <circle cx="8" cy="8" r="2" />
+          <polyline points="5.5 4.5 2 8 5.5 11.5" />
+          <polyline points="10.5 4.5 14 8 10.5 11.5" />
         </svg>
-        <span>Keep open</span>
+        <span class="action-btn__text">Code</span>
       </button>
-
-      <!-- View Switch (Preview / Code) -->
-      <div class="view-switch" role="tablist" aria-label="View mode">
-        <div class="view-switch-indicator" :class="{ 'is-code': viewMode === 'code' }" />
-        <button
-          type="button"
-          role="tab"
-          class="view-switch__btn"
-          :class="{ 'is-active': viewMode === 'preview' }"
-          :aria-selected="viewMode === 'preview'"
-          @click="onSelectView('preview')"
-        >
-          <svg
-            class="view-switch__icon"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" />
-            <circle cx="8" cy="8" r="2" />
-          </svg>
-          <span>Preview</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="view-switch__btn"
-          :class="{ 'is-active': viewMode === 'code' }"
-          :aria-selected="viewMode === 'code'"
-          @click="onSelectView('code')"
-        >
-          <svg
-            class="view-switch__icon"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="5.5 4.5 2 8 5.5 11.5" />
-            <polyline points="10.5 4.5 14 8 10.5 11.5" />
-          </svg>
-          <span>Code</span>
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -413,6 +393,12 @@ function selectPlacementOption(val: Placement) {
   gap: 0.45rem;
 }
 
+.header-actions__options {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 /* Small Placement Select Button */
 .placement-control {
   position: relative;
@@ -495,85 +481,8 @@ function selectPlacementOption(val: Placement) {
   height: 12px;
 }
 
-/* View Switch */
-.view-switch {
-  position: relative;
-  display: flex;
-  width: 156px;
-  height: 28px;
-  background: var(--vp-c-bg-alt);
-  padding: 2px;
-  border-radius: 6px;
-  border: 1px solid var(--vp-c-divider);
-  overflow: hidden;
-}
-
-.view-switch-indicator {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: calc(50% - 2px);
-  height: calc(100% - 4px);
-  border-radius: 4px;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv);
-  box-shadow: var(--vp-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.08));
-  pointer-events: none;
-  z-index: 1;
-  transform: translateX(0);
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.view-switch-indicator.is-code {
-  transform: translateX(100%);
-}
-
-.view-switch__btn {
-  position: relative;
-  z-index: 2;
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  padding: 0 0.4rem;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--vp-c-text-2);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 500;
-  cursor: pointer;
-  user-select: none;
-  touch-action: manipulation;
-  transition: color 0.18s ease;
-}
-
-.view-switch__btn:hover {
-  color: var(--vp-c-text-1);
-}
-
-.view-switch__btn.is-active {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
-}
-
-.view-switch__btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 1px;
-}
-
-.view-switch__icon {
-  width: 12px;
-  height: 12px;
-  opacity: 0.85;
-  flex-shrink: 0;
-}
-
-.view-switch__btn.is-active .view-switch__icon {
-  opacity: 1;
-  color: var(--vp-c-brand-1);
+.code-toggle-btn {
+  margin-left: auto;
 }
 
 @media (max-width: 640px) {
@@ -581,11 +490,46 @@ function selectPlacementOption(val: Placement) {
     flex-direction: column;
     align-items: stretch;
     padding: 0.5rem;
-    gap: 0.45rem;
+    gap: 0.5rem;
+  }
+
+  .preset-nav {
+    width: 100%;
+    background: var(--vp-c-bg-alt);
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 8px;
+    padding: 2px;
+  }
+
+  .preset-tab {
+    flex: 1 0 auto;
+    text-align: center;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.8rem;
   }
 
   .header-actions {
-    justify-content: flex-end;
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .header-actions__options {
+    gap: 0.35rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .preset-tab {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  .placement-btn,
+  .action-btn {
+    padding: 0 0.45rem;
+    font-size: 0.74rem;
+    gap: 0.25rem;
   }
 }
 </style>

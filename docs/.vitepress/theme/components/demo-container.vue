@@ -62,54 +62,32 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="demo-header__actions">
-        <!-- View Switch (Preview / Code) -->
-        <div v-if="hasCode" class="view-switch" role="tablist" aria-label="View mode">
-          <div class="view-switch-indicator" :class="{ 'is-code': activeView === 'code' }" />
-          <button
-            type="button"
-            role="tab"
-            class="view-switch__btn"
-            :class="{ 'is-active': activeView === 'preview' }"
-            :aria-selected="activeView === 'preview'"
-            @click="activeView = 'preview'"
+        <!-- Code Action Toggle Button -->
+        <button
+          v-if="hasCode"
+          type="button"
+          class="action-btn code-toggle-btn"
+          :class="{ 'is-active': activeView === 'code' }"
+          :title="activeView === 'code' ? 'Switch to interactive preview' : 'View component code'"
+          :aria-label="activeView === 'code' ? 'Switch to interactive preview' : 'View component code'"
+          :aria-pressed="activeView === 'code'"
+          @click="activeView = activeView === 'code' ? 'preview' : 'code'"
+        >
+          <svg
+            class="action-btn__icon"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
           >
-            <svg
-              class="view-switch__icon"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" />
-              <circle cx="8" cy="8" r="2" />
-            </svg>
-            <span>Preview</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="view-switch__btn"
-            :class="{ 'is-active': activeView === 'code' }"
-            :aria-selected="activeView === 'code'"
-            @click="activeView = 'code'"
-          >
-            <svg
-              class="view-switch__icon"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="5.5 4.5 2 8 5.5 11.5" />
-              <polyline points="10.5 4.5 14 8 10.5 11.5" />
-            </svg>
-            <span>Code</span>
-          </button>
-        </div>
+            <polyline points="5.5 4.5 2 8 5.5 11.5" />
+            <polyline points="10.5 4.5 14 8 10.5 11.5" />
+          </svg>
+          <span class="action-btn__text">Code</span>
+        </button>
       </div>
     </div>
 
@@ -220,86 +198,49 @@ onBeforeUnmount(() => {
 }
 
 /* ============================================================================
-   View Switch & Micro-Sliding Highlight
+   Action Toggle Button (Code View)
    ============================================================================ */
-.demo-card .view-switch {
-  position: relative;
-  display: flex;
-  width: 168px;
-  background: var(--vp-c-bg-alt);
-  padding: 2px;
-  border-radius: 6px;
-  border: 1px solid var(--vp-c-divider);
-  overflow: hidden;
-}
-
-.demo-card .view-switch-indicator {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: calc(50% - 2px);
-  height: calc(100% - 4px);
-  border-radius: 4px;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv);
-  box-shadow: var(--vp-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.08));
-  pointer-events: none;
-  z-index: 1;
-  transform: translateX(0);
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.demo-card .view-switch-indicator.is-code {
-  transform: translateX(100%);
-}
-
-.demo-card .view-switch__btn {
-  position: relative;
-  z-index: 2;
-  flex: 1;
+.demo-card .action-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.35rem;
-  padding: 0.28rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
+  height: 28px;
+  padding: 0 0.55rem;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-2);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 500;
   cursor: pointer;
-  user-select: none;
-  outline: none;
   touch-action: manipulation;
-  transition: color 0.18s ease;
+  user-select: none;
+  transition: all 0.15s ease;
 }
 
-.demo-card .view-switch__btn:hover {
+.demo-card .action-btn:hover {
   color: var(--vp-c-text-1);
+  border-color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-soft);
 }
 
-.demo-card .view-switch__btn.is-active {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
-}
-
-.demo-card .view-switch__btn:focus-visible {
+.demo-card .action-btn:focus-visible {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 1px;
 }
 
-.demo-card .view-switch__icon {
-  width: 13px;
-  height: 13px;
-  opacity: 0.85;
-  flex-shrink: 0;
+.demo-card .action-btn.is-active {
+  background: var(--vp-c-brand-soft);
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
 
-.demo-card .view-switch__btn.is-active .view-switch__icon {
-  opacity: 1;
-  color: var(--vp-c-brand-1);
+.demo-card .action-btn__icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 /* ============================================================================
@@ -467,6 +408,28 @@ onBeforeUnmount(() => {
     border-radius: 10px;
   }
 
+  .demo-card .demo-header {
+    padding: 0.5rem 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .demo-card .demo-header__left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .demo-card .demo-title {
+    font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+
+  .demo-card .demo-header__actions {
+    flex-shrink: 0;
+  }
+
   .demo-card .demo-body {
     min-height: 200px;
   }
@@ -492,6 +455,14 @@ onBeforeUnmount(() => {
     padding: 0.75rem 3.5rem 0.75rem 0.85rem !important;
     font-size: 0.76rem;
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 380px) {
+  .demo-card .action-btn {
+    padding: 0 0.45rem;
+    font-size: 0.74rem;
+    gap: 0.25rem;
   }
 }
 </style>
