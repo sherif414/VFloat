@@ -82,6 +82,7 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - Run tests (single run): `pnpm run test:run`
 - Run SSR tests (Node mode): `pnpm run test:ssr`
 - Run dry-run release simulation: `pnpm run release:dry`
+- Build documentation: `pnpm docs:build`
 - Deploy documentation: `pnpm run docs:deploy`
 
 ## Review Checklist for Agents
@@ -90,5 +91,7 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Always write targeted regression unit tests whenever fixing a bug, handling an edge case, or addressing an ordering/lifecycle dependency.
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
 - [ ] Ensure full SSR compatibility: never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
-- [ ] Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test` to validate changes.
+- [ ] Scope-aware validation:
+  - For `src/` changes: Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test:run`.
+  - For `docs/` changes: Run `pnpm docs:build` (note: `pnpm test` and `pnpm lint` do not test or type-check `docs/` components; never cite unit test passes for `docs/` edits).
 - [ ] Keep module internals private: never export functions, interfaces, types, constants, or variables that are only used within their defining module and not imported outside of it.
