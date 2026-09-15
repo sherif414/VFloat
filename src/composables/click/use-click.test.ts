@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
-import { defineComponent, h, nextTick, ref, useTemplateRef, type VNode } from "vue";
+import { computed, defineComponent, h, nextTick, ref, useTemplateRef, type VNode } from "vue";
 import {
   type FloatingNode,
   type UseClickOptions,
+  type VirtualElement,
   useClick,
   useFloatingNode,
   useHover,
@@ -524,6 +525,46 @@ describe("useClick", () => {
 
       await userEvent.keyboard(" ");
       expect(setOpenMock).toHaveBeenCalledTimes(2);
+      expect(node.open.value).toBe(false);
+    });
+
+    it("attaches click handlers to a virtual element with a contextElement", async () => {
+      let node!: FloatingNode;
+      const Component = defineComponent(() => {
+        const floatingEl = useTemplateRef<HTMLElement>("floating");
+        const contextEl = useTemplateRef<HTMLElement>("context");
+        const virtualAnchor = computed<VirtualElement | null>(() => {
+          if (!contextEl.value) return null;
+          return {
+            getBoundingClientRect: () => contextEl.value!.getBoundingClientRect(),
+            contextElement: contextEl.value,
+          };
+        });
+
+        node = useFloatingNode({
+          anchorEl: virtualAnchor,
+          floatingEl,
+        });
+        useClick(node);
+
+        return () =>
+          h("div", { class: "test-wrapper" }, [
+            h("button", { ref: "context", "data-testid": "context-btn" }, "Context Target"),
+            h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
+          ]);
+      });
+
+      await render(Component);
+      await nextTick();
+      const btn = getTestEl("context-btn");
+
+      expect(node.open.value).toBe(false);
+      await userEvent.click(btn);
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      await userEvent.click(btn);
+      await nextTick();
       expect(node.open.value).toBe(false);
     });
   });

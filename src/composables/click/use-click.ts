@@ -9,12 +9,12 @@ import {
 import type { FloatingNode } from "@/composables/floating-tree";
 import {
   isButtonTarget,
-  isHTMLElement,
   isLinkTarget,
   isMouseLikePointerType,
   isSpaceIgnored,
   isTypeableElement,
 } from "@/shared/dom";
+import { getAnchorElement } from "@/shared/elements";
 import type { OpenChangeReason } from "@/types";
 
 type PointerType = "mouse" | "touch" | "pen";
@@ -38,19 +38,9 @@ type PointerType = "mouse" | "touch" | "pen";
  * ```
  */
 export function useClick(node: FloatingNode, options: UseClickOptions = {}): void {
-  const { open, setOpen } = node;
-  const refs = node.refs;
-  const {
-    enabled: enabledOption = true,
-    event: eventOption = "click",
-    toggle: toggleOption = true,
-    stickIfOpen: stickIfOpenOption = false,
-    ignoreMouse: ignoreMouseOption = false,
-    ignoreKeyboard: ignoreKeyboardOption = false,
-    ignoreTouch: ignoreTouchOption = false,
-  } = options;
+  const { open, setOpen, refs } = node;
 
-  // --- Interaction State -----------------------------------------------------
+  // --- Modality & Open State Tracking -----------------------------------------
 
   // Kept as plain locals (not refs/reactive) because they only coordinate
   // intra-event ordering.
@@ -67,19 +57,14 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     }
   });
 
-  const isEnabled = computed(() => toValue(enabledOption));
+  const isEnabled = computed(() => toValue(options.enabled ?? true));
+  const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
 
-  const anchorEl = computed(() => {
-    const el = refs.anchorEl.value;
-    if (isHTMLElement(el)) return el;
-    return null;
-  });
-
-  // --- Click & Activation Handlers -------------------------------------------
+  // --- Click & Keyboard Activation --------------------------------------------
 
   function onOpenChange(reason: OpenChangeReason, event: Event) {
-    const isStickIfOpen = toValue(stickIfOpenOption);
-    const isToggle = toValue(toggleOption);
+    const isStickIfOpen = toValue(options.stickIfOpen ?? false);
+    const isToggle = toValue(options.toggle ?? true);
     const lastReason = node.lastOpenReason?.value;
 
     if (open.value) {
@@ -115,12 +100,12 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function isSyntheticKeyboardClick(e: MouseEvent): boolean {
     // When keyboard interactions are disabled, browsers may still dispatch a
     // click after Enter/Space activation on some elements.
-    return toValue(ignoreKeyboardOption) && e.detail === 0;
+    return toValue(options.ignoreKeyboard ?? false) && e.detail === 0;
   }
 
   function onMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
-    if (toValue(eventOption) === "click") return;
+    if (toValue(options.event ?? "click") === "click") return;
     if (isIgnoredPointerType(interactionState.pointerType)) return;
 
     onOpenChange("anchor-click", e);
@@ -132,7 +117,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
       return;
     }
 
-    if (toValue(eventOption) === "mousedown" && interactionState.pointerType) {
+    if (toValue(options.event ?? "click") === "mousedown" && interactionState.pointerType) {
       // If pointerdown exists, reset it and skip click, as mousedown handled it.
       clearInteractionState();
       return;
@@ -150,7 +135,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function onKeyDown(e: KeyboardEvent) {
     interactionState.pointerType = undefined;
 
-    if (e.defaultPrevented || toValue(ignoreKeyboardOption)) {
+    if (e.defaultPrevented || toValue(options.ignoreKeyboard ?? false)) {
       return;
     }
 
@@ -182,7 +167,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
 
     if (
       e.defaultPrevented ||
-      toValue(ignoreKeyboardOption) ||
+      toValue(options.ignoreKeyboard ?? false) ||
       isButtonTarget(e) ||
       isSpaceIgnored(el)
     ) {
@@ -196,13 +181,13 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   }
 
   function isIgnoredPointerType(type: PointerType | undefined): boolean {
-    if (isMouseLikePointerType(type, true) && toValue(ignoreMouseOption)) {
+    if (isMouseLikePointerType(type, true) && toValue(options.ignoreMouse ?? false)) {
       return true;
     }
-    return type === "touch" && toValue(ignoreTouchOption);
+    return type === "touch" && toValue(options.ignoreTouch ?? false);
   }
 
-  // --- Anchor Event Listeners ------------------------------------------------
+  // --- Trigger Event Registration ---------------------------------------------
 
   watchPostEffect(() => {
     const el = anchorEl.value;
