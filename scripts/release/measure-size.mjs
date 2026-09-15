@@ -59,11 +59,13 @@ export function measurePackageSize(options = {}) {
     gzipFormatted: formatBytes(gzipBytes),
     brotliBytes,
     brotliFormatted: formatBytes(brotliBytes),
-    measuredAt: new Date().toISOString(),
   };
 
   mkdirSync(dirname(outputJsonFile), { recursive: true });
-  writeFileSync(outputJsonFile, JSON.stringify(data, null, 2) + "\n", "utf8");
+  const outputContent = JSON.stringify(data, null, 2) + "\n";
+  if (!existsSync(outputJsonFile) || readFileSync(outputJsonFile, "utf8") !== outputContent) {
+    writeFileSync(outputJsonFile, outputContent, "utf8");
+  }
 
   return data;
 }

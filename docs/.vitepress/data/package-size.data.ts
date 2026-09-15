@@ -27,7 +27,6 @@ export interface PackageSizeData {
   gzipFormatted: string;
   brotliBytes: number;
   brotliFormatted: string;
-  measuredAt: string;
 }
 
 export function loadPackageSize(): PackageSizeData {
@@ -49,7 +48,6 @@ export function loadPackageSize(): PackageSizeData {
         gzipFormatted: formatBytes(gzipBytes),
         brotliBytes,
         brotliFormatted: formatBytes(brotliBytes),
-        measuredAt: new Date().toISOString(),
       };
     } catch {
       // Fall through to jsonFile
@@ -74,7 +72,6 @@ export function loadPackageSize(): PackageSizeData {
     gzipFormatted: "14.72 kB",
     brotliBytes: 13377,
     brotliFormatted: "13.06 kB",
-    measuredAt: new Date().toISOString(),
   };
 }
 
