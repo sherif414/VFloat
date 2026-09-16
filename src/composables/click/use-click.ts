@@ -10,7 +10,7 @@ import {
 import { getAnchorElement } from "@/shared/elements";
 import { getWindow } from "@/shared/env";
 
-type PointerType = "mouse" | "touch" | "pen";
+type PointerType = "mouse" | "touch" | "pen" | (string & {});
 
 //=======================================================================================
 // 📌 Main
@@ -67,15 +67,16 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
 
   function onMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
-    if (toValue(options.event ?? "click") === "click") return;
+    if (toValue(options.event ?? "click") !== "mousedown") return;
     if (shouldIgnorePointerType(pointerType)) return;
 
     toggleOpen();
   }
 
   function onClick(e: MouseEvent): void {
-    if (toValue(options.event ?? "click") === "mousedown" && pointerType) {
-      // skip click as mousedown handled it.
+    // When event is mousedown, skip trailing click if a pointer gesture initiated it.
+    // Explicitly check !== undefined so unknown device pointerType ("") is not treated as falsy/keyboard.
+    if (toValue(options.event ?? "click") === "mousedown" && pointerType !== undefined) {
       clearInteractionState();
       return;
     }
@@ -86,7 +87,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     }
 
     // Synthetic click from keyboard activation (detail === 0 and no active pointer gesture)
-    if (!pointerType && e.detail === 0 && ignoreKeyboard.value) {
+    if (pointerType === undefined && e.detail === 0 && ignoreKeyboard.value) {
       clearInteractionState();
       return;
     }
@@ -239,7 +240,7 @@ export interface UseClickOptions {
   enabled?: MaybeRefOrGetter<boolean>;
 
   /**
-   * The type of event to use to determine a "click" with mouse input.
+   * The type of event to use to determine a "click" with pointer input.
    * This option does not affect keyboard interactions.
    * @default 'click'
    */

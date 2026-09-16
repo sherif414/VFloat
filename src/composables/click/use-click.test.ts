@@ -169,6 +169,48 @@ describe("useClick", () => {
 
       expect(node.open.value).toBe(true);
     });
+
+    it("handles unknown pointer device with empty string pointerType ('') when event is mousedown", async () => {
+      const { anchorEl, node } = await renderClick({
+        event: "mousedown",
+        toggle: true,
+      });
+      expect(node.open.value).toBe(false);
+
+      // Browser cannot determine device type so pointerType is ""
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { button: 0, pointerType: "" }));
+      anchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      // Subsequent click event from the gesture must be skipped rather than double-toggling closed
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+      expect(node.open.value).toBe(true);
+    });
+
+    it("does not mistake unknown pointer ('') with detail === 0 for keyboard activation when ignoreKeyboard is true", async () => {
+      const { anchorEl, node } = await renderClick({ ignoreKeyboard: true });
+      expect(node.open.value).toBe(false);
+
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { button: 0, pointerType: "" }));
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 0 }));
+      await nextTick();
+
+      // Because pointerdown preceded the click, it is a pointer gesture, not keyboard
+      expect(node.open.value).toBe(true);
+    });
+
+    it("allows unknown pointer device ('') when ignoreMouse is true", async () => {
+      const { anchorEl, node } = await renderClick({ ignoreMouse: true });
+      expect(node.open.value).toBe(false);
+
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { button: 0, pointerType: "" }));
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+
+      expect(node.open.value).toBe(true);
+    });
   });
 
   describe("keyboard behavior", () => {
