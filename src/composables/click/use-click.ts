@@ -135,8 +135,6 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     const el = anchorEl.value;
     if (!isEnabled.value || !el) return;
 
-    const win = getWindow(el);
-
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("mousedown", onMouseDown);
     el.addEventListener("click", onClick);
@@ -144,12 +142,6 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     // Clear stale interaction state if the pointer gesture is cancelled (e.g. touch drag/scroll)
     // or if the element/window loses focus before keyup (e.g. blur while holding Space).
     el.addEventListener("pointercancel", clearInteractionState);
-    el.addEventListener("blur", clearInteractionState);
-
-    if (win) {
-      win.addEventListener("pointercancel", clearInteractionState);
-      win.addEventListener("blur", clearInteractionState);
-    }
 
     if (!ignoreKeyboard.value) {
       el.addEventListener("keydown", onKeyDown);
@@ -161,13 +153,6 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
       el.removeEventListener("mousedown", onMouseDown);
       el.removeEventListener("click", onClick);
       el.removeEventListener("pointercancel", clearInteractionState);
-      el.removeEventListener("blur", clearInteractionState);
-
-      if (win) {
-        win.removeEventListener("pointercancel", clearInteractionState);
-        win.removeEventListener("blur", clearInteractionState);
-      }
-
       el.removeEventListener("keydown", onKeyDown);
       el.removeEventListener("keyup", onKeyUp);
       clearInteractionState();
