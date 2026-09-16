@@ -73,6 +73,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   }
 
   function onClick(e: MouseEvent): void {
+    if (e.button !== 0) return;
     // When event is mousedown, skip trailing click if a pointer gesture initiated it.
     // Explicitly check !== undefined so unknown device pointerType ("") is not treated as falsy/keyboard.
     if (toValue(options.event ?? "click") === "mousedown" && pointerType !== undefined) {
