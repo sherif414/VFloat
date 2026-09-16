@@ -177,10 +177,6 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
       return;
     }
 
-    if (node.lastOpenReason?.value && node.lastOpenReason.value !== "hover") {
-      return;
-    }
-
     if (isSafePolygonEnabled.value) {
       setTimeout(() => {
         clearPolygon();

@@ -38,8 +38,6 @@ interface FloatingNode {
   refs: FloatingNodeElements;
   open: Readonly<Ref<boolean>>;
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
-  lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
-  lastOpenEvent?: Readonly<Ref<Event | null>>;
   parent: Readonly<ShallowRef<FloatingNode | null>>;
   children: Readonly<ShallowRef<ReadonlySet<FloatingNode>>>;
   appendChild: (child: FloatingNode) => () => void;
@@ -90,8 +88,6 @@ type OpenChangeReason =
 | `refs` | `FloatingNodeElements` | Shared `anchorEl`, `floatingEl`, and `arrowEl` refs. |
 | `open` | `Readonly<Ref<boolean>>` | Current reactive open state. |
 | `setOpen` | `(open, reason?, event?) => void` | Updates open state with an explicit reason. Missing reason defaults to `"programmatic"`. |
-| `lastOpenReason` | `Readonly<Ref<OpenChangeReason \| null>>` | Reason that triggered the latest open state change. `null` when closed. |
-| `lastOpenEvent` | `Readonly<Ref<Event \| null>>` | DOM event that triggered the change. `null` when closed. |
 | `parent` | `Readonly<ShallowRef<FloatingNode \| null>>` | Intrinsic parent node in the hierarchy. `null` for root or standalone nodes. |
 | `children` | `Readonly<ShallowRef<ReadonlySet<FloatingNode>>>` | Immediate child nodes registered under this node. |
 | `appendChild` | `(child: FloatingNode) => () => void` | Atomically links a child node under this parent. Returns a teardown function. |
@@ -116,8 +112,8 @@ When you omit `open`, the node creates internal state initialized with `defaultO
 
 `setOpen` accepts an `OpenChangeReason` string:
 
-- Reaffirming the existing state (calling `node.setOpen(true)` when already open) updates `lastOpenReason` and `lastOpenEvent` without firing `onOpenChange`. This mechanism allows [`useClick`](/api/use-click) with `stickIfOpen` to pin a hover-opened surface.
-- `onOpenChange` is invoked only when the boolean value transitions.
+- `onOpenChange` is invoked with the transition reason and source event whenever the boolean open state transitions.
+- Calling `setOpen` with the current value is a no-op and does not fire `onOpenChange`.
 
 ### Hierarchy & Parenting Resolution
 

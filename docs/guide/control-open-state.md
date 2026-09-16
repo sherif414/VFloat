@@ -67,7 +67,7 @@ function close() {
 
 When using this pattern, VFloat automatically updates the `open` ref when interaction helpers (like click or hover) trigger open changes.
 
-To update the state programmatically, **always call `node.setOpen()`** instead of mutating the `open` ref directly. This keeps reason and event bookkeeping (`lastOpenReason`, `lastOpenEvent`, `onOpenChange`) consistent. Note that closing a node never cascades to related nodes on its own. When family teardown must follow, walk open descendants explicitly using `node.traverse((child) => child.setOpen(false, "programmatic"), { order: "bottom-up" })` on your [`FloatingNode`](/api/types#floatingnode).
+To update the state programmatically, **always call `node.setOpen()`** instead of mutating the `open` ref directly. This ensures `onOpenChange` fires with the correct reason and event context. Note that closing a node never cascades to related nodes on its own. When family teardown must follow, walk open descendants explicitly using `node.traverse((child) => child.setOpen(false, "programmatic"), { order: "bottom-up" })` on your [`FloatingNode`](/api/types#floatingnode).
 
 > [!IMPORTANT]
 > The `open` ref passed to `useFloatingNode` options must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.

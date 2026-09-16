@@ -72,8 +72,6 @@ const node = useFloatingNode({ anchorEl, floatingEl });
 - **`node.open`**: a boolean ref that tracks whether the surface is currently visible. Interaction composables flip this on and off.
 - **`node.setOpen`**: the function that changes open state. Call it directly when you need to open or close the surface yourself.
 
-The node also exposes `lastOpenReason` and `lastOpenEvent` so you can inspect why the surface last opened.
-
 The node does not position elements and does not bind DOM event listeners. It acts as the shared coordinator that every other composable plugs into. Nothing happens without it, but it delegates the actual work to the other composables.
 
 ## Positioning computes and applies coordinates

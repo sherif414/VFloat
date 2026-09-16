@@ -26,12 +26,6 @@ interface FloatingNode {
   /** Updates the open state and records the transition reason and source event. */
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
 
-  /** The reason for the most recent open transition. Null when closed. */
-  lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
-
-  /** The DOM event for the most recent open transition. Null when closed. */
-  lastOpenEvent?: Readonly<Ref<Event | null>>;
-
   /** Intrinsic parent node in the composite hierarchy. Null for root nodes. */
   parent: Readonly<ShallowRef<FloatingNode | null>>;
 

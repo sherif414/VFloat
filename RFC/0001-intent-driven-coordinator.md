@@ -141,8 +141,6 @@ export interface FloatingNode {
   refs: FloatingNodeElements;
   open: Readonly<Ref<boolean>>;
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
-  lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
-  lastOpenEvent?: Readonly<Ref<Event | null>>;
 
   /**
    * Checks whether a DOM target is inside this node's anchor/floating elements

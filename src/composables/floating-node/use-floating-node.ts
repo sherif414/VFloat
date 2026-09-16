@@ -1,6 +1,5 @@
 import type { Middleware, MiddlewareData, Placement } from "@floating-ui/dom";
 import {
-  computed,
   type ComputedRef,
   getCurrentInstance,
   hasInjectionContext,
@@ -60,17 +59,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     },
   });
 
-  const storedReason = ref<OpenChangeReason | null>(null);
-  const storedEvent = ref<Event | null>(null);
-
   const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
-    if (!value) {
-      storedReason.value = null;
-      storedEvent.value = null;
-    } else {
-      storedReason.value = reason;
-      storedEvent.value = event ?? null;
-    }
     if (open.value === value) return;
     open.value = value;
     options.onOpenChange?.(value, reason, event);
@@ -213,10 +202,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     },
     open,
     setOpen,
-    lastOpenReason: computed<OpenChangeReason | null>(() =>
-      open.value ? storedReason.value : null,
-    ),
-    lastOpenEvent: computed<Event | null>(() => (open.value ? storedEvent.value : null)),
     parent: shallowReadonly(parent) as Readonly<ShallowRef<FloatingNode | null>>,
     children: shallowReadonly(children) as Readonly<ShallowRef<ReadonlySet<FloatingNode>>>,
     appendChild,
@@ -364,16 +349,6 @@ export interface FloatingNode {
   refs: FloatingNodeElements;
   open: Readonly<Ref<boolean>>;
   setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
-  /**
-   * The reason for the most recent open state transition or reaffirmation.
-   * Null when closed.
-   */
-  lastOpenReason?: Readonly<Ref<OpenChangeReason | null>>;
-  /**
-   * The DOM/synthetic event associated with the most recent open state transition or reaffirmation.
-   * Null when closed.
-   */
-  lastOpenEvent?: Readonly<Ref<Event | null>>;
 
   /**
    * Intrinsic parent node in the composite hierarchy. Null for root nodes.
