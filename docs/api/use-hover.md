@@ -68,9 +68,6 @@ Enabling `safePolygon: true` tracks the pointer trajectory. As long as the curso
 
 When moving the pointer into a child submenu or nested floating surface, `useHover` verifies whether the pointer's destination (`e.relatedTarget`) is contained in the node family via `node.contains(e.relatedTarget)`. Parent surfaces stay open without extra manual listener wiring.
 
-### Pinning and Reason Protection
-
-`useHover` opens and closes with reason `"hover"`. If another interaction composable (such as [`useClick`](/api/use-click)) pins the surface with another reason, `useHover` detects the change and will not dismiss the surface on pointer leave.
 
 ## Example
 
@@ -110,7 +107,7 @@ useHover(node, {
 
 ## See Also
 
-- [`useClick`](/api/use-click) - Click toggle; supports hover pinning with `stickIfOpen`
+- [`useClick`](/api/use-click) - Toggle open state on click, tap, or keyboard activation
 - [`useFocus`](/api/use-focus) - Keyboard focus trigger for accessible tooltips
 - [`useFloatingNode`](/api/use-floating-node) - Composite node with parent-child coordination
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Tooltip patterns and best practices
