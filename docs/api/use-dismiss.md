@@ -48,7 +48,7 @@ interface UseDismissOutsideOptions {
 | --- | --- | --- | --- |
 | `capture` | `boolean` | `false` | Attaches keydown listener during the capture phase. Read once. |
 | `preventDefault` | `boolean` | `false` | Calls `event.preventDefault()` on handled Escape presses. |
-| `onEscape` | `(event: KeyboardEvent) => void` | `undefined` | Custom handler. Replaces default `node.setOpen(false)`. |
+| `onEscape` | `(event: KeyboardEvent) => void` | `undefined` | Custom handler. Replaces default `node.open.value = false`. |
 | `ignoreEscapeKey` | `(event: KeyboardEvent) => boolean` | `undefined` | Predicate to let children or custom inputs consume Escape first. |
 
 ### Outside Press Channel Options (`outsidePress` object)
@@ -58,13 +58,13 @@ interface UseDismissOutsideOptions {
 | `event` | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event triggers dismissal. |
 | `capture` | `MaybeRefOrGetter<boolean>` | `true` | Runs during listener capture phase before bubbling completes. |
 | `ignoreClick` | `(event, target) => boolean` | `undefined` | Skips selected clicks; runs after the composite node family check. |
-| `onClick` | `(event: MouseEvent) => void` | `undefined` | Custom handler. Replaces default `node.setOpen(false)`. |
+| `onClick` | `(event: MouseEvent) => void` | `undefined` | Custom handler. Replaces default `node.open.value = false`. |
 | `ignoreScrollbar` | `MaybeRefOrGetter<boolean>` | `true` | Clicking scrollbars inside the panel does not trigger dismissal. |
 | `ignoreDrag` | `MaybeRefOrGetter<boolean>` | `true` | For `event: "click"`, ignores mouseup outside after dragging from inside. |
 
 ## Returns
 
-`useDismiss` returns `void`. When dismissed, it updates open state with reason `"escape-key"` for Escape presses and `"outside-pointer"` for outside clicks.
+`useDismiss` returns `void`. When dismissed, it updates `node.open.value = false`.
 
 ## Details
 

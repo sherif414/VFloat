@@ -8,9 +8,9 @@ import {
   type VirtualElement,
   useClick,
   useFloatingNode,
-  useHover,
 } from "@/composables";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
+import { isButtonTarget, isLinkTarget } from "./use-click";
 
 type AnchorKind =
   | "button"
@@ -57,7 +57,6 @@ function renderAnchor(kind: AnchorKind): VNode {
 function createTestComponent(options: UseClickOptions = {}, config: FixtureConfig = {}) {
   const openRef = ref(false);
   let node!: FloatingNode;
-  let setOpenMock!: ReturnType<typeof vi.fn>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
@@ -68,7 +67,6 @@ function createTestComponent(options: UseClickOptions = {}, config: FixtureConfi
       floatingEl,
       open: openRef,
     });
-    setOpenMock = vi.spyOn(node, "setOpen");
     useClick(node, options);
 
     return () =>
@@ -78,28 +76,7 @@ function createTestComponent(options: UseClickOptions = {}, config: FixtureConfi
       ]);
   });
 
-  return { Component, getNode: () => node, openRef, getSetOpenMock: () => setOpenMock };
-}
-
-function createHoverClickComponent() {
-  let floatingNode!: ReturnType<typeof useFloatingNode>;
-
-  const Component = defineComponent(() => {
-    const anchorEl = useTemplateRef<HTMLElement>("anchor");
-    const floatingEl = useTemplateRef<HTMLElement>("floating");
-
-    floatingNode = useFloatingNode({ anchorEl, floatingEl });
-    useHover(floatingNode);
-    useClick(floatingNode, { stickIfOpen: true });
-
-    return () =>
-      h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "anchor", "data-testid": "anchor" }, "Trigger"),
-        h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
-      ]);
-  });
-
-  return { Component, getNode: () => floatingNode };
+  return { Component, getNode: () => node, openRef };
 }
 
 async function renderClick(options: UseClickOptions = {}, config: FixtureConfig = {}) {
@@ -111,15 +88,7 @@ async function renderClick(options: UseClickOptions = {}, config: FixtureConfig 
     floatingEl: getTestEl("floating"),
     node: fixture.getNode(),
     openRef: fixture.openRef,
-    setOpenMock: fixture.getSetOpenMock(),
   };
-}
-
-async function renderHoverClick() {
-  const fixture = createHoverClickComponent();
-  await render(fixture.Component);
-  await nextTick();
-  return { anchorEl: getTestEl("anchor"), node: fixture.getNode() };
 }
 
 describe("useClick", () => {
@@ -130,57 +99,48 @@ describe("useClick", () => {
 
   describe("click behavior", () => {
     it("toggles open state on click", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({ toggle: true });
+      const { anchorEl, node } = await renderClick({ toggle: true });
       expect(node.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(false);
     });
 
     it("opens but does not toggle when toggle is false", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({ toggle: false });
+      const { anchorEl, node } = await renderClick({ toggle: false });
       expect(node.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(node.open.value).toBe(true);
 
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(node.open.value).toBe(true);
     });
   });
 
   describe("pointer behavior", () => {
     it("does not toggle on mouse click if ignoreMouse is true", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({ ignoreMouse: true });
+      const { anchorEl, node } = await renderClick({ ignoreMouse: true });
       expect(node.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
 
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
     });
 
     it("respects event option 'mousedown' (toggles on mousedown, not on click)", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({
+      const { anchorEl, node } = await renderClick({
         event: "mousedown",
         toggle: true,
       });
@@ -189,20 +149,15 @@ describe("useClick", () => {
       anchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
       await nextTick();
 
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
-      setOpenMock.mockClear();
 
       anchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(false);
     });
 
     it("tracks pointerType on pointerdown when handling mousedown event", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({
+      const { anchorEl, node } = await renderClick({
         event: "mousedown",
         toggle: true,
       });
@@ -212,61 +167,50 @@ describe("useClick", () => {
       anchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
       await nextTick();
 
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
     });
   });
 
   describe("keyboard behavior", () => {
     it("ignores synthetic keyboard click (detail === 0) when ignoreKeyboard is true", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({ ignoreKeyboard: true });
+      const { anchorEl, node } = await renderClick({ ignoreKeyboard: true });
 
       anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 0 }));
       await nextTick();
 
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
     });
 
     it("toggles on Enter key press", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick();
+      const { anchorEl, node } = await renderClick();
       expect(node.open.value).toBe(false);
 
       anchorEl.focus();
       expect(document.activeElement).toBe(anchorEl);
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(false);
     });
 
     it("toggles on Space key press", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick();
+      const { anchorEl, node } = await renderClick();
       expect(node.open.value).toBe(false);
 
       anchorEl.focus();
       expect(document.activeElement).toBe(anchorEl);
 
       await userEvent.keyboard(" ");
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(false);
     });
 
     it("does not trigger on Space key press if ignoreKeyboard is true", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick(
+      const { anchorEl, node } = await renderClick(
         { ignoreKeyboard: true },
         { anchorKind: "plain-div" },
       );
@@ -275,256 +219,111 @@ describe("useClick", () => {
       anchorEl.focus();
       await userEvent.keyboard(" ");
 
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
     });
 
     it("does not trigger on Enter key press if ignoreKeyboard is true", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({ ignoreKeyboard: true });
+      const { anchorEl, node } = await renderClick({ ignoreKeyboard: true });
       expect(node.open.value).toBe(false);
 
       anchorEl.focus();
       await userEvent.keyboard("{Enter}");
 
-      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(false);
     });
   });
 
   describe("enabled state", () => {
     it("does not respond to interaction when disabled", async () => {
       const enabled = ref(false);
-      const { anchorEl, node, setOpenMock } = await renderClick({ enabled });
+      const { anchorEl, node } = await renderClick({ enabled });
 
       expect(node.open.value).toBe(false);
 
       await userEvent.click(anchorEl);
 
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
 
       enabled.value = true;
       await nextTick();
 
       await userEvent.click(anchorEl);
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
     });
 
     it("stops responding if disabled after initialization", async () => {
       const enabled = ref(true);
-      const { anchorEl, node, setOpenMock } = await renderClick({ enabled });
+      const { anchorEl, node } = await renderClick({ enabled });
 
       await userEvent.click(anchorEl);
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(node.open.value).toBe(true);
-      setOpenMock.mockClear();
 
       enabled.value = false;
       await nextTick();
 
       await userEvent.click(anchorEl);
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(true);
-    });
-  });
-
-  describe("stickIfOpen behavior", () => {
-    it("closes open element on click by default when stickIfOpen is false", async () => {
-      const { anchorEl, node, openRef, setOpenMock } = await renderClick({
-        stickIfOpen: false,
-        toggle: true,
-      });
-      openRef.value = true;
-      await nextTick();
-
-      await userEvent.click(anchorEl);
-      await nextTick();
-
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenCalledWith(false, "anchor-click", expect.any(Object));
-      expect(node.open.value).toBe(false);
-    });
-
-    it("keeps open element open (pins it) on first click when stickIfOpen is true", async () => {
-      const { anchorEl, node, openRef, setOpenMock } = await renderClick({
-        stickIfOpen: true,
-        toggle: true,
-      });
-      openRef.value = true;
-      await nextTick();
-
-      // First click: pins the already-open overlay without closing it
-      await userEvent.click(anchorEl);
-      await nextTick();
-
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
-      expect(node.open.value).toBe(true);
-
-      // Second click: toggles it closed
-      await userEvent.click(anchorEl);
-      await nextTick();
-
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(2, false, "anchor-click", expect.any(Object));
-      expect(node.open.value).toBe(false);
-    });
-
-    it("keeps open element open across multiple clicks when stickIfOpen is true and toggle is false", async () => {
-      const { anchorEl, node, openRef } = await renderClick({
-        stickIfOpen: true,
-        toggle: false,
-      });
-      openRef.value = true;
-      await nextTick();
-
-      await userEvent.click(anchorEl);
-      await nextTick();
-      expect(node.open.value).toBe(true);
-
-      await userEvent.click(anchorEl);
-      await nextTick();
-      expect(node.open.value).toBe(true);
-    });
-  });
-
-  describe("combined hover and click pinning integration", () => {
-    it("pins hover overlay on click so pointer leave does not close it", async () => {
-      const { anchorEl, node } = await renderHoverClick();
-      expect(node.open.value).toBe(false);
-
-      // 1. Pointer enters anchor -> opened via hover
-      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
-      await nextTick();
-      expect(node.open.value).toBe(true);
-      expect(node.lastOpenReason?.value).toBe("hover");
-
-      // 2. User clicks anchor -> pins open via stickIfOpen
-      await userEvent.click(anchorEl);
-      await nextTick();
-      expect(node.open.value).toBe(true);
-      expect(node.lastOpenReason?.value).toBe("anchor-click");
-
-      // 3. Pointer leaves anchor -> stays open because it is pinned
-      anchorEl.dispatchEvent(makePointerEvent("pointerleave"));
-      await nextTick();
-      expect(node.open.value).toBe(true);
-
-      // 4. Second click on anchor -> closes overlay
-      await userEvent.click(anchorEl);
-      await nextTick();
-      expect(node.open.value).toBe(false);
-      expect(node.lastOpenReason?.value).toBeNull();
-    });
-
-    it("unpinned hover overlay closes normally on pointer leave without click", async () => {
-      const { anchorEl, node } = await renderHoverClick();
-      expect(node.open.value).toBe(false);
-
-      // Pointer enters anchor -> opens via hover
-      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
-      await nextTick();
-      expect(node.open.value).toBe(true);
-      expect(node.lastOpenReason?.value).toBe("hover");
-
-      // Pointer leaves without clicking -> closes via hover
-      anchorEl.dispatchEvent(makePointerEvent("pointerleave"));
-      await nextTick();
-      expect(node.open.value).toBe(false);
-      expect(node.lastOpenReason?.value).toBeNull();
     });
   });
 
   describe("element types support", () => {
     it("handles div with role='button' on Enter and Space", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({}, { anchorKind: "role-button" });
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "role-button" });
 
       anchorEl.focus();
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "keyboard-activate", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(
-        2,
-        false,
-        "keyboard-activate",
-        expect.any(Object),
-      );
       expect(node.open.value).toBe(false);
     });
 
     it("handles <a href='...'> without double-triggering on Enter", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({}, { anchorKind: "link" });
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "link" });
 
       anchorEl.focus();
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "anchor-click", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(
-        2,
-        false,
-        "keyboard-activate",
-        expect.any(Object),
-      );
       expect(node.open.value).toBe(false);
     });
 
     it("handles <a> without href on Enter and Space", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({}, { anchorKind: "bare-link" });
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "bare-link" });
 
       anchorEl.focus();
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).toHaveBeenNthCalledWith(1, true, "keyboard-activate", expect.any(Object));
       expect(node.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
-      expect(setOpenMock).toHaveBeenNthCalledWith(
-        2,
-        false,
-        "keyboard-activate",
-        expect.any(Object),
-      );
       expect(node.open.value).toBe(false);
     });
 
     it("does not toggle on Space or Enter when anchor is a typeable text input or textarea", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({}, { anchorKind: "text-input" });
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "text-input" });
 
       anchorEl.focus();
 
       await userEvent.keyboard("hello world");
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
     });
 
     it("handles input[type='button'] on Space and Enter", async () => {
-      const { anchorEl, node, setOpenMock } = await renderClick({}, { anchorKind: "button-input" });
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "button-input" });
 
       anchorEl.focus();
 
       await userEvent.keyboard("{Enter}");
-      expect(setOpenMock).toHaveBeenCalledTimes(1);
       expect(node.open.value).toBe(true);
 
       await userEvent.keyboard(" ");
-      expect(setOpenMock).toHaveBeenCalledTimes(2);
       expect(node.open.value).toBe(false);
     });
 
@@ -566,6 +365,291 @@ describe("useClick", () => {
       await userEvent.click(btn);
       await nextTick();
       expect(node.open.value).toBe(false);
+    });
+  });
+
+  describe("stale interaction state cleanup", () => {
+    it("clears pointerType on element pointercancel when touch interaction is cancelled", async () => {
+      const { anchorEl, node } = await renderClick({ ignoreTouch: true });
+
+      // Simulate a touch sequence on the anchor that gets cancelled (e.g. user starts dragging/scrolling away).
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { pointerType: "touch" }));
+      anchorEl.dispatchEvent(makePointerEvent("pointercancel", { pointerType: "touch" }));
+
+      // A subsequent non-touch click should not be blocked by a stale "touch" pointerType.
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+
+      expect(node.open.value).toBe(true);
+    });
+
+    it("clears pointerType on window pointercancel", async () => {
+      const { anchorEl, node } = await renderClick({ ignoreTouch: true });
+
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { pointerType: "touch" }));
+      window.dispatchEvent(makePointerEvent("pointercancel", { pointerType: "touch" }));
+
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+
+      expect(node.open.value).toBe(true);
+    });
+
+    it("clears didKeyDown on element blur before keyup", async () => {
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "role-button" });
+
+      anchorEl.focus();
+      // User presses Space down on the trigger.
+      anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+
+      // Focus leaves the trigger before Space is released (e.g. Tab pressed, programmatic blur, or modal).
+      anchorEl.dispatchEvent(new FocusEvent("blur"));
+
+      // Space keyup fires after focus was lost; it must not trigger activation.
+      anchorEl.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+      await nextTick();
+
+      expect(node.open.value).toBe(false);
+    });
+
+    it("clears didKeyDown on window blur before keyup", async () => {
+      const { anchorEl, node } = await renderClick({}, { anchorKind: "role-button" });
+
+      anchorEl.focus();
+      anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+
+      // Window blurs (e.g. user Alt+Tabs away while holding Space).
+      window.dispatchEvent(new FocusEvent("blur"));
+
+      anchorEl.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+      await nextTick();
+
+      expect(node.open.value).toBe(false);
+    });
+
+    it("clears stale pointerType on element blur", async () => {
+      const { anchorEl, node } = await renderClick({
+        event: "mousedown",
+        toggle: true,
+      });
+
+      // User presses mouse down on trigger, then drags away causing trigger to blur.
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { pointerType: "mouse" }));
+      anchorEl.dispatchEvent(new FocusEvent("blur"));
+
+      // Subsequent click should not be skipped as already handled by mousedown.
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+
+      expect(node.open.value).toBe(true);
+    });
+  });
+
+  describe("isButtonTarget and isLinkTarget with nested child elements", () => {
+    it("recognizes native button targets and their nested children", () => {
+      const button = document.createElement("button");
+      const span = document.createElement("span");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const textNode = document.createTextNode("Click");
+
+      svg.appendChild(path);
+      span.appendChild(textNode);
+      button.appendChild(span);
+      button.appendChild(svg);
+
+      // Direct button
+      expect(isButtonTarget(button)).toBe(true);
+      // Nested HTML child
+      expect(isButtonTarget(span)).toBe(true);
+      // Nested SVG child
+      expect(isButtonTarget(svg)).toBe(true);
+      // Deeply nested SVG child
+      expect(isButtonTarget(path)).toBe(true);
+      // Nested text node
+      expect(isButtonTarget(textNode)).toBe(true);
+
+      // Input buttons
+      const buttonInput = document.createElement("input");
+      buttonInput.type = "button";
+      expect(isButtonTarget(buttonInput)).toBe(true);
+
+      const submitInput = document.createElement("input");
+      submitInput.type = "submit";
+      expect(isButtonTarget(submitInput)).toBe(true);
+
+      const resetInput = document.createElement("input");
+      resetInput.type = "reset";
+      expect(isButtonTarget(resetInput)).toBe(true);
+
+      const imageInput = document.createElement("input");
+      imageInput.type = "image";
+      expect(isButtonTarget(imageInput)).toBe(true);
+
+      // Summary and nested child
+      const summary = document.createElement("summary");
+      const summarySpan = document.createElement("span");
+      summary.appendChild(summarySpan);
+      expect(isButtonTarget(summary)).toBe(true);
+      expect(isButtonTarget(summarySpan)).toBe(true);
+
+      // Non-buttons
+      const textInput = document.createElement("input");
+      textInput.type = "text";
+      expect(isButtonTarget(textInput)).toBe(false);
+
+      const div = document.createElement("div");
+      const divChild = document.createElement("span");
+      div.appendChild(divChild);
+      expect(isButtonTarget(div)).toBe(false);
+      expect(isButtonTarget(divChild)).toBe(false);
+
+      const roleButton = document.createElement("div");
+      roleButton.setAttribute("role", "button");
+      const roleButtonSpan = document.createElement("span");
+      roleButton.appendChild(roleButtonSpan);
+      expect(isButtonTarget(roleButton)).toBe(false);
+      expect(isButtonTarget(roleButtonSpan)).toBe(false);
+
+      const link = document.createElement("a");
+      link.href = "#";
+      const linkSpan = document.createElement("span");
+      link.appendChild(linkSpan);
+      expect(isButtonTarget(link)).toBe(false);
+      expect(isButtonTarget(linkSpan)).toBe(false);
+
+      // Non-elements
+      expect(isButtonTarget(null)).toBe(false);
+      expect(isButtonTarget(undefined as unknown as EventTarget)).toBe(false);
+      expect(isButtonTarget(window)).toBe(false);
+      expect(isButtonTarget(document)).toBe(false);
+      expect(isButtonTarget(document.createTextNode("detached"))).toBe(false);
+    });
+
+    it("recognizes link targets with href and their nested children", () => {
+      const link = document.createElement("a");
+      link.href = "https://example.com";
+      const span = document.createElement("span");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const textNode = document.createTextNode("Link text");
+
+      svg.appendChild(path);
+      span.appendChild(textNode);
+      link.appendChild(span);
+      link.appendChild(svg);
+
+      // Direct link
+      expect(isLinkTarget(link)).toBe(true);
+      // Nested HTML child
+      expect(isLinkTarget(span)).toBe(true);
+      // Nested SVG child
+      expect(isLinkTarget(svg)).toBe(true);
+      // Deeply nested SVG child
+      expect(isLinkTarget(path)).toBe(true);
+      // Nested text node
+      expect(isLinkTarget(textNode)).toBe(true);
+
+      // Bare link without href
+      const bareLink = document.createElement("a");
+      const bareSpan = document.createElement("span");
+      bareLink.appendChild(bareSpan);
+      expect(isLinkTarget(bareLink)).toBe(false);
+      expect(isLinkTarget(bareSpan)).toBe(false);
+
+      // Non-links
+      const button = document.createElement("button");
+      const buttonSpan = document.createElement("span");
+      button.appendChild(buttonSpan);
+      expect(isLinkTarget(button)).toBe(false);
+      expect(isLinkTarget(buttonSpan)).toBe(false);
+
+      const div = document.createElement("div");
+      expect(isLinkTarget(div)).toBe(false);
+
+      // Non-elements
+      expect(isLinkTarget(null)).toBe(false);
+      expect(isLinkTarget(undefined as unknown as EventTarget)).toBe(false);
+      expect(isLinkTarget(window)).toBe(false);
+      expect(isLinkTarget(document)).toBe(false);
+      expect(isLinkTarget(document.createTextNode("detached"))).toBe(false);
+    });
+
+    it("does not call preventDefault on Space keydown when event target is a nested child in a native button", async () => {
+      let node!: FloatingNode;
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLElement>("anchor");
+        const floatingEl = useTemplateRef<HTMLElement>("floating");
+
+        node = useFloatingNode({
+          anchorEl,
+          floatingEl,
+        });
+        useClick(node);
+
+        return () =>
+          h("div", { class: "test-wrapper" }, [
+            h("button", { ref: "anchor", "data-testid": "anchor" }, [
+              h("span", { "data-testid": "child-span" }, "Click Me"),
+              h(
+                "svg",
+                { "data-testid": "child-svg", viewBox: "0 0 10 10" },
+                h("circle", { cx: 5, cy: 5, r: 5 }),
+              ),
+            ]),
+            h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
+          ]);
+      });
+
+      await render(Component);
+      await nextTick();
+
+      const span = getTestEl("child-span");
+      const keydownEvent = new KeyboardEvent("keydown", {
+        key: " ",
+        bubbles: true,
+        cancelable: true,
+      });
+
+      span.dispatchEvent(keydownEvent);
+      // Native button handles space natively; preventDefault should NOT be called.
+      expect(keydownEvent.defaultPrevented).toBe(false);
+    });
+
+    it("calls preventDefault on Space keydown when event target is a nested child in a non-native button", async () => {
+      let node!: FloatingNode;
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLElement>("anchor");
+        const floatingEl = useTemplateRef<HTMLElement>("floating");
+
+        node = useFloatingNode({
+          anchorEl,
+          floatingEl,
+        });
+        useClick(node);
+
+        return () =>
+          h("div", { class: "test-wrapper" }, [
+            h("div", { ref: "anchor", "data-testid": "anchor", role: "button", tabindex: 0 }, [
+              h("span", { "data-testid": "role-child-span" }, "Custom Button"),
+            ]),
+            h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
+          ]);
+      });
+
+      await render(Component);
+      await nextTick();
+
+      const span = getTestEl("role-child-span");
+      const keydownEvent = new KeyboardEvent("keydown", {
+        key: " ",
+        bubbles: true,
+        cancelable: true,
+      });
+
+      span.dispatchEvent(keydownEvent);
+      // Non-native button needs preventDefault to avoid scrolling the page on space.
+      expect(keydownEvent.defaultPrevented).toBe(true);
     });
   });
 });

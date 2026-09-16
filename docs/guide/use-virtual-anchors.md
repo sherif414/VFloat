@@ -87,7 +87,7 @@ useDismiss(node);
 
 function onContextMenu(e: MouseEvent) {
   e.preventDefault();
-  node.setOpen(true);
+  node.open.value = true;
 }
 </script>
 

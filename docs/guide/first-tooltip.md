@@ -69,8 +69,7 @@ const node = useFloatingNode({ anchorEl, floatingEl });
 [`useFloatingNode`](/api/use-floating-node) creates a shared [`FloatingNode`](/api/types#floatingnode) object. It is a flat object without a nested `state` wrapper, holding the pieces you will use constantly:
 
 - **`node.refs`**: the anchor, floating, and arrow element refs. Every companion composable reads from here.
-- **`node.open`**: a boolean ref that tracks whether the surface is currently visible. Interaction composables flip this on and off.
-- **`node.setOpen`**: the function that changes open state. Call it directly when you need to open or close the surface yourself.
+- **`node.open`**: a mutable boolean ref (`Ref<boolean>`) that tracks whether the surface is currently visible. Interaction composables update this ref directly, and you can also read or mutate it yourself.
 
 The node does not position elements and does not bind DOM event listeners. It acts as the shared coordinator that every other composable plugs into. Nothing happens without it, but it delegates the actual work to the other composables.
 
@@ -126,11 +125,11 @@ Tracing the full lifecycle clarifies how the pieces fit together:
 
 1. The page renders. Both refs are `null` because the tooltip is not in the DOM yet.
 2. The button renders and `anchorEl` receives a real DOM node.
-3. The user hovers over the button. `useHover` detects `pointerenter` and calls `node.setOpen(true, "hover", event)`.
+3. The user hovers over the button. `useHover` detects `pointerenter` and sets `node.open.value = true`.
 4. `node.open.value` becomes `true`. The `v-if` mounts the tooltip. `floatingEl` receives a real DOM node.
 5. `usePosition` reads both element rects, applies `placement: "top"` and `offset: 8`, and applies the positioning styles directly to `floatingEl`.
 6. The tooltip appears above the button with the correct gap.
-7. The pointer leaves. `useHover` calls `setOpen(false, "hover", event)`. The `v-if` unmounts the tooltip.
+7. The pointer leaves. `useHover` sets `node.open.value = false`. The `v-if` unmounts the tooltip.
 
 That loop (hover in, open, position, hover out, close) is the same for every floating surface. The interaction composables change; the node and the template bindings stay the same.
 
@@ -140,4 +139,4 @@ This tooltip opens on hover but ignores keyboard users entirely. [Build Accessib
 
 If you want a click-driven surface instead, [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) swaps `useHover` for `useClick` and adds outside-click dismissal.
 
-For a deeper look at the shared node, [Floating Node](/guide/floating-node) explains the flat node shape (`refs`, `open`, and `setOpen`) in detail.
+For a deeper look at the shared node, [Floating Node](/guide/floating-node) explains the flat node shape (`refs`, `open`, hierarchy methods) in detail.

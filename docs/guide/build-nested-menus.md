@@ -126,7 +126,7 @@ useClick(rootNode);
     type="button"
     aria-haspopup="menu"
     :aria-expanded="rootNode.open.value"
-    @click="rootNode.setOpen(!rootNode.open.value)"
+    @click="rootNode.open.value = !rootNode.open.value"
   >
     <slot />
   </button>
@@ -218,7 +218,7 @@ useHover(subNode, {
     role="menuitem"
     aria-haspopup="menu"
     :aria-expanded="subNode.open.value"
-    @click="subNode.setOpen(!subNode.open.value)"
+    @click="subNode.open.value = !subNode.open.value"
   >
     <slot />
     <span>›</span>
@@ -251,7 +251,7 @@ const { getTabindex } = useRovingFocus(subNode, {
   loop: true,
   onExit: () => {
     // ArrowLeft closes this submenu and returns focus to its parent trigger
-    subNode.setOpen(false, "keyboard-exit");
+    subNode.open.value = false;
   },
 });
 
@@ -305,7 +305,9 @@ useHover(sub, { delay: { open: 100, close: 200 }, safePolygon: true });
 useDismiss(sub);
 useRovingFocus(sub, {
   elementsList: subItems,
-  onExit: () => sub.setOpen(false, "keyboard-exit"),
+  onExit: () => {
+    sub.open.value = false;
+  },
 });
 </script>
 ```
@@ -316,7 +318,7 @@ useRovingFocus(sub, {
 
 - **Outside Click Safety:** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useDismiss`](/api/use-dismiss) invokes `node.contains(target)`, which recursively checks open descendants.
 - **Deepest Escape First:** Pressing `Escape` dismisses only the innermost active submenu first through the deterministic leaf-first Escape protocol.
-- **Cascading Teardown:** When the root menu closes, you can tear down all open descendants using `rootNode.traverse((node) => node.setOpen(false, "programmatic"), { order: "bottom-up" })`.
+- **Cascading Teardown:** When the root menu closes, you can tear down all open descendants using `rootNode.traverse((node) => node.open.value = false, { order: "bottom-up" })`.
 - **Safe Traversal Corridor:** Moving the cursor diagonally across sibling items to enter the submenu is protected by `useHover({ safePolygon: true })`.
 
 ---

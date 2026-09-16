@@ -75,7 +75,7 @@ Render item elements with roving `tabindex` from `getTabindex` and bind dynamic 
 
 ```vue
 <template>
-  <button ref="anchorEl" type="button" @click="node.setOpen(!node.open.value)">
+  <button ref="anchorEl" type="button" @click="node.open.value = !node.open.value">
     Menu Options
   </button>
 
@@ -156,7 +156,7 @@ const { activeIndex, getItemId } = useAriaActivedescendant(node, {
   elementsList: itemEls,
   onSelect: (index) => {
     query.value = filteredOptions.value[index]!.label;
-    node.setOpen(false);
+    node.open.value = false;
   },
 });
 
@@ -180,7 +180,7 @@ Bind `:id="getItemId(index)"` on each option. The `aria-activedescendant` attrib
     role="combobox"
     aria-autocomplete="list"
     :aria-expanded="node.open.value"
-    @focus="node.setOpen(true)"
+    @focus="node.open.value = true"
   />
 
   <ul v-if="node.open.value" ref="floatingEl" role="listbox">

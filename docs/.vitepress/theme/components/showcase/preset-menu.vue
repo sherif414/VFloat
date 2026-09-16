@@ -58,9 +58,9 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.setOpen(true);
+      context.open.value = true;
     } else {
-      context.setOpen(false);
+      context.open.value = false;
     }
   },
   { immediate: true },
@@ -104,7 +104,7 @@ const { activeIndex, getTabindex, setActiveIndex } = useRovingFocus(context, {
   loop: true,
   enabled: () => props.isActive,
   onSelect: () => {
-    context.setOpen(false);
+    context.open.value = false;
   },
 });
 
@@ -176,7 +176,7 @@ defineExpose({
           'is-danger': item.danger,
         }"
         @mouseenter="setActiveIndex(index)"
-        @click="context.setOpen(false)"
+        @click="context.open.value = false"
       >
         <span class="menu-item__label">{{ item.label }}</span>
         <kbd class="menu-item__shortcut">{{ item.shortcut }}</kbd>

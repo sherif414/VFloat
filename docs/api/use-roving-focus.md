@@ -108,7 +108,7 @@ const { activeIndex, getTabindex, focusIndex } = useRovingFocus(node, {
 </script>
 
 <template>
-  <button ref="anchorEl" type="button" @click="node.setOpen(!node.open.value)">
+  <button ref="anchorEl" type="button" @click="node.open.value = !node.open.value">
     Options
   </button>
 

@@ -19,7 +19,6 @@ interface UseFloatingNodeOptions {
   arrowEl?: Ref<HTMLElement | null>;
   open?: Ref<boolean>;
   defaultOpen?: boolean;
-  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
   parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
 }
 
@@ -36,8 +35,7 @@ interface FloatingNodeElements {
 interface FloatingNode {
   id: FloatingNodeId;
   refs: FloatingNodeElements;
-  open: Readonly<Ref<boolean>>;
-  setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
+  open: Ref<boolean>;
   parent: Readonly<ShallowRef<FloatingNode | null>>;
   children: Readonly<ShallowRef<ReadonlySet<FloatingNode>>>;
   appendChild: (child: FloatingNode) => () => void;
@@ -54,18 +52,6 @@ type TraverseAction = void | "skip" | "stop";
 interface TraverseOptions {
   order?: "top-down" | "bottom-up";
 }
-
-type OpenChangeReason =
-  | "anchor-click"
-  | "keyboard-activate"
-  | "keyboard-exit"
-  | "outside-pointer"
-  | "focus"
-  | "blur"
-  | "hover"
-  | "escape-key"
-  | "tab-key"
-  | "programmatic";
 ```
 
 ## Options
@@ -75,9 +61,8 @@ type OpenChangeReason =
 | `anchorEl` | `Ref<AnchorElement>` | Required | Reference element or [virtual element](/guide/use-virtual-anchors). |
 | `floatingEl` | `Ref<FloatingElement>` | Required | Floating content element. |
 | `arrowEl` | `Ref<HTMLElement \| null>` | `ref(null)` | Optional arrow element ref. Automatically created when omitted. |
-| `open` | `Ref<boolean>` | `undefined` | Controlled open ref. When supplied, `defaultOpen` is ignored. |
-| `defaultOpen` | `boolean` | `false` | Initial state when uncontrolled. |
-| `onOpenChange` | `(open, reason, event?) => void` | `undefined` | Callback invoked only when open state actually changes. |
+| `open` | `Ref<boolean>` | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored. |
+| `defaultOpen` | `boolean` | `false` | Initial open state when `open` is omitted. |
 | `parent` | `MaybeRefOrGetter<FloatingNode \| null \| undefined>` | `undefined` | Parent node reference. Omitted/`undefined` uses DI; `null` forces standalone; `FloatingNode`/ref links explicitly. |
 
 ## Returns
@@ -86,8 +71,7 @@ type OpenChangeReason =
 | --- | --- | --- |
 | `id` | `FloatingNodeId` | Stable symbol identifying the node in trees. |
 | `refs` | `FloatingNodeElements` | Shared `anchorEl`, `floatingEl`, and `arrowEl` refs. |
-| `open` | `Readonly<Ref<boolean>>` | Current reactive open state. |
-| `setOpen` | `(open, reason?, event?) => void` | Updates open state with an explicit reason. Missing reason defaults to `"programmatic"`. |
+| `open` | `Ref<boolean>` | Reactive mutable open state ref. Mutate directly (`node.open.value = true / false`). |
 | `parent` | `Readonly<ShallowRef<FloatingNode \| null>>` | Intrinsic parent node in the hierarchy. `null` for root or standalone nodes. |
 | `children` | `Readonly<ShallowRef<ReadonlySet<FloatingNode>>>` | Immediate child nodes registered under this node. |
 | `appendChild` | `(child: FloatingNode) => () => void` | Atomically links a child node under this parent. Returns a teardown function. |
@@ -97,23 +81,28 @@ type OpenChangeReason =
 
 ## Details
 
-### Controlled vs Uncontrolled State
+### Pure Vue Open State
 
-When you pass an external `open` ref to `useFloatingNode({ anchorEl, floatingEl, open })`, the node operates in **controlled mode**. The external ref is the single source of truth:
+`node.open` is a standard Vue `Ref<boolean>`. You can drive open state directly in script or templates:
+
+```ts
+// Mutate state directly
+node.open.value = true;
+node.open.value = false;
+```
+
+When you pass an external ref to `useFloatingNode({ anchorEl, floatingEl, open: isOpen })`, `node.open` aliases `isOpen` directly:
 
 ```ts
 const isOpen = ref(false);
 const node = useFloatingNode({ anchorEl, floatingEl, open: isOpen });
+
+// Mutating either updates both
+isOpen.value = true;
+console.log(node.open.value); // true
 ```
 
-When you omit `open`, the node creates internal state initialized with `defaultOpen`. Call `node.setOpen(value, reason, event)` to change state.
-
-### Reason Tracking
-
-`setOpen` accepts an `OpenChangeReason` string:
-
-- `onOpenChange` is invoked with the transition reason and source event whenever the boolean open state transitions.
-- Calling `setOpen` with the current value is a no-op and does not fire `onOpenChange`.
+When you omit `open`, `useFloatingNode` creates an internal `ref(defaultOpen ?? false)` returned as `node.open`.
 
 ### Hierarchy & Parenting Resolution
 
@@ -150,7 +139,7 @@ useDismiss(node);
 </script>
 
 <template>
-  <button ref="anchorEl" @click="node.setOpen(!node.open.value)">Menu</button>
+  <button ref="anchorEl" @click="node.open.value = !node.open.value">Menu</button>
   <div v-if="node.open.value" ref="floatingEl" class="menu">
     <SubMenu />
   </div>
@@ -173,7 +162,7 @@ useDismiss(subNode);
 </script>
 
 <template>
-  <button ref="anchorEl" @click="subNode.setOpen(!subNode.open.value)">Submenu</button>
+  <button ref="anchorEl" @click="subNode.open.value = !subNode.open.value">Submenu</button>
   <div v-if="subNode.open.value" ref="floatingEl" class="submenu">
     <p>Submenu items</p>
   </div>

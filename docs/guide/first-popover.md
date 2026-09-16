@@ -100,4 +100,4 @@ Because the popover panel stays rendered while open, users can interact with for
 
 - Read [Control Open State](/guide/control-open-state) to learn when to let VFloat manage open state and when the parent component should control it.
 - Read [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) for production enhancements like viewport boundary collisions and focus rules.
-- Read [Floating Node](/guide/floating-node) for the complete reference on `node.refs`, `node.open`, and `node.setOpen`.
+- Read [Floating Node](/guide/floating-node) for the complete reference on `node.refs`, `node.open`, and node hierarchy methods.

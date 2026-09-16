@@ -49,9 +49,9 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.setOpen(true);
+      context.open.value = true;
     } else {
-      context.setOpen(false);
+      context.open.value = false;
     }
   },
   { immediate: true },

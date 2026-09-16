@@ -59,10 +59,10 @@ useFocusTrap(node, {
         <h2 id="dialog-title">Edit profile</h2>
         <p>Update your display name and email address.</p>
 
-        <form @submit.prevent="node.setOpen(false)">
+        <form @submit.prevent="node.open.value = false">
           <input type="text" placeholder="Your name" />
           <button type="submit">Save</button>
-          <button type="button" @click="node.setOpen(false)">Cancel</button>
+          <button type="button" @click="node.open.value = false">Cancel</button>
         </form>
       </div>
     </div>

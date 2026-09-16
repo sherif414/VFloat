@@ -35,7 +35,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  * ```
  */
 export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOptions = {}): void {
-  const { open, setOpen } = node;
+  const { open } = node;
   const {
     enabled: enabledOption = true,
     event: eventOption = "pointerdown",
@@ -91,7 +91,7 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
       return;
     }
 
-    setOpen(false, "outside-pointer", event);
+    open.value = false;
   }
 
   function isDragSuppressed(): boolean {

@@ -167,12 +167,12 @@ const { activeIndex, getItemId } = useAriaActivedescendant(node, {
   elementsList,
   onSelect: (index) => {
     query.value = filtered.value[index]!;
-    node.setOpen(false);
+    node.open.value = false;
   },
 });
 
 function onInput() {
-  if (!node.open.value) node.setOpen(true);
+  if (!node.open.value) node.open.value = true;
 }
 </script>
 
@@ -186,7 +186,7 @@ function onInput() {
       :aria-expanded="node.open.value"
       placeholder="Type a framework..."
       @input="onInput"
-      @focus="node.setOpen(true)"
+      @focus="node.open.value = true"
     />
 
     <ul

@@ -23,7 +23,7 @@ The anchor is the thing the surface is positioned against. The floating element 
 VFloat intentionally keeps the shared [`FloatingNode`](/api/types#floatingnode) small and focused:
 
 - `refs` (`anchorEl`, `floatingEl`, `arrowEl`)
-- `open` and `setOpen`
+- `open`
 - Hierarchy relations (`parent`, `children`) and tree methods (`contains`, `traverse`)
 
 That grouping matters because companion composables know where to read and write behavior without forcing the public root shape to grow in random directions. Positioning is added separately with [`usePosition`](/api/use-position), which reads the same node and applies computed geometry. Related surfaces coordinate naturally through the composite node hierarchy without requiring an external tree wrapper.
@@ -38,16 +38,11 @@ It includes:
 - `floatingEl`
 - `arrowEl`
 
-## `open` and `setOpen`
+## `open`
 
-The open pair is about visibility.
+The open state is a standard mutable Vue `Ref<boolean>`.
 
-It includes:
-
-- `open`
-- `setOpen`
-
-Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useDismiss`](/api/use-dismiss) all coordinate through this same open state, tagging each change with a reason such as `"hover"` or `"anchor-click"`.
+Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useDismiss`](/api/use-dismiss) all coordinate through this same open state by setting `node.open.value = true` or `node.open.value = false`.
 
 ## Positioning lives next to the node
 

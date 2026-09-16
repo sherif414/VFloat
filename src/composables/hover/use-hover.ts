@@ -31,7 +31,7 @@ interface UseDelayedOpenOptions {
  * ```
  */
 export function useHover(node: FloatingNode, options: UseHoverOptions = {}): void {
-  const { open, setOpen } = node;
+  const { open } = node;
   const { anchorEl, floatingEl } = node.refs;
   const {
     enabled: enabledOption = true,
@@ -49,14 +49,14 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   });
 
   const { hide, show, showDelay, clearTimeouts } = useDelayedOpen(
-    (event?: Event) => {
+    () => {
       if (!open.value && anchorDomEl.value?.isConnected) {
-        setOpen(true, "hover", event);
+        open.value = true;
       }
     },
-    (event?: Event) => {
+    () => {
       if (open.value) {
-        setOpen(false, "hover", event);
+        open.value = false;
       }
     },
     { delay: delayOption },

@@ -1,21 +1,14 @@
-import {
-  computed,
-  type MaybeRefOrGetter,
-  onWatcherCleanup,
-  toValue,
-  watch,
-  watchPostEffect,
-} from "vue";
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import {
-  isButtonTarget,
-  isLinkTarget,
+  isElement,
+  isHTMLElement,
   isMouseLikePointerType,
-  isSpaceIgnored,
-  isTypeableElement,
+  isNode,
+  isTypeableElement as _isTypeableElement,
 } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
-import type { OpenChangeReason } from "@/types";
+import { getWindow } from "@/shared/env";
 
 type PointerType = "mouse" | "touch" | "pen";
 
@@ -28,7 +21,7 @@ type PointerType = "mouse" | "touch" | "pen";
  *
  * This composable provides trigger handlers for opening/toggling floating elements.
  *
- * @param node - The floating node with open state and change handler.
+ * @param node - The floating node with open state and refs.
  * @param options - Configuration options for click behavior.
  *
  * @example Basic usage
@@ -38,153 +31,101 @@ type PointerType = "mouse" | "touch" | "pen";
  * ```
  */
 export function useClick(node: FloatingNode, options: UseClickOptions = {}): void {
-  const { open, setOpen, refs } = node;
+  const { open, refs } = node;
 
   // --- Modality & Open State Tracking -----------------------------------------
 
-  // Kept as plain locals (not refs/reactive) because they only coordinate
-  // intra-event ordering.
-  const interactionState = {
-    pointerType: undefined as PointerType | undefined,
-    didKeyDown: false,
-  };
+  let pointerType: PointerType | undefined = undefined;
+  let didKeyDown: boolean = false;
 
-  let isOpenedByClick = false;
-
-  watch(open, (isOpen) => {
-    if (!isOpen) {
-      isOpenedByClick = false;
-    }
-  });
-
+  const ignoreKeyboard = computed(() => toValue(options.ignoreKeyboard ?? false));
   const isEnabled = computed(() => toValue(options.enabled ?? true));
   const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
 
-  // --- Click & Keyboard Activation --------------------------------------------
-
-  function onOpenChange(reason: OpenChangeReason, event: Event) {
-    const isStickIfOpen = toValue(options.stickIfOpen ?? false);
-    const isToggle = toValue(options.toggle ?? true);
-    const lastReason = node.lastOpenReason?.value;
+  function toggleOpen() {
+    const toggle = toValue(options.toggle ?? true);
 
     if (open.value) {
-      const isAlreadyClicked =
-        isOpenedByClick || lastReason === "anchor-click" || lastReason === "keyboard-activate";
-
-      if (isStickIfOpen && !isAlreadyClicked) {
-        isOpenedByClick = true;
-        setOpen(true, reason, event);
-        return;
-      }
-
-      // When `toggle` is enabled, anchor clicks toggle open/closed.
-      if (isToggle) {
-        isOpenedByClick = false;
-        setOpen(false, reason, event);
+      if (toggle) {
+        open.value = false;
       }
     } else {
-      isOpenedByClick = true;
-      setOpen(true, reason, event);
+      open.value = true;
     }
   }
 
   function clearInteractionState() {
-    interactionState.pointerType = undefined;
-    interactionState.didKeyDown = false;
+    pointerType = undefined;
+    didKeyDown = false;
   }
+
+  // --- Pointers ---------------------------------------------------------------
 
   function onPointerDown(e: PointerEvent) {
-    interactionState.pointerType = e.pointerType as PointerType;
-  }
-
-  function isSyntheticKeyboardClick(e: MouseEvent): boolean {
-    // When keyboard interactions are disabled, browsers may still dispatch a
-    // click after Enter/Space activation on some elements.
-    return toValue(options.ignoreKeyboard ?? false) && e.detail === 0;
+    pointerType = e.pointerType as PointerType;
   }
 
   function onMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
     if (toValue(options.event ?? "click") === "click") return;
-    if (isIgnoredPointerType(interactionState.pointerType)) return;
+    if (shouldIgnorePointerType(pointerType)) return;
 
-    onOpenChange("anchor-click", e);
+    toggleOpen();
   }
 
   function onClick(e: MouseEvent): void {
-    if (isSyntheticKeyboardClick(e)) {
+    if (toValue(options.event ?? "click") === "mousedown" && pointerType) {
+      // skip click as mousedown handled it.
       clearInteractionState();
       return;
     }
 
-    if (toValue(options.event ?? "click") === "mousedown" && interactionState.pointerType) {
-      // If pointerdown exists, reset it and skip click, as mousedown handled it.
+    if (shouldIgnorePointerType(pointerType)) {
       clearInteractionState();
       return;
     }
 
-    if (isIgnoredPointerType(interactionState.pointerType)) {
+    // Synthetic click from keyboard activation (detail === 0 and no active pointer gesture)
+    if (!pointerType && e.detail === 0 && ignoreKeyboard.value) {
       clearInteractionState();
       return;
     }
 
-    onOpenChange("anchor-click", e);
+    toggleOpen();
     clearInteractionState();
   }
 
-  function onKeyDown(e: KeyboardEvent) {
-    interactionState.pointerType = undefined;
-
-    if (e.defaultPrevented || toValue(options.ignoreKeyboard ?? false)) {
-      return;
-    }
-
-    const el = anchorEl.value;
-    if (!el) return;
-
-    if (e.key === " ") {
-      if (isButtonTarget(e) || isSpaceIgnored(el)) {
-        return;
-      }
-
-      // Prevent scrolling
-      e.preventDefault();
-      interactionState.didKeyDown = true;
-    }
-
-    if (e.key === "Enter") {
-      if (isButtonTarget(e) || isLinkTarget(e) || isTypeableElement(el)) {
-        return;
-      }
-
-      onOpenChange("keyboard-activate", e);
-    }
-  }
-
-  function onKeyUp(e: KeyboardEvent) {
-    const el = anchorEl.value;
-    if (!el) return;
-
-    if (
-      e.defaultPrevented ||
-      toValue(options.ignoreKeyboard ?? false) ||
-      isButtonTarget(e) ||
-      isSpaceIgnored(el)
-    ) {
-      return;
-    }
-
-    if (e.key === " " && interactionState.didKeyDown) {
-      interactionState.didKeyDown = false;
-      onOpenChange("keyboard-activate", e);
-    }
-  }
-
-  function isIgnoredPointerType(type: PointerType | undefined): boolean {
+  function shouldIgnorePointerType(type: PointerType | undefined): boolean {
     if (isMouseLikePointerType(type, true) && toValue(options.ignoreMouse ?? false)) {
       return true;
     }
     return type === "touch" && toValue(options.ignoreTouch ?? false);
+  }
+
+  // --- Keyboard ---------------------------------------------------------------
+
+  function onKeyDown(e: KeyboardEvent) {
+    pointerType = undefined;
+    if (isButtonTarget(e.target) || isTypeableElement(e.target)) return;
+
+    if (e.key === " ") {
+      if (!isButtonTarget(e.target)) {
+        e.preventDefault();
+      }
+      didKeyDown = true;
+    }
+
+    if (e.key === "Enter") {
+      if (isLinkTarget(e.target)) return;
+      toggleOpen();
+    }
+  }
+
+  function onKeyUp(e: KeyboardEvent) {
+    if (e.key === " " && didKeyDown) {
+      didKeyDown = false;
+      toggleOpen();
+    }
   }
 
   // --- Trigger Event Registration ---------------------------------------------
@@ -193,21 +134,89 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     const el = anchorEl.value;
     if (!isEnabled.value || !el) return;
 
+    const win = getWindow(el);
+
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("mousedown", onMouseDown);
     el.addEventListener("click", onClick);
-    el.addEventListener("keydown", onKeyDown);
-    el.addEventListener("keyup", onKeyUp);
+
+    // Clear stale interaction state if the pointer gesture is cancelled (e.g. touch drag/scroll)
+    // or if the element/window loses focus before keyup (e.g. blur while holding Space).
+    el.addEventListener("pointercancel", clearInteractionState);
+    el.addEventListener("blur", clearInteractionState);
+
+    if (win) {
+      win.addEventListener("pointercancel", clearInteractionState);
+      win.addEventListener("blur", clearInteractionState);
+    }
+
+    if (!ignoreKeyboard.value) {
+      el.addEventListener("keydown", onKeyDown);
+      el.addEventListener("keyup", onKeyUp);
+    }
 
     onWatcherCleanup(() => {
       el.removeEventListener("pointerdown", onPointerDown);
       el.removeEventListener("mousedown", onMouseDown);
       el.removeEventListener("click", onClick);
+      el.removeEventListener("pointercancel", clearInteractionState);
+      el.removeEventListener("blur", clearInteractionState);
+
+      if (win) {
+        win.removeEventListener("pointercancel", clearInteractionState);
+        win.removeEventListener("blur", clearInteractionState);
+      }
+
       el.removeEventListener("keydown", onKeyDown);
       el.removeEventListener("keyup", onKeyUp);
       clearInteractionState();
     });
   });
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+const BUTTON_SELECTOR =
+  'button, input[type="button"], input[type="submit"], input[type="reset"], input[type="image"], summary';
+
+const LINK_SELECTOR = "a[href]";
+
+function getClosestElement(target: EventTarget | null): Element | null {
+  if (!target || typeof target !== "object") return null;
+  if (isElement(target)) return target;
+  if (isNode(target) && isElement(target.parentElement)) return target.parentElement;
+  if ("closest" in target && typeof (target as Element).closest === "function") {
+    return target as Element;
+  }
+  return null;
+}
+
+/**
+ * Recognizes native button elements that natively dispatch synthetic click events on Space/Enter.
+ */
+export function isButtonTarget(target: EventTarget | null): boolean {
+  const element = getClosestElement(target);
+  if (!element) return false;
+  return Boolean(element.closest?.(BUTTON_SELECTOR));
+}
+
+/**
+ * Skips custom Space handling when the focused element already behaves like a text field.
+ */
+export function isTypeableElement(target: EventTarget | null): boolean {
+  if (!isHTMLElement(target)) return false;
+  return _isTypeableElement(target);
+}
+
+/**
+ * Recognizes native link elements that natively dispatch synthetic click events on Enter.
+ */
+export function isLinkTarget(target: EventTarget | null): boolean {
+  const element = getClosestElement(target);
+  if (!element) return false;
+  return Boolean(element.closest?.(LINK_SELECTOR));
 }
 
 //=======================================================================================
@@ -241,13 +250,6 @@ export interface UseClickOptions {
    * @default true
    */
   toggle?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether to keep the floating element open upon the first click if it
-   * was initially opened by another interaction (e.g. hover or focus).
-   * @default false
-   */
-  stickIfOpen?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether to ignore the logic for mouse input.

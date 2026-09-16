@@ -332,7 +332,7 @@ export function useRovingFocus(
         node.traverse?.(
           (current, depth) => {
             if (depth > 0 && current.open.value) {
-              current.setOpen(false, "keyboard-exit");
+              current.open.value = false;
             }
           },
           { order: "bottom-up" },
@@ -383,9 +383,9 @@ export function useRovingFocus(
         if (result !== false) {
           e.preventDefault();
         }
-      } else if (node.parent?.value && node?.setOpen) {
+      } else if (node.parent?.value) {
         e.preventDefault();
-        node.setOpen(false, "keyboard-exit", e);
+        node.open.value = false;
         const anchor = resolveAnchorElement(node.refs.anchorEl?.value ?? null);
         anchor?.focus({ preventScroll: true });
       }

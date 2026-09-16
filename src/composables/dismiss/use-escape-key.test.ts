@@ -1,17 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { effectScope, ref } from "vue";
+import { effectScope, ref, watch } from "vue";
 import { clearTrackedElements, trackElement } from "@/test-utils";
 import { type FloatingNode, useFloatingNode } from "@/composables";
 import { clearActiveFloatingNodes } from "@/composables/floating-node/active-nodes";
 import { type UseEscapeKeyOptions, useEscapeKey } from "./use-escape-key";
 
-function createMockFloatingNode(): FloatingNode {
-  const node = useFloatingNode({
+function createMockFloatingNode(initialOpen = false): FloatingNode {
+  return useFloatingNode({
     anchorEl: ref(null),
     floatingEl: ref(null),
+    defaultOpen: initialOpen,
   });
-  vi.spyOn(node, "setOpen");
-  return node;
 }
 
 describe("useEscapeKey", () => {
@@ -38,45 +37,37 @@ describe("useEscapeKey", () => {
 
   describe("FloatingNode behavior", () => {
     it("closes floating element on escape key press", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       setupEscape(node);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(node.open.value).toBe(false);
     });
 
     it("does not trigger when floating element is already closed", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(false);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(false);
 
       setupEscape(node);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(false);
     });
 
     it("respects enabled option", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       setupEscape(node, { enabled: false });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(true);
     });
 
     it("respects defaultPrevented from another handler", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       const onKeyDown = (event: KeyboardEvent) => {
         if (event.key === "Escape") {
@@ -92,13 +83,11 @@ describe("useEscapeKey", () => {
 
       document.removeEventListener("keydown", onKeyDown, { capture: true });
 
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(true);
     });
 
     it("uses custom onEscape handler when provided", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
       const customHandler = vi.fn();
 
       setupEscape(node, { onEscape: customHandler });
@@ -106,13 +95,11 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
       expect(customHandler).toHaveBeenCalled();
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(true);
     });
 
     it("ignores non-escape keys", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       setupEscape(node);
 
@@ -125,66 +112,58 @@ describe("useEscapeKey", () => {
         } as any),
       );
 
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(true);
     });
   });
 
   describe("Composition event handling", () => {
     it("ignores escape during composition", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       setupEscape(node);
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(true);
 
       document.dispatchEvent(new CompositionEvent("compositionend"));
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(node.open.value).toBe(false);
     });
   });
 
   describe("Options handling", () => {
     it("respects reactive enabled option", async () => {
-      const node = createMockFloatingNode();
+      const node = createMockFloatingNode(true);
       const enabled = ref(true);
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
 
       setupEscape(node, { enabled });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(node.open.value).toBe(false);
 
-      vi.clearAllMocks();
+      node.open.value = true;
       enabled.value = false;
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(node.setOpen).not.toHaveBeenCalled();
+      expect(node.open.value).toBe(true);
     });
 
     it("handles capture option", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       setupEscape(node, { capture: true });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
-      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(node.open.value).toBe(false);
     });
 
     it("prevents default when preventDefault is enabled", async () => {
-      const node = createMockFloatingNode();
-      node.setOpen(true);
-      (node.setOpen as any).mockClear();
+      const node = createMockFloatingNode(true);
 
       setupEscape(node, { preventDefault: true });
 
@@ -197,16 +176,12 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(true);
-      expect(node.setOpen).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(node.open.value).toBe(false);
     });
 
     it("shares a single composition listener across multiple consumers", async () => {
-      const nodeA = createMockFloatingNode();
-      const nodeB = createMockFloatingNode();
-      nodeA.setOpen(true);
-      nodeB.setOpen(true);
-      (nodeA.setOpen as any).mockClear();
-      (nodeB.setOpen as any).mockClear();
+      const nodeA = createMockFloatingNode(true);
+      const nodeB = createMockFloatingNode(true);
 
       const addEventListenerSpy = vi.spyOn(document, "addEventListener");
 
@@ -238,35 +213,45 @@ describe("useEscapeKey", () => {
       const childOpen = ref(true);
       const grandchildOpen = ref(true);
 
+      watch(
+        rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        childOpen,
+        (open) => {
+          if (!open) calls.push("child");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        grandchildOpen,
+        (open) => {
+          if (!open) calls.push("grandchild");
+        },
+        { flush: "sync" },
+      );
+
       scope?.run(() => {
         const root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: rootOpen,
-          onOpenChange: (open) => {
-            rootOpen.value = open;
-            calls.push("root");
-          },
         });
         const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: childOpen,
           parent: root,
-          onOpenChange: (open) => {
-            childOpen.value = open;
-            calls.push("child");
-          },
         });
         const grandchild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: grandchildOpen,
           parent: child,
-          onOpenChange: (open) => {
-            grandchildOpen.value = open;
-            calls.push("grandchild");
-          },
         });
 
         useEscapeKey(root);
@@ -291,6 +276,28 @@ describe("useEscapeKey", () => {
       const secondChildOpen = ref(true);
       const secondGrandchildOpen = ref(true);
 
+      watch(
+        firstChildOpen,
+        (open) => {
+          if (!open) calls.push("first-child");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        secondChildOpen,
+        (open) => {
+          if (!open) calls.push("second-child");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        secondGrandchildOpen,
+        (open) => {
+          if (!open) calls.push("second-grandchild");
+        },
+        { flush: "sync" },
+      );
+
       scope?.run(() => {
         const root = useFloatingNode({
           anchorEl: ref(null),
@@ -302,30 +309,18 @@ describe("useEscapeKey", () => {
           floatingEl: ref(null),
           open: firstChildOpen,
           parent: root,
-          onOpenChange: (open) => {
-            firstChildOpen.value = open;
-            calls.push("first-child");
-          },
         });
         const secondChild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: secondChildOpen,
           parent: root,
-          onOpenChange: (open) => {
-            secondChildOpen.value = open;
-            calls.push("second-child");
-          },
         });
         const secondGrandchild = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           open: secondGrandchildOpen,
           parent: secondChild,
-          onOpenChange: (open) => {
-            secondGrandchildOpen.value = open;
-            calls.push("second-grandchild");
-          },
         });
 
         useEscapeKey(root);
@@ -347,6 +342,21 @@ describe("useEscapeKey", () => {
       const rootOpen = ref(true);
       const branchAOpen = ref(true);
       const branchBOpen = ref(true);
+
+      watch(
+        branchAOpen,
+        (open) => {
+          if (!open) calls.push("branch-a");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        branchBOpen,
+        (open) => {
+          if (!open) calls.push("branch-b");
+        },
+        { flush: "sync" },
+      );
 
       const rootAnchor = trackElement(document.createElement("button"));
       const rootFloating = trackElement(document.createElement("div"));
@@ -371,20 +381,12 @@ describe("useEscapeKey", () => {
           floatingEl: ref(branchAFloating),
           open: branchAOpen,
           parent: root,
-          onOpenChange: (open) => {
-            branchAOpen.value = open;
-            calls.push("branch-a");
-          },
         });
         const branchB = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(branchBFloating),
           open: branchBOpen,
           parent: root,
-          onOpenChange: (open) => {
-            branchBOpen.value = open;
-            calls.push("branch-b");
-          },
         });
 
         useEscapeKey(root);
@@ -406,6 +408,21 @@ describe("useEscapeKey", () => {
       const tree1ChildOpen = ref(true);
       const tree2RootOpen = ref(true);
       const tree2ChildOpen = ref(true);
+
+      watch(
+        tree1ChildOpen,
+        (open) => {
+          if (!open) calls.push("tree1-child");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        tree2ChildOpen,
+        (open) => {
+          if (!open) calls.push("tree2-child");
+        },
+        { flush: "sync" },
+      );
 
       const tree1Anchor = trackElement(document.createElement("button"));
       const tree1Floating = trackElement(document.createElement("div"));
@@ -435,10 +452,6 @@ describe("useEscapeKey", () => {
           floatingEl: ref(tree1ChildFloating),
           open: tree1ChildOpen,
           parent: tree1Root,
-          onOpenChange: (open) => {
-            tree1ChildOpen.value = open;
-            calls.push("tree1-child");
-          },
         });
 
         const tree2Root = useFloatingNode({
@@ -451,10 +464,6 @@ describe("useEscapeKey", () => {
           floatingEl: ref(tree2ChildFloating),
           open: tree2ChildOpen,
           parent: tree2Root,
-          onOpenChange: (open) => {
-            tree2ChildOpen.value = open;
-            calls.push("tree2-child");
-          },
         });
 
         useEscapeKey(tree1Root);
@@ -477,6 +486,21 @@ describe("useEscapeKey", () => {
       const rootOpen = ref(true);
       const childOpen = ref(true);
 
+      watch(
+        rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        childOpen,
+        (open) => {
+          if (!open) calls.push("child");
+        },
+        { flush: "sync" },
+      );
+
       const rootAnchor = trackElement(document.createElement("button"));
       const rootFloating = trackElement(document.createElement("div"));
       const childFloating = trackElement(document.createElement("div"));
@@ -490,20 +514,12 @@ describe("useEscapeKey", () => {
           anchorEl: ref(rootAnchor),
           floatingEl: ref(rootFloating),
           open: rootOpen,
-          onOpenChange: (open) => {
-            rootOpen.value = open;
-            calls.push("root");
-          },
         });
         const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(childFloating),
           open: childOpen,
           parent: root,
-          onOpenChange: (open) => {
-            childOpen.value = open;
-            calls.push("child");
-          },
         });
 
         useEscapeKey(root);
@@ -522,6 +538,21 @@ describe("useEscapeKey", () => {
       const rootOpen = ref(true);
       const childOpen = ref(true);
 
+      watch(
+        rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        childOpen,
+        (open) => {
+          if (!open) calls.push("child");
+        },
+        { flush: "sync" },
+      );
+
       const rootAnchor = trackElement(document.createElement("button"));
       const rootFloating = trackElement(document.createElement("div"));
       const rootItem = trackElement(document.createElement("button"));
@@ -537,20 +568,12 @@ describe("useEscapeKey", () => {
           anchorEl: ref(rootAnchor),
           floatingEl: ref(rootFloating),
           open: rootOpen,
-          onOpenChange: (open) => {
-            rootOpen.value = open;
-            calls.push("root");
-          },
         });
         const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(childFloating),
           open: childOpen,
           parent: root,
-          onOpenChange: (open) => {
-            childOpen.value = open;
-            calls.push("child");
-          },
         });
 
         useEscapeKey(root);
@@ -570,6 +593,28 @@ describe("useEscapeKey", () => {
       const subOpen = ref(true);
       const subSubOpen = ref(true);
 
+      watch(
+        rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        subOpen,
+        (open) => {
+          if (!open) calls.push("sub");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        subSubOpen,
+        (open) => {
+          if (!open) calls.push("subsub");
+        },
+        { flush: "sync" },
+      );
+
       const rootFloating = trackElement(document.createElement("div"));
       const subFloating = trackElement(document.createElement("div"));
       const subItem = trackElement(document.createElement("button"));
@@ -585,30 +630,18 @@ describe("useEscapeKey", () => {
           anchorEl: ref(null),
           floatingEl: ref(rootFloating),
           open: rootOpen,
-          onOpenChange: (open) => {
-            rootOpen.value = open;
-            calls.push("root");
-          },
         });
         const sub = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(subFloating),
           open: subOpen,
           parent: root,
-          onOpenChange: (open) => {
-            subOpen.value = open;
-            calls.push("sub");
-          },
         });
         const subSub = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(subSubFloating),
           open: subSubOpen,
           parent: sub,
-          onOpenChange: (open) => {
-            subSubOpen.value = open;
-            calls.push("subsub");
-          },
         });
 
         useEscapeKey(root);
@@ -641,6 +674,35 @@ describe("useEscapeKey", () => {
       const branchBOpen = ref(true);
       const branchB1Open = ref(true);
 
+      watch(
+        rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        branchAOpen,
+        (open) => {
+          if (!open) calls.push("branch-a");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        branchBOpen,
+        (open) => {
+          if (!open) calls.push("branch-b");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        branchB1Open,
+        (open) => {
+          if (!open) calls.push("branch-b1");
+        },
+        { flush: "sync" },
+      );
+
       const rootFloating = trackElement(document.createElement("div"));
       const branchAFloating = trackElement(document.createElement("div"));
       const branchBFloating = trackElement(document.createElement("div"));
@@ -658,40 +720,24 @@ describe("useEscapeKey", () => {
           anchorEl: ref(null),
           floatingEl: ref(rootFloating),
           open: rootOpen,
-          onOpenChange: (open) => {
-            rootOpen.value = open;
-            calls.push("root");
-          },
         });
         const branchA = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(branchAFloating),
           open: branchAOpen,
           parent: root,
-          onOpenChange: (open) => {
-            branchAOpen.value = open;
-            calls.push("branch-a");
-          },
         });
         const branchB = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(branchBFloating),
           open: branchBOpen,
           parent: root,
-          onOpenChange: (open) => {
-            branchBOpen.value = open;
-            calls.push("branch-b");
-          },
         });
         const branchB1 = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(branchB1Floating),
           open: branchB1Open,
           parent: branchB,
-          onOpenChange: (open) => {
-            branchB1Open.value = open;
-            calls.push("branch-b1");
-          },
         });
 
         useEscapeKey(root);
@@ -773,6 +819,21 @@ describe("useEscapeKey", () => {
       const rootOpen = ref(true);
       const childOpen = ref(true);
 
+      watch(
+        rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        childOpen,
+        (open) => {
+          if (!open) calls.push("child");
+        },
+        { flush: "sync" },
+      );
+
       const rootAnchor = trackElement(document.createElement("button"));
       const rootFloating = trackElement(document.createElement("div"));
       const childFloating = trackElement(document.createElement("div"));
@@ -788,20 +849,12 @@ describe("useEscapeKey", () => {
           anchorEl: ref(rootAnchor),
           floatingEl: ref(rootFloating),
           open: rootOpen,
-          onOpenChange: (open) => {
-            rootOpen.value = open;
-            calls.push("root");
-          },
         });
         const child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(childFloating),
           open: childOpen,
           parent: root,
-          onOpenChange: (open) => {
-            childOpen.value = open;
-            calls.push("child");
-          },
         });
 
         useEscapeKey(root);

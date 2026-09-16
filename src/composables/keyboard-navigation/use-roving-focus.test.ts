@@ -2081,7 +2081,6 @@ describe("useRovingFocus", () => {
     it("automatically closes submenu and returns focus to anchorEl on exit intent in child node", async () => {
       let childNode!: FloatingNode;
       let childRoving!: UseRovingFocusReturn;
-      const onOpenChangeMock = vi.fn();
 
       const SubmenuFixture = defineComponent(() => {
         const rootFloatingEl = useTemplateRef<HTMLDivElement>("rootFloating");
@@ -2101,7 +2100,6 @@ describe("useRovingFocus", () => {
           floatingEl: childFloatingEl,
           defaultOpen: true,
           parent: rootNode,
-          onOpenChange: onOpenChangeMock,
         });
 
         childRoving = useRovingFocus(childNode, {
@@ -2141,13 +2139,8 @@ describe("useRovingFocus", () => {
       // Press ArrowLeft (exit intent in vertical LTR)
       await userEvent.keyboard("{ArrowLeft}");
 
-      // Child node should close with reason "keyboard-exit"
+      // Child node should close
       expect(childNode.open.value).toBe(false);
-      expect(onOpenChangeMock).toHaveBeenCalledWith(
-        false,
-        "keyboard-exit",
-        expect.any(KeyboardEvent),
-      );
 
       // Focus should return to the anchor trigger
       await expect.element(subTrigger).toHaveFocus();
@@ -2156,7 +2149,6 @@ describe("useRovingFocus", () => {
     it("supports RTL exit intent (ArrowRight) to close child submenu and restore focus", async () => {
       let childNode!: FloatingNode;
       let childRoving!: UseRovingFocusReturn;
-      const onOpenChangeMock = vi.fn();
 
       const SubmenuFixtureRtl = defineComponent(() => {
         const rootFloatingEl = useTemplateRef<HTMLDivElement>("rootFloating");
@@ -2176,7 +2168,6 @@ describe("useRovingFocus", () => {
           floatingEl: childFloatingEl,
           defaultOpen: true,
           parent: rootNode,
-          onOpenChange: onOpenChangeMock,
         });
 
         childRoving = useRovingFocus(childNode, {
@@ -2215,11 +2206,6 @@ describe("useRovingFocus", () => {
       await userEvent.keyboard("{ArrowRight}");
 
       expect(childNode.open.value).toBe(false);
-      expect(onOpenChangeMock).toHaveBeenCalledWith(
-        false,
-        "keyboard-exit",
-        expect.any(KeyboardEvent),
-      );
       await expect.element(subTrigger).toHaveFocus();
     });
 
@@ -2292,7 +2278,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(2);
 
       // Close the node
-      getContext().setOpen?.(false);
+      getContext().open.value = false;
       await nextTick();
 
       expect(getRoving().activeIndex.value).toBe(-1);

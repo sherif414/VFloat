@@ -58,22 +58,19 @@ const node = useFloatingNode({
 useClick(node);
 useDismiss(node);
 
-// To change the state programmatically, call setOpen
+// To change the state programmatically, update the ref or node.open
 function close() {
-  node.setOpen(false);
+  open.value = false;
 }
 </script>
 ```
 
 When using this pattern, VFloat automatically updates the `open` ref when interaction helpers (like click or hover) trigger open changes.
 
-To update the state programmatically, **always call `node.setOpen()`** instead of mutating the `open` ref directly. This ensures `onOpenChange` fires with the correct reason and event context. Note that closing a node never cascades to related nodes on its own. When family teardown must follow, walk open descendants explicitly using `node.traverse((child) => child.setOpen(false, "programmatic"), { order: "bottom-up" })` on your [`FloatingNode`](/api/types#floatingnode).
+To update the state programmatically, mutate `node.open.value = false` (or `open.value = false`). Because `node.open` is a standard Vue `Ref<boolean>`, changes immediately trigger Vue reactivity. Note that closing a node never cascades to related nodes on its own. When family teardown must follow, walk open descendants explicitly using `node.traverse((child) => child.open.value = false, { order: "bottom-up" })` on your [`FloatingNode`](/api/types#floatingnode).
 
 > [!IMPORTANT]
-> The `open` ref passed to `useFloatingNode` options must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates (such as those delegating to a parent prop), as they can cause rendering state lag.
-
-> [!NOTE]
-> `onOpenChange` is mainly for side-effects and debugging. Do not use it to synchronize or drive the `open` state.
+> The `open` ref passed to `useFloatingNode` options must be synchronously mutable. Avoid passing read-only refs or computed properties that defer updates, as they can cause rendering state lag.
 
 ## When each model makes sense
 

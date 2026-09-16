@@ -7,18 +7,15 @@ import { getTestEl, makePointerEvent } from "@/test-utils";
 
 function createTestComponent(options: UseDismissOptions = {}) {
   const openRef = ref(true);
-  const setOpenMock = vi.fn();
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
     const floatingEl = useTemplateRef<HTMLElement>("floating");
 
-    // Controlled open state: the mock observes every open change the node makes.
     const node = useFloatingNode({
       anchorEl,
       floatingEl,
       open: openRef,
-      onOpenChange: (value, reason, event) => setOpenMock(value, reason, event),
     });
     useDismiss(node, options);
 
@@ -30,7 +27,7 @@ function createTestComponent(options: UseDismissOptions = {}) {
       ]);
   });
 
-  return { Component, openRef, setOpenMock };
+  return { Component, openRef };
 }
 
 function createTreeComponent() {
@@ -69,14 +66,12 @@ function createTreeComponent() {
 
 async function renderDismiss(options: UseDismissOptions = {}) {
   const fixture = createTestComponent(options);
-  const setOpenMock = fixture.setOpenMock;
   await render(fixture.Component);
   await nextTick();
   return {
     floatingEl: getTestEl("floating"),
     outsideEl: getTestEl("outside"),
     openRef: fixture.openRef,
-    setOpenMock,
   };
 }
 
@@ -87,131 +82,112 @@ describe("useDismiss", () => {
   });
 
   describe("default channels", () => {
-    it("closes on Escape with the escape-key reason", async () => {
-      const { setOpenMock, openRef } = await renderDismiss();
-      setOpenMock.mockClear();
+    it("closes on Escape", async () => {
+      const { openRef } = await renderDismiss();
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await nextTick();
 
-      expect(setOpenMock).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
       expect(openRef.value).toBe(false);
     });
 
-    it("closes on outside pointerdown with the outside-pointer reason", async () => {
-      const { outsideEl, setOpenMock, openRef } = await renderDismiss();
-      setOpenMock.mockClear();
+    it("closes on outside pointerdown", async () => {
+      const { outsideEl, openRef } = await renderDismiss();
 
       outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
 
-      expect(setOpenMock).toHaveBeenCalledWith(false, "outside-pointer", expect.any(Event));
       expect(openRef.value).toBe(false);
     });
 
     it("does not close when pressing inside the floating element", async () => {
-      const { floatingEl, setOpenMock, openRef } = await renderDismiss();
-      setOpenMock.mockClear();
+      const { floatingEl, openRef } = await renderDismiss();
 
       floatingEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
 
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(openRef.value).toBe(true);
     });
   });
 
   describe("shared gate", () => {
     it("disables both channels when enabled is false", async () => {
-      const { outsideEl, setOpenMock, openRef } = await renderDismiss({ enabled: false });
-      setOpenMock.mockClear();
+      const { outsideEl, openRef } = await renderDismiss({ enabled: false });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
 
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(openRef.value).toBe(true);
     });
 
     it("follows a reactive enabled toggle for both channels", async () => {
       const enabledRef = ref(false);
-      const { outsideEl, setOpenMock, openRef } = await renderDismiss({ enabled: enabledRef });
-      setOpenMock.mockClear();
+      const { outsideEl, openRef } = await renderDismiss({ enabled: enabledRef });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
-      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(openRef.value).toBe(true);
 
       enabledRef.value = true;
       await nextTick();
-      setOpenMock.mockClear();
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
       expect(openRef.value).toBe(false);
     });
   });
 
   describe("per-channel toggles", () => {
     it("keeps outside dismissal when Escape is disabled", async () => {
-      const { outsideEl, setOpenMock, openRef } = await renderDismiss({ escapeKey: false });
-      setOpenMock.mockClear();
+      const { outsideEl, openRef } = await renderDismiss({ escapeKey: false });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await nextTick();
-      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(openRef.value).toBe(true);
 
       outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledWith(false, "outside-pointer", expect.any(Event));
       expect(openRef.value).toBe(false);
     });
 
     it("keeps Escape dismissal when outside press is disabled", async () => {
-      const { outsideEl, setOpenMock, openRef } = await renderDismiss({ outsidePress: false });
-      setOpenMock.mockClear();
+      const { outsideEl, openRef } = await renderDismiss({ outsidePress: false });
 
       outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(openRef.value).toBe(true);
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledWith(false, "escape-key", expect.any(KeyboardEvent));
+      expect(openRef.value).toBe(false);
     });
   });
 
   describe("per-channel options", () => {
     it("calls a custom onEscape handler instead of closing", async () => {
       const onEscape = vi.fn();
-      const { setOpenMock, openRef } = await renderDismiss({ escapeKey: { onEscape } });
-      setOpenMock.mockClear();
+      const { openRef } = await renderDismiss({ escapeKey: { onEscape } });
 
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await nextTick();
 
       expect(onEscape).toHaveBeenCalledTimes(1);
-      expect(setOpenMock).not.toHaveBeenCalled();
       expect(openRef.value).toBe(true);
     });
 
     it("respects the outsidePress event option", async () => {
-      const { outsideEl, setOpenMock, openRef } = await renderDismiss({
+      const { outsideEl, openRef } = await renderDismiss({
         outsidePress: { event: "click" },
       });
-      setOpenMock.mockClear();
 
       outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
       await nextTick();
-      expect(setOpenMock).not.toHaveBeenCalled();
+      expect(openRef.value).toBe(true);
 
       await userEvent.click(outsideEl);
       await nextTick();
-      expect(setOpenMock).toHaveBeenCalledWith(false, "outside-pointer", expect.any(Event));
       expect(openRef.value).toBe(false);
     });
   });

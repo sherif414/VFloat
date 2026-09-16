@@ -129,13 +129,13 @@ This gives perfect LIFO (last-in, first-out) dismissal across any depth with zer
 
 ### Cascading Teardown with `node.traverse`
 
-Closing a parent node does not cascade on its own (`node.setOpen` remains focused). When parent teardown must close all open descendants, traverse the subtree bottom-up using `node.traverse`:
+Closing a parent node does not cascade on its own (closing a node only modifies that specific node's `open` ref). When parent teardown must close all open descendants, traverse the subtree bottom-up using `node.traverse`:
 
 ```ts
 node.traverse(
   (descendant, depth) => {
     if (depth > 0 && descendant.open.value) {
-      descendant.setOpen(false, "programmatic");
+      descendant.open.value = false;
     }
   },
   { order: "bottom-up" },

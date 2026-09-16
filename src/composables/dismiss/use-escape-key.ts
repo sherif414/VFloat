@@ -37,7 +37,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  *       if (hasUnsavedChanges.value) {
  *         showConfirmDialog.value = true
  *       } else {
- *         node.setOpen(false)
+ *         node.open.value = false
  *       }
  *     },
  *   },
@@ -133,7 +133,7 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
 
     event.stopPropagation();
     event.stopImmediatePropagation();
-    node.setOpen(false, "escape-key", event);
+    node.open.value = false;
   };
 
   // Event listener setup

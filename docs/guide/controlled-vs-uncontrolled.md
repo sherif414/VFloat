@@ -22,7 +22,7 @@ This is ideal when:
 
 ## Controlled: the parent owns the truth
 
-In the controlled model, the parent owns an `open` ref and gives it to [`useFloatingNode`](/api/use-floating-node). Add `onOpenChange` when the parent needs to react to changes with side effects; VFloat keeps the `open` ref itself in sync.
+In the controlled model, the parent owns an `open` ref and gives it to [`useFloatingNode`](/api/use-floating-node). Watch the `open` ref with Vue's standard `watch()` when the parent needs to react to changes with side effects; VFloat keeps the `open` ref itself in sync.
 
 This is ideal when:
 

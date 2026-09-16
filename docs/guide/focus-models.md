@@ -15,7 +15,7 @@ There are two focus questions you will run into again and again:
 
 Sometimes the trigger should keep focus while the floating surface behaves like a lightweight companion. This is common for simple tooltips and combobox-like inputs with active descendants.
 
-- [`useFocus`](/api/use-focus) detects when the trigger receives `:focus-visible` to open the surface with reason `focus`, and closes with reason `blur` when focus leaves the family.
+- [`useFocus`](/api/use-focus) detects when the trigger receives `:focus-visible` to open the surface, and closes when focus leaves the family.
 - Focus never leaves the input or trigger.
 
 A minimal focus trigger takes one shared node:
@@ -74,7 +74,7 @@ Defaults are modal-first: `modal: true`, `guards: true`, `returnFocus: true`, an
 - **Non-modal surfaces.** Focus is managed without trapping. Opt in to `closeOnFocusOut` or `closeOnTab` when leaving should dismiss.
 - **Portal guards.** Automatically places invisible sentinels around portaled floating panels to keep focus from escaping into the browser chrome.
 - **Return focus.** Safely restores focus to the trigger on close without viewport jumps.
-- **Nested families.** Family awareness is built into the node via `node.contains()`. Closing a parent never cascades on its own; call `node.traverse((descendant) => descendant.setOpen(false, "programmatic"), { order: "bottom-up" })` when teardown must close the entire family cascade.
+- **Nested families.** Family awareness is built into the node via `node.contains()`. Closing a parent never cascades on its own; call `node.traverse((descendant) => descendant.open.value = false, { order: "bottom-up" })` when teardown must close the entire family cascade.
 
 ## Where to go next
 

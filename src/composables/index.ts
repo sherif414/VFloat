@@ -1,7 +1,6 @@
 /** Public composable barrel for the VFloat API surface. */
 
-// Core Types
-export type { OpenChangeReason, VirtualElement } from "@/types";
+export type { VirtualElement } from "@/types";
 
 export type {
   ApplyArrowStylesFn,

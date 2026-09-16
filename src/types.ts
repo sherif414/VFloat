@@ -23,18 +23,3 @@ export interface VirtualElement {
    */
   getClientRects?: () => DOMRectList | Array<DOMRect>;
 }
-
-/**
- * Primary interaction reasons for open state changes. Minimal and extensible.
- */
-export type OpenChangeReason =
-  | "anchor-click"
-  | "keyboard-activate"
-  | "keyboard-exit"
-  | "outside-pointer"
-  | "focus"
-  | "blur"
-  | "hover"
-  | "escape-key"
-  | "tab-key"
-  | "programmatic";

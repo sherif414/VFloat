@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, h, nextTick, onMounted, ref, shallowRef, useTemplateRef } from "vue";
 import type { FloatingNode } from "@/composables";
@@ -12,7 +12,6 @@ interface FixtureConfig {
 function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfig = {}) {
   const open = ref(false);
   let node!: FloatingNode;
-  let setOpen!: Mock<FloatingNode["setOpen"]>;
 
   const Component = defineComponent(() => {
     const anchorTemplateEl = useTemplateRef<HTMLDivElement>("anchor");
@@ -26,10 +25,6 @@ function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfi
       floatingEl,
       open,
     });
-    // Delegating spy installed before useHover captures setOpen, so assertions
-    // observe calls while open state still updates through the real implementation.
-    setOpen = vi.fn(node.setOpen);
-    node.setOpen = setOpen;
 
     useHover(node, options);
 
@@ -50,9 +45,6 @@ function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfi
     Component,
     getNode: () => node,
     open,
-    get setOpen() {
-      return setOpen;
-    },
   };
 }
 
@@ -132,7 +124,6 @@ async function renderHover(options: UseHoverOptions = {}, config: FixtureConfig 
     view,
     node: fixture.getNode(),
     open: fixture.open,
-    setOpen: fixture.setOpen,
   };
 }
 
@@ -169,7 +160,6 @@ describe("useHover", () => {
       await nextTick();
 
       expect(ctx.node.open.value).toBe(true);
-      expect(ctx.setOpen).toHaveBeenCalledWith(true, "hover", expect.any(Event));
     });
 
     it("closes when pointer leaves reference element", async () => {
@@ -184,7 +174,6 @@ describe("useHover", () => {
       await nextTick();
 
       expect(ctx.node.open.value).toBe(false);
-      expect(ctx.setOpen).toHaveBeenCalledWith(false, "hover", expect.any(Event));
     });
 
     it("does not close immediately if pointer moves from reference to floating element", async () => {
@@ -243,7 +232,7 @@ describe("useHover", () => {
       enabled.value = false;
       await nextTick();
 
-      ctx.node.setOpen(false);
+      ctx.node.open.value = false;
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
@@ -542,7 +531,7 @@ describe("useHover", () => {
     it("reacts to external state changes", async () => {
       const ctx = await renderHover();
 
-      ctx.node.setOpen(true);
+      ctx.node.open.value = true;
       await nextTick();
       expect(ctx.node.open.value).toBe(true);
 
@@ -550,7 +539,7 @@ describe("useHover", () => {
       await nextTick();
       expect(ctx.node.open.value).toBe(true);
 
-      ctx.node.setOpen(false);
+      ctx.node.open.value = false;
       await nextTick();
       expect(ctx.node.open.value).toBe(false);
 
@@ -619,14 +608,14 @@ describe("useHover", () => {
       await ctx.view.unmount();
       await nextTick();
 
-      ctx.node.setOpen(false);
+      ctx.node.open.value = false;
 
       ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
       expect(ctx.node.open.value).toBe(false);
 
-      ctx.node.setOpen(true);
+      ctx.node.open.value = true;
       ctx.floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", { relatedTarget: document.body }),
       );
@@ -650,7 +639,6 @@ describe("useHover", () => {
       await nextTick();
 
       expect(ctx.node.open.value).toBe(false);
-      expect(ctx.setOpen).not.toHaveBeenCalledWith(true, "hover", expect.anything());
     });
   });
 });

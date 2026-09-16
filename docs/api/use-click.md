@@ -44,17 +44,8 @@ interface UseClickOptions {
 
 `useClick` attaches listeners directly to `node.refs.anchorEl`. It handles mouse clicks, touchscreen taps, and keyboard activation:
 
-- Pressing Enter or Space on non-button elements (e.g. a `<div>` with `tabindex="0"`) dispatches `node.setOpen(..., "keyboard-activate")`.
-- Native `<button>` and `<a>` elements retain native activation semantics and emit `"anchor-click"`.
-
-### Pinning with `stickIfOpen`
-
-When combining hover previews with click actions (such as an interactive tooltip or popover card):
-
-1. User hovers over the trigger &rarr; [`useHover`](/api/use-hover) opens the surface with reason `"hover"`.
-2. User clicks the trigger &rarr; `useClick` with `stickIfOpen: true` catches the click and changes the reason to `"anchor-click"`.
-3. User moves the mouse away &rarr; `useHover` detects the pin reason and will not close the surface on pointer leave.
-4. User clicks the trigger again &rarr; `useClick` toggles the pinned surface closed.
+- Pressing Enter or Space on non-button elements (e.g. a `<div>` with `tabindex="0"`) toggles the open state.
+- Native `<button>` and `<a>` elements retain native activation semantics.
 
 ## Example
 
@@ -83,10 +74,10 @@ useDismiss(node);
 <template>
   <button ref="anchorEl">Toggle Menu</button>
 
-  <div v-if="node.open" ref="floatingEl" class="dropdown">
-    <button @click="node.setOpen(false)">Profile</button>
-    <button @click="node.setOpen(false)">Settings</button>
-    <button @click="node.setOpen(false)">Logout</button>
+  <div v-if="node.open.value" ref="floatingEl" class="dropdown">
+    <button @click="node.open.value = false">Profile</button>
+    <button @click="node.open.value = false">Settings</button>
+    <button @click="node.open.value = false">Logout</button>
   </div>
 </template>
 ```

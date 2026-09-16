@@ -119,7 +119,7 @@ useDismiss(node);
 
 function onContextMenu(event: MouseEvent) {
   event.preventDefault();
-  node.setOpen(true, "anchor-click", event);
+  node.open.value = true;
 }
 </script>
 
@@ -131,10 +131,10 @@ function onContextMenu(event: MouseEvent) {
   >
     Right-click inside this container
 
-    <div v-if="node.open" ref="floatingEl" class="context-menu">
-      <button @click="node.setOpen(false)">Cut</button>
-      <button @click="node.setOpen(false)">Copy</button>
-      <button @click="node.setOpen(false)">Paste</button>
+    <div v-if="node.open.value" ref="floatingEl" class="context-menu">
+      <button @click="node.open.value = false">Cut</button>
+      <button @click="node.open.value = false">Copy</button>
+      <button @click="node.open.value = false">Paste</button>
     </div>
   </div>
 </template>

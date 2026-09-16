@@ -47,10 +47,8 @@ describe("useFloatingNode", () => {
     expect(node.open.value).toBe(false);
   });
 
-  it("uses controlled open state and forwards reasons and events", () => {
+  it("uses controlled open state when passed as ref", () => {
     const open = ref(false);
-    const onOpenChange = vi.fn();
-    const event = new KeyboardEvent("keydown");
     let node!: ReturnType<typeof useFloatingNode>;
 
     scope?.run(() => {
@@ -58,34 +56,14 @@ describe("useFloatingNode", () => {
         anchorEl: ref(null),
         floatingEl: ref(null),
         open,
-        onOpenChange,
       });
     });
 
-    node.setOpen(true, "anchor-click", event);
-
+    node.open.value = true;
     expect(open.value).toBe(true);
-    expect(onOpenChange).toHaveBeenCalledWith(true, "anchor-click", event);
-  });
 
-  it("falls back to programmatic reasons and ignores duplicate updates", () => {
-    const onOpenChange = vi.fn();
-    let node!: ReturnType<typeof useFloatingNode>;
-
-    scope?.run(() => {
-      node = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-        onOpenChange,
-      });
-    });
-
-    node.setOpen(true);
-    node.setOpen(true, "anchor-click");
-
-    expect(node.open.value).toBe(true);
-    expect(onOpenChange).toHaveBeenCalledTimes(1);
-    expect(onOpenChange).toHaveBeenCalledWith(true, "programmatic", undefined);
+    open.value = false;
+    expect(node.open.value).toBe(false);
   });
 
   it("assigns each node a stable symbol id", () => {

@@ -95,7 +95,7 @@ useRole(node, { role: "dialog", modal: true });
 </script>
 
 <template>
-  <button ref="anchorEl" @click="node.setOpen(true)">Edit Profile</button>
+  <button ref="anchorEl" @click="node.open.value = true">Edit Profile</button>
 
   <div v-if="node.open.value" class="dialog-backdrop">
     <div ref="floatingEl" class="dialog-panel">
@@ -103,8 +103,8 @@ useRole(node, { role: "dialog", modal: true });
       <input ref="nameInput" placeholder="Full name" />
       <input placeholder="Email address" />
       <div class="actions">
-        <button @click="node.setOpen(false)">Save</button>
-        <button @click="node.setOpen(false)">Cancel</button>
+        <button @click="node.open.value = false">Save</button>
+        <button @click="node.open.value = false">Cancel</button>
       </div>
     </div>
   </div>

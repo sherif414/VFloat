@@ -17,8 +17,7 @@ import {
 } from "vue";
 import { isTargetWithinElements } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
-import { useControllableState } from "@/shared/use-controllable-state";
-import type { OpenChangeReason, VirtualElement } from "@/types";
+import type { VirtualElement } from "@/types";
 import { registerActiveFloatingNode } from "./active-nodes";
 
 const FLOATING_NODE_KEY: InjectionKey<FloatingNode> = Symbol("v-float-node-context");
@@ -51,19 +50,7 @@ export const floatingInternals = new WeakMap<FloatingNodeId, FloatingInternals>(
  */
 export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const id = createFloatingNodeId();
-  const open = useControllableState({
-    value: options.open,
-    initialValue: !!options.defaultOpen,
-    onChange: (value) => {
-      if (options.open) options.open.value = value;
-    },
-  });
-
-  const setOpen = (value: boolean, reason: OpenChangeReason = "programmatic", event?: Event) => {
-    if (open.value === value) return;
-    open.value = value;
-    options.onOpenChange?.(value, reason, event);
-  };
+  const open = options.open ?? ref(options.defaultOpen ?? false);
 
   const parent = shallowRef<FloatingNode | null>(null);
   const children = shallowRef<ReadonlySet<FloatingNode>>(new Set());
@@ -201,7 +188,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
       arrowEl: options.arrowEl ?? ref<HTMLElement | null>(null),
     },
     open,
-    setOpen,
     parent: shallowReadonly(parent) as Readonly<ShallowRef<FloatingNode | null>>,
     children: shallowReadonly(children) as Readonly<ShallowRef<ReadonlySet<FloatingNode>>>,
     appendChild,
@@ -347,8 +333,7 @@ export interface FloatingNodeElements {
 export interface FloatingNode {
   id: FloatingNodeId;
   refs: FloatingNodeElements;
-  open: Readonly<Ref<boolean>>;
-  setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
+  open: Ref<boolean>;
 
   /**
    * Intrinsic parent node in the composite hierarchy. Null for root nodes.
@@ -421,11 +406,6 @@ export interface UseFloatingNodeOptions {
    * Initial open state when `open` is not provided.
    */
   defaultOpen?: boolean;
-
-  /**
-   * Called whenever the open state changes through VFloat helpers.
-   */
-  onOpenChange?: (open: boolean, reason: OpenChangeReason, event?: Event) => void;
 
   /**
    * Parent node reference for establishing composite hierarchies (submenus, cascades).

@@ -3,18 +3,15 @@ import { ref } from "vue";
 import {
   clearTimeoutIfSet,
   getDomPath,
-  isButtonTarget,
   isClickOnScrollbar,
   isElement,
   isElementInEventPath,
   isEventTargetWithin,
   isFunction,
   isHTMLElement,
-  isLinkTarget,
   isMouseLikePointerType,
   isNode,
   isShadowRoot,
-  isSpaceIgnored,
   isTypeableElement,
   isVirtualElement,
 } from "@/shared/dom";
@@ -59,10 +56,6 @@ describe("utils and core helpers", () => {
     submitInput.type = "submit";
     const textarea = trackElement(document.createElement("textarea"));
     const button = trackElement(document.createElement("button"));
-    const summary = trackElement(document.createElement("summary"));
-    const linkWithHref = trackElement(document.createElement("a"));
-    linkWithHref.href = "#";
-    const linkWithoutHref = trackElement(document.createElement("a"));
     const div = trackElement(document.createElement("div"));
     div.setAttribute("role", "button");
     div.contentEditable = "true";
@@ -84,37 +77,6 @@ describe("utils and core helpers", () => {
     expect(isTypeableElement(textarea)).toBe(true);
     expect(isTypeableElement(div)).toBe(true);
     expect(isTypeableElement(button)).toBe(false);
-    expect(
-      isButtonTarget(
-        new KeyboardEvent("keydown", {
-          bubbles: true,
-        }),
-      ),
-    ).toBe(false);
-
-    const makeKeyTarget = (el: HTMLElement) => {
-      const event = new KeyboardEvent("keydown");
-      Object.defineProperty(event, "target", {
-        configurable: true,
-        value: el,
-      });
-      return event;
-    };
-
-    expect(isButtonTarget(makeKeyTarget(button))).toBe(true);
-    expect(isButtonTarget(makeKeyTarget(buttonInput))).toBe(true);
-    expect(isButtonTarget(makeKeyTarget(submitInput))).toBe(true);
-    expect(isButtonTarget(makeKeyTarget(summary))).toBe(true);
-    expect(isButtonTarget(makeKeyTarget(div))).toBe(false);
-    expect(isButtonTarget(makeKeyTarget(linkWithHref))).toBe(false);
-
-    expect(isLinkTarget(makeKeyTarget(linkWithHref))).toBe(true);
-    expect(isLinkTarget(makeKeyTarget(linkWithoutHref))).toBe(false);
-    expect(isLinkTarget(makeKeyTarget(button))).toBe(false);
-
-    expect(isSpaceIgnored(input)).toBe(true);
-    expect(isSpaceIgnored(button)).toBe(false);
-    expect(isSpaceIgnored(buttonInput)).toBe(false);
     expect(isVirtualElement({ contextElement: button })).toBe(true);
     expect(isVirtualElement(null)).toBe(false);
   });
@@ -217,15 +179,12 @@ describe("utils and core helpers", () => {
     const styles = ref({
       position: "absolute" as const,
       top: "0px",
-      left: "0px",
     });
-    const setOpen = vi.fn();
     const update = vi.fn();
 
     const node = {
       refs: { anchorEl, floatingEl, arrowEl },
       open,
-      setOpen,
     };
     const position = {
       x,

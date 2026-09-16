@@ -15,7 +15,6 @@ import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
-import type { OpenChangeReason } from "@/types";
 import { createFocusGuards, type FocusGuardHandles } from "./focus-guards";
 import { isolateOutsideElements } from "./inert-stack";
 import {
@@ -52,7 +51,7 @@ export function useFocusTrap(
   options: UseFocusTrapOptions = {},
 ): UseFocusTrapReturn {
   const { anchorEl: anchorElOption, floatingEl: floatingElOption } = node.refs;
-  const { open, setOpen } = node;
+  const { open } = node;
 
   const {
     enabled: enabledOption = true,
@@ -140,7 +139,7 @@ export function useFocusTrap(
 
     // Handle non-modal closeOnTab
     if (!isModal.value && shouldCloseOnTab.value) {
-      setOpen(false, "tab-key", event);
+      open.value = false;
       return;
     }
 
@@ -230,7 +229,7 @@ export function useFocusTrap(
         first.focus({ preventScroll: shouldPreventScroll.value });
       }
     } else if (shouldCloseOnTab.value) {
-      setOpen(false, "tab-key", event);
+      open.value = false;
     }
   }
 
@@ -305,7 +304,13 @@ export function useFocusTrap(
     }
 
     let target: HTMLElement | null = null;
-    if (rawTarget && typeof rawTarget === "object") {
+    if (typeof rawTarget === "function") {
+      const resolved = (rawTarget as () => unknown)();
+      if (resolved === false) return;
+      if (resolved instanceof Element) {
+        target = resolved as HTMLElement;
+      }
+    } else if (rawTarget && typeof rawTarget === "object") {
       if ("value" in rawTarget && (rawTarget as any).value instanceof Element) {
         target = (rawTarget as any).value;
       } else if (rawTarget instanceof Element) {
@@ -382,7 +387,7 @@ export function useFocusTrap(
     }
   }
 
-  // --- Outside Focus Detection -----------------------------------------------
+  // --- Document Event Listeners (Non-Modal Mode) -----------------------------
 
   function onDocumentFocusIn(event: FocusEvent) {
     if (!isEnabled.value || !open.value) return;
@@ -399,7 +404,7 @@ export function useFocusTrap(
     }
 
     if (shouldCloseOnFocusOut.value) {
-      setOpen(false, "blur", event);
+      open.value = false;
     }
   }
 
@@ -418,7 +423,7 @@ export function useFocusTrap(
     }
 
     if (shouldCloseOnFocusOut.value) {
-      setOpen(false, "outside-pointer", event);
+      open.value = false;
     }
   }
 
@@ -460,7 +465,7 @@ export function useFocusTrap(
     }
   }
 
-  function deactivate(reason?: OpenChangeReason, returnFocus = true) {
+  function deactivate(returnFocus = true) {
     cleanupGuards();
     cleanupIsolation();
     clearBlurTimeout();
@@ -470,10 +475,6 @@ export function useFocusTrap(
       restoreFocus();
     } else {
       previouslyActiveElement = null;
-    }
-
-    if (reason && open.value) {
-      setOpen(false, reason);
     }
   }
 
@@ -495,7 +496,7 @@ export function useFocusTrap(
           });
         }
       } else {
-        deactivate(undefined, shouldReturnFocus.value);
+        deactivate(shouldReturnFocus.value);
       }
 
       onWatcherCleanup(() => {
@@ -547,7 +548,7 @@ export function useFocusTrap(
 
   tryOnScopeDispose(() => {
     cleanupRegistry.cleanup();
-    deactivate("programmatic", false);
+    deactivate(false);
   });
 
   return {
@@ -558,7 +559,8 @@ export function useFocusTrap(
       }
     },
     deactivate: () => {
-      deactivate("programmatic", shouldReturnFocus.value);
+      open.value = false;
+      deactivate(shouldReturnFocus.value);
     },
   };
 }

@@ -49,9 +49,9 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.setOpen(true);
+      context.open.value = true;
     } else {
-      context.setOpen(false);
+      context.open.value = false;
     }
   },
   { immediate: true },
@@ -132,7 +132,7 @@ defineExpose({
           type="button"
           class="popover-close-btn"
           aria-label="Close"
-          @click="context.setOpen(false)"
+          @click="context.open.value = false"
         >
           ✕
         </button>
@@ -146,14 +146,14 @@ defineExpose({
         <button
           type="button"
           class="action-btn action-btn--secondary"
-          @click="context.setOpen(false)"
+          @click="context.open.value = false"
         >
           Done
         </button>
         <button
           type="button"
           class="action-btn action-btn--primary"
-          @click="context.setOpen(false)"
+          @click="context.open.value = false"
         >
           Copy Link
         </button>

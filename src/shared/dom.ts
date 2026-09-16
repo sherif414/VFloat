@@ -87,36 +87,6 @@ export function isTypeableElement(element: Element | null): boolean {
 }
 
 /**
- * Recognizes native button elements that natively dispatch synthetic click events on Space/Enter.
- */
-export function isButtonTarget(event: KeyboardEvent): boolean {
-  const target = event.target;
-  if (!isHTMLElement(target)) return false;
-  return (
-    target.tagName === "BUTTON" ||
-    (target.tagName === "INPUT" &&
-      ["button", "submit", "reset", "image"].includes((target as HTMLInputElement).type)) ||
-    target.tagName === "SUMMARY"
-  );
-}
-
-/**
- * Recognizes native link elements that natively dispatch synthetic click events on Enter.
- */
-export function isLinkTarget(event: KeyboardEvent): boolean {
-  const target = event.target;
-  if (!isHTMLElement(target)) return false;
-  return target.tagName === "A" && target.hasAttribute("href");
-}
-
-/**
- * Skips custom Space handling when the focused element already behaves like a text field.
- */
-export function isSpaceIgnored(element: Element | null): boolean {
-  return isTypeableElement(element);
-}
-
-/**
  * Returns true for VFloat's virtual anchor shape.
  */
 export function isVirtualElement(el: unknown): el is VirtualElement {

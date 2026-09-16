@@ -44,7 +44,7 @@ watch(
   ([x, y]) => {
     if (x != null && y != null && props.isActive) {
       if (!context.open.value) {
-        context.setOpen(true);
+        context.open.value = true;
       }
       void position.update();
     }
@@ -55,9 +55,9 @@ watch(
   () => [props.keepOpen, props.isActive],
   ([keep, active]) => {
     if (active && keep) {
-      context.setOpen(true);
+      context.open.value = true;
     } else {
-      context.setOpen(false);
+      context.open.value = false;
     }
   },
   { immediate: true },
@@ -73,14 +73,14 @@ watch(
 
 function onPointerEnter() {
   if (props.isActive && coordinates.value.x != null && coordinates.value.y != null) {
-    context.setOpen(true);
+    context.open.value = true;
     void position.update();
   }
 }
 
 function onPointerLeave() {
   if (!props.keepOpen) {
-    context.setOpen(false);
+    context.open.value = false;
   }
 }
 

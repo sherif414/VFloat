@@ -146,7 +146,7 @@ useDismiss(placementContext);
 
 function selectPlacementOption(val: Placement) {
   emit("update:placement", val);
-  placementContext.setOpen(false);
+  placementContext.open.value = false;
 }
 </script>
 

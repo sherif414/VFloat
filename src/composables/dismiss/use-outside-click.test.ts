@@ -16,9 +16,6 @@ const OUTSIDE_STYLE = {
 
 function createTestComponent(options: UseOutsideClickOptions = {}) {
   const openRef = ref(true);
-  const setOpenMock = vi.fn((open: boolean, _reason?: any, _event?: any) => {
-    openRef.value = open;
-  });
   let node!: FloatingNode;
 
   const Component = defineComponent(() => {
@@ -29,9 +26,6 @@ function createTestComponent(options: UseOutsideClickOptions = {}) {
       anchorEl,
       floatingEl,
       open: openRef,
-      onOpenChange: (open, reason, event) => {
-        setOpenMock(open, reason, event);
-      },
     });
     useOutsideClick(node, options);
 
@@ -48,13 +42,12 @@ function createTestComponent(options: UseOutsideClickOptions = {}) {
       ]);
   });
 
-  return { Component, getNode: () => node, openRef, setOpenMock };
+  return { Component, getNode: () => node, openRef };
 }
 
 function createTreeComponent(target: "parent" | "child") {
   const parentOpen = ref(true);
   const childOpen = ref(true);
-  const onParentOpenChange = vi.fn();
   let parentNode!: ReturnType<typeof useFloatingNode>;
   let childNode!: ReturnType<typeof useFloatingNode>;
 
@@ -68,7 +61,6 @@ function createTreeComponent(target: "parent" | "child") {
       anchorEl,
       floatingEl,
       open: parentOpen,
-      onOpenChange: onParentOpenChange,
     });
     childNode = useFloatingNode({
       anchorEl: childAnchorEl,
@@ -102,7 +94,6 @@ function createTreeComponent(target: "parent" | "child") {
     getChild: () => childNode,
     parentOpen,
     childOpen,
-    onParentOpenChange,
   };
 }
 
@@ -117,7 +108,6 @@ async function renderOutsideClick(options: UseOutsideClickOptions = {}) {
     ignoredEl: getTestEl("ignored"),
     node: fixture.getNode(),
     openRef: fixture.openRef,
-    setOpenMock: fixture.setOpenMock,
   };
 }
 
@@ -134,7 +124,6 @@ async function renderTreeOutsideClick(target: "parent" | "child") {
     childNode: fixture.getChild(),
     parentOpen: fixture.parentOpen,
     childOpen: fixture.childOpen,
-    onParentOpenChange: fixture.onParentOpenChange,
   };
 }
 
@@ -145,29 +134,25 @@ describe("useOutsideClick", () => {
   });
 
   it("closes on outside click by default", async () => {
-    const { outsideEl, node, setOpenMock } = await renderOutsideClick({ event: "click" });
+    const { outsideEl, node } = await renderOutsideClick({ event: "click" });
 
     await userEvent.click(outsideEl);
     await nextTick();
 
-    expect(setOpenMock).toHaveBeenCalledTimes(1);
-    expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "outside-pointer", expect.any(Event));
     expect(node.open.value).toBe(false);
   });
 
   it("closes on outside pointerdown when configured", async () => {
-    const { outsideEl, node, setOpenMock } = await renderOutsideClick({ event: "pointerdown" });
+    const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
 
     outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
     await nextTick();
 
-    expect(setOpenMock).toHaveBeenCalledTimes(1);
-    expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "outside-pointer", expect.any(Event));
     expect(node.open.value).toBe(false);
   });
 
   it("does not close when outside dismissal is disabled", async () => {
-    const { outsideEl, node, setOpenMock } = await renderOutsideClick({
+    const { outsideEl, node } = await renderOutsideClick({
       enabled: false,
       event: "click",
     });
@@ -175,12 +160,11 @@ describe("useOutsideClick", () => {
     await userEvent.click(outsideEl);
     await nextTick();
 
-    expect(setOpenMock).not.toHaveBeenCalled();
     expect(node.open.value).toBe(true);
   });
 
   it("does not close when clicking the anchor or floating element", async () => {
-    const { anchorEl, floatingEl, node, setOpenMock } = await renderOutsideClick({
+    const { anchorEl, floatingEl, node } = await renderOutsideClick({
       event: "click",
     });
 
@@ -188,29 +172,27 @@ describe("useOutsideClick", () => {
     await userEvent.click(floatingEl);
     await nextTick();
 
-    expect(setOpenMock).not.toHaveBeenCalled();
     expect(node.open.value).toBe(true);
   });
 
   it("uses the ignoreClick predicate for per-target dismissal", async () => {
-    const { outsideEl, ignoredEl, setOpenMock } = await renderOutsideClick({
+    const { outsideEl, ignoredEl, node } = await renderOutsideClick({
       event: "click",
       ignoreClick: (_event, target) => target === ignoredEl,
     });
 
     await userEvent.click(ignoredEl);
     await nextTick();
-    expect(setOpenMock).not.toHaveBeenCalled();
+    expect(node.open.value).toBe(true);
 
     await userEvent.click(outsideEl);
     await nextTick();
-    expect(setOpenMock).toHaveBeenCalledTimes(1);
-    expect(setOpenMock).toHaveBeenNthCalledWith(1, false, "outside-pointer", expect.any(Event));
+    expect(node.open.value).toBe(false);
   });
 
   it("calls onClick instead of closing when a custom handler is provided", async () => {
     const onClick = vi.fn();
-    const { outsideEl, node, setOpenMock } = await renderOutsideClick({
+    const { outsideEl, node } = await renderOutsideClick({
       event: "click",
       onClick,
     });
@@ -219,12 +201,11 @@ describe("useOutsideClick", () => {
     await nextTick();
 
     expect(onClick).toHaveBeenCalledTimes(1);
-    expect(setOpenMock).not.toHaveBeenCalled();
     expect(node.open.value).toBe(true);
   });
 
   it("ignores outside click after a drag that started inside the floating element", async () => {
-    const { floatingEl, outsideEl, node, setOpenMock } = await renderOutsideClick({
+    const { floatingEl, outsideEl, node } = await renderOutsideClick({
       event: "click",
       ignoreDrag: true,
     });
@@ -233,19 +214,16 @@ describe("useOutsideClick", () => {
     outsideEl.dispatchEvent(makeMouseEvent("click"));
     await nextTick();
 
-    expect(setOpenMock).not.toHaveBeenCalled();
     expect(node.open.value).toBe(true);
   });
 
   it("keeps a parent open when clicking inside a child floating element", async () => {
-    const { childFloatingEl, parentOpen, onParentOpenChange } =
-      await renderTreeOutsideClick("parent");
+    const { childFloatingEl, parentOpen } = await renderTreeOutsideClick("parent");
 
     await userEvent.click(childFloatingEl);
     await nextTick();
 
     expect(parentOpen.value).toBe(true);
-    expect(onParentOpenChange).not.toHaveBeenCalled();
   });
 
   it("treats parent blank areas as outside for child nodes", async () => {

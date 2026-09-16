@@ -34,7 +34,7 @@ const BLUR_CHECK_DELAY = 0;
  * ```
  */
 export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): UseFocusReturn {
-  const { open, setOpen } = node;
+  const { open } = node;
   const { anchorEl: anchorElOption } = node.refs;
 
   const {
@@ -133,7 +133,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): Use
       }
     }
 
-    setOpen(true, "focus", event);
+    open.value = true;
   }
 
   function onBlur(event: FocusEvent): void {
@@ -173,7 +173,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): Use
       }
 
       // If neither of the above conditions are met, focus has moved elsewhere.
-      setOpen(false, "blur", event);
+      open.value = false;
     }, BLUR_CHECK_DELAY);
   }
 
@@ -194,7 +194,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): Use
 
         if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
 
-        setOpen(false, "blur", e);
+        open.value = false;
       },
       { capture: true },
     ),

@@ -28,7 +28,6 @@ function createTestComponent(
   const openRef = ref(initialOpen);
   let node!: FloatingNode;
   let result!: ReturnType<typeof useFocus>;
-  let setOpenMock!: ReturnType<typeof vi.fn>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
@@ -39,7 +38,6 @@ function createTestComponent(
       floatingEl,
       open: openRef,
     });
-    setOpenMock = vi.spyOn(node, "setOpen");
     result = useFocus(node, options);
 
     const anchorKind = config.anchorKind ?? "button";
@@ -67,14 +65,12 @@ function createTestComponent(
     getNode: () => node,
     getResult: () => result,
     openRef,
-    getSetOpenMock: () => setOpenMock,
   };
 }
 
 function createTreeComponent(target: "parent" | "child") {
   const parentOpen = ref(true);
   const childOpen = ref(true);
-  const parentChanges = vi.fn();
 
   const Component = defineComponent(() => {
     const parentAnchorEl = useTemplateRef<HTMLElement>("parent-anchor");
@@ -86,7 +82,6 @@ function createTreeComponent(target: "parent" | "child") {
       anchorEl: parentAnchorEl,
       floatingEl: parentFloatingEl,
       open: parentOpen,
-      onOpenChange: parentChanges,
     });
     const childNode = useFloatingNode({
       anchorEl: childAnchorEl,
@@ -106,7 +101,7 @@ function createTreeComponent(target: "parent" | "child") {
       ]);
   });
 
-  return { Component, parentOpen, childOpen, parentChanges };
+  return { Component, parentOpen, childOpen };
 }
 
 async function flushFocus() {
@@ -121,7 +116,6 @@ interface FocusFixture {
   node: FloatingNode;
   openRef: ReturnType<typeof ref<boolean>>;
   result: ReturnType<typeof useFocus>;
-  setOpenMock: ReturnType<typeof vi.fn>;
   childInputEl: HTMLElement | null;
   outsideEl: HTMLElement | null;
   ignoredEl: HTMLElement | null;
@@ -142,7 +136,6 @@ async function renderFocus(
     node: fixture.getNode(),
     openRef: fixture.openRef,
     result: fixture.getResult(),
-    setOpenMock: fixture.getSetOpenMock(),
     childInputEl: config.anchorKind === "anchor-subtree" ? getTestEl("anchor-child") : null,
     outsideEl: config.withOutside || config.withIgnored ? getTestEl("outside") : null,
     ignoredEl: config.withIgnored ? getTestEl("ignored") : null,
@@ -160,7 +153,6 @@ async function renderTreeFocus(target: "parent" | "child") {
     outsideEl: getTestEl("outside"),
     parentOpen: fixture.parentOpen,
     childOpen: fixture.childOpen,
-    parentChanges: fixture.parentChanges,
   };
 }
 
@@ -179,7 +171,6 @@ describe("useFocus", () => {
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(true);
-      expect(ctx.setOpenMock).toHaveBeenCalledWith(true, "focus", expect.any(FocusEvent));
     });
 
     it("only opens when the focused element matches focus-visible", async () => {
@@ -207,7 +198,7 @@ describe("useFocus", () => {
       await flushFocus();
       expect(ctx.node.open.value).toBe(true);
 
-      ctx.node.setOpen(false);
+      ctx.node.open.value = false;
       await flushFocus();
       expect(ctx.node.open.value).toBe(false);
 
@@ -241,7 +232,6 @@ describe("useFocus", () => {
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(false);
-      expect(ctx.setOpenMock).toHaveBeenLastCalledWith(false, "blur", expect.any(FocusEvent));
     });
 
     it("stays open when focus moves into the floating element", async () => {
@@ -303,14 +293,12 @@ describe("useFocus", () => {
 
   describe("parent-linked nodes", () => {
     it("keeps a parent open when focus moves into a child floating element", async () => {
-      const { childFloatingEl, outsideEl, parentOpen, parentChanges } =
-        await renderTreeFocus("parent");
+      const { childFloatingEl, outsideEl, parentOpen } = await renderTreeFocus("parent");
 
       childFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
       expect(parentOpen.value).toBe(true);
-      expect(parentChanges).not.toHaveBeenCalled();
 
       outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
@@ -341,7 +329,6 @@ describe("useFocus", () => {
       await flushFocus();
 
       expect(ctx.node.open.value).toBe(false);
-      expect(ctx.setOpenMock).not.toHaveBeenCalled();
     });
 
     it("cleanup clears pending blur work and removes every listener", async () => {
@@ -362,7 +349,7 @@ describe("useFocus", () => {
 
       expect(ctx.node.open.value).toBe(true);
 
-      ctx.node.setOpen(false);
+      ctx.node.open.value = false;
       await flushFocus();
 
       ctx.anchorEl.focus();

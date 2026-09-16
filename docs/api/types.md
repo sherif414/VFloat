@@ -20,11 +20,8 @@ interface FloatingNode {
   /** Shared reactive element refs. */
   refs: FloatingNodeElements;
 
-  /** Reactive boolean indicating whether the surface is open. */
-  open: Readonly<Ref<boolean>>;
-
-  /** Updates the open state and records the transition reason and source event. */
-  setOpen: (open: boolean, reason?: OpenChangeReason, event?: Event) => void;
+  /** Reactive boolean ref indicating whether the surface is open. */
+  open: Ref<boolean>;
 
   /** Intrinsic parent node in the composite hierarchy. Null for root nodes. */
   parent: Readonly<ShallowRef<FloatingNode | null>>;
@@ -89,24 +86,6 @@ interface VirtualElement {
   getBoundingClientRect: () => DOMRect | ClientRect;
   contextElement?: Element;
 }
-```
-
-### `OpenChangeReason`
-
-The semantic trigger reason recorded during an open state transition.
-
-```ts
-type OpenChangeReason =
-  | "anchor-click"
-  | "keyboard-activate"
-  | "keyboard-exit"
-  | "outside-pointer"
-  | "focus"
-  | "blur"
-  | "hover"
-  | "escape-key"
-  | "tab-key"
-  | "programmatic";
 ```
 
 ---
