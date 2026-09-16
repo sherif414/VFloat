@@ -107,6 +107,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
 
   function onKeyDown(e: KeyboardEvent) {
     pointerType = undefined;
+    if (e.repeat) return;
     if (isButtonTarget(e.target) || isTypeableElement(e.target)) return;
 
     if (e.key === " ") {
