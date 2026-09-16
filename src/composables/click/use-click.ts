@@ -109,9 +109,6 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     if (isButtonTarget(e.target) || isTypeableElement(e.target)) return;
 
     if (e.key === " ") {
-      if (!isButtonTarget(e.target)) {
-        e.preventDefault();
-      }
       didKeyDown = true;
     }
 
@@ -172,9 +169,6 @@ function getClosestElement(target: EventTarget | null): Element | null {
   if (!target || typeof target !== "object") return null;
   if (isElement(target)) return target;
   if (isNode(target) && isElement(target.parentElement)) return target.parentElement;
-  if ("closest" in target && typeof (target as Element).closest === "function") {
-    return target as Element;
-  }
   return null;
 }
 
