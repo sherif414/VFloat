@@ -36,6 +36,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
 
   let pointerType: PointerType | undefined = undefined;
   let didKeyDown: boolean = false;
+  let didHandleMouseDown: boolean = false;
 
   const ignoreKeyboard = computed(() => toValue(options.ignoreKeyboard ?? false));
   const isEnabled = computed(() => toValue(options.enabled ?? true));
@@ -56,6 +57,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function clearInteractionState() {
     pointerType = undefined;
     didKeyDown = false;
+    didHandleMouseDown = false;
   }
 
   // --- Pointers ---------------------------------------------------------------
@@ -67,16 +69,17 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function onMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
     if (toValue(options.event ?? "click") !== "mousedown") return;
+    if (pointerType === "touch") return;
     if (shouldIgnorePointerType(pointerType)) return;
 
     toggleOpen();
+    didHandleMouseDown = true;
   }
 
   function onClick(e: MouseEvent): void {
     if (e.button !== 0) return;
-    // When event is mousedown, skip trailing click if a pointer gesture initiated it.
-    // Explicitly check !== undefined so unknown device pointerType ("") is not treated as falsy/keyboard.
-    if (toValue(options.event ?? "click") === "mousedown" && pointerType !== undefined) {
+
+    if (toValue(options.event ?? "click") === "mousedown" && didHandleMouseDown) {
       clearInteractionState();
       return;
     }

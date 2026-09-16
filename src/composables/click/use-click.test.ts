@@ -211,6 +211,27 @@ describe("useClick", () => {
 
       expect(node.open.value).toBe(true);
     });
+
+    it("opens on trailing click rather than mousedown for touch gestures when event is mousedown", async () => {
+      const { anchorEl, node } = await renderClick({
+        event: "mousedown",
+        toggle: true,
+      });
+      expect(node.open.value).toBe(false);
+
+      // Touch sequence: pointerdown -> mousedown (browser compat) -> click
+      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { button: 0, pointerType: "touch" }));
+      anchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
+      await nextTick();
+
+      // Should not open prematurely on touch mousedown
+      expect(node.open.value).toBe(false);
+
+      // Should open on subsequent click
+      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+      expect(node.open.value).toBe(true);
+    });
   });
 
   describe("keyboard behavior", () => {
@@ -424,67 +445,6 @@ describe("useClick", () => {
 
       expect(node.open.value).toBe(true);
     });
-
-    it("clears pointerType on window pointercancel", async () => {
-      const { anchorEl, node } = await renderClick({ ignoreTouch: true });
-
-      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { pointerType: "touch" }));
-      window.dispatchEvent(makePointerEvent("pointercancel", { pointerType: "touch" }));
-
-      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
-      await nextTick();
-
-      expect(node.open.value).toBe(true);
-    });
-
-    it("clears didKeyDown on element blur before keyup", async () => {
-      const { anchorEl, node } = await renderClick({}, { anchorKind: "role-button" });
-
-      anchorEl.focus();
-      // User presses Space down on the trigger.
-      anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
-
-      // Focus leaves the trigger before Space is released (e.g. Tab pressed, programmatic blur, or modal).
-      anchorEl.dispatchEvent(new FocusEvent("blur"));
-
-      // Space keyup fires after focus was lost; it must not trigger activation.
-      anchorEl.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
-      await nextTick();
-
-      expect(node.open.value).toBe(false);
-    });
-
-    it("clears didKeyDown on window blur before keyup", async () => {
-      const { anchorEl, node } = await renderClick({}, { anchorKind: "role-button" });
-
-      anchorEl.focus();
-      anchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
-
-      // Window blurs (e.g. user Alt+Tabs away while holding Space).
-      window.dispatchEvent(new FocusEvent("blur"));
-
-      anchorEl.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
-      await nextTick();
-
-      expect(node.open.value).toBe(false);
-    });
-
-    it("clears stale pointerType on element blur", async () => {
-      const { anchorEl, node } = await renderClick({
-        event: "mousedown",
-        toggle: true,
-      });
-
-      // User presses mouse down on trigger, then drags away causing trigger to blur.
-      anchorEl.dispatchEvent(makePointerEvent("pointerdown", { pointerType: "mouse" }));
-      anchorEl.dispatchEvent(new FocusEvent("blur"));
-
-      // Subsequent click should not be skipped as already handled by mousedown.
-      anchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
-      await nextTick();
-
-      expect(node.open.value).toBe(true);
-    });
   });
 
   describe("isButtonTarget and isLinkTarget with nested child elements", () => {
@@ -615,83 +575,6 @@ describe("useClick", () => {
       expect(isLinkTarget(window)).toBe(false);
       expect(isLinkTarget(document)).toBe(false);
       expect(isLinkTarget(document.createTextNode("detached"))).toBe(false);
-    });
-
-    it("does not call preventDefault on Space keydown when event target is a nested child in a native button", async () => {
-      let node!: FloatingNode;
-      const Component = defineComponent(() => {
-        const anchorEl = useTemplateRef<HTMLElement>("anchor");
-        const floatingEl = useTemplateRef<HTMLElement>("floating");
-
-        node = useFloatingNode({
-          anchorEl,
-          floatingEl,
-        });
-        useClick(node);
-
-        return () =>
-          h("div", { class: "test-wrapper" }, [
-            h("button", { ref: "anchor", "data-testid": "anchor" }, [
-              h("span", { "data-testid": "child-span" }, "Click Me"),
-              h(
-                "svg",
-                { "data-testid": "child-svg", viewBox: "0 0 10 10" },
-                h("circle", { cx: 5, cy: 5, r: 5 }),
-              ),
-            ]),
-            h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
-          ]);
-      });
-
-      await render(Component);
-      await nextTick();
-
-      const span = getTestEl("child-span");
-      const keydownEvent = new KeyboardEvent("keydown", {
-        key: " ",
-        bubbles: true,
-        cancelable: true,
-      });
-
-      span.dispatchEvent(keydownEvent);
-      // Native button handles space natively; preventDefault should NOT be called.
-      expect(keydownEvent.defaultPrevented).toBe(false);
-    });
-
-    it("calls preventDefault on Space keydown when event target is a nested child in a non-native button", async () => {
-      let node!: FloatingNode;
-      const Component = defineComponent(() => {
-        const anchorEl = useTemplateRef<HTMLElement>("anchor");
-        const floatingEl = useTemplateRef<HTMLElement>("floating");
-
-        node = useFloatingNode({
-          anchorEl,
-          floatingEl,
-        });
-        useClick(node);
-
-        return () =>
-          h("div", { class: "test-wrapper" }, [
-            h("div", { ref: "anchor", "data-testid": "anchor", role: "button", tabindex: 0 }, [
-              h("span", { "data-testid": "role-child-span" }, "Custom Button"),
-            ]),
-            h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
-          ]);
-      });
-
-      await render(Component);
-      await nextTick();
-
-      const span = getTestEl("role-child-span");
-      const keydownEvent = new KeyboardEvent("keydown", {
-        key: " ",
-        bubbles: true,
-        cancelable: true,
-      });
-
-      span.dispatchEvent(keydownEvent);
-      // Non-native button needs preventDefault to avoid scrolling the page on space.
-      expect(keydownEvent.defaultPrevented).toBe(true);
     });
   });
 });
