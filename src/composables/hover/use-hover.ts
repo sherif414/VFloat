@@ -7,7 +7,7 @@ import { type SafePolygonOptions, safePolygon } from "./polygon";
 /**
  * Minimum movement threshold in pixels to reset the rest detection timer.
  */
-const POINTER_MOVE_THRESHOLD = 10;
+const POINTER_MOVE_THRESHOLD = 4;
 
 //=======================================================================================
 // 📌 Main
