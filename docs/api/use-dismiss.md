@@ -74,6 +74,7 @@ interface UseDismissOutsideOptions {
 
 - **Family-Aware Outside Click:** `node.contains(target)` traverses open child surfaces. Clicking inside a child submenu (even if teleported to `<body>`) is recognized as internal to parent menus, preventing unwanted closures.
 - **Leaf-First Escape Protocol:** When `Escape` is pressed in a nested cascade (e.g. Root &rarr; Submenu &rarr; SubSubmenu), parent nodes inspect their open children. If open children exist, parent nodes pass through execution so only the deepest leaf node closes. Subsequent `Escape` presses pop each ancestor in reverse depth order.
+- **Independent Overlay Coordination:** When multiple separate floating surfaces are open across the page, Escape dismisses the focused surface first, or the most recently opened surface when focus is neutral. Unrelated overlays do not intercept or steal keystrokes from each other.
 
 ### Outside Press Detection
 

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref, watch } from "vue";
 import { clearTrackedElements, trackElement } from "@/test-utils";
 import { type FloatingNode, useFloatingNode } from "@/composables";
-import { clearActiveFloatingNodes } from "@/composables/floating-node/active-nodes";
 import { type UseEscapeKeyOptions, useEscapeKey } from "./use-escape-key";
 
 function createMockFloatingNode(initialOpen = false): FloatingNode {
@@ -23,7 +22,6 @@ describe("useEscapeKey", () => {
   afterEach(() => {
     scope?.stop();
     scope = undefined;
-    clearActiveFloatingNodes();
     clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();

@@ -125,7 +125,7 @@ Rather than maintaining brittle global event registries, each composite node res
    - `SubSubMenu` is now closed.
    - `SubMenu` has no open children &rarr; closes!
 
-This gives perfect LIFO (last-in, first-out) dismissal across any depth with zero race conditions.
+This gives predictable LIFO (last-in, first-out) dismissal across any depth. When multiple independent floating surfaces are open on the page, Escape dismisses the focused surface first, or the most recently opened surface when focus is neutral, preventing unrelated overlays from intercepting keystrokes from each other.
 
 ### Cascading Teardown with `node.traverse`
 

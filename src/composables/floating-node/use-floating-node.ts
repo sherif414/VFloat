@@ -18,7 +18,6 @@ import {
 import { isTargetWithinElements } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { VirtualElement } from "@/types";
-import { registerActiveFloatingNode } from "./active-nodes";
 
 const FLOATING_NODE_KEY: InjectionKey<FloatingNode> = Symbol("v-float-node-context");
 const internalParentMap = new WeakMap<FloatingNodeId, ShallowRef<FloatingNode | null>>();
@@ -200,11 +199,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
 
   if (getCurrentInstance()) {
     provide(FLOATING_NODE_KEY, node);
-  }
-
-  if (typeof window !== "undefined") {
-    const unregisterNode = registerActiveFloatingNode(node);
-    tryOnScopeDispose(unregisterNode);
   }
 
   // Declarative parent binding via options.parent or implicit DI
