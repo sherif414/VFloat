@@ -1,10 +1,10 @@
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
-import { isHTMLElement, isTypeableElement } from "@/shared/dom";
+import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
-import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
+import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -33,107 +33,129 @@ const BLUR_CHECK_DELAY = 0;
  * useFocus(ctx)
  * ```
  */
-export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): UseFocusReturn {
-  const { open } = node;
-  const { anchorEl: anchorElOption } = node.refs;
+export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): void {
+  const { open, refs } = node;
 
-  const {
-    enabled: enabledOption = true,
-    requireFocusVisible: requireFocusVisibleOption = true,
-    ignoreFocusOut: ignoreFocusOutOption,
-  } = options;
-  const globalDocument = getDocument();
-  const globalWindow = getWindow();
+  const isEnabled = computed(() => toValue(options.enabled ?? true));
+  const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
+  const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? getDocument());
+  const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? getWindow());
 
-  /**
-   * Computed anchor element that handles both HTMLElement and virtual element references.
-   * Virtual elements (from libraries like Floating UI) use a `contextElement` property
-   * to reference the actual DOM element for positioning calculations.
-   */
-  const anchorEl = computed(() => {
-    return getAnchorElement(anchorElOption.value);
-  });
-  const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? globalDocument);
-  const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? globalWindow);
-  const isEnabled = computed(() => toValue(enabledOption));
+  // --- Window Focus Coordination --------------------------------------------
 
+  // Edge case: "Ghost Reopen" on Tab/Window Switch
+  // Scenario: An anchor receives focus (opening the floating element), and then the floating
+  // element is closed (e.g., via Escape) while the anchor remains the active
+  // DOM element (`activeElement === anchorEl`).
+  // When the user switches to another browser tab or OS window, the window fires `blur`.
+  // When switching back, the window fires `focus`, and browsers automatically re-dispatch
+  // a `focus` event on `document.activeElement`.
+  // Without this guard, returning to the window would erroneously re-open the dismissed popover.
   let isFocusBlocked = false;
+
+  useEventListener(
+    () => (isEnabled.value ? ownerWindow.value : null),
+    "blur",
+    () => {
+      if (!open.value && anchorEl.value && ownerDocument.value?.activeElement === anchorEl.value) {
+        isFocusBlocked = true;
+      }
+    },
+  );
+
+  useEventListener(
+    () => (isEnabled.value ? ownerWindow.value : null),
+    "focus",
+    () => {
+      isFocusBlocked = false;
+    },
+  );
+
+  watch(isEnabled, (enabled) => {
+    if (!enabled) {
+      isFocusBlocked = false;
+    }
+  });
+
+  tryOnScopeDispose(() => {
+    isFocusBlocked = false;
+  });
+
+  // --- Focus-Based Activation -----------------------------------------------
+
   const isSafariOnMac = isMac() && isSafari();
+
+  function onFocus(e: FocusEvent): void {
+    if (!isEnabled.value) return;
+
+    // If focus was re-triggered purely by returning to the browser window/tab,
+    // consume the block and prevent the popover from ghost-reopening.
+    if (isFocusBlocked) {
+      isFocusBlocked = false;
+      return;
+    }
+
+    const target = e.target instanceof Element ? e.target : null;
+    if (toValue(options.requireFocusVisible ?? true) && target) {
+      // -----------------------------------------------------------------------
+      // WebKit Bug #233465: https://bugs.webkit.org/show_bug.cgi?id=233465
+      // WebKit Bug #229895: https://bugs.webkit.org/show_bug.cgi?id=229895
+      //
+      // The Problem:
+      // When `requireFocusVisible` is true, `useFocus` should only open the
+      // floating element on keyboard navigation, leaving mouse clicks to `useClick`.
+      // Normally, `matchesFocusVisible(target)` handles this distinction.
+      //
+      // However, on Safari (macOS), when focus enters the document from outside
+      // (e.g. tabbing into the page from the address bar or browser chrome),
+      // `e.relatedTarget` is `null`. In this situation, WebKit's internal
+      // heuristic fails and `element.matches(':focus-visible')` falsely returns
+      // `false` even though the user navigated using the Tab key.
+      //
+      // Why a naive bypass fails:
+      // In Safari on macOS, clicking non-typeable elements (like buttons) also
+      // produces `e.relatedTarget === null` due to macOS focus conventions (#229895).
+      // Blindly opening whenever `!e.relatedTarget` would erroneously cause mouse
+      // clicks to trigger `useFocus`.
+      //
+      // The Solution:
+      // When on Safari macOS with `e.relatedTarget === null`, bypass native
+      // `matches(':focus-visible')` and manually evaluate the W3C `:focus-visible`
+      // specification criteria:
+      //   1. Did the user navigate via keyboard? (`isUsingKeyboard.value === true`)
+      //      -> Qualifies as visible focus.
+      //   2. Is the element a text field? (`isTypeableElement(target) === true`)
+      //      -> Per spec, text inputs always receive visible focus on any modality.
+      // If NEITHER criterion is met, the interaction was a pointer click on a
+      // non-typeable element, so we return early without opening.
+      // -----------------------------------------------------------------------
+      if (isSafariOnMac && !e.relatedTarget) {
+        if (!isUsingKeyboard.value && !isTypeableElement(target)) {
+          return;
+        }
+      } else if (!matchesFocusVisible(target)) {
+        return;
+      }
+    }
+
+    open.value = true;
+  }
+
+  useEventListener(() => (isEnabled.value ? anchorEl.value : null), "focus", onFocus);
+
+  // --- Focus Blur & Outside Dismissal ----------------------------------------
+
   let blurTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
-  const cleanupRegistry = createCleanupRegistry();
-  const registerCleanup = cleanupRegistry.add;
-  const cleanup = cleanupRegistry.cleanup;
 
   function clearBlurTimeout() {
     clearTimeout(blurTimeoutId);
     blurTimeoutId = undefined;
   }
 
-  // --- Window Focus Coordination --------------------------------------------
-
-  // 1. Blocks the floating element from opening when a user switches back to a
-  //    tab where the reference element was focused but the popover was closed.
-  registerCleanup(
-    useEventListener(
-      () => (isEnabled.value ? ownerWindow.value : null),
-      "blur",
-      () => {
-        if (
-          !open.value &&
-          anchorEl.value &&
-          ownerDocument.value?.activeElement === anchorEl.value
-        ) {
-          isFocusBlocked = true;
-        }
-      },
-    ),
-  );
-
-  // 2. Resets the block when the window regains focus.
-  registerCleanup(
-    useEventListener(
-      () => (isEnabled.value ? ownerWindow.value : null),
-      "focus",
-      () => {
-        isFocusBlocked = false;
-      },
-    ),
-  );
-
-  // When disabled, clear any pending state so re-enabling starts cleanly.
-  registerCleanup(
-    watchPostEffect(() => {
-      if (isEnabled.value) return;
-
-      isFocusBlocked = false;
-      clearBlurTimeout();
-    }),
-  );
-
-  // --- Focus & Blur Handlers -------------------------------------------------
-
-  function onFocus(event: FocusEvent): void {
-    if (!isEnabled.value) return;
-
-    if (isFocusBlocked) {
-      isFocusBlocked = false;
-      return;
-    }
-
-    const target = event.target instanceof Element ? event.target : null;
-    if (toValue(requireFocusVisibleOption) && target) {
-      // Safari fails to match `:focus-visible` if focus was initially outside
-      // the document. This is a workaround.
-      if (isSafariOnMac && !event.relatedTarget) {
-        if (!isUsingKeyboard.value && !isTypeableElement(target)) {
-          return; // Do not open if interaction was pointer-based on a non-typeable element.
-        }
-      } else if (!matchesFocusVisible(target)) {
-        return; // Standard check for other browsers.
-      }
-    }
-
-    open.value = true;
+  function shouldIgnoreDismiss(target: Element | null): boolean {
+    if (!target) return false;
+    if (node.contains(target)) return true;
+    return Boolean(options.ignoreFocusOut?.(target));
   }
 
   function onBlur(event: FocusEvent): void {
@@ -142,37 +164,59 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): Use
       return;
     }
 
-    // Clear any existing timeout from a previous blur event.
+    // Cancel any previous pending blur check to avoid duplicate or stale evaluations.
     clearBlurTimeout();
 
     const currentWindow = ownerWindow.value;
     if (!currentWindow) return;
 
-    // Use a timeout to check the activeElement in the next event loop tick.
-    // This is more reliable than `event.relatedTarget` for complex cases
-    // like Shadow DOM or when focus is programmatically moved.
+    // Why defer with a macrotask timeout (BLUR_CHECK_DELAY = 0ms)?
+    // Citations:
+    // - WHATWG HTML Focus Processing Model (§ 7.4.3):
+    //   https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model
+    // - W3C UI Events FocusEvent.relatedTarget (§ 5.2.2):
+    //   https://www.w3.org/TR/uievents/#dom-focusevent-relatedtarget
+    // - WebKit Bug #229895 (macOS button click focus heuristics):
+    //   https://bugs.webkit.org/show_bug.cgi?id=229895
+    //
+    // While the HTML spec updates `activeElement` before firing `blur` during a synchronous
+    // keyboard Tab transition, synchronous inspection during `blur` fails across real-world patterns:
+    //   1. Pointer clicks & WebKit heuristics: Clicking a button inside the floating panel triggers
+    //      `anchor.blur` before the click event fires. On WebKit/Safari (#229895), clicking buttons does
+    //      not focus them synchronously, temporarily leaving `activeElement` as body or transitional.
+    //   2. Programmatic & framework focus: Components mounted inside the floating element often receive
+    //      focus via microtasks (`nextTick()`) or click handlers, which run after the anchor's `blur`
+    //      event has already completed.
+    //   3. Shadow DOM encapsulation: Crossing Shadow DOM boundaries frequently retargets or nullifies
+    //      `event.relatedTarget` per W3C UI Events specification.
+    // Deferring evaluation by 0ms lets the current event loop task settle (clicks, programmatic focus calls,
+    // and DOM updates), allowing `document.activeElement` to reflect the final target.
     blurTimeoutId = currentWindow.setTimeout(() => {
       if (!open.value) return;
 
       const currentDocument = ownerDocument.value;
       const activeEl = currentDocument?.activeElement ?? null;
 
-      // Case 1: Focus has left the window entirely, but the browser is tricky
-      // and hasn't blurred the window yet. If `relatedTarget` is null but focus
-      // is still on the anchor, we assume focus is about to leave, so don't close.
+      // Case 1: Window / OS-level blur (focus left the document, not the anchor).
+      // When the user switches to another OS window/app (Alt+Tab), changes browser tabs, or clicks
+      // the browser's address bar/DevTools, the browser dispatches `blur` on the active anchor with
+      // `event.relatedTarget === null`. In this scenario, `document.activeElement` remains the anchor
+      // because DOM focus never moved to an in-page element. We preserve open state so returning to the
+      // window does not close the popover.
       if (!event.relatedTarget && activeEl === anchorEl.value) {
         return;
       }
 
-      if (node.contains(activeEl)) {
+      // Case 2: Focus transitioned into the floating tree or an explicitly ignored target.
+      // If focus landed on an interactive element inside the floating node (`node.contains(activeEl)`)
+      // or satisfies the consumer's `ignoreFocusOut(activeEl)` predicate (e.g. an external toolbar),
+      // we keep the popover open.
+      if (shouldIgnoreDismiss(activeEl instanceof Element ? activeEl : null)) {
         return;
       }
 
-      if (activeEl instanceof Element && ignoreFocusOutOption && ignoreFocusOutOption(activeEl)) {
-        return;
-      }
-
-      // If neither of the above conditions are met, focus has moved elsewhere.
+      // Case 3: Genuine outside focus.
+      // Focus has moved to an unrelated focusable element elsewhere in the document. Dismiss the popover.
       open.value = false;
     }, BLUR_CHECK_DELAY);
   }
@@ -180,62 +224,29 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): Use
   // In addition to element-level blur, observe focus changes at the document level
   // to handle cases where focus moves between descendants and outside elements
   // without triggering another blur on the original anchor.
-  registerCleanup(
-    useEventListener(
-      () => (isEnabled.value ? ownerDocument.value : null),
-      "focusin",
-      (e: FocusEvent) => {
-        if (!open.value) return;
+  useEventListener(
+    () => (isEnabled.value ? ownerDocument.value : null),
+    "focusin",
+    (e: FocusEvent) => {
+      if (!open.value) return;
 
-        const target = e.target;
-        if (!(target instanceof Element)) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target || shouldIgnoreDismiss(target)) return;
 
-        if (node.contains(target)) return;
-
-        if (ignoreFocusOutOption && ignoreFocusOutOption(target)) return;
-
-        open.value = false;
-      },
-      { capture: true },
-    ),
+      open.value = false;
+    },
+    { capture: true },
   );
 
-  // --- Anchor Event Listeners ------------------------------------------------
+  useEventListener(() => (isEnabled.value ? anchorEl.value : null), "blur", onBlur);
 
-  registerCleanup(
-    watchPostEffect(() => {
-      if (!isEnabled.value) return;
-      const el = anchorEl.value;
-      if (!isHTMLElement(el)) return;
-
-      el.addEventListener("focus", onFocus);
-      el.addEventListener("blur", onBlur);
-
-      onWatcherCleanup(() => {
-        el.removeEventListener("focus", onFocus);
-        el.removeEventListener("blur", onBlur);
-        clearBlurTimeout();
-      });
-    }),
-  );
-
-  registerCleanup(() => {
-    isFocusBlocked = false;
-    clearBlurTimeout();
+  watch(isEnabled, (enabled) => {
+    if (!enabled) {
+      clearBlurTimeout();
+    }
   });
 
-  // Ensure the cleanup runs if the component unmounts.
-  tryOnScopeDispose(() => {
-    cleanup();
-  });
-
-  return {
-    /**
-     * Cleanup function that removes all event listeners and clears pending timeouts.
-     * Useful for manual cleanup in testing scenarios.
-     */
-    cleanup,
-  };
+  tryOnScopeDispose(clearBlurTimeout);
 }
 
 //=======================================================================================
@@ -246,17 +257,6 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): Use
  * Context required by `useFocus`.
  */
 export type UseFocusContext = FloatingNode;
-
-/**
- * Cleanup handle returned by `useFocus`.
- */
-export interface UseFocusReturn {
-  /**
-   * Cleanup function that removes all event listeners and clears pending timeouts.
-   * Useful for manual cleanup in testing scenarios.
-   */
-  cleanup: () => void;
-}
 
 /**
  * Options that control focus-based open and close behavior.

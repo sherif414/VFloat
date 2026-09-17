@@ -27,7 +27,6 @@ function createTestComponent(
 ) {
   const openRef = ref(initialOpen);
   let node!: FloatingNode;
-  let result!: ReturnType<typeof useFocus>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
@@ -38,7 +37,7 @@ function createTestComponent(
       floatingEl,
       open: openRef,
     });
-    result = useFocus(node, options);
+    useFocus(node, options);
 
     const anchorKind = config.anchorKind ?? "button";
 
@@ -63,7 +62,6 @@ function createTestComponent(
   return {
     Component,
     getNode: () => node,
-    getResult: () => result,
     openRef,
   };
 }
@@ -115,7 +113,6 @@ interface FocusFixture {
   floatingEl: HTMLElement;
   node: FloatingNode;
   openRef: ReturnType<typeof ref<boolean>>;
-  result: ReturnType<typeof useFocus>;
   childInputEl: HTMLElement | null;
   outsideEl: HTMLElement | null;
   ignoredEl: HTMLElement | null;
@@ -135,7 +132,6 @@ async function renderFocus(
     floatingEl: getTestEl("floating"),
     node: fixture.getNode(),
     openRef: fixture.openRef,
-    result: fixture.getResult(),
     childInputEl: config.anchorKind === "anchor-subtree" ? getTestEl("anchor-child") : null,
     outsideEl: config.withOutside || config.withIgnored ? getTestEl("outside") : null,
     ignoredEl: config.withIgnored ? getTestEl("ignored") : null,
@@ -324,33 +320,6 @@ describe("useFocus", () => {
         enabled,
         requireFocusVisible: false,
       });
-
-      ctx.anchorEl.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(false);
-    });
-
-    it("cleanup clears pending blur work and removes every listener", async () => {
-      const ctx = await renderFocus({ requireFocusVisible: false }, false, { withOutside: true });
-
-      ctx.anchorEl.focus();
-      await flushFocus();
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.anchorEl.blur();
-      ctx.result.cleanup();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.outsideEl!.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.node.open.value = false;
-      await flushFocus();
 
       ctx.anchorEl.focus();
       await flushFocus();
