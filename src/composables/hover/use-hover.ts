@@ -336,9 +336,7 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
       return;
     }
 
-    if (open.value && isSafePolygonEnabled.value) {
-      startSafePolygon(e);
-    }
+    clearPolygon();
     reconcile();
   }
 

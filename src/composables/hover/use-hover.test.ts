@@ -805,6 +805,47 @@ describe("useHover", () => {
 
       expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
     });
+
+    it("does not initiate safe polygon when pointer leaves floating element", async () => {
+      const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+      const ctx = await renderHover({ safePolygon: true });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
+
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          relatedTarget: document.body,
+          clientX: 25,
+          clientY: 100,
+        }),
+      );
+      await nextTick();
+
+      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
+      await nextTick();
+
+      addEventListenerSpy.mockClear();
+
+      ctx.floatingEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          relatedTarget: document.body,
+          clientX: 25,
+          clientY: 110,
+        }),
+      );
+      await nextTick();
+
+      // Should not register a document-level pointermove listener for safePolygon
+      expect(addEventListenerSpy).not.toHaveBeenCalledWith("pointermove", expect.any(Function), {
+        passive: true,
+      });
+      // Closes according to normal delay rules (immediate when delay is 0)
+      expect(ctx.node.open.value).toBe(false);
+
+      addEventListenerSpy.mockRestore();
+    });
   });
 
   describe("lifecycle & cleanup", () => {
