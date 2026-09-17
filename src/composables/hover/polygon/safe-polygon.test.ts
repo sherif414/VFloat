@@ -309,6 +309,25 @@ describe("safePolygon", () => {
       perfSpy.mockRestore();
     });
 
+    it("respects custom intentTimeout for deceleration delay", () => {
+      let now = 1000;
+      const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
+
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon({ intentTimeout: 120 })(ctx);
+
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      now += 5000;
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109.01 }));
+
+      vi.advanceTimersByTime(40);
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(80);
+      expect(ctx.onCloseMock).toHaveBeenCalled();
+      perfSpy.mockRestore();
+    });
+
     it("does not schedule close when requireIntent is false", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false })(ctx);
@@ -421,6 +440,95 @@ describe("safePolygon", () => {
         expect(ctx.onCloseMock).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe("blockPointerEvents", () => {
+    it("does not create an overlay by default (blockPointerEvents=false)", () => {
+      const ctx = createContext("bottom");
+      safePolygon()(ctx);
+
+      const overlay = document.querySelector("[data-vfloat-safe-polygon-overlay]");
+      expect(overlay).toBeNull();
+    });
+
+    it("creates an invisible fixed overlay element when blockPointerEvents is true", () => {
+      const ctx = createContext("bottom");
+      const handler = safePolygon({ blockPointerEvents: true })(ctx);
+
+      const overlay = document.querySelector(
+        "[data-vfloat-safe-polygon-overlay]",
+      ) as HTMLElement | null;
+      expect(overlay).not.toBeNull();
+      expect(overlay?.style.position).toBe("fixed");
+      expect(overlay?.style.zIndex).toBe("2147483647");
+
+      handler.cleanup?.();
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+    });
+
+    it("cleans up overlay on close", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon({ blockPointerEvents: true, requireIntent: false })(ctx);
+
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
+
+      handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }));
+      expect(ctx.onCloseMock).toHaveBeenCalled();
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+    });
+
+    it("cleans up overlay when cursor lands on floating element", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon({ blockPointerEvents: true, requireIntent: false })(ctx);
+
+      const floatEl = ctx.elements.floating as HTMLElement;
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
+
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 100,
+          clientY: 130,
+          target: floatEl,
+        }),
+      );
+
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+    });
+  });
+
+  describe("layout read throttling", () => {
+    it("caches getBoundingClientRect results within 16ms and refreshes after 16ms", () => {
+      let now = 1000;
+      const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
+
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const anchorEl = ctx.elements.domReference as HTMLElement;
+      const floatingEl = ctx.elements.floating as HTMLElement;
+
+      const anchorRectSpy = vi.spyOn(anchorEl, "getBoundingClientRect");
+      const floatingRectSpy = vi.spyOn(floatingEl, "getBoundingClientRect");
+
+      const handler = safePolygon({ requireIntent: false })(ctx);
+
+      // First event: initial rect measurements
+      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
+      expect(anchorRectSpy).toHaveBeenCalledTimes(1);
+      expect(floatingRectSpy).toHaveBeenCalledTimes(1);
+
+      // Rapid move within 16ms: reuses cached rects
+      now += 8;
+      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 106 }));
+      expect(anchorRectSpy).toHaveBeenCalledTimes(1);
+      expect(floatingRectSpy).toHaveBeenCalledTimes(1);
+
+      // Move after > 16ms: refreshes rect measurements
+      now += 20;
+      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 107 }));
+      expect(anchorRectSpy).toHaveBeenCalledTimes(2);
+      expect(floatingRectSpy).toHaveBeenCalledTimes(2);
+
+      perfSpy.mockRestore();
+    });
   });
 
   describe("hasLanded and pointer outside ref", () => {

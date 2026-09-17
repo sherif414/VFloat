@@ -9,7 +9,7 @@ import {
 import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
-import { type SafePolygonOptions, safePolygon } from "./polygon";
+import { type SafePolygonHandler, type SafePolygonOptions, safePolygon } from "./polygon";
 
 /**
  * Minimum movement threshold in pixels to reset the rest detection timer.
@@ -195,8 +195,7 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
   // --- Safe Polygon Corridor --------------------------------------------------
 
-  let polygonPointerMoveHandler: ((e: MouseEvent) => void) | null = null;
-  let polygonTimerId = 0;
+  let polygonPointerMoveHandler: SafePolygonHandler | null = null;
 
   const isSafePolygonEnabled = computed<boolean>(() =>
     Boolean(toValue(options.safePolygon ?? false)),
@@ -209,10 +208,10 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   });
 
   function clearPolygon(): void {
-    polygonTimerId++;
     safePolygonActive = false;
     if (polygonPointerMoveHandler) {
       document.removeEventListener("pointermove", polygonPointerMoveHandler);
+      polygonPointerMoveHandler.cleanup?.();
       polygonPointerMoveHandler = null;
     }
     const polygonOpts = safePolygonOptions.value;
@@ -224,7 +223,6 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   function startSafePolygon(e: PointerEvent): void {
     clearPolygon();
     safePolygonActive = true;
-    const currentPolyId = ++polygonTimerId;
 
     const refEl = anchorEl.value;
     const floatEl = refs.floatingEl.value;
@@ -235,28 +233,23 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
     const { clientX, clientY } = e;
 
-    setTimeout(() => {
-      if (currentPolyId !== polygonTimerId) return;
-      if (!safePolygonActive) return;
+    polygonPointerMoveHandler = safePolygon(safePolygonOptions.value)({
+      x: clientX,
+      y: clientY,
+      elements: {
+        domReference: refEl,
+        floating: floatEl,
+      },
+      buffer: safePolygonOptions.value?.buffer ?? 1,
+      onClose: () => {
+        clearPolygon();
+        reconcile();
+      },
+    });
 
-      polygonPointerMoveHandler = safePolygon(safePolygonOptions.value)({
-        x: clientX,
-        y: clientY,
-        elements: {
-          domReference: refEl,
-          floating: floatEl,
-        },
-        buffer: safePolygonOptions.value?.buffer ?? 1,
-        onClose: () => {
-          clearPolygon();
-          reconcile();
-        },
-      });
-
-      if (polygonPointerMoveHandler) {
-        document.addEventListener("pointermove", polygonPointerMoveHandler);
-      }
-    }, 0);
+    if (polygonPointerMoveHandler) {
+      document.addEventListener("pointermove", polygonPointerMoveHandler, { passive: true });
+    }
   }
 
   // --- Pointer Event Listeners ------------------------------------------------
@@ -445,7 +438,7 @@ export interface UseHoverOptions {
    * region between the reference and floating elements.
    * - `true`: enabled with defaults
    * - `false | undefined`: disabled
-   * - `SafePolygonOptions`: enabled with custom configuration (buffer, intent, change callback)
+   * - `SafePolygonOptions`: enabled with custom configuration (buffer, requireIntent, intentTimeout, blockPointerEvents, change callback)
    * @default false
    */
   safePolygon?: MaybeRefOrGetter<boolean | SafePolygonOptions>;

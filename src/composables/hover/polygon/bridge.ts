@@ -1,4 +1,3 @@
-import { computed } from "vue";
 import type { AnchorElement, FloatingElement } from "@/composables/floating-node";
 import {
   clearTimeoutIfSet,
@@ -19,83 +18,66 @@ import {
   resolveSide,
 } from "./geometry";
 
-/**
- * Options for tuning the safe-polygon hover corridor.
- */
-export interface SafePolygonOptions {
-  /**
-   * Expands the polygon around the cursor leave point.
-   */
-  buffer?: number;
-
-  /**
-   * Requires the cursor to keep moving toward the floating element before the
-   * polygon protection fully applies.
-   */
-  requireIntent?: boolean;
-
-  /**
-   * Optional hook for visualizing the currently active polygon.
-   */
-  onPolygonChange?: (polygon: Polygon) => void;
-}
-
-/**
- * Factory that produces a pointer-move handler for safe-polygon hover retention.
- */
-export type SafePolygon = (node: CreateSafePolygonHandlerContext) => SafePolygonHandler;
-/**
- * Mouse-move handler produced by `safePolygon`.
- */
-export type SafePolygonHandler = (event: MouseEvent) => void;
-
-/**
- * Geometry and callback inputs used to build a safe-polygon handler.
- */
-export interface CreateSafePolygonHandlerContext {
-  x: number;
-  y: number;
-  elements: {
-    domReference: AnchorElement | null;
-    floating: FloatingElement | null;
-  };
-  buffer: number;
-  onClose: () => void;
-}
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Builds a pointer-move handler that keeps hover interactions open while the
  * cursor travels through the "safe" area between the anchor and floating panel.
  */
 export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
-  const { requireIntent = true } = options;
+  const { requireIntent = true, intentTimeout = 40, blockPointerEvents = false } = options;
 
   let timeoutId = -1;
   let hasLanded = false;
 
   return function createSafePolygonHandler(node: CreateSafePolygonHandlerContext) {
     const { x, y, elements, buffer: nodeBuffer, onClose } = node;
-    const referenceEl = computed(() => {
-      const domReference = elements.domReference;
+    const referenceEl = resolveReferenceElement(elements.domReference);
 
-      if (isHTMLElement(domReference)) {
-        return domReference;
+    let overlayEl: HTMLDivElement | null = null;
+
+    if (blockPointerEvents && typeof document !== "undefined") {
+      const doc = referenceEl?.ownerDocument ?? document;
+      if (doc.body) {
+        overlayEl = doc.createElement("div");
+        overlayEl.style.position = "fixed";
+        overlayEl.style.top = "0";
+        overlayEl.style.left = "0";
+        overlayEl.style.width = "100vw";
+        overlayEl.style.height = "100vh";
+        overlayEl.style.zIndex = "2147483647";
+        overlayEl.style.opacity = "0";
+        overlayEl.style.cursor = "default";
+        overlayEl.setAttribute("data-vfloat-safe-polygon-overlay", "");
+        doc.body.appendChild(overlayEl);
       }
-
-      return (domReference?.contextElement as HTMLElement) ?? null;
-    });
+    }
 
     let lastX: number | null = null;
     let lastY: number | null = null;
     let lastCursorTime = getCurrentTime();
 
+    let cachedAnchorRect: DOMRect | null = null;
+    let cachedFloatingRect: DOMRect | null = null;
+    let lastRectTime = 0;
+
+    const cleanupOverlay = () => {
+      if (overlayEl) {
+        overlayEl.remove();
+        overlayEl = null;
+      }
+    };
+
     const close = () => {
       clearTimeoutIfSet(timeoutId);
       timeoutId = -1;
+      cleanupOverlay();
       onClose();
     };
 
-    return function onMouseMove(event: MouseEvent) {
+    const onMouseMove = function onMouseMove(event: MouseEvent) {
       clearTimeoutIfSet(timeoutId);
       timeoutId = -1;
 
@@ -103,24 +85,40 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
         return;
       }
 
+      if (!referenceEl) {
+        return;
+      }
+
+      const now = getCurrentTime();
+      if (!cachedAnchorRect || !cachedFloatingRect || now - lastRectTime > 16) {
+        cachedAnchorRect = referenceEl.getBoundingClientRect();
+        cachedFloatingRect = elements.floating.getBoundingClientRect();
+        lastRectTime = now;
+      }
+
+      const anchorRect = cachedAnchorRect;
+      const floatingRect = cachedFloatingRect;
+
+      if (!anchorRect || !floatingRect) {
+        return;
+      }
+
       const { clientX, clientY } = event;
       const clientPoint: Point = [clientX, clientY];
       const target = getTarget(event) as Element | null;
       const isLeave = event.type === "mouseleave";
-      const isOverFloatingEl = elements.floating && contains(elements.floating, target);
-      const isOverReferenceEl = referenceEl.value && contains(referenceEl.value, target);
-      const anchorRect = referenceEl.value?.getBoundingClientRect();
-      const floatingRect = elements.floating.getBoundingClientRect();
-
-      if (!anchorRect) {
-        return;
-      }
+      const isOverFloatingEl =
+        (elements.floating && contains(elements.floating, target)) ||
+        isInside(clientPoint, floatingRect);
+      const isOverReferenceEl =
+        (referenceEl && contains(referenceEl, target)) || isInside(clientPoint, anchorRect);
 
       const side = resolveSide(floatingRect, anchorRect);
       const isOverReferenceRect = isInside(clientPoint, anchorRect);
 
       if (isOverFloatingEl) {
         hasLanded = true;
+        cleanupOverlay();
 
         if (!isLeave) {
           return;
@@ -129,6 +127,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
 
       if (isOverReferenceEl) {
         hasLanded = false;
+        cleanupOverlay();
       }
 
       if (isOverReferenceEl && !isLeave) {
@@ -170,7 +169,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
             lastX,
             lastY,
             lastCursorTime,
-            getCurrentTime(),
+            now,
           );
 
           lastX = speedResult.lastX;
@@ -178,7 +177,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
           lastCursorTime = speedResult.lastCursorTime;
 
           if (speedResult.speed !== null && speedResult.speed < 0.1) {
-            timeoutId = setTimeout(close, 40) as unknown as number;
+            timeoutId = setTimeout(close, intentTimeout) as unknown as number;
           }
         }
 
@@ -193,5 +192,89 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       // Outside both safe areas: close immediately.
       close();
     };
+
+    onMouseMove.cleanup = cleanupOverlay;
+
+    return onMouseMove;
   };
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+/**
+ * Resolves the underlying HTMLElement from an AnchorElement (HTMLElement or VirtualElement).
+ */
+function resolveReferenceElement(domReference: AnchorElement | null): HTMLElement | null {
+  if (isHTMLElement(domReference)) {
+    return domReference;
+  }
+
+  return (domReference?.contextElement as HTMLElement) ?? null;
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * Options for tuning the safe-polygon hover corridor.
+ */
+export interface SafePolygonOptions {
+  /**
+   * Expands the polygon around the cursor leave point.
+   */
+  buffer?: number;
+
+  /**
+   * Requires the cursor to keep moving toward the floating element before the
+   * polygon protection fully applies.
+   * @default true
+   */
+  requireIntent?: boolean;
+
+  /**
+   * Delay in milliseconds before closing when cursor decelerates below 0.1 px/ms.
+   * @default 40
+   */
+  intentTimeout?: number;
+
+  /**
+   * Blocks background pointer events during corridor traversal.
+   * When true, an invisible fixed overlay is created while the corridor is active.
+   * @default false
+   */
+  blockPointerEvents?: boolean;
+
+  /**
+   * Optional hook for visualizing the currently active polygon.
+   */
+  onPolygonChange?: (polygon: Polygon) => void;
+}
+
+/**
+ * Geometry and callback inputs used to build a safe-polygon handler.
+ */
+export interface CreateSafePolygonHandlerContext {
+  x: number;
+  y: number;
+  elements: {
+    domReference: AnchorElement | null;
+    floating: FloatingElement | null;
+  };
+  buffer: number;
+  onClose: () => void;
+}
+
+/**
+ * Mouse-move handler produced by `safePolygon`.
+ */
+export type SafePolygonHandler = ((event: MouseEvent) => void) & {
+  cleanup?: () => void;
+};
+
+/**
+ * Factory that produces a pointer-move handler for safe-polygon hover retention.
+ */
+export type SafePolygon = (node: CreateSafePolygonHandlerContext) => SafePolygonHandler;

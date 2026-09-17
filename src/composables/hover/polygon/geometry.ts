@@ -114,7 +114,7 @@ export function getCursorSpeed(
 
   const deltaX = x - lastX;
   const deltaY = y - lastY;
-  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  const distance = Math.hypot(deltaX, deltaY);
 
   return {
     speed: distance / elapsedTime,

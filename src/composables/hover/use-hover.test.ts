@@ -756,6 +756,55 @@ describe("useHover", () => {
       vi.advanceTimersByTime(100);
       expect(ctx.node.open.value).toBe(false);
     });
+
+    it("registers pointermove listener synchronously with passive: true upon pointerleave", async () => {
+      const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+
+      const ctx = await renderHover({ safePolygon: true });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          clientX: 25,
+          clientY: 100,
+          relatedTarget: document.body,
+        }),
+      );
+
+      // Synchronously attached without timer ticks
+      expect(addEventListenerSpy).toHaveBeenCalledWith("pointermove", expect.any(Function), {
+        passive: true,
+      });
+
+      addEventListenerSpy.mockRestore();
+    });
+
+    it("cleans up blockPointerEvents overlay when clearPolygon is called on re-entry", async () => {
+      const ctx = await renderHover({
+        safePolygon: { blockPointerEvents: true },
+      });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          clientX: 25,
+          clientY: 100,
+          relatedTarget: document.body,
+        }),
+      );
+
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
+
+      // Re-enter anchor
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+
+      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+    });
   });
 
   describe("lifecycle & cleanup", () => {

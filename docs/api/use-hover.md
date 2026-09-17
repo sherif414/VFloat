@@ -23,6 +23,8 @@ interface UseHoverOptions {
 interface SafePolygonOptions {
   buffer?: number;
   requireIntent?: boolean;
+  intentTimeout?: number;
+  blockPointerEvents?: boolean;
   onPolygonChange?: (polygon: Polygon) => void;
 }
 ```
@@ -46,6 +48,8 @@ When `safePolygon` is `true` or an object, an invisible directional polygon is c
 | --- | --- | --- | --- |
 | `buffer` | `number` | `1` | Extra pixel padding added around the travel corridor. |
 | `requireIntent` | `boolean` | `true` | Requires pointer velocity and direction to point toward the floating element. |
+| `intentTimeout` | `number` | `40` | Delay in milliseconds before closing when pointer velocity drops below 0.1 px/ms. |
+| `blockPointerEvents` | `boolean` | `false` | Prevents background elements from firing pointer/hover events while traversing the safe corridor. |
 | `onPolygonChange` | `(polygon: Polygon) => void` | `undefined` | Callback receiving updated polygon coordinates for debugging or visualization. |
 
 ## Returns
@@ -65,6 +69,18 @@ To ensure accessibility for users with motor tremors or continuous scanning habi
 If your floating panel is separated from the anchor by an offset margin, moving the mouse to click an item in the panel would trigger a `pointerleave` event on the anchor and dismiss the panel.
 
 Enabling `safePolygon: true` tracks the pointer trajectory. As long as the cursor moves toward the floating panel inside the dynamic cone, the surface remains open.
+
+### Preventing Background Flicker with `blockPointerEvents`
+
+In dense navigation bars, multi-column flyouts, and mega-menus, moving the cursor diagonally across the screen to reach a submenu often passes over sibling links or neighboring navigation items. Even with `safePolygon` active, those underlying DOM elements still fire pointer events by default, causing unwanted hover states, button highlights, or secondary popups to flicker into view.
+
+Setting `blockPointerEvents: true` in your `safePolygon` configuration temporarily blocks pointer events across underlying elements while the cursor travels through the safe corridor. Pointer interactions restore immediately once the pointer enters the floating panel, returns to the anchor, or leaves the corridor.
+
+### Tuning Intent Sensitivity with `intentTimeout`
+
+When `requireIntent` is enabled (the default), `useHover` measures pointer velocity. If the cursor slows down or stops inside the safe corridor (dropping below 0.1 px/ms), `useHover` starts a timer before closing the floating panel.
+
+The default `intentTimeout` is 40ms. If you build large mega-menus, multi-column navigation layouts, or designs where users pause briefly while scanning items mid-transit, increase `intentTimeout` (for example, `80` to `150`) to provide a more forgiving grace period.
 
 ### Spatial Family Awareness
 

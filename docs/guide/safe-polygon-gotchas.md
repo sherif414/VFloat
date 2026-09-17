@@ -36,6 +36,58 @@ Passing `true` enables the corridor with defaults (`buffer: 1`, `requireIntent: 
 
 The more forgiving the corridor becomes, the less tightly it matches the visible UI. That can create a strange feeling where the pointer appears to have left the UI, but the surface stays open because the safe area is larger than it looks.
 
+## Background hover flicker in mega-menus
+
+In mega-menus, multi-column navigation bars, and dense toolbars, moving diagonally from a trigger to a floating panel means crossing intermediate links and buttons. While `safePolygon` keeps the active floating panel open, moving the pointer across background DOM elements still fires their native hover and pointer events. Sibling navigation items flash their hover states as the cursor glides past.
+
+Pass `blockPointerEvents: true` to prevent underlying elements from receiving pointer events while the cursor stays within the safe corridor:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useFloatingNode, useHover } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const node = useFloatingNode({ anchorEl, floatingEl });
+
+useHover(node, {
+  safePolygon: {
+    blockPointerEvents: true,
+  },
+});
+</script>
+```
+
+Underlying elements stop firing pointer events during corridor transit, eliminating flicker without altering your CSS. Pointer events restore as soon as the pointer enters the floating panel or leaves the corridor.
+
+## Abrupt closes on wide layouts
+
+By default, `safePolygon` checks whether the user is still moving toward the floating element (`requireIntent: true`). If the cursor slows down below 0.1 px/ms, a 40ms timer triggers closure.
+
+In wide layouts or large mega-menus, users travel longer screen distances and often pause briefly mid-transit while reading or reorienting. If 40ms feels too abrupt, increase `intentTimeout`:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { useFloatingNode, useHover } from "v-float";
+
+const anchorEl = ref<HTMLElement | null>(null);
+const floatingEl = ref<HTMLElement | null>(null);
+
+const node = useFloatingNode({ anchorEl, floatingEl });
+
+useHover(node, {
+  safePolygon: {
+    intentTimeout: 100,
+  },
+});
+</script>
+```
+
+A value between 80ms and 150ms gives users a forgiving pause window. Keep this bounded: excessively high values make menus feel unresponsive when users deliberately move away.
+
 ## Debug the corridor if hover feels wrong
 
 If the behavior feels surprising, pass `safePolygon: { onPolygonChange }` to inspect the polygon while debugging. Clearing the corridor (on close or re-enter) reports an empty polygon.
@@ -46,3 +98,4 @@ For nested menus, [`useHover`](/api/use-hover) uses intrinsic family awareness (
 
 - Read [Build Accessible Tooltips](/guide/build-accessible-tooltips) for the main workflow.
 - Read [Build Nested Menus](/guide/build-nested-menus) if the hover corridor problem shows up in submenu behavior.
+- Read [`useHover`](/api/use-hover) for full option contracts and defaults.
