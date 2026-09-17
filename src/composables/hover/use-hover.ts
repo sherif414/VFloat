@@ -344,7 +344,8 @@ export interface UseHoverOptions {
   restMs?: MaybeRefOrGetter<number>;
 
   /**
-   * Whether hover events should only trigger for mouse-like pointers (mouse, pen, stylus, etc.).
+   * Whether hover events should only trigger for physical mouse devices (ignoring pen/stylus).
+   * Note: Touch pointers are always ignored regardless of this option.
    * @default false
    */
   mouseOnly?: MaybeRefOrGetter<boolean>;
