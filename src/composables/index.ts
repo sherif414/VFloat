@@ -49,7 +49,12 @@ export { useFocus } from "./focus/use-focus";
 export type { UseFocusTrapContext, UseFocusTrapOptions, UseFocusTrapReturn } from "./focus-trap";
 // Focus Trap
 export { useFocusTrap } from "./focus-trap";
-export type { SafePolygonOptions, UseHoverOptions } from "./hover/use-hover";
+export type {
+  SafePolygonOptions,
+  UseHoverContext,
+  UseHoverDelay,
+  UseHoverOptions,
+} from "./hover/use-hover";
 // Hover
 export { useHover } from "./hover/use-hover";
 export type {
