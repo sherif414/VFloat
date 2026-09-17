@@ -114,6 +114,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     if (isButtonTarget(e.target) || isTypeableElement(e.target)) return;
 
     if (e.key === " ") {
+      e.preventDefault();
       didKeyDown = true;
     }
 
