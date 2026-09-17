@@ -61,6 +61,23 @@
   - Use `useTemplateRef()` when binding template element references in Vue components.
   - **Reactivity Economy & Intentionality:** Do not make static initialization seeds, default values, or one-time options reactive. Options that only seed initial/uncontrolled state (e.g., `defaultOpen: boolean`, `defaultIndex: number`, `initialValue: T`) must be plain, non-reactive primitives—not `MaybeRefOrGetter`. Only wrap options in `MaybeRefOrGetter` when they represent dynamic inputs expected to reactively update over the composable's active lifecycle (e.g., `enabled`, `orientation`, `loop`, `rtl`, `scrollIntoView`).
   - **TypeScript Contract Trust (Zero Defensive Boilerplate):** Always trust TypeScript type contracts. Never add defensive runtime fallbacks (`?? []`, `!elements || elements.length === 0`, `if (!elements) return`) when a parameter is typed as a non-nullable container (e.g., `elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>`). Distinguish container nullability from item nullability: in `Array<HTMLElement | null>`, the array itself is guaranteed to exist; only individual element lookups (`list[idx]`) require null guards when accessing DOM nodes (`el?.focus()`, `if (el)`).
+- **Cross-Realm (Iframe) & SSR Environment Safety:**
+  - **Zero Bare Globals:** Never access bare `window` or `document` directly in DOM interaction logic or composable setup scopes.
+  - **Dynamic Owner Resolution:** Always resolve DOM environment targets dynamically from active elements:
+    - Document: `const ownerDoc = computed(() => element.value?.ownerDocument ?? getDocument());`
+    - Window: `const ownerWin = computed(() => ownerDoc.value?.defaultView ?? getWindow());`
+    - Always use safe SSR fallbacks (`getDocument()`, `getWindow()`, `isClient`) from `@/shared/env`.
+  - **Realm-Scoped Timers:** Always schedule and clear timers (`setTimeout`, `clearTimeout`, `requestAnimationFrame`, `cancelAnimationFrame`) on the resolved `ownerWindow`, never on the global `window`:
+    ```ts
+    // ❌ Fragile (leaks across iframes, breaks in SSR):
+    timeoutId = window.setTimeout(fn, delay);
+    clearTimeout(timeoutId);
+
+    // ✅ Realm-safe & SSR-safe:
+    timeoutId = ownerWindow.value?.setTimeout(fn, delay);
+    ownerWindow.value?.clearTimeout(timeoutId);
+    ```
+  - **Cross-Realm Type Checks:** Never use bare `instanceof HTMLElement` or `instanceof Window` across realm boundaries without guarding against `null` or different realm constructors (prefer `isHTMLElement(target)` from `@/shared/dom`).
 - **Dependency Guard:**
   - **NEVER** install or suggest legacy/outdated utility packages (e.g., `lodash`, `underscore`, `axios`, `moment`, `deepmerge`, `vue-demi`, `rimraf`).
   - Always inspect `package.json` before assuming any dependency exists.
@@ -90,7 +107,7 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Run `pnpm install` after pulling remote changes and before getting started.
 - [ ] Always write targeted regression unit tests whenever fixing a bug, handling an edge case, or addressing an ordering/lifecycle dependency.
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
-- [ ] Ensure full SSR compatibility: never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
+- [ ] Ensure full SSR & cross-realm (iframe) safety: resolve documents via `element.ownerDocument ?? getDocument()` and windows via `ownerDocument.defaultView ?? getWindow()`; execute timers (`setTimeout`, `clearTimeout`) on `ownerWindow`; never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
 - [ ] Scope-aware validation:
   - For `src/` changes: Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test:run`.
   - For `docs/` changes: Run `pnpm docs:build` (note: `pnpm test` and `pnpm lint` do not test or type-check `docs/` components; never cite unit test passes for `docs/` edits).
