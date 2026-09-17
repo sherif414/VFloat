@@ -21,15 +21,7 @@ const Layout = defineComponent({
     return () =>
       renderLayout(DefaultTheme.Layout, null, {
         ...slots,
-        "nav-bar-title-before": () =>
-          h("img", {
-            class: "vf-mark",
-            src: "/vfloat-mark.svg",
-            alt: "",
-            width: 24,
-            height: 24,
-          }),
-        "navbar-title": () => h("span", { class: "text" }, "VFloat"),
+        "navbar-title": () => h("span", { class: "text font-bold" }, "VFloat"),
         ...(frontmatter.value.layout === "home"
           ? {
               "home-hero-actions-after": () => h(HomeInstall),

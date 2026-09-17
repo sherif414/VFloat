@@ -22,9 +22,3 @@ html.dark {
   --vp-c-brand-soft: rgba(16, 185, 129, 0.16);
 }
 
-/* Brand mark in the nav bar. */
-.vf-mark {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-}

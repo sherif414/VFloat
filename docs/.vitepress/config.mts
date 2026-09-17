@@ -6,7 +6,7 @@ import { loadPackageSize } from "./data/package-size.data";
 const SITE_ORIGIN = "https://vfloat.pages.dev";
 const SITE_TITLE = "VFloat";
 const SITE_DESCRIPTION = "A headless, primitive floating library for Vue 3";
-const SOCIAL_IMAGE = `${SITE_ORIGIN}/vfloat-mark.png`;
+const SOCIAL_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 
 /**
  * Maps source paths to served canonical URLs.
@@ -32,10 +32,11 @@ export default defineConfig({
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: SITE_TITLE }],
     ["meta", { property: "og:image", content: SOCIAL_IMAGE }],
-    ["meta", { property: "og:image:width", content: "1024" }],
-    ["meta", { property: "og:image:height", content: "1024" }],
-    ["meta", { property: "og:image:alt", content: SITE_TITLE }],
-    ["meta", { name: "twitter:card", content: "summary" }],
+    ["meta", { property: "og:image:width", content: "1200" }],
+    ["meta", { property: "og:image:height", content: "630" }],
+    ["meta", { property: "og:image:alt", content: "VFloat - Headless Floating UI Primitives for Vue 3" }],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
+    ["meta", { name: "twitter:image", content: SOCIAL_IMAGE }],
   ],
 
   transformHead({ pageData, title, description }) {
