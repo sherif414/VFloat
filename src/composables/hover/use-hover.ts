@@ -9,6 +9,12 @@ import { type SafePolygonOptions, safePolygon } from "./polygon";
  */
 const POINTER_MOVE_THRESHOLD = 4;
 
+/**
+ * Fallback ceiling delay in milliseconds to force open the floating element
+ * even if the pointer continues moving within the anchor.
+ */
+const REST_FALLBACK_MS = 1000;
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -92,20 +98,32 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
   let restCoords: PointerCoords | null = null;
   let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
-  const isRestMsEnabled = computed<boolean>(() => showDelay.value === 0 && restMs.value > 0);
+  let fallbackTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  function clearRestTimeout(): void {
+  const isRestMsEnabled = computed<boolean>(() => restMs.value > 0);
+  const fallbackDelay = computed<number>(() => {
+    return showDelay.value > 0 ? Math.max(showDelay.value, REST_FALLBACK_MS) : REST_FALLBACK_MS;
+  });
+
+  function clearRestTimeouts(): void {
     clearTimeout(restTimeoutId);
     restTimeoutId = undefined;
+    clearTimeout(fallbackTimeoutId);
+    fallbackTimeoutId = undefined;
   }
 
   function onRestPointerEnter(e: PointerEvent): void {
     if (!isEnabled.value || !isSupportedPointer(e) || !isRestMsEnabled.value) return;
     restCoords = { x: e.clientX, y: e.clientY };
-    clearRestTimeout();
+    clearRestTimeouts();
     restTimeoutId = setTimeout(() => {
+      clearRestTimeouts();
       show(0);
     }, restMs.value);
+    fallbackTimeoutId = setTimeout(() => {
+      clearRestTimeouts();
+      show(0);
+    }, fallbackDelay.value);
   }
 
   function onRestPointerMove(e: PointerEvent): void {
@@ -124,15 +142,16 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
     if (dx > POINTER_MOVE_THRESHOLD || dy > POINTER_MOVE_THRESHOLD) {
       restCoords = { x: e.clientX, y: e.clientY };
-      clearRestTimeout();
+      clearTimeout(restTimeoutId);
       restTimeoutId = setTimeout(() => {
+        clearRestTimeouts();
         show(0);
       }, restMs.value);
     }
   }
 
   function restMsCleanup(): void {
-    clearRestTimeout();
+    clearRestTimeouts();
     restCoords = null;
   }
 
@@ -338,7 +357,6 @@ export interface UseHoverOptions {
   /**
    * Time in milliseconds the pointer must rest within the reference
    * element before opening the floating element.
-   * This option is ignored if an open delay is specified.
    * @default 0
    */
   restMs?: MaybeRefOrGetter<number>;

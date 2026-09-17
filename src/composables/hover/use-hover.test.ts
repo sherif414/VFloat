@@ -411,19 +411,59 @@ describe("useHover", () => {
       expect(ctx.node.open.value).toBe(false);
     });
 
-    it("ignores restMs if delay.open is greater than 0", async () => {
+    it("forces floating element open after fallback delay (1000ms) even if pointer moves continuously", async () => {
+      const ctx = await renderHover({ restMs: 100 });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 0, clientY: 0 }));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(false);
+
+      for (let time = 50; time <= 950; time += 50) {
+        vi.advanceTimersByTime(50);
+        ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: time, clientY: 0 }));
+        await nextTick();
+        expect(ctx.node.open.value).toBe(false);
+      }
+
+      vi.advanceTimersByTime(50);
+      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
+    });
+
+    it("respects fallback delay when delay.open is specified alongside restMs", async () => {
       const ctx = await renderHover({
-        delay: { open: 100 },
+        delay: { open: 1200 },
         restMs: 50,
       });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 0, clientY: 0 }));
       await nextTick();
 
-      vi.advanceTimersByTime(1);
+      for (let time = 30; time <= 1170; time += 30) {
+        vi.advanceTimersByTime(30);
+        ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: time, clientY: 0 }));
+        await nextTick();
+        expect(ctx.node.open.value).toBe(false);
+      }
+
+      vi.advanceTimersByTime(30);
+      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
+    });
+
+    it("opens after restMs when pointer rests even if delay.open is specified", async () => {
+      const ctx = await renderHover({
+        delay: { open: 200 },
+        restMs: 50,
+      });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+      await nextTick();
+
+      vi.advanceTimersByTime(49);
       expect(ctx.node.open.value).toBe(false);
 
-      vi.advanceTimersByTime(99);
+      vi.advanceTimersByTime(1);
       expect(ctx.node.open.value).toBe(true);
     });
   });

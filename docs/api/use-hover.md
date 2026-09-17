@@ -56,7 +56,9 @@ When `safePolygon` is `true` or an object, an invisible directional polygon is c
 
 ### Preventing Accidental Triggers with `restMs`
 
-When users quickly skim across a row of buttons or table cells, instant tooltips create visual noise. Setting `restMs: 150` waits until the pointer stops moving before opening.
+When users quickly skim across a row of buttons or table cells, instant tooltips create visual noise. Setting `restMs: 150` waits until the pointer rests stationary within the anchor element (moves $\le$ 4px) before opening.
+
+To ensure accessibility for users with motor tremors or continuous scanning habits, `useHover` enforces an automatic 1000ms fallback ceiling delay (or `Math.max(delay.open, 1000)` if `delay.open` is larger). If the pointer remains inside the anchor for the duration of the fallback delay, the floating element opens even if the cursor moves continuously.
 
 ### Bridging Gaps with `safePolygon`
 
