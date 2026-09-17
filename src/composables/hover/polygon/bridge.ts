@@ -6,6 +6,7 @@ import {
   getTarget,
   isHTMLElement,
 } from "@/shared/dom";
+import { getDocument, getWindow } from "@/shared/env";
 import {
   buildRectangularTrough,
   buildSafePolygon,
@@ -38,9 +39,9 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
 
     let overlayEl: HTMLDivElement | null = null;
 
-    if (blockPointerEvents && typeof document !== "undefined") {
-      const doc = referenceEl?.ownerDocument ?? document;
-      if (doc.body) {
+    if (blockPointerEvents) {
+      const doc = referenceEl?.ownerDocument ?? getDocument();
+      if (doc?.body) {
         overlayEl = doc.createElement("div");
         overlayEl.style.position = "fixed";
         overlayEl.style.top = "0";
@@ -177,7 +178,10 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
           lastCursorTime = speedResult.lastCursorTime;
 
           if (speedResult.speed !== null && speedResult.speed < 0.1) {
-            timeoutId = setTimeout(close, intentTimeout) as unknown as number;
+            const currentWin = getWindow(referenceEl);
+            if (currentWin) {
+              timeoutId = currentWin.setTimeout(close, intentTimeout);
+            }
           }
         }
 

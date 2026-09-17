@@ -8,6 +8,7 @@ import {
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement } from "@/shared/elements";
+import { getDocument, getWindow } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { type SafePolygonHandler, type SafePolygonOptions, safePolygon } from "./polygon";
 
@@ -52,6 +53,8 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   const restMs = computed(() => toValue(options.restMs ?? 0));
   const fallbackDelay = computed<number>(() => Math.max(showDelay.value, REST_FALLBACK_MS));
   const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
+  const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? getDocument());
+  const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? getWindow());
 
   // --- Interaction Facts & Transitions ----------------------------------------
 
@@ -82,7 +85,9 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
       }
       return;
     }
-    setTimeout(() => {
+    const currentWindow = ownerWindow.value;
+    if (!currentWindow) return;
+    currentWindow.setTimeout(() => {
       if (id !== transitionId) return;
       if (!canOpen()) return;
       if (!open.value && anchorEl.value?.isConnected) {
@@ -99,7 +104,9 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
       }
       return;
     }
-    setTimeout(() => {
+    const currentWindow = ownerWindow.value;
+    if (!currentWindow) return;
+    currentWindow.setTimeout(() => {
       if (id !== transitionId) return;
       if (!canClose()) return;
       if (open.value) {
@@ -144,14 +151,17 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     const currentRestId = ++restTimerId;
     const currentFallbackId = ++fallbackTimerId;
 
-    setTimeout(() => {
+    const currentWindow = ownerWindow.value;
+    if (!currentWindow) return;
+
+    currentWindow.setTimeout(() => {
       if (currentRestId !== restTimerId) return;
       if (!pointerInsideAnchor) return;
       restSatisfied = true;
       reconcile();
     }, restMs.value);
 
-    setTimeout(() => {
+    currentWindow.setTimeout(() => {
       if (currentFallbackId !== fallbackTimerId) return;
       if (!pointerInsideAnchor) return;
       restSatisfied = true;
@@ -184,7 +194,9 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     if (dx > POINTER_MOVE_THRESHOLD || dy > POINTER_MOVE_THRESHOLD) {
       restCoords = { x: e.clientX, y: e.clientY };
       const currentRestId = ++restTimerId;
-      setTimeout(() => {
+      const currentWindow = ownerWindow.value;
+      if (!currentWindow) return;
+      currentWindow.setTimeout(() => {
         if (currentRestId !== restTimerId) return;
         if (!pointerInsideAnchor) return;
         restSatisfied = true;
@@ -196,6 +208,7 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   // --- Safe Polygon Corridor --------------------------------------------------
 
   let polygonPointerMoveHandler: SafePolygonHandler | null = null;
+  let activePolygonDocument: Document | null = null;
 
   const isSafePolygonEnabled = computed<boolean>(() =>
     Boolean(toValue(options.safePolygon ?? false)),
@@ -210,7 +223,8 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   function clearPolygon(): void {
     safePolygonActive = false;
     if (polygonPointerMoveHandler) {
-      document.removeEventListener("pointermove", polygonPointerMoveHandler);
+      activePolygonDocument?.removeEventListener("pointermove", polygonPointerMoveHandler);
+      activePolygonDocument = null;
       polygonPointerMoveHandler.cleanup?.();
       polygonPointerMoveHandler = null;
     }
@@ -248,7 +262,9 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     });
 
     if (polygonPointerMoveHandler) {
-      document.addEventListener("pointermove", polygonPointerMoveHandler, { passive: true });
+      const doc = ownerDocument.value;
+      activePolygonDocument = doc;
+      doc?.addEventListener("pointermove", polygonPointerMoveHandler, { passive: true });
     }
   }
 
