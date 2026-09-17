@@ -101,9 +101,7 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   let fallbackTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const isRestMsEnabled = computed<boolean>(() => restMs.value > 0);
-  const fallbackDelay = computed<number>(() => {
-    return showDelay.value > 0 ? Math.max(showDelay.value, REST_FALLBACK_MS) : REST_FALLBACK_MS;
-  });
+  const fallbackDelay = computed<number>(() => Math.max(showDelay.value, REST_FALLBACK_MS));
 
   function clearRestTimeouts(): void {
     clearTimeout(restTimeoutId);
