@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.14.0
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.13.3...v0.14.0)
+
+### 🚀 Enhancements
+
+- **arrow:** Add automatic style binding and switch to physical insets ([098377c](https://github.com/sherif414/VFloat/commit/098377c))
+- **hover:** Add fallback ceiling delay for restMs ([40c5b2d](https://github.com/sherif414/VFloat/commit/40c5b2d))
+- **hover:** Add intent timeout and pointer shield options to safe polygon ([44f79b8](https://github.com/sherif414/VFloat/commit/44f79b8))
+
+### 🩹 Fixes
+
+- **click:** Handle unknown pointer type with explicit undefined check ([749addd](https://github.com/sherif414/VFloat/commit/749addd))
+- **click:** Ignore non primary pointer buttons on click listener ([9d0f913](https://github.com/sherif414/VFloat/commit/9d0f913))
+- **click:** Ignore repeated keyboard clicks ([f77bdb3](https://github.com/sherif414/VFloat/commit/f77bdb3))
+- **click:** Track consumed mousedown state and preserve touch click activation ([c072c27](https://github.com/sherif414/VFloat/commit/c072c27))
+- **click:** Prevent space key from scrolling on non native buttons. ([7f727cf](https://github.com/sherif414/VFloat/commit/7f727cf))
+- **hover:** Adjust pointer move threshold and remove obsolete export ([58737e8](https://github.com/sherif414/VFloat/commit/58737e8))
+- **hover:** Ignore touch pointers and improve rest timeout lifecycle ([6ed9e3a](https://github.com/sherif414/VFloat/commit/6ed9e3a))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.13.3
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.13.2...v0.13.3)
