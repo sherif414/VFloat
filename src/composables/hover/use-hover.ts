@@ -1,4 +1,11 @@
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+import {
+  computed,
+  type MaybeRefOrGetter,
+  onWatcherCleanup,
+  toValue,
+  watch,
+  watchPostEffect,
+} from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -40,97 +47,133 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   const { open, refs } = node;
 
   const isEnabled = computed(() => toValue(options.enabled ?? true));
-  const restMs = computed(() => toValue(options.restMs ?? 0));
-  const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
-
-  // --- Delayed Open & Close ---------------------------------------------------
-
   const showDelay = computed<number>(() => resolveDelay(toValue(options.delay), "open"));
   const hideDelay = computed<number>(() => resolveDelay(toValue(options.delay), "close"));
+  const restMs = computed(() => toValue(options.restMs ?? 0));
+  const fallbackDelay = computed<number>(() => Math.max(showDelay.value, REST_FALLBACK_MS));
+  const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
 
-  let showTimeoutId: ReturnType<typeof setTimeout> | undefined;
-  let hideTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  // --- Interaction Facts & Transitions ----------------------------------------
 
-  function clearTimeouts(): void {
-    clearTimeout(showTimeoutId);
-    showTimeoutId = undefined;
-    clearTimeout(hideTimeoutId);
-    hideTimeoutId = undefined;
+  let pointerInsideAnchor = false;
+  let pointerInsideFloating = false;
+  let restSatisfied = false;
+  let safePolygonActive = false;
+  let dismissedWhileInside = false;
+
+  let transitionId = 0;
+
+  function canOpen(): boolean {
+    return (
+      pointerInsideFloating ||
+      (pointerInsideAnchor && !dismissedWhileInside && (restMs.value === 0 || restSatisfied))
+    );
   }
 
-  function show(overrideDelay?: number): void {
-    clearTimeouts();
-    const resolvedDelay = overrideDelay ?? showDelay.value;
+  function canClose(): boolean {
+    return !pointerInsideAnchor && !pointerInsideFloating && !safePolygonActive;
+  }
 
-    if (resolvedDelay === 0) {
+  function scheduleOpen(delay: number): void {
+    const id = ++transitionId;
+    if (delay === 0) {
       if (!open.value && anchorEl.value?.isConnected) {
         open.value = true;
       }
-    } else {
-      showTimeoutId = setTimeout(() => {
-        if (!open.value && anchorEl.value?.isConnected) {
-          open.value = true;
-        }
-      }, resolvedDelay);
+      return;
     }
+    setTimeout(() => {
+      if (id !== transitionId) return;
+      if (!canOpen()) return;
+      if (!open.value && anchorEl.value?.isConnected) {
+        open.value = true;
+      }
+    }, delay);
   }
 
-  function hide(overrideDelay?: number): void {
-    clearTimeouts();
-    const resolvedDelay = overrideDelay ?? hideDelay.value;
-
-    if (resolvedDelay === 0) {
+  function scheduleClose(delay: number): void {
+    const id = ++transitionId;
+    if (delay === 0) {
       if (open.value) {
         open.value = false;
       }
-    } else {
-      hideTimeoutId = setTimeout(() => {
-        if (open.value) {
-          open.value = false;
-        }
-      }, resolvedDelay);
+      return;
+    }
+    setTimeout(() => {
+      if (id !== transitionId) return;
+      if (!canClose()) return;
+      if (open.value) {
+        open.value = false;
+      }
+    }, delay);
+  }
+
+  function reconcile(): void {
+    if (!open.value && canOpen()) {
+      const delay = restMs.value > 0 ? 0 : showDelay.value;
+      scheduleOpen(delay);
+    } else if (open.value && canClose()) {
+      scheduleClose(hideDelay.value);
+    } else if (open.value && !canClose()) {
+      // In-flight close cancelled because surface is protected or re-entered
+      transitionId++;
+    } else if (!open.value && !canOpen()) {
+      // In-flight open cancelled because pointer left
+      transitionId++;
     }
   }
 
-  tryOnScopeDispose(clearTimeouts);
+  // Sync external close (e.g. Escape key / outside click while cursor is on anchor)
+  watch(open, (isOpen) => {
+    if (!isOpen && pointerInsideAnchor) {
+      dismissedWhileInside = true;
+      cancelRestDetection();
+      transitionId++;
+    }
+  });
 
   // --- Rest Detection ---------------------------------------------------------
 
   let restCoords: PointerCoords | null = null;
-  let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
-  let fallbackTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let restTimerId = 0;
+  let fallbackTimerId = 0;
 
-  const isRestMsEnabled = computed<boolean>(() => restMs.value > 0);
-  const fallbackDelay = computed<number>(() => Math.max(showDelay.value, REST_FALLBACK_MS));
+  function startRestDetection(e: PointerEvent): void {
+    restCoords = { x: e.clientX, y: e.clientY };
+    restSatisfied = false;
+    const currentRestId = ++restTimerId;
+    const currentFallbackId = ++fallbackTimerId;
 
-  function clearRestTimeouts(): void {
-    clearTimeout(restTimeoutId);
-    restTimeoutId = undefined;
-    clearTimeout(fallbackTimeoutId);
-    fallbackTimeoutId = undefined;
+    setTimeout(() => {
+      if (currentRestId !== restTimerId) return;
+      if (!pointerInsideAnchor) return;
+      restSatisfied = true;
+      reconcile();
+    }, restMs.value);
+
+    setTimeout(() => {
+      if (currentFallbackId !== fallbackTimerId) return;
+      if (!pointerInsideAnchor) return;
+      restSatisfied = true;
+      reconcile();
+    }, fallbackDelay.value);
   }
 
-  function onRestPointerEnter(e: PointerEvent): void {
-    if (!isEnabled.value || !isSupportedPointer(e) || !isRestMsEnabled.value) return;
-    restCoords = { x: e.clientX, y: e.clientY };
-    clearRestTimeouts();
-    restTimeoutId = setTimeout(() => {
-      clearRestTimeouts();
-      show(0);
-    }, restMs.value);
-    fallbackTimeoutId = setTimeout(() => {
-      clearRestTimeouts();
-      show(0);
-    }, fallbackDelay.value);
+  function cancelRestDetection(): void {
+    restTimerId++;
+    fallbackTimerId++;
+    restCoords = null;
+    restSatisfied = false;
   }
 
   function onRestPointerMove(e: PointerEvent): void {
     if (
-      open.value ||
-      !restCoords ||
       !isEnabled.value ||
       !isSupportedPointer(e) ||
-      !isRestMsEnabled.value
+      restMs.value === 0 ||
+      !restCoords ||
+      restSatisfied ||
+      open.value
     ) {
       return;
     }
@@ -140,41 +183,20 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
     if (dx > POINTER_MOVE_THRESHOLD || dy > POINTER_MOVE_THRESHOLD) {
       restCoords = { x: e.clientX, y: e.clientY };
-      clearTimeout(restTimeoutId);
-      restTimeoutId = setTimeout(() => {
-        clearRestTimeouts();
-        show(0);
+      const currentRestId = ++restTimerId;
+      setTimeout(() => {
+        if (currentRestId !== restTimerId) return;
+        if (!pointerInsideAnchor) return;
+        restSatisfied = true;
+        reconcile();
       }, restMs.value);
     }
   }
 
-  function restMsCleanup(): void {
-    clearRestTimeouts();
-    restCoords = null;
-  }
-
-  watchPostEffect(() => {
-    const el = anchorEl.value;
-    if (!el || !isEnabled.value || !isRestMsEnabled.value) return;
-
-    el.addEventListener("pointerenter", onRestPointerEnter);
-    el.addEventListener("pointermove", onRestPointerMove);
-    el.addEventListener("pointerleave", restMsCleanup);
-
-    onWatcherCleanup(() => {
-      restMsCleanup();
-      el.removeEventListener("pointerenter", onRestPointerEnter);
-      el.removeEventListener("pointermove", onRestPointerMove);
-      el.removeEventListener("pointerleave", restMsCleanup);
-    });
-  });
-
-  tryOnScopeDispose(restMsCleanup);
-
   // --- Safe Polygon Corridor --------------------------------------------------
 
   let polygonPointerMoveHandler: ((e: MouseEvent) => void) | null = null;
-  let polygonTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let polygonTimerId = 0;
 
   const isSafePolygonEnabled = computed<boolean>(() =>
     Boolean(toValue(options.safePolygon ?? false)),
@@ -187,10 +209,8 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   });
 
   function clearPolygon(): void {
-    if (polygonTimeoutId !== undefined) {
-      clearTimeout(polygonTimeoutId);
-      polygonTimeoutId = undefined;
-    }
+    polygonTimerId++;
+    safePolygonActive = false;
     if (polygonPointerMoveHandler) {
       document.removeEventListener("pointermove", polygonPointerMoveHandler);
       polygonPointerMoveHandler = null;
@@ -201,7 +221,43 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     }
   }
 
-  tryOnScopeDispose(clearPolygon);
+  function startSafePolygon(e: PointerEvent): void {
+    clearPolygon();
+    safePolygonActive = true;
+    const currentPolyId = ++polygonTimerId;
+
+    const refEl = anchorEl.value;
+    const floatEl = refs.floatingEl.value;
+    if (!refEl || !floatEl) {
+      safePolygonActive = false;
+      return;
+    }
+
+    const { clientX, clientY } = e;
+
+    setTimeout(() => {
+      if (currentPolyId !== polygonTimerId) return;
+      if (!safePolygonActive) return;
+
+      polygonPointerMoveHandler = safePolygon(safePolygonOptions.value)({
+        x: clientX,
+        y: clientY,
+        elements: {
+          domReference: refEl,
+          floating: floatEl,
+        },
+        buffer: safePolygonOptions.value?.buffer ?? 1,
+        onClose: () => {
+          clearPolygon();
+          reconcile();
+        },
+      });
+
+      if (polygonPointerMoveHandler) {
+        document.addEventListener("pointermove", polygonPointerMoveHandler);
+      }
+    }, 0);
+  }
 
   // --- Pointer Event Listeners ------------------------------------------------
 
@@ -217,24 +273,25 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   }
 
   function onAnchorPointerEnter(e: PointerEvent): void {
-    if (!isEnabled.value || !isSupportedPointer(e) || isRestMsEnabled.value) return;
+    if (!isEnabled.value || !isSupportedPointer(e)) return;
     clearPolygon();
-    show();
+    pointerInsideAnchor = true;
+    if (restMs.value > 0) {
+      startRestDetection(e);
+    } else {
+      restSatisfied = true;
+    }
+    reconcile();
   }
 
-  function onFloatingPointerEnter(e: PointerEvent): void {
-    if (!isEnabled.value || !isSupportedPointer(e)) return;
-    clearTimeouts();
-    clearPolygon();
-  }
-
-  function onPointerLeave(e: PointerEvent): void {
+  function onAnchorPointerLeave(e: PointerEvent): void {
     if (!isEnabled.value || !isSupportedPointer(e)) return;
 
-    const { clientX, clientY } = e;
+    pointerInsideAnchor = false;
+    cancelRestDetection();
+    dismissedWhileInside = false;
+
     const relatedTarget = e.relatedTarget as Node | null;
-
-    // Spatial family awareness directly from the unified composite node
     if (node.contains(relatedTarget)) {
       return;
     }
@@ -243,41 +300,37 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
       return;
     }
 
-    if (isSafePolygonEnabled.value) {
-      clearPolygon();
-      polygonTimeoutId = setTimeout(() => {
-        polygonTimeoutId = undefined;
-        clearPolygon();
-        const refEl = anchorEl.value;
-        const floatEl = refs.floatingEl.value;
-
-        if (!refEl || !floatEl) {
-          hide();
-          return;
-        }
-
-        polygonPointerMoveHandler = safePolygon(safePolygonOptions.value)({
-          x: clientX,
-          y: clientY,
-          elements: {
-            domReference: refEl,
-            floating: floatEl,
-          },
-          buffer: safePolygonOptions.value?.buffer ?? 1,
-          onClose: () => {
-            clearPolygon();
-            hide();
-          },
-        });
-
-        if (polygonPointerMoveHandler) {
-          document.addEventListener("pointermove", polygonPointerMoveHandler);
-        }
-      }, 0);
-    } else {
-      // Standard logic for standalone usage
-      hide();
+    if (open.value && isSafePolygonEnabled.value) {
+      startSafePolygon(e);
     }
+    reconcile();
+  }
+
+  function onFloatingPointerEnter(e: PointerEvent): void {
+    if (!isEnabled.value || !isSupportedPointer(e)) return;
+    clearPolygon();
+    pointerInsideFloating = true;
+    reconcile();
+  }
+
+  function onFloatingPointerLeave(e: PointerEvent): void {
+    if (!isEnabled.value || !isSupportedPointer(e)) return;
+
+    pointerInsideFloating = false;
+
+    const relatedTarget = e.relatedTarget as Node | null;
+    if (node.contains(relatedTarget)) {
+      return;
+    }
+
+    if (options.ignorePointerLeave?.(relatedTarget)) {
+      return;
+    }
+
+    if (open.value && isSafePolygonEnabled.value) {
+      startSafePolygon(e);
+    }
+    reconcile();
   }
 
   watchPostEffect(() => {
@@ -285,12 +338,19 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     if (!el || !isEnabled.value) return;
 
     el.addEventListener("pointerenter", onAnchorPointerEnter);
-    el.addEventListener("pointerleave", onPointerLeave);
+    el.addEventListener("pointermove", onRestPointerMove);
+    el.addEventListener("pointerleave", onAnchorPointerLeave);
+    el.addEventListener("pointercancel", onAnchorPointerLeave);
 
     onWatcherCleanup(() => {
-      clearTimeouts();
+      cancelRestDetection();
+      clearPolygon();
+      pointerInsideAnchor = false;
+      transitionId++;
       el.removeEventListener("pointerenter", onAnchorPointerEnter);
-      el.removeEventListener("pointerleave", onPointerLeave);
+      el.removeEventListener("pointermove", onRestPointerMove);
+      el.removeEventListener("pointerleave", onAnchorPointerLeave);
+      el.removeEventListener("pointercancel", onAnchorPointerLeave);
     });
   });
 
@@ -299,12 +359,25 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     if (!el || !isEnabled.value) return;
 
     el.addEventListener("pointerenter", onFloatingPointerEnter);
-    el.addEventListener("pointerleave", onPointerLeave);
+    el.addEventListener("pointerleave", onFloatingPointerLeave);
+    el.addEventListener("pointercancel", onFloatingPointerLeave);
 
     onWatcherCleanup(() => {
+      clearPolygon();
+      pointerInsideFloating = false;
       el.removeEventListener("pointerenter", onFloatingPointerEnter);
-      el.removeEventListener("pointerleave", onPointerLeave);
+      el.removeEventListener("pointerleave", onFloatingPointerLeave);
+      el.removeEventListener("pointercancel", onFloatingPointerLeave);
     });
+  });
+
+  tryOnScopeDispose(() => {
+    transitionId++;
+    cancelRestDetection();
+    clearPolygon();
+    pointerInsideAnchor = false;
+    pointerInsideFloating = false;
+    dismissedWhileInside = false;
   });
 }
 

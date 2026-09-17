@@ -589,6 +589,99 @@ describe("useHover", () => {
       await nextTick();
       expect(ctx.node.open.value).toBe(false);
     });
+
+    it("does not re-open when dismissed externally while cursor remains on anchor until re-entry", async () => {
+      const ctx = await renderHover({ delay: { open: 50 } });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      vi.advanceTimersByTime(50);
+      expect(ctx.node.open.value).toBe(true);
+
+      // External dismissal (e.g., Escape pressed or outside click) while pointer stays inside anchor
+      ctx.node.open.value = false;
+      await nextTick();
+      expect(ctx.node.open.value).toBe(false);
+
+      // Moving or waiting inside the anchor does not re-open
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 20, clientY: 20 }));
+      vi.advanceTimersByTime(200);
+      await nextTick();
+      expect(ctx.node.open.value).toBe(false);
+
+      // Leaving and re-entering restores hover opening
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", { relatedTarget: document.body }),
+      );
+      await nextTick();
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      vi.advanceTimersByTime(50);
+      expect(ctx.node.open.value).toBe(true);
+    });
+
+    it("cancels pending close delay when returning to anchor while open without scheduling open delay", async () => {
+      const ctx = await renderHover({ delay: { open: 200, close: 100 } });
+
+      // Open initial tooltip
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      vi.advanceTimersByTime(200);
+      expect(ctx.node.open.value).toBe(true);
+
+      // Move into floating element
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
+      );
+      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+
+      // Leave floating element towards anchor (starts 100ms close delay)
+      ctx.floatingEl.dispatchEvent(
+        makePointerEvent("pointerleave", { relatedTarget: ctx.anchorEl }),
+      );
+      await nextTick();
+      vi.advanceTimersByTime(40); // 40ms into 100ms close delay
+
+      // Re-enter anchor element: close delay cancelled, surface stays open
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+
+      // Even after 100ms total, it stays open (close timer was cancelled)
+      vi.advanceTimersByTime(100);
+      expect(ctx.node.open.value).toBe(true);
+    });
+
+    it("handles pointercancel on anchor and floating element similarly to pointerleave", async () => {
+      const ctx = await renderHover();
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
+
+      // System interrupts with pointercancel on anchor
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointercancel"));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(false);
+
+      // Re-enter and move to floating element
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
+
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
+      );
+      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(true);
+
+      // Pointercancel on floating element
+      ctx.floatingEl.dispatchEvent(makePointerEvent("pointercancel"));
+      await nextTick();
+      expect(ctx.node.open.value).toBe(false);
+    });
   });
 
   describe("safePolygon behavior", () => {
@@ -633,6 +726,34 @@ describe("useHover", () => {
       vi.runAllTimers();
       await nextTick();
 
+      expect(ctx.node.open.value).toBe(false);
+    });
+
+    it("does not initiate safe polygon if reference is left before opening", async () => {
+      const onPolygonChange = vi.fn();
+      const ctx = await renderHover({
+        delay: { open: 100 },
+        safePolygon: { onPolygonChange },
+      });
+
+      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      vi.advanceTimersByTime(30);
+      expect(ctx.node.open.value).toBe(false);
+
+      // On initial pointerenter, clearPolygon resets polygon to []
+      expect(onPolygonChange).toHaveBeenCalledTimes(1);
+      expect(onPolygonChange).toHaveBeenLastCalledWith([]);
+
+      ctx.anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", { relatedTarget: document.body }),
+      );
+      vi.advanceTimersByTime(10);
+      await nextTick();
+
+      // Safe polygon is never initiated because tooltip was never opened
+      expect(onPolygonChange).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(100);
       expect(ctx.node.open.value).toBe(false);
     });
   });
