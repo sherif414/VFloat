@@ -99,23 +99,6 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     restTimeoutId = undefined;
   }
 
-  function onRestPointerMove(e: PointerEvent): void {
-    if (!isEnabled.value || !isSupportedPointer(e) || !isRestMsEnabled.value) return;
-    if (!restCoords) return;
-    const newCoords = { x: e.clientX, y: e.clientY };
-
-    const dx = Math.abs(newCoords.x - restCoords.x);
-    const dy = Math.abs(newCoords.y - restCoords.y);
-
-    if (dx > POINTER_MOVE_THRESHOLD || dy > POINTER_MOVE_THRESHOLD) {
-      restCoords = newCoords;
-      clearRestTimeout();
-      restTimeoutId = setTimeout(() => {
-        show(0);
-      }, restMs.value);
-    }
-  }
-
   function onRestPointerEnter(e: PointerEvent): void {
     if (!isEnabled.value || !isSupportedPointer(e) || !isRestMsEnabled.value) return;
     restCoords = { x: e.clientX, y: e.clientY };
@@ -125,7 +108,30 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
     }, restMs.value);
   }
 
-  function onRestPointerLeave(): void {
+  function onRestPointerMove(e: PointerEvent): void {
+    if (
+      open.value ||
+      !restCoords ||
+      !isEnabled.value ||
+      !isSupportedPointer(e) ||
+      !isRestMsEnabled.value
+    ) {
+      return;
+    }
+
+    const dx = Math.abs(e.clientX - restCoords.x);
+    const dy = Math.abs(e.clientY - restCoords.y);
+
+    if (dx > POINTER_MOVE_THRESHOLD || dy > POINTER_MOVE_THRESHOLD) {
+      restCoords = { x: e.clientX, y: e.clientY };
+      clearRestTimeout();
+      restTimeoutId = setTimeout(() => {
+        show(0);
+      }, restMs.value);
+    }
+  }
+
+  function restMsCleanup(): void {
     clearRestTimeout();
     restCoords = null;
   }
@@ -136,17 +142,17 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
     el.addEventListener("pointerenter", onRestPointerEnter);
     el.addEventListener("pointermove", onRestPointerMove);
-    el.addEventListener("pointerleave", onRestPointerLeave);
+    el.addEventListener("pointerleave", restMsCleanup);
 
     onWatcherCleanup(() => {
-      clearRestTimeout();
+      restMsCleanup();
       el.removeEventListener("pointerenter", onRestPointerEnter);
       el.removeEventListener("pointermove", onRestPointerMove);
-      el.removeEventListener("pointerleave", onRestPointerLeave);
+      el.removeEventListener("pointerleave", restMsCleanup);
     });
   });
 
-  tryOnScopeDispose(clearRestTimeout);
+  tryOnScopeDispose(restMsCleanup);
 
   // --- Safe Polygon Corridor --------------------------------------------------
 
@@ -183,6 +189,10 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   // --- Pointer Event Listeners ------------------------------------------------
 
   function isSupportedPointer(e: PointerEvent): boolean {
+    if (e.pointerType === "touch") {
+      return false;
+    }
+
     if (toValue(options.mouseOnly ?? false)) {
       return e.pointerType === "mouse";
     }
