@@ -114,7 +114,7 @@ When you omit `open`, `useFloatingNode` creates an internal `ref(defaultOpen ?? 
 
 ### Spatial Containment (`node.contains`)
 
-`node.contains(target)` determines if an event target belongs to the floating surface or any of its open descendants. Interaction composables such as [`useDismiss`](/api/use-dismiss) and [`useHover`](/api/use-hover) rely on `node.contains` to prevent premature dismissals when interacting with nested submenus or child panels.
+`node.contains(target)` determines if an event target belongs to the floating surface or any of its open descendants. Interaction composables such as [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useHover`](/api/use-hover) rely on `node.contains` to prevent premature dismissals when interacting with nested submenus or child panels.
 
 ## Examples
 
@@ -126,7 +126,7 @@ In multi-component architectures, submenus automatically discover and register w
 <!-- RootMenu.vue -->
 <script setup lang="ts">
 import { ref } from "vue";
-import { useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 import SubMenu from "./SubMenu.vue";
 
 const anchorEl = ref<HTMLElement | null>(null);
@@ -135,7 +135,8 @@ const floatingEl = ref<HTMLElement | null>(null);
 // Automatically provides this node to child components
 const node = useFloatingNode({ anchorEl, floatingEl });
 usePosition(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 </script>
 
 <template>
@@ -150,7 +151,7 @@ useDismiss(node);
 <!-- SubMenu.vue -->
 <script setup lang="ts">
 import { ref } from "vue";
-import { useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -158,7 +159,8 @@ const floatingEl = ref<HTMLElement | null>(null);
 // Omitted parent defaults to DI: automatically injects RootMenu node
 const subNode = useFloatingNode({ anchorEl, floatingEl });
 usePosition(subNode, { placement: "right-start" });
-useDismiss(subNode);
+useOutsideClick(subNode);
+useEscapeKey(subNode);
 </script>
 
 <template>
@@ -176,7 +178,7 @@ In flat single-component scripts where submenus are defined in the same `<script
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const rootAnchorEl = ref<HTMLElement | null>(null);
 const rootFloatingEl = ref<HTMLElement | null>(null);
@@ -188,14 +190,17 @@ const sub = useFloatingNode({ anchorEl: subAnchorEl, floatingEl: subFloatingEl, 
 
 usePosition(root);
 usePosition(sub, { placement: "right-start" });
-useDismiss(root);
-useDismiss(sub);
+useOutsideClick(root);
+useEscapeKey(root);
+useOutsideClick(sub);
+useEscapeKey(sub);
 </script>
 ```
 
 ## See Also
 
 - [`usePosition`](/api/use-position) - Add reactive coordinate calculations
-- [`useDismiss`](/api/use-dismiss) - Coordinate outside clicks and Escape key dismissals across node hierarchies
+- [`useOutsideClick`](/api/use-outside-click) - Coordinate outside clicks across node hierarchies
+- [`useEscapeKey`](/api/use-escape-key) - Coordinate leaf-first Escape key dismissals across node hierarchies
 - [`useClick`](/api/use-click) - Toggle open state on click or tap
 - [Floating Node](/guide/floating-node) - Conceptual guide to floating nodes

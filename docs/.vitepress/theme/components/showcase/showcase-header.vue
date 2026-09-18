@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Placement } from "v-float";
-import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import type { PresetType, ShowcasePresetMeta } from "./types";
 
@@ -142,7 +142,8 @@ const placementPosition = usePosition(placementContext, {
 });
 
 useClick(placementContext);
-useDismiss(placementContext);
+useOutsideClick(placementContext);
+useEscapeKey(placementContext);
 
 function selectPlacementOption(val: Placement) {
   emit("update:placement", val);

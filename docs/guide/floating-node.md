@@ -42,7 +42,7 @@ It includes:
 
 The open state is a standard mutable Vue `Ref<boolean>`.
 
-Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), and [`useDismiss`](/api/use-dismiss) all coordinate through this same open state by setting `node.open.value = true` or `node.open.value = false`.
+Interaction composables such as [`useHover`](/api/use-hover), [`useClick`](/api/use-click), [`useFocus`](/api/use-focus), [`useOutsideClick`](/api/use-outside-click), and [`useEscapeKey`](/api/use-escape-key) all coordinate through this same open state by setting `node.open.value = true` or `node.open.value = false`.
 
 ## Positioning lives next to the node
 

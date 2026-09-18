@@ -27,7 +27,7 @@ Here is a minimal tooltip that ties these three parts together:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useDismiss, useFloatingNode, usePosition, useHover } from "v-float";
+import { useEscapeKey, useFloatingNode, usePosition, useHover } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -43,7 +43,7 @@ usePosition(node, {
 
 // 3. WHEN: manage visibility based on user input
 useHover(node);
-useDismiss(node, { outsidePress: false });
+useEscapeKey(node);
 </script>
 
 <template>
@@ -61,11 +61,12 @@ Because both composables plug into the same `node`, they work together automatic
 
 You won't find a `<Menu>` component or a `useTooltip()` composable in VFloat. That's intentional. Instead, you get a set of focused composables that you mix and match to build whatever you need.
 
-Want to turn the tooltip from above into a popover? Swap hover for click, and add outside-click dismissal:
+Want to turn the tooltip from above into a popover? Swap hover for click, and add outside-click dismissal and Escape key handling:
 
 ```ts
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 ```
 
 Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
@@ -74,7 +75,8 @@ Building a dropdown menu? Keep the click trigger and add roving keyboard focus:
 const itemEls = shallowRef<(HTMLElement | null)[]>([]);
 
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 useRovingFocus(node, { elementsList: itemEls });
 ```
 
@@ -83,7 +85,8 @@ Need a modal dialog? Add focus management to trap focus inside the dialog while 
 ```ts
 useClick(node);
 useFocusTrap(node, { modal: true });
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 ```
 
 ## Relationship to Floating UI

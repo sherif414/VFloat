@@ -22,14 +22,9 @@ export type {
 } from "./client-point/use-client-point";
 // Client Point
 export { useClientPoint } from "./client-point/use-client-point";
-export type {
-  UseDismissContext,
-  UseDismissEscapeOptions,
-  UseDismissOptions,
-  UseDismissOutsideOptions,
-} from "./dismiss";
-// Dismiss
-export { useDismiss } from "./dismiss";
+export type { UseEscapeKeyContext, UseEscapeKeyOptions } from "./escape-key";
+// Escape Key
+export { useEscapeKey } from "./escape-key";
 export type {
   AnchorElement,
   FloatingElement,
@@ -80,6 +75,13 @@ export {
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";
+export type {
+  OutsideClickPredicate,
+  UseOutsideClickContext,
+  UseOutsideClickOptions,
+} from "./outside-click";
+// Outside Click
+export { useOutsideClick } from "./outside-click";
 export type {
   ApplyStylesFn,
   FloatingMiddlewareRegistry,

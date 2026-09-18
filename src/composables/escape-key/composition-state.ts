@@ -31,7 +31,6 @@ export function useComposition() {
   if (getCurrentScope()) {
     onScopeDispose(() => {
       state.consumers -= 1;
-
       if (state.consumers <= 0) {
         state.scope.stop();
         sharedCompositionState = undefined;

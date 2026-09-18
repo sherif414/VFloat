@@ -40,7 +40,7 @@ Rather than creating a separate coordinator component, every menu level is a `Fl
 ```
 
 1. **Composite linking:** Submenus automatically discover their parent node through Dependency Injection (`provide` / `inject`).
-2. **Family-aware interactions:** [`useDismiss`](/api/use-dismiss) and [`useHover`](/api/use-hover) use `node.contains()` to treat child submenus as internal to the parent, preventing accidental dismissals.
+2. **Family-aware interactions:** [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useHover`](/api/use-hover) use `node.contains()` to treat child submenus as internal to the parent, preventing accidental dismissals.
 3. **Safe cursor corridors:** [`useHover`](/api/use-hover) with `safePolygon: true` keeps the submenu open while the cursor travels diagonally toward the submenu panel.
 4. **Intent-driven navigation:** [`useRovingFocus`](/api/use-roving-focus) fires `onEnter` (`ArrowRight`) to open the child submenu and `onExit` (`ArrowLeft`) to collapse back to the parent trigger.
 5. **Leaf-first Escape:** Pressing `Escape` closes the innermost open submenu first with zero global event maps.
@@ -138,7 +138,7 @@ useClick(rootNode);
 ```vue
 <script setup lang="ts">
 import { inject, ref, shallowRef, watchEffect, provide } from "vue";
-import { useDismiss, useRovingFocus } from "v-float";
+import { useEscapeKey, useOutsideClick, useRovingFocus } from "v-float";
 
 const { rootNode } = inject<any>("MenuRootContext");
 const contentRef = ref<HTMLDivElement | null>(null);
@@ -153,7 +153,8 @@ const { getTabindex } = useRovingFocus(rootNode, {
   loop: true,
 });
 
-useDismiss(rootNode);
+useOutsideClick(rootNode);
+useEscapeKey(rootNode);
 
 provide("MenuLevelContext", { node: rootNode, getTabindex, itemEls });
 </script>
@@ -231,7 +232,7 @@ useHover(subNode, {
 ```vue
 <script setup lang="ts">
 import { inject, provide, ref, shallowRef, watchEffect } from "vue";
-import { useDismiss, usePosition, useRovingFocus } from "v-float";
+import { useEscapeKey, useOutsideClick, usePosition, useRovingFocus } from "v-float";
 
 const { subNode } = inject<any>("MenuSubContext");
 const contentRef = ref<HTMLDivElement | null>(null);
@@ -255,7 +256,8 @@ const { getTabindex } = useRovingFocus(subNode, {
   },
 });
 
-useDismiss(subNode);
+useOutsideClick(subNode);
+useEscapeKey(subNode);
 
 provide("MenuLevelContext", { node: subNode, getTabindex, itemEls });
 </script>
@@ -278,7 +280,7 @@ If you prefer defining nested menus within a single flat `<script setup>`, link 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode, useHover, usePosition, useRovingFocus } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useHover, useOutsideClick, usePosition, useRovingFocus } from "v-float";
 
 const rootAnchorEl = ref<HTMLElement | null>(null);
 const rootFloatingEl = ref<HTMLElement | null>(null);
@@ -298,11 +300,13 @@ const subPos = usePosition(sub, { placement: "right-start" });
 
 // 3. Add interactions
 useClick(root);
-useDismiss(root);
+useOutsideClick(root);
+useEscapeKey(root);
 useRovingFocus(root, { elementsList: rootItems });
 
 useHover(sub, { delay: { open: 100, close: 200 }, safePolygon: true });
-useDismiss(sub);
+useOutsideClick(sub);
+useEscapeKey(sub);
 useRovingFocus(sub, {
   elementsList: subItems,
   onExit: () => {
@@ -316,7 +320,7 @@ useRovingFocus(sub, {
 
 ## Edge Cases Solved
 
-- **Outside Click Safety:** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useDismiss`](/api/use-dismiss) invokes `node.contains(target)`, which recursively checks open descendants.
+- **Outside Click Safety:** Clicking inside a teleported child submenu does not dismiss the parent menu because [`useOutsideClick`](/api/use-outside-click) invokes `node.contains(target)`, which recursively checks open descendants.
 - **Deepest Escape First:** Pressing `Escape` dismisses only the innermost active submenu first through the deterministic leaf-first Escape protocol.
 - **Cascading Teardown:** When the root menu closes, you can tear down all open descendants using `rootNode.traverse((node) => node.open.value = false, { order: "bottom-up" })`.
 - **Safe Traversal Corridor:** Moving the cursor diagonally across sibling items to enter the submenu is protected by `useHover({ safePolygon: true })`.

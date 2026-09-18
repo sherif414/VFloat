@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, effectScope, h, nextTick, ref, shallowRef } from "vue";
 import { clearTrackedElements, trackElement } from "@/test-utils";
-import { useDismiss } from "@/composables/dismiss/use-dismiss";
+import { useEscapeKey } from "@/composables/escape-key";
 import { type FloatingNode, useFloatingNode } from "./use-floating-node";
 
 let scope: ReturnType<typeof effectScope> | undefined;
@@ -633,9 +633,9 @@ describe("useFloatingNode", () => {
             parent: child,
           });
 
-          useDismiss(root);
-          useDismiss(child);
-          useDismiss(grandchild);
+          useEscapeKey(root);
+          useEscapeKey(child);
+          useEscapeKey(grandchild);
 
           return () => h("div", "Hierarchy");
         },

@@ -18,11 +18,12 @@ Examples:
 
 - [`useHover`](/api/use-hover) reacts to pointer movement
 - [`useClick`](/api/use-click) reacts to anchor activation
-- [`useDismiss`](/api/use-dismiss) reacts to Escape and outside pointer input through one gate
+- [`useOutsideClick`](/api/use-outside-click) reacts to pointer input outside the floating family
+- [`useEscapeKey`](/api/use-escape-key) reacts to Escape key presses with leaf-first tree coordination
 - [`useFocus`](/api/use-focus) reacts to focus and blur
 - [`useFocusTrap`](/api/use-focus-trap) orchestrates focus while open
 
-[`useDismiss`](/api/use-dismiss) is itself a thin grouping over the internal Escape and outside-press channels. Reach for it by default; disable the channel you do not need with `escapeKey: false` or `outsidePress: false`.
+`useOutsideClick` and `useEscapeKey` are decoupled primitives. Mix and match them based on the exact UX requirements of your surface (e.g. tooltips typically only need `useEscapeKey`, whereas modals and dropdowns usually use both).
 
 ## One node, many behaviors
 
@@ -39,7 +40,7 @@ This example shows a common click-driven combination:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -47,11 +48,12 @@ const floatingEl = ref<HTMLElement | null>(null);
 const node = useFloatingNode({ anchorEl, floatingEl });
 
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 </script>
 ```
 
-`useDismiss(node)` closes on Escape and outside pointer input with one shared `enabled` gate and intrinsic family awareness. When a surface needs only one channel, disable the other (`useDismiss(node, { outsidePress: false })`).
+`useOutsideClick(node)` closes when the user interacts outside the surface (with built-in family awareness so clicking inside child submenus won't dismiss the parent). `useEscapeKey(node)` dismisses on Escape, respecting IME composition and nested tree hierarchy.
 
 ## Where to go next
 

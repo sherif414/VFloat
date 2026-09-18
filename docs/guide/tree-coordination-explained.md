@@ -34,7 +34,7 @@ Every floating surface is created with [`useFloatingNode`](/api/use-floating-nod
          (el.contains(target))               (child.contains(target))
 ```
 
-Because hierarchy is built directly into `FloatingNode`, companion composables ([`useDismiss`](/api/use-dismiss), [`useHover`](/api/use-hover), [`useFocusTrap`](/api/use-focus-trap), [`useRovingFocus`](/api/use-roving-focus)) interact with a uniform contract without branching on tree existence.
+Because hierarchy is built directly into `FloatingNode`, companion composables ([`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`useHover`](/api/use-hover), [`useFocusTrap`](/api/use-focus-trap), [`useRovingFocus`](/api/use-roving-focus)) interact with a uniform contract without branching on tree existence.
 
 ---
 
@@ -109,7 +109,7 @@ const standaloneNode = useFloatingNode({
 
 ### Teleportation-Safe Outside Clicks
 
-When a user clicks inside a child submenu teleported to `<body>`, the parent's [`useDismiss`](/api/use-dismiss) outside-press handler calls `node.contains(target)`.
+When a user clicks inside a child submenu teleported to `<body>`, the parent's [`useOutsideClick`](/api/use-outside-click) handler calls `node.contains(target)`.
 
 `node.contains` first tests the fast-path physical DOM element. If the target is not in the local DOM, it recursively queries open child nodes. Because the child is linked in the composite hierarchy, the click is recognized as internal, keeping the parent open.
 

@@ -43,7 +43,7 @@ When the parent needs to read or react to the open state directly in its own log
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -56,7 +56,8 @@ const node = useFloatingNode({
 });
 
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 
 // To change the state programmatically, update the ref or node.open
 function close() {

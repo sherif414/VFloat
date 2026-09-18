@@ -11,7 +11,7 @@ of [@floating-ui/dom](https://floating-ui.com/) with Vue 3 Composition API.
 
 - **Precise Positioning**: Pixel-perfect positioning with automatic collision detection
 - **Vue 3 Composables**: Reactive composables designed for the Composition API
-- **Interaction Handling**: Built-in hover, focus, click, and dismiss behaviors
+- **Interaction Handling**: Built-in hover, focus, click, outside click, and escape key behaviors
 - **Arrow Positioning**: `useArrow` composable for positioning arrow elements
 - **Lightweight**: Tree-shakable with minimal bundle impact (~14.7 kB min+gzip for the entire suite)
 - **Cross-platform**: Works on desktop, mobile, and touch devices
@@ -22,12 +22,6 @@ of [@floating-ui/dom](https://floating-ui.com/) with Vue 3 Composition API.
 ```bash
 # With pnpm (recommended)
 pnpm add v-float
-
-# With npm
-npm install v-float
-
-# With yarn
-yarn add v-float
 ```
 
 ## Quick Start
@@ -39,10 +33,10 @@ yarn add v-float
 import { useTemplateRef } from "vue";
 import { useFloatingNode, usePosition, useHover } from "v-float";
 
-const anchorEl = useTemplateRef("anchorEl");
-const floatingEl = useTemplateRef("floatingEl");
+const triggerEl = useTemplateRef("triggerEl");
+const tooltipEl = useTemplateRef("tooltipEl");
 
-const context = useFloatingNode({ anchorEl, floatingEl });
+const context = useFloatingNode({ anchorEl: triggerEl, floatingEl: tooltipEl });
 const { styles } = usePosition(context, {
   placement: "top",
   middlewares: { offset: 8 },
@@ -52,9 +46,11 @@ useHover(context);
 </script>
 
 <template>
-  <button ref="anchorEl">Hover me</button>
+  <button ref="triggerEl">Hover me</button>
 
-  <div v-if="context.open" ref="floatingEl" :style="styles">This is a tooltip</div>
+  <div v-if="context.open" ref="tooltipEl" :style="styles">
+    Tooltip Content
+  </div>
 </template>
 ```
 
@@ -63,7 +59,7 @@ useHover(context);
 ```vue
 <script setup lang="ts">
 import { useTemplateRef } from "vue";
-import { useFloatingNode, usePosition, useClick, useDismiss } from "v-float";
+import { useFloatingNode, usePosition, useClick, useOutsideClick, useEscapeKey } from "v-float";
 
 const triggerEl = useTemplateRef("triggerEl");
 const menuEl = useTemplateRef("menuEl");
@@ -75,7 +71,8 @@ const { styles } = usePosition(context, {
 });
 
 useClick(context);
-useDismiss(context);
+useOutsideClick(context);
+useEscapeKey(context);
 </script>
 
 <template>
@@ -158,7 +155,8 @@ const { arrowStyles } = useArrow(context, {
 - `**useHover**`: Hover interactions with configurable delays and safe polygon
 - `**useFocus**`: Focus/blur event handling for keyboard navigation
 - `**useFocusTrap**`: Initial focus, modal trapping, guards, and return focus
-- `**useDismiss**`: Closes floating content on Escape and outside input through one gate
+- `**useOutsideClick**`: Closes floating content on outside pointer interactions
+- `**useEscapeKey**`: Closes floating content on Escape key presses with IME and tree hierarchy coordination
 - `**useRole**`: Synchronizes ARIA roles and states for floating surfaces
 
 ### Keyboard Navigation

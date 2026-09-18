@@ -1,11 +1,11 @@
 import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
 import { useComposition } from "./composition-state";
 import {
-  type DismissEntry,
-  pushDismissEntry,
-  removeDismissEntry,
-  resolveActiveDismissEntry,
-} from "./dismiss-stack";
+  type EscapeEntry,
+  pushEscapeEntry,
+  removeEscapeEntry,
+  resolveActiveEscapeEntry,
+} from "./escape-stack";
 import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
@@ -16,34 +16,31 @@ import { useEventListener } from "@/shared/use-event-listener";
 //=======================================================================================
 
 /**
- * A composable to handle the escape key press with composition event handling.
+ * Closes a floating node when the user presses the Escape key.
  *
- * When triggered, it will close the floating element by setting open to false.
+ * Coordinates across nested tree hierarchies (leaf-first unwinding), stacked
+ * independent overlays (LIFO order), and ignores Escape during IME text composition.
  *
- * @internal Consumed by `useDismiss`. Use `useDismiss(node, { escapeKey })` instead.
- *
- * @param node - The floating node with open state and change handler.
- * @param options - {@link UseEscapeKeyOptions}
+ * @param node - The floating node with open state and element refs.
+ * @param options - Configuration options for Escape key dismissal.
  *
  * @example Basic usage
  * ```ts
- * const node = useFloatingNode(...)
- * useDismiss(node) // Closes the floating element on escape
+ * const node = useFloatingNode({ anchorEl, floatingEl });
+ * useEscapeKey(node);
  * ```
  *
  * @example Custom handler
  * ```ts
- * useDismiss(node, {
- *   escapeKey: {
- *     onEscape: (event) => {
- *       if (hasUnsavedChanges.value) {
- *         showConfirmDialog.value = true
- *       } else {
- *         node.open.value = false
- *       }
- *     },
+ * useEscapeKey(node, {
+ *   onEscape: (event) => {
+ *     if (hasUnsavedChanges.value) {
+ *       showConfirmDialog.value = true;
+ *     } else {
+ *       node.open.value = false;
+ *     }
  *   },
- * })
+ * });
  * ```
  */
 export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = {}): void {
@@ -58,7 +55,7 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
       getDocument(),
   );
 
-  const entry: DismissEntry = { node };
+  const entry: EscapeEntry = { node };
 
   watch(
     () => [isEnabled.value, open.value],
@@ -68,9 +65,9 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
       const doc = ownerDoc.value;
       if (!doc) return;
 
-      pushDismissEntry(doc, entry);
+      pushEscapeEntry(doc, entry);
       onCleanup(() => {
-        removeDismissEntry(doc, entry);
+        removeEscapeEntry(doc, entry);
       });
     },
     { immediate: true, flush: "sync" },
@@ -94,7 +91,7 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
     const doc = ownerDoc.value;
     if (!doc) return;
 
-    const activeNode = resolveActiveDismissEntry(doc, event.target);
+    const activeNode = resolveActiveEscapeEntry(doc, event.target);
     if (!activeNode || activeNode.id !== node.id) {
       return;
     }
@@ -121,6 +118,14 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
 // 📌 Types
 //=======================================================================================
 
+/**
+ * Context required by `useEscapeKey`.
+ */
+export type UseEscapeKeyContext = FloatingNode;
+
+/**
+ * Options for configuring Escape key dismissal.
+ */
 export interface UseEscapeKeyOptions {
   /**
    * Condition to enable the escape key listener.

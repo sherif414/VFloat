@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Placement, UsePositionMiddlewaresOptions } from "v-float";
 import { computed, shallowRef, watch } from "vue";
-import { useArrow, useClick, useDismiss, useFloatingNode, usePosition, useRole } from "v-float";
+import { useArrow, useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition, useRole } from "v-float";
 
 interface Props {
   placement: Placement;
@@ -69,7 +69,11 @@ useClick(context, {
   enabled: () => props.isActive && !props.keepOpen,
 });
 
-useDismiss(context, {
+useOutsideClick(context, {
+  enabled: () => props.isActive && !props.keepOpen,
+});
+
+useEscapeKey(context, {
   enabled: () => props.isActive && !props.keepOpen,
 });
 

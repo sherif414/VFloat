@@ -1,7 +1,7 @@
 import type { FloatingNode } from "@/composables/floating-node";
 import { isNode } from "@/shared/dom";
 
-export interface DismissEntry {
+export interface EscapeEntry {
   node: FloatingNode;
 }
 
@@ -9,12 +9,12 @@ export interface DismissEntry {
 // 📌 Main
 //=======================================================================================
 
-const documentStacks = new WeakMap<Document, DismissEntry[]>();
+const documentStacks = new WeakMap<Document, EscapeEntry[]>();
 
 /**
- * Retrieves or initializes the LIFO dismiss stack for a specific document.
+ * Retrieves or initializes the LIFO escape stack for a specific document.
  */
-function getDocumentStack(doc: Document): DismissEntry[] {
+function getDocumentStack(doc: Document): EscapeEntry[] {
   let stack = documentStacks.get(doc);
   if (!stack) {
     stack = [];
@@ -24,9 +24,9 @@ function getDocumentStack(doc: Document): DismissEntry[] {
 }
 
 /**
- * Pushes an open, escape-enabled floating node onto the document's dismiss stack.
+ * Pushes an open, escape-enabled floating node onto the document's escape stack.
  */
-export function pushDismissEntry(doc: Document, entry: DismissEntry): void {
+export function pushEscapeEntry(doc: Document, entry: EscapeEntry): void {
   const stack = getDocumentStack(doc);
   const existingIdx = stack.indexOf(entry);
   if (existingIdx !== -1) {
@@ -36,9 +36,9 @@ export function pushDismissEntry(doc: Document, entry: DismissEntry): void {
 }
 
 /**
- * Removes a floating node from the document's dismiss stack.
+ * Removes a floating node from the document's escape stack.
  */
-export function removeDismissEntry(doc: Document, entry: DismissEntry): void {
+export function removeEscapeEntry(doc: Document, entry: EscapeEntry): void {
   const stack = documentStacks.get(doc);
   if (!stack) return;
   const idx = stack.indexOf(entry);
@@ -55,7 +55,7 @@ export function removeDismissEntry(doc: Document, entry: DismissEntry): void {
  * 2. If target is outside all open hierarchies (e.g. document body or headless tests),
  *    resolves to the topmost open entry on the LIFO stack.
  */
-export function resolveActiveDismissEntry(
+export function resolveActiveEscapeEntry(
   doc: Document,
   target: EventTarget | null,
 ): FloatingNode | null {

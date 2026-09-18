@@ -19,7 +19,7 @@ A dialog usually needs:
 - Explicit semantics such as `role="dialog"` and `aria-modal="true"`
 - Escape key and backdrop dismissal
 
-In VFloat, the core dialog stack pairs [`useFloatingNode`](/api/use-floating-node) with [`useFocusTrap`](/api/use-focus-trap) and [`useDismiss`](/api/use-dismiss).
+In VFloat, the core dialog stack pairs [`useFloatingNode`](/api/use-floating-node) with [`useFocusTrap`](/api/use-focus-trap), [`useEscapeKey`](/api/use-escape-key), and [`useOutsideClick`](/api/use-outside-click).
 
 ## The complete example
 
@@ -28,7 +28,7 @@ Here is a full working modal dialog:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode, useFocusTrap } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useFocusTrap, useOutsideClick } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -36,7 +36,8 @@ const floatingEl = ref<HTMLElement | null>(null);
 const node = useFloatingNode({ anchorEl, floatingEl });
 
 useClick(node);
-useDismiss(node);
+useEscapeKey(node);
+useOutsideClick(node);
 
 useFocusTrap(node, {
   modal: true,

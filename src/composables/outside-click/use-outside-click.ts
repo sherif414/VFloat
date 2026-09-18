@@ -13,26 +13,25 @@ import { useEventListener } from "@/shared/use-event-listener";
 /**
  * Closes a floating node when pointer input lands outside its floating family.
  *
- * @internal Consumed by `useDismiss`. Use `useDismiss(node, { outsidePress })` instead.
+ * Supports nested tree hierarchies (family-aware detection), scrollbar filtering,
+ * drag-gesture suppression, and configurable event triggers.
  *
  * @param node - The floating node with refs and open state.
  * @param options - Configuration options for outside-click dismissal.
  *
  * @example Basic usage
  * ```ts
- * const node = useFloatingNode(...)
- * useDismiss(node)
+ * const node = useFloatingNode({ anchorEl, floatingEl });
+ * useOutsideClick(node);
  * ```
  *
  * @example Ignore a related external element
  * ```ts
- * useDismiss(node, {
- *   outsidePress: {
- *     ignoreClick: (_event, target) => {
- *       return target instanceof Node && !!toolbarEl.value?.contains(target)
- *     },
+ * useOutsideClick(node, {
+ *   ignoreClick: (_event, target) => {
+ *     return target instanceof Node && !!toolbarEl.value?.contains(target);
  *   },
- * })
+ * });
  * ```
  */
 export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOptions = {}): void {
@@ -143,6 +142,11 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/**
+ * Context required by `useOutsideClick`.
+ */
+export type UseOutsideClickContext = FloatingNode;
 
 /**
  * Options for configuring outside-click dismissal.

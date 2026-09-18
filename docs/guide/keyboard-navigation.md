@@ -108,8 +108,9 @@ In this model, DOM focus stays inside a text input or combobox container, allowi
 import { computed, ref, shallowRef } from "vue";
 import {
   useAriaActivedescendant,
-  useDismiss,
+  useEscapeKey,
   useFloatingNode,
+  useOutsideClick,
   usePosition,
   useRole,
 } from "v-float";
@@ -146,7 +147,8 @@ usePosition(node, {
   },
 });
 
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 
 const filteredOptions = computed(() =>
   options.value.filter((o) => o.label.toLowerCase().includes(query.value.toLowerCase())),

@@ -15,7 +15,7 @@ Here is the full working component before we break it down:
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -29,7 +29,8 @@ usePosition(node, {
 });
 
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 </script>
 
 <template>
@@ -63,19 +64,21 @@ Just like the tooltip, [`useFloatingNode`](/api/use-floating-node) creates the s
 
 [`usePosition`](/api/use-position) places the popover panel below the button aligned with its start edge (`"bottom-start"`), with an 8-pixel gap provided by [`offset`](/api/offset), and applies the positioning styles automatically to `floatingEl`.
 
-## Swapping hover for click and dismissal
+## Swapping hover for click, outside click, and Escape
 
 ```ts
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 ```
 
 This is where the popover departs from the tooltip:
 
 - **[`useClick`](/api/use-click)** toggles `node.open` when the anchor button is clicked, and prevents double-triggers on keyboard activation.
-- **[`useDismiss`](/api/use-dismiss)** listens for outside pointer input and Escape key presses through one shared gate, closing the popover when the user moves away or presses Escape.
+- **[`useOutsideClick`](/api/use-outside-click)** listens for pointer interactions outside the popover family, closing the surface when the user clicks away.
+- **[`useEscapeKey`](/api/use-escape-key)** listens for Escape key presses, closing the popover while respecting IME text composition.
 
-Both composables plug into the same `node`, so they share the exact same open state without manual event plumbing.
+All three composables plug into the same `node`, so they share the exact same open state without manual event plumbing.
 
 ## The template bindings
 

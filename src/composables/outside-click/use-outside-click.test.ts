@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
-import { type FloatingNode, useFloatingNode } from "@/composables";
+import { type FloatingNode, useFloatingNode } from "@/composables/floating-node";
 import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
 

@@ -6,7 +6,7 @@ description: Opens and closes floating content on click, tap, or keyboard activa
 
 `useClick` toggles or opens a floating surface in response to pointer clicks, touchscreen taps, and keyboard activation on the anchor element.
 
-It attaches listeners directly to the anchor element (or context element for virtual anchors) and updates `node.open.value`. Pair it with [`useDismiss`](/api/use-dismiss) when the surface should close on outside clicks or Escape key presses.
+It attaches listeners directly to the anchor element (or context element for virtual anchors) and updates `node.open.value`. Pair it with [`useOutsideClick`](/api/use-outside-click) and [`useEscapeKey`](/api/use-escape-key) when the surface should close on outside clicks or Escape key presses.
 
 ## Type
 
@@ -74,7 +74,7 @@ When `ignoreKeyboard` is `false` (the default):
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -90,7 +90,8 @@ usePosition(node, {
 });
 
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 </script>
 
 <template>
@@ -107,7 +108,8 @@ useDismiss(node);
 ## See Also
 
 - [`useHover`](/api/use-hover) - Open on pointer hover with delay and safe polygon tracking
-- [`useDismiss`](/api/use-dismiss) - Dismiss on Escape key and outside pointer interactions
+- [`useOutsideClick`](/api/use-outside-click) - Close on outside pointer interactions
+- [`useEscapeKey`](/api/use-escape-key) - Close on Escape key press
 - [`useFocus`](/api/use-focus) - Open on keyboard focus and close on blur
 - [`useFloatingNode`](/api/use-floating-node) - Shared node coordinating element refs and open state
 - [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) - Click and dismissal workflow

@@ -29,7 +29,8 @@ describe("SSR Compatibility (Node Environment)", () => {
         VFloat.useHover(node);
         VFloat.useFocus(node);
         VFloat.useFocusTrap(node, { modal: true });
-        VFloat.useDismiss(node);
+        VFloat.useEscapeKey(node);
+        VFloat.useOutsideClick(node);
         VFloat.useRole(node, { role: "menu", label: "Actions" });
         VFloat.useArrow(node);
         VFloat.useClientPoint(node);
@@ -114,8 +115,10 @@ describe("SSR Compatibility (Node Environment)", () => {
 
         VFloat.usePosition(parentNode);
         VFloat.usePosition(childNode);
-        VFloat.useDismiss(parentNode);
-        VFloat.useDismiss(childNode);
+        VFloat.useEscapeKey(parentNode);
+        VFloat.useOutsideClick(parentNode);
+        VFloat.useEscapeKey(childNode);
+        VFloat.useOutsideClick(childNode);
 
         return () =>
           h("div", [

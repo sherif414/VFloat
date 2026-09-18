@@ -76,7 +76,7 @@ interface UseFocusTrapReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useDismiss, useFloatingNode, useFocusTrap, useRole } from "v-float";
+import { useEscapeKey, useFloatingNode, useFocusTrap, useOutsideClick, useRole } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -90,7 +90,8 @@ useFocusTrap(node, {
   returnFocus: true,
 });
 
-useDismiss(node);
+useEscapeKey(node);
+useOutsideClick(node);
 useRole(node, { role: "dialog", modal: true });
 </script>
 
@@ -130,7 +131,8 @@ useRole(node, { role: "dialog", modal: true });
 
 ## See Also
 
-- [`useDismiss`](/api/use-dismiss) - Close on Escape or backdrop click
+- [`useEscapeKey`](/api/use-escape-key) - Close on Escape key press
+- [`useOutsideClick`](/api/use-outside-click) - Close on outside or backdrop click
 - [`useRole`](/api/use-role) - Apply `role="dialog"` and `aria-modal="true"`
 - [`useFloatingNode`](/api/use-floating-node) - Shared node lifecycle
 - [Build Dialogs and Modals](/guide/build-dialogs-and-modals) - Full modal implementation guide

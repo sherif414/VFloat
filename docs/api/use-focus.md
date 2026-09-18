@@ -94,5 +94,5 @@ useRole(node, { role: "tooltip" });
 
 - [`useHover`](/api/use-hover) - Pointer hover trigger
 - [`useRole`](/api/use-role) - ARIA role and `aria-describedby` synchronization
-- [`useDismiss`](/api/use-dismiss) - Dismissal on Escape key
+- [`useEscapeKey`](/api/use-escape-key) - Dismissal on Escape key
 - [Build Accessible Tooltips](/guide/build-accessible-tooltips) - Complete tooltip pattern guide

@@ -15,11 +15,11 @@ Pick the combination of composables and middleware that matches your interface p
 | Interface Pattern | Primary Composables | Suggested Middleware | Guide |
 | --- | --- | --- | --- |
 | **Tooltip** | [`useFloatingNode`](/api/use-floating-node), [`useHover`](/api/use-hover), [`usePosition`](/api/use-position) | `offset`, `flip`, `shift`, `arrow` | [Build Accessible Tooltips](/guide/build-accessible-tooltips) |
-| **Popover / Dropdown** | [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useDismiss`](/api/use-dismiss), [`usePosition`](/api/use-position) | `offset`, `flip`, `shift` | [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) |
-| **Dialog / Modal** | [`useFloatingNode`](/api/use-floating-node), [`useFocusTrap`](/api/use-focus-trap), [`useDismiss`](/api/use-dismiss), [`useRole`](/api/use-role) | None (CSS centered) | [Build Dialogs and Modals](/guide/build-dialogs-and-modals) |
-| **ContextMenu / Cursor** | [`useFloatingNode`](/api/use-floating-node), [`useClientPoint`](/api/use-client-point), [`useDismiss`](/api/use-dismiss), [`usePosition`](/api/use-position) | `flip`, `shift` | [Use Virtual Anchors](/guide/use-virtual-anchors) |
-| **Menu with Roving Focus** | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useClick`](/api/use-click), [`useDismiss`](/api/use-dismiss) | `offset`, `flip`, `shift` | [Keyboard Navigation](/guide/keyboard-navigation) |
-| **Nested Menu Tree** | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useDismiss`](/api/use-dismiss) | `offset`, `flip` | [Build Nested Menus](/guide/build-nested-menus) |
+| **Popover / Dropdown** | [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`usePosition`](/api/use-position) | `offset`, `flip`, `shift` | [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) |
+| **Dialog / Modal** | [`useFloatingNode`](/api/use-floating-node), [`useFocusTrap`](/api/use-focus-trap), [`useEscapeKey`](/api/use-escape-key), [`useOutsideClick`](/api/use-outside-click), [`useRole`](/api/use-role) | None (CSS centered) | [Build Dialogs and Modals](/guide/build-dialogs-and-modals) |
+| **ContextMenu / Cursor** | [`useFloatingNode`](/api/use-floating-node), [`useClientPoint`](/api/use-client-point), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`usePosition`](/api/use-position) | `flip`, `shift` | [Use Virtual Anchors](/guide/use-virtual-anchors) |
+| **Menu with Roving Focus** | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key) | `offset`, `flip`, `shift` | [Keyboard Navigation](/guide/keyboard-navigation) |
+| **Nested Menu Tree** | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key) | `offset`, `flip` | [Build Nested Menus](/guide/build-nested-menus) |
 | **Combobox / Autocomplete** | [`useAriaActivedescendant`](/api/use-aria-activedescendant), [`useTypeahead`](/api/use-typeahead), [`usePosition`](/api/use-position) | `offset`, `flip`, `size` | [Keyboard Navigation](/guide/keyboard-navigation) |
 
 ## Core
@@ -51,7 +51,8 @@ Interaction composables attach DOM event listeners to the anchor or document to 
 | [`useHover`](/api/use-hover) | Opens and closes floating content on pointer hover with delay and safe polygon tracking. |
 | [`useFocus`](/api/use-focus) | Opens and closes floating content when the anchor gains or loses keyboard focus. |
 | [`useFocusTrap`](/api/use-focus-trap) | Manages modal focus containment, boundary sentinels, background isolation, and return focus. |
-| [`useDismiss`](/api/use-dismiss) | Dismisses open floating surfaces on Escape key presses and outside pointer interactions. |
+| [`useOutsideClick`](/api/use-outside-click) | Closes open floating surfaces when pointer interactions occur outside the floating family. |
+| [`useEscapeKey`](/api/use-escape-key) | Closes open floating surfaces on Escape key presses with leaf-first hierarchy and IME coordination. |
 | [`useRole`](/api/use-role) | Synchronizes ARIA roles, popup states, and accessibility relationships on anchor and panel. |
 
 ## Keyboard Navigation

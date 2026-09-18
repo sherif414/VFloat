@@ -95,7 +95,7 @@ Right-click anywhere in an area to open a context menu anchored at the click poi
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useClientPoint, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
@@ -115,7 +115,8 @@ useClientPoint(node, {
   trackingMode: "static",
 });
 
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 
 function onContextMenu(event: MouseEvent) {
   event.preventDefault();
@@ -162,5 +163,6 @@ function onContextMenu(event: MouseEvent) {
 
 - [`useFloatingNode`](/api/use-floating-node) - Creates node and holds element refs
 - [`usePosition`](/api/use-position) - Coordinates and styling calculation
-- [`useDismiss`](/api/use-dismiss) - Outside click and Escape handling
+- [`useOutsideClick`](/api/use-outside-click) - Outside click handling
+- [`useEscapeKey`](/api/use-escape-key) - Escape key handling
 - [Use Virtual Anchors](/guide/use-virtual-anchors) - Guide to coordinate-based positioning

@@ -11,7 +11,8 @@ For a reliable popover or dropdown, the core stack combines:
 - [`useFloatingNode`](/api/use-floating-node) for shared refs and open state
 - [`usePosition`](/api/use-position) with collision-aware middlewares
 - [`useClick`](/api/use-click) for anchor toggling
-- [`useDismiss`](/api/use-dismiss) for outside pointer and Escape key dismissal
+- [`useOutsideClick`](/api/use-outside-click) for outside pointer dismissal
+- [`useEscapeKey`](/api/use-escape-key) for Escape key dismissal
 
 ## The complete example
 
@@ -20,7 +21,7 @@ Here is a full working popover with collision handling, outside clicks, and keyb
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useDismiss, useFloatingNode, usePosition } from "v-float";
+import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
@@ -36,7 +37,8 @@ usePosition(node, {
 });
 
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 </script>
 
 <template>
@@ -75,19 +77,19 @@ A production popover needs more than just a base placement:
 
 This three-middleware stack (`offset` → `flip` → `shift`) represents the battle-tested default for dropdown panels. `usePosition` automatically applies the resulting GPU-accelerated CSS transforms directly onto `node.refs.floatingEl`.
 
-## Coordinating click and dismissal
+## Coordinating click, outside click, and Escape
 
 ```ts
 useClick(node);
-useDismiss(node);
+useOutsideClick(node);
+useEscapeKey(node);
 ```
 
-These two composables cooperate through the shared `node`:
+These composables cooperate through the shared `node`:
 
 - **[`useClick`](/api/use-click)** opens the popover when the trigger button is clicked, and closes it if clicked again. It safely ignores modifier keys and right clicks.
-- **[`useDismiss`](/api/use-dismiss)** registers document-level listeners for outside pointer interactions and the Escape key. It automatically keeps outside press and Escape handling in sync behind one shared gate.
-
-When a user clicks inside the popover panel (such as on the "Edit" or "Duplicate" buttons), `useDismiss` detects that the click occurred within `node.refs.floatingEl` and keeps the popover open.
+- **[`useOutsideClick`](/api/use-outside-click)** registers document-level pointer listeners to close the surface when clicking away, while safely ignoring clicks inside `node.refs.floatingEl` (such as on the "Edit" or "Duplicate" buttons).
+- **[`useEscapeKey`](/api/use-escape-key)** closes the surface when the user presses Escape, taking care not to intercept keystrokes while an IME is actively composing.
 
 ## The template bindings
 
