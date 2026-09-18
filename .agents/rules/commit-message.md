@@ -47,7 +47,7 @@ The header is the first line of the commit message and is **REQUIRED**. It **MUS
   - `ci`: Changes to CI configuration files and automation pipelines (e.g., `.github/workflows/`).
   - `docs`: Documentation only changes (e.g., `docs/`, `README.md`).
   - `perf`: A code change that improves performance in the library runtime (`src/`).
-  - `refactor`: A code change in the library runtime (`src/`) that neither fixes a bug nor adds a feature.
+  - `refactor`: An internal code change in the library runtime (`src/`) that neither fixes a bug nor adds a feature, preserving external behavior. Because internal refactors are excluded from the public changelog (`refactor: false`), `refactor` **MUST NOT** be used for breaking public API changes.
   - `revert`: Indicates that a previous commit has been reverted (see Section 8.1).
   - `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc).
   - `test`: Adding missing tests or correcting existing tests (`*.test.ts`, Vitest configs).
@@ -57,6 +57,7 @@ The header is the first line of the commit message and is **REQUIRED**. It **MUS
 Automated changelog generators and release tools (such as `changelogen` or `semantic-release`) parse `feat` and `fix` commits to generate public release notes and determine Semantic Version bumps.
 
 - **Library Features (`feat`)**: Changes that add new capabilities to the published npm package consumed by end-users (e.g., `feat(hover): add rest timeout option`, `feat(focus-manager): add trap focus support`).
+- **Breaking API Changes & Removals (`feat!:` / `fix!:`)**: Any change to the public API surface—including redesigning composable signatures, simplifying parameters, or removing options—**MUST** use `feat!:` (or `fix!:` if correcting an erroneous API design). Because release tooling (`changelogen`) only includes user-facing types and excludes `refactor`, breaking changes tagged as `refactor!:` will be omitted from the changelog. `refactor` **MUST ONLY** be used for internal implementation changes that are 100% backwards compatible.
 - **AI Agent Tooling / Skills / Rules (`chore`)**: Changes to `.agents/`, `.gemini/`, skills, agent prompts, rules, or subagents are internal maintainer tooling and **MUST NEVER** use `feat` or `fix`. Always use `chore(skills)`, `chore(agents)`, or `chore(rules)` (e.g., `chore(skills): add diagnose skill`, `chore(agents): update issue workflow`).
 - **Maintainer Scripts & Release Tooling (`chore` / `ci` / `build`)**: Scripts in `scripts/`, release tools, docs deployment helpers, etc. **MUST NOT** use `feat` (e.g., use `chore(release): automate gh release step`).
 
@@ -84,7 +85,7 @@ Automated changelog generators and release tools (such as `changelogen` or `sema
 
 - A breaking change **MAY** be indicated in the header by appending a `!` immediately before the required `:`.
 - See Section 6 for full details on handling breaking changes.
-- **Example:** `refactor(arrow)!: simplify useArrow to only require context`
+- **Example:** `feat(arrow)!: simplify useArrow to only require context`
 
 ---
 
@@ -201,7 +202,7 @@ side is omitted, preventing unexpected dismissals during diagonal pointer tracki
 ### Example 3: Breaking Change using `!`
 
 ```
-refactor(arrow)!: simplify useArrow to only require context
+feat(arrow)!: simplify useArrow to only require context
 
 Removes the standalone element option in favor of extracting arrowEl directly from
 floating context refs.
@@ -210,7 +211,7 @@ floating context refs.
 ### Example 4: Commit with Body and Footers (including Breaking Change)
 
 ```
-refactor(focus-manager)!: centralize focus management with native engine
+feat(focus-manager)!: centralize focus management with native engine
 
 BREAKING CHANGE: Standalone trap focus options have been replaced by the unified useFocusManager composable API.
 ```
