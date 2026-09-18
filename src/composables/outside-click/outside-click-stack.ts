@@ -16,7 +16,7 @@ interface DocumentOutsideClickManager {
 }
 
 const documentManagers = new WeakMap<Document, DocumentOutsideClickManager>();
-const documentHandledEvents = new WeakMap<Document, WeakSet<MouseEvent>>();
+const eventSnapshots = new WeakMap<Event, Map<FloatingNodeId, boolean>>();
 
 //=======================================================================================
 // 📌 Main
@@ -50,10 +50,6 @@ export function removeOutsideClickEntry(doc: Document, entry: OutsideClickEntry)
   syncDocumentListeners(doc, manager);
 }
 
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
-
 /**
  * Retrieves or lazily creates the manager state for a specific document realm.
  */
@@ -75,31 +71,6 @@ function getDocumentManager(doc: Document): DocumentOutsideClickManager {
     documentManagers.set(doc, manager);
   }
   return manager;
-}
-
-/**
- * Returns the set of events already handled within the document to prevent dual dispatch.
- */
-function getHandledEvents(doc: Document): WeakSet<MouseEvent> {
-  let handled = documentHandledEvents.get(doc);
-  if (!handled) {
-    handled = new WeakSet();
-    documentHandledEvents.set(doc, handled);
-  }
-  return handled;
-}
-
-/**
- * Resolves the true source target across Shadow DOM boundaries via `composedPath`.
- */
-function getEventTarget(event: Event): EventTarget | null {
-  if (typeof event.composedPath === "function") {
-    const path = event.composedPath();
-    if (path.length > 0) {
-      return path[0];
-    }
-  }
-  return event.target;
 }
 
 /**
@@ -172,7 +143,9 @@ function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManag
       const target = getEventTarget(event);
       if (!isNode(target)) return;
 
+      clearDragTimeout(manager, win);
       manager.dragStartedEntries.clear();
+      manager.dragEndedEntries.clear();
       for (const entry of manager.stack) {
         if (entry.node.contains(target)) {
           manager.dragStartedEntries.add(entry.node.id);
@@ -244,7 +217,7 @@ function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManag
 }
 
 /**
- * Dispatches outside click dismissal to eligible open stack entries in reverse hierarchy order.
+ * Dispatches outside click dismissal to eligible open stack entries in leaf-first hierarchy order.
  */
 function dispatchOutsideClick(
   doc: Document,
@@ -266,10 +239,7 @@ function dispatchOutsideClick(
   // Guard against elements detached from the DOM during click processing
   if (!target.isConnected) return;
 
-  const handledEvents = getHandledEvents(doc);
-  if (handledEvents.has(event)) return;
-
-  // Gather matching open entries
+  // Gather matching open entries for this event phase
   const candidates: OutsideClickEntry[] = [];
   for (const entry of manager.stack) {
     if (!entry.node.open.value) continue;
@@ -282,24 +252,32 @@ function dispatchOutsideClick(
 
   if (candidates.length === 0) return;
 
-  handledEvents.add(event);
-
-  // Snapshot open children state before dismissing any candidate
-  const initiallyOpenChildMap = new Map<FloatingNodeId, boolean>();
-  for (const entry of candidates) {
-    let hasOpenChild = false;
-    for (const child of entry.node.children.value) {
-      if (child.open.value) {
-        hasOpenChild = true;
-        break;
+  // Retrieve or initialize event-scoped open children snapshot across all stack entries
+  let initiallyOpenChildMap = eventSnapshots.get(event);
+  if (!initiallyOpenChildMap) {
+    initiallyOpenChildMap = new Map<FloatingNodeId, boolean>();
+    for (const entry of manager.stack) {
+      if (!entry.node.open.value) continue;
+      let hasOpenChild = false;
+      for (const child of entry.node.children.value) {
+        if (child.open.value) {
+          hasOpenChild = true;
+          break;
+        }
       }
+      initiallyOpenChildMap.set(entry.node.id, hasOpenChild);
     }
-    initiallyOpenChildMap.set(entry.node.id, hasOpenChild);
+    eventSnapshots.set(event, initiallyOpenChildMap);
   }
 
-  // Iterate in reverse (leaf-first unwinding)
-  for (let i = candidates.length - 1; i >= 0; i--) {
-    const entry = candidates[i];
+  // Sort candidates leaf-first (deepest descendants first, stack order tie-breaker)
+  candidates.sort((a, b) => {
+    const depthDiff = getNodeDepth(b.node) - getNodeDepth(a.node);
+    if (depthDiff !== 0) return depthDiff;
+    return manager.stack.indexOf(b) - manager.stack.indexOf(a);
+  });
+
+  for (const entry of candidates) {
     const { node, options } = entry;
 
     // 1. Scrollbar click check
@@ -354,10 +332,20 @@ function dispatchIframeBlur(
 ): void {
   const fakeEvent = new MouseEvent("click", { bubbles: false, cancelable: true });
 
-  for (let i = manager.stack.length - 1; i >= 0; i--) {
-    const entry = manager.stack[i];
-    if (!entry.node.open.value) continue;
+  const candidates: OutsideClickEntry[] = [];
+  for (const entry of manager.stack) {
+    if (entry.node.open.value) {
+      candidates.push(entry);
+    }
+  }
 
+  candidates.sort((a, b) => {
+    const depthDiff = getNodeDepth(b.node) - getNodeDepth(a.node);
+    if (depthDiff !== 0) return depthDiff;
+    return manager.stack.indexOf(b) - manager.stack.indexOf(a);
+  });
+
+  for (const entry of candidates) {
     if (entry.node.contains(iframe)) {
       continue;
     }
@@ -376,6 +364,36 @@ function dispatchIframeBlur(
       break;
     }
   }
+}
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
+
+/**
+ * Computes the hierarchical depth of a floating node relative to its root ancestor.
+ */
+function getNodeDepth(node: FloatingNode): number {
+  let depth = 0;
+  let current = node.parent.value;
+  while (current) {
+    depth++;
+    current = current.parent.value;
+  }
+  return depth;
+}
+
+/**
+ * Resolves the true source target across Shadow DOM boundaries via `composedPath`.
+ */
+function getEventTarget(event: Event): EventTarget | null {
+  if (typeof event.composedPath === "function") {
+    const path = event.composedPath();
+    if (path.length > 0) {
+      return path[0];
+    }
+  }
+  return event.target;
 }
 
 //=======================================================================================

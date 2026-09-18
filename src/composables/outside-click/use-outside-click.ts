@@ -49,10 +49,9 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
   const { open } = node;
 
   const isEnabled = computed(() => toValue(options.enabled ?? true));
-  const floatingEl = computed(() => node.refs.floatingEl.value);
   const ownerDocument = computed(
     () =>
-      floatingEl.value?.ownerDocument ??
+      node.refs.floatingEl.value?.ownerDocument ??
       getAnchorElement(node.refs.anchorEl.value)?.ownerDocument ??
       getDocument(),
   );
@@ -103,3 +102,8 @@ export interface UseOutsideClickOptions extends OutsideClickEntryOptions {
 }
 
 export type { OutsideClickPredicate } from "./outside-click-stack";
+
+/**
+ * The floating node context required by `useOutsideClick`.
+ */
+export type UseOutsideClickContext = FloatingNode;

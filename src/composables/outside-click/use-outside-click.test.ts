@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
-import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
+import { defineComponent, h, nextTick, ref, type Ref, useTemplateRef } from "vue";
 import { type FloatingNode, useFloatingNode } from "@/composables/floating-node";
 import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
@@ -136,7 +136,15 @@ async function renderTreeOutsideClick(target: "parent" | "child") {
 }
 
 function createFullTreeComponent(
-  options: { parentBubbles?: boolean; childBubbles?: boolean } = {},
+  options: {
+    parentBubbles?: boolean;
+    childBubbles?: boolean;
+    parentCapture?: boolean;
+    childCapture?: boolean;
+    parentEvent?: "click" | "pointerdown";
+    childEvent?: "click" | "pointerdown";
+    parentEnabled?: Ref<boolean>;
+  } = {},
 ) {
   const parentOpen = ref(true);
   const childOpen = ref(true);
@@ -161,8 +169,17 @@ function createFullTreeComponent(
       parent: parentNode,
     });
 
-    useOutsideClick(parentNode, { event: "click", bubbles: options.parentBubbles ?? true });
-    useOutsideClick(childNode, { event: "click", bubbles: options.childBubbles ?? true });
+    useOutsideClick(parentNode, {
+      event: options.parentEvent ?? "click",
+      bubbles: options.parentBubbles ?? true,
+      capture: options.parentCapture ?? true,
+      enabled: options.parentEnabled,
+    });
+    useOutsideClick(childNode, {
+      event: options.childEvent ?? "click",
+      bubbles: options.childBubbles ?? true,
+      capture: options.childCapture ?? true,
+    });
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -192,7 +209,15 @@ function createFullTreeComponent(
 }
 
 async function renderFullTreeOutsideClick(
-  options: { parentBubbles?: boolean; childBubbles?: boolean } = {},
+  options: {
+    parentBubbles?: boolean;
+    childBubbles?: boolean;
+    parentCapture?: boolean;
+    childCapture?: boolean;
+    parentEvent?: "click" | "pointerdown";
+    childEvent?: "click" | "pointerdown";
+    parentEnabled?: Ref<boolean>;
+  } = {},
 ) {
   const fixture = createFullTreeComponent(options);
   await render(fixture.Component);
@@ -203,6 +228,54 @@ async function renderFullTreeOutsideClick(
     childNode: fixture.getChild(),
     parentOpen: fixture.parentOpen,
     childOpen: fixture.childOpen,
+  };
+}
+
+function createTwoOverlaysComponent(
+  options: { overlayACapture?: boolean; overlayBCapture?: boolean } = {},
+) {
+  const openA = ref(true);
+  const openB = ref(true);
+  let nodeA!: ReturnType<typeof useFloatingNode>;
+  let nodeB!: ReturnType<typeof useFloatingNode>;
+
+  const Component = defineComponent(() => {
+    const anchorA = useTemplateRef<HTMLElement>("anchor-a");
+    const floatingA = useTemplateRef<HTMLElement>("floating-a");
+    const anchorB = useTemplateRef<HTMLElement>("anchor-b");
+    const floatingB = useTemplateRef<HTMLElement>("floating-b");
+
+    nodeA = useFloatingNode({ anchorEl: anchorA, floatingEl: floatingA, open: openA });
+    nodeB = useFloatingNode({ anchorEl: anchorB, floatingEl: floatingB, open: openB });
+
+    useOutsideClick(nodeA, { event: "click", capture: options.overlayACapture ?? true });
+    useOutsideClick(nodeB, { event: "click", capture: options.overlayBCapture ?? false });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "anchor-a", "data-testid": "anchor-a" }, "Trigger A"),
+        h("div", { ref: "floating-a", "data-testid": "floating-a" }, "Floating A"),
+        h("button", { ref: "anchor-b", "data-testid": "anchor-b" }, "Trigger B"),
+        h("div", { ref: "floating-b", "data-testid": "floating-b" }, "Floating B"),
+        h("div", { "data-testid": "outside", style: { ...OUTSIDE_STYLE, left: "0" } }, "Outside"),
+      ]);
+  });
+
+  return { Component, openA, openB, getNodeA: () => nodeA, getNodeB: () => nodeB };
+}
+
+async function renderTwoOverlaysOutsideClick(
+  options: { overlayACapture?: boolean; overlayBCapture?: boolean } = {},
+) {
+  const fixture = createTwoOverlaysComponent(options);
+  await render(fixture.Component);
+  await nextTick();
+  return {
+    outsideEl: getTestEl("outside"),
+    openA: fixture.openA,
+    openB: fixture.openB,
+    nodeA: fixture.getNodeA(),
+    nodeB: fixture.getNodeB(),
   };
 }
 
@@ -675,5 +748,104 @@ describe("useOutsideClick", () => {
 
     expect(node.open.value).toBe(true);
     innerIframe.remove();
+  });
+
+  it("coordinates tree unwinding leaf-first across mixed capture settings when bubbles is false", async () => {
+    // Parent on bubble phase (capture: false), Child on capture phase (capture: true)
+    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+      parentBubbles: false,
+      childBubbles: false,
+      parentCapture: false,
+      childCapture: true,
+    });
+
+    expect(parentOpen.value).toBe(true);
+    expect(childOpen.value).toBe(true);
+
+    // Click 1 outside: capture listener closes child; bubble listener skips parent via event-scoped snapshot
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(childOpen.value).toBe(false);
+    expect(parentOpen.value).toBe(true);
+
+    // Click 2 outside: parent now closes
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(parentOpen.value).toBe(false);
+  });
+
+  it("dismisses independent overlays with mixed capture phases without cross-phase lockout", async () => {
+    const { outsideEl, openA, openB } = await renderTwoOverlaysOutsideClick({
+      overlayACapture: true,
+      overlayBCapture: false,
+    });
+
+    expect(openA.value).toBe(true);
+    expect(openB.value).toBe(true);
+
+    // Single click outside should dismiss both overlays across capture and bubble phases
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(openA.value).toBe(false);
+    expect(openB.value).toBe(false);
+  });
+
+  it("maintains leaf-first tree order when an ancestor re-registers while children remain open", async () => {
+    const parentEnabled = ref(true);
+    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+      parentBubbles: false,
+      childBubbles: false,
+      parentEnabled,
+    });
+
+    expect(parentOpen.value).toBe(true);
+    expect(childOpen.value).toBe(true);
+
+    // Temporarily disable and re-enable parent to trigger watcher unregister + re-register
+    parentEnabled.value = false;
+    await nextTick();
+    parentEnabled.value = true;
+    await nextTick();
+
+    // Leaf-first depth sorting ensures child still unwinds first
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(childOpen.value).toBe(false);
+    expect(parentOpen.value).toBe(true);
+
+    // Second click dismisses parent
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(parentOpen.value).toBe(false);
+  });
+
+  it("cancels pending drag reset timer on new mousedown to prevent wiping active drag tracking", async () => {
+    vi.useFakeTimers();
+
+    const { floatingEl, outsideEl, node } = await renderOutsideClick({
+      event: "click",
+      ignoreDrag: true,
+    });
+
+    // Gesture 1: mousedown inside, mouseup outside -> schedules drag reset timeout
+    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+    outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
+
+    // Gesture 2: immediate new mousedown inside BEFORE timer 1 executes
+    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+
+    // Advance timer past the reset delay of gesture 1
+    vi.advanceTimersByTime(10);
+
+    // Gesture 2 click lands outside; should NOT dismiss because drag started inside and wasn't wiped out
+    outsideEl.dispatchEvent(makeMouseEvent("click"));
+    await nextTick();
+
+    expect(node.open.value).toBe(true);
   });
 });
