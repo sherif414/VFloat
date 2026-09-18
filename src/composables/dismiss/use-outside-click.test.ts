@@ -39,6 +39,14 @@ function createTestComponent(options: UseOutsideClickOptions = {}) {
           { "data-testid": "ignored", style: { ...OUTSIDE_STYLE, left: "120px" } },
           "Ignored",
         ),
+        h(
+          "div",
+          {
+            "data-testid": "outside-scrollable",
+            style: { ...OUTSIDE_STYLE, left: "240px", overflowY: "scroll" },
+          },
+          [h("div", { style: { height: "300px" } }, "Scroll content")],
+        ),
       ]);
   });
 
@@ -234,5 +242,54 @@ describe("useOutsideClick", () => {
 
     expect(parentOpen.value).toBe(true);
     expect(childOpen.value).toBe(false);
+  });
+
+  it("ignores outside press on scrollbars when ignoreScrollbar is true", async () => {
+    const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+    const scrollableEl = getTestEl("outside-scrollable");
+    const rect = scrollableEl.getBoundingClientRect();
+
+    // Headless Chromium uses overlay scrollbars by default (clientWidth === offsetWidth).
+    // Simulate classic 15px scrollbar gutter width.
+    Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+
+    // Click near the right edge where the vertical scrollbar gutter resides
+    const scrollbarX = rect.left + 90;
+    const scrollbarY = rect.top + 20;
+
+    scrollableEl.dispatchEvent(
+      new MouseEvent("pointerdown", {
+        clientX: scrollbarX,
+        clientY: scrollbarY,
+        bubbles: true,
+      }),
+    );
+    await nextTick();
+
+    expect(node.open.value).toBe(true);
+  });
+
+  it("closes on scrollbar click when ignoreScrollbar is false", async () => {
+    const { node } = await renderOutsideClick({ ignoreScrollbar: false });
+    const scrollableEl = getTestEl("outside-scrollable");
+    const rect = scrollableEl.getBoundingClientRect();
+
+    // Headless Chromium uses overlay scrollbars by default (clientWidth === offsetWidth).
+    // Simulate classic 15px scrollbar gutter width.
+    Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+
+    const scrollbarX = rect.left + 90;
+    const scrollbarY = rect.top + 20;
+
+    scrollableEl.dispatchEvent(
+      new MouseEvent("pointerdown", {
+        clientX: scrollbarX,
+        clientY: scrollbarY,
+        bubbles: true,
+      }),
+    );
+    await nextTick();
+
+    expect(node.open.value).toBe(false);
   });
 });

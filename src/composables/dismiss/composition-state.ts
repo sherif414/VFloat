@@ -1,6 +1,14 @@
 import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue";
-import { getDocument } from "@/shared/env";
+import { getDocument, isServer } from "@/shared/env";
 import { useEventListener } from "@/shared/use-event-listener";
+
+interface CompositionState {
+  scope: ReturnType<typeof effectScope>;
+  isComposing: Ref<boolean>;
+  consumers: number;
+}
+
+let sharedCompositionState: CompositionState | undefined;
 
 //=======================================================================================
 // 📌 Main
@@ -10,6 +18,12 @@ import { useEventListener } from "@/shared/use-event-listener";
  * Exposes whether the user is currently composing text through an IME.
  */
 export function useComposition() {
+  if (isServer) {
+    return {
+      isComposing: ref(false),
+    };
+  }
+
   const state = getSharedCompositionState();
 
   state.consumers += 1;
@@ -33,8 +47,6 @@ export function useComposition() {
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
-
-let sharedCompositionState: CompositionState | undefined;
 
 function getSharedCompositionState(): CompositionState {
   if (sharedCompositionState) {
@@ -69,14 +81,4 @@ function getSharedCompositionState(): CompositionState {
   };
 
   return sharedCompositionState;
-}
-
-//=======================================================================================
-// 📌 Types
-//=======================================================================================
-
-interface CompositionState {
-  scope: ReturnType<typeof effectScope>;
-  isComposing: Ref<boolean>;
-  consumers: number;
 }

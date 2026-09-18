@@ -47,16 +47,10 @@ import { useEventListener } from "@/shared/use-event-listener";
  * ```
  */
 export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = {}): void {
-  const {
-    enabled = true,
-    capture = false,
-    preventDefault = false,
-    onEscape,
-    ignoreEscapeKey,
-  } = options;
   const { isComposing } = useComposition();
   const { open } = node;
 
+  const isEnabled = computed(() => toValue(options.enabled ?? true));
   const ownerDoc = computed(
     () =>
       node.refs.floatingEl.value?.ownerDocument ??
@@ -67,9 +61,9 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
   const entry: DismissEntry = { node };
 
   watch(
-    () => [toValue(enabled), open.value],
-    ([isEnabled, isOpen], _, onCleanup) => {
-      if (!isEnabled || !isOpen) return;
+    () => [isEnabled.value, open.value],
+    ([enabled, isOpen], _, onCleanup) => {
+      if (!enabled || !isOpen) return;
 
       const doc = ownerDoc.value;
       if (!doc) return;
@@ -79,21 +73,21 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
         removeDismissEntry(doc, entry);
       });
     },
-    { immediate: true },
+    { immediate: true, flush: "sync" },
   );
 
   const handleEscape = (event: KeyboardEvent) => {
     if (
       event.key !== "Escape" ||
       event.defaultPrevented ||
-      !toValue(enabled) ||
+      !isEnabled.value ||
       !open.value ||
       isComposing.value
     ) {
       return;
     }
 
-    if (ignoreEscapeKey && ignoreEscapeKey(event)) {
+    if (options.ignoreEscapeKey && options.ignoreEscapeKey(event)) {
       return;
     }
 
@@ -105,13 +99,13 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
       return;
     }
 
-    if (preventDefault) {
+    if (options.preventDefault) {
       event.preventDefault();
     }
 
     // Skip the default close behavior when the caller needs custom escape handling.
-    if (onEscape) {
-      onEscape(event);
+    if (options.onEscape) {
+      options.onEscape(event);
       return;
     }
 
@@ -120,17 +114,12 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
     node.open.value = false;
   };
 
-  useEventListener(ownerDoc, "keydown", handleEscape, capture);
+  useEventListener(ownerDoc, "keydown", handleEscape, options.capture);
 }
 
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
-
-/**
- * Context required by `useEscapeKey`.
- */
-export type UseEscapeKeyContext = FloatingNode;
 
 export interface UseEscapeKeyOptions {
   /**

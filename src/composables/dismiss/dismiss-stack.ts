@@ -1,8 +1,13 @@
 import type { FloatingNode } from "@/composables/floating-node";
+import { isNode } from "@/shared/dom";
 
 export interface DismissEntry {
   node: FloatingNode;
 }
+
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 const documentStacks = new WeakMap<Document, DismissEntry[]>();
 
@@ -48,7 +53,7 @@ export function removeDismissEntry(doc: Document, entry: DismissEntry): void {
  * 1. If target is contained within a registered open hierarchy, resolves to that hierarchy's
  *    deepest open descendant.
  * 2. If target is outside all open hierarchies (e.g. document body or headless tests),
- *    resolves to the topmost entry on the LIFO stack.
+ *    resolves to the topmost open entry on the LIFO stack.
  */
 export function resolveActiveDismissEntry(
   doc: Document,
@@ -57,7 +62,7 @@ export function resolveActiveDismissEntry(
   const stack = documentStacks.get(doc);
   if (!stack || stack.length === 0) return null;
 
-  const targetNode = target instanceof Node ? target : null;
+  const targetNode = isNode(target) ? target : null;
 
   if (targetNode) {
     // Check from topmost (latest opened) entry downward to find target's hierarchy
@@ -76,14 +81,24 @@ export function resolveActiveDismissEntry(
   }
 
   // Fallback when target is outside all known hierarchies (or document/body):
-  // Resolve using the topmost entry in the stack.
-  const topNode = stack[stack.length - 1].node;
-  let topRoot = topNode;
-  while (topRoot.parent?.value) {
-    topRoot = topRoot.parent.value;
+  // Resolve using the topmost open entry in the stack.
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const candidate = stack[i].node;
+    if (candidate.open.value) {
+      let topRoot = candidate;
+      while (topRoot.parent?.value) {
+        topRoot = topRoot.parent.value;
+      }
+      return findDeepestOpenDescendant(topRoot) ?? candidate;
+    }
   }
-  return findDeepestOpenDescendant(topRoot) ?? topNode;
+
+  return null;
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 function findDeepestOpenDescendant(root: FloatingNode): FloatingNode | null {
   if (!root.open.value) return null;

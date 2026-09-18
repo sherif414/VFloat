@@ -1,7 +1,8 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
-import { getDocument } from "@/shared/env";
+import { getAnchorElement } from "@/shared/elements";
+import { getDocument, getWindow } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 
@@ -36,25 +37,23 @@ import { useEventListener } from "@/shared/use-event-listener";
  */
 export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOptions = {}): void {
   const { open } = node;
-  const {
-    enabled: enabledOption = true,
-    event: eventOption = "pointerdown",
-    capture: captureOption = true,
-    ignoreClick: ignoreClickOption,
-    onClick: onClickOption,
-    ignoreScrollbar: ignoreScrollbarOption = true,
-    ignoreDrag: ignoreDragOption = true,
-  } = options;
 
-  const isEnabled = computed(() => toValue(enabledOption));
+  const isEnabled = computed(() => toValue(options.enabled ?? true));
   const floatingEl = computed(() => node.refs.floatingEl.value);
+  const ownerDocument = computed(
+    () =>
+      floatingEl.value?.ownerDocument ??
+      getAnchorElement(node.refs.anchorEl.value)?.ownerDocument ??
+      getDocument(),
+  );
+  const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? getWindow());
 
   let dragStartedInside = false;
-  let dragResetTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let dragResetTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
 
   function clearDragResetTimeout() {
     if (dragResetTimeoutId == null) return;
-    clearTimeout(dragResetTimeoutId);
+    ownerWindow.value?.clearTimeout(dragResetTimeoutId as number);
     dragResetTimeoutId = undefined;
   }
 
@@ -68,11 +67,10 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
     const target = event.target as Node | null;
     if (!target) return;
 
+    // Ignore clicks on scrollbar gutters (e.g. of the document or an outside container).
     if (
-      toValue(ignoreScrollbarOption) &&
+      toValue(options.ignoreScrollbar ?? true) &&
       isHTMLElement(target) &&
-      floatingEl.value &&
-      node.contains(target) &&
       isClickOnScrollbar(event, target)
     ) {
       return;
@@ -82,12 +80,12 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
       return;
     }
 
-    if (ignoreClickOption?.(event, target)) {
+    if (options.ignoreClick?.(event, target)) {
       return;
     }
 
-    if (onClickOption) {
-      onClickOption(event);
+    if (options.onClick) {
+      options.onClick(event);
       return;
     }
 
@@ -95,8 +93,8 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
   }
 
   function isDragSuppressed(): boolean {
-    if (toValue(eventOption) !== "click") return false;
-    if (!toValue(ignoreDragOption)) return false;
+    if (toValue(options.event ?? "pointerdown") !== "click") return false;
+    if (!toValue(options.ignoreDrag ?? true)) return false;
     if (!dragStartedInside) return false;
 
     dragStartedInside = false;
@@ -109,7 +107,7 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
 
   function onFloatingMouseUp() {
     clearDragResetTimeout();
-    dragResetTimeoutId = setTimeout(() => {
+    dragResetTimeoutId = ownerWindow.value?.setTimeout(() => {
       dragStartedInside = false;
     }, 0);
   }
@@ -118,19 +116,24 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
     clearDragResetTimeout();
   });
 
-  useEventListener(() => (isEnabled.value ? getDocument() : null), eventOption, onDocumentClick, {
-    capture: toValue(captureOption),
-  });
+  useEventListener(
+    () => (isEnabled.value ? ownerDocument.value : null),
+    () => toValue(options.event ?? "pointerdown"),
+    onDocumentClick,
+    {
+      capture: toValue(options.capture ?? true),
+    },
+  );
 
   useEventListener(
-    () => (isEnabled.value && toValue(ignoreDragOption) ? floatingEl.value : null),
+    () => (isEnabled.value && toValue(options.ignoreDrag ?? true) ? floatingEl.value : null),
     "mousedown",
     onFloatingMouseDown,
     { capture: true },
   );
 
   useEventListener(
-    () => (isEnabled.value && toValue(ignoreDragOption) ? floatingEl.value : null),
+    () => (isEnabled.value && toValue(options.ignoreDrag ?? true) ? floatingEl.value : null),
     "mouseup",
     onFloatingMouseUp,
     { capture: true },
@@ -140,11 +143,6 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
-
-/**
- * Context required by `useOutsideClick`.
- */
-export type UseOutsideClickContext = FloatingNode;
 
 /**
  * Options for configuring outside-click dismissal.
