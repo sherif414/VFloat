@@ -73,7 +73,7 @@ export function resolveActiveEscapeEntry(
         root = root.parent.value;
       }
 
-      if (typeof root.contains === "function" && root.contains(targetNode)) {
+      if (root.contains(targetNode)) {
         const owner = findTargetOwner(root, targetNode);
         return findDeepestOpenDescendant(owner) ?? owner;
       }
@@ -106,26 +106,23 @@ function findDeepestOpenDescendant(root: FloatingNode): FloatingNode | null {
   let deepest: FloatingNode = root;
   let maxDepth = 0;
 
-  if (typeof root.traverse === "function") {
-    root.traverse((current, depth) => {
-      if (!current.open.value) return "skip";
-      if (depth >= maxDepth) {
-        maxDepth = depth;
-        deepest = current;
-      }
-    });
-  }
+  root.traverse((current, depth) => {
+    if (!current.open.value) return "skip";
+    if (depth >= maxDepth) {
+      maxDepth = depth;
+      deepest = current;
+    }
+  });
 
   return deepest;
 }
 
 function findTargetOwner(current: FloatingNode, targetNode: Node): FloatingNode {
-  if (current.children?.value) {
-    for (const child of Array.from(current.children.value)) {
-      if (child.open.value && typeof child.contains === "function" && child.contains(targetNode)) {
-        return findTargetOwner(child, targetNode);
-      }
+  for (const child of current.children.value) {
+    if (child.open.value && child.contains(targetNode)) {
+      return findTargetOwner(child, targetNode);
     }
   }
+
   return current;
 }

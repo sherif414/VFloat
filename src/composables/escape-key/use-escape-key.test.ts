@@ -225,8 +225,17 @@ function createTwoIndependentTreesComponent() {
 // Tests
 //=======================================================================================
 
+const SAFARI_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
+
 describe("useEscapeKey", () => {
+  const originalUserAgent = window.navigator.userAgent;
+
   afterEach(() => {
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: originalUserAgent,
+    });
     vi.clearAllMocks();
     vi.useRealTimers();
   });
@@ -781,6 +790,79 @@ describe("useEscapeKey", () => {
       expect(fixture.subOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(false);
       expect(calls).toEqual(["sub", "root"]);
+    });
+  });
+
+  describe("IME and WebKit composition resilience (WebKit Bug 165004)", () => {
+    it("does not close on Escape when event.isComposing or keyCode 229 is set", async () => {
+      const fixture = createTestComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      const anchor = getTestEl("anchor");
+      await userEvent.click(anchor);
+
+      // Standard browser IME keydown with isComposing: true
+      const composingEvent = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(composingEvent, "isComposing", { value: true });
+      anchor.dispatchEvent(composingEvent);
+      await nextTick();
+      expect(fixture.openRef.value).toBe(true);
+
+      // Standard legacy IME keyCode 229
+      const keyCode229Event = new KeyboardEvent("keydown", {
+        key: "Escape",
+        keyCode: 229,
+        bubbles: true,
+        cancelable: true,
+      });
+      anchor.dispatchEvent(keyCode229Event);
+      await nextTick();
+      expect(fixture.openRef.value).toBe(true);
+    });
+
+    it("prevents premature dismissal when WebKit fires compositionend before keydown (WebKit Bug 165004)", async () => {
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: SAFARI_USER_AGENT,
+      });
+
+      const fixture = createTestComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      const anchor = getTestEl("anchor");
+      await userEvent.click(anchor);
+
+      // Start IME composition
+      document.dispatchEvent(new CompositionEvent("compositionstart"));
+
+      // In Safari (Bug 165004), pressing Escape to close IME candidate list dispatches
+      // compositionend first, immediately followed by keydown without isComposing
+      document.dispatchEvent(new CompositionEvent("compositionend"));
+
+      const trailingKeydown = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      anchor.dispatchEvent(trailingKeydown);
+      await nextTick();
+
+      // Floating element must remain OPEN because composition-state debounced the reset
+      expect(fixture.openRef.value).toBe(true);
+
+      // Wait for debounce window (5ms) to pass
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Subsequent Escape closes the overlay normally
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+      expect(fixture.openRef.value).toBe(false);
     });
   });
 });

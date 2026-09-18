@@ -17,7 +17,7 @@ import {
 } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
-import { isMac, isSafari, matchesFocusVisible } from "@/shared/platform";
+import { isMac, isSafari, isWebKit, matchesFocusVisible } from "@/shared/platform";
 import { clearTrackedElements, trackElement } from "@/test-utils";
 import type { VirtualElement } from "@/types";
 
@@ -66,6 +66,7 @@ describe("utils and core helpers", () => {
     expect(isHTMLElement(null)).toBe(false);
     expect(isMac()).toBe(true);
     expect(isSafari()).toBe(true);
+    expect(isWebKit()).toBe(true);
     expect(matchesFocusVisible({ matches: () => true } as unknown as Element)).toBe(true);
     expect(isMouseLikePointerType("mouse")).toBe(true);
     expect(isMouseLikePointerType("pen")).toBe(true);

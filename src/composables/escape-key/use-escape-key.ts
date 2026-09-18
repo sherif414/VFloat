@@ -74,12 +74,17 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
   );
 
   const handleEscape = (event: KeyboardEvent) => {
+    // Ignore Escape when IME (Input Method Editor) text composition is active.
+    // Checks shared composition state, standard KeyboardEvent.isComposing (UI Events § 3.5.3),
+    // and legacy keyCode 229 (standard fallback for IME-managed keystrokes).
     if (
       event.key !== "Escape" ||
       event.defaultPrevented ||
       !isEnabled.value ||
       !open.value ||
-      isComposing.value
+      isComposing.value ||
+      event.isComposing ||
+      event.keyCode === 229
     ) {
       return;
     }

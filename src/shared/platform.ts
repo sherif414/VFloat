@@ -19,6 +19,18 @@ export function isSafari(): boolean {
 }
 
 /**
+ * Returns true when running in a WebKit-based browser engine (Safari on macOS and iOS,
+ * WebKit WebViews).
+ */
+export function isWebKit(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    isSafari() ||
+    (/AppleWebKit/i.test(navigator.userAgent) && !/Chrome|CriOS|Android/i.test(navigator.userAgent))
+  );
+}
+
+/**
  * Probes `:focus-visible` support through `matches()` so focus styling can stay native.
  */
 export function matchesFocusVisible(element: Element): boolean {
