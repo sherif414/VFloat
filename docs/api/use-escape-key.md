@@ -18,7 +18,6 @@ interface UseEscapeKeyOptions {
   capture?: boolean;
   preventDefault?: boolean;
   onEscape?: (event: KeyboardEvent) => void;
-  ignoreEscapeKey?: (event: KeyboardEvent) => boolean;
 }
 ```
 
@@ -30,7 +29,6 @@ interface UseEscapeKeyOptions {
 | `capture` | `boolean` | `false` | Attaches keydown listener during the capture phase. Read once during listener setup. |
 | `preventDefault` | `boolean` | `false` | Calls `event.preventDefault()` on handled Escape presses. |
 | `onEscape` | `(event: KeyboardEvent) => void` | `undefined` | Custom callback. When provided, replaces the default `node.open.value = false`. |
-| `ignoreEscapeKey` | `(event: KeyboardEvent) => boolean` | `undefined` | Predicate to conditionally ignore an Escape press (e.g. to let an internal editor handle it first). |
 
 ## Returns
 

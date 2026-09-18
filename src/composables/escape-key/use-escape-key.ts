@@ -84,10 +84,6 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
       return;
     }
 
-    if (options.ignoreEscapeKey && options.ignoreEscapeKey(event)) {
-      return;
-    }
-
     const doc = ownerDoc.value;
     if (!doc) return;
 
@@ -150,11 +146,4 @@ export interface UseEscapeKeyOptions {
    * When provided, overrides default behavior.
    */
   onEscape?: (event: KeyboardEvent) => void;
-
-  /**
-   * Predicate to determine if an escape key press should be ignored (e.g. to let a child handle it).
-   * @param event - The keyboard event
-   * @returns true if the escape key should be ignored
-   */
-  ignoreEscapeKey?: (event: KeyboardEvent) => boolean;
 }
