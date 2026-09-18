@@ -280,7 +280,15 @@ If you prefer defining nested menus within a single flat `<script setup>`, link 
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useHover, useOutsideClick, usePosition, useRovingFocus } from "v-float";
+import {
+  useClick,
+  useEscapeKey,
+  useFloatingNode,
+  useHover,
+  useOutsideClick,
+  usePosition,
+  useRovingFocus,
+} from "v-float";
 
 const rootAnchorEl = ref<HTMLElement | null>(null);
 const rootFloatingEl = ref<HTMLElement | null>(null);

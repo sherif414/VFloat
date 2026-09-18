@@ -38,18 +38,18 @@ interface UseTypeaheadReturn {
 
 ## Options
 
-| Name             | Type                                            | Default        | Notes                                                                                                           |
-| ---------------- | ----------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `items`          | `MaybeRefOrGetter<readonly (string \| null)[]>` | `[]`           | Array of text labels to match against. `null` entries are skipped.                                              |
-| `containerEl`    | `MaybeRefOrGetter<HTMLElement \| null>`         | Floating panel | Keyboard scope for typeahead search. Override for inline widgets whose list lives outside the panel.            |
-| `target`         | `NavigationTarget`                              | `undefined`    | Navigation target (e.g. `useRovingFocus` or `useAriaActivedescendant`). Auto-wires `activeIndex` and `onMatch`.  |
-| `activeIndex`    | `MaybeRefOrGetter<number>`                      | `target?.activeIndex ?? -1` | Currently active index, used as the starting offset when cycling. Never written; forward matches via `onMatch`. |
-| `onMatch`        | `(index: number) => void`                       | `(idx) => target?.focusIndex(idx)` | Callback invoked with the index of the matched item.                                                       |
-| `enabled`        | `MaybeRefOrGetter<boolean>`                     | `true`         | Whether typeahead search is active.                                                                             |
-| `resetMs`        | `MaybeRefOrGetter<number>`                      | `1000`         | Inactivity timeout in milliseconds before clearing the typing buffer.                                           |
-| `ignoreKeys`     | `MaybeRefOrGetter<readonly string[]>`           | `[]`           | Additional keys to ignore during typeahead search.                                                              |
-| `findMatch`      | `TypeaheadFindMatchFn`                          | Prefix search  | Custom matcher returning the matching item index, or `-1`. Out-of-range or disabled results count as no match.  |
-| `isItemDisabled` | `(index: number) => boolean`                    | `undefined`    | Predicate for skipping disabled items during matching.                                                          |
+| Name             | Type                                            | Default                            | Notes                                                                                                           |
+| ---------------- | ----------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `items`          | `MaybeRefOrGetter<readonly (string \| null)[]>` | `[]`                               | Array of text labels to match against. `null` entries are skipped.                                              |
+| `containerEl`    | `MaybeRefOrGetter<HTMLElement \| null>`         | Floating panel                     | Keyboard scope for typeahead search. Override for inline widgets whose list lives outside the panel.            |
+| `target`         | `NavigationTarget`                              | `undefined`                        | Navigation target (e.g. `useRovingFocus` or `useAriaActivedescendant`). Auto-wires `activeIndex` and `onMatch`. |
+| `activeIndex`    | `MaybeRefOrGetter<number>`                      | `target?.activeIndex ?? -1`        | Currently active index, used as the starting offset when cycling. Never written; forward matches via `onMatch`. |
+| `onMatch`        | `(index: number) => void`                       | `(idx) => target?.focusIndex(idx)` | Callback invoked with the index of the matched item.                                                            |
+| `enabled`        | `MaybeRefOrGetter<boolean>`                     | `true`                             | Whether typeahead search is active.                                                                             |
+| `resetMs`        | `MaybeRefOrGetter<number>`                      | `1000`                             | Inactivity timeout in milliseconds before clearing the typing buffer.                                           |
+| `ignoreKeys`     | `MaybeRefOrGetter<readonly string[]>`           | `[]`                               | Additional keys to ignore during typeahead search.                                                              |
+| `findMatch`      | `TypeaheadFindMatchFn`                          | Prefix search                      | Custom matcher returning the matching item index, or `-1`. Out-of-range or disabled results count as no match.  |
+| `isItemDisabled` | `(index: number) => boolean`                    | `undefined`                        | Predicate for skipping disabled items during matching.                                                          |
 
 ## Returns
 

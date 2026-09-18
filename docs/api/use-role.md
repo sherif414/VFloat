@@ -49,25 +49,25 @@ interface UseRoleReturn {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. While `false`, attributes are not written. |
-| `role` | `MaybeRefOrGetter<FloatingRole \| null>` | `null` | Surface role. Semantic attributes are applied only when a role is set. |
-| `label` | `MaybeRefOrGetter<string \| null>` | `undefined` | Sets `aria-label` on the floating surface. |
-| `labelledBy` | `MaybeRefOrGetter<string \| null>` | `undefined` | Sets `aria-labelledby` referencing an element id. |
-| `describedBy` | `MaybeRefOrGetter<string \| null>` | `undefined` | Sets `aria-describedby` referencing an element id. |
-| `controls` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, links anchor to panel with `aria-controls`. |
-| `modal` | `MaybeRefOrGetter<boolean>` | `undefined` | With `role: "dialog"`, writes `aria-modal="true"`. |
-| `listRef` | `Ref<Array<HTMLElement \| null>>` | `undefined` | Item refs array for automatic item role application. |
-| `itemRole` | Role string or function | Auto | Fixed or per-index role for items in `listRef`. |
-| `disabledIndices` | `Array<number> \| ((idx) => boolean)` | `undefined` | Marks items with `aria-disabled="true"`. |
-| `checkedIndices` | `Array<number> \| ((idx) => boolean)` | `undefined` | Marks items with `aria-checked="true"`. |
-| `selectedIndices` | `Array<number> \| ((idx) => boolean)` | `undefined` | Marks items with `aria-selected="true"`. |
+| Name              | Type                                     | Default     | Notes                                                                  |
+| ----------------- | ---------------------------------------- | ----------- | ---------------------------------------------------------------------- |
+| `enabled`         | `MaybeRefOrGetter<boolean>`              | `true`      | Reactive toggle. While `false`, attributes are not written.            |
+| `role`            | `MaybeRefOrGetter<FloatingRole \| null>` | `null`      | Surface role. Semantic attributes are applied only when a role is set. |
+| `label`           | `MaybeRefOrGetter<string \| null>`       | `undefined` | Sets `aria-label` on the floating surface.                             |
+| `labelledBy`      | `MaybeRefOrGetter<string \| null>`       | `undefined` | Sets `aria-labelledby` referencing an element id.                      |
+| `describedBy`     | `MaybeRefOrGetter<string \| null>`       | `undefined` | Sets `aria-describedby` referencing an element id.                     |
+| `controls`        | `MaybeRefOrGetter<boolean>`              | `true`      | When `true`, links anchor to panel with `aria-controls`.               |
+| `modal`           | `MaybeRefOrGetter<boolean>`              | `undefined` | With `role: "dialog"`, writes `aria-modal="true"`.                     |
+| `listRef`         | `Ref<Array<HTMLElement \| null>>`        | `undefined` | Item refs array for automatic item role application.                   |
+| `itemRole`        | Role string or function                  | Auto        | Fixed or per-index role for items in `listRef`.                        |
+| `disabledIndices` | `Array<number> \| ((idx) => boolean)`    | `undefined` | Marks items with `aria-disabled="true"`.                               |
+| `checkedIndices`  | `Array<number> \| ((idx) => boolean)`    | `undefined` | Marks items with `aria-checked="true"`.                                |
+| `selectedIndices` | `Array<number> \| ((idx) => boolean)`    | `undefined` | Marks items with `aria-selected="true"`.                               |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
+| Name      | Type         | Notes                                                                      |
+| --------- | ------------ | -------------------------------------------------------------------------- |
 | `cleanup` | `() => void` | Restores original attributes on all elements and stops attribute watchers. |
 
 ## Details
@@ -92,7 +92,14 @@ interface UseRoleReturn {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition, useRole } from "v-float";
+import {
+  useClick,
+  useEscapeKey,
+  useFloatingNode,
+  useOutsideClick,
+  usePosition,
+  useRole,
+} from "v-float";
 
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);

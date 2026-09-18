@@ -459,7 +459,6 @@ function selectPlacementOption(val: Placement) {
   height: 12px;
 }
 
-
 @media (max-width: 640px) {
   .showcase-header {
     flex-direction: column;
@@ -589,4 +588,3 @@ function selectPlacementOption(val: Placement) {
   transform: scale(0.96) translateY(-4px);
 }
 </style>
-

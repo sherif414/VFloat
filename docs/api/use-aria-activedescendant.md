@@ -58,45 +58,45 @@ interface UseAriaActivedescendantReturn extends NavigationTarget {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `targetEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `node.refs.anchorEl` | Target element holding physical DOM focus and receiving `aria-activedescendant`. |
-| `containerEl` | `MaybeRefOrGetter<HTMLElement \| null>` | `node.refs.floatingEl` | Container element holding the items. Used for bounded scroll calculations. |
-| `elementsList` | `MaybeRefOrGetter<Array<HTMLElement \| null>>` | `undefined` | List of element references for static or dynamic DOM lists. |
-| `itemCount` | `MaybeRefOrGetter<number>` | Inferred / `0` | Total number of items when using virtualized lists. |
-| `activeIndex` | `Ref<number>` | `undefined` | Optional controlled active index ref. |
-| `defaultIndex` | `number` | `-1` | Initial active index in uncontrolled mode (`-1` = none). |
-| `idPrefix` | `string` | Auto `useId()` | Base prefix used for generating descendant element IDs. |
-| `getItemId` | `(index: number, key?: string \| number) => string` | Built-in pattern | Custom function resolving the DOM element ID for an item. |
-| `getItemKey` | `(index: number) => string \| number` | `undefined` | Key extractor for stable identities in virtualized lists. |
-| `orientation` | `MaybeRefOrGetter<"vertical" \| "horizontal" \| "both">` | `"vertical"` | Navigation axis. |
-| `loop` | `MaybeRefOrGetter<boolean>` | `false` | When `true`, arrow keys wrap around at boundaries. |
-| `pageSize` | `MaybeRefOrGetter<number>` | `10` | Number of items jumped on `PageUp` and `PageDown`. |
-| `rtl` | `MaybeRefOrGetter<boolean>` | Auto-detected | Right-to-Left reading order flag. |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | When `false`, keyboard handlers are inactive. |
-| `scrollIntoView` | `MaybeRefOrGetter<boolean>` | `true` | Whether active items are automatically scrolled into view. |
-| `editable` | `MaybeRefOrGetter<boolean \| "auto">` | `"auto"` | Preserves Space typing and Home/End caret navigation when target is editable. |
-| `preventPointerDown` | `MaybeRefOrGetter<boolean>` | `true` | Prevents pointerdown default on non-interactive item surfaces to retain input focus. |
-| `focusOnHover` | `MaybeRefOrGetter<boolean>` | `false` | Activates item highlight on pointermove. |
-| `clearOnPointerLeave` | `MaybeRefOrGetter<boolean>` | `false` | Clears highlight when pointer leaves container. |
-| `resetOnBlur` | `MaybeRefOrGetter<boolean>` | `false` | Resets highlight when target input loses focus. |
-| `focusDisabledElements` | `MaybeRefOrGetter<boolean>` | `false` | Allows virtual highlighting of disabled items for APG discoverability. |
-| `isItemDisabled` | `(index: number) => boolean` | Auto-detected | Custom predicate for disabled items. |
-| `virtualizer` | `VirtualizerAdapter` | `undefined` | Virtual scroller bridge for large lists. |
-| `onSelect` | `(index: number, event: Event) => void` | `undefined` | Callback fired on Enter or Space. |
-| `onActiveIndexChange` | `(index: number) => void` | `undefined` | Callback fired on active index change. |
+| Name                    | Type                                                     | Default                | Notes                                                                                |
+| ----------------------- | -------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------ |
+| `targetEl`              | `MaybeRefOrGetter<HTMLElement \| null>`                  | `node.refs.anchorEl`   | Target element holding physical DOM focus and receiving `aria-activedescendant`.     |
+| `containerEl`           | `MaybeRefOrGetter<HTMLElement \| null>`                  | `node.refs.floatingEl` | Container element holding the items. Used for bounded scroll calculations.           |
+| `elementsList`          | `MaybeRefOrGetter<Array<HTMLElement \| null>>`           | `undefined`            | List of element references for static or dynamic DOM lists.                          |
+| `itemCount`             | `MaybeRefOrGetter<number>`                               | Inferred / `0`         | Total number of items when using virtualized lists.                                  |
+| `activeIndex`           | `Ref<number>`                                            | `undefined`            | Optional controlled active index ref.                                                |
+| `defaultIndex`          | `number`                                                 | `-1`                   | Initial active index in uncontrolled mode (`-1` = none).                             |
+| `idPrefix`              | `string`                                                 | Auto `useId()`         | Base prefix used for generating descendant element IDs.                              |
+| `getItemId`             | `(index: number, key?: string \| number) => string`      | Built-in pattern       | Custom function resolving the DOM element ID for an item.                            |
+| `getItemKey`            | `(index: number) => string \| number`                    | `undefined`            | Key extractor for stable identities in virtualized lists.                            |
+| `orientation`           | `MaybeRefOrGetter<"vertical" \| "horizontal" \| "both">` | `"vertical"`           | Navigation axis.                                                                     |
+| `loop`                  | `MaybeRefOrGetter<boolean>`                              | `false`                | When `true`, arrow keys wrap around at boundaries.                                   |
+| `pageSize`              | `MaybeRefOrGetter<number>`                               | `10`                   | Number of items jumped on `PageUp` and `PageDown`.                                   |
+| `rtl`                   | `MaybeRefOrGetter<boolean>`                              | Auto-detected          | Right-to-Left reading order flag.                                                    |
+| `enabled`               | `MaybeRefOrGetter<boolean>`                              | `true`                 | When `false`, keyboard handlers are inactive.                                        |
+| `scrollIntoView`        | `MaybeRefOrGetter<boolean>`                              | `true`                 | Whether active items are automatically scrolled into view.                           |
+| `editable`              | `MaybeRefOrGetter<boolean \| "auto">`                    | `"auto"`               | Preserves Space typing and Home/End caret navigation when target is editable.        |
+| `preventPointerDown`    | `MaybeRefOrGetter<boolean>`                              | `true`                 | Prevents pointerdown default on non-interactive item surfaces to retain input focus. |
+| `focusOnHover`          | `MaybeRefOrGetter<boolean>`                              | `false`                | Activates item highlight on pointermove.                                             |
+| `clearOnPointerLeave`   | `MaybeRefOrGetter<boolean>`                              | `false`                | Clears highlight when pointer leaves container.                                      |
+| `resetOnBlur`           | `MaybeRefOrGetter<boolean>`                              | `false`                | Resets highlight when target input loses focus.                                      |
+| `focusDisabledElements` | `MaybeRefOrGetter<boolean>`                              | `false`                | Allows virtual highlighting of disabled items for APG discoverability.               |
+| `isItemDisabled`        | `(index: number) => boolean`                             | Auto-detected          | Custom predicate for disabled items.                                                 |
+| `virtualizer`           | `VirtualizerAdapter`                                     | `undefined`            | Virtual scroller bridge for large lists.                                             |
+| `onSelect`              | `(index: number, event: Event) => void`                  | `undefined`            | Callback fired on Enter or Space.                                                    |
+| `onActiveIndexChange`   | `(index: number) => void`                                | `undefined`            | Callback fired on active index change.                                               |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `activeIndex` | `Readonly<Ref<number>>` | Current highlighted index, or `-1` if none is active. |
-| `activeId` | `ComputedRef<string \| undefined>` | DOM ID of the currently active descendant, or `undefined` when inactive. |
-| `focusIndex` | `(target: NavigationTargetValue, options?: NavigationTargetOptions) => void` | Polymorphic navigation method. Accepts an index, `"reset"`, or directional keywords (`"next"`, `"prev"`, `"first"`, `"last"`, `"page-up"`, `"page-down"`). |
-| `setActiveIndex` | `(index: number) => void` | Imperatively sets active index and scrolls into view. |
-| `clearActive` | `() => void` | Clears active descendant (sets index to `-1`). |
-| `scrollToActive` | `() => void` | Imperatively scrolls the current active item into view. |
-| `getItemId` | `(index: number, key?: string \| number) => string` | Resolves the DOM element ID for the item at `index` (with optional `key`). |
+| Name             | Type                                                                         | Notes                                                                                                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `activeIndex`    | `Readonly<Ref<number>>`                                                      | Current highlighted index, or `-1` if none is active.                                                                                                      |
+| `activeId`       | `ComputedRef<string \| undefined>`                                           | DOM ID of the currently active descendant, or `undefined` when inactive.                                                                                   |
+| `focusIndex`     | `(target: NavigationTargetValue, options?: NavigationTargetOptions) => void` | Polymorphic navigation method. Accepts an index, `"reset"`, or directional keywords (`"next"`, `"prev"`, `"first"`, `"last"`, `"page-up"`, `"page-down"`). |
+| `setActiveIndex` | `(index: number) => void`                                                    | Imperatively sets active index and scrolls into view.                                                                                                      |
+| `clearActive`    | `() => void`                                                                 | Clears active descendant (sets index to `-1`).                                                                                                             |
+| `scrollToActive` | `() => void`                                                                 | Imperatively scrolls the current active item into view.                                                                                                    |
+| `getItemId`      | `(index: number, key?: string \| number) => string`                          | Resolves the DOM element ID for the item at `index` (with optional `key`).                                                                                 |
 
 ## Details
 
@@ -189,12 +189,7 @@ function onInput() {
       @focus="node.open.value = true"
     />
 
-    <ul
-      v-if="node.open.value && filtered.length"
-      ref="floatingEl"
-      role="listbox"
-      class="listbox"
-    >
+    <ul v-if="node.open.value && filtered.length" ref="floatingEl" role="listbox" class="listbox">
       <li
         v-for="(item, idx) in filtered"
         :id="getItemId(idx)"

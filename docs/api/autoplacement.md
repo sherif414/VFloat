@@ -26,14 +26,14 @@ interface AutoPlacementOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `crossAxis` | `boolean` | `false` | When `true`, evaluates perpendicular placements if primary axis sides are blocked. |
-| `alignment` | `"start" \| "end" \| null` | `null` | Constrains choices to a fixed alignment (e.g. only `"top-start"`, `"bottom-start"`). |
-| `autoAlignment` | `boolean` | `true` | When `true`, automatically flips alignment to find the best fit. |
-| `allowedPlacements` | `Array<Placement>` | All placements | Limits the candidate placements evaluated. |
-| `padding` | `Padding` | `0` | Minimum clearance inset from clipping boundaries. |
-| `boundary` | `Boundary` | `"clippingAncestors"` | Element or rect defining the clipping area. |
+| Name                | Type                       | Default               | Notes                                                                                |
+| ------------------- | -------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| `crossAxis`         | `boolean`                  | `false`               | When `true`, evaluates perpendicular placements if primary axis sides are blocked.   |
+| `alignment`         | `"start" \| "end" \| null` | `null`                | Constrains choices to a fixed alignment (e.g. only `"top-start"`, `"bottom-start"`). |
+| `autoAlignment`     | `boolean`                  | `true`                | When `true`, automatically flips alignment to find the best fit.                     |
+| `allowedPlacements` | `Array<Placement>`         | All placements        | Limits the candidate placements evaluated.                                           |
+| `padding`           | `Padding`                  | `0`                   | Minimum clearance inset from clipping boundaries.                                    |
+| `boundary`          | `Boundary`                 | `"clippingAncestors"` | Element or rect defining the clipping area.                                          |
 
 ## Returns
 

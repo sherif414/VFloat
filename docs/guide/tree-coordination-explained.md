@@ -165,6 +165,7 @@ Rather than blindly teleporting every floating surface to `document.body`, prior
 ```
 
 ### Key Benefits:
+
 1. **Physical DOM Ancestry Preserved:** Standard `dialogRoot.contains(target)` naturally returns `true` for nested controls.
 2. **Native Focus Traps Remain Intact:** [`useFocusTrap`](/api/use-focus-trap) on the modal requires zero custom exclusion allowlists for nested controls.
 3. **Top-Layer Alignment:** Integrates seamlessly with native HTML `<dialog>` and Popover API.

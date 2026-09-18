@@ -143,15 +143,7 @@ Target destination or directional step accepted by `focusIndex()`.
 
 ```ts
 type NavigationTargetValue =
-  | number
-  | "next"
-  | "prev"
-  | "previous"
-  | "first"
-  | "last"
-  | "page-up"
-  | "page-down"
-  | "reset";
+  number | "next" | "prev" | "previous" | "first" | "last" | "page-up" | "page-down" | "reset";
 ```
 
 ### `NavigationTargetOptions`

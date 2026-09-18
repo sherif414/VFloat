@@ -34,7 +34,10 @@ export default defineConfig({
     ["meta", { property: "og:image", content: SOCIAL_IMAGE }],
     ["meta", { property: "og:image:width", content: "1200" }],
     ["meta", { property: "og:image:height", content: "630" }],
-    ["meta", { property: "og:image:alt", content: "VFloat - Headless Floating UI Primitives for Vue 3" }],
+    [
+      "meta",
+      { property: "og:image:alt", content: "VFloat - Headless Floating UI Primitives for Vue 3" },
+    ],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],
     ["meta", { name: "twitter:image", content: SOCIAL_IMAGE }],
   ],

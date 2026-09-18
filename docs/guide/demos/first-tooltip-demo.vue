@@ -18,16 +18,9 @@ useHover(node);
 
 <template>
   <div class="tooltip-demo">
-    <button ref="anchorEl" class="tooltip-demo__button" type="button">
-      Save changes
-    </button>
+    <button ref="anchorEl" class="tooltip-demo__button" type="button">Save changes</button>
 
-    <div
-      v-if="node.open.value"
-      ref="floatingEl"
-      class="tooltip-demo__floating"
-      role="tooltip"
-    >
+    <div v-if="node.open.value" ref="floatingEl" class="tooltip-demo__floating" role="tooltip">
       <span>This button saves your changes.</span>
     </div>
   </div>

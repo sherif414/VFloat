@@ -28,22 +28,22 @@ interface HideData {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `strategy` | `"referenceHidden" \| "escaped"` | `"referenceHidden"` | Whether to track the anchor being clipped (`"referenceHidden"`) or the panel escaping (`"escaped"`). |
-| `padding` | `Padding` | `0` | Inset padding around the boundary edge. |
-| `boundary` | `Boundary` | `"clippingAncestors"` | Element or rect defining the clipping area. |
-| `rootBoundary` | `RootBoundary` | `"viewport"` | Root boundary context (`"viewport"` or `"document"`). |
-| `altBoundary` | `boolean` | `false` | When `true`, checks boundaries against the floating element instead of the anchor. |
+| Name           | Type                             | Default               | Notes                                                                                                |
+| -------------- | -------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `strategy`     | `"referenceHidden" \| "escaped"` | `"referenceHidden"`   | Whether to track the anchor being clipped (`"referenceHidden"`) or the panel escaping (`"escaped"`). |
+| `padding`      | `Padding`                        | `0`                   | Inset padding around the boundary edge.                                                              |
+| `boundary`     | `Boundary`                       | `"clippingAncestors"` | Element or rect defining the clipping area.                                                          |
+| `rootBoundary` | `RootBoundary`                   | `"viewport"`          | Root boundary context (`"viewport"` or `"document"`).                                                |
+| `altBoundary`  | `boolean`                        | `false`               | When `true`, checks boundaries against the floating element instead of the anchor.                   |
 
 ## Returns
 
 `hide` returns a `Middleware` object with `name: "hide"`. It writes status flags to `middlewareData.value.hide`:
 
-| Field | Type | Notes |
-| --- | --- | --- |
+| Field             | Type                   | Notes                                                                 |
+| ----------------- | ---------------------- | --------------------------------------------------------------------- |
 | `referenceHidden` | `boolean \| undefined` | `true` when the anchor element is fully clipped by its scroll parent. |
-| `escaped` | `boolean \| undefined` | `true` when the floating element escapes its clipping boundary. |
+| `escaped`         | `boolean \| undefined` | `true` when the floating element escapes its clipping boundary.       |
 
 ## Details
 

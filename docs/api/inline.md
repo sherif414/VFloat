@@ -20,11 +20,11 @@ interface InlineOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `padding` | `Padding` | `0` | Boundary padding around the individual line rects. |
-| `x` | `number` | `undefined` | Cursor or reference X coordinate used to pick the active line rect. |
-| `y` | `number` | `undefined` | Cursor or reference Y coordinate used to pick the active line rect. |
+| Name      | Type      | Default     | Notes                                                               |
+| --------- | --------- | ----------- | ------------------------------------------------------------------- |
+| `padding` | `Padding` | `0`         | Boundary padding around the individual line rects.                  |
+| `x`       | `number`  | `undefined` | Cursor or reference X coordinate used to pick the active line rect. |
+| `y`       | `number`  | `undefined` | Cursor or reference Y coordinate used to pick the active line rect. |
 
 ## Returns
 
@@ -75,9 +75,7 @@ useHover(node);
     inside a paragraph.
   </p>
 
-  <div v-if="node.open" ref="floatingEl" class="tooltip">
-    Anchored to the specific active line
-  </div>
+  <div v-if="node.open" ref="floatingEl" class="tooltip">Anchored to the specific active line</div>
 </template>
 
 <style>

@@ -28,16 +28,16 @@ interface FlipOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `mainAxis` | `boolean` | `true` | Allows flipping to the opposite side along the main axis (e.g. `"bottom"` &rarr; `"top"`). |
-| `crossAxis` | `boolean \| "alignment"` | `true` | Allows flipping along the cross axis when both main axis sides overflow. |
-| `fallbackAxisSideDirection` | `"none" \| "start" \| "end"` | `"none"` | Which side to try when flipping along the cross axis. |
-| `flipAlignment` | `boolean` | `true` | Flips alignment (e.g. `"bottom-start"` &rarr; `"bottom-end"`) when side alignment overflows. |
-| `fallbackPlacements` | `Array<Placement>` | Opposite side | Explicit ordered list of placements to try before giving up. |
-| `fallbackStrategy` | `"bestFit" \| "initialPlacement"` | `"bestFit"` | Strategy when all placements overflow: pick the best fit, or reset to preferred. |
-| `padding` | `Padding` | `0` | Minimum clearance from the clipping boundary. |
-| `boundary` | `Boundary` | `"clippingAncestors"` | Clipping boundary element or rect. |
+| Name                        | Type                              | Default               | Notes                                                                                        |
+| --------------------------- | --------------------------------- | --------------------- | -------------------------------------------------------------------------------------------- |
+| `mainAxis`                  | `boolean`                         | `true`                | Allows flipping to the opposite side along the main axis (e.g. `"bottom"` &rarr; `"top"`).   |
+| `crossAxis`                 | `boolean \| "alignment"`          | `true`                | Allows flipping along the cross axis when both main axis sides overflow.                     |
+| `fallbackAxisSideDirection` | `"none" \| "start" \| "end"`      | `"none"`              | Which side to try when flipping along the cross axis.                                        |
+| `flipAlignment`             | `boolean`                         | `true`                | Flips alignment (e.g. `"bottom-start"` &rarr; `"bottom-end"`) when side alignment overflows. |
+| `fallbackPlacements`        | `Array<Placement>`                | Opposite side         | Explicit ordered list of placements to try before giving up.                                 |
+| `fallbackStrategy`          | `"bestFit" \| "initialPlacement"` | `"bestFit"`           | Strategy when all placements overflow: pick the best fit, or reset to preferred.             |
+| `padding`                   | `Padding`                         | `0`                   | Minimum clearance from the clipping boundary.                                                |
+| `boundary`                  | `Boundary`                        | `"clippingAncestors"` | Clipping boundary element or rect.                                                           |
 
 ## Returns
 
@@ -89,9 +89,7 @@ const { placement } = usePosition(node, {
 
 <template>
   <button ref="anchorEl">Anchor</button>
-  <div v-if="node.open" ref="floatingEl" :data-placement="placement">
-    Flipping floating panel
-  </div>
+  <div v-if="node.open" ref="floatingEl" :data-placement="placement">Flipping floating panel</div>
 </template>
 ```
 

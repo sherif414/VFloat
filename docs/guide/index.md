@@ -49,9 +49,7 @@ useEscapeKey(node);
 <template>
   <button ref="anchorEl" type="button">Hover me</button>
 
-  <div v-if="node.open.value" ref="floatingEl" role="tooltip">
-    Tooltip content
-  </div>
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip">Tooltip content</div>
 </template>
 ```
 

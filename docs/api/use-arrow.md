@@ -33,18 +33,18 @@ interface UseArrowReturn {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `offset` | `MaybeRefOrGetter<string>` | `"-4px"` | Gap or overlap between the arrow tip and the floating element edge. |
-| `padding` | `MaybeRefOrGetter<Padding>` | `0` | Minimum clearance keeping the arrow away from the floating element corners. |
-| `applyStyles` | `MaybeRef<boolean> \| ApplyArrowStylesFn` | `true` | Whether to automatically synchronize positioning styles to `node.refs.arrowEl.value.style`. Pass `false` for manual template binding, or a custom applicator function. |
+| Name          | Type                                      | Default  | Notes                                                                                                                                                                  |
+| ------------- | ----------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `offset`      | `MaybeRefOrGetter<string>`                | `"-4px"` | Gap or overlap between the arrow tip and the floating element edge.                                                                                                    |
+| `padding`     | `MaybeRefOrGetter<Padding>`               | `0`      | Minimum clearance keeping the arrow away from the floating element corners.                                                                                            |
+| `applyStyles` | `MaybeRef<boolean> \| ApplyArrowStylesFn` | `true`   | Whether to automatically synchronize positioning styles to `node.refs.arrowEl.value.style`. Pass `false` for manual template binding, or a custom applicator function. |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `arrowX` | `ComputedRef<number>` | Computed horizontal position in pixels. Falls back to `0` before positioning runs. |
-| `arrowY` | `ComputedRef<number>` | Computed vertical position in pixels. Falls back to `0` before positioning runs. |
+| Name          | Type                                  | Notes                                                                                                            |
+| ------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `arrowX`      | `ComputedRef<number>`                 | Computed horizontal position in pixels. Falls back to `0` before positioning runs.                               |
+| `arrowY`      | `ComputedRef<number>`                 | Computed vertical position in pixels. Falls back to `0` before positioning runs.                                 |
 | `arrowStyles` | `ComputedRef<Record<string, string>>` | Computed CSS style object with physical insets (`top`, `bottom`, `left`, `right`). Empty `{}` before positioned. |
 
 ## Details
@@ -108,12 +108,7 @@ useHover(node);
 <template>
   <button ref="anchorEl">Hover me</button>
 
-  <div
-    v-if="node.open"
-    ref="floatingEl"
-    class="tooltip"
-    :data-placement="placement"
-  >
+  <div v-if="node.open" ref="floatingEl" class="tooltip" :data-placement="placement">
     <span>Tooltip message</span>
     <div ref="arrowEl" class="tooltip-arrow" />
   </div>

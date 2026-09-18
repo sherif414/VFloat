@@ -11,10 +11,7 @@ Use it for cursor-following tooltips, image hover previews, and right-click cont
 ## Type
 
 ```ts
-function useClientPoint(
-  node: FloatingNode,
-  options?: UseClientPointOptions,
-): UseClientPointReturn;
+function useClientPoint(node: FloatingNode, options?: UseClientPointOptions): UseClientPointReturn;
 
 type TrackingMode = "follow" | "static";
 
@@ -58,17 +55,17 @@ interface UseClientPointReturn {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `trackingAreaEl` | `Ref<HTMLElement \| null>` | `document.documentElement` | Target element that receives pointer listeners. |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Disabling disconnects listeners and restores static anchoring. |
-| `x` / `y` | `MaybeRefOrGetter<number \| null>` | `null` | External coordinates. When both are non-null finite numbers, enters controlled mode. |
-| `trackingMode` | `"follow" \| "static"` | `"follow"` | `"follow"` updates coordinates continuously while open. `"static"` captures coordinates at open time. |
+| Name             | Type                               | Default                    | Notes                                                                                                 |
+| ---------------- | ---------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `trackingAreaEl` | `Ref<HTMLElement \| null>`         | `document.documentElement` | Target element that receives pointer listeners.                                                       |
+| `enabled`        | `MaybeRefOrGetter<boolean>`        | `true`                     | Reactive toggle. Disabling disconnects listeners and restores static anchoring.                       |
+| `x` / `y`        | `MaybeRefOrGetter<number \| null>` | `null`                     | External coordinates. When both are non-null finite numbers, enters controlled mode.                  |
+| `trackingMode`   | `"follow" \| "static"`             | `"follow"`                 | `"follow"` updates coordinates continuously while open. `"static"` captures coordinates at open time. |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
+| Name          | Type                                                      | Notes                                                                                                |
+| ------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `coordinates` | `Readonly<Ref<{ x: number \| null; y: number \| null }>>` | Last recorded pointer coordinates. `null` before first trigger and when closed in uncontrolled mode. |
 
 ## Details
@@ -95,7 +92,13 @@ Right-click anywhere in an area to open a context menu anchored at the click poi
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
+import {
+  useClientPoint,
+  useEscapeKey,
+  useFloatingNode,
+  useOutsideClick,
+  usePosition,
+} from "v-float";
 
 const trackingAreaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
@@ -125,11 +128,7 @@ function onContextMenu(event: MouseEvent) {
 </script>
 
 <template>
-  <div
-    ref="trackingAreaEl"
-    class="canvas-area"
-    @contextmenu="onContextMenu"
-  >
+  <div ref="trackingAreaEl" class="canvas-area" @contextmenu="onContextMenu">
     Right-click inside this container
 
     <div v-if="node.open.value" ref="floatingEl" class="context-menu">

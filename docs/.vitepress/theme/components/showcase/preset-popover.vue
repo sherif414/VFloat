@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import type { Placement, UsePositionMiddlewaresOptions } from "v-float";
 import { computed, shallowRef, watch } from "vue";
-import { useArrow, useClick, useEscapeKey, useFloatingNode, useOutsideClick, usePosition, useRole } from "v-float";
+import {
+  useArrow,
+  useClick,
+  useEscapeKey,
+  useFloatingNode,
+  useOutsideClick,
+  usePosition,
+  useRole,
+} from "v-float";
 
 interface Props {
   placement: Placement;

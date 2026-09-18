@@ -24,16 +24,16 @@ interface UseFocusReturn {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Disabling removes all focus listeners. |
-| `requireFocusVisible` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, opens only for keyboard navigation, ignoring pointer clicks. |
-| `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | `undefined` | Predicate to prevent closing when focus transitions to selected elements. |
+| Name                  | Type                                       | Default     | Notes                                                                     |
+| --------------------- | ------------------------------------------ | ----------- | ------------------------------------------------------------------------- |
+| `enabled`             | `MaybeRefOrGetter<boolean>`                | `true`      | Reactive toggle. Disabling removes all focus listeners.                   |
+| `requireFocusVisible` | `MaybeRefOrGetter<boolean>`                | `true`      | When `true`, opens only for keyboard navigation, ignoring pointer clicks. |
+| `ignoreFocusOut`      | `(target: EventTarget \| null) => boolean` | `undefined` | Predicate to prevent closing when focus transitions to selected elements. |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
+| Name      | Type         | Notes                                                                         |
+| --------- | ------------ | ----------------------------------------------------------------------------- |
 | `cleanup` | `() => void` | Manually unregisters all focus listeners. Also executes on component unmount. |
 
 ## Details
@@ -84,9 +84,7 @@ useRole(node, { role: "tooltip" });
 <template>
   <button ref="anchorEl">Tab to focus me</button>
 
-  <div v-if="node.open.value" ref="floatingEl" role="tooltip">
-    Helpful keyboard-accessible hint
-  </div>
+  <div v-if="node.open.value" ref="floatingEl" role="tooltip">Helpful keyboard-accessible hint</div>
 </template>
 ```
 

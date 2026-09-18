@@ -101,6 +101,9 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - Run dry-run release simulation: `pnpm run release:dry`
 - Build documentation: `pnpm docs:build`
 - Deploy documentation: `pnpm run docs:deploy`
+- Run documentation linting: `pnpm docs:lint`
+- Fix documentation lint & format: `pnpm docs:lint:fix`
+- Format documentation: `pnpm docs:format`
 
 ## Review Checklist for Agents
 
@@ -110,5 +113,5 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Ensure full SSR & cross-realm (iframe) safety: resolve documents via `element.ownerDocument ?? getDocument()` and windows via `ownerDocument.defaultView ?? getWindow()`; execute timers (`setTimeout`, `clearTimeout`) on `ownerWindow`; never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
 - [ ] Scope-aware validation:
   - For `src/` changes: Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test:run`.
-  - For `docs/` changes: Run `pnpm docs:build` (note: `pnpm test` and `pnpm lint` do not test or type-check `docs/` components; never cite unit test passes for `docs/` edits).
+  - For `docs/` changes: Run `pnpm docs:lint` and `pnpm docs:build` (note: `pnpm test` and `pnpm lint` target `src/`; use `pnpm docs:lint` and `pnpm docs:build` for `docs/` edits).
 - [ ] Keep module internals private: never export functions, interfaces, types, constants, or variables that are only used within their defining module and not imported outside of it.

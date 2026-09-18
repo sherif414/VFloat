@@ -69,7 +69,9 @@ onBeforeUnmount(() => {
           class="action-btn code-toggle-btn"
           :class="{ 'is-active': activeView === 'code' }"
           :title="activeView === 'code' ? 'Switch to interactive preview' : 'View component code'"
-          :aria-label="activeView === 'code' ? 'Switch to interactive preview' : 'View component code'"
+          :aria-label="
+            activeView === 'code' ? 'Switch to interactive preview' : 'View component code'
+          "
           :aria-pressed="activeView === 'code'"
           @click="activeView = activeView === 'code' ? 'preview' : 'code'"
         >

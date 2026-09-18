@@ -28,15 +28,15 @@ interface ShiftOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `mainAxis` | `boolean` | `true` | Allows shifting along the placement's cross-direction to prevent clipping against side edges. |
-| `crossAxis` | `boolean` | `false` | Allows shifting along the placement direction (e.g. moving closer to or further from the anchor). |
-| `limiter` | `{ fn, options? }` | `undefined` | Constrains shifting so the panel never slides beyond the anchor edge (e.g. `limitShift()`). |
-| `padding` | `Padding` | `0` | Inset padding from the clipping viewport boundary. |
-| `boundary` | `Boundary` | `"clippingAncestors"` | Clipping boundary element or rect. |
-| `rootBoundary` | `RootBoundary` | `"viewport"` | Root boundary context (`"viewport"` or `"document"`). |
-| `altBoundary` | `boolean` | `false` | When `true`, checks boundaries of the floating element instead of the anchor. |
+| Name           | Type               | Default               | Notes                                                                                             |
+| -------------- | ------------------ | --------------------- | ------------------------------------------------------------------------------------------------- |
+| `mainAxis`     | `boolean`          | `true`                | Allows shifting along the placement's cross-direction to prevent clipping against side edges.     |
+| `crossAxis`    | `boolean`          | `false`               | Allows shifting along the placement direction (e.g. moving closer to or further from the anchor). |
+| `limiter`      | `{ fn, options? }` | `undefined`           | Constrains shifting so the panel never slides beyond the anchor edge (e.g. `limitShift()`).       |
+| `padding`      | `Padding`          | `0`                   | Inset padding from the clipping viewport boundary.                                                |
+| `boundary`     | `Boundary`         | `"clippingAncestors"` | Clipping boundary element or rect.                                                                |
+| `rootBoundary` | `RootBoundary`     | `"viewport"`          | Root boundary context (`"viewport"` or `"document"`).                                             |
+| `altBoundary`  | `boolean`          | `false`               | When `true`, checks boundaries of the floating element instead of the anchor.                     |
 
 ## Returns
 

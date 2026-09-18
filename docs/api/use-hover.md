@@ -31,26 +31,26 @@ interface SafePolygonOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Gates all hover listeners. |
-| `delay` | `MaybeRefOrGetter<number \| { open?: number; close?: number }>` | `0` | Debounce duration in milliseconds for open and close transitions. |
-| `restMs` | `MaybeRefOrGetter<number>` | `0` | Duration the pointer must rest stationary over the anchor before opening. |
-| `mouseOnly` | `MaybeRefOrGetter<boolean>` | `false` | When `true`, ignores touch or pen hover events. |
-| `safePolygon` | `MaybeRefOrGetter<boolean \| SafePolygonOptions>` | `false` | Keeps panel open while the pointer travels across the gap between anchor and floating panel. |
-| `ignorePointerLeave` | `(target: EventTarget \| null) => boolean` | `undefined` | Callback returning `true` to ignore selected pointer-leave events. |
+| Name                 | Type                                                            | Default     | Notes                                                                                        |
+| -------------------- | --------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `enabled`            | `MaybeRefOrGetter<boolean>`                                     | `true`      | Reactive toggle. Gates all hover listeners.                                                  |
+| `delay`              | `MaybeRefOrGetter<number \| { open?: number; close?: number }>` | `0`         | Debounce duration in milliseconds for open and close transitions.                            |
+| `restMs`             | `MaybeRefOrGetter<number>`                                      | `0`         | Duration the pointer must rest stationary over the anchor before opening.                    |
+| `mouseOnly`          | `MaybeRefOrGetter<boolean>`                                     | `false`     | When `true`, ignores touch or pen hover events.                                              |
+| `safePolygon`        | `MaybeRefOrGetter<boolean \| SafePolygonOptions>`               | `false`     | Keeps panel open while the pointer travels across the gap between anchor and floating panel. |
+| `ignorePointerLeave` | `(target: EventTarget \| null) => boolean`                      | `undefined` | Callback returning `true` to ignore selected pointer-leave events.                           |
 
 ### Safe Polygon Options
 
 When `safePolygon` is `true` or an object, an invisible directional polygon is calculated between the pointer and the floating panel:
 
-| Option | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `buffer` | `number` | `1` | Extra pixel padding added around the travel corridor. |
-| `requireIntent` | `boolean` | `true` | Requires pointer velocity and direction to point toward the floating element. |
-| `intentTimeout` | `number` | `40` | Delay in milliseconds before closing when pointer velocity drops below 0.1 px/ms. |
-| `blockPointerEvents` | `boolean` | `false` | Prevents background elements from firing pointer/hover events while traversing the safe corridor. |
-| `onPolygonChange` | `(polygon: Polygon) => void` | `undefined` | Callback receiving updated polygon coordinates for debugging or visualization. |
+| Option               | Type                         | Default     | Notes                                                                                             |
+| -------------------- | ---------------------------- | ----------- | ------------------------------------------------------------------------------------------------- |
+| `buffer`             | `number`                     | `1`         | Extra pixel padding added around the travel corridor.                                             |
+| `requireIntent`      | `boolean`                    | `true`      | Requires pointer velocity and direction to point toward the floating element.                     |
+| `intentTimeout`      | `number`                     | `40`        | Delay in milliseconds before closing when pointer velocity drops below 0.1 px/ms.                 |
+| `blockPointerEvents` | `boolean`                    | `false`     | Prevents background elements from firing pointer/hover events while traversing the safe corridor. |
+| `onPolygonChange`    | `(polygon: Polygon) => void` | `undefined` | Callback receiving updated polygon coordinates for debugging or visualization.                    |
 
 ## Returns
 
@@ -85,7 +85,6 @@ The default `intentTimeout` is 40ms. If you build large mega-menus, multi-column
 ### Spatial Family Awareness
 
 When moving the pointer into a child submenu or nested floating surface, `useHover` verifies whether the pointer's destination (`e.relatedTarget`) is contained in the node family via `node.contains(e.relatedTarget)`. Parent surfaces stay open without extra manual listener wiring.
-
 
 ## Example
 

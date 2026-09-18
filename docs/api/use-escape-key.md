@@ -23,12 +23,12 @@ interface UseEscapeKeyOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Setting to `false` removes the node from the escape stack and ignores keystrokes. |
-| `capture` | `boolean` | `false` | Attaches keydown listener during the capture phase. Read once during listener setup. |
-| `preventDefault` | `boolean` | `false` | Calls `event.preventDefault()` on handled Escape presses. |
-| `onEscape` | `(event: KeyboardEvent) => void` | `undefined` | Custom callback. When provided, replaces the default `node.open.value = false`. |
+| Name             | Type                             | Default     | Notes                                                                                              |
+| ---------------- | -------------------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
+| `enabled`        | `MaybeRefOrGetter<boolean>`      | `true`      | Reactive toggle. Setting to `false` removes the node from the escape stack and ignores keystrokes. |
+| `capture`        | `boolean`                        | `false`     | Attaches keydown listener during the capture phase. Read once during listener setup.               |
+| `preventDefault` | `boolean`                        | `false`     | Calls `event.preventDefault()` on handled Escape presses.                                          |
+| `onEscape`       | `(event: KeyboardEvent) => void` | `undefined` | Custom callback. When provided, replaces the default `node.open.value = false`.                    |
 
 ## Returns
 

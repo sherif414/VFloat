@@ -9,10 +9,7 @@ description: Manages modal focus containment, sentinels, background inert isolat
 ## Type
 
 ```ts
-function useFocusTrap(
-  node: FloatingNode,
-  options?: UseFocusTrapOptions,
-): UseFocusTrapReturn;
+function useFocusTrap(node: FloatingNode, options?: UseFocusTrapOptions): UseFocusTrapReturn;
 
 interface UseFocusTrapOptions {
   enabled?: MaybeRefOrGetter<boolean>;
@@ -37,27 +34,27 @@ interface UseFocusTrapReturn {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Reactive toggle. Activates focus management while `node.open` is `true`. |
-| `modal` | `MaybeRefOrGetter<boolean>` | `true` | When `true`, isolates outside DOM elements and strictly traps Tab navigation inside. |
-| `initialFocus` | Element, ref, function, or `false` | First tabbable element | Specifies element to receive focus upon opening. `false` prevents initial focus. |
-| `returnFocus` | `boolean`, Element, or ref | `true` | Restores focus to the trigger or target element when the trap deactivates. |
-| `guards` | `MaybeRefOrGetter<boolean>` | `true` | Injects invisible boundary sentinels around the floating element to catch portal leaks. |
-| `closeOnFocusOut` | `MaybeRefOrGetter<boolean>` | `false` | When `modal: false`, closes `node` when focus leaves the floating family. |
-| `closeOnTab` | `MaybeRefOrGetter<boolean>` | `false` | When `modal: false`, closes `node` when pressing Tab on boundaries. |
-| `outsideElementsInert` | `MaybeRefOrGetter<boolean>` | `modal` | Isolates background elements using `inert`. Defaults to `true` when `modal: true`. |
-| `preventScroll` | `MaybeRefOrGetter<boolean>` | `true` | Prevents browser viewport scrolling when shifting focus. |
-| `ignoreFocusOut` | `(target: EventTarget \| null) => boolean` | `undefined` | Custom predicate to ignore focus loss to specific target elements. |
-| `onError` | `(error: unknown) => void` | `undefined` | Optional error handler callback if trap activation fails. |
+| Name                   | Type                                       | Default                | Notes                                                                                   |
+| ---------------------- | ------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------- |
+| `enabled`              | `MaybeRefOrGetter<boolean>`                | `true`                 | Reactive toggle. Activates focus management while `node.open` is `true`.                |
+| `modal`                | `MaybeRefOrGetter<boolean>`                | `true`                 | When `true`, isolates outside DOM elements and strictly traps Tab navigation inside.    |
+| `initialFocus`         | Element, ref, function, or `false`         | First tabbable element | Specifies element to receive focus upon opening. `false` prevents initial focus.        |
+| `returnFocus`          | `boolean`, Element, or ref                 | `true`                 | Restores focus to the trigger or target element when the trap deactivates.              |
+| `guards`               | `MaybeRefOrGetter<boolean>`                | `true`                 | Injects invisible boundary sentinels around the floating element to catch portal leaks. |
+| `closeOnFocusOut`      | `MaybeRefOrGetter<boolean>`                | `false`                | When `modal: false`, closes `node` when focus leaves the floating family.               |
+| `closeOnTab`           | `MaybeRefOrGetter<boolean>`                | `false`                | When `modal: false`, closes `node` when pressing Tab on boundaries.                     |
+| `outsideElementsInert` | `MaybeRefOrGetter<boolean>`                | `modal`                | Isolates background elements using `inert`. Defaults to `true` when `modal: true`.      |
+| `preventScroll`        | `MaybeRefOrGetter<boolean>`                | `true`                 | Prevents browser viewport scrolling when shifting focus.                                |
+| `ignoreFocusOut`       | `(target: EventTarget \| null) => boolean` | `undefined`            | Custom predicate to ignore focus loss to specific target elements.                      |
+| `onError`              | `(error: unknown) => void`                 | `undefined`            | Optional error handler callback if trap activation fails.                               |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `isActive` | `ComputedRef<boolean>` | Reactive status indicating whether focus trapping is currently active. |
-| `activate` | `() => void` | Manually activates focus management. |
-| `deactivate` | `() => void` | Manually deactivates focus management and restores focus. |
+| Name         | Type                   | Notes                                                                  |
+| ------------ | ---------------------- | ---------------------------------------------------------------------- |
+| `isActive`   | `ComputedRef<boolean>` | Reactive status indicating whether focus trapping is currently active. |
+| `activate`   | `() => void`           | Manually activates focus management.                                   |
+| `deactivate` | `() => void`           | Manually deactivates focus management and restores focus.              |
 
 ## Details
 

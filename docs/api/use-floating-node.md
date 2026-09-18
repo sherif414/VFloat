@@ -56,28 +56,28 @@ interface TraverseOptions {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `anchorEl` | `Ref<AnchorElement>` | Required | Reference element or [virtual element](/guide/use-virtual-anchors). |
-| `floatingEl` | `Ref<FloatingElement>` | Required | Floating content element. |
-| `arrowEl` | `Ref<HTMLElement \| null>` | `ref(null)` | Optional arrow element ref. Automatically created when omitted. |
-| `open` | `Ref<boolean>` | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored. |
-| `defaultOpen` | `boolean` | `false` | Initial open state when `open` is omitted. |
-| `parent` | `MaybeRefOrGetter<FloatingNode \| null \| undefined>` | `undefined` | Parent node reference. Omitted/`undefined` uses DI; `null` forces standalone; `FloatingNode`/ref links explicitly. |
+| Name          | Type                                                  | Default     | Notes                                                                                                              |
+| ------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| `anchorEl`    | `Ref<AnchorElement>`                                  | Required    | Reference element or [virtual element](/guide/use-virtual-anchors).                                                |
+| `floatingEl`  | `Ref<FloatingElement>`                                | Required    | Floating content element.                                                                                          |
+| `arrowEl`     | `Ref<HTMLElement \| null>`                            | `ref(null)` | Optional arrow element ref. Automatically created when omitted.                                                    |
+| `open`        | `Ref<boolean>`                                        | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored.                                              |
+| `defaultOpen` | `boolean`                                             | `false`     | Initial open state when `open` is omitted.                                                                         |
+| `parent`      | `MaybeRefOrGetter<FloatingNode \| null \| undefined>` | `undefined` | Parent node reference. Omitted/`undefined` uses DI; `null` forces standalone; `FloatingNode`/ref links explicitly. |
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `id` | `FloatingNodeId` | Stable symbol identifying the node in trees. |
-| `refs` | `FloatingNodeElements` | Shared `anchorEl`, `floatingEl`, and `arrowEl` refs. |
-| `open` | `Ref<boolean>` | Reactive mutable open state ref. Mutate directly (`node.open.value = true / false`). |
-| `parent` | `Readonly<ShallowRef<FloatingNode \| null>>` | Intrinsic parent node in the hierarchy. `null` for root or standalone nodes. |
-| `children` | `Readonly<ShallowRef<ReadonlySet<FloatingNode>>>` | Immediate child nodes registered under this node. |
-| `appendChild` | `(child: FloatingNode) => () => void` | Atomically links a child node under this parent. Returns a teardown function. |
-| `removeChild` | `(child: FloatingNode) => void` | Unlinks a child node and clears the child's parent reference. |
-| `contains` | `(target: EventTarget \| null) => boolean` | Checks whether target is contained in this node or any open descendant. |
-| `traverse` | `(visitor, options?) => boolean` | Recursively traverses this node and its descendants in depth-first order. |
+| Name          | Type                                              | Notes                                                                                |
+| ------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `id`          | `FloatingNodeId`                                  | Stable symbol identifying the node in trees.                                         |
+| `refs`        | `FloatingNodeElements`                            | Shared `anchorEl`, `floatingEl`, and `arrowEl` refs.                                 |
+| `open`        | `Ref<boolean>`                                    | Reactive mutable open state ref. Mutate directly (`node.open.value = true / false`). |
+| `parent`      | `Readonly<ShallowRef<FloatingNode \| null>>`      | Intrinsic parent node in the hierarchy. `null` for root or standalone nodes.         |
+| `children`    | `Readonly<ShallowRef<ReadonlySet<FloatingNode>>>` | Immediate child nodes registered under this node.                                    |
+| `appendChild` | `(child: FloatingNode) => () => void`             | Atomically links a child node under this parent. Returns a teardown function.        |
+| `removeChild` | `(child: FloatingNode) => void`                   | Unlinks a child node and clears the child's parent reference.                        |
+| `contains`    | `(target: EventTarget \| null) => boolean`        | Checks whether target is contained in this node or any open descendant.              |
+| `traverse`    | `(visitor, options?) => boolean`                  | Recursively traverses this node and its descendants in depth-first order.            |
 
 ## Details
 

@@ -28,21 +28,21 @@ interface ArrowData {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `element` | `Ref<HTMLElement \| null>` | Required | Vue ref holding the arrow DOM element to measure. |
-| `padding` | `Padding` | `0` | Minimum clearance keeping the arrow away from the floating element's rounded corners. |
+| Name      | Type                       | Default  | Notes                                                                                 |
+| --------- | -------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `element` | `Ref<HTMLElement \| null>` | Required | Vue ref holding the arrow DOM element to measure.                                     |
+| `padding` | `Padding`                  | `0`      | Minimum clearance keeping the arrow away from the floating element's rounded corners. |
 
 ## Returns
 
 `arrow` returns a `Middleware` object with `name: "arrow"`. It writes calculated coordinates to `middlewareData.value.arrow`:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `x` | `number \| undefined` | Horizontal offset in pixels for top and bottom placements. |
-| `y` | `number \| undefined` | Vertical offset in pixels for left and right placements. |
-| `centerOffset` | `number` | Distance in pixels from the arrow center to the anchor center. |
-| `alignmentOffset` | `number \| undefined` | Offset relative to alignment edges. |
+| Field             | Type                  | Notes                                                          |
+| ----------------- | --------------------- | -------------------------------------------------------------- |
+| `x`               | `number \| undefined` | Horizontal offset in pixels for top and bottom placements.     |
+| `y`               | `number \| undefined` | Vertical offset in pixels for left and right placements.       |
+| `centerOffset`    | `number`              | Distance in pixels from the arrow center to the anchor center. |
+| `alignmentOffset` | `number \| undefined` | Offset relative to alignment edges.                            |
 
 ## Details
 

@@ -77,7 +77,8 @@ function handleResetDemo() {
 }
 
 const isModified = computed(() => {
-  const hasOffset = activePreset.value !== "cursor" && (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
+  const hasOffset =
+    activePreset.value !== "cursor" && (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
   const hasCustomPlacement = selectedPlacement.value !== "top";
   const isKeepOpen = keepOpen.value;
   return hasOffset || hasCustomPlacement || isKeepOpen;
@@ -115,103 +116,99 @@ onMounted(() => {
     <!-- 2. Main Workspace -->
     <div class="showcase-body">
       <!-- 1. Interactive Stage Canvas -->
-      <div
-        ref="sandboxEl"
-        class="sandbox"
-        :class="{ 'is-cursor-mode': activePreset === 'cursor' }"
-      >
-          <!-- Caption Helper -->
-          <div class="sandbox-caption">
-            <template v-if="activePreset === 'tooltip'">
-              Hover to open. Drag anchor to test collision flipping.
-            </template>
-            <template v-else-if="activePreset === 'popover'">
-              Click to open card. Drag anchor near edges to observe placement adaptation.
-            </template>
-            <template v-else-if="activePreset === 'menu'">
-              Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.
-            </template>
-            <template v-else> Move your cursor across this area to track coordinates. </template>
-          </div>
+      <div ref="sandboxEl" class="sandbox" :class="{ 'is-cursor-mode': activePreset === 'cursor' }">
+        <!-- Caption Helper -->
+        <div class="sandbox-caption">
+          <template v-if="activePreset === 'tooltip'">
+            Hover to open. Drag anchor to test collision flipping.
+          </template>
+          <template v-else-if="activePreset === 'popover'">
+            Click to open card. Drag anchor near edges to observe placement adaptation.
+          </template>
+          <template v-else-if="activePreset === 'menu'">
+            Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.
+          </template>
+          <template v-else> Move your cursor across this area to track coordinates. </template>
+        </div>
 
-          <!-- Reset Button (Icon-Only, Resets Position & Options) -->
-          <button
-            v-if="isModified"
-            type="button"
-            class="reset-icon-btn"
-            title="Reset position and settings"
-            aria-label="Reset position and settings"
-            @click="handleResetDemo"
+        <!-- Reset Button (Icon-Only, Resets Position & Options) -->
+        <button
+          v-if="isModified"
+          type="button"
+          class="reset-icon-btn"
+          title="Reset position and settings"
+          aria-label="Reset position and settings"
+          @click="handleResetDemo"
+        >
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
           >
-            <svg
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M2.5 2.5v4h4" />
-              <path d="M2.8 10a6 6 0 1 0 1.4-6.3L2.5 6.5" />
-            </svg>
-          </button>
+            <path d="M2.5 2.5v4h4" />
+            <path d="M2.8 10a6 6 0 1 0 1.4-6.3L2.5 6.5" />
+          </svg>
+        </button>
 
-          <!-- Tooltip Preset -->
-          <PresetTooltip
-            v-if="activePreset === 'tooltip'"
-            ref="tooltipPresetRef"
-            :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :enable-arrow="enableArrow"
-            :anchor-offset="anchorOffset"
-            :is-dragging="isDragging"
-            :is-active="activePreset === 'tooltip'"
-            :keep-open="keepOpen"
-            @pointerdown="handlePointerDown"
-            @update:resolved-placement="onResolvedPlacementUpdate"
-          />
+        <!-- Tooltip Preset -->
+        <PresetTooltip
+          v-if="activePreset === 'tooltip'"
+          ref="tooltipPresetRef"
+          :placement="selectedPlacement"
+          :middleware-config="middlewareConfig"
+          :enable-arrow="enableArrow"
+          :anchor-offset="anchorOffset"
+          :is-dragging="isDragging"
+          :is-active="activePreset === 'tooltip'"
+          :keep-open="keepOpen"
+          @pointerdown="handlePointerDown"
+          @update:resolved-placement="onResolvedPlacementUpdate"
+        />
 
-          <!-- Popover Preset -->
-          <PresetPopover
-            v-if="activePreset === 'popover'"
-            ref="popoverPresetRef"
-            :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :enable-arrow="enableArrow"
-            :anchor-offset="anchorOffset"
-            :is-dragging="isDragging"
-            :is-active="activePreset === 'popover'"
-            :keep-open="keepOpen"
-            @pointerdown="handlePointerDown"
-            @update:resolved-placement="onResolvedPlacementUpdate"
-          />
+        <!-- Popover Preset -->
+        <PresetPopover
+          v-if="activePreset === 'popover'"
+          ref="popoverPresetRef"
+          :placement="selectedPlacement"
+          :middleware-config="middlewareConfig"
+          :enable-arrow="enableArrow"
+          :anchor-offset="anchorOffset"
+          :is-dragging="isDragging"
+          :is-active="activePreset === 'popover'"
+          :keep-open="keepOpen"
+          @pointerdown="handlePointerDown"
+          @update:resolved-placement="onResolvedPlacementUpdate"
+        />
 
-          <!-- Menu Preset -->
-          <PresetMenu
-            v-if="activePreset === 'menu'"
-            ref="menuPresetRef"
-            :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :enable-arrow="enableArrow"
-            :anchor-offset="anchorOffset"
-            :is-dragging="isDragging"
-            :is-active="activePreset === 'menu'"
-            :keep-open="keepOpen"
-            @pointerdown="handlePointerDown"
-            @update:resolved-placement="onResolvedPlacementUpdate"
-          />
+        <!-- Menu Preset -->
+        <PresetMenu
+          v-if="activePreset === 'menu'"
+          ref="menuPresetRef"
+          :placement="selectedPlacement"
+          :middleware-config="middlewareConfig"
+          :enable-arrow="enableArrow"
+          :anchor-offset="anchorOffset"
+          :is-dragging="isDragging"
+          :is-active="activePreset === 'menu'"
+          :keep-open="keepOpen"
+          @pointerdown="handlePointerDown"
+          @update:resolved-placement="onResolvedPlacementUpdate"
+        />
 
-          <!-- Cursor Follower Preset -->
-          <PresetCursor
-            v-if="activePreset === 'cursor'"
-            ref="cursorPresetRef"
-            :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :is-active="activePreset === 'cursor'"
-            :keep-open="keepOpen"
-            @update:resolved-placement="onResolvedPlacementUpdate"
-          />
+        <!-- Cursor Follower Preset -->
+        <PresetCursor
+          v-if="activePreset === 'cursor'"
+          ref="cursorPresetRef"
+          :placement="selectedPlacement"
+          :middleware-config="middlewareConfig"
+          :is-active="activePreset === 'cursor'"
+          :keep-open="keepOpen"
+          @update:resolved-placement="onResolvedPlacementUpdate"
+        />
       </div>
     </div>
   </div>

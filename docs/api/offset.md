@@ -23,11 +23,11 @@ type OffsetOptions =
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `mainAxis` | `number` | `0` | Distance in pixels along the placement direction (e.g. gap below anchor for `placement: "bottom"`). |
-| `crossAxis` | `number` | `0` | Distance in pixels perpendicular to the placement direction. |
-| `alignmentAxis` | `number \| null` | `null` | Distance along the alignment axis for aligned placements (such as `"top-start"`). |
+| Name            | Type             | Default | Notes                                                                                               |
+| --------------- | ---------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `mainAxis`      | `number`         | `0`     | Distance in pixels along the placement direction (e.g. gap below anchor for `placement: "bottom"`). |
+| `crossAxis`     | `number`         | `0`     | Distance in pixels perpendicular to the placement direction.                                        |
+| `alignmentAxis` | `number \| null` | `null`  | Distance along the alignment axis for aligned placements (such as `"top-start"`).                   |
 
 You can also pass a plain `number` directly (e.g. `offset(8)` or `middlewares: { offset: 8 }`), which assigns the value to `mainAxis`.
 

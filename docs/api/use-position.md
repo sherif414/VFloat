@@ -21,10 +21,7 @@ interface UsePositionOptions {
   applyStyles?: MaybeRef<boolean | undefined> | ApplyStylesFn;
 }
 
-type ApplyStylesFn = (
-  element: HTMLElement,
-  styles: FloatingStyles,
-) => void | (() => void);
+type ApplyStylesFn = (element: HTMLElement, styles: FloatingStyles) => void | (() => void);
 
 interface UsePositionMiddlewaresOptions {
   inline?: true | false | InlineOptions;
@@ -68,46 +65,46 @@ type FloatingStyles = {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `placement` | `MaybeRefOrGetter<Placement>` | `"bottom"` | Desired side and alignment (e.g. `"bottom-start"`). Reactive. |
-| `strategy` | `MaybeRefOrGetter<Strategy>` | `"absolute"` | CSS positioning strategy: `"absolute"` or `"fixed"`. Reactive. |
-| `transform` | `MaybeRefOrGetter<boolean>` | `true` | `true` uses CSS `transform: translate(x, y)`. `false` sets `top` and `left`. |
-| `middlewares` | `MaybeRefOrGetter<UsePositionMiddlewaresOptions \| Middleware[]>` | `{}` | Declarative middleware configuration or a raw `Middleware[]` array. |
-| `autoUpdate` | `MaybeRefOrGetter<boolean \| AutoUpdateOptions>` | `true` | Automatically recomputes on resize, scroll, and layout changes. Set `false` to disable. |
-| `enabled` | `MaybeRefOrGetter<boolean>` | `true` | Controls whether positioning computations and viewport listeners are active. |
-| `applyStyles` | `MaybeRef<boolean> \| ApplyStylesFn` | `true` | Automatically synchronizes computed styles to `node.refs.floatingEl`. Pass `false` to disable or a custom function to override. |
+| Name          | Type                                                              | Default      | Notes                                                                                                                           |
+| ------------- | ----------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `placement`   | `MaybeRefOrGetter<Placement>`                                     | `"bottom"`   | Desired side and alignment (e.g. `"bottom-start"`). Reactive.                                                                   |
+| `strategy`    | `MaybeRefOrGetter<Strategy>`                                      | `"absolute"` | CSS positioning strategy: `"absolute"` or `"fixed"`. Reactive.                                                                  |
+| `transform`   | `MaybeRefOrGetter<boolean>`                                       | `true`       | `true` uses CSS `transform: translate(x, y)`. `false` sets `top` and `left`.                                                    |
+| `middlewares` | `MaybeRefOrGetter<UsePositionMiddlewaresOptions \| Middleware[]>` | `{}`         | Declarative middleware configuration or a raw `Middleware[]` array.                                                             |
+| `autoUpdate`  | `MaybeRefOrGetter<boolean \| AutoUpdateOptions>`                  | `true`       | Automatically recomputes on resize, scroll, and layout changes. Set `false` to disable.                                         |
+| `enabled`     | `MaybeRefOrGetter<boolean>`                                       | `true`       | Controls whether positioning computations and viewport listeners are active.                                                    |
+| `applyStyles` | `MaybeRef<boolean> \| ApplyStylesFn`                              | `true`       | Automatically synchronizes computed styles to `node.refs.floatingEl`. Pass `false` to disable or a custom function to override. |
 
 ### Declarative Middleware Options
 
 When passing an object to `middlewares`, VFloat resolves built-in middlewares in the recommended pipeline order:
 
-| Option | Type | Pipeline Step | Purpose |
-| --- | --- | --- | --- |
-| `inline` | `boolean \| InlineOptions` | 1 | Dissects multi-line inline triggers into individual client rects. |
-| `offset` | `number \| OffsetOptions` | 2 | Adds distance between the anchor and the floating panel. |
-| `flip` | `boolean \| FlipOptions` | 3 | Flips to alternate placements when space is constrained. |
-| `autoPlacement` | `boolean \| AutoPlacementOptions` | 4 | Chooses the placement with the most available space (mutually exclusive with `flip`). |
-| `shift` | `boolean \| ShiftOptions` | 5 | Nudges the element along the viewport boundary to stay visible. |
-| `matchWidth` | `boolean` | 6 | Sets panel width to match the anchor's measured width via `size`. |
-| `size` | `SizeOptions` | 7 | Measures boundary limits and invokes a custom resizing function. |
-| `hide` | `boolean \| HideOptions` | 8 | Flags whether the anchor is clipped or the panel escaped boundaries. |
-| `arrow` | `boolean \| UsePositionArrowOptions` | 9 | Calculates offsets for an arrow element using `node.refs.arrowEl`. |
-| `custom` | `Middleware[]` | 10 | Appends custom Floating UI middleware instances at the end of the pipeline. |
+| Option          | Type                                 | Pipeline Step | Purpose                                                                               |
+| --------------- | ------------------------------------ | ------------- | ------------------------------------------------------------------------------------- |
+| `inline`        | `boolean \| InlineOptions`           | 1             | Dissects multi-line inline triggers into individual client rects.                     |
+| `offset`        | `number \| OffsetOptions`            | 2             | Adds distance between the anchor and the floating panel.                              |
+| `flip`          | `boolean \| FlipOptions`             | 3             | Flips to alternate placements when space is constrained.                              |
+| `autoPlacement` | `boolean \| AutoPlacementOptions`    | 4             | Chooses the placement with the most available space (mutually exclusive with `flip`). |
+| `shift`         | `boolean \| ShiftOptions`            | 5             | Nudges the element along the viewport boundary to stay visible.                       |
+| `matchWidth`    | `boolean`                            | 6             | Sets panel width to match the anchor's measured width via `size`.                     |
+| `size`          | `SizeOptions`                        | 7             | Measures boundary limits and invokes a custom resizing function.                      |
+| `hide`          | `boolean \| HideOptions`             | 8             | Flags whether the anchor is clipped or the panel escaped boundaries.                  |
+| `arrow`         | `boolean \| UsePositionArrowOptions` | 9             | Calculates offsets for an arrow element using `node.refs.arrowEl`.                    |
+| `custom`        | `Middleware[]`                       | 10            | Appends custom Floating UI middleware instances at the end of the pipeline.           |
 
 Alternatively, you can pass a raw `Middleware[]` array to `middlewares` to fully customize the middleware instances and execution order.
 
 ## Returns
 
-| Name | Type | Notes |
-| --- | --- | --- |
-| `x` / `y` | `Readonly<Ref<number>>` | Computed horizontal and vertical coordinates in pixels. |
-| `strategy` | `Readonly<Ref<Strategy>>` | Active positioning strategy (`"absolute"` or `"fixed"`). |
-| `placement` | `Readonly<Ref<Placement>>` | Effective placement after middleware execution (e.g. after flipping). |
-| `middlewareData` | `Readonly<Ref<MiddlewareData>>` | Raw output produced by middlewares (such as arrow coordinates or hide flags). |
-| `isPositioned` | `Readonly<Ref<boolean>>` | Becomes `true` once coordinates are computed for mounted elements. Resets to `false` on unmount. |
-| `styles` | `Readonly<Ref<FloatingStyles>>` | Reactive inline style object with device-pixel-ratio subpixel rounding. Synchronized directly to `node.refs.floatingEl` by default (`applyStyles: true`), or manually bindable via `:style="styles"` when `applyStyles: false`. |
-| `update` | `() => Promise<void>` | Imperatively forces an immediate coordinate recomputation. |
+| Name             | Type                            | Notes                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x` / `y`        | `Readonly<Ref<number>>`         | Computed horizontal and vertical coordinates in pixels.                                                                                                                                                                         |
+| `strategy`       | `Readonly<Ref<Strategy>>`       | Active positioning strategy (`"absolute"` or `"fixed"`).                                                                                                                                                                        |
+| `placement`      | `Readonly<Ref<Placement>>`      | Effective placement after middleware execution (e.g. after flipping).                                                                                                                                                           |
+| `middlewareData` | `Readonly<Ref<MiddlewareData>>` | Raw output produced by middlewares (such as arrow coordinates or hide flags).                                                                                                                                                   |
+| `isPositioned`   | `Readonly<Ref<boolean>>`        | Becomes `true` once coordinates are computed for mounted elements. Resets to `false` on unmount.                                                                                                                                |
+| `styles`         | `Readonly<Ref<FloatingStyles>>` | Reactive inline style object with device-pixel-ratio subpixel rounding. Synchronized directly to `node.refs.floatingEl` by default (`applyStyles: true`), or manually bindable via `:style="styles"` when `applyStyles: false`. |
+| `update`         | `() => Promise<void>`           | Imperatively forces an immediate coordinate recomputation.                                                                                                                                                                      |
 
 ## Details
 
@@ -179,9 +176,7 @@ useHover(node);
 
 <template>
   <button ref="anchorEl">Hover me</button>
-  <div v-if="node.open" ref="floatingEl" :data-placement="placement">
-    Tooltip content
-  </div>
+  <div v-if="node.open" ref="floatingEl" :data-placement="placement">Tooltip content</div>
 </template>
 ```
 
@@ -211,9 +206,7 @@ useClick(node);
 
 <template>
   <button ref="anchorEl" style="width: 240px">Select an option</button>
-  <div v-if="node.open" ref="floatingEl">
-    Matches anchor width (240px)
-  </div>
+  <div v-if="node.open" ref="floatingEl">Matches anchor width (240px)</div>
 </template>
 ```
 
@@ -238,9 +231,7 @@ const { styles } = usePosition(node, {
 
 <template>
   <button ref="anchorEl">Trigger</button>
-  <div v-if="node.open" ref="floatingEl" :style="styles">
-    Manual style binding
-  </div>
+  <div v-if="node.open" ref="floatingEl" :style="styles">Manual style binding</div>
 </template>
 ```
 

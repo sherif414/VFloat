@@ -35,13 +35,13 @@ interface SizeState {
 
 ## Options
 
-| Name | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `apply` | `(state: SizeState) => void` | `undefined` | Callback invoked on each position recalculation with available dimensions. |
-| `padding` | `Padding` | `0` | Boundary inset subtracted from available width and height. |
-| `boundary` | `Boundary` | `"clippingAncestors"` | Element or rect defining the clipping area. |
-| `rootBoundary` | `RootBoundary` | `"viewport"` | Root boundary context (`"viewport"` or `"document"`). |
-| `altBoundary` | `boolean` | `false` | Checks boundaries of the floating element instead of the anchor. |
+| Name           | Type                         | Default               | Notes                                                                      |
+| -------------- | ---------------------------- | --------------------- | -------------------------------------------------------------------------- |
+| `apply`        | `(state: SizeState) => void` | `undefined`           | Callback invoked on each position recalculation with available dimensions. |
+| `padding`      | `Padding`                    | `0`                   | Boundary inset subtracted from available width and height.                 |
+| `boundary`     | `Boundary`                   | `"clippingAncestors"` | Element or rect defining the clipping area.                                |
+| `rootBoundary` | `RootBoundary`               | `"viewport"`          | Root boundary context (`"viewport"` or `"document"`).                      |
+| `altBoundary`  | `boolean`                    | `false`               | Checks boundaries of the floating element instead of the anchor.           |
 
 ## Returns
 

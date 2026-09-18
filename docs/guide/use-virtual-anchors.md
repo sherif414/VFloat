@@ -67,7 +67,13 @@ For context menus and right-click inspectors, you want the surface to open at th
 ```vue
 <script setup lang="ts">
 import { ref } from "vue";
-import { useClientPoint, useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-float";
+import {
+  useClientPoint,
+  useEscapeKey,
+  useFloatingNode,
+  useOutsideClick,
+  usePosition,
+} from "v-float";
 
 const areaEl = ref<HTMLElement | null>(null);
 const anchorEl = ref<HTMLElement | null>(null);
