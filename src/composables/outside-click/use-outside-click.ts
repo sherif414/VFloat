@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
-import { isClickOnScrollbar, isHTMLElement } from "@/shared/dom";
+import { isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -29,7 +29,7 @@ import { useEventListener } from "@/shared/use-event-listener";
  * ```ts
  * useOutsideClick(node, {
  *   ignoreClick: (_event, target) => {
- *     return target instanceof Node && !!toolbarEl.value?.contains(target);
+ *     return !!toolbarEl.value?.contains(target);
  *   },
  * });
  * ```
@@ -63,8 +63,8 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
 
     if (isDragSuppressed()) return;
 
-    const target = event.target as Node | null;
-    if (!target) return;
+    const target = event.target;
+    if (!isNode(target)) return;
 
     // Ignore clicks on scrollbar gutters (e.g. of the document or an outside container).
     if (
@@ -120,7 +120,7 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
     () => toValue(options.event ?? "pointerdown"),
     onDocumentClick,
     {
-      capture: toValue(options.capture ?? true),
+      capture: options.capture ?? true,
     },
   );
 
@@ -168,12 +168,12 @@ export interface UseOutsideClickOptions {
    * Whether to use capture phase for the document listener.
    * @default true
    */
-  capture?: MaybeRefOrGetter<boolean>;
+  capture?: boolean;
 
   /**
    * Predicate used to ignore specific outside clicks.
    * @param event - The mouse event that triggered the outside click
-   * @param target - The event target
+   * @param target - The event target node
    * @returns true if the click should be ignored
    */
   ignoreClick?: OutsideClickPredicate;
@@ -202,4 +202,4 @@ export interface UseOutsideClickOptions {
 /**
  * Predicate used by `ignoreClick` to decide whether an outside click should be skipped.
  */
-export type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | null) => boolean;
+export type OutsideClickPredicate = (event: MouseEvent, target: Node) => boolean;

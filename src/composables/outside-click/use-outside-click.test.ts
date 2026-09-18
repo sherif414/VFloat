@@ -292,4 +292,101 @@ describe("useOutsideClick", () => {
 
     expect(node.open.value).toBe(false);
   });
+
+  it("reacts dynamically when enabled option changes", async () => {
+    const enabled = ref(false);
+    const { outsideEl, node } = await renderOutsideClick({
+      enabled,
+      event: "click",
+    });
+
+    await userEvent.click(outsideEl);
+    await nextTick();
+    expect(node.open.value).toBe(true);
+
+    enabled.value = true;
+    await nextTick();
+
+    await userEvent.click(outsideEl);
+    await nextTick();
+    expect(node.open.value).toBe(false);
+  });
+
+  it("intercepts click even if stopPropagation is called in bubbling when capture is true", async () => {
+    const { outsideEl, node } = await renderOutsideClick({
+      event: "click",
+      capture: true,
+    });
+
+    outsideEl.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+      },
+      { once: true },
+    );
+
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(node.open.value).toBe(false);
+  });
+
+  it("allows bubbling stopPropagation to prevent dismissal when capture is false", async () => {
+    const { outsideEl, node } = await renderOutsideClick({
+      event: "click",
+      capture: false,
+    });
+
+    outsideEl.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+      },
+      { once: true },
+    );
+
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(node.open.value).toBe(true);
+  });
+
+  it("does not trigger onClick when node is already closed", async () => {
+    const onClick = vi.fn();
+    const { outsideEl, node } = await renderOutsideClick({
+      event: "click",
+      onClick,
+    });
+
+    node.open.value = false;
+    await nextTick();
+
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("resets drag sequence after mouseup timeout completes", async () => {
+    vi.useFakeTimers();
+
+    const { floatingEl, outsideEl, node } = await renderOutsideClick({
+      event: "click",
+      ignoreDrag: true,
+    });
+
+    // Start drag inside and release mouseup
+    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+    floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
+
+    // Advance past the 0ms timeout that resets dragStartedInside
+    vi.advanceTimersByTime(10);
+
+    // Subsequent outside click should close since drag was reset
+    outsideEl.dispatchEvent(makeMouseEvent("click"));
+    await nextTick();
+
+    expect(node.open.value).toBe(false);
+  });
 });
