@@ -109,25 +109,46 @@ export function isEventTargetWithin(event: Event, element: Element | null | unde
 
 /**
  * Detects clicks on the scrollbar gutter so pointer logic can ignore drag-like gestures.
+ * Handles both LTR and RTL directions and accounts for border widths to prevent false positives.
  */
 export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
-  const rect = target.getBoundingClientRect();
-  const scrollbarWidth = target.offsetWidth - target.clientWidth;
-  const scrollbarHeight = target.offsetHeight - target.clientHeight;
+  const win = getWindow(target);
+  const style = win?.getComputedStyle ? win.getComputedStyle(target) : null;
 
+  const borderLeft = style ? Number.parseFloat(style.borderLeftWidth) || 0 : 0;
+  const borderRight = style ? Number.parseFloat(style.borderRightWidth) || 0 : 0;
+  const borderTop = style ? Number.parseFloat(style.borderTopWidth) || 0 : 0;
+  const borderBottom = style ? Number.parseFloat(style.borderBottomWidth) || 0 : 0;
+
+  const scrollbarWidth = target.offsetWidth - target.clientWidth - borderLeft - borderRight;
+  const scrollbarHeight = target.offsetHeight - target.clientHeight - borderTop - borderBottom;
+
+  const isRTL = style?.direction === "rtl";
+
+  const rect = target.getBoundingClientRect();
   const elementX = event.clientX - rect.left;
   const elementY = event.clientY - rect.top;
 
   if (scrollbarWidth > 0) {
-    const scrollbarStart = target.clientWidth;
-    if (elementX >= scrollbarStart && elementX <= target.offsetWidth) {
-      return true;
+    if (isRTL) {
+      const scrollbarStart = borderLeft;
+      const scrollbarEnd = borderLeft + scrollbarWidth;
+      if (elementX >= scrollbarStart && elementX <= scrollbarEnd) {
+        return true;
+      }
+    } else {
+      const scrollbarStart = borderLeft + target.clientWidth;
+      const scrollbarEnd = target.offsetWidth - borderRight;
+      if (elementX >= scrollbarStart && elementX <= scrollbarEnd) {
+        return true;
+      }
     }
   }
 
   if (scrollbarHeight > 0) {
-    const scrollbarStart = target.clientHeight;
-    if (elementY >= scrollbarStart && elementY <= target.offsetHeight) {
+    const scrollbarStart = borderTop + target.clientHeight;
+    const scrollbarEnd = target.offsetHeight - borderBottom;
+    if (elementY >= scrollbarStart && elementY <= scrollbarEnd) {
       return true;
     }
   }
