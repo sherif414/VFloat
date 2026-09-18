@@ -221,6 +221,146 @@ function createTwoIndependentTreesComponent() {
   return { Component, tree1RootOpen, tree1ChildOpen, tree2RootOpen, tree2ChildOpen };
 }
 
+function createPartiallyRegisteredTreeComponent() {
+  const rootOpen = ref(true);
+  const childOpen = ref(true);
+  const subChildOpen = ref(true);
+
+  const Component = defineComponent(() => {
+    const rootAnchorEl = useTemplateRef<HTMLElement>("root-anchor");
+    const rootFloatingEl = useTemplateRef<HTMLElement>("root-floating");
+    const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
+    const subChildFloatingEl = useTemplateRef<HTMLElement>("subchild-floating");
+
+    const rootNode = useFloatingNode({
+      anchorEl: rootAnchorEl,
+      floatingEl: rootFloatingEl,
+      open: rootOpen,
+    });
+    const childNode = useFloatingNode({
+      anchorEl: ref(null),
+      floatingEl: childFloatingEl,
+      open: childOpen,
+      parent: rootNode,
+    });
+    useFloatingNode({
+      anchorEl: ref(null),
+      floatingEl: subChildFloatingEl,
+      open: subChildOpen,
+      parent: childNode,
+    });
+
+    // Root and child register, but subChild deliberately does NOT register useEscapeKey
+    useEscapeKey(rootNode);
+    useEscapeKey(childNode);
+
+    return () =>
+      h("div", [
+        h("button", { ref: "root-anchor", "data-testid": "root-anchor" }, "Root Trigger"),
+        h("div", { ref: "root-floating", "data-testid": "root-floating" }, [
+          h("div", { ref: "child-floating", "data-testid": "child-floating" }, [
+            h("div", { ref: "subchild-floating", "data-testid": "subchild-floating" }, [
+              h("button", { "data-testid": "subchild-item" }, "SubChild Item"),
+            ]),
+          ]),
+        ]),
+        h("button", { "data-testid": "outside-btn" }, "Outside Button"),
+      ]);
+  });
+
+  return { Component, rootOpen, childOpen, subChildOpen };
+}
+
+function createRootOnlyRegisteredTreeComponent() {
+  const rootOpen = ref(true);
+  const childOpen = ref(true);
+
+  const Component = defineComponent(() => {
+    const rootAnchorEl = useTemplateRef<HTMLElement>("root-anchor");
+    const rootFloatingEl = useTemplateRef<HTMLElement>("root-floating");
+    const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
+
+    const rootNode = useFloatingNode({
+      anchorEl: rootAnchorEl,
+      floatingEl: rootFloatingEl,
+      open: rootOpen,
+    });
+    useFloatingNode({
+      anchorEl: ref(null),
+      floatingEl: childFloatingEl,
+      open: childOpen,
+      parent: rootNode,
+    });
+
+    // Only root registers useEscapeKey
+    useEscapeKey(rootNode);
+
+    return () =>
+      h("div", [
+        h("button", { ref: "root-anchor", "data-testid": "root-anchor" }, "Root Trigger"),
+        h("div", { ref: "root-floating", "data-testid": "root-floating" }, [
+          h("div", { ref: "child-floating", "data-testid": "child-floating" }, [
+            h("button", { "data-testid": "child-item" }, "Child Item"),
+          ]),
+        ]),
+        h("button", { "data-testid": "outside-btn" }, "Outside Button"),
+      ]);
+  });
+
+  return { Component, rootOpen, childOpen };
+}
+
+function createEqualDepthSiblingsComponent() {
+  const rootOpen = ref(true);
+  const branchAOpen = ref(false);
+  const branchBOpen = ref(false);
+
+  const Component = defineComponent(() => {
+    const rootAnchorEl = useTemplateRef<HTMLElement>("root-anchor");
+    const rootFloatingEl = useTemplateRef<HTMLElement>("root-floating");
+    const branchAFloatingEl = useTemplateRef<HTMLElement>("branch-a-floating");
+    const branchBFloatingEl = useTemplateRef<HTMLElement>("branch-b-floating");
+
+    const root = useFloatingNode({
+      anchorEl: rootAnchorEl,
+      floatingEl: rootFloatingEl,
+      open: rootOpen,
+    });
+    const branchA = useFloatingNode({
+      anchorEl: ref(null),
+      floatingEl: branchAFloatingEl,
+      open: branchAOpen,
+      parent: root,
+    });
+    const branchB = useFloatingNode({
+      anchorEl: ref(null),
+      floatingEl: branchBFloatingEl,
+      open: branchBOpen,
+      parent: root,
+    });
+
+    useEscapeKey(root);
+    useEscapeKey(branchA);
+    useEscapeKey(branchB);
+
+    return () =>
+      h("div", [
+        h("button", { ref: "root-anchor", "data-testid": "root-anchor" }, "Root Anchor"),
+        h("div", { ref: "root-floating", "data-testid": "root-floating" }, [
+          h("div", { ref: "branch-a-floating", "data-testid": "branch-a-floating" }, [
+            h("button", { "data-testid": "branch-a-item" }, "Branch A Item"),
+          ]),
+          h("div", { ref: "branch-b-floating", "data-testid": "branch-b-floating" }, [
+            h("button", { "data-testid": "branch-b-item" }, "Branch B Item"),
+          ]),
+        ]),
+        h("button", { "data-testid": "outside-btn" }, "Outside Button"),
+      ]);
+  });
+
+  return { Component, rootOpen, branchAOpen, branchBOpen };
+}
+
 //=======================================================================================
 // Tests
 //=======================================================================================
@@ -791,6 +931,161 @@ describe("useEscapeKey", () => {
       expect(fixture.rootOpen.value).toBe(false);
       expect(calls).toEqual(["sub", "root"]);
     });
+
+    it("gracefully unwinds to nearest registered ancestor when child did not call useEscapeKey", async () => {
+      const fixture = createRootOnlyRegisteredTreeComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      const childItem = getTestEl("child-item");
+      await userEvent.click(childItem);
+
+      // Child did not register useEscapeKey, but is open and contained within root.
+      // Escape should resolve to child, fail to match an entry, and walk up parent
+      // chain to root so root closes gracefully rather than silently dropping the key.
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.rootOpen.value).toBe(false);
+    });
+
+    it("gracefully unwinds 3-level tree leaf-first when deepest leaf did not call useEscapeKey", async () => {
+      const calls: string[] = [];
+      const fixture = createPartiallyRegisteredTreeComponent();
+
+      watch(
+        fixture.rootOpen,
+        (open) => {
+          if (!open) calls.push("root");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        fixture.childOpen,
+        (open) => {
+          if (!open) calls.push("child");
+        },
+        { flush: "sync" },
+      );
+
+      await render(fixture.Component);
+      await nextTick();
+
+      const subchildItem = getTestEl("subchild-item");
+      await userEvent.click(subchildItem);
+
+      // 1st Escape: subchild is deepest open descendant but not registered.
+      // Resolution walks up to childNode (which is registered), closing childNode.
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.childOpen.value).toBe(false);
+      expect(fixture.rootOpen.value).toBe(true);
+      expect(calls).toEqual(["child"]);
+
+      // 2nd Escape: root closes
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.rootOpen.value).toBe(false);
+      expect(calls).toEqual(["child", "root"]);
+    });
+
+    it("breaks ties between equal-depth sibling branches using LIFO stack order (branch B opened after branch A)", async () => {
+      const calls: string[] = [];
+      const fixture = createEqualDepthSiblingsComponent();
+
+      watch(
+        fixture.branchAOpen,
+        (open) => {
+          if (!open) calls.push("branch-a");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        fixture.branchBOpen,
+        (open) => {
+          if (!open) calls.push("branch-b");
+        },
+        { flush: "sync" },
+      );
+
+      await render(fixture.Component);
+      await nextTick();
+
+      // Open branch A first, then branch B second (branch B is topmost on the stack)
+      fixture.branchAOpen.value = true;
+      await nextTick();
+      fixture.branchBOpen.value = true;
+      await nextTick();
+
+      const outsideBtn = getTestEl("outside-btn");
+      await userEvent.click(outsideBtn);
+
+      // 1st Escape: Branch B was opened more recently -> closes first
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.branchBOpen.value).toBe(false);
+      expect(fixture.branchAOpen.value).toBe(true);
+      expect(calls).toEqual(["branch-b"]);
+
+      // 2nd Escape: Branch A closes next
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.branchAOpen.value).toBe(false);
+      expect(fixture.rootOpen.value).toBe(true);
+      expect(calls).toEqual(["branch-b", "branch-a"]);
+    });
+
+    it("breaks ties between equal-depth sibling branches using LIFO stack order (branch A opened after branch B)", async () => {
+      const calls: string[] = [];
+      const fixture = createEqualDepthSiblingsComponent();
+
+      watch(
+        fixture.branchAOpen,
+        (open) => {
+          if (!open) calls.push("branch-a");
+        },
+        { flush: "sync" },
+      );
+      watch(
+        fixture.branchBOpen,
+        (open) => {
+          if (!open) calls.push("branch-b");
+        },
+        { flush: "sync" },
+      );
+
+      await render(fixture.Component);
+      await nextTick();
+
+      // Open branch B first, then branch A second (branch A is topmost on the stack)
+      fixture.branchBOpen.value = true;
+      await nextTick();
+      fixture.branchAOpen.value = true;
+      await nextTick();
+
+      const outsideBtn = getTestEl("outside-btn");
+      await userEvent.click(outsideBtn);
+
+      // 1st Escape: Branch A was opened more recently -> closes first
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.branchAOpen.value).toBe(false);
+      expect(fixture.branchBOpen.value).toBe(true);
+      expect(calls).toEqual(["branch-a"]);
+
+      // 2nd Escape: Branch B closes next
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.branchBOpen.value).toBe(false);
+      expect(fixture.rootOpen.value).toBe(true);
+      expect(calls).toEqual(["branch-a", "branch-b"]);
+    });
   });
 
   describe("IME and WebKit composition resilience (WebKit Bug 165004)", () => {
@@ -863,6 +1158,120 @@ describe("useEscapeKey", () => {
       await userEvent.keyboard("{Escape}");
       await nextTick();
       expect(fixture.openRef.value).toBe(false);
+    });
+  });
+
+  describe("shared per-document listener architecture", () => {
+    it("attaches 0 document listeners when overlay is closed and removes on close", async () => {
+      const addSpy = vi.spyOn(document, "addEventListener");
+      const removeSpy = vi.spyOn(document, "removeEventListener");
+
+      const fixture = createTestComponent({}, { defaultOpen: false });
+      await render(fixture.Component);
+      await nextTick();
+
+      const escapeKeydownAdds = () => addSpy.mock.calls.filter(([event]) => event === "keydown");
+      const escapeKeydownRemoves = () =>
+        removeSpy.mock.calls.filter(([event]) => event === "keydown");
+
+      // Closed initially: no keydown listener attached
+      expect(escapeKeydownAdds().length).toBe(0);
+
+      // Open: exactly 1 keydown listener attached
+      fixture.openRef.value = true;
+      await nextTick();
+      expect(escapeKeydownAdds().length).toBe(1);
+
+      // Close: listener removed
+      fixture.openRef.value = false;
+      await nextTick();
+      expect(escapeKeydownRemoves().length).toBe(1);
+
+      addSpy.mockRestore();
+      removeSpy.mockRestore();
+    });
+
+    it("shares a single document keydown listener across multiple open overlays", async () => {
+      const addSpy = vi.spyOn(document, "addEventListener");
+
+      const fixture = create3LevelLinearTreeComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      const keydownAdds = addSpy.mock.calls.filter(([event]) => event === "keydown");
+      // Exactly 1 bubble keydown listener on document despite 3 active overlays
+      expect(keydownAdds.length).toBe(1);
+
+      addSpy.mockRestore();
+    });
+
+    it("allows inner elements to stop propagation in bubble phase, but intercepts in capture phase", async () => {
+      // Test bubble phase (default): inner element stopPropagation protects overlay
+      const bubbleFixture = createTestComponent();
+      await render(bubbleFixture.Component);
+      await nextTick();
+
+      const outsideInput = getTestEl("outside-input");
+      outsideInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+        }
+      });
+
+      await userEvent.click(outsideInput);
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      // Bubble phase respects inner element's stopPropagation
+      expect(bubbleFixture.openRef.value).toBe(true);
+
+      // Test capture phase: overlay intercepts before inner element can stop propagation
+      const captureFixture = createTestComponent({ capture: true });
+      await render(captureFixture.Component);
+      await nextTick();
+
+      const captureOutsideInput = document.querySelectorAll<HTMLInputElement>(
+        "[data-testid='outside-input']",
+      )[1];
+      expect(captureOutsideInput).toBeDefined();
+
+      captureOutsideInput!.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+        }
+      });
+
+      await userEvent.click(captureOutsideInput!);
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      // Capture phase intercepts before inner element
+      expect(captureFixture.openRef.value).toBe(false);
+    });
+
+    it("executes dynamically updated onEscape on an open overlay", async () => {
+      const calls: string[] = [];
+      const options: UseEscapeKeyOptions = {
+        onEscape: () => {
+          calls.push("initial");
+        },
+      };
+
+      const fixture = createTestComponent(options);
+      await render(fixture.Component);
+      await nextTick();
+
+      // Mutate callback dynamically while overlay remains open
+      options.onEscape = () => {
+        calls.push("updated");
+      };
+
+      const anchor = getTestEl("anchor");
+      await userEvent.click(anchor);
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(calls).toEqual(["updated"]);
     });
   });
 });

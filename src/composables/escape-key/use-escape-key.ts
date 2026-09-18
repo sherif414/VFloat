@@ -2,14 +2,13 @@ import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
 import { useComposition } from "./composition-state";
 import {
   type EscapeEntry,
+  type EscapeEntryOptions,
   pushEscapeEntry,
   removeEscapeEntry,
-  resolveActiveEscapeEntry,
 } from "./escape-stack";
 import type { FloatingNode } from "@/composables/floating-node";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
-import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
 // 📌 Main
@@ -44,7 +43,9 @@ import { useEventListener } from "@/shared/use-event-listener";
  * ```
  */
 export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = {}): void {
-  const { isComposing } = useComposition();
+  // Ensure shared composition tracking is active while this composable is mounted
+  useComposition();
+
   const { open } = node;
 
   const isEnabled = computed(() => toValue(options.enabled ?? true));
@@ -55,15 +56,17 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
       getDocument(),
   );
 
-  const entry: EscapeEntry = { node };
+  const entry: EscapeEntry = {
+    node,
+    get options() {
+      return options;
+    },
+  };
 
   watch(
-    () => [isEnabled.value, open.value],
-    ([enabled, isOpen], _, onCleanup) => {
-      if (!enabled || !isOpen) return;
-
-      const doc = ownerDoc.value;
-      if (!doc) return;
+    () => [isEnabled.value, open.value, ownerDoc.value] as const,
+    ([enabled, isOpen, doc], _, onCleanup) => {
+      if (!enabled || !isOpen || !doc) return;
 
       pushEscapeEntry(doc, entry);
       onCleanup(() => {
@@ -72,47 +75,6 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
     },
     { immediate: true, flush: "sync" },
   );
-
-  const handleEscape = (event: KeyboardEvent) => {
-    // Ignore Escape when IME (Input Method Editor) text composition is active.
-    // Checks shared composition state, standard KeyboardEvent.isComposing (UI Events § 3.5.3),
-    // and legacy keyCode 229 (standard fallback for IME-managed keystrokes).
-    if (
-      event.key !== "Escape" ||
-      event.defaultPrevented ||
-      !isEnabled.value ||
-      !open.value ||
-      isComposing.value ||
-      event.isComposing ||
-      event.keyCode === 229
-    ) {
-      return;
-    }
-
-    const doc = ownerDoc.value;
-    if (!doc) return;
-
-    const activeNode = resolveActiveEscapeEntry(doc, event.target);
-    if (!activeNode || activeNode.id !== node.id) {
-      return;
-    }
-
-    if (options.preventDefault) {
-      event.preventDefault();
-    }
-
-    // Skip the default close behavior when the caller needs custom escape handling.
-    if (options.onEscape) {
-      options.onEscape(event);
-      return;
-    }
-
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    node.open.value = false;
-  };
-
-  useEventListener(ownerDoc, "keydown", handleEscape, options.capture);
 }
 
 //=======================================================================================
@@ -127,28 +89,10 @@ export type UseEscapeKeyContext = FloatingNode;
 /**
  * Options for configuring Escape key dismissal.
  */
-export interface UseEscapeKeyOptions {
+export interface UseEscapeKeyOptions extends EscapeEntryOptions {
   /**
    * Condition to enable the escape key listener.
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Whether to use capture phase for document event listeners.
-   * @default false
-   */
-  capture?: boolean;
-
-  /**
-   * Whether to call preventDefault on the escape key event before handling it.
-   * @default false
-   */
-  preventDefault?: boolean;
-
-  /**
-   * Custom callback function to be executed when the escape key is pressed.
-   * When provided, overrides default behavior.
-   */
-  onEscape?: (event: KeyboardEvent) => void;
 }

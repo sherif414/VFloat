@@ -1,66 +1,173 @@
 import type { FloatingNode } from "@/composables/floating-node";
 import { isNode } from "@/shared/dom";
+import { isImeComposing } from "./composition-state";
+
+export interface EscapeEntryOptions {
+  capture?: boolean;
+  preventDefault?: boolean;
+  onEscape?: (event: KeyboardEvent) => void;
+}
 
 export interface EscapeEntry {
   node: FloatingNode;
+  readonly options?: EscapeEntryOptions;
+}
+
+interface DocumentEscapeManager {
+  stack: EscapeEntry[];
+  captureListener: ((event: KeyboardEvent) => void) | null;
+  bubbleListener: ((event: KeyboardEvent) => void) | null;
 }
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
-const documentStacks = new WeakMap<Document, EscapeEntry[]>();
+const documentManagers = new WeakMap<Document, DocumentEscapeManager>();
+const handledEscapeEvents = new WeakSet<KeyboardEvent>();
 
 /**
- * Retrieves or initializes the LIFO escape stack for a specific document.
+ * Retrieves or initializes the document escape manager for a specific document.
  */
-function getDocumentStack(doc: Document): EscapeEntry[] {
-  let stack = documentStacks.get(doc);
-  if (!stack) {
-    stack = [];
-    documentStacks.set(doc, stack);
+function getDocumentManager(doc: Document): DocumentEscapeManager {
+  let manager = documentManagers.get(doc);
+  if (!manager) {
+    manager = {
+      stack: [],
+      captureListener: null,
+      bubbleListener: null,
+    };
+    documentManagers.set(doc, manager);
   }
-  return stack;
+  return manager;
 }
 
 /**
- * Pushes an open, escape-enabled floating node onto the document's escape stack.
+ * Synchronizes capture and bubble document keydown listeners based on stack entries.
+ * Attaches listeners when entries exist and detaches them when empty.
+ */
+function syncDocumentListeners(doc: Document, manager: DocumentEscapeManager): void {
+  const needsCapture = manager.stack.some((entry) => Boolean(entry.options?.capture));
+  const needsBubble = manager.stack.some((entry) => !entry.options?.capture);
+
+  if (needsCapture && !manager.captureListener) {
+    const listener = (event: KeyboardEvent) => {
+      dispatchEscape(doc, event, "capture");
+    };
+    manager.captureListener = listener;
+    doc.addEventListener("keydown", listener, true);
+  } else if (!needsCapture && manager.captureListener) {
+    doc.removeEventListener("keydown", manager.captureListener, true);
+    manager.captureListener = null;
+  }
+
+  if (needsBubble && !manager.bubbleListener) {
+    const listener = (event: KeyboardEvent) => {
+      dispatchEscape(doc, event, "bubble");
+    };
+    manager.bubbleListener = listener;
+    doc.addEventListener("keydown", listener, false);
+  } else if (!needsBubble && manager.bubbleListener) {
+    doc.removeEventListener("keydown", manager.bubbleListener, false);
+    manager.bubbleListener = null;
+  }
+}
+
+/**
+ * Handles Escape key events centrally per document.
+ */
+function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | "bubble"): void {
+  // Ignore Escape when IME (Input Method Editor) text composition is active,
+  // when default is prevented by an inner element, or if already handled.
+  if (
+    event.key !== "Escape" ||
+    event.defaultPrevented ||
+    event.isComposing ||
+    event.keyCode === 229 ||
+    isImeComposing() ||
+    handledEscapeEvents.has(event)
+  ) {
+    return;
+  }
+
+  const manager = documentManagers.get(doc);
+  if (!manager || manager.stack.length === 0) return;
+
+  const activeEntry = resolveActiveEscapeEntry(manager, event.target);
+  if (!activeEntry) return;
+
+  const isCapture = Boolean(activeEntry.options?.capture);
+
+  // If this entry requested capture phase, it must only execute during capture phase.
+  // If it requested bubble phase, it must only execute during bubble phase.
+  if (phase === "capture" && !isCapture) {
+    return;
+  }
+  if (phase === "bubble" && isCapture) {
+    return;
+  }
+
+  handledEscapeEvents.add(event);
+
+  const { options, node } = activeEntry;
+
+  if (options?.preventDefault) {
+    event.preventDefault();
+  }
+
+  if (options?.onEscape) {
+    options.onEscape(event);
+    return;
+  }
+
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  node.open.value = false;
+}
+
+/**
+ * Pushes an open, escape-enabled floating node onto the document's escape stack
+ * and synchronizes shared document listeners.
  */
 export function pushEscapeEntry(doc: Document, entry: EscapeEntry): void {
-  const stack = getDocumentStack(doc);
-  const existingIdx = stack.indexOf(entry);
+  const manager = getDocumentManager(doc);
+  const existingIdx = manager.stack.indexOf(entry);
   if (existingIdx !== -1) {
-    stack.splice(existingIdx, 1);
+    manager.stack.splice(existingIdx, 1);
   }
-  stack.push(entry);
+  manager.stack.push(entry);
+  syncDocumentListeners(doc, manager);
 }
 
 /**
- * Removes a floating node from the document's escape stack.
+ * Removes a floating node from the document's escape stack and cleans up
+ * listeners if no active entries remain.
  */
 export function removeEscapeEntry(doc: Document, entry: EscapeEntry): void {
-  const stack = documentStacks.get(doc);
-  if (!stack) return;
-  const idx = stack.indexOf(entry);
+  const manager = documentManagers.get(doc);
+  if (!manager) return;
+  const idx = manager.stack.indexOf(entry);
   if (idx !== -1) {
-    stack.splice(idx, 1);
+    manager.stack.splice(idx, 1);
   }
+  syncDocumentListeners(doc, manager);
 }
 
 /**
- * Resolves which floating node should handle the Escape key for a given event target.
+ * Resolves which escape entry should handle the Escape key for a given event target.
  *
  * 1. If target is contained within a registered open hierarchy, resolves to that hierarchy's
- *    deepest open descendant.
+ *    deepest open descendant (or its closest registered ancestor if the descendant did not
+ *    invoke `useEscapeKey`).
  * 2. If target is outside all open hierarchies (e.g. document body or headless tests),
- *    resolves to the topmost open entry on the LIFO stack.
+ *    resolves using the topmost open entry on the LIFO stack and its open subtree.
  */
-export function resolveActiveEscapeEntry(
-  doc: Document,
+function resolveActiveEscapeEntry(
+  manager: DocumentEscapeManager,
   target: EventTarget | null,
-): FloatingNode | null {
-  const stack = documentStacks.get(doc);
-  if (!stack || stack.length === 0) return null;
+): EscapeEntry | null {
+  const { stack } = manager;
+  if (stack.length === 0) return null;
 
   const targetNode = isNode(target) ? target : null;
 
@@ -75,21 +182,21 @@ export function resolveActiveEscapeEntry(
 
       if (root.contains(targetNode)) {
         const owner = findTargetOwner(root, targetNode);
-        return findDeepestOpenDescendant(owner) ?? owner;
+        const deepest = findDeepestOpenDescendant(owner, stack) ?? owner;
+        const entry = findEntryForNode(manager, deepest);
+        if (entry) return entry;
       }
     }
   }
 
   // Fallback when target is outside all known hierarchies (or document/body):
-  // Resolve using the topmost open entry in the stack.
+  // Resolve using the topmost open entry in the stack and unwind its open subtree.
   for (let i = stack.length - 1; i >= 0; i--) {
     const candidate = stack[i].node;
     if (candidate.open.value) {
-      let topRoot = candidate;
-      while (topRoot.parent?.value) {
-        topRoot = topRoot.parent.value;
-      }
-      return findDeepestOpenDescendant(topRoot) ?? candidate;
+      const deepest = findDeepestOpenDescendant(candidate, stack) ?? candidate;
+      const entry = findEntryForNode(manager, deepest);
+      if (entry) return entry;
     }
   }
 
@@ -100,17 +207,62 @@ export function resolveActiveEscapeEntry(
 // 📌 Helpers
 //=======================================================================================
 
-function findDeepestOpenDescendant(root: FloatingNode): FloatingNode | null {
+/**
+ * Finds the EscapeEntry for a given node, or walks up its ancestor chain until finding
+ * the nearest registered ancestor entry on the stack.
+ *
+ * This ensures that if an intermediate or leaf node in a tree hierarchy did not call
+ * `useEscapeKey`, Escape gracefully unwinds to the nearest enclosing registered overlay
+ * rather than silently dropping the event.
+ */
+function findEntryForNode(
+  manager: DocumentEscapeManager,
+  startNode: FloatingNode,
+): EscapeEntry | null {
+  let curr: FloatingNode | null = startNode;
+  while (curr) {
+    for (let i = manager.stack.length - 1; i >= 0; i--) {
+      if (manager.stack[i].node.id === curr.id) {
+        return manager.stack[i];
+      }
+    }
+    curr = curr.parent?.value ?? null;
+  }
+  return null;
+}
+
+/**
+ * Finds the deepest open descendant in a floating node subtree.
+ *
+ * Traverses top-down. If multiple nodes share the maximum depth (e.g. sibling branches),
+ * ties are broken using the LIFO stack order (the one opened more recently wins).
+ */
+function findDeepestOpenDescendant(root: FloatingNode, stack?: EscapeEntry[]): FloatingNode | null {
   if (!root.open.value) return null;
 
   let deepest: FloatingNode = root;
   let maxDepth = 0;
 
+  const getStackIndex = (node: FloatingNode): number => {
+    if (!stack) return -1;
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (stack[i].node.id === node.id) return i;
+    }
+    return -1;
+  };
+
   root.traverse((current, depth) => {
     if (!current.open.value) return "skip";
-    if (depth >= maxDepth) {
+    if (depth > maxDepth) {
       maxDepth = depth;
       deepest = current;
+    } else if (depth === maxDepth && depth > 0) {
+      const currentIdx = getStackIndex(current);
+      const deepestIdx = getStackIndex(deepest);
+      // At equal depth, break ties in favor of the more recently opened node on the stack
+      if (currentIdx > deepestIdx) {
+        deepest = current;
+      }
     }
   });
 

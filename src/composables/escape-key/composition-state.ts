@@ -9,6 +9,9 @@ interface CompositionState {
   consumers: number;
 }
 
+// Shared client-side singleton across all composable instances.
+// SSR Safety: The `isServer` guard at the start of `useComposition()` returns early with a
+// fresh ref, preventing any shared state allocation or leakage across SSR requests.
 let sharedCompositionState: CompositionState | undefined;
 
 //=======================================================================================
@@ -42,6 +45,13 @@ export function useComposition() {
   return {
     isComposing: state.isComposing,
   };
+}
+
+/**
+ * Returns true if IME text composition is currently active or within the WebKit debounce window.
+ */
+export function isImeComposing(): boolean {
+  return sharedCompositionState?.isComposing.value ?? false;
 }
 
 //=======================================================================================
