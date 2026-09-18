@@ -280,11 +280,17 @@ function dispatchOutsideClick(
   for (const entry of candidates) {
     const { node, options } = entry;
 
+    const scrollbarTarget = isHTMLElement(target)
+      ? target
+      : isNode(target) && target.nodeType === 9
+        ? ((target as Document).documentElement as HTMLElement | null)
+        : null;
+
     // 1. Scrollbar click check
     if (
       toValue(options?.ignoreScrollbar ?? true) &&
-      isHTMLElement(target) &&
-      isClickOnScrollbar(event, target)
+      scrollbarTarget &&
+      isClickOnScrollbar(event, scrollbarTarget)
     ) {
       continue;
     }

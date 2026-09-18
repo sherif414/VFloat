@@ -437,6 +437,60 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(false);
   });
 
+  it("ignores clicks on the viewport scrollbar when ignoreScrollbar is true", async () => {
+    const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+
+    const origInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+    Object.defineProperty(document.documentElement, "clientWidth", {
+      value: 985,
+      configurable: true,
+    });
+
+    try {
+      document.documentElement.dispatchEvent(
+        new MouseEvent("pointerdown", {
+          clientX: 990,
+          clientY: 100,
+          bubbles: true,
+        }),
+      );
+      await nextTick();
+
+      expect(node.open.value).toBe(true);
+    } finally {
+      Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
+      delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
+    }
+  });
+
+  it("dismisses on viewport scrollbar click when ignoreScrollbar is false", async () => {
+    const { node } = await renderOutsideClick({ ignoreScrollbar: false });
+
+    const origInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+    Object.defineProperty(document.documentElement, "clientWidth", {
+      value: 985,
+      configurable: true,
+    });
+
+    try {
+      document.documentElement.dispatchEvent(
+        new MouseEvent("pointerdown", {
+          clientX: 990,
+          clientY: 100,
+          bubbles: true,
+        }),
+      );
+      await nextTick();
+
+      expect(node.open.value).toBe(false);
+    } finally {
+      Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
+      delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
+    }
+  });
+
   it("reacts dynamically when enabled option changes", async () => {
     const enabled = ref(false);
     const { outsideEl, node } = await renderOutsideClick({

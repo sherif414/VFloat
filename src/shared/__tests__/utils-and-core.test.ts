@@ -153,6 +153,89 @@ describe("utils and core helpers", () => {
       false,
     );
 
+    // RTL container scrollbar
+    const rtlTarget = document.createElement("div");
+    rtlTarget.dir = "rtl";
+    rtlTarget.style.direction = "rtl";
+    document.body.appendChild(rtlTarget);
+    Object.defineProperties(rtlTarget, {
+      offsetWidth: { configurable: true, value: 120 },
+      clientWidth: { configurable: true, value: 100 },
+      offsetHeight: { configurable: true, value: 140 },
+      clientHeight: { configurable: true, value: 100 },
+    });
+    rtlTarget.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 120,
+        bottom: 140,
+      }) as DOMRect;
+
+    // In RTL container, scrollbar is on the left (0 to 20)
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 10, clientY: 10 }), rtlTarget),
+    ).toBe(true);
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 110, clientY: 10 }), rtlTarget),
+    ).toBe(false);
+    rtlTarget.remove();
+
+    // Root viewport scrollbars
+    const rootEl = document.documentElement;
+    const origInnerWidth = window.innerWidth;
+    const origInnerHeight = window.innerHeight;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+    Object.defineProperty(rootEl, "clientWidth", { configurable: true, value: 985 });
+    Object.defineProperty(rootEl, "clientHeight", { configurable: true, value: 785 });
+
+    // Root LTR vertical scrollbar (985 to 1000)
+    rootEl.dir = "ltr";
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 990, clientY: 100 }), rootEl),
+    ).toBe(true);
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 500, clientY: 100 }), rootEl),
+    ).toBe(false);
+
+    // Root horizontal scrollbar (785 to 800)
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 500, clientY: 790 }), rootEl),
+    ).toBe(true);
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 500, clientY: 400 }), rootEl),
+    ).toBe(false);
+
+    // Root RTL vertical scrollbar when on the left (rect.left > 0)
+    rootEl.dir = "rtl";
+    const rectSpy = vi
+      .spyOn(rootEl, "getBoundingClientRect")
+      .mockReturnValue({ left: 15, top: 0, right: 1000, bottom: 800 } as DOMRect);
+    expect(isClickOnScrollbar(new MouseEvent("click", { clientX: 10, clientY: 100 }), rootEl)).toBe(
+      true,
+    );
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 500, clientY: 100 }), rootEl),
+    ).toBe(false);
+
+    // Root RTL vertical scrollbar when on the right (rect.left === 0)
+    rectSpy.mockReturnValue({ left: 0, top: 0, right: 985, bottom: 800 } as DOMRect);
+    expect(
+      isClickOnScrollbar(new MouseEvent("click", { clientX: 990, clientY: 100 }), rootEl),
+    ).toBe(true);
+    expect(isClickOnScrollbar(new MouseEvent("click", { clientX: 10, clientY: 100 }), rootEl)).toBe(
+      false,
+    );
+
+    // Cleanup root mocks
+    rootEl.dir = "ltr";
+    rectSpy.mockRestore();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: origInnerWidth });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: origInnerHeight });
+    delete (rootEl as unknown as { clientWidth?: number }).clientWidth;
+    delete (rootEl as unknown as { clientHeight?: number }).clientHeight;
+
     const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
     clearTimeoutIfSet(-1);
     clearTimeoutIfSet(window.setTimeout(() => {}, 0));

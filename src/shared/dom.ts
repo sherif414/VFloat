@@ -1,4 +1,4 @@
-import { getWindow } from "@/shared/env";
+import { getDocument, getWindow } from "@/shared/env";
 import type { VirtualElement } from "@/types";
 
 const NON_TYPEABLE_INPUT_TYPES = new Set([
@@ -110,9 +110,41 @@ export function isEventTargetWithin(event: Event, element: Element | null | unde
 /**
  * Detects clicks on the scrollbar gutter so pointer logic can ignore drag-like gestures.
  * Handles both LTR and RTL directions and accounts for border widths to prevent false positives.
+ * Supports both root viewport scrollbars and nested scrollable containers.
  */
 export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): boolean {
-  const win = getWindow(target);
+  const doc = target.ownerDocument ?? getDocument();
+  const win = doc?.defaultView ?? getWindow(target);
+  const isRoot = Boolean(doc && (target === doc.documentElement || target === doc.body));
+
+  if (isRoot && doc) {
+    const root = doc.documentElement;
+    const style = win?.getComputedStyle ? win.getComputedStyle(root) : null;
+    const isRTL = style?.direction === "rtl" || root.dir === "rtl";
+
+    // Viewport vertical scrollbar
+    const rootScrollbarWidth = (win?.innerWidth ?? 0) - root.clientWidth;
+    if (rootScrollbarWidth > 0) {
+      // In RTL, browsers that move the root scrollbar to the left shift the root bounding rect right.
+      const isScrollbarOnLeft = isRTL && root.getBoundingClientRect().left > 0;
+      if (isScrollbarOnLeft) {
+        if (event.clientX <= rootScrollbarWidth) return true;
+      } else if (event.clientX >= root.clientWidth && event.clientX <= (win?.innerWidth ?? 0)) {
+        return true;
+      }
+    }
+
+    // Viewport horizontal scrollbar
+    const rootScrollbarHeight = (win?.innerHeight ?? 0) - root.clientHeight;
+    if (rootScrollbarHeight > 0) {
+      if (event.clientY >= root.clientHeight && event.clientY <= (win?.innerHeight ?? 0)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   const style = win?.getComputedStyle ? win.getComputedStyle(target) : null;
 
   const borderLeft = style ? Number.parseFloat(style.borderLeftWidth) || 0 : 0;
@@ -123,7 +155,7 @@ export function isClickOnScrollbar(event: MouseEvent, target: HTMLElement): bool
   const scrollbarWidth = target.offsetWidth - target.clientWidth - borderLeft - borderRight;
   const scrollbarHeight = target.offsetHeight - target.clientHeight - borderTop - borderBottom;
 
-  const isRTL = style?.direction === "rtl";
+  const isRTL = style?.direction === "rtl" || target.dir === "rtl";
 
   const rect = target.getBoundingClientRect();
   const elementX = event.clientX - rect.left;
