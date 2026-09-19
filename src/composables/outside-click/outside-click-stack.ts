@@ -1,6 +1,7 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import type { FloatingNode, FloatingNodeId } from "@/composables/floating-node";
 import { isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
+import { isTargetWithinElements } from "@/shared/elements";
 
 interface DocumentOutsideClickManager {
   stack: OutsideClickEntry[];
@@ -314,8 +315,11 @@ function dispatchOutsideClick(
       continue;
     }
 
-    // 5. Bubbling control: if bubbles is false and node had open children, let child dismiss first
-    if (options?.bubbles === false && initiallyOpenChildMap.get(node.id)) {
+    // 5. Bubbling control: if bubbles is false and node had open children, let child dismiss first.
+    // Exception: when clicking directly on an ancestor's elements, the user is intentionally interacting
+    // with an upper layer of the hierarchy, so descendant branches must unwind immediately.
+    const isInsideAncestor = isTargetWithinAncestor(node, target);
+    if (options?.bubbles === false && initiallyOpenChildMap.get(node.id) && !isInsideAncestor) {
       continue;
     }
 
@@ -400,6 +404,24 @@ function getEventTarget(event: Event): EventTarget | null {
     }
   }
   return event.target;
+}
+
+/**
+ * Checks whether the click target is contained directly within any ancestor node's
+ * anchor element or floating panel.
+ */
+function isTargetWithinAncestor(node: FloatingNode, target: EventTarget | null): boolean {
+  if (!target) return false;
+  let current = node.parent.value;
+  while (current) {
+    if (
+      isTargetWithinElements(current.refs.anchorEl.value, current.refs.floatingEl.value, target)
+    ) {
+      return true;
+    }
+    current = current.parent.value;
+  }
+  return false;
 }
 
 //=======================================================================================

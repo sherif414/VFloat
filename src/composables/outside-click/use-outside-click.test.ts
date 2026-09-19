@@ -223,6 +223,10 @@ async function renderFullTreeOutsideClick(
   await render(fixture.Component);
   await nextTick();
   return {
+    anchorEl: getTestEl("anchor"),
+    floatingEl: getTestEl("floating"),
+    childAnchorEl: getTestEl("child-anchor"),
+    childFloatingEl: getTestEl("child-floating"),
     outsideEl: getTestEl("outside"),
     parentNode: fixture.getParent(),
     childNode: fixture.getChild(),
@@ -901,5 +905,39 @@ describe("useOutsideClick", () => {
     await nextTick();
 
     expect(node.open.value).toBe(true);
+  });
+
+  it("dismisses descendant branch immediately when clicking on ancestor anchor even if bubbles is false", async () => {
+    const { anchorEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+      parentBubbles: false,
+      childBubbles: false,
+    });
+
+    expect(parentOpen.value).toBe(true);
+    expect(childOpen.value).toBe(true);
+
+    // Clicking parent anchor is inside parent, but outside child; child must dismiss immediately
+    await userEvent.click(anchorEl);
+    await nextTick();
+
+    expect(childOpen.value).toBe(false);
+    expect(parentOpen.value).toBe(true);
+  });
+
+  it("dismisses descendant branch immediately when clicking inside ancestor floating panel even if bubbles is false", async () => {
+    const { floatingEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+      parentBubbles: false,
+      childBubbles: false,
+    });
+
+    expect(parentOpen.value).toBe(true);
+    expect(childOpen.value).toBe(true);
+
+    // Clicking parent floating panel is inside parent, but outside child; child must dismiss immediately
+    await userEvent.click(floatingEl);
+    await nextTick();
+
+    expect(childOpen.value).toBe(false);
+    expect(parentOpen.value).toBe(true);
   });
 });
