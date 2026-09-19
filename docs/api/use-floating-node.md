@@ -20,7 +20,6 @@ interface UseFloatingNodeOptions {
   open?: Ref<boolean>;
   defaultOpen?: boolean;
   parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
-  cascadeClose?: boolean;
 }
 
 type AnchorElement = HTMLElement | VirtualElement | null;
@@ -57,15 +56,14 @@ interface TraverseOptions {
 
 ## Options
 
-| Name           | Type                                                  | Default     | Notes                                                                                                              |
-| -------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| `anchorEl`     | `Ref<AnchorElement>`                                  | Required    | Reference element or [virtual element](/guide/use-virtual-anchors).                                                |
-| `floatingEl`   | `Ref<FloatingElement>`                                | Required    | Floating content element.                                                                                          |
-| `arrowEl`      | `Ref<HTMLElement \| null>`                            | `ref(null)` | Optional arrow element ref. Automatically created when omitted.                                                    |
-| `open`         | `Ref<boolean>`                                        | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored.                                              |
-| `defaultOpen`  | `boolean`                                             | `false`     | Initial open state when `open` is omitted.                                                                         |
-| `parent`       | `MaybeRefOrGetter<FloatingNode \| null \| undefined>` | `undefined` | Parent node reference. Omitted/`undefined` uses DI; `null` forces standalone; `FloatingNode`/ref links explicitly. |
-| `cascadeClose` | `boolean`                                             | `true`      | Whether closing this node automatically cascades to close all open descendant nodes.                               |
+| Name          | Type                                                  | Default     | Notes                                                                                                              |
+| ------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| `anchorEl`    | `Ref<AnchorElement>`                                  | Required    | Reference element or [virtual element](/guide/use-virtual-anchors).                                                |
+| `floatingEl`  | `Ref<FloatingElement>`                                | Required    | Floating content element.                                                                                          |
+| `arrowEl`     | `Ref<HTMLElement \| null>`                            | `ref(null)` | Optional arrow element ref. Automatically created when omitted.                                                    |
+| `open`        | `Ref<boolean>`                                        | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored.                                              |
+| `defaultOpen` | `boolean`                                             | `false`     | Initial open state when `open` is omitted.                                                                         |
+| `parent`      | `MaybeRefOrGetter<FloatingNode \| null \| undefined>` | `undefined` | Parent node reference. Omitted/`undefined` uses DI; `null` forces standalone; `FloatingNode`/ref links explicitly. |
 
 ## Returns
 
@@ -117,20 +115,6 @@ When you omit `open`, `useFloatingNode` creates an internal `ref(defaultOpen ?? 
 ### Spatial Containment (`node.contains`)
 
 `node.contains(target)` determines if an event target belongs to the floating surface or any of its open descendants. Interaction composables such as [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useHover`](/api/use-hover) rely on `node.contains` to prevent premature dismissals when interacting with nested submenus or child panels.
-
-### Automatic Cascade on Close
-
-When a parent floating node closes, all open descendant nodes close automatically in bottom-up order. This eliminates orphaned submenus pointing to unmounted or hidden elements.
-
-To opt out and preserve open child surfaces when a parent closes, pass `cascadeClose: false`:
-
-```ts
-const root = useFloatingNode({
-  anchorEl,
-  floatingEl,
-  cascadeClose: false,
-});
-```
 
 ## Examples
 
