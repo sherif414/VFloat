@@ -235,6 +235,26 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     }
   });
 
+  // Cascades close state to open descendant nodes when this node closes
+  if (options.cascadeClose !== false) {
+    watch(open, (isOpen) => {
+      if (!isOpen) {
+        node.traverse(
+          (descendant, depth) => {
+            if (depth > 0 && descendant.open.value) {
+              try {
+                descendant.open.value = false;
+              } catch {
+                // Safeguard against readonly computed refs or non-writable models
+              }
+            }
+          },
+          { order: "bottom-up" },
+        );
+      }
+    });
+  }
+
   return node;
 }
 
@@ -410,6 +430,13 @@ export interface UseFloatingNodeOptions {
    * - **`FloatingNode` / `Ref` / `getter`**: Explicitly links to the given parent node, bypassing DI.
    */
   parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
+
+  /**
+   * Whether closing this node automatically cascades to close all open descendant nodes.
+   *
+   * @default true
+   */
+  cascadeClose?: boolean;
 }
 
 /**
