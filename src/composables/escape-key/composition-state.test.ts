@@ -21,7 +21,7 @@ describe("useComposition", () => {
     vi.useRealTimers();
   });
 
-  it("reacts to compositionstart immediately and delays compositionend reset", () => {
+  it("reacts to compositionstart immediately and resets synchronously on standard browsers", () => {
     const scope = effectScope();
     let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
 
@@ -36,11 +36,7 @@ describe("useComposition", () => {
     expect(isComposingRef.value).toBe(true);
 
     document.dispatchEvent(new CompositionEvent("compositionend"));
-    // Immediately after compositionend, isComposing remains true to protect trailing keydown events
-    // (WebKit Bug 165004 / UI Events § 3.5.3.3)
-    expect(isComposingRef.value).toBe(true);
-
-    vi.runAllTimers();
+    // Spec-compliant browsers (Chrome, Firefox) reset synchronously (W3C UI Events § 3.6.5)
     expect(isComposingRef.value).toBe(false);
 
     scope.stop();
@@ -105,6 +101,81 @@ describe("useComposition", () => {
     scope.stop();
   });
 
+  it("resets isComposing when the window blurs during active composition", () => {
+    const scope = effectScope();
+    let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+
+    scope.run(() => {
+      const { isComposing } = useComposition();
+      isComposingRef = isComposing;
+    });
+
+    document.dispatchEvent(new CompositionEvent("compositionstart"));
+    expect(isComposingRef.value).toBe(true);
+
+    window.dispatchEvent(new Event("blur"));
+    expect(isComposingRef.value).toBe(false);
+
+    scope.stop();
+  });
+
+  it("resets isComposing when document visibility changes to hidden during active composition", () => {
+    const scope = effectScope();
+    let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+
+    scope.run(() => {
+      const { isComposing } = useComposition();
+      isComposingRef = isComposing;
+    });
+
+    document.dispatchEvent(new CompositionEvent("compositionstart"));
+    expect(isComposingRef.value).toBe(true);
+
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: true,
+    });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(isComposingRef.value).toBe(false);
+
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: false,
+    });
+
+    scope.stop();
+  });
+
+  it("does not leak consumers when called outside an active effect scope", () => {
+    // Calling outside a scope should work safely without incrementing consumers
+    const { isComposing: compOutside } = useComposition();
+    expect(compOutside.value).toBe(false);
+
+    const scope = effectScope();
+    let compInside!: ReturnType<typeof useComposition>;
+
+    scope.run(() => {
+      compInside = useComposition();
+    });
+
+    document.dispatchEvent(new CompositionEvent("compositionstart"));
+    expect(compOutside.value).toBe(true);
+    expect(compInside.isComposing.value).toBe(true);
+
+    // Disposing the only scoped consumer should cleanly tear down the shared state
+    scope.stop();
+
+    // Re-invoking in a new scope gets a clean fresh state
+    const newScope = effectScope();
+    let compNew!: ReturnType<typeof useComposition>;
+    newScope.run(() => {
+      compNew = useComposition();
+    });
+    expect(compNew.isComposing.value).toBe(false);
+    newScope.stop();
+  });
+
   it("shares state across multiple consumers and disposes when all scopes stop", () => {
     const scope1 = effectScope();
     const scope2 = effectScope();
@@ -130,9 +201,6 @@ describe("useComposition", () => {
     expect(comp2.isComposing.value).toBe(true);
 
     document.dispatchEvent(new CompositionEvent("compositionend"));
-    expect(comp2.isComposing.value).toBe(true);
-
-    vi.runAllTimers();
     expect(comp2.isComposing.value).toBe(false);
 
     scope2.stop();

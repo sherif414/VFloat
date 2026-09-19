@@ -1,4 +1,4 @@
-import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue";
+import { effectScope, getCurrentScope, onScopeDispose, readonly, type Ref, ref } from "vue";
 import { getDocument, getWindow, isServer } from "@/shared/env";
 import { isWebKit } from "@/shared/platform";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -24,15 +24,15 @@ let sharedCompositionState: CompositionState | undefined;
 export function useComposition() {
   if (isServer) {
     return {
-      isComposing: ref(false),
+      isComposing: readonly(ref(false)),
     };
   }
 
   const state = getSharedCompositionState();
 
-  state.consumers += 1;
-
   if (getCurrentScope()) {
+    state.consumers += 1;
+
     onScopeDispose(() => {
       state.consumers -= 1;
       if (state.consumers <= 0) {
@@ -43,7 +43,7 @@ export function useComposition() {
   }
 
   return {
-    isComposing: state.isComposing,
+    isComposing: readonly(state.isComposing),
   };
 }
 
@@ -92,31 +92,61 @@ function getSharedCompositionState(): CompositionState {
       () => {
         clearPendingTimeout();
 
-        // WebKit (Safari on macOS and iOS) fires `compositionend` before the trailing
-        // `keydown` event (e.g. Escape or Enter) when confirming or cancelling an IME
-        // candidate selection.
-        //
-        // Specification:
-        // W3C UI Events § 3.5.3.3 "Composition Events and Key Events"
-        // https://www.w3.org/TR/uievents/#events-composition-key-events
-        //
-        // Upstream issue:
-        // WebKit Bug 165004: "compositionend event is fired before keydown event"
-        // https://bugs.webkit.org/show_bug.cgi?id=165004
-        //
-        // If `isComposing` is reset synchronously on `compositionend`, the trailing `keydown`
-        // arrives with `isComposing: false`, erroneously triggering dismissal of floating overlays.
-        // To preserve IME protection during the trailing keydown, delay resetting `isComposing`
-        // until the next event loop tick. In WebKit/Safari, a 0ms/1ms timer can race with the
-        // event loop, so a 5ms delay is used. In non-WebKit environments, 0ms executes on the
-        // next macrotask.
-        const ownerWin = getWindow(getDocument());
-        const delay = isWebKit() ? 5 : 0;
-
-        compositionTimeoutId = ownerWin?.setTimeout(() => {
+        if (isWebKit()) {
+          // WebKit (Safari on macOS and iOS) fires `compositionend` before the trailing
+          // `keydown` event (e.g. Escape or Enter) when confirming or cancelling an IME
+          // candidate selection.
+          //
+          // Specification:
+          // W3C UI Events § 3.6.5 "Key Events During Composition"
+          // https://www.w3.org/TR/uievents/#events-composition-key-events
+          //
+          // Upstream issue:
+          // WebKit Bug 165004: "compositionend event is fired before keydown event"
+          // https://bugs.webkit.org/show_bug.cgi?id=165004
+          //
+          // Upstream fix:
+          // WebKit Bug 311717: "Fix a regression and turn on correct composition event ordering by default"
+          // https://bugs.webkit.org/show_bug.cgi?id=311717
+          //
+          // If `isComposing` is reset synchronously on `compositionend`, the trailing `keydown`
+          // arrives with `isComposing: false`, erroneously triggering dismissal of floating overlays.
+          // In WebKit/Safari, a 0ms/1ms timer can race with the event loop, so a 5ms delay is used.
+          const ownerWin = getWindow(getDocument());
+          compositionTimeoutId = ownerWin?.setTimeout(() => {
+            isComposing.value = false;
+            compositionTimeoutId = undefined;
+          }, 5);
+        } else {
+          // Spec-compliant browsers (Chrome, Firefox): the confirmation keydown
+          // fires before compositionend with event.isComposing === true.
+          // Reset synchronously to avoid a false-positive suppression window.
           isComposing.value = false;
-          compositionTimeoutId = undefined;
-        }, delay);
+        }
+      },
+    );
+
+    // --- Stuck State Fallbacks ------------------------------------------------
+
+    // If the window loses focus (e.g. user Alt-Tabs or switches apps) or tab visibility changes
+    // during active composition, `compositionend` may never fire. Reset cleanly.
+    useEventListener(
+      () => getWindow(getDocument()),
+      "blur",
+      () => {
+        clearPendingTimeout();
+        isComposing.value = false;
+      },
+    );
+
+    useEventListener(
+      () => getDocument(),
+      "visibilitychange",
+      () => {
+        if (getDocument()?.hidden) {
+          clearPendingTimeout();
+          isComposing.value = false;
+        }
       },
     );
 
