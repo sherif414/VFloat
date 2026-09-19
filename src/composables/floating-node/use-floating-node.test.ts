@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
-import { defineComponent, effectScope, h, nextTick, ref, shallowRef } from "vue";
+import { defineComponent, effectScope, h, nextTick, ref } from "vue";
 import { clearTrackedElements, trackElement } from "@/test-utils";
 import { useEscapeKey } from "@/composables/escape-key";
 import { type FloatingNode, useFloatingNode } from "./use-floating-node";
@@ -507,8 +507,7 @@ describe("useFloatingNode", () => {
       expect(collectFloatingElements(root)).toEqual([rootFloating]);
     });
 
-    it("supports dynamically switching parent node via reactive ref", async () => {
-      const parentA = shallowRef<FloatingNode | null>(null);
+    it("supports switching parent node imperatively via appendChild and removeChild", () => {
       let child!: FloatingNode;
       let root1!: FloatingNode;
       let root2!: FloatingNode;
@@ -522,11 +521,10 @@ describe("useFloatingNode", () => {
           anchorEl: ref(null),
           floatingEl: ref(null),
         });
-        parentA.value = root1;
         child = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          parent: parentA,
+          parent: root1,
         });
       });
 
@@ -534,15 +532,15 @@ describe("useFloatingNode", () => {
       expect(root1.children.value.has(child)).toBe(true);
       expect(root2.children.value.has(child)).toBe(false);
 
-      parentA.value = root2;
-      await nextTick();
+      // Re-parent to root2 imperatively
+      root2.appendChild(child);
 
       expect(child.parent.value).toBe(root2);
       expect(root1.children.value.has(child)).toBe(false);
       expect(root2.children.value.has(child)).toBe(true);
 
-      parentA.value = null;
-      await nextTick();
+      // Detach imperatively
+      root2.removeChild(child);
 
       expect(child.parent.value).toBeNull();
       expect(root2.children.value.has(child)).toBe(false);
@@ -568,7 +566,7 @@ describe("useFloatingNode", () => {
           const childNode = useFloatingNode({
             anchorEl,
             floatingEl,
-            parent: () => props.parent,
+            parent: props.parent,
           });
           childNodeRef = childNode;
           return () => h("div", { ref: floatingEl }, "Child Menu");
@@ -886,8 +884,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 7: Implicit registration via Dependency Injection (DI)", () => {
-    it("implicitly registers child component node under parent component node when parent is omitted", async () => {
+  describe("Criterion 7: Standalone-by-default and opt-in Dependency Injection (DI)", () => {
+    it("creates a standalone node when parent is omitted, even when nested inside a parent component providing a floating node", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
 
@@ -913,11 +911,43 @@ describe("useFloatingNode", () => {
 
       await render(ParentComponent);
 
+      expect(childNode.parent.value).toBeNull();
+      expect(parentNode.children.value.has(childNode)).toBe(false);
+      expect(parentNode.children.value.size).toBe(0);
+    });
+
+    it("implicitly registers child component node under parent component node when parent: 'auto' is specified", async () => {
+      let parentNode!: FloatingNode;
+      let childNode!: FloatingNode;
+
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            parent: "auto",
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      await render(ParentComponent);
+
       expect(childNode.parent.value).toBe(parentNode);
       expect(parentNode.children.value.has(childNode)).toBe(true);
     });
 
-    it("supports multi-level hierarchical chaining (Grandparent -> Parent -> Child) via DI", async () => {
+    it("supports multi-level hierarchical chaining (Grandparent -> Parent -> Child) via parent: 'auto'", async () => {
       let gpNode!: FloatingNode;
       let pNode!: FloatingNode;
       let cNode!: FloatingNode;
@@ -927,6 +957,7 @@ describe("useFloatingNode", () => {
           cNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
+            parent: "auto",
           });
           return () => h("div", { "data-testid": "child" });
         },
@@ -937,6 +968,7 @@ describe("useFloatingNode", () => {
           pNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
+            parent: "auto",
           });
           return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
         },
@@ -959,6 +991,58 @@ describe("useFloatingNode", () => {
       expect(gpNode.children.value.has(pNode)).toBe(true);
       expect(pNode.children.value.has(cNode)).toBe(true);
       expect(gpNode.children.value.has(cNode)).toBe(false);
+    });
+
+    it("prevents top-level/App.vue tooltips from adopting descendant floating elements across the app", async () => {
+      let appTooltipNode!: FloatingNode;
+      let childDropdownNode!: FloatingNode;
+      let childModalNode!: FloatingNode;
+
+      const ChildDropdown = defineComponent({
+        setup() {
+          childDropdownNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            defaultOpen: true,
+          });
+          return () => h("div", { "data-testid": "dropdown" });
+        },
+      });
+
+      const ChildModal = defineComponent({
+        setup() {
+          childModalNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            defaultOpen: true,
+          });
+          return () => h("div", { "data-testid": "modal" });
+        },
+      });
+
+      const AppComponent = defineComponent({
+        setup() {
+          appTooltipNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            defaultOpen: true,
+          });
+          return () => h("div", { "data-testid": "app" }, [h(ChildDropdown), h(ChildModal)]);
+        },
+      });
+
+      await render(AppComponent);
+
+      expect(appTooltipNode.children.value.size).toBe(0);
+      expect(childDropdownNode.parent.value).toBeNull();
+      expect(childModalNode.parent.value).toBeNull();
+
+      // Verify that closing the app-level tooltip has zero cascade impact on child surfaces
+      appTooltipNode.open.value = false;
+      await nextTick();
+
+      expect(childDropdownNode.open.value).toBe(true);
+      expect(childModalNode.open.value).toBe(true);
     });
 
     it("bypasses DI and creates standalone node when parent: null is explicitly passed", async () => {
@@ -1040,6 +1124,7 @@ describe("useFloatingNode", () => {
           childNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
+            parent: "auto",
           });
           return () => h("div", { "data-testid": "child" });
         },
@@ -1078,6 +1163,7 @@ describe("useFloatingNode", () => {
           childNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
+            parent: "auto",
           });
           return () => h("div", { "data-testid": "child" });
         },
@@ -1108,6 +1194,65 @@ describe("useFloatingNode", () => {
       await nextTick();
 
       expect(childNode.parent.value).toBeNull();
+    });
+
+    it("warns in DEV and stays standalone when parent: 'auto' is passed without an ancestor FloatingNode", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      let node!: FloatingNode;
+
+      const IsolatedComponent = defineComponent({
+        setup() {
+          node = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            parent: "auto",
+          });
+          return () => h("div", { "data-testid": "isolated" });
+        },
+      });
+
+      await render(IsolatedComponent);
+
+      expect(node.parent.value).toBeNull();
+      expect(node.children.value.size).toBe(0);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[FloatingNode] parent: 'auto' was specified, but no ancestor FloatingNode was found in the Vue component hierarchy. The node will remain standalone.",
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it("prevents providing node to descendants when provide: false is configured", async () => {
+      let parentNode!: FloatingNode;
+      let childNode!: FloatingNode;
+
+      const ChildComponent = defineComponent({
+        setup() {
+          childNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            parent: "auto",
+          });
+          return () => h("div", { "data-testid": "child" });
+        },
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          parentNode = useFloatingNode({
+            anchorEl: ref(null),
+            floatingEl: ref(null),
+            provide: false,
+          });
+          return () => h("div", { "data-testid": "parent" }, [h(ChildComponent)]);
+        },
+      });
+
+      await render(ParentComponent);
+
+      expect(parentNode.parent.value).toBeNull();
+      expect(childNode.parent.value).toBeNull();
+      expect(parentNode.children.value.has(childNode)).toBe(false);
     });
 
     it("operates cleanly as standalone root when called outside component context (e.g. effectScope)", () => {

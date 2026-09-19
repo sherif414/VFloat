@@ -12,7 +12,7 @@ Nested menus (submenus) introduce coordination challenges beyond single-level li
 - How do diagonal mouse movements toward the submenu avoid closing it prematurely?
 - When pressing `Escape`, how does the system close only the deepest open submenu first?
 
-In VFloat, these questions are resolved by the **Unified Composite Node Architecture**. Submenus link directly into their parent floating node (either implicitly via Vue's Dependency Injection or explicitly via `parent: rootNode`), and pair each menu level with [`useRovingFocus`](/api/use-roving-focus) for physical item focus.
+In VFloat, these questions are resolved by the **Unified Composite Node Architecture**. Submenus link directly into their parent floating node (either via opt-in Dependency Injection with `parent: "auto"` or explicitly via `parent: rootNode`), and pair each menu level with [`useRovingFocus`](/api/use-roving-focus) for physical item focus.
 
 ---
 
@@ -28,7 +28,8 @@ Rather than creating a separate coordinator component, every menu level is a `Fl
 │  • provides itself to descendants via Vue DI                │
 └──────────────────────────────┬──────────────────────────────┘
                                │
-                Implicit DI (or parent: rootNode)
+                 Opt-in DI (parent: "auto")
+                 or explicit parent: rootNode
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -39,7 +40,7 @@ Rather than creating a separate coordinator component, every menu level is a `Fl
 └─────────────────────────────────────────────────────────────┘
 ```
 
-1. **Composite linking:** Submenus automatically discover their parent node through Dependency Injection (`provide` / `inject`).
+1. **Composite linking:** Submenus discover their parent node through Dependency Injection (`parent: "auto"`).
 2. **Family-aware interactions:** [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), and [`useHover`](/api/use-hover) use `node.contains()` to treat child submenus as internal to the parent, preventing accidental dismissals.
 3. **Safe cursor corridors:** [`useHover`](/api/use-hover) with `safePolygon: true` keeps the submenu open while the cursor travels diagonally toward the submenu panel.
 4. **Intent-driven navigation:** [`useRovingFocus`](/api/use-roving-focus) fires `onEnter` (`ArrowRight`) to open the child submenu and `onExit` (`ArrowLeft`) to collapse back to the parent trigger.
@@ -170,7 +171,7 @@ provide("MenuLevelContext", { node: rootNode, getTabindex, itemEls });
 
 ### 4. Submenu Container (`MenuSub.vue`)
 
-Calling `useFloatingNode()` with an omitted `parent` automatically injects `rootNode` as its parent:
+Calling `useFloatingNode({ parent: "auto" })` links to the nearest ancestor floating node via Vue Dependency Injection:
 
 ```vue
 <script setup lang="ts">
@@ -181,8 +182,8 @@ const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 const open = ref(false);
 
-// Omitted parent automatically links to rootNode via Vue Dependency Injection
-const subNode = useFloatingNode({ anchorEl, floatingEl, open });
+// Passing parent: "auto" links to rootNode via Vue Dependency Injection
+const subNode = useFloatingNode({ anchorEl, floatingEl, open, parent: "auto" });
 
 provide("MenuSubContext", { subNode });
 </script>

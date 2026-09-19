@@ -42,9 +42,20 @@ Because hierarchy is built directly into `FloatingNode`, companion composables (
 
 VFloat resolves parent-child relationships through three ergonomic tiers:
 
-### 1. Implicit DI (Default / Omitted — Zero Prop Drilling)
+### 1. Standalone by Default (Zero Accidental Adoption)
 
-In multi-component architectures, child components automatically discover and link to their parent floating node via Vue's Dependency Injection (`provide` / `inject`):
+Most floating surfaces (tooltips, popovers, dropdowns, dialogs) are independent roots. By default (when `parent` is omitted or `undefined`), a floating node is completely standalone (`parent.value === null`):
+
+```ts
+// Standalone by default: will never adopt or be adopted by other surfaces
+const node = useFloatingNode({ anchorEl, floatingEl });
+```
+
+This guarantees that a tooltip in `App.vue` or a layout header will never accidentally adopt dropdowns or modals across your application. Passing `parent: null` explicitly achieves the same standalone behavior.
+
+### 2. Opt-In DI (`parent: "auto"`)
+
+In multi-component architectures, child components opt into discovering and linking to their nearest ancestor floating node by passing `parent: "auto"`. This leverages Vue's Dependency Injection (`provide` / `inject`) without manual prop drilling:
 
 ```vue
 <!-- RootMenu.vue -->
@@ -56,7 +67,7 @@ import SubMenu from "./SubMenu.vue";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-// Automatically provides rootNode to descendant components
+// Automatically provides rootNode to descendant components (provide defaults to true)
 const rootNode = useFloatingNode({ anchorEl, floatingEl });
 </script>
 
@@ -77,30 +88,18 @@ import { useFloatingNode } from "v-float";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-// Omitted parent automatically injects rootNode from RootMenu
-const subNode = useFloatingNode({ anchorEl, floatingEl });
+// Opt into DI parenting to link with RootMenu
+const subNode = useFloatingNode({ anchorEl, floatingEl, parent: "auto" });
 </script>
 ```
 
-### 2. Explicit Reference (`parent: rootNode`)
+### 3. Explicit Reference (`parent: rootNode`)
 
 For flat single-component `<script setup>` scripts or explicit prop forwarding, pass the parent node directly:
 
 ```ts
 const root = useFloatingNode({ anchorEl: rootBtn, floatingEl: rootMenu });
 const sub = useFloatingNode({ anchorEl: subBtn, floatingEl: subMenu, parent: root });
-```
-
-### 3. Explicit Standalone (`parent: null`)
-
-When a floating component is rendered inside an existing overlay but should remain completely independent (such as a standalone tooltip or detached dialog inside a menu), pass `parent: null` to opt out of DI:
-
-```ts
-const standaloneNode = useFloatingNode({
-  anchorEl,
-  floatingEl,
-  parent: null, // Bypasses ancestor DI injection
-});
 ```
 
 ---

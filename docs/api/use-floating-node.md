@@ -6,7 +6,7 @@ description: Create a unified composite floating node with shared refs, open sta
 
 `useFloatingNode` creates a unified composite floating node. It owns element refs and open state, providing a stable identity, spatial containment checks, and reactive hub for positioning and interaction composables.
 
-`useFloatingNode` acts as both a standalone surface ($N = 0$) and a hierarchical tree node ($N > 0$). It supports automatic hierarchy wiring across components via Vue's Dependency Injection (`provide` / `inject`), explicit parent linking for single-component scripts, and explicit standalone isolation.
+`useFloatingNode` acts as both a standalone surface ($N = 0$) and a hierarchical tree node ($N > 0$). It operates as a standalone surface by default, and supports hierarchical composite trees via explicit parent references or opt-in Dependency Injection (`parent: "auto"`).
 
 ## Type
 
@@ -19,7 +19,8 @@ interface UseFloatingNodeOptions {
   arrowEl?: Ref<HTMLElement | null>;
   open?: Ref<boolean>;
   defaultOpen?: boolean;
-  parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
+  parent?: FloatingNode | "auto" | null;
+  provide?: boolean;
 }
 
 type AnchorElement = HTMLElement | VirtualElement | null;
@@ -56,14 +57,15 @@ interface TraverseOptions {
 
 ## Options
 
-| Name          | Type                                                  | Default     | Notes                                                                                                              |
-| ------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| `anchorEl`    | `Ref<AnchorElement>`                                  | Required    | Reference element or [virtual element](/guide/use-virtual-anchors).                                                |
-| `floatingEl`  | `Ref<FloatingElement>`                                | Required    | Floating content element.                                                                                          |
-| `arrowEl`     | `Ref<HTMLElement \| null>`                            | `ref(null)` | Optional arrow element ref. Automatically created when omitted.                                                    |
-| `open`        | `Ref<boolean>`                                        | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored.                                              |
-| `defaultOpen` | `boolean`                                             | `false`     | Initial open state when `open` is omitted.                                                                         |
-| `parent`      | `MaybeRefOrGetter<FloatingNode \| null \| undefined>` | `undefined` | Parent node reference. Omitted/`undefined` uses DI; `null` forces standalone; `FloatingNode`/ref links explicitly. |
+| Name          | Type                             | Default     | Notes                                                                                                                                        |
+| ------------- | -------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `anchorEl`    | `Ref<AnchorElement>`             | Required    | Reference element or [virtual element](/guide/use-virtual-anchors).                                                                          |
+| `floatingEl`  | `Ref<FloatingElement>`           | Required    | Floating content element.                                                                                                                    |
+| `arrowEl`     | `Ref<HTMLElement \| null>`       | `ref(null)` | Optional arrow element ref. Automatically created when omitted.                                                                              |
+| `open`        | `Ref<boolean>`                   | `undefined` | Controlled mutable open ref. When supplied, `defaultOpen` is ignored.                                                                        |
+| `defaultOpen` | `boolean`                        | `false`     | Initial open state when `open` is omitted.                                                                                                   |
+| `parent`      | `FloatingNode \| "auto" \| null` | `undefined` | Parent node reference. Omitted/`undefined` (default) is standalone; `"auto"` links via DI; `FloatingNode` links explicitly; `null` isolates. |
+| `provide`     | `boolean`                        | `true`      | Whether to provide this node to descendant components via Vue's Dependency Injection.                                                        |
 
 ## Returns
 
@@ -108,9 +110,9 @@ When you omit `open`, `useFloatingNode` creates an internal `ref(defaultOpen ?? 
 
 `useFloatingNode` implements a three-tier parenting strategy:
 
-1. **Implicit DI (Default / Omitted)**: When `parent` is omitted or `undefined`, `useFloatingNode` automatically injects the nearest ancestor `FloatingNode` from the Vue component hierarchy via `provide` / `inject`. In addition, every node automatically provides itself to descendant components.
-2. **Explicit Standalone (`parent: null`)**: Passing `parent: null` explicitly opts out of Dependency Injection. The node will remain a standalone root with `parent.value === null` even when nested inside an ancestor component that provides a floating node.
-3. **Explicit Parent (`parent: rootNode | ref | getter`)**: Passing an explicit `FloatingNode` (or reactive ref/getter) links directly to that parent, bypassing DI. This is ideal for flat single-component `<script setup>` scripts or explicit prop forwarding.
+1. **Standalone (Default / Omitted / `parent: undefined` / `parent: null`)**: By default, a floating node is completely independent (`parent.value === null`). It does not inject an ancestor parent, ensuring top-level surfaces (such as tooltips in `App.vue` or layout components) never accidentally adopt or get adopted by child floating surfaces.
+2. **Opt-In DI (`parent: "auto"`)**: Passing `parent: "auto"` explicitly discovers and attaches to the nearest ancestor `FloatingNode` provided via Vue's Dependency Injection (`provide` / `inject`). This allows multi-component cascading submenus to link automatically without manual prop drilling.
+3. **Explicit Parent (`parent: rootNode`)**: Passing an explicit `FloatingNode` links directly to that parent, bypassing DI. This is ideal for flat single-component `<script setup>` scripts or explicit prop forwarding.
 
 ### Spatial Containment (`node.contains`)
 
@@ -118,9 +120,9 @@ When you omit `open`, `useFloatingNode` creates an internal `ref(defaultOpen ?? 
 
 ## Examples
 
-### Multi-Component Submenu (Implicit DI)
+### Multi-Component Submenu (Opt-In DI)
 
-In multi-component architectures, submenus automatically discover and register with parent nodes via Dependency Injection without passing props:
+In multi-component architectures, submenus opt into parent discovery and registration via `parent: "auto"` without manual prop drilling:
 
 ```vue
 <!-- RootMenu.vue -->
@@ -132,7 +134,7 @@ import SubMenu from "./SubMenu.vue";
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-// Automatically provides this node to child components
+// Automatically provides this node to child components (provide defaults to true)
 const node = useFloatingNode({ anchorEl, floatingEl });
 usePosition(node);
 useOutsideClick(node);
@@ -156,8 +158,8 @@ import { useEscapeKey, useFloatingNode, useOutsideClick, usePosition } from "v-f
 const anchorEl = ref<HTMLElement | null>(null);
 const floatingEl = ref<HTMLElement | null>(null);
 
-// Omitted parent defaults to DI: automatically injects RootMenu node
-const subNode = useFloatingNode({ anchorEl, floatingEl });
+// Opt into DI parenting to link with ancestor RootMenu node
+const subNode = useFloatingNode({ anchorEl, floatingEl, parent: "auto" });
 usePosition(subNode, { placement: "right-start" });
 useOutsideClick(subNode);
 useEscapeKey(subNode);

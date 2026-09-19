@@ -12,8 +12,6 @@ import {
   type ShallowRef,
   shallowReadonly,
   shallowRef,
-  toValue,
-  watch,
 } from "vue";
 import { isTargetWithinElements } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -39,10 +37,10 @@ export const floatingInternals = new WeakMap<FloatingNodeId, FloatingInternals>(
  * Supports standalone surfaces ($N = 0$) and nested composite hierarchies ($N > 0$) uniformly.
  *
  * Parenting resolution follows three tiers:
- * - **Explicit Parent (`parent: node | ref | getter`)**: Explicitly links to the provided node, bypassing DI.
- * - **Explicit Standalone (`parent: null`)**: Explicitly isolates the node with no parent, bypassing DI.
- * - **Implicit DI (Default / Omitted / `parent: undefined`)**: Injects the nearest ancestor `FloatingNode`
+ * - **Standalone (Default / Omitted / `parent: undefined` / `parent: null`)**: Isolates the node with no parent, bypassing DI.
+ * - **Opt-In DI (`parent: "auto"`)**: Discovers and attaches to the nearest ancestor `FloatingNode`
  *   from the Vue component context via Dependency Injection.
+ * - **Explicit Parent (`parent: node`)**: Explicitly links to the provided node, bypassing DI.
  *
  * @param options - Configuration options for the floating node.
  * @returns The composite FloatingNode instance.
@@ -197,31 +195,26 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
 
   internalParentMap.set(id, parent);
 
-  if (getCurrentInstance()) {
+  if (getCurrentInstance() && options.provide !== false) {
     provide(FLOATING_NODE_KEY, node);
   }
 
-  // Declarative parent binding via options.parent or implicit DI
-  if (options.parent === null) {
-    // Explicit null: standalone surface, explicitly bypasses DI
-  } else if (options.parent !== undefined) {
-    // Explicit parent option passed (node, ref, or getter): use it, do not use DI
-    watch(
-      () => toValue(options.parent),
-      (parentNode, _oldParent, onCleanup) => {
-        if (!parentNode) return;
-        const unbind = parentNode.appendChild(node);
-        onCleanup(unbind);
-      },
-      { immediate: true },
-    );
-  } else {
-    // Default: nothing passed (undefined), use DI
-    const injectedParent = hasInjectionContext() ? inject(FLOATING_NODE_KEY, null) : null;
-    if (injectedParent) {
-      const unbind = injectedParent.appendChild(node);
-      tryOnScopeDispose(unbind);
+  // Declarative parent binding via options.parent
+  let targetParent: FloatingNode | null = null;
+  if (options.parent === "auto") {
+    targetParent = hasInjectionContext() ? inject(FLOATING_NODE_KEY, null) : null;
+    if (import.meta.env.DEV && !targetParent) {
+      console.warn(
+        "[FloatingNode] parent: 'auto' was specified, but no ancestor FloatingNode was found in the Vue component hierarchy. The node will remain standalone.",
+      );
     }
+  } else if (options.parent) {
+    targetParent = options.parent;
+  }
+
+  if (targetParent) {
+    const unbind = targetParent.appendChild(node);
+    tryOnScopeDispose(unbind);
   }
 
   // Teardown on scope disposal: severs bi-directional links (both upstream parent
@@ -404,12 +397,21 @@ export interface UseFloatingNodeOptions {
   /**
    * Parent node reference for establishing composite hierarchies (submenus, cascades).
    *
-   * - **Omitted / `undefined` (default)**: Implicitly registers with the nearest ancestor `FloatingNode`
-   *   via Vue Dependency Injection (`provide` / `inject`).
-   * - **`null`**: Explicitly marks the node as standalone, bypassing DI even if an ancestor node exists.
-   * - **`FloatingNode` / `Ref` / `getter`**: Explicitly links to the given parent node, bypassing DI.
+   * - **Omitted / `undefined` (default)**: Standalone surface with no parent, bypassing DI.
+   * - **`"auto"`**: Injects the nearest ancestor `FloatingNode` from the Vue component hierarchy via DI.
+   * - **`null`**: Explicitly marks the node as standalone, bypassing DI.
+   * - **`FloatingNode`**: Explicitly links to the given parent node, bypassing DI.
    */
-  parent?: MaybeRefOrGetter<FloatingNode | null | undefined>;
+  parent?: FloatingNode | "auto" | null;
+
+  /**
+   * Whether to provide this node to descendant components via Vue's Dependency Injection (`provide`).
+   * When `true` (default), descendant components passing `parent: "auto"` can discover and attach to this node.
+   * Set to `false` to prevent this node from acting as a DI parent to any descendant nodes.
+   *
+   * @default true
+   */
+  provide?: boolean;
 }
 
 /**
