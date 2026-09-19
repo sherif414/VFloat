@@ -10,6 +10,7 @@ import {
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
+import { isImeComposing, useComposition } from "@/shared/composition-state";
 import { isHTMLElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
@@ -50,6 +51,8 @@ export function useFocusTrap(
   node: FloatingNode,
   options: UseFocusTrapOptions = {},
 ): UseFocusTrapReturn {
+  useComposition();
+
   const { anchorEl: anchorElOption, floatingEl: floatingElOption } = node.refs;
   const { open } = node;
 
@@ -130,7 +133,13 @@ export function useFocusTrap(
   // --- Focus Trapping & Keydown Navigation -----------------------------------
 
   function onFloatingKeyDown(event: KeyboardEvent) {
-    if (event.key !== "Tab" || event.defaultPrevented || !isEnabled.value || !open.value) {
+    if (
+      event.key !== "Tab" ||
+      event.defaultPrevented ||
+      !isEnabled.value ||
+      !open.value ||
+      isImeComposing(event)
+    ) {
       return;
     }
 

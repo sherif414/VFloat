@@ -1,5 +1,6 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
+import { isImeComposing, useComposition } from "@/shared/composition-state";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -62,6 +63,8 @@ export function useTypeahead(
 ): UseTypeaheadReturn {
   const { open } = node;
   const target = options.target;
+
+  useComposition();
 
   // --- Shared Options & Root State --------------------------------------------------
 
@@ -215,7 +218,7 @@ export function useTypeahead(
  * user-ignored keys, and non-printable keys.
  */
 function isIgnoredKey(e: KeyboardEvent, ignoreKeys: readonly string[]): boolean {
-  if (e.isComposing) return true;
+  if (isImeComposing(e)) return true;
   if (e.ctrlKey || e.metaKey || e.altKey) return true;
   if (ignoreKeys.includes(e.key)) return true;
   return e.key.length !== 1;

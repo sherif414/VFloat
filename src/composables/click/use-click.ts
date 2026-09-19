@@ -1,5 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
+import { isImeComposing, useComposition } from "@/shared/composition-state";
 import {
   isElement,
   isHTMLElement,
@@ -30,6 +31,8 @@ type PointerType = "mouse" | "touch" | "pen" | (string & {});
  * ```
  */
 export function useClick(node: FloatingNode, options: UseClickOptions = {}): void {
+  useComposition();
+
   const { open, refs } = node;
 
   // --- Modality & Open State Tracking -----------------------------------------
@@ -111,6 +114,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function onKeyDown(e: KeyboardEvent) {
     pointerType = undefined;
     if (e.repeat) return;
+    if (isImeComposing(e)) return;
     if (isButtonTarget(e.target) || isTypeableElement(e.target)) return;
 
     if (e.key === " ") {
@@ -127,6 +131,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function onKeyUp(e: KeyboardEvent) {
     if (e.key === " " && didKeyDown) {
       didKeyDown = false;
+      if (isImeComposing(e)) return;
       toggleOpen();
     }
   }

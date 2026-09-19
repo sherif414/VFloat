@@ -752,4 +752,37 @@ describe("useTypeahead", () => {
       expect(getActiveIndex()).toBe(-1);
     });
   });
+
+  describe("IME composition safety", () => {
+    it("ignores keystrokes during active IME composition", async () => {
+      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+        items: ["Apple", "Banana", "Cherry"],
+      });
+
+      document.dispatchEvent(new CompositionEvent("compositionstart"));
+
+      dispatchKey(floatingEl, "a");
+      expect(typeahead.searchQuery.value).toBe("");
+      expect(getActiveIndex()).toBe(-1);
+
+      document.dispatchEvent(new CompositionEvent("compositionend"));
+
+      dispatchKey(floatingEl, "a");
+      expect(typeahead.searchQuery.value).toBe("a");
+      expect(getActiveIndex()).toBe(0);
+    });
+
+    it("ignores keystrokes when event.isComposing is true directly", async () => {
+      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+        items: ["Apple", "Banana", "Cherry"],
+      });
+
+      const event = new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true });
+      Object.defineProperty(event, "isComposing", { value: true });
+      floatingEl.dispatchEvent(event);
+
+      expect(typeahead.searchQuery.value).toBe("");
+      expect(getActiveIndex()).toBe(-1);
+    });
+  });
 });

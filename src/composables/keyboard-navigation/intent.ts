@@ -1,3 +1,5 @@
+import { isImeComposing } from "@/shared/composition-state";
+
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
@@ -22,7 +24,7 @@ export function resolveKeyIntent(
   options: KeyboardIntentOptions = {},
 ): NavigationIntent | null {
   // ignore IME.
-  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return null;
+  if (isImeComposing(event)) return null;
   if (event.ctrlKey || event.metaKey || event.altKey) return null;
 
   const { orientation = "vertical", rtl = false } = options;

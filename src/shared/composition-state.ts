@@ -19,7 +19,10 @@ let sharedCompositionState: CompositionState | undefined;
 //=======================================================================================
 
 /**
- * Exposes whether the user is currently composing text through an IME.
+ * Exposes whether the user is currently composing text through an IME (Input Method Editor).
+ *
+ * Maintains a reference-counted shared singleton across active composable scopes, attaching
+ * document-level composition listeners only while at least one consumer is active.
  */
 export function useComposition() {
   if (isServer) {
@@ -49,8 +52,18 @@ export function useComposition() {
 
 /**
  * Returns true if IME text composition is currently active or within the WebKit debounce window.
+ *
+ * If a `KeyboardEvent` is provided, also checks whether the event itself is marked as composing
+ * (`isComposing`, `keyCode === 229`, or `key === "Process"`).
+ *
+ * @param event - Optional native KeyboardEvent to evaluate.
  */
-export function isImeComposing(): boolean {
+export function isImeComposing(event?: KeyboardEvent | null): boolean {
+  if (event) {
+    if (event.isComposing || event.key === "Process" || event.keyCode === 229) {
+      return true;
+    }
+  }
   return sharedCompositionState?.isComposing.value ?? false;
 }
 
@@ -110,7 +123,7 @@ function getSharedCompositionState(): CompositionState {
           // https://bugs.webkit.org/show_bug.cgi?id=311717
           //
           // If `isComposing` is reset synchronously on `compositionend`, the trailing `keydown`
-          // arrives with `isComposing: false`, erroneously triggering dismissal of floating overlays.
+          // arrives with `isComposing: false`, erroneously triggering dismissal or activation of floating overlays.
           // In WebKit/Safari, a 0ms/1ms timer can race with the event loop, so a 5ms delay is used.
           const ownerWin = getWindow(getDocument());
           compositionTimeoutId = ownerWin?.setTimeout(() => {

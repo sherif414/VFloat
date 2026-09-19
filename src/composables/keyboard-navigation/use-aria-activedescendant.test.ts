@@ -1795,4 +1795,49 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
   });
+
+  describe("Suite 30: IME composition safety", () => {
+    it("ignores navigation and selection keystrokes during active IME composition", async () => {
+      const onSelect = vi.fn();
+      const { Component, getReturn } = createTestComponent(
+        { defaultIndex: 1, onSelect },
+        { itemCount: 5 },
+      );
+      await render(Component);
+
+      const anchor = page.getByRole("textbox", { name: "anchor" }).element() as HTMLElement;
+
+      // Start IME composition
+      document.dispatchEvent(new CompositionEvent("compositionstart"));
+
+      // Enter during composition should not fire onSelect
+      anchor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(onSelect).not.toHaveBeenCalled();
+
+      // ArrowDown during composition should not navigate
+      anchor.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      expect(getReturn().activeIndex.value).toBe(1);
+
+      // End composition
+      document.dispatchEvent(new CompositionEvent("compositionend"));
+
+      // Enter after compositionend should select
+      anchor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(onSelect).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
+    });
+
+    it("protects against selection when event.isComposing is true directly", async () => {
+      const onSelect = vi.fn();
+      const { Component } = createTestComponent({ defaultIndex: 0, onSelect }, { itemCount: 5 });
+      await render(Component);
+
+      const anchor = page.getByRole("textbox", { name: "anchor" }).element() as HTMLElement;
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      Object.defineProperty(event, "isComposing", { value: true });
+
+      anchor.dispatchEvent(event);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+  });
 });

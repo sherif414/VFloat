@@ -577,4 +577,42 @@ describe("useClick", () => {
       expect(isLinkTarget(document.createTextNode("detached"))).toBe(false);
     });
   });
+
+  describe("IME composition safety", () => {
+    it("ignores Enter and Space keydown during active IME composition on non-button triggers", async () => {
+      const { Component, openRef } = createTestComponent({}, { anchorKind: "plain-div" });
+      await render(Component);
+
+      const anchor = getTestEl("anchor");
+
+      // Start IME
+      document.dispatchEvent(new CompositionEvent("compositionstart"));
+
+      anchor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(openRef.value).toBe(false);
+
+      anchor.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+      anchor.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+      expect(openRef.value).toBe(false);
+
+      // End IME
+      document.dispatchEvent(new CompositionEvent("compositionend"));
+
+      anchor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(openRef.value).toBe(true);
+    });
+
+    it("ignores Enter when event.isComposing is true directly", async () => {
+      const { Component, openRef } = createTestComponent({}, { anchorKind: "plain-div" });
+      await render(Component);
+
+      const anchor = getTestEl("anchor");
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      Object.defineProperty(event, "isComposing", { value: true });
+      anchor.dispatchEvent(event);
+
+      expect(openRef.value).toBe(false);
+    });
+  });
 });

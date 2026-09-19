@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
-import { useComposition } from "./composition-state";
+import { useComposition } from "@/shared/composition-state";
 import {
   type EscapeEntry,
   type EscapeEntryOptions,

@@ -1,6 +1,6 @@
 import type { FloatingNode } from "@/composables/floating-node";
 import { isNode } from "@/shared/dom";
-import { isImeComposing } from "./composition-state";
+import { isImeComposing } from "@/shared/composition-state";
 
 export interface EscapeEntryOptions {
   capture?: boolean;
@@ -82,9 +82,7 @@ function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | 
   if (
     event.key !== "Escape" ||
     event.defaultPrevented ||
-    event.isComposing ||
-    event.keyCode === 229 ||
-    isImeComposing() ||
+    isImeComposing(event) ||
     handledEscapeEvents.has(event)
   ) {
     return;

@@ -12,6 +12,7 @@ import {
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
+import { isImeComposing, useComposition } from "@/shared/composition-state";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -96,6 +97,8 @@ export function useAriaActivedescendant(
     onActiveIndexChange,
     isKeyHandled,
   } = options;
+
+  useComposition();
 
   // --- Shared Options & Root State --------------------------------------------
 
@@ -544,7 +547,7 @@ export function useAriaActivedescendant(
 
   useEventListener(targetElement, "keydown", (e: KeyboardEvent) => {
     if (e.defaultPrevented || !isEnabled.value) return;
-    if (e.isComposing || e.keyCode === 229) return;
+    if (isImeComposing(e)) return;
 
     if (isKeyHandled && !isKeyHandled(e)) return;
 

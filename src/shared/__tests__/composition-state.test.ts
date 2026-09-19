@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope } from "vue";
-import { useComposition } from "./composition-state";
+import { isImeComposing, useComposition } from "../composition-state";
 
 const SAFARI_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
 
-describe("useComposition", () => {
+describe("useComposition & isImeComposing", () => {
   const originalUserAgent = window.navigator.userAgent;
 
   beforeEach(() => {
@@ -31,13 +31,16 @@ describe("useComposition", () => {
     });
 
     expect(isComposingRef.value).toBe(false);
+    expect(isImeComposing()).toBe(false);
 
     document.dispatchEvent(new CompositionEvent("compositionstart"));
     expect(isComposingRef.value).toBe(true);
+    expect(isImeComposing()).toBe(true);
 
     document.dispatchEvent(new CompositionEvent("compositionend"));
     // Spec-compliant browsers (Chrome, Firefox) reset synchronously (W3C UI Events § 3.6.5)
     expect(isComposingRef.value).toBe(false);
+    expect(isImeComposing()).toBe(false);
 
     scope.stop();
   });
@@ -58,15 +61,19 @@ describe("useComposition", () => {
 
     document.dispatchEvent(new CompositionEvent("compositionstart"));
     expect(isComposingRef.value).toBe(true);
+    expect(isImeComposing()).toBe(true);
 
     document.dispatchEvent(new CompositionEvent("compositionend"));
     expect(isComposingRef.value).toBe(true);
+    expect(isImeComposing()).toBe(true);
 
     vi.advanceTimersByTime(4);
     expect(isComposingRef.value).toBe(true);
+    expect(isImeComposing()).toBe(true);
 
     vi.advanceTimersByTime(1);
     expect(isComposingRef.value).toBe(false);
+    expect(isImeComposing()).toBe(false);
 
     scope.stop();
   });
@@ -204,5 +211,49 @@ describe("useComposition", () => {
     expect(comp2.isComposing.value).toBe(false);
 
     scope2.stop();
+  });
+
+  describe("isImeComposing with KeyboardEvent parameter", () => {
+    it("returns true when event.isComposing is true", () => {
+      const event = new KeyboardEvent("keydown", { key: "Enter" });
+      Object.defineProperty(event, "isComposing", { value: true });
+
+      expect(isImeComposing(event)).toBe(true);
+    });
+
+    it("returns true when event.keyCode is 229", () => {
+      const event = new KeyboardEvent("keydown", { keyCode: 229 } as any);
+      expect(isImeComposing(event)).toBe(true);
+    });
+
+    it("returns true when event.key is Process", () => {
+      const event = new KeyboardEvent("keydown", { key: "Process" });
+      expect(isImeComposing(event)).toBe(true);
+    });
+
+    it("returns true during WebKit debounce window even when event flags are false", () => {
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: SAFARI_USER_AGENT,
+      });
+
+      const scope = effectScope();
+      scope.run(() => {
+        useComposition();
+      });
+
+      document.dispatchEvent(new CompositionEvent("compositionstart"));
+      document.dispatchEvent(new CompositionEvent("compositionend"));
+
+      // In WebKit, trailing keydown arrives with isComposing: false
+      const event = new KeyboardEvent("keydown", { key: "Enter" });
+      expect(event.isComposing).toBe(false);
+      expect(isImeComposing(event)).toBe(true);
+
+      vi.advanceTimersByTime(5);
+      expect(isImeComposing(event)).toBe(false);
+
+      scope.stop();
+    });
   });
 });
