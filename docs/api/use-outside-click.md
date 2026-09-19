@@ -17,6 +17,7 @@ interface UseOutsideClickOptions {
   enabled?: MaybeRefOrGetter<boolean>;
   event?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
   capture?: boolean;
+  bubbles?: boolean;
   ignoreClick?: OutsideClickPredicate;
   onClick?: (event: MouseEvent) => void;
   ignoreScrollbar?: MaybeRefOrGetter<boolean>;
@@ -28,15 +29,16 @@ type OutsideClickPredicate = (event: MouseEvent, target: Node) => boolean;
 
 ## Options
 
-| Name              | Type                                                        | Default         | Notes                                                                                                |
-| ----------------- | ----------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------- |
-| `enabled`         | `MaybeRefOrGetter<boolean>`                                 | `true`          | Reactive toggle. Setting to `false` disables outside click detection.                                |
-| `event`           | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event triggers dismissal.                                                             |
-| `capture`         | `boolean`                                                   | `true`          | Attaches document listener during the capture phase before bubbling completes.                       |
-| `ignoreClick`     | `OutsideClickPredicate`                                     | `undefined`     | Custom predicate to ignore specific outside clicks. Evaluated after the composite node family check. |
-| `onClick`         | `(event: MouseEvent) => void`                               | `undefined`     | Custom handler. When provided, replaces default `node.open.value = false`.                           |
-| `ignoreScrollbar` | `MaybeRefOrGetter<boolean>`                                 | `true`          | Clicks on scrollbar gutters do not trigger dismissal.                                                |
-| `ignoreDrag`      | `MaybeRefOrGetter<boolean>`                                 | `true`          | For `event: "click"`, ignores mouseup outside when the drag started inside the floating surface.     |
+| Name              | Type                                                        | Default         | Notes                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`         | `MaybeRefOrGetter<boolean>`                                 | `true`          | Reactive toggle. Setting to `false` disables outside click detection.                                                                           |
+| `event`           | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event triggers dismissal.                                                                                                        |
+| `capture`         | `boolean`                                                   | `true`          | Attaches document listener during the capture phase before bubbling completes.                                                                  |
+| `bubbles`         | `boolean`                                                   | `true`          | When true, outside clicks dismiss all open levels simultaneously. When false, only the active leaf dismisses first unless clicking an ancestor. |
+| `ignoreClick`     | `OutsideClickPredicate`                                     | `undefined`     | Custom predicate to ignore specific outside clicks. Evaluated after the composite node family check.                                            |
+| `onClick`         | `(event: MouseEvent) => void`                               | `undefined`     | Custom handler. When provided, replaces default `node.open.value = false`.                                                                      |
+| `ignoreScrollbar` | `MaybeRefOrGetter<boolean>`                                 | `true`          | Clicks on scrollbar gutters do not trigger dismissal.                                                                                           |
+| `ignoreDrag`      | `MaybeRefOrGetter<boolean>`                                 | `true`          | For `event: "click"`, ignores mouseup outside when the drag started inside the floating surface.                                                |
 
 ## Returns
 
@@ -49,6 +51,7 @@ type OutsideClickPredicate = (event: MouseEvent, target: Node) => boolean;
 `useOutsideClick` works seamlessly with nested menus and popovers:
 
 - **Composite Node Containment:** `node.contains(target)` traverses open child surfaces. Clicking inside a child submenu (even if teleported to `<body>`) is recognized as internal to parent menus, preventing unwanted parent closures.
+- **Leaf-First Unpeeling (`bubbles: false`):** When set to `false`, clicking the page background unpeels only the outermost open leaf, keeping parent surfaces open. If the user clicks directly on an ancestor's anchor or panel, the descendant branches unwind immediately on pointerdown.
 - **Independent Stacks:** Unrelated floating nodes on the same page remain isolated. Clicking outside a popover closes only the relevant surface while respecting neighboring overlays.
 
 ### Event Selection & Capture Phase
