@@ -61,19 +61,9 @@ export function useFocusTrap(
 
   const isEnabled = computed(() => !!toValue(options.enabled ?? true));
   const isModal = computed(() => !!toValue(options.modal ?? true));
-  const shouldCloseOnFocusOut = computed(
-    () => !isModal.value && !!toValue(options.closeOnFocusOut ?? false),
-  );
   const shouldCloseOnTab = computed(() => !!toValue(options.closeOnTab ?? false));
-  const shouldInertOutside = computed(() => {
-    if (options.outsideElementsInert !== undefined) {
-      return !!toValue(options.outsideElementsInert);
-    }
-    return isModal.value;
-  });
   const shouldReturnFocus = computed(() => !!toValue(options.returnFocus ?? true));
   const shouldPreventScroll = computed(() => !!toValue(options.preventScroll ?? true));
-  const shouldApplyGuards = computed(() => !!toValue(options.guards ?? true));
 
   const targetDocument = computed(
     () =>
@@ -234,6 +224,10 @@ export function useFocusTrap(
 
   // --- Non-Modal Focus Dismissal -----------------------------------------------
 
+  const shouldCloseOnFocusOut = computed(
+    () => !isModal.value && !!toValue(options.closeOnFocusOut ?? false),
+  );
+
   function onNonModalFocusOut(event: FocusEvent) {
     if (!isEnabled.value || !open.value) return;
 
@@ -267,6 +261,8 @@ export function useFocusTrap(
   );
 
   // --- Portal Focus Guards ----------------------------------------------------
+
+  const shouldApplyGuards = computed(() => !!toValue(options.guards ?? true));
 
   let guardHandles: FocusGuardHandles | null = null;
 
@@ -324,6 +320,13 @@ export function useFocusTrap(
   );
 
   // --- Background Inert Isolation ---------------------------------------------
+
+  const shouldInertOutside = computed(() => {
+    if (options.outsideElementsInert !== undefined) {
+      return !!toValue(options.outsideElementsInert);
+    }
+    return isModal.value;
+  });
 
   let isolationRestore: (() => void) | null = null;
 
