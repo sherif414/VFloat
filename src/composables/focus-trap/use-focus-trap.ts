@@ -11,9 +11,9 @@ import {
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { isImeComposing, useComposition } from "@/shared/composition-state";
-import { isHTMLElement } from "@/shared/dom";
+import { isElement, isHTMLElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
-import { getDocument } from "@/shared/env";
+import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
 import { createFocusGuards, type FocusGuardHandles } from "./focus-guards";
@@ -90,16 +90,8 @@ export function useFocusTrap(
   let previouslyActiveElement: HTMLElement | null = null;
   let guardHandles: FocusGuardHandles | null = null;
   let isolationRestore: (() => void) | null = null;
-  let blurTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const cleanupRegistry = createCleanupRegistry();
-
-  function clearBlurTimeout() {
-    if (blurTimeoutId != null) {
-      clearTimeout(blurTimeoutId);
-      blurTimeoutId = undefined;
-    }
-  }
 
   function getAnchorElement(): HTMLElement | null {
     return resolveAnchorElement(anchorElOption.value);
@@ -115,19 +107,15 @@ export function useFocusTrap(
   }
 
   function getFamilyElements(): HTMLElement[] {
-    if (typeof node?.traverse === "function") {
-      const elements: HTMLElement[] = [];
-      node.traverse((current) => {
-        if (!current.open.value) return "skip";
-        const el = current.refs.floatingEl.value;
-        if (el) {
-          elements.push(el);
-        }
-      });
-      return elements;
-    }
-    const floating = getFloatingElement();
-    return floating ? [floating] : [];
+    const elements: HTMLElement[] = [];
+    node.traverse((current) => {
+      if (!current.open.value) return "skip";
+      const el = current.refs.floatingEl.value;
+      if (el) {
+        elements.push(el);
+      }
+    });
+    return elements;
   }
 
   // --- Focus Trapping & Keydown Navigation -----------------------------------
@@ -230,6 +218,11 @@ export function useFocusTrap(
 
     if (isModal.value) {
       event.preventDefault();
+      // The floating container may not be natively focusable, so fall back to it only
+      // after ensuring it can receive programmatic focus (consistent with initial focus).
+      if (!floating.hasAttribute("tabindex")) {
+        floating.setAttribute("tabindex", "-1");
+      }
       if (type === "start") {
         const last = getLastTabbableElement(floating) ?? floating;
         last.focus({ preventScroll: shouldPreventScroll.value });
@@ -278,7 +271,7 @@ export function useFocusTrap(
   // --- Initial & Return Focus ------------------------------------------------
 
   let isPointerDownOutside = false;
-  let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
 
   function onDocumentPointerDownTracker(event: PointerEvent | MouseEvent) {
     if (!isEnabled.value || !open.value) return;
@@ -289,8 +282,13 @@ export function useFocusTrap(
     // If the interaction is outside this floating tree, prevent focus hijacking
     if (!node.contains(target)) {
       isPointerDownOutside = true;
-      if (pointerDownOutsideTimeoutId) clearTimeout(pointerDownOutsideTimeoutId);
-      pointerDownOutsideTimeoutId = setTimeout(() => {
+      // Schedule/clear the debounce on the target's owner window so cross-realm (iframe)
+      // targets resolve correctly and we never touch the global `window` (SSR-safe).
+      const ownerWindow = getWindow(target);
+      if (pointerDownOutsideTimeoutId != null) {
+        ownerWindow?.clearTimeout(pointerDownOutsideTimeoutId);
+      }
+      pointerDownOutsideTimeoutId = ownerWindow?.setTimeout(() => {
         isPointerDownOutside = false;
       }, 100);
     }
@@ -316,13 +314,17 @@ export function useFocusTrap(
     if (typeof rawTarget === "function") {
       const resolved = (rawTarget as () => unknown)();
       if (resolved === false) return;
-      if (resolved instanceof Element) {
+      if (isElement(resolved)) {
         target = resolved as HTMLElement;
       }
     } else if (rawTarget && typeof rawTarget === "object") {
-      if ("value" in rawTarget && (rawTarget as any).value instanceof Element) {
-        target = (rawTarget as any).value;
-      } else if (rawTarget instanceof Element) {
+      if ("value" in rawTarget) {
+        // Ref-like: unwrap `.value` and accept it if it resolves to a real element.
+        const unwrapped: unknown = (rawTarget as Record<"value", unknown>).value;
+        if (isElement(unwrapped)) {
+          target = unwrapped as HTMLElement;
+        }
+      } else if (isElement(rawTarget)) {
         target = rawTarget as HTMLElement;
       }
     }
@@ -477,7 +479,6 @@ export function useFocusTrap(
   function deactivate(returnFocus = true) {
     cleanupGuards();
     cleanupIsolation();
-    clearBlurTimeout();
     trapIsActive.value = false;
 
     if (returnFocus) {
@@ -511,7 +512,6 @@ export function useFocusTrap(
       onWatcherCleanup(() => {
         cleanupGuards();
         cleanupIsolation();
-        clearBlurTimeout();
       });
     }),
   );
