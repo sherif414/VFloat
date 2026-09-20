@@ -1,230 +1,253 @@
 <script setup lang="ts">
-import { ref, shallowRef } from "vue";
-import {
-  usePosition,
-  useHover,
-  useRole,
-  useOutsideClick,
-  offset,
-  flip,
-  shift,
-  type Placement,
-} from "v-float";
+import { computed, onWatcherCleanup, shallowRef, watchPostEffect } from "vue";
+import OutsideClickDemo from "./demos/OutsideClickDemo.vue";
+import MenuDemo from "./demos/MenuDemo.vue";
+import TypeaheadDemo from "./demos/TypeaheadDemo.vue";
+import Temp from "./demos/Temp.vue";
 
-const isOpen = ref(false);
-const placement = ref<Placement>("bottom");
-const offsetValue = ref(8);
+interface DemoEntry {
+  id: string;
+  title: string;
+  component: unknown;
+}
 
-const anchorRef = shallowRef<HTMLElement | null>(null);
-const floatingRef = shallowRef<HTMLElement | null>(null);
-
-const { floatingStyles, actualPlacement } = usePosition(anchorRef, floatingRef, {
-  placement,
-  open: isOpen,
-  middleware: [offset(() => offsetValue.value), flip(), shift({ padding: 8 })],
-});
-
-useHover({
-  open: isOpen,
-  onOpenChange: (val) => {
-    isOpen.value = val;
+const demos: DemoEntry[] = [
+  {
+    id: "outside-click",
+    title: "Outside click stack",
+    component: OutsideClickDemo,
   },
-  elements: {
-    reference: anchorRef,
-    floating: floatingRef,
+  {
+    id: "Temp",
+    title: "Temp",
+    component: Temp,
   },
-});
-
-useOutsideClick({
-  open: isOpen,
-  onOutsideClick: () => {
-    isOpen.value = false;
+  {
+    id: "menu",
+    title: "Nested menu",
+    component: MenuDemo,
   },
-  elements: {
-    reference: anchorRef,
-    floating: floatingRef,
+  {
+    id: "typeahead",
+    title: "Typeahead",
+    component: TypeaheadDemo,
   },
-});
-
-useRole({
-  role: "tooltip",
-  open: isOpen,
-  elements: {
-    reference: anchorRef,
-    floating: floatingRef,
-  },
-});
-
-const placements: Placement[] = [
-  "top",
-  "top-start",
-  "top-end",
-  "bottom",
-  "bottom-start",
-  "bottom-end",
-  "left",
-  "left-start",
-  "left-end",
-  "right",
-  "right-start",
-  "right-end",
 ];
+
+const activeId = shallowRef(demos[0]!.id);
+const activeDemo = computed(() => demos.find((demo) => demo.id === activeId.value) ?? demos[0]!);
 </script>
 
 <template>
-  <main class="playground-container">
-    <header class="header">
-      <h1>VFloat Playground</h1>
-      <p>Interactive testing sandbox for VFloat composables.</p>
+  <div class="canvas">
+    <header class="canvas__brand">
+      <span class="canvas__mark">◈</span>
+      <span class="canvas__name">VFloat <em>canvas</em></span>
     </header>
 
-    <section class="controls">
-      <label>
-        Placement:
-        <select v-model="placement">
-          <option v-for="p in placements" :key="p" :value="p">{{ p }}</option>
-        </select>
-      </label>
-
-      <label>
-        Offset:
-        <input v-model.number="offsetValue" type="number" min="0" max="40" />
-      </label>
-
-      <span class="actual-placement">
-        Resolved: <strong>{{ actualPlacement }}</strong>
-      </span>
-    </section>
-
-    <div class="sandbox-stage">
-      <button ref="anchorRef" class="anchor-btn">Hover Me</button>
-
-      <div v-if="isOpen" ref="floatingRef" :style="floatingStyles" class="floating-card">
-        <div class="card-content">
-          <strong>Floating Element</strong>
-          <p>Placement: {{ actualPlacement }}</p>
+    <main class="canvas__stage">
+      <Transition name="demo-fade" mode="out-in">
+        <div :key="activeDemo.id" class="canvas__demo">
+          <component :is="activeDemo.component" />
         </div>
+      </Transition>
+    </main>
+
+    <nav class="floatbar" aria-label="Switch demo">
+      <div class="floatbar__items">
+        <button
+          v-for="demo in demos"
+          :key="demo.id"
+          type="button"
+          class="floatbar__item"
+          :data-active="demo.id === activeId"
+          @click="activeId = demo.id"
+        >
+          <span class="floatbar__dot" />
+          {{ demo.title }}
+        </button>
       </div>
-    </div>
-  </main>
+      <span class="floatbar__sep" />
+      <span class="floatbar__hint">{{ demos.length }} demo{{ demos.length === 1 ? "" : "s" }}</span>
+    </nav>
+  </div>
 </template>
 
 <style>
-* {
-  box-sizing: border-box;
-}
-
+html,
 body {
   margin: 0;
+  background: #08090a;
+  color: #f7f8f8;
   font-family:
-    system-ui,
+    Inter,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
     sans-serif;
-  background-color: #0d1117;
-  color: #e6edf3;
 }
-
-.playground-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+#app {
+  min-height: 100vh;
 }
+</style>
 
-.header {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #30363d;
-  padding-bottom: 1rem;
-}
-
-.header h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.8rem;
-  color: #58a6ff;
-}
-
-.controls {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-  margin-bottom: 3rem;
-  padding: 1rem;
-  background-color: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 8px;
-}
-
-.controls select,
-.controls input {
-  margin-left: 0.5rem;
-  background-color: #0d1117;
-  color: #e6edf3;
-  border: 1px solid #30363d;
-  padding: 0.35rem 0.65rem;
-  border-radius: 4px;
-}
-
-.actual-placement {
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: #8b949e;
-}
-
-.actual-placement strong {
-  color: #3fb950;
-}
-
-.sandbox-stage {
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed #30363d;
-  border-radius: 12px;
+<style scoped>
+.canvas {
   position: relative;
+  min-height: 100vh;
+  overflow: clip;
+  /* Open-canvas dot grid */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
-
-.anchor-btn {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+/* Soft vignette so the edges fall away */
+.canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 90% 70% at 50% 40%,
+    transparent 40%,
+    rgba(8, 9, 10, 0.85) 100%
+  );
+}
+.canvas__brand {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  z-index: 5;
+}
+.canvas__mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #5e6ad2;
+  font-size: 13px;
+}
+.canvas__name {
+  font-size: 13px;
   font-weight: 600;
-  color: #ffffff;
-  background-color: #1f6feb;
-  border: 1px solid rgba(240, 246, 252, 0.1);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
 }
-
-.anchor-btn:hover {
-  background-color: #388bfd;
+.canvas__name em {
+  font-style: normal;
+  font-weight: 400;
+  color: rgba(247, 248, 248, 0.4);
 }
-
-.floating-card {
+.canvas__stage {
+  display: flex;
+  justify-content: center;
+  padding: 96px 24px 140px;
+}
+.canvas__demo {
+  width: 100%;
+  max-width: 640px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(13, 14, 17, 0.85);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  padding: 24px;
+}
+.demo-fade-enter-active,
+.demo-fade-leave-active {
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+.demo-fade-enter-from,
+.demo-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.floatbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
-  background-color: #21262d;
-  color: #e6edf3;
-  border: 1px solid #484f58;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: min(92vw, 720px);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 24, 29, 0.9);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+/* Scrollable strip so the bar holds many demos without growing off-canvas */
+.floatbar__items {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, black 92%, transparent 100%);
+  padding-right: 8px;
+}
+.floatbar__items::-webkit-scrollbar {
+  display: none;
+}
+.floatbar__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border: 0;
   border-radius: 8px;
-  padding: 0.75rem 1rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  pointer-events: auto;
+  background: transparent;
+  color: rgba(247, 248, 248, 0.65);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
 }
-
-.card-content strong {
-  display: block;
-  font-size: 0.9rem;
-  margin-bottom: 0.25rem;
+.floatbar__item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #f7f8f8;
 }
-
-.card-content p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #8b949e;
+.floatbar__item[data-active="true"] {
+  background: rgba(94, 106, 210, 0.18);
+  color: #bec6ff;
+}
+.floatbar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.floatbar__item kbd {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(247, 248, 248, 0.5);
+}
+.floatbar__sep {
+  width: 1px;
+  align-self: stretch;
+  flex-shrink: 0;
+  margin: 6px 2px;
+  background: rgba(255, 255, 255, 0.09);
+}
+.floatbar__hint {
+  padding: 0 10px 0 6px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(247, 248, 248, 0.35);
+  white-space: nowrap;
 }
 </style>
