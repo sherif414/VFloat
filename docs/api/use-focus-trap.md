@@ -61,7 +61,7 @@ interface UseFocusTrapReturn {
 ### Modal Traps vs Non-Modal Overlays
 
 - **Modal Dialogs (`modal: true`):** Focus sentinels wrap the panel. Pressing <kbd>Tab</kbd> on the last element wraps back to the first. Background DOM elements outside the floating family are marked `inert` to prevent screen readers or pointer clicks from escaping.
-- **Non-Modal Overlays (`modal: false`):** Sentinels are omitted. <kbd>Tab</kbd> allows natural document flow, while `closeOnFocusOut: true` or `closeOnTab: true` gracefully dismisses the panel when focus moves away.
+- **Non-Modal Overlays (`modal: false`):** Focus is not trapped, so <kbd>Tab</kbd> follows the natural document flow. `closeOnFocusOut: true` or `closeOnTab: true` gracefully dismisses the panel when focus moves away. (The boundary sentinels are still used to detect a <kbd>Tab</kbd> that leaves the surface when `closeOnTab` is enabled.)
 
 ### Initial and Return Focus
 
