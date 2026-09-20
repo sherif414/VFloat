@@ -1,14 +1,3 @@
-import {
-  type ComputedRef,
-  computed,
-  type MaybeRefOrGetter,
-  nextTick,
-  type Ref,
-  shallowRef,
-  toValue,
-  watch,
-  watchPostEffect,
-} from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { isImeComposing, useComposition } from "@/shared/composition-state";
 import { isElement, isHTMLElement } from "@/shared/dom";
@@ -16,6 +5,17 @@ import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
+import {
+  computed,
+  type MaybeRefOrGetter,
+  nextTick,
+  readonly,
+  type Ref,
+  shallowRef,
+  toValue,
+  watch,
+  watchPostEffect,
+} from "vue";
 import { createFocusGuards, type FocusGuardHandles } from "./focus-guards";
 import type { FocusTrapEntry } from "./focus-trap-stack";
 import { isTopModalTrap, pushTrapEntry, removeTrapEntry } from "./focus-trap-stack";
@@ -82,17 +82,16 @@ export function useFocusTrap(
       getDocument(),
   );
   const ownerWindow = computed(() => targetDocument.value?.defaultView ?? getWindow());
-
   const trapIsActive = shallowRef(false);
-  const isActive = computed(() => trapIsActive.value);
 
   const cleanupRegistry = createCleanupRegistry();
   const trapEntry: FocusTrapEntry = {
     id: Symbol("vfloat-focus-trap"),
-    getFamilyElements,
+    onKeyDown: onDocumentKeyDown,
+    onFocusIn: onModalFocusPullback,
   };
 
-  function getFamilyElements(): HTMLElement[] {
+  function getOpenFloatingElements(): HTMLElement[] {
     const elements: HTMLElement[] = [];
     node.traverse((current) => {
       if (!current.open.value) return "skip";
@@ -117,11 +116,9 @@ export function useFocusTrap(
       return;
     }
 
-    const doc = targetDocument.value;
-    if (!doc || !isTopModalTrap(doc, trapEntry)) return;
-
     const floating = refs.floatingEl.value;
-    if (!floating) return;
+    const doc = targetDocument.value;
+    if (!floating || !doc) return;
 
     // Document-level wrap: catches Tab even after focus escaped to body or
     // the address bar, which a floating-only listener never sees.
@@ -165,16 +162,6 @@ export function useFocusTrap(
 
     open.value = false;
   }
-
-  // Document keydown owns modal Tab wrapping so escaped focus still wraps.
-  cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value && open.value && isModal.value ? targetDocument.value : null),
-      "keydown",
-      onDocumentKeyDown,
-      { capture: true },
-    ),
-  );
 
   // Floating keydown listener for non-modal closeOnTab.
   cleanupRegistry.add(
@@ -234,15 +221,12 @@ export function useFocusTrap(
 
   function onModalFocusPullback(event: FocusEvent) {
     // Synchronous backstop for programmatic focus jumps that never produce
-    // a floating focusout (e.g. outsideEl.focus() while open). Only the top
-    // modal owns the correction so stacked modals cannot fight.
+    // a floating focusout (e.g. outsideEl.focus() while open). The stack
+    // dispatcher guarantees only the topmost modal receives document focusin.
     if (!isEnabled.value || !open.value || !isModal.value) return;
 
     const floating = refs.floatingEl.value;
     if (!floating) return;
-
-    const doc = targetDocument.value;
-    if (!doc || !isTopModalTrap(doc, trapEntry)) return;
 
     const target = event.target as Node | null;
     if (!target || node.contains(target)) {
@@ -262,16 +246,6 @@ export function useFocusTrap(
       () => (isEnabled.value && open.value && isModal.value ? refs.floatingEl.value : null),
       "focusout",
       onFloatingFocusOut,
-    ),
-  );
-
-  // Document focusin handles modal focus containment and recovery from programmatic outside jumps.
-  cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value && open.value && isModal.value ? targetDocument.value : null),
-      "focusin",
-      onModalFocusPullback,
-      { capture: true },
     ),
   );
 
@@ -406,7 +380,7 @@ export function useFocusTrap(
     cleanupIsolation();
     if (!shouldInertOutside.value) return;
 
-    const containers = getFamilyElements();
+    const containers = getOpenFloatingElements();
     if (containers.length === 0) return;
 
     const handle = isolateOutsideElements(containers, true);
@@ -828,7 +802,7 @@ export function useFocusTrap(
   });
 
   return {
-    isActive,
+    isActive: readonly(trapIsActive),
     activate: () => {
       if (open.value) {
         activate();
@@ -857,7 +831,7 @@ export interface UseFocusTrapReturn {
   /**
    * Whether focus management is currently active.
    */
-  isActive: ComputedRef<boolean>;
+  isActive: Readonly<Ref<boolean>>;
 
   /**
    * Manually activates focus management.
