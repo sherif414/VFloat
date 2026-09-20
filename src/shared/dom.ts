@@ -108,6 +108,31 @@ export function isEventTargetWithin(event: Event, element: Element | null | unde
 }
 
 /**
+ * Resolves the true event source across Shadow DOM boundaries via `composedPath`.
+ *
+ * Inside a shadow root, `event.target` is retargeted to the host element when the
+ * event reaches the light-DOM document listener. The first entry of
+ * `composedPath()` is the original inner dispatch target, so passing it to
+ * `node.contains()` attributes the event to the overlay whose family actually
+ * encloses the source. `contains()` itself walks Shadow DOM parents via
+ * `getDomPath()`, keeping `composedPath()[0]` and `event.target` equivalent for
+ * open shadow roots. Falls back to `event.target` when `composedPath` is
+ * unavailable or empty (synthetic events, legacy browsers).
+ */
+export function getEventTarget(event: Event): EventTarget | null {
+  if (
+    "composedPath" in event &&
+    typeof (event as Event & { composedPath?: () => EventTarget[] }).composedPath === "function"
+  ) {
+    const path = (event as Event & { composedPath: () => EventTarget[] }).composedPath();
+    if (path.length > 0) {
+      return path[0];
+    }
+  }
+  return event.target;
+}
+
+/**
  * Detects clicks on the scrollbar gutter so pointer logic can ignore drag-like gestures.
  * Handles both LTR and RTL directions and accounts for border widths to prevent false positives.
  * Supports both root viewport scrollbars and nested scrollable containers.

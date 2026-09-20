@@ -59,9 +59,14 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
   const entry: OutsideClickEntry = {
     node,
     get options() {
-      return options;
+      return { ...options, capture: initialCapture };
     },
   };
+
+  // `capture` is a static setup option: snapshot it at registration so the document
+  // listener phase stays stable while the overlay is open. Changing it takes
+  // effect on close/re-open.
+  const initialCapture = Boolean(options.capture ?? true);
 
   watch(
     () =>
@@ -70,7 +75,6 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
         open.value,
         ownerDocument.value,
         toValue(options.event ?? "pointerdown"),
-        Boolean(toValue(options.capture ?? true)),
       ] as const,
     ([enabled, isOpen, doc], _, onCleanup) => {
       if (!enabled || !isOpen || !doc) return;

@@ -23,12 +23,12 @@ interface UseEscapeKeyOptions {
 
 ## Options
 
-| Name             | Type                             | Default     | Notes                                                                                              |
-| ---------------- | -------------------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
-| `enabled`        | `MaybeRefOrGetter<boolean>`      | `true`      | Reactive toggle. Setting to `false` removes the node from the escape stack and ignores keystrokes. |
-| `capture`        | `boolean`                        | `false`     | Attaches keydown listener during the capture phase. Read once during listener setup.               |
-| `preventDefault` | `boolean`                        | `false`     | Calls `event.preventDefault()` on handled Escape presses.                                          |
-| `onEscape`       | `(event: KeyboardEvent) => void` | `undefined` | Custom callback. When provided, replaces the default `node.open.value = false`.                    |
+| Name             | Type                             | Default     | Notes                                                                                                                        |
+| ---------------- | -------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`        | `MaybeRefOrGetter<boolean>`      | `true`      | Reactive toggle. Setting to `false` removes the node from the escape stack and ignores keystrokes.                           |
+| `capture`        | `boolean`                        | `false`     | Static setup option. Changing it mid-open takes effect on close/re-open. Attaches keydown listener during the capture phase. |
+| `preventDefault` | `boolean`                        | `false`     | Calls `event.preventDefault()` on handled Escape presses.                                                                    |
+| `onEscape`       | `(event: KeyboardEvent) => void` | `undefined` | Custom callback. When provided, replaces the default `node.open.value = false`.                                              |
 
 ## Returns
 
@@ -49,6 +49,7 @@ When multiple independent overlays coexist on the page (for example, a modal dia
 
 - **Focused Surface First:** If focus resides inside one of the open overlays, that overlay claims the Escape key.
 - **LIFO Order:** If focus is neutral (e.g. on the document body), the most recently opened surface closes first. Unrelated overlays do not intercept each other's Escape presses.
+- **Shadow DOM Target Resolution:** The event source is resolved via `composedPath()` when available, so Escape pressed inside a shadow root is attributed to the overlay whose family actually contains the inner element. Falls back to `event.target` for synthetic or legacy events.
 
 ### IME Composition Awareness
 

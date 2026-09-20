@@ -33,7 +33,7 @@ type OutsideClickPredicate = (event: MouseEvent, target: Node) => boolean;
 | ----------------- | ----------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `enabled`         | `MaybeRefOrGetter<boolean>`                                 | `true`          | Reactive toggle. Setting to `false` disables outside click detection.                                                                           |
 | `event`           | `MaybeRefOrGetter<"pointerdown" \| "mousedown" \| "click">` | `"pointerdown"` | Which document event triggers dismissal.                                                                                                        |
-| `capture`         | `boolean`                                                   | `true`          | Attaches document listener during the capture phase before bubbling completes.                                                                  |
+| `capture`         | `boolean`                                                   | `true`          | Static setup option. Changing it mid-open takes effect on close/re-open. Selects the document listener phase.                                   |
 | `bubbles`         | `boolean`                                                   | `true`          | When true, outside clicks dismiss all open levels simultaneously. When false, only the active leaf dismisses first unless clicking an ancestor. |
 | `ignoreClick`     | `OutsideClickPredicate`                                     | `undefined`     | Custom predicate to ignore specific outside clicks. Evaluated after the composite node family check.                                            |
 | `onClick`         | `(event: MouseEvent) => void`                               | `undefined`     | Custom handler. When provided, replaces default `node.open.value = false`.                                                                      |
@@ -53,6 +53,7 @@ type OutsideClickPredicate = (event: MouseEvent, target: Node) => boolean;
 - **Composite Node Containment:** `node.contains(target)` traverses open child surfaces. Clicking inside a child submenu (even if teleported to `<body>`) is recognized as internal to parent menus, preventing unwanted parent closures.
 - **Leaf-First Unpeeling (`bubbles: false`):** When set to `false`, clicking the page background unpeels only the outermost open leaf, keeping parent surfaces open. If the user clicks directly on an ancestor's anchor or panel, the descendant branches unwind immediately on pointerdown.
 - **Independent Stacks:** Unrelated floating nodes on the same page remain isolated. Clicking outside a popover closes only the relevant surface while respecting neighboring overlays.
+- **Shadow DOM Target Resolution:** The press source is resolved via `composedPath()` when available, so clicks inside shadow roots are attributed to the surface whose family actually contains the inner element. Falls back to `event.target` for synthetic or legacy events.
 
 ### Event Selection & Capture Phase
 

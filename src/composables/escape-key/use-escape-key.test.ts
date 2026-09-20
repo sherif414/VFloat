@@ -1294,6 +1294,64 @@ describe("useEscapeKey", () => {
       expect(captureFixture.openRef.value).toBe(false);
     });
 
+    it("resolves retargeted Shadow DOM events via composedPath", async () => {
+      const fixture = createTwoIndependentTreesComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      const shadowTarget = getTestEl("t2-target-button");
+      const retargetedHost = getTestEl("t2-floating");
+      const retargetedEvent = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      // Simulate Shadow DOM retargeting: the document-level listener observes the
+      // host while composedPath() still exposes the original inner target.
+      Object.defineProperty(retargetedEvent, "target", {
+        configurable: true,
+        value: retargetedHost,
+      });
+      Object.defineProperty(retargetedEvent, "composedPath", {
+        configurable: true,
+        value: () => [shadowTarget, retargetedHost, document.body, document],
+      });
+      document.dispatchEvent(retargetedEvent);
+      await nextTick();
+
+      // Tree 2 owns the composed target, so it unwinds while Tree 1 stays open.
+      expect(fixture.tree2ChildOpen.value).toBe(false);
+      expect(fixture.tree2RootOpen.value).toBe(true);
+      expect(fixture.tree1ChildOpen.value).toBe(true);
+      expect(fixture.tree1RootOpen.value).toBe(true);
+    });
+
+    it("falls back to event.target when composedPath is empty", async () => {
+      const fixture = createTwoIndependentTreesComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      // Synthetic events may expose an empty composedPath; resolution must
+      // fall back to the dispatch target instead of dropping the keypress.
+      const treeBButton = getTestEl("t2-target-button");
+      const emptyPathEvent = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(emptyPathEvent, "composedPath", {
+        configurable: true,
+        value: () => [] as EventTarget[],
+      });
+      treeBButton.dispatchEvent(emptyPathEvent);
+      await nextTick();
+
+      expect(fixture.tree2ChildOpen.value).toBe(false);
+      expect(fixture.tree2RootOpen.value).toBe(true);
+      expect(fixture.tree1ChildOpen.value).toBe(true);
+      expect(fixture.tree1RootOpen.value).toBe(true);
+    });
+
     it("executes dynamically updated onEscape on an open overlay", async () => {
       const calls: string[] = [];
       const options: UseEscapeKeyOptions = {

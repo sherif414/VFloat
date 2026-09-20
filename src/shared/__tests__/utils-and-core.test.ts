@@ -3,6 +3,7 @@ import { ref } from "vue";
 import {
   clearTimeoutIfSet,
   getDomPath,
+  getEventTarget,
   isClickOnScrollbar,
   isElement,
   isElementInEventPath,
@@ -113,6 +114,18 @@ describe("utils and core helpers", () => {
 
     expect(isEventTargetWithin(composedEvent, container)).toBe(true);
     expect(isEventTargetWithin(fallbackEvent, container)).toBe(true);
+    expect(getEventTarget(composedEvent)).toBe(child);
+    expect(getEventTarget(fallbackEvent)).toBe(child);
+    const emptyPathEvent = new Event("click");
+    Object.defineProperty(emptyPathEvent, "composedPath", {
+      configurable: true,
+      value: () => [] as EventTarget[],
+    });
+    Object.defineProperty(emptyPathEvent, "target", {
+      configurable: true,
+      value: child,
+    });
+    expect(getEventTarget(emptyPathEvent)).toBe(child);
     expect(isElementInEventPath(container, [child, container])).toBe(true);
     expect(isElementInEventPath(virtualElement, [container])).toBe(true);
     expect(isElementInEventPath({}, [container])).toBe(false);

@@ -554,6 +554,29 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(true);
   });
 
+  it("keeps the initial capture phase when capture changes mid-open", async () => {
+    const options: UseOutsideClickOptions = { event: "click", capture: true };
+    const { outsideEl, node } = await renderOutsideClick(options);
+
+    // Capture is a static setup option: flipping it while the overlay stays
+    // open must not re-key the active document listener.
+    options.capture = false;
+    await nextTick();
+
+    outsideEl.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+      },
+      { once: true },
+    );
+
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(node.open.value).toBe(false);
+  });
+
   it("does not trigger onClick when node is already closed", async () => {
     const onClick = vi.fn();
     const { outsideEl, node } = await renderOutsideClick({

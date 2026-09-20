@@ -1,5 +1,5 @@
 import type { FloatingNode } from "@/composables/floating-node";
-import { isNode } from "@/shared/dom";
+import { getEventTarget, isNode } from "@/shared/dom";
 import { isImeComposing } from "@/shared/composition-state";
 
 export interface EscapeEntryOptions {
@@ -106,7 +106,7 @@ function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | 
   const manager = documentManagers.get(doc);
   if (!manager || manager.stack.length === 0) return;
 
-  const activeEntry = resolveActiveEscapeEntry(manager, event.target);
+  const activeEntry = resolveActiveEscapeEntry(manager, getEventTarget(event));
   if (!activeEntry) return;
 
   const isCapture = Boolean(activeEntry.options?.capture);
@@ -289,6 +289,11 @@ function findDeepestOpenDescendant(root: FloatingNode, stack?: EscapeEntry[]): F
   return deepest;
 }
 
+/**
+ * Descends through open children containing the target to find the subtree
+ * owner: the deepest node whose family still encloses the event source.
+ * The caller then unwinds that owner's deepest open descendant leaf-first.
+ */
 function findTargetOwner(current: FloatingNode, targetNode: Node): FloatingNode {
   for (const child of current.children.value) {
     if (child.open.value && child.contains(targetNode)) {

@@ -1,6 +1,6 @@
 import { type MaybeRefOrGetter, toValue } from "vue";
 import type { FloatingNode, FloatingNodeId } from "@/composables/floating-node";
-import { isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
+import { getEventTarget, isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
 import { isTargetWithinElements } from "@/shared/elements";
 
 interface DocumentOutsideClickManager {
@@ -106,7 +106,9 @@ function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManag
 
   for (const entry of manager.stack) {
     const eventName = toValue(entry.options?.event ?? "pointerdown");
-    const capture = Boolean(toValue(entry.options?.capture ?? true));
+    // `capture` is a static setup option: read once per sync so listener keys stay
+    // stable while the overlay is open. Changing it takes effect on close/re-open.
+    const capture = Boolean(entry.options?.capture ?? true);
     const key = `${eventName}:${capture ? "capture" : "bubble"}`;
     if (!neededListeners.has(key)) {
       neededListeners.set(key, { eventName, capture });
@@ -245,7 +247,7 @@ function dispatchOutsideClick(
   for (const entry of manager.stack) {
     if (!entry.node.open.value) continue;
     const entryEvent = toValue(entry.options?.event ?? "pointerdown");
-    const entryCapture = Boolean(toValue(entry.options?.capture ?? true));
+    const entryCapture = Boolean(entry.options?.capture ?? true);
     if (entryEvent === phaseEventName && entryCapture === isCapture) {
       candidates.push(entry);
     }
@@ -394,19 +396,6 @@ function getNodeDepth(node: FloatingNode): number {
 }
 
 /**
- * Resolves the true source target across Shadow DOM boundaries via `composedPath`.
- */
-function getEventTarget(event: Event): EventTarget | null {
-  if (typeof event.composedPath === "function") {
-    const path = event.composedPath();
-    if (path.length > 0) {
-      return path[0];
-    }
-  }
-  return event.target;
-}
-
-/**
  * Checks whether the click target is contained directly within any ancestor node's
  * anchor element or floating panel.
  */
@@ -439,7 +428,13 @@ export type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | nu
 export interface OutsideClickEntryOptions {
   enabled?: MaybeRefOrGetter<boolean>;
   event?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
-  capture?: MaybeRefOrGetter<boolean>;
+  /**
+   * Which document event phase handles dismissal.
+   * Static: read once during listener setup. Changing it mid-open takes
+   * effect on close/re-open.
+   * @default true
+   */
+  capture?: boolean;
   bubbles?: boolean;
   ignoreScrollbar?: MaybeRefOrGetter<boolean>;
   ignoreDrag?: MaybeRefOrGetter<boolean>;
