@@ -1,10 +1,3 @@
-import type { FloatingNode } from "@/composables/floating-node";
-import { isImeComposing, useComposition } from "@/shared/composition-state";
-import { isElement, isHTMLElement } from "@/shared/dom";
-import { getAnchorElement } from "@/shared/elements";
-import { getDocument, getWindow } from "@/shared/env";
-import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
-import { useEventListener } from "@/shared/use-event-listener";
 import {
   computed,
   type MaybeRefOrGetter,
@@ -16,6 +9,13 @@ import {
   watch,
   watchPostEffect,
 } from "vue";
+import type { FloatingNode } from "@/composables/floating-node";
+import { isImeComposing, useComposition } from "@/shared/composition-state";
+import { isElement, isHTMLElement } from "@/shared/dom";
+import { getAnchorElement } from "@/shared/elements";
+import { getDocument, getWindow } from "@/shared/env";
+import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
+import { useEventListener } from "@/shared/use-event-listener";
 import { createFocusGuards, type FocusGuardHandles } from "./focus-guards";
 import type { FocusTrapEntry } from "./focus-trap-stack";
 import { isTopModalTrap, pushTrapEntry, removeTrapEntry } from "./focus-trap-stack";
@@ -85,23 +85,6 @@ export function useFocusTrap(
   const trapIsActive = shallowRef(false);
 
   const cleanupRegistry = createCleanupRegistry();
-  const trapEntry: FocusTrapEntry = {
-    id: Symbol("vfloat-focus-trap"),
-    onKeyDown: onDocumentKeyDown,
-    onFocusIn: onModalFocusPullback,
-  };
-
-  function getOpenFloatingElements(): HTMLElement[] {
-    const elements: HTMLElement[] = [];
-    node.traverse((current) => {
-      if (!current.open.value) return "skip";
-      const el = current.refs.floatingEl.value;
-      if (el) {
-        elements.push(el);
-      }
-    });
-    return elements;
-  }
 
   // --- Focus Trapping & Tab Navigation ----------------------------------------
 
@@ -376,6 +359,18 @@ export function useFocusTrap(
 
   let isolationRestore: (() => void) | null = null;
 
+  function getOpenFloatingElements(): HTMLElement[] {
+    const elements: HTMLElement[] = [];
+    node.traverse((current) => {
+      if (!current.open.value) return "skip";
+      const el = current.refs.floatingEl.value;
+      if (el) {
+        elements.push(el);
+      }
+    });
+    return elements;
+  }
+
   function setupIsolation() {
     cleanupIsolation();
     if (!shouldInertOutside.value) return;
@@ -628,6 +623,12 @@ export function useFocusTrap(
   }
 
   // --- Modal Stack & Trap Coordination ----------------------------------------
+
+  const trapEntry: FocusTrapEntry = {
+    id: Symbol("vfloat-focus-trap"),
+    onKeyDown: onDocumentKeyDown,
+    onFocusIn: onModalFocusPullback,
+  };
 
   // Tracks guards/floating tabindex marked for this trap instance.
   let trapScopeMarked = false;

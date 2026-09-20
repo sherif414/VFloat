@@ -1,25 +1,12 @@
-//=======================================================================================
-// 📌 Main
-//=======================================================================================
-
-/**
- * A registered modal trap entry. The stack routes document-level keydown and
- * focusin capture events to the topmost entry so only one shared listener per
- * event type exists per document, regardless of how many modal traps are stacked.
- */
-export interface FocusTrapEntry {
-  id: symbol;
-  /** Called by the shared document keydown capture listener for modal Tab wrapping. */
-  onKeyDown: (event: KeyboardEvent) => void;
-  /** Called by the shared document focusin capture listener for modal focus containment. */
-  onFocusIn: (event: FocusEvent) => void;
-}
-
 interface DocumentTrapManager {
   stack: FocusTrapEntry[];
   keydownListener: ((event: KeyboardEvent) => void) | null;
   focusinListener: ((event: FocusEvent) => void) | null;
 }
+
+//=======================================================================================
+// 📌 Main
+//=======================================================================================
 
 /**
  * Per-document managers. Each manager owns the stack of active modal traps and
@@ -113,4 +100,21 @@ export function isTopModalTrap(doc: Document, entry: FocusTrapEntry): boolean {
   const manager = documentManagers.get(doc);
   if (!manager || manager.stack.length === 0) return true;
   return manager.stack[manager.stack.length - 1] === entry;
+}
+
+//=======================================================================================
+// 📌 Types
+//=======================================================================================
+
+/**
+ * A registered modal trap entry. The stack routes document-level keydown and
+ * focusin capture events to the topmost entry so only one shared listener per
+ * event type exists per document, regardless of how many modal traps are stacked.
+ */
+export interface FocusTrapEntry {
+  id: symbol;
+  /** Called by the shared document keydown capture listener for modal Tab wrapping. */
+  onKeyDown: (event: KeyboardEvent) => void;
+  /** Called by the shared document focusin capture listener for modal focus containment. */
+  onFocusIn: (event: FocusEvent) => void;
 }
