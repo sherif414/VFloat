@@ -31,7 +31,11 @@ export function isFunction(value: unknown): value is (...args: unknown[]) => unk
 export function isNode(value: unknown): value is Node {
   if (!value || typeof value !== "object") return false;
   const win = getWindow(value);
-  return typeof win?.Node !== "undefined" && value instanceof win.Node;
+  return (
+    (typeof Node !== "undefined" && value instanceof Node) ||
+    (typeof win?.Node !== "undefined" && value instanceof win.Node) ||
+    (typeof (value as Node).nodeType === "number" && typeof (value as Node).nodeName === "string")
+  );
 }
 
 /**
@@ -40,7 +44,17 @@ export function isNode(value: unknown): value is Node {
 export function isHTMLElement(value: unknown): value is HTMLElement {
   if (!value || typeof value !== "object") return false;
   const win = getWindow(value);
-  return typeof win?.HTMLElement !== "undefined" && value instanceof win.HTMLElement;
+  if (
+    (typeof HTMLElement !== "undefined" && value instanceof HTMLElement) ||
+    (typeof win?.HTMLElement !== "undefined" && value instanceof win.HTMLElement)
+  ) {
+    return true;
+  }
+  return (
+    isElement(value) &&
+    !("ownerSVGElement" in value) &&
+    (value.namespaceURI === "http://www.w3.org/1999/xhtml" || !value.namespaceURI)
+  );
 }
 
 /**
@@ -49,7 +63,11 @@ export function isHTMLElement(value: unknown): value is HTMLElement {
 export function isElement(value: unknown): value is Element {
   if (!value || typeof value !== "object") return false;
   const win = getWindow(value);
-  return typeof win?.Element !== "undefined" && value instanceof win.Element;
+  return (
+    (typeof Element !== "undefined" && value instanceof Element) ||
+    (typeof win?.Element !== "undefined" && value instanceof win.Element) ||
+    ((value as Element).nodeType === 1 && typeof (value as Element).tagName === "string")
+  );
 }
 
 /**
@@ -58,7 +76,11 @@ export function isElement(value: unknown): value is Element {
 export function isShadowRoot(value: unknown): value is ShadowRoot {
   if (!value || typeof value !== "object") return false;
   const win = getWindow(value);
-  return typeof win?.ShadowRoot !== "undefined" && value instanceof win.ShadowRoot;
+  return (
+    (typeof ShadowRoot !== "undefined" && value instanceof ShadowRoot) ||
+    (typeof win?.ShadowRoot !== "undefined" && value instanceof win.ShadowRoot) ||
+    ((value as Node).nodeType === 11 && "host" in value)
+  );
 }
 
 /**
@@ -75,15 +97,14 @@ export function isMouseLikePointerType(pointerType: string | undefined, strict?:
  */
 export function isTypeableElement(element: Element | null): boolean {
   if (!isHTMLElement(element)) return false;
-  const win = getWindow(element);
-  if (typeof win?.HTMLInputElement !== "undefined" && element instanceof win.HTMLInputElement) {
-    return !NON_TYPEABLE_INPUT_TYPES.has(element.type);
+  const tag = element.tagName;
+  if (tag === "INPUT") {
+    return !NON_TYPEABLE_INPUT_TYPES.has((element as HTMLInputElement).type);
   }
-  return (
-    (typeof win?.HTMLTextAreaElement !== "undefined" &&
-      element instanceof win.HTMLTextAreaElement) ||
-    (element.isContentEditable && element.contentEditable !== "false")
-  );
+  if (tag === "TEXTAREA") {
+    return true;
+  }
+  return Boolean(element.isContentEditable && element.contentEditable !== "false");
 }
 
 /**

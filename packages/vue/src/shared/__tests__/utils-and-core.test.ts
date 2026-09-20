@@ -16,7 +16,7 @@ import {
   isTypeableElement,
   isVirtualElement,
 } from "@/shared/dom";
-import { getAnchorElement } from "@/shared/elements";
+import { getAnchorElement, isTargetWithinElements } from "@/shared/elements";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { isMac, isSafari, isWebKit, matchesFocusVisible } from "@/shared/platform";
 import { clearTrackedElements, trackElement } from "@/test-utils";
@@ -332,5 +332,74 @@ describe("utils and core helpers", () => {
         getBoundingClientRect: () => iframeBtn.getBoundingClientRect(),
       }),
     ).toBe(iframeBtn);
+  });
+
+  it("supports cross-realm elements adopted into iframes from host document", () => {
+    const iframe = trackElement(document.createElement("iframe"));
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument!;
+    // Created by host document, then adopted into iframeDoc
+    const adoptedInput = trackElement(document.createElement("input"));
+    iframeDoc.body.appendChild(adoptedInput);
+
+    expect(adoptedInput.ownerDocument).toBe(iframeDoc);
+    expect(isNode(adoptedInput)).toBe(true);
+    expect(isElement(adoptedInput)).toBe(true);
+    expect(isHTMLElement(adoptedInput)).toBe(true);
+    expect(isTypeableElement(adoptedInput)).toBe(true);
+    expect(getAnchorElement(adoptedInput)).toBe(adoptedInput);
+  });
+
+  it("supports elements from detached iframes where defaultView is null", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument!;
+    const iframeDiv = iframeDoc.createElement("div");
+    const iframeInput = iframeDoc.createElement("input");
+    const iframeTextarea = iframeDoc.createElement("textarea");
+
+    // Detach the iframe: defaultView becomes null in real browser environments
+    document.body.removeChild(iframe);
+
+    expect(isNode(iframeDiv)).toBe(true);
+    expect(isElement(iframeDiv)).toBe(true);
+    expect(isHTMLElement(iframeDiv)).toBe(true);
+    expect(isTypeableElement(iframeInput)).toBe(true);
+    expect(isTypeableElement(iframeTextarea)).toBe(true);
+  });
+
+  it("differentiates SVG elements from HTML elements across realms", () => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    svg.appendChild(path);
+
+    expect(isNode(svg)).toBe(true);
+    expect(isElement(svg)).toBe(true);
+    expect(isHTMLElement(svg)).toBe(false);
+
+    expect(isNode(path)).toBe(true);
+    expect(isElement(path)).toBe(true);
+    expect(isHTMLElement(path)).toBe(false);
+  });
+
+  it("correctly checks contextElement inside iframes in isTargetWithinElements", () => {
+    const iframe = trackElement(document.createElement("iframe"));
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument!;
+    const contextEl = iframeDoc.createElement("button");
+    const targetInside = iframeDoc.createElement("span");
+    contextEl.appendChild(targetInside);
+    iframeDoc.body.appendChild(contextEl);
+
+    const virtualAnchor: VirtualElement = {
+      contextElement: contextEl,
+      getBoundingClientRect: () => contextEl.getBoundingClientRect(),
+    };
+
+    expect(isTargetWithinElements(virtualAnchor, null, targetInside)).toBe(true);
+    expect(isTargetWithinElements(virtualAnchor, null, document.body)).toBe(false);
   });
 });

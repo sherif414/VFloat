@@ -1,11 +1,5 @@
 import type { AnchorElement, FloatingElement } from "@/composables/floating-node";
-import {
-  clearTimeoutIfSet,
-  contains,
-  getCurrentTime,
-  getTarget,
-  isHTMLElement,
-} from "@/shared/dom";
+import { clearTimeoutIfSet, contains, getCurrentTime, getTarget, isElement } from "@/shared/dom";
 import { getDocument, getWindow } from "@/shared/env";
 import {
   buildRectangularTrough,
@@ -138,7 +132,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
 
       if (
         isLeave &&
-        isHTMLElement(event.relatedTarget) &&
+        isElement(event.relatedTarget) &&
         elements.floating &&
         contains(elements.floating, event.relatedTarget)
       ) {
@@ -211,8 +205,8 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
  * Resolves the underlying HTMLElement from an AnchorElement (HTMLElement or VirtualElement).
  */
 function resolveReferenceElement(domReference: AnchorElement | null): HTMLElement | null {
-  if (isHTMLElement(domReference)) {
-    return domReference;
+  if (isElement(domReference)) {
+    return domReference as HTMLElement;
   }
 
   return (domReference?.contextElement as HTMLElement) ?? null;

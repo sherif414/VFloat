@@ -1,8 +1,8 @@
-import { isHTMLElement } from "@/shared/dom";
+import { isElement } from "@/shared/dom";
 import { getWindow, isServer } from "@/shared/env";
 
 interface IsolatedEntry {
-  el: HTMLElement;
+  el: Element;
   attribute: string;
   previousValue: string | null;
   previousInertProperty: boolean | null;
@@ -10,7 +10,7 @@ interface IsolatedEntry {
 }
 
 interface DocumentIsolationState {
-  entries: Map<HTMLElement, IsolatedEntry>;
+  entries: Map<Element, IsolatedEntry>;
 }
 
 const documentStates = new WeakMap<Document, DocumentIsolationState>();
@@ -53,11 +53,11 @@ export function isolateOutsideElements(
   const supportsInert = supportsInertIn(doc);
   const useInert = preferInert && supportsInert;
   const attributeToSet = useInert ? "inert" : "aria-hidden";
-  const owned: HTMLElement[] = [];
+  const owned: Element[] = [];
 
   const docRef: Document = doc;
 
-  const allowedRoots = new Set<HTMLElement>(allowedElements.filter((el) => el.isConnected));
+  const allowedRoots = new Set<Element>(allowedElements.filter((el) => el.isConnected));
   const ancestorSet = new Set<Node>();
 
   for (const root of allowedRoots) {
@@ -68,10 +68,10 @@ export function isolateOutsideElements(
     }
   }
 
-  function traverse(parent: HTMLElement) {
+  function traverse(parent: Element) {
     for (let i = 0; i < parent.children.length; i++) {
       const child = parent.children[i];
-      if (!isHTMLElement(child)) continue;
+      if (!isElement(child)) continue;
       if (child.tagName === "SCRIPT" || child.tagName === "STYLE") continue;
       if (child.hasAttribute("data-vfloat-focus-guard")) continue;
 
@@ -128,12 +128,7 @@ function supportsInertIn(doc: Document): boolean {
   return typeof HTMLElement !== "undefined" && "inert" in HTMLElement.prototype;
 }
 
-function acquireIsolation(
-  doc: Document,
-  el: HTMLElement,
-  attribute: string,
-  owned: HTMLElement[],
-): void {
+function acquireIsolation(doc: Document, el: Element, attribute: string, owned: Element[]): void {
   const state = getDocumentState(doc);
   const existing = state.entries.get(el);
   if (existing) {
@@ -169,7 +164,7 @@ function acquireIsolation(
   owned.push(el);
 }
 
-function releaseIsolation(doc: Document, owned: HTMLElement[]): void {
+function releaseIsolation(doc: Document, owned: Element[]): void {
   const state = documentStates.get(doc);
   if (!state) return;
 

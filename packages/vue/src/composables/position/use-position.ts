@@ -40,7 +40,7 @@ import {
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { floatingInternals } from "@/composables/floating-node/use-floating-node";
-import { isServer } from "@/shared/env";
+import { getWindow, isServer } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
 import { arrow } from "../middlewares";
 
@@ -331,8 +331,8 @@ function roundByDPR(el: HTMLElement, value: number) {
 
 function getDPR(el: HTMLElement) {
   if (isServer) return 1;
-  const win = el.ownerDocument.defaultView || window;
-  return win.devicePixelRatio || 1;
+  const win = getWindow(el);
+  return win?.devicePixelRatio || 1;
 }
 
 function getMiddlewares(

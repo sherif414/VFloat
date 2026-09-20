@@ -54,13 +54,15 @@ export function isTargetWithinElements(
   if (anchorEl) {
     if (isElement(anchorEl)) {
       if (anchorEl.contains(target) || path.includes(anchorEl)) return true;
-    } else if (
-      isElement(anchorEl.contextElement) &&
-      anchorEl.contextElement !== getDocument()?.documentElement &&
-      anchorEl.contextElement !== getDocument()?.body
-    ) {
-      if (anchorEl.contextElement.contains(target) || path.includes(anchorEl.contextElement)) {
-        return true;
+    } else if (isElement(anchorEl.contextElement)) {
+      const ownerDoc = anchorEl.contextElement.ownerDocument ?? getDocument();
+      if (
+        anchorEl.contextElement !== ownerDoc?.documentElement &&
+        anchorEl.contextElement !== ownerDoc?.body
+      ) {
+        if (anchorEl.contextElement.contains(target) || path.includes(anchorEl.contextElement)) {
+          return true;
+        }
       }
     }
   }

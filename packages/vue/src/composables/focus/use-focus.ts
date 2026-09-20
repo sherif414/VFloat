@@ -1,7 +1,7 @@
 import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { isUsingKeyboard } from "@/composables/focus/input-modality";
-import { isTypeableElement } from "@/shared/dom";
+import { isElement, isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -95,7 +95,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): voi
       return;
     }
 
-    const target = e.target instanceof Element ? e.target : null;
+    const target = isElement(e.target) ? e.target : null;
     if (toValue(options.requireFocusVisible ?? true) && target) {
       // -----------------------------------------------------------------------
       // WebKit Bug #233465: https://bugs.webkit.org/show_bug.cgi?id=233465
@@ -211,7 +211,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): voi
       // If focus landed on an interactive element inside the floating node (`node.contains(activeEl)`)
       // or satisfies the consumer's `ignoreFocusOut(activeEl)` predicate (e.g. an external toolbar),
       // we keep the popover open.
-      if (shouldIgnoreDismiss(activeEl instanceof Element ? activeEl : null)) {
+      if (shouldIgnoreDismiss(isElement(activeEl) ? activeEl : null)) {
         return;
       }
 
@@ -230,7 +230,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): voi
     (e: FocusEvent) => {
       if (!open.value) return;
 
-      const target = e.target instanceof Element ? e.target : null;
+      const target = isElement(e.target) ? e.target : null;
       if (!target || shouldIgnoreDismiss(target)) return;
 
       open.value = false;
