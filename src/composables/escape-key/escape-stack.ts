@@ -3,8 +3,23 @@ import { isNode } from "@/shared/dom";
 import { isImeComposing } from "@/shared/composition-state";
 
 export interface EscapeEntryOptions {
+  /**
+   * Handle Escape during the document's capture phase instead of the bubble phase.
+   * Capture intercepts the event before inner elements can stop its propagation.
+   * @default false
+   */
   capture?: boolean;
+  /**
+   * Calls `event.preventDefault()` on the keydown event when this entry claims it.
+   * This prevents the browser default for the keyboard event; it does NOT prevent dismissal.
+   * @default false
+   */
   preventDefault?: boolean;
+  /**
+   * Custom handler invoked instead of the default close behavior.
+   * The event is fully consumed before this runs (propagation is stopped),
+   * so closing `node.open` is the handler's responsibility.
+   */
   onEscape?: (event: KeyboardEvent) => void;
 }
 
@@ -113,13 +128,17 @@ function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | 
     event.preventDefault();
   }
 
+  // Once an entry claims the event it is fully consumed: stop propagation for both
+  // the default close path and custom onEscape handlers so the keypress never leaks
+  // to outer UI (native <dialog>, route-level key handlers, etc.).
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+
   if (options?.onEscape) {
     options.onEscape(event);
     return;
   }
 
-  event.stopPropagation();
-  event.stopImmediatePropagation();
   node.open.value = false;
 }
 
@@ -257,7 +276,10 @@ function findDeepestOpenDescendant(root: FloatingNode, stack?: EscapeEntry[]): F
     } else if (depth === maxDepth && depth > 0) {
       const currentIdx = getStackIndex(current);
       const deepestIdx = getStackIndex(deepest);
-      // At equal depth, break ties in favor of the more recently opened node on the stack
+      // At equal depth, break ties in favor of the more recently opened node on the stack.
+      // Nodes without a stack entry score -1 and always lose, which is deliberate:
+      // registered entries are the dismissal candidates (unregistered nodes unwind to
+      // their nearest registered ancestor afterwards via findEntryForNode).
       if (currentIdx > deepestIdx) {
         deepest = current;
       }

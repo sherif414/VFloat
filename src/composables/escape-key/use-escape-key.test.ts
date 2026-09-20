@@ -467,6 +467,34 @@ describe("useEscapeKey", () => {
       expect(fixture.openRef.value).toBe(true);
     });
 
+    it("consumes the event for custom onEscape handlers without leaking propagation", async () => {
+      const customHandler = vi.fn();
+      const outerTargetListener = vi.fn();
+      const outerWindowListener = vi.fn();
+
+      // A claimed Escape must never continue bubbling past the document-level dispatch:
+      // neither the event target (observing bubble listeners added later) nor window
+      // (the next propagation step after document) may observe it.
+      document.addEventListener("keydown", (event) => {
+        event.target?.addEventListener("keydown", outerTargetListener);
+      });
+      window.addEventListener("keydown", outerWindowListener);
+
+      const fixture = createTestComponent({ onEscape: customHandler });
+      await render(fixture.Component);
+      await nextTick();
+
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      window.removeEventListener("keydown", outerWindowListener);
+
+      expect(customHandler).toHaveBeenCalledTimes(1);
+      expect(outerTargetListener).not.toHaveBeenCalled();
+      expect(outerWindowListener).not.toHaveBeenCalled();
+      expect(fixture.openRef.value).toBe(true);
+    });
+
     it("ignores non-escape keys", async () => {
       const fixture = createTestComponent();
       await render(fixture.Component);
@@ -686,6 +714,23 @@ describe("useEscapeKey", () => {
       expect(fixture.tree2ChildOpen.value).toBe(false);
       expect(fixture.tree2RootOpen.value).toBe(true);
       expect(calls).toEqual(["tree2-child"]);
+    });
+
+    it("unwinds the most recently opened tree leaf-first when focus is on document body", async () => {
+      const fixture = createTwoIndependentTreesComponent();
+      await render(fixture.Component);
+      await nextTick();
+
+      // Neutral target: focus is outside both hierarchies, so the LIFO fallback tier
+      // picks the most recently opened tree (tree2) and unwinds its deepest open leaf.
+      document.body.focus();
+      await userEvent.keyboard("{Escape}");
+      await nextTick();
+
+      expect(fixture.tree2ChildOpen.value).toBe(false);
+      expect(fixture.tree2RootOpen.value).toBe(true);
+      expect(fixture.tree1ChildOpen.value).toBe(true);
+      expect(fixture.tree1RootOpen.value).toBe(true);
     });
 
     it("closes open child and preserves root when target is root anchor element", async () => {
