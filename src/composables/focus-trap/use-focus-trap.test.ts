@@ -116,6 +116,41 @@ function createTreeComponent() {
   return { Component, getResult: () => result, parentOpen, childOpen };
 }
 
+function createTwoTrapsComponent() {
+  const openA = ref(false);
+  const openB = ref(false);
+  let resultA!: UseFocusTrapReturn;
+  let resultB!: UseFocusTrapReturn;
+
+  const Component = defineComponent(() => {
+    const anchorA = useTemplateRef<HTMLButtonElement>("anchor-a");
+    const floatingA = useTemplateRef<HTMLDivElement>("floating-a");
+    const anchorB = useTemplateRef<HTMLButtonElement>("anchor-b");
+    const floatingB = useTemplateRef<HTMLDivElement>("floating-b");
+
+    const nodeA = useFloatingNode({ anchorEl: anchorA, floatingEl: floatingA, open: openA });
+    const nodeB = useFloatingNode({ anchorEl: anchorB, floatingEl: floatingB, open: openB });
+    resultA = useFocusTrap(nodeA, { modal: true });
+    resultB = useFocusTrap(nodeB, { modal: true });
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { ref: "anchor-a", "data-testid": "anchor-a", type: "button" }, "Anchor A"),
+        h("div", { ref: "floating-a", "data-testid": "floating-a", tabindex: -1 }, "Panel A"),
+        h("button", { ref: "anchor-b", "data-testid": "anchor-b", type: "button" }, "Anchor B"),
+        h("div", { ref: "floating-b", "data-testid": "floating-b", tabindex: -1 }, "Panel B"),
+      ]);
+  });
+
+  return {
+    Component,
+    openA,
+    openB,
+    getResultA: () => resultA,
+    getResultB: () => resultB,
+  };
+}
+
 function appendButton(container: HTMLElement, id: string, text = id): HTMLButtonElement {
   const button = document.createElement("button");
   button.id = id;
@@ -554,6 +589,117 @@ describe("useFocusTrap", () => {
       await flushFocus();
 
       expect(ctx.result.isActive.value).toBe(true);
+    });
+  });
+
+  describe("containment regressions", () => {
+    it("wraps Tab at the document level even when focus escaped to an outside element", async () => {
+      const ctx = await renderTrap();
+      appendButton(ctx.floatingEl, "btn");
+      const outsideEl = createOutsideButton();
+      await openTrap(ctx);
+
+      // Programmatic escape: no focusout ever fires from the panel.
+      outsideEl.focus();
+      await flushFocus();
+
+      outsideEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+      await flushFocus();
+
+      expect(document.activeElement?.id).toBe("btn");
+    });
+
+    it("pulls focus back inside when focus lands outside programmatically", async () => {
+      const ctx = await renderTrap();
+      appendButton(ctx.floatingEl, "btn");
+      const outsideEl = createOutsideButton();
+      await openTrap(ctx);
+
+      outsideEl.focus();
+      outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await flushFocus();
+
+      expect(document.activeElement?.id).toBe("btn");
+    });
+
+    it("removes the temporary fallback tabindex from the panel after close", async () => {
+      const ctx = await renderTrap();
+      // Panel starts without tabindex and has no tabbable children.
+      ctx.floatingEl.removeAttribute("tabindex");
+      await openTrap(ctx);
+
+      expect(ctx.floatingEl.getAttribute("tabindex")).toBe("-1");
+
+      ctx.node.open.value = false;
+      await flushFocus();
+
+      expect(ctx.floatingEl.hasAttribute("tabindex")).toBe(false);
+    });
+
+    it("restores focus to the opener captured synchronously, even if focus moved before activation", async () => {
+      const ctx = await renderTrap();
+      const middle = createOutsideButton("middle");
+      await nextTick();
+
+      ctx.anchorEl.focus();
+      ctx.node.open.value = true;
+      // Sync focus move between open=true and nextTick must not hijack return focus.
+      middle.focus();
+      await flushFocus();
+
+      ctx.node.open.value = false;
+      await flushFocus();
+
+      expect(document.activeElement).toBe(ctx.anchorEl);
+    });
+
+    it("stacks two independent modals and keeps the shared background inert after the first closes", async () => {
+      const fixture = createTwoTrapsComponent();
+      await render(fixture.Component);
+      vi.useFakeTimers();
+      await nextTick();
+
+      const outsideEl = createOutsideButton();
+
+      fixture.openA.value = true;
+      await flushFocus();
+      fixture.openB.value = true;
+      await flushFocus();
+
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
+      expect(fixture.getResultA().isActive.value).toBe(true);
+      expect(fixture.getResultB().isActive.value).toBe(true);
+
+      // Closing A first must not un-inert the background while B is open.
+      fixture.openA.value = false;
+      await flushFocus();
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
+
+      fixture.openB.value = false;
+      await flushFocus();
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+    });
+
+    it("re-focusing inside after an outside pointerdown is not swallowed by the pointer window", async () => {
+      const ctx = await renderTrap();
+      const btn = appendButton(ctx.floatingEl, "btn");
+      const outsideEl = createOutsideButton();
+      await openTrap(ctx);
+
+      document.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      // Keyboard user Tabs back inside within the 100ms suppression window.
+      btn.focus();
+      btn.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await flushFocus();
+
+      expect(document.activeElement).toBe(btn);
+
+      // A subsequent outside focus jump is still corrected, not ignored.
+      outsideEl.focus();
+      outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await flushFocus();
+
+      expect(document.activeElement?.id).toBe("btn");
     });
   });
 

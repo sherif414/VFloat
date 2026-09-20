@@ -140,6 +140,111 @@ describe("tabbable utilities (native implementation)", () => {
       const tabbables = getTabbableElements(container);
       expect(tabbables.map((el) => el.id)).toEqual(["btn1"]);
     });
+    it("excludes content inside closed details but keeps the summary", () => {
+      const container = createContainer();
+      container.innerHTML = `
+        <details>
+          <summary id="summary">Toggle</summary>
+          <button id="hidden-btn">Hidden while closed</button>
+        </details>
+        <details open>
+          <summary id="open-summary">Open toggle</summary>
+          <button id="open-btn">Visible</button>
+        </details>
+      `;
+
+      const tabbables = getTabbableElements(container);
+      expect(tabbables.map((el) => el.id)).toEqual(["summary", "open-summary", "open-btn"]);
+    });
+
+    it("keeps controls inside the first legend of a disabled fieldset enabled", () => {
+      const container = createContainer();
+      container.innerHTML = `
+        <fieldset disabled>
+          <legend><button id="legend-btn">Legend control</button></legend>
+          <button id="fieldset-btn">Disabled descendant</button>
+        </fieldset>
+      `;
+
+      const tabbables = getTabbableElements(container);
+      expect(tabbables.map((el) => el.id)).toEqual(["legend-btn"]);
+    });
+
+    it("excludes elements hidden by an ancestor visibility:hidden", () => {
+      const container = createContainer();
+      container.innerHTML = `
+        <div style="visibility: hidden;">
+          <button id="btn-hidden">Hidden via ancestor</button>
+        </div>
+        <button id="btn-visible">Visible</button>
+      `;
+
+      const tabbables = getTabbableElements(container);
+      expect(tabbables.map((el) => el.id)).toEqual(["btn-visible"]);
+    });
+
+    it("fallback visibility path still walks ancestors when checkVisibility is unavailable", () => {
+      const container = createContainer();
+      container.innerHTML = `
+        <div style="visibility: hidden;">
+          <button id="btn-hidden">Hidden via ancestor</button>
+        </div>
+        <button id="btn-visible">Visible</button>
+      `;
+
+      const candidates = Array.from(container.querySelectorAll("button"));
+      const prototype = Object.getPrototypeOf(candidates[0]);
+      const descriptor = Object.getOwnPropertyDescriptor(prototype, "checkVisibility");
+      // Stub checkVisibility off each candidate so the ancestor-walking
+      // fallback path runs instead of the native implementation.
+      for (const el of candidates) {
+        Object.defineProperty(el, "checkVisibility", { value: undefined, configurable: true });
+      }
+      try {
+        const tabbables = getTabbableElements(container);
+        expect(tabbables.map((el) => el.id)).toEqual(["btn-visible"]);
+      } finally {
+        if (descriptor) {
+          Object.defineProperty(prototype, "checkVisibility", descriptor);
+        }
+        for (const el of candidates) {
+          delete (el as { checkVisibility?: unknown }).checkVisibility;
+        }
+      }
+    });
+
+    it("includes iframes and property-set tabindex elements as focusable", () => {
+      const container = createContainer();
+      const iframe = document.createElement("iframe");
+      iframe.id = "frame";
+      const custom = document.createElement("div");
+      custom.id = "custom";
+      custom.tabIndex = 0;
+      container.append(iframe, custom);
+
+      expect(isElementFocusable(iframe)).toBe(true);
+      expect(isElementTabbable(custom)).toBe(true);
+
+      const focusables = getFocusableElements(container);
+      expect(focusables.map((el) => el.id)).toContain("frame");
+    });
+
+    it("scopes radio groups to the container so outside checked radios do not suppress inside ones", () => {
+      const outside = trackElement(document.createElement("div"));
+      outside.innerHTML = `<input id="outside-radio" type="radio" name="plan" checked />`;
+      document.body.appendChild(outside);
+
+      const container = createContainer();
+      container.innerHTML = `
+        <input id="in1" type="radio" name="plan" />
+        <input id="in2" type="radio" name="plan" />
+      `;
+
+      const tabbables = getTabbableElements(container);
+      // First inside radio is the group tab stop; the outside checked radio
+      // must not make both inside radios untabbable.
+      expect(tabbables.map((el) => el.id)).toEqual(["in1"]);
+    });
   });
 
   describe("getFirstTabbableElement and getLastTabbableElement", () => {

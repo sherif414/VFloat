@@ -63,6 +63,14 @@ interface UseFocusTrapReturn {
 - **Modal Dialogs (`modal: true`):** Focus sentinels wrap the panel. Pressing <kbd>Tab</kbd> on the last element wraps back to the first. Background DOM elements outside the floating family are marked `inert` to prevent screen readers or pointer clicks from escaping.
 - **Non-Modal Overlays (`modal: false`):** Focus is not trapped, so <kbd>Tab</kbd> follows the natural document flow. `closeOnFocusOut: true` or `closeOnTab: true` gracefully dismisses the panel when focus moves away. (The boundary sentinels are still used to detect a <kbd>Tab</kbd> that leaves the surface when `closeOnTab` is enabled.)
 
+### Multiple Independent Modals
+
+Each strict modal registers on a per-document stack. The newest modal owns <kbd>Tab</kbd> wrapping and focus corrections, and background `inert` isolation is reference-counted: closing one modal never strips the isolation another still needs. Traps that share one `FloatingNode` tree (submenus, cascades) coordinate automatically through the tree instead of the stack.
+
+::: warning
+`outsideElementsInert: false` (or browsers without `inert`) falls back to `aria-hidden="true"`, which hides content from screen readers but **does not block keyboard focus**. Prefer `inert` for strict modals.
+:::
+
 ### Initial and Return Focus
 
 - When `initialFocus` is omitted, the trap automatically focuses the first tabbable child (falling back to the floating container).

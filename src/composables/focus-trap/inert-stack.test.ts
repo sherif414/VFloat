@@ -82,4 +82,29 @@ describe("isolateOutsideElements", () => {
     handle.restore();
     expect(outsideEl.hasAttribute("inert")).toBe(false);
   });
+
+  it("reference-counts overlapping isolations so an early restore keeps the other trap inert", () => {
+    const first = isolateOutsideElements([modalEl]);
+    const second = isolateOutsideElements([modalEl]);
+
+    expect(outsideEl.hasAttribute("inert")).toBe(true);
+
+    first.restore();
+    // Second trap is still open; the shared background node must stay inert.
+    expect(outsideEl.hasAttribute("inert")).toBe(true);
+
+    second.restore();
+    expect(outsideEl.hasAttribute("inert")).toBe(false);
+  });
+
+  it("restores a pre-existing inert attribute and property instead of stripping them", () => {
+    outsideEl.setAttribute("inert", "");
+    (outsideEl as HTMLElement & { inert: boolean }).inert = true;
+
+    const handle = isolateOutsideElements([modalEl]);
+    handle.restore();
+
+    expect(outsideEl.hasAttribute("inert")).toBe(true);
+    expect((outsideEl as HTMLElement & { inert: boolean }).inert).toBe(true);
+  });
 });
