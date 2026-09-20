@@ -4,6 +4,7 @@ import OutsideClickDemo from "./demos/OutsideClickDemo.vue";
 import MenuDemo from "./demos/MenuDemo.vue";
 import TypeaheadDemo from "./demos/TypeaheadDemo.vue";
 import Temp from "./demos/Temp.vue";
+import IframeTrapDemo from "./demos/IframeTrapDemo.vue";
 
 interface DemoEntry {
   id: string;
@@ -12,6 +13,11 @@ interface DemoEntry {
 }
 
 const demos: DemoEntry[] = [
+  {
+    id: "iframe-trap",
+    title: "Cross-document focus trap",
+    component: IframeTrapDemo,
+  },
   {
     id: "outside-click",
     title: "Outside click stack",
