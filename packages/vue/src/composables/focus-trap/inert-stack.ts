@@ -73,7 +73,6 @@ export function isolateOutsideElements(
       const child = parent.children[i];
       if (!isElement(child)) continue;
       if (child.tagName === "SCRIPT" || child.tagName === "STYLE") continue;
-      if (child.hasAttribute("data-vfloat-focus-guard")) continue;
 
       if (allowedRoots.has(child)) {
         // Child is an allowed root: its entire subtree remains active, do not recurse or isolate

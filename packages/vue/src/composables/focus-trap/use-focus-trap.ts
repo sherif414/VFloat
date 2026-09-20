@@ -16,16 +16,10 @@ import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
-import { createFocusGuards, type FocusGuardHandles } from "./focus-guards";
 import type { FocusTrapEntry } from "./focus-trap-stack";
 import { isTopModalTrap, pushTrapEntry, removeTrapEntry } from "./focus-trap-stack";
 import { isolateOutsideElements } from "./inert-stack";
-import {
-  getFirstTabbableElement,
-  getLastTabbableElement,
-  getTabbableElements,
-  isElementFocusable,
-} from "./tabbable";
+import { getFirstTabbableElement, getTabbableElements, isElementFocusable } from "./tabbable";
 
 //=======================================================================================
 // 📌 Main
@@ -33,8 +27,7 @@ import {
 
 /**
  * Manages surface focus orchestration for floating elements including initial focus,
- * modal and non-modal focus containment, portal focus guards, background isolation,
- * and return focus restoration.
+ * modal and non-modal focus containment, background isolation, and return focus restoration.
  *
  * @param node - Floating node containing elements refs and open state.
  * @param options - Configuration options for focus management.
@@ -61,7 +54,6 @@ export function useFocusTrap(
 
   const isEnabled = computed(() => !!toValue(options.enabled ?? true));
   const isModal = computed(() => !!toValue(options.modal ?? true));
-  const shouldCloseOnTab = computed(() => !!toValue(options.closeOnTab ?? false));
   const shouldReturnFocus = computed(() => !!toValue(options.returnFocus ?? true));
   const shouldPreventScroll = computed(() => !!toValue(options.preventScroll ?? true));
 
@@ -121,32 +113,6 @@ export function useFocusTrap(
       }
     }
   }
-
-  function onFloatingKeyDown(event: KeyboardEvent) {
-    if (
-      event.key !== "Tab" ||
-      event.defaultPrevented ||
-      !isEnabled.value ||
-      !open.value ||
-      isImeComposing(event)
-    ) {
-      return;
-    }
-
-    open.value = false;
-  }
-
-  // Floating keydown listener for non-modal closeOnTab.
-  cleanupRegistry.add(
-    useEventListener(
-      () =>
-        isEnabled.value && open.value && !isModal.value && shouldCloseOnTab.value
-          ? refs.floatingEl.value
-          : null,
-      "keydown",
-      onFloatingKeyDown,
-    ),
-  );
 
   // --- Focus Containment & Recovery -------------------------------------------
 
@@ -260,73 +226,7 @@ export function useFocusTrap(
     ),
   );
 
-  // --- Portal Focus Guards ----------------------------------------------------
-
-  const shouldApplyGuards = computed(() => !!toValue(options.guards ?? true));
-
-  let guardHandles: FocusGuardHandles | null = null;
-
-  function onGuardFocus(type: "start" | "end", event: FocusEvent) {
-    if (!isEnabled.value || !open.value) return;
-
-    const floating = refs.floatingEl.value;
-    if (!floating) return;
-
-    if (isModal.value) {
-      event.preventDefault();
-      ensureFloatingFocusable(floating);
-      if (type === "start") {
-        const last = getLastTabbableElement(floating) ?? floating;
-        last.focus({ preventScroll: shouldPreventScroll.value });
-      } else {
-        const first = getFirstTabbableElement(floating) ?? floating;
-        first.focus({ preventScroll: shouldPreventScroll.value });
-      }
-    } else if (shouldCloseOnTab.value) {
-      open.value = false;
-    }
-  }
-
-  function setupGuards(floating: HTMLElement) {
-    if (!shouldApplyGuards.value) return;
-    cleanupGuards();
-    guardHandles = createFocusGuards(floating, onGuardFocus);
-  }
-
-  function cleanupGuards() {
-    if (guardHandles) {
-      guardHandles.remove();
-      guardHandles = null;
-    }
-  }
-
-  // Dynamically synchronize guards when `guards` option updates while active.
-  cleanupRegistry.add(
-    watch(
-      shouldApplyGuards,
-      (guardsEnabled) => {
-        if (!trapIsActive.value) return;
-        if (!guardsEnabled) {
-          cleanupGuards();
-          return;
-        }
-        const floating = refs.floatingEl.value;
-        if (floating) {
-          setupGuards(floating);
-        }
-      },
-      { flush: "post" },
-    ),
-  );
-
   // --- Background Inert Isolation ---------------------------------------------
-
-  const shouldInertOutside = computed(() => {
-    if (options.outsideElementsInert !== undefined) {
-      return !!toValue(options.outsideElementsInert);
-    }
-    return isModal.value;
-  });
 
   let isolationRestore: (() => void) | null = null;
 
@@ -344,7 +244,7 @@ export function useFocusTrap(
 
   function setupIsolation() {
     cleanupIsolation();
-    if (!shouldInertOutside.value) return;
+    if (!isModal.value) return;
 
     const containers = getOpenFloatingElements();
     if (containers.length === 0) return;
@@ -359,22 +259,6 @@ export function useFocusTrap(
       isolationRestore = null;
     }
   }
-
-  // Dynamically synchronize isolation when `outsideElementsInert` option updates while active.
-  cleanupRegistry.add(
-    watch(
-      shouldInertOutside,
-      (inertEnabled) => {
-        if (!trapIsActive.value) return;
-        if (!inertEnabled) {
-          cleanupIsolation();
-          return;
-        }
-        setupIsolation();
-      },
-      { flush: "post" },
-    ),
-  );
 
   // --- Initial & Return Focus -------------------------------------------------
 
@@ -662,7 +546,6 @@ export function useFocusTrap(
       pendingTriggerElement = null;
 
       markTrapScope(floating);
-      setupGuards(floating);
       setupIsolation();
       applyInitialFocus(floating);
       registerModalStack();
@@ -670,7 +553,6 @@ export function useFocusTrap(
       trapIsActive.value = true;
     } catch (error) {
       trapIsActive.value = false;
-      cleanupGuards();
       cleanupIsolation();
       unmarkTrapScope();
 
@@ -684,7 +566,6 @@ export function useFocusTrap(
 
   function deactivate(returnFocus = true) {
     unregisterModalStack();
-    cleanupGuards();
     cleanupIsolation();
     unmarkTrapScope();
     clearTemporaryFloatingTabindex(refs.floatingEl.value);
@@ -737,7 +618,6 @@ export function useFocusTrap(
       onCleanup(() => {
         if (!isEnabled.value || !open.value) {
           unregisterModalStack();
-          cleanupGuards();
           cleanupIsolation();
           unmarkTrapScope();
           clearTemporaryFloatingTabindex(refs.floatingEl.value);
@@ -746,7 +626,7 @@ export function useFocusTrap(
     }),
   );
 
-  // Dynamically synchronize modal stack membership when `modal` option updates while active.
+  // Dynamically synchronize modal stack membership and isolation when `modal` option updates while active.
   cleanupRegistry.add(
     watch(
       isModal,
@@ -754,8 +634,10 @@ export function useFocusTrap(
         if (!trapIsActive.value) return;
         if (modalEnabled) {
           registerModalStack();
+          setupIsolation();
         } else {
           unregisterModalStack();
+          cleanupIsolation();
         }
       },
       { flush: "post" },
@@ -852,29 +734,10 @@ export interface UseFocusTrapOptions {
   returnFocus?: MaybeRefOrGetter<boolean | HTMLElement | Ref<HTMLElement | null>>;
 
   /**
-   * Whether to inject and manage off-screen focus guard sentinels around the floating element
-   * to catch portal boundary focus leaks.
-   * @default true
-   */
-  guards?: MaybeRefOrGetter<boolean>;
-
-  /**
    * When `modal` is false, closes the floating element when focus moves outside its family.
    * @default false
    */
   closeOnFocusOut?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * When `modal` is false, closes the floating element when the user presses Tab to leave.
-   * @default false
-   */
-  closeOnTab?: MaybeRefOrGetter<boolean>;
-
-  /**
-   * Isolates background DOM elements using `inert` (or `aria-hidden="true"` fallback).
-   * Defaults to `true` when `modal: true`, and `false` otherwise.
-   */
-  outsideElementsInert?: MaybeRefOrGetter<boolean>;
 
   /**
    * Whether browser scrolling is prevented when focusing elements.

@@ -42,13 +42,6 @@ export function isTargetWithinElements(
     if (floatingEl.contains(target) || path.includes(floatingEl)) {
       return true;
     }
-    if (
-      isElement(target) &&
-      target.hasAttribute("data-vfloat-focus-guard") &&
-      (target.nextElementSibling === floatingEl || target.previousElementSibling === floatingEl)
-    ) {
-      return true;
-    }
   }
 
   if (anchorEl) {

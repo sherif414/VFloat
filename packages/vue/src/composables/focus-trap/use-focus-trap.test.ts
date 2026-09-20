@@ -259,20 +259,15 @@ describe("useFocusTrap", () => {
       last.focus();
       expect(document.activeElement).toBe(last);
 
-      // Simulating tab boundary wrap-around via focus guards
-      const startGuard = document.querySelector<HTMLElement>('[data-vfloat-focus-guard="start"]');
-      const endGuard = document.querySelector<HTMLElement>('[data-vfloat-focus-guard="end"]');
-
-      expect(startGuard).toBeTruthy();
-      expect(endGuard).toBeTruthy();
-
-      startGuard!.focus();
-      await flushFocus();
-      expect(document.activeElement).toBe(last);
-
-      endGuard!.focus();
-      await flushFocus();
+      // Tab on last element wraps to first
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", cancelable: true }));
       expect(document.activeElement).toBe(first);
+
+      // Shift+Tab on first element wraps to last
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, cancelable: true }),
+      );
+      expect(document.activeElement).toBe(last);
     });
 
     it("accepts a function for initialFocus", async () => {
@@ -306,51 +301,31 @@ describe("useFocusTrap", () => {
     });
   });
 
-  describe("focus guards", () => {
-    it("inserts start and end focus guards with guards: true", async () => {
-      const ctx = await renderTrap({ guards: true });
-
+  describe("DOM cleanliness & boundary containment", () => {
+    it("does not inject artificial focus guard elements into the DOM", async () => {
+      const ctx = await renderTrap({ modal: true });
       await openTrap(ctx);
 
-      const startGuard = document.querySelector('[data-vfloat-focus-guard="start"]');
-      const endGuard = document.querySelector('[data-vfloat-focus-guard="end"]');
-
-      expect(startGuard).toBeTruthy();
-      expect(endGuard).toBeTruthy();
-      expect(startGuard?.getAttribute("tabindex")).toBe("0");
-      expect(endGuard?.getAttribute("tabindex")).toBe("0");
-      expect(startGuard?.getAttribute("aria-hidden")).toBe("true");
-      expect(endGuard?.getAttribute("aria-hidden")).toBe("true");
+      const guards = document.querySelectorAll("[data-vfloat-focus-guard]");
+      expect(guards.length).toBe(0);
     });
 
-    it("omits focus guards when guards: false", async () => {
-      const ctx = await renderTrap({ guards: false });
-
-      await openTrap(ctx);
-
-      const startGuard = document.querySelector('[data-vfloat-focus-guard="start"]');
-      const endGuard = document.querySelector('[data-vfloat-focus-guard="end"]');
-
-      expect(startGuard).toBeNull();
-      expect(endGuard).toBeNull();
-    });
-
-    it("wraps focus between start and end guards correctly", async () => {
-      const ctx = await renderTrap({ guards: true, modal: true });
+    it("wraps focus between first and last tabbables via document keydown", async () => {
+      const ctx = await renderTrap({ modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const last = appendButton(ctx.floatingEl, "last");
 
       await openTrap(ctx);
+      expect(document.activeElement).toBe(first);
 
-      const startGuard = document.querySelector<HTMLElement>('[data-vfloat-focus-guard="start"]')!;
-      const endGuard = document.querySelector<HTMLElement>('[data-vfloat-focus-guard="end"]')!;
-
-      startGuard.focus();
-      await flushFocus();
+      // Shift+Tab on first wraps to last
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, cancelable: true }),
+      );
       expect(document.activeElement).toBe(last);
 
-      endGuard.focus();
-      await flushFocus();
+      // Tab on last wraps to first
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", cancelable: true }));
       expect(document.activeElement).toBe(first);
     });
   });
@@ -502,20 +477,6 @@ describe("useFocusTrap", () => {
 
       outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
-      expect(ctx.node.open.value).toBe(false);
-    });
-
-    it("closes on Tab when closeOnTab is true", async () => {
-      const ctx = await renderTrap({ modal: false, closeOnTab: true });
-      appendButton(ctx.floatingEl, "btn");
-
-      await openTrap(ctx);
-
-      ctx.floatingEl.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }),
-      );
-      await flushFocus();
-
       expect(ctx.node.open.value).toBe(false);
     });
   });
@@ -732,19 +693,15 @@ describe("useFocusTrap", () => {
       const scope = effectScope();
 
       scope.run(() => {
-        useFocusTrap(node, { modal: true, guards: true });
+        useFocusTrap(node, { modal: true });
       });
 
       vi.useFakeTimers();
       open.value = true;
       await flushFocus();
 
-      const startGuard = iframeDoc.querySelector('[data-vfloat-focus-guard="start"]');
-      const endGuard = iframeDoc.querySelector('[data-vfloat-focus-guard="end"]');
-
-      expect(startGuard).toBeTruthy();
-      expect(endGuard).toBeTruthy();
       expect(iframeDoc.activeElement).toBe(button);
+      expect(iframeDoc.querySelectorAll("[data-vfloat-focus-guard]").length).toBe(0);
 
       scope.stop();
     });

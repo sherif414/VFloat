@@ -6,7 +6,6 @@ describe("isolateOutsideElements", () => {
   let container: HTMLDivElement;
   let outsideEl: HTMLDivElement;
   let modalEl: HTMLDivElement;
-  let focusGuard: HTMLSpanElement;
 
   beforeEach(() => {
     container = trackElement(document.createElement("div"));
@@ -16,10 +15,7 @@ describe("isolateOutsideElements", () => {
     modalEl = trackElement(document.createElement("div"));
     modalEl.id = "modal";
 
-    focusGuard = trackElement(document.createElement("span"));
-    focusGuard.setAttribute("data-vfloat-focus-guard", "");
-
-    document.body.append(container, outsideEl, modalEl, focusGuard);
+    document.body.append(container, outsideEl, modalEl);
   });
 
   afterEach(() => {
@@ -34,7 +30,6 @@ describe("isolateOutsideElements", () => {
     expect(outsideEl.hasAttribute("inert")).toBe(true);
     expect(container.hasAttribute("inert")).toBe(true);
     expect(modalEl.hasAttribute("inert")).toBe(false);
-    expect(focusGuard.hasAttribute("inert")).toBe(false);
 
     handle.restore();
 
