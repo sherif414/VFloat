@@ -244,7 +244,7 @@ export function useFocusTrap(
       return;
     }
 
-    if (options.ignoreFocusOut && options.ignoreFocusOut(target)) {
+    if (options.ignoreFocusOut?.(target)) {
       return;
     }
 
@@ -263,7 +263,7 @@ export function useFocusTrap(
       return;
     }
 
-    if (options.ignoreFocusOut && options.ignoreFocusOut(target)) {
+    if (options.ignoreFocusOut?.(target)) {
       return;
     }
 
@@ -502,7 +502,7 @@ export function useFocusTrap(
       }
     }
 
-    if (target && target.isConnected && typeof target.focus === "function") {
+    if (target?.isConnected && typeof target.focus === "function") {
       target.focus({ preventScroll: shouldPreventScroll.value });
       retryInitialFocus(target);
       return;
@@ -587,16 +587,16 @@ export function useFocusTrap(
       targetElement = customReturn.value;
     } else {
       const anchor = getAnchorElement(refs.anchorEl.value);
-      if (anchor && anchor.isConnected) {
+      if (anchor?.isConnected) {
         targetElement = anchor;
-      } else if (previouslyActiveElement && previouslyActiveElement.isConnected) {
+      } else if (previouslyActiveElement?.isConnected) {
         targetElement = previouslyActiveElement;
       }
     }
 
     previouslyActiveElement = null;
 
-    if (targetElement && targetElement.isConnected) {
+    if (targetElement?.isConnected) {
       // Make unfocusable triggers focusable temporarily, then clean up so the
       // trigger DOM never keeps a mutated tabindex after the trap closes.
       const needsTemporaryTabindex =
