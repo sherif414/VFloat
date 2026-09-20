@@ -8,4 +8,5 @@
 *.svg text eol=lf
 *.png binary
 *.ico binary
-.imbeccable/** linguist-vendored
+**/.imbeccable/** linguist-vendored
+**/.imbeccable/** linguist-detectable=false
