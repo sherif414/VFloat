@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync, copyFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -15,14 +15,18 @@ const skipNpm = args.includes("--skip-npm");
 const releaseType = getReleaseType(args);
 const explicitVersion = getArgValue("--version");
 
-const pkgPath = resolve(process.cwd(), "package.json");
+const rootPkgPath = resolve(process.cwd(), "package.json");
+const pkgPath = resolve(process.cwd(), "packages/vue/package.json");
 const changelogPath = resolve(process.cwd(), "CHANGELOG.md");
+const packageReadmePath = resolve(process.cwd(), "packages/vue/README.md");
+const rootReadmePath = resolve(process.cwd(), "README.md");
 
 if (!existsSync(pkgPath)) {
-  fail("Could not find package.json in current working directory.");
+  fail("Could not find packages/vue/package.json in workspace.");
 }
 
 const originalPkgContent = readFileSync(pkgPath, "utf8");
+const originalRootPkgContent = existsSync(rootPkgPath) ? readFileSync(rootPkgPath, "utf8") : null;
 const originalChangelogContent = existsSync(changelogPath)
   ? readFileSync(changelogPath, "utf8")
   : null;
@@ -31,7 +35,7 @@ const pkg = JSON.parse(originalPkgContent);
 const currentVersion = pkg.version;
 
 if (!currentVersion) {
-  fail("package.json is missing a 'version' field.");
+  fail("packages/vue/package.json is missing a 'version' field.");
 }
 
 const targetVersion = explicitVersion || calculateNextVersion(currentVersion, releaseType);
@@ -51,9 +55,14 @@ if (!isDryRun && !skipNpm) {
   }
 }
 
-// 1. Update package.json
+// 1. Update packages/vue/package.json and root package.json
 pkg.version = targetVersion;
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+if (originalRootPkgContent) {
+  const rootPkg = JSON.parse(originalRootPkgContent);
+  rootPkg.version = targetVersion;
+  writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, 2) + "\n", "utf8");
+}
 
 // 2. Generate Changelog with changelogen
 console.log("[release] Generating changelog...");
@@ -83,11 +92,23 @@ if (isDryRun) {
   console.log(releaseNotes);
   console.log("---------------------------------------\n");
 
+  const hasLocalReadme = existsSync(packageReadmePath);
+  if (!hasLocalReadme && existsSync(rootReadmePath)) {
+    copyFileSync(rootReadmePath, packageReadmePath);
+  }
+
   console.log("[release] Simulating npm pack output...");
-  run("pnpm", ["pack", "--dry-run"]);
+  run("pnpm", ["--filter", "v-float", "pack", "--dry-run"]);
+
+  if (!hasLocalReadme && existsSync(packageReadmePath)) {
+    unlinkSync(packageReadmePath);
+  }
 
   // Restore original contents so worktree remains 100% clean
   writeFileSync(pkgPath, originalPkgContent, "utf8");
+  if (originalRootPkgContent !== null) {
+    writeFileSync(rootPkgPath, originalRootPkgContent, "utf8");
+  }
   if (originalChangelogContent !== null) {
     writeFileSync(changelogPath, originalChangelogContent, "utf8");
   } else if (existsSync(changelogPath)) {
@@ -108,7 +129,7 @@ if (process.env.GITHUB_ACTIONS) {
 }
 
 // Step 1: Stage and commit release artifacts locally
-run("git", ["add", "package.json", "CHANGELOG.md"]);
+run("git", ["add", "packages/vue/package.json", "package.json", "CHANGELOG.md"]);
 run("git", ["commit", "-m", `chore: release v${targetVersion}`]);
 run("git", ["tag", "-a", `v${targetVersion}`, "-m", `v${targetVersion}`]);
 
@@ -119,12 +140,25 @@ run("git", ["push", "origin", `v${targetVersion}`]);
 
 // Step 3: Publish to npm FIRST with fail-safe rollback
 if (!skipNpm) {
+  const hasLocalReadme = existsSync(packageReadmePath);
+  if (!hasLocalReadme && existsSync(rootReadmePath)) {
+    copyFileSync(rootReadmePath, packageReadmePath);
+  }
+
   console.log("[release] Publishing to npm registry with provenance...");
-  const publishResult = spawnSync("npm", ["publish", "--provenance", "--access", "public"], {
-    stdio: "inherit",
-    shell: process.platform === "win32",
-    env: process.env,
-  });
+  let publishResult;
+  try {
+    publishResult = spawnSync("npm", ["publish", "--provenance", "--access", "public"], {
+      cwd: resolve(process.cwd(), "packages/vue"),
+      stdio: "inherit",
+      shell: process.platform === "win32",
+      env: process.env,
+    });
+  } finally {
+    if (!hasLocalReadme && existsSync(packageReadmePath)) {
+      unlinkSync(packageReadmePath);
+    }
+  }
 
   if (publishResult.status !== 0) {
     console.error(

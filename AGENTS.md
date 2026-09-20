@@ -112,6 +112,7 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
 - [ ] Ensure full SSR & cross-realm (iframe) safety: resolve documents via `element.ownerDocument ?? getDocument()` and windows via `ownerDocument.defaultView ?? getWindow()`; execute timers (`setTimeout`, `clearTimeout`) on `ownerWindow`; never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
 - [ ] Scope-aware validation:
-  - For `src/` changes: Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test:run`.
-  - For `docs/` changes: Run `pnpm docs:lint` and `pnpm docs:build` (note: `pnpm test` and `pnpm lint` target `src/`; use `pnpm docs:lint` and `pnpm docs:build` for `docs/` edits).
+  - For library changes in `packages/vue/src/`: Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test:run`.
+  - For `docs/` changes: Run `pnpm docs:lint` and `pnpm docs:build`.
+  - For `playground/` changes: Run `pnpm --filter v-float-playground build`.
 - [ ] Keep module internals private: never export functions, interfaces, types, constants, or variables that are only used within their defining module and not imported outside of it.

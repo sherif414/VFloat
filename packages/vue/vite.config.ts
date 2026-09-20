@@ -1,9 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
-import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
 import dts from "vite-plugin-dts";
-import vueDevtools from "vite-plugin-vue-devtools";
 import { playwright } from "@vitest/browser-playwright";
 
 const isDebugging =
@@ -48,9 +46,7 @@ export default defineConfig({
   },
   plugins: [
     vue(),
-    tailwindcss(),
     dts({ tsconfigPath: "./tsconfig.build.json", outDirs: "dist", bundleTypes: true }),
-    !process.env.VITEST && vueDevtools(),
   ],
   resolve: {
     alias: {

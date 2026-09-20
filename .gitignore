@@ -14,6 +14,7 @@ dist
 dist-ssr
 coverage
 *.tgz
+packages/*/README.md
 *.local
 .env
 
@@ -34,8 +35,11 @@ coverage
 
 *.tsbuildinfo
 
-docs/.vitepress/dist
-docs/.vitepress/cache
+docs/.nuxt
+docs/.output
+docs/.data
+docs/.content-search
+docs/dist
 *.timestamp-*.mjs
 *.timestamp-*.js
 *storybook.log
@@ -44,20 +48,12 @@ docs/.vitepress/cache
 .qoder/repowiki/
 .npmrc
 
-# Playground scratch files
-playground/
+**/__tests__/__screenshots__/
 
-src/**/__tests__/__screenshots__/
-
-# Nuxt
+# Nuxt / Nitro
 .nuxt
 .output
-
-# Docs site
-docs-site/.nuxt
-docs-site/.output
-docs-site/dist
-docs-site/.env.local
+.nitro
 
 # Build cache
 .wrangler/tmp

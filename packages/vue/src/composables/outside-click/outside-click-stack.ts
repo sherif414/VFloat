@@ -12,8 +12,8 @@ interface DocumentOutsideClickManager {
   onBlur: ((event: FocusEvent) => void) | null;
   dragStartedEntries: Set<FloatingNodeId>;
   dragEndedEntries: Set<FloatingNodeId>;
-  dragResetTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
-  blurTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
+  dragResetTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
+  blurTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
 }
 
 const documentManagers = new WeakMap<Document, DocumentOutsideClickManager>();
@@ -79,7 +79,7 @@ function getDocumentManager(doc: Document): DocumentOutsideClickManager {
  */
 function clearDragTimeout(manager: DocumentOutsideClickManager, win: Window | null): void {
   if (manager.dragResetTimeoutId != null) {
-    win?.clearTimeout(manager.dragResetTimeoutId as number);
+    win?.clearTimeout(manager.dragResetTimeoutId);
     manager.dragResetTimeoutId = undefined;
   }
 }
@@ -89,7 +89,7 @@ function clearDragTimeout(manager: DocumentOutsideClickManager, win: Window | nu
  */
 function clearBlurTimeout(manager: DocumentOutsideClickManager, win: Window | null): void {
   if (manager.blurTimeoutId != null) {
-    win?.clearTimeout(manager.blurTimeoutId as number);
+    win?.clearTimeout(manager.blurTimeoutId);
     manager.blurTimeoutId = undefined;
   }
 }

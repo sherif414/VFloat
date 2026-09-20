@@ -338,7 +338,7 @@ export function useFocusTrap(
   // --- Initial & Return Focus ------------------------------------------------
 
   let isPointerDownOutside = false;
-  let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
+  let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   function onDocumentPointerDownTracker(event: PointerEvent | MouseEvent) {
     if (!isEnabled.value || !open.value) return;

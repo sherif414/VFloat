@@ -5,13 +5,17 @@
       "path": "./tsconfig.node.json"
     },
     {
-      "path": "./tsconfig.app.json"
+      "path": "./packages/vue/tsconfig.json"
     },
     {
-      "path": "./tsconfig.build.json"
+      "path": "./packages/vue/tsconfig.build.json"
     },
     {
-      "path": "./tsconfig.vitest.json"
+      "path": "./packages/vue/tsconfig.vitest.json"
+    },
+    {
+      "path": "./playground/tsconfig.json"
     }
   ]
 }
+

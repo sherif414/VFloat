@@ -36,7 +36,7 @@ jobs:
 
       - name: Get Playwright version
         id: playwright-version
-        run: echo "version=$(pnpm exec playwright --version)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter v-float exec playwright --version)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright browser binaries
         uses: actions/cache@v6
@@ -47,17 +47,17 @@ jobs:
 
       - name: Install Playwright Chromium with system dependencies (cache miss)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter v-float exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+        run: pnpm --filter v-float exec playwright install-deps chromium
 
       - name: Run lint
         run: pnpm run lint
 
       - name: Run tests
-        run: pnpm run test
+        run: pnpm run test:run
 
       - name: Build package
         run: pnpm run build

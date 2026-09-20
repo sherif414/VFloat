@@ -6,8 +6,8 @@ import zlib from "node:zlib";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "../..");
-const distFile = join(rootDir, "dist/index.mjs");
-const packageJsonFile = join(rootDir, "package.json");
+const distFile = join(rootDir, "packages/vue/dist/index.mjs");
+const packageJsonFile = join(rootDir, "packages/vue/package.json");
 
 const args = process.argv.slice(2);
 const isJsonOutput = args.includes("--json");

@@ -145,7 +145,7 @@ export function useFocus(node: FloatingNode, options: UseFocusOptions = {}): voi
 
   // --- Focus Blur & Outside Dismissal ----------------------------------------
 
-  let blurTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
+  let blurTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
 
   function clearBlurTimeout() {
     clearTimeout(blurTimeoutId);

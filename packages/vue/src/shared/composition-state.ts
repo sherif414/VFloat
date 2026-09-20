@@ -80,12 +80,12 @@ function getSharedCompositionState(): CompositionState {
   const isComposing = ref(false);
 
   scope.run(() => {
-    let compositionTimeoutId: ReturnType<typeof setTimeout> | number | undefined;
+    let compositionTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
 
     const clearPendingTimeout = () => {
       if (compositionTimeoutId !== undefined) {
         const ownerWin = getWindow(getDocument());
-        ownerWin?.clearTimeout(compositionTimeoutId as number);
+        ownerWin?.clearTimeout(compositionTimeoutId);
         compositionTimeoutId = undefined;
       }
     };

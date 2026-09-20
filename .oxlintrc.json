@@ -10,7 +10,7 @@
     "vitest/no-conditional-expect": "warn",
     "vitest/expect-expect": "warn"
   },
-  "ignorePatterns": ["/*", "/.*", "!/src"],
+  "ignorePatterns": ["/*", "/.*", "!/packages/vue/src", "!/playground/src"],
   "env": {
     "builtin": true,
     "browser": true,

@@ -1,0 +1,19 @@
+{
+  "extends": "../packages/vue/tsconfig.json",
+  "include": [
+    "env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "paths": {
+      "v-float": ["../packages/vue/src/index.ts"],
+      "@/*": ["../packages/vue/src/*"]
+    }
+  }
+}

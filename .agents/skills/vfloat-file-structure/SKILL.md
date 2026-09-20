@@ -9,7 +9,7 @@ This skill defines the gold standard for file architecture and internal code org
 
 ## When to use this Skill
 
-- When creating any new composable in `src/composables/`.
+- When creating any new composable in `packages/vue/src/composables/`.
 - When refactoring existing composables or internal modules.
 - When performing a code cleanup or polish pass.
 - When organizing logic inside large composables.

@@ -11,5 +11,5 @@
   "arrowParens": "always",
   "bracketSameLine": false,
   "bracketSpacing": true,
-  "ignorePatterns": ["/*", "/.*", "!/src"]
+  "ignorePatterns": ["/*", "/.*", "!/packages/vue/src", "!/playground/src"]
 }
