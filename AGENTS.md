@@ -19,6 +19,7 @@
 - **Respect User Intent**: When given a specific task (such as staging/committing a change or running a script), execute the requested action without unilaterally modifying the underlying subject unless explicitly asked.
 - **Strict Staging Isolation**: When asked to commit changes, strictly stage only the specific files modified by the agent as part of the active task (`git add <specific-files>`). Never use blanket commands (`git add .` / `git add -A`) or stage pre-existing unstaged/user-authored changes unless explicitly instructed to commit everything.
 - **Rollback Scope Boundary**: When asked to revert, reset, or roll back changes, strictly target only the modifications or commits introduced during the active task. Never reset beyond the task boundary or discard user commits without explicit confirmation.
+- **Pragmatic Scope Discipline**: When investigating or hardening architectural concerns (such as cross-realm or SSR safety), focus strictly on realistic library use cases (such as elements inside same-origin iframes, portals, and SVG anchors). Do not over-engineer or divert focus into irrelevant or near-impossible scenarios (such as cross-origin security restrictions, obscure XML parsers, or synthetic mocks) unless explicitly requested.
 
 ## Coding Style
 
@@ -77,7 +78,11 @@
     timeoutId = ownerWindow.value?.setTimeout(fn, delay);
     ownerWindow.value?.clearTimeout(timeoutId);
     ```
-  - **Cross-Realm Type Checks:** Never use bare `instanceof HTMLElement` or `instanceof Window` across realm boundaries without guarding against `null` or different realm constructors (prefer `isHTMLElement(target)` from `@/shared/dom`).
+  - **Cross-Realm Type Checks:**
+    - Never use bare `instanceof Element`, `instanceof HTMLElement`, or `instanceof Window` across realm boundaries. Always use `isElement(target)` or `isHTMLElement(target)` from `@/shared/dom`.
+    - **Structural Checks Over Prototype Chains:** Prefer standard DOM structural properties (`nodeType === 1`, string `tagName`) over prototype chain inspection (`instanceof`), which breaks when iframes detach or constructor prototypes differ across realms.
+    - **Tag Checks Over Class Constructors:** For specialized inputs, check `element.tagName === "INPUT"` and `element.tagName === "TEXTAREA"` instead of `instanceof HTMLInputElement` or `instanceof HTMLTextAreaElement`.
+    - **SVG vs. HTML Element Awareness:** Use `isElement` (not `isHTMLElement`) whenever an element could be an SVG node (e.g., tooltip anchors, hover corridor targets, and modal inert background traversal) so SVG elements are not erroneously rejected.
 - **Dependency Guard:**
   - **NEVER** install or suggest legacy/outdated utility packages (e.g., `lodash`, `underscore`, `axios`, `moment`, `deepmerge`, `vue-demi`, `rimraf`).
   - Always inspect `package.json` before assuming any dependency exists.
@@ -110,7 +115,7 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 - [ ] Run `pnpm install` after pulling remote changes and before getting started.
 - [ ] Always write targeted regression unit tests whenever fixing a bug, handling an edge case, or addressing an ordering/lifecycle dependency.
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
-- [ ] Ensure full SSR & cross-realm (iframe) safety: resolve documents via `element.ownerDocument ?? getDocument()` and windows via `ownerDocument.defaultView ?? getWindow()`; execute timers (`setTimeout`, `clearTimeout`) on `ownerWindow`; never access bare `window`/`document` or un-guarded `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
+- [ ] Ensure full SSR & cross-realm (iframe) safety: resolve documents via `element.ownerDocument ?? getDocument()` and windows via `ownerDocument.defaultView ?? getWindow()`; execute timers (`setTimeout`, `clearTimeout`) on `ownerWindow`; never access bare `window`/`document` or un-guarded `instanceof Element` / `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
 - [ ] Scope-aware validation:
   - For library changes in `packages/vue/src/`: Run `pnpm lint`, `pnpm run test:ssr`, and `pnpm test:run`.
   - For `docs/` changes: Run `pnpm docs:lint` and `pnpm docs:build`.
