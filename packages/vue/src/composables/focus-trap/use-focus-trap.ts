@@ -232,28 +232,9 @@ export function useFocusTrap(
     ),
   );
 
-  // --- Non-Modal Outside Dismissal --------------------------------------------
+  // --- Non-Modal Focus Dismissal -----------------------------------------------
 
   function onNonModalFocusOut(event: FocusEvent) {
-    if (!isEnabled.value || !open.value) return;
-
-    const target = event.target as Node | null;
-    if (!target) return;
-
-    if (node.contains(target)) {
-      return;
-    }
-
-    if (options.ignoreFocusOut?.(target)) {
-      return;
-    }
-
-    if (shouldCloseOnFocusOut.value) {
-      open.value = false;
-    }
-  }
-
-  function onNonModalPointerDown(event: PointerEvent | MouseEvent) {
     if (!isEnabled.value || !open.value) return;
 
     const target = event.target as Node | null;
@@ -281,19 +262,6 @@ export function useFocusTrap(
           : null,
       "focusin",
       onNonModalFocusOut,
-      { capture: true },
-    ),
-  );
-
-  // Document pointerdown listener closes non-modal surfaces when clicking outside.
-  cleanupRegistry.add(
-    useEventListener(
-      () =>
-        isEnabled.value && open.value && shouldCloseOnFocusOut.value && !isModal.value
-          ? targetDocument.value
-          : null,
-      "pointerdown",
-      onNonModalPointerDown,
       { capture: true },
     ),
   );

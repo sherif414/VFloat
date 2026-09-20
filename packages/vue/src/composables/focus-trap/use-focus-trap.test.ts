@@ -469,7 +469,7 @@ describe("useFocusTrap", () => {
       expect(ctx.node.open.value).toBe(false);
     });
 
-    it("closes on pointerdown outside when closeOnFocusOut is true", async () => {
+    it("does not close on outside pointerdown (delegated to useOutsideClick)", async () => {
       const outsideEl = createOutsideButton();
       const ctx = await renderTrap({ modal: false, closeOnFocusOut: true });
       appendButton(ctx.floatingEl, "btn");
@@ -480,7 +480,7 @@ describe("useFocusTrap", () => {
       outsideEl.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       await flushFocus();
 
-      expect(ctx.node.open.value).toBe(false);
+      expect(ctx.node.open.value).toBe(true);
     });
 
     it("respects ignoreFocusOut predicate", async () => {
