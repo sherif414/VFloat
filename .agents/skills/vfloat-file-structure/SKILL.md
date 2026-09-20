@@ -83,16 +83,18 @@ Organize code using **Feature-Based Grouping (Vertical Cohesion)** rather than h
 ```
 composable()
 │
-├── Shared Options & Root State  (Direct `options.xxx` access, computed wrappers only for options read 2+ times, shared refs)
+├── Shared Options & Root State  (Only options read in 2+ feature blocks, root DOM targets & lifecycle refs)
 │
-├── Feature Block 1               (Private state + Actions + Handlers + Effects for Feature 1)
+├── Feature Block 1               (Feature-scoped option computed + Private state + Actions + Effects)
 │
-├── Feature Block 2               (Private state + Actions + Handlers + Effects for Feature 2)
+├── Feature Block 2               (Feature-scoped option computed + Private state + Actions + Effects)
 │
-├── Feature Block 3               (Private state + Actions + Handlers + Effects for Feature 3)
+├── Feature Block 3               (Feature-scoped option computed + Private state + Actions + Effects)
 │
 └── Public Return Statement       (Aggregates methods & state exposed to consumer)
 ```
+
+- **Feature-Scoped Options Vertical Cohesion**: `Shared Options & Root State` must **only** contain options read across 2 or more distinct feature blocks, along with root DOM targets and lifecycle refs. Any option consumed exclusively within a single feature block must be defined directly inside that feature block alongside its private state, handlers, and effects.
 
 ### Single-Concern Separation Rule
 
@@ -169,5 +171,6 @@ Internals are functions, interfaces, types, constants, and variables used only w
 - [ ] Internal feature dividers use single-line dashed comments (`// --- Feature Name ----`) with a trailing blank line.
 - [ ] Feature divider names are Title Case noun phrases describing functionality (no generic `// --- State ---` or `// --- Handlers ---`).
 - [ ] Options are accessed directly via `options.xxx` with inline defaults (e.g. `toValue(options.enabled ?? true)`); only options read 2+ times get a local/computed. No `*Option` suffix renames.
+- [ ] Feature-scoped options are declared inside their respective feature blocks, not grouped in Shared Options & Root State.
 - [ ] Types and interfaces are positioned at the bottom of the file.
 - [ ] Module internals (entities used only within the defining module and not imported elsewhere) are unexported.

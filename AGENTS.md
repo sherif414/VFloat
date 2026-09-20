@@ -35,6 +35,7 @@
 - **Single-Concern Separation for Effects, Watchers & Event Handlers**:
   - Never conflate multiple distinct concerns within a single `watch`, `watchPostEffect`, or effect handler. Each distinct responsibility (e.g., reactive bounds auto-correction, DOM attribute synchronization, DOM focus synchronization) must have its own independent watcher.
   - Event listeners and handlers must not combine unrelated logic representing independent capabilities or concerns when they do not depend on call order. Keep independent behaviors decoupled in dedicated event listeners within their respective feature sections.
+- **Composable Domain Separation & Non-Overreach**: Each composable must strictly adhere to its defined functional capability (e.g., focus orchestration, pointer interactions, positioning, keyboard navigation). Never implement ad-hoc fallback listeners or shortcuts representing an unrelated concern (e.g., handling pointer dismissal inside a focus composable). Instead, keep composables focused and rely on composition with the dedicated companion composable.
 
 ### Module Encapsulation & Export Discipline
 
@@ -62,6 +63,7 @@
   - Use `useTemplateRef()` when binding template element references in Vue components.
   - **Reactivity Economy & Intentionality:** Do not make static initialization seeds, default values, or one-time options reactive. Options that only seed initial/uncontrolled state (e.g., `defaultOpen: boolean`, `defaultIndex: number`, `initialValue: T`) must be plain, non-reactive primitives—not `MaybeRefOrGetter`. Only wrap options in `MaybeRefOrGetter` when they represent dynamic inputs expected to reactively update over the composable's active lifecycle (e.g., `enabled`, `orientation`, `loop`, `rtl`, `scrollIntoView`).
   - **TypeScript Contract Trust (Zero Defensive Boilerplate):** Always trust TypeScript type contracts. Never add defensive runtime fallbacks (`?? []`, `!elements || elements.length === 0`, `if (!elements) return`) when a parameter is typed as a non-nullable container (e.g., `elementsList: MaybeRefOrGetter<Array<HTMLElement | null>>`). Distinguish container nullability from item nullability: in `Array<HTMLElement | null>`, the array itself is guaranteed to exist; only individual element lookups (`list[idx]`) require null guards when accessing DOM nodes (`el?.focus()`, `if (el)`).
+  - **Modern Optional Chaining (`?.()`, `?.prop`) Over Legacy Truthy Boilerplate:** Always use modern optional chaining (`options.callback?.(arg)`, `element?.isConnected`) instead of pre-ES2020 / pre-TS 4.4 truthy guard patterns (`options.callback && options.callback(arg)`, `element && element.isConnected`). In conditional statements, `undefined` naturally evaluates as falsy—never write redundant double-lookup boilerplate.
 - **Cross-Realm (Iframe) & SSR Environment Safety:**
   - **Zero Bare Globals:** Never access bare `window` or `document` directly in DOM interaction logic or composable setup scopes.
   - **Dynamic Owner Resolution:** Always resolve DOM environment targets dynamically from active elements:
