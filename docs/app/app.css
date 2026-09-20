@@ -1,0 +1,82 @@
+/**
+ * VFloat docs styles & CSS variable bridges for Docus / Nuxt UI.
+ */
+
+:root {
+  --vp-c-brand-1: var(--ui-primary, #18794e);
+  --vp-c-brand-2: #299764;
+  --vp-c-brand-3: #30a46c;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.14);
+
+  --vp-c-divider: var(--ui-border, #e5e7eb);
+  --vp-c-bg-elv: var(--ui-bg-elevated, #ffffff);
+  --vp-c-bg-soft: var(--ui-bg-muted, #f3f4f6);
+  --vp-c-bg-alt: var(--ui-bg-subtle, #f9fafb);
+  --vp-c-text-1: var(--ui-text-highlighted, #111827);
+  --vp-c-text-2: var(--ui-text, #4b5563);
+  --vp-c-text-3: var(--ui-text-muted, #9ca3af);
+
+  --vp-font-family-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
+
+.dark {
+  --vp-c-brand-1: var(--ui-primary, #3dd68c);
+  --vp-c-brand-2: #30a46c;
+  --vp-c-brand-3: #298459;
+  --vp-c-brand-soft: rgba(16, 185, 129, 0.16);
+
+  --vp-c-divider: var(--ui-border, #27272a);
+  --vp-c-bg-elv: var(--ui-bg-elevated, #18181b);
+  --vp-c-bg-soft: var(--ui-bg-muted, #27272a);
+  --vp-c-bg-alt: var(--ui-bg-subtle, #09090b);
+  --vp-c-text-1: var(--ui-text-highlighted, #f9fafb);
+  --vp-c-text-2: var(--ui-text, #d1d5db);
+  --vp-c-text-3: var(--ui-text-muted, #71717a);
+}
+
+.home-showcase-section {
+  max-width: 1152px;
+  margin: 2rem auto;
+  padding: 0.5rem 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .home-showcase-section {
+    padding: 0.75rem 0.75rem 0.25rem;
+  }
+}
+
+/* ============================================================================
+   Floating Arrow Styles
+   ============================================================================ */
+.floating-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--vp-c-bg-elv);
+  transform: rotate(45deg);
+  pointer-events: none;
+  border: 0 solid var(--vp-c-divider);
+  z-index: 1;
+}
+
+.floating-arrow--top {
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.floating-arrow--bottom {
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.floating-arrow--left {
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.floating-arrow--right {
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}

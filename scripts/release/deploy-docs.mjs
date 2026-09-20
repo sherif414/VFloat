@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 const defaultProjectName = "vfloat";
-const distDir = "docs/.vitepress/dist";
+const distDir = "docs/.output/public";
 
 const args = process.argv.slice(2);
 
@@ -117,6 +117,6 @@ Options:
   --project <name>  Cloudflare Pages project name.
   --branch <name>   Pages branch name. Defaults to "main".
   --dry-run         Build docs and print the deploy command without deploying.
-  --skip-build      Deploy the existing docs/.vitepress/dist directory.
+  --skip-build      Deploy the existing docs/.output/public directory.
 `);
 }

@@ -7,7 +7,7 @@
   "rules": {
     "no-explicit-any": "off"
   },
-  "ignorePatterns": [".vitepress/dist/**", ".vitepress/cache/**"],
+  "ignorePatterns": [".output/**", ".nuxt/**", ".data/**", "dist/**"],
   "env": {
     "builtin": true,
     "browser": true,

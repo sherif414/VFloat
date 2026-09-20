@@ -1,13 +1,13 @@
 # Documentation & Theme Guidelines (`docs/`)
 
-This guide applies to all documentation pages, VitePress configuration, and theme components within `docs/`.
+This guide applies to all documentation pages, Docus/Nuxt configuration, and theme components within `docs/`.
 
 ---
 
 ## Toolchain & Verification
 
 - **Dev Server**: `pnpm docs:dev`
-- **Build & SSR Validation**: `pnpm docs:build` (authoritative verification for all `docs/` changes)
+- **Build & Static Generation**: `pnpm docs:build` (authoritative verification for all `docs/` changes)
 - **Preview**: `pnpm docs:preview`
 - **Deploy**: `pnpm run docs:deploy`
 - **Lint**: `pnpm docs:lint`
@@ -23,9 +23,9 @@ This guide applies to all documentation pages, VitePress configuration, and them
 
 ### 1. SSR Compatibility
 
-- VitePress executes components in a Node.js SSR environment during `pnpm docs:build`.
+- Docus/Nuxt executes components in a Node.js SSR environment during `pnpm docs:build`.
 - **Never access browser globals** (`window`, `document`, `navigator`, `HTMLElement`, `localStorage`) in top-level `<script setup>` scope.
-- Wrap browser-only initialization inside `onMounted()` or use VitePress's `<ClientOnly>` component when necessary.
+- Wrap browser-only initialization inside `onMounted()` or use Nuxt's `<ClientOnly>` component when necessary.
 
 ### 2. GPU Transform Positioning Architecture
 
@@ -73,11 +73,17 @@ When implementing interactive floating menus, dropdowns, or tooltips inside demo
 
 ### 2. Navigation & Sidebar Integrity
 
-- When adding, moving, or renaming markdown files, update:
-  1. `docs/.vitepress/config.mts` (sidebar and nav routes).
-  2. Relevant section index files (`docs/api/index.md` or `docs/guide/index.md`).
+- Docus uses directory-based routing and auto-generated navigation from `docs/content/`.
+- Top-level folders:
+  - `docs/content/1.guide/` (`.navigation.yml`: `title: Guide`, `icon: i-lucide-book-open`)
+  - `docs/content/2.api/` (`.navigation.yml`: `title: API Reference`, `icon: i-lucide-code-xml`)
+- Subcategories use numbered directories (e.g., `1.getting-started/`, `2.core-concepts/`, `1.overview/`, `2.core/`) with `.navigation.yml` to define titles and order.
+- When adding or moving markdown files:
+  1. Place them in the appropriate category subfolder in `docs/content/`.
+  2. If preserving a legacy flat route, add the corresponding redirect to `routeRules` in `docs/nuxt.config.ts`.
+  3. Update section index pages (`docs/content/1.guide/1.getting-started/1.index.md` or `docs/content/2.api/1.overview/1.index.md`) if relevant.
 
-### 3. Code Example Standards
+### 3. Code Example & Component Standards
 
 - Use `<script setup lang="ts">` for all Vue examples.
 - Import library exports from `v-float` (not relative source paths).
@@ -94,8 +100,10 @@ When implementing interactive floating menus, dropdowns, or tooltips inside demo
   </script>
   ```
 - Keep examples concise, complete, and runnable.
+- Interactive demo components reside in `docs/components/content/` and can be invoked directly in markdown using MDC syntax.
 
 ### 4. Prose & Structure Standards
 
-- Follow the Diátaxis structure referenced in `.agents/skills/documentation-writer/SKILL.md` (Reference for `docs/api/`, Tutorials/How-tos/Explanations for `docs/guide/`).
+- Follow the Diátaxis structure referenced in `.agents/skills/documentation-writer/SKILL.md` (Reference for `docs/content/2.api/`, Tutorials/How-tos/Explanations for `docs/content/1.guide/`).
 - Open guides with the reader's concrete friction before introducing abstractions.
+- Use Docus callout syntax (`::note`, `::tip`, `::warning`, `::caution`) instead of unsupported custom container tags.

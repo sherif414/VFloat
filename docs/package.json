@@ -1,0 +1,21 @@
+{
+  "name": "v-float-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "nuxt prepare",
+    "dev": "nuxt dev",
+    "build": "nuxt generate",
+    "preview": "nuxt preview",
+    "lint": "oxlint -c oxlint.json . && oxfmt -c oxfmt.json --check .",
+    "lint:fix": "oxlint -c oxlint.json --fix . && oxfmt -c oxfmt.json --write .",
+    "format": "oxfmt -c oxfmt.json --write ."
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "docus": "^5.13.0",
+    "nuxt": "^4.1.0",
+    "v-float": "workspace:*",
+    "vue": "^3.5.41"
+  }
+}

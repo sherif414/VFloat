@@ -1,6 +1,6 @@
 ---
 name: documentation-writer
-description: Use this skill when creating, updating, reviewing, or syncing VFloat documentation in docs/api or docs/guide, especially after source changes in src/composables/ or when the user asks for VFloat API pages, guides, tutorials, doc fixes, or docs review feedback even if they do not name the docs folders directly.
+description: Use this skill when creating, updating, reviewing, or syncing VFloat documentation in docs/api or docs/guide, especially after source changes in packages/vue/src/composables/ or when the user asks for VFloat API pages, guides, tutorials, doc fixes, or docs review feedback even if they do not name the docs folders directly.
 ---
 
 # Documentation Writer
@@ -23,7 +23,7 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
    - Tutorial, how-to, or explanation in `docs/guide/`
    - Docs review or docs-sync task after code changes
 2. Inspect the source of truth.
-   - Read the relevant files in `src/composables/` first.
+   - Read the relevant files in `packages/vue/src/composables/` first.
    - Read the matching or neighboring docs pages to preserve local conventions.
    - Confirm exported names, option names, defaults, examples, and edge cases from code or tests before writing.
 3. Choose the page family.
@@ -55,13 +55,13 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 - VFloat is inspired by Floating UI but not a fork. Verify behavior in this repo before reusing wording, defaults, or examples.
 - Use project terminology literally: `useFloatingNode`, `usePosition`, `useClick`, `useHover`, `useCollection`, `middlewares`, `open`, `node`, and `FloatingNode`.
 - Examples should import from `v-float`.
-- Use `middlewares` (plural) when referring to the middleware array or the `src/composables/middlewares` module.
+- Use `middlewares` (plural) when referring to the middleware array or the `packages/vue/src/composables/middlewares` module.
 - Prefer `<script setup lang="ts">` for Vue examples.
 - `usePosition` and `useArrow` automatically apply styles to `floatingEl` and `arrowEl` by default (`applyStyles: true`), so manual `:style` binding is omitted from standard examples unless demonstrating manual opt-out (`applyStyles: false`).
 - Do not restate full option interfaces inside guides when the API page already owns that contract.
 - Middleware API pages currently use an older family style in this repo. Preserve that family for focused edits unless the task is to standardize the whole family together.
 - Link the first useful mention of core VFloat terms in guides and tutorials to their home page, such as `useFloatingNode`, `usePosition`, `useClick`, `useHover`, `useFocus`, `useFocusTrap`, `useDismiss`, `useRovingFocus`, `useAriaActivedescendant`, `useCollection`, `useTypeahead`, `useClientPoint`, `useRole`, `useArrow`, `offset`, `flip`, `shift`, `size`, `autoPlacement`, `hide`, `inline`, `arrow`, `safePolygon`, `node`, `middlewares`, `virtual elements`, and `overlay hierarchy coordination`.
-- If you add or rename a docs page, update `docs/.vitepress/config.mts` and the relevant overview page such as `docs/api/index.md` or `docs/guide/index.md`.
+- If you add or rename a docs page, update the directory structure in `docs/content/` and the relevant overview page such as `docs/content/2.api/1.overview/1.index.md` or `docs/content/1.guide/1.getting-started/1.index.md`.
 
 ## Tone
 
@@ -106,6 +106,6 @@ Do not force this voice onto compact API reference pages. API pages should stay 
 ## Validation Loop
 
 1. Re-read the relevant source and the edited doc side by side.
-2. Check links, headings, VitePress containers, and code block language tags.
+2. Check links, headings, callouts, and code block language tags.
 3. Run `pnpm run docs:build`.
 4. If build or review fails, fix the doc and repeat the loop.

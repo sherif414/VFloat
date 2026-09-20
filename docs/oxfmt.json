@@ -11,5 +11,5 @@
   "arrowParens": "always",
   "bracketSameLine": false,
   "bracketSpacing": true,
-  "ignorePatterns": [".vitepress/dist/**", ".vitepress/cache/**"]
+  "ignorePatterns": [".output/**", ".nuxt/**", ".data/**", "dist/**"]
 }
