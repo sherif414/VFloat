@@ -8,3 +8,4 @@
 *.svg text eol=lf
 *.png binary
 *.ico binary
+.imbeccable/** linguist-vendored
