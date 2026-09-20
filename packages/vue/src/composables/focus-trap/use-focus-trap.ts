@@ -3,16 +3,16 @@ import {
   computed,
   type MaybeRefOrGetter,
   nextTick,
-  onWatcherCleanup,
   type Ref,
   shallowRef,
   toValue,
+  watch,
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { isImeComposing, useComposition } from "@/shared/composition-state";
 import { isElement, isHTMLElement } from "@/shared/dom";
-import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
+import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { createCleanupRegistry, tryOnScopeDispose } from "@/shared/lifecycle";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -55,75 +55,42 @@ export function useFocusTrap(
 ): UseFocusTrapReturn {
   useComposition();
 
-  const { anchorEl: anchorElOption, floatingEl: floatingElOption } = node.refs;
-  const { open } = node;
+  const { open, refs } = node;
 
-  const {
-    enabled: enabledOption = true,
-    modal: modalOption = true,
-    initialFocus: initialFocusOption,
-    returnFocus: returnFocusOption = true,
-    guards: guardsOption = true,
-    closeOnFocusOut: closeOnFocusOutOption = false,
-    closeOnTab: closeOnTabOption = false,
-    outsideElementsInert: outsideElementsInertOption,
-    preventScroll: preventScrollOption = true,
-    ignoreFocusOut,
-    onError,
-  } = options;
+  // --- Shared Options & Root State --------------------------------------------
 
-  const isEnabled = computed(() => !!toValue(enabledOption));
-  const isModal = computed(() => !!toValue(modalOption));
-  const shouldCloseOnFocusOut = computed(() => !isModal.value && !!toValue(closeOnFocusOutOption));
-  const shouldCloseOnTab = computed(() => !!toValue(closeOnTabOption));
+  const isEnabled = computed(() => !!toValue(options.enabled ?? true));
+  const isModal = computed(() => !!toValue(options.modal ?? true));
+  const shouldCloseOnFocusOut = computed(
+    () => !isModal.value && !!toValue(options.closeOnFocusOut ?? false),
+  );
+  const shouldCloseOnTab = computed(() => !!toValue(options.closeOnTab ?? false));
   const shouldInertOutside = computed(() => {
-    if (outsideElementsInertOption !== undefined) {
-      return !!toValue(outsideElementsInertOption);
+    if (options.outsideElementsInert !== undefined) {
+      return !!toValue(options.outsideElementsInert);
     }
     return isModal.value;
   });
-  const shouldReturnFocus = computed(() => !!toValue(returnFocusOption));
-  const shouldPreventScroll = computed(() => !!toValue(preventScrollOption));
-  const shouldApplyGuards = computed(() => !!toValue(guardsOption));
+  const shouldReturnFocus = computed(() => !!toValue(options.returnFocus ?? true));
+  const shouldPreventScroll = computed(() => !!toValue(options.preventScroll ?? true));
+  const shouldApplyGuards = computed(() => !!toValue(options.guards ?? true));
+
+  const targetDocument = computed(
+    () =>
+      refs.floatingEl.value?.ownerDocument ??
+      getAnchorElement(refs.anchorEl.value)?.ownerDocument ??
+      getDocument(),
+  );
+  const ownerWindow = computed(() => targetDocument.value?.defaultView ?? getWindow());
 
   const trapIsActive = shallowRef(false);
   const isActive = computed(() => trapIsActive.value);
-
-  let previouslyActiveElement: HTMLElement | null = null;
-  // Captured synchronously on open so a focus move before nextTick cannot
-  // overwrite the true trigger.
-  let pendingTriggerElement: HTMLElement | null = null;
-  let guardHandles: FocusGuardHandles | null = null;
-  let isolationRestore: (() => void) | null = null;
-  // Temporary tabindex added to an otherwise unfocusable return target.
-  // Removed on deactivate so triggers never keep a mutated tabindex.
-  let temporaryTabindexTarget: HTMLElement | null = null;
-  // Fallback container tabindex added when no tabbable child exists.
-  // Removed on deactivate/re-focus so the panel DOM stays untouched when idle.
-  let temporaryFloatingTabindex = false;
-  // Tracks guards/floating tabindex marked for this trap instance.
-  let trapScopeMarked = false;
-  // Whether this trap currently occupies the document modal stack.
-  let isModalStacked = false;
 
   const cleanupRegistry = createCleanupRegistry();
   const trapEntry: FocusTrapEntry = {
     id: Symbol("vfloat-focus-trap"),
     getFamilyElements,
   };
-
-  function getAnchorElement(): HTMLElement | null {
-    return resolveAnchorElement(anchorElOption.value);
-  }
-
-  function getFloatingElement(): HTMLElement | null {
-    return floatingElOption.value;
-  }
-
-  function getTargetDocument(): Document | null {
-    const el = getFloatingElement() ?? getAnchorElement();
-    return el?.ownerDocument ?? getDocument();
-  }
 
   function getFamilyElements(): HTMLElement[] {
     const elements: HTMLElement[] = [];
@@ -137,7 +104,7 @@ export function useFocusTrap(
     return elements;
   }
 
-  // --- Focus Trapping & Keydown Navigation -----------------------------------
+  // --- Focus Trapping & Tab Navigation ----------------------------------------
 
   function onDocumentKeyDown(event: KeyboardEvent) {
     if (
@@ -150,21 +117,11 @@ export function useFocusTrap(
       return;
     }
 
-    const doc = getTargetDocument();
+    const doc = targetDocument.value;
     if (!doc || !isTopModalTrap(doc, trapEntry)) return;
 
-    const floating = getFloatingElement();
+    const floating = refs.floatingEl.value;
     if (!floating) return;
-
-    // Handle non-modal closeOnTab
-    if (!isModal.value && shouldCloseOnTab.value) {
-      open.value = false;
-      return;
-    }
-
-    if (!isModal.value) {
-      return;
-    }
 
     // Document-level wrap: catches Tab even after focus escaped to body or
     // the address bar, which a floating-only listener never sees.
@@ -196,8 +153,6 @@ export function useFocusTrap(
   }
 
   function onFloatingKeyDown(event: KeyboardEvent) {
-    // Kept for non-modal closeOnTab when the document handler yields;
-    // modal wrapping lives on the document handler above.
     if (
       event.key !== "Tab" ||
       event.defaultPrevented ||
@@ -208,60 +163,41 @@ export function useFocusTrap(
       return;
     }
 
-    if (!isModal.value && shouldCloseOnTab.value) {
-      open.value = false;
-    }
+    open.value = false;
   }
 
-  function onFloatingFocusOut(event: FocusEvent) {
-    if (!isEnabled.value || !open.value || !isModal.value) return;
+  // Document keydown owns modal Tab wrapping so escaped focus still wraps.
+  cleanupRegistry.add(
+    useEventListener(
+      () => (isEnabled.value && open.value && isModal.value ? targetDocument.value : null),
+      "keydown",
+      onDocumentKeyDown,
+      { capture: true },
+    ),
+  );
 
-    const floating = getFloatingElement();
-    if (!floating) return;
+  // Floating keydown listener for non-modal closeOnTab.
+  cleanupRegistry.add(
+    useEventListener(
+      () =>
+        isEnabled.value && open.value && !isModal.value && shouldCloseOnTab.value
+          ? refs.floatingEl.value
+          : null,
+      "keydown",
+      onFloatingKeyDown,
+    ),
+  );
 
-    const doc = getTargetDocument();
-    if (!doc || !isTopModalTrap(doc, trapEntry)) return;
-
-    const relatedTarget = event.relatedTarget as Node | null;
-    if (relatedTarget && node.contains(relatedTarget)) {
-      return;
-    }
-
-    pullFocusInside();
-  }
-
-  function onModalFocusPullback(event: FocusEvent) {
-    // Synchronous backstop for programmatic focus jumps that never produce
-    // a floating focusout (e.g. outsideEl.focus() while open). Only the top
-    // modal owns the correction so stacked modals cannot fight.
-    if (!isEnabled.value || !open.value || !isModal.value) return;
-
-    const floating = getFloatingElement();
-    if (!floating) return;
-
-    const doc = getTargetDocument();
-    if (!doc || !isTopModalTrap(doc, trapEntry)) return;
-
-    const target = event.target as Node | null;
-    if (!target || node.contains(target)) {
-      // Keyboard navigation back inside clears the outside-pointer flag so a
-      // fast Tab after an outside press is never swallowed by the 100ms window.
-      isPointerDownOutside = false;
-      return;
-    }
-    if (isPointerDownOutside) return;
-
-    pullFocusInside();
-  }
+  // --- Focus Containment & Recovery -------------------------------------------
 
   function pullFocusInside() {
     queueMicrotask(() => {
       if (!isEnabled.value || !open.value || !isModal.value) return;
 
-      const currentFloating = getFloatingElement();
+      const currentFloating = refs.floatingEl.value;
       if (!currentFloating) return;
 
-      const doc = getTargetDocument();
+      const doc = targetDocument.value;
       if (!doc || !isTopModalTrap(doc, trapEntry)) return;
       const currentActive = doc.activeElement;
 
@@ -279,12 +215,140 @@ export function useFocusTrap(
     });
   }
 
-  // --- Focus Guards ----------------------------------------------------------
+  function onFloatingFocusOut(event: FocusEvent) {
+    if (!isEnabled.value || !open.value || !isModal.value) return;
+
+    const floating = refs.floatingEl.value;
+    if (!floating) return;
+
+    const doc = targetDocument.value;
+    if (!doc || !isTopModalTrap(doc, trapEntry)) return;
+
+    const relatedTarget = event.relatedTarget as Node | null;
+    if (relatedTarget && node.contains(relatedTarget)) {
+      return;
+    }
+
+    pullFocusInside();
+  }
+
+  function onModalFocusPullback(event: FocusEvent) {
+    // Synchronous backstop for programmatic focus jumps that never produce
+    // a floating focusout (e.g. outsideEl.focus() while open). Only the top
+    // modal owns the correction so stacked modals cannot fight.
+    if (!isEnabled.value || !open.value || !isModal.value) return;
+
+    const floating = refs.floatingEl.value;
+    if (!floating) return;
+
+    const doc = targetDocument.value;
+    if (!doc || !isTopModalTrap(doc, trapEntry)) return;
+
+    const target = event.target as Node | null;
+    if (!target || node.contains(target)) {
+      // Keyboard navigation back inside clears the outside-pointer flag so a
+      // fast Tab after an outside press is never swallowed by the 100ms window.
+      isPointerDownOutside = false;
+      return;
+    }
+    if (isPointerDownOutside) return;
+
+    pullFocusInside();
+  }
+
+  // Floating focusout listener recovers focus if the active child is removed inside a modal.
+  cleanupRegistry.add(
+    useEventListener(
+      () => (isEnabled.value && open.value && isModal.value ? refs.floatingEl.value : null),
+      "focusout",
+      onFloatingFocusOut,
+    ),
+  );
+
+  // Document focusin handles modal focus containment and recovery from programmatic outside jumps.
+  cleanupRegistry.add(
+    useEventListener(
+      () => (isEnabled.value && open.value && isModal.value ? targetDocument.value : null),
+      "focusin",
+      onModalFocusPullback,
+      { capture: true },
+    ),
+  );
+
+  // --- Non-Modal Outside Dismissal --------------------------------------------
+
+  function onNonModalFocusOut(event: FocusEvent) {
+    if (!isEnabled.value || !open.value) return;
+
+    const target = event.target as Node | null;
+    if (!target) return;
+
+    if (node.contains(target)) {
+      return;
+    }
+
+    if (options.ignoreFocusOut && options.ignoreFocusOut(target)) {
+      return;
+    }
+
+    if (shouldCloseOnFocusOut.value) {
+      open.value = false;
+    }
+  }
+
+  function onNonModalPointerDown(event: PointerEvent | MouseEvent) {
+    if (!isEnabled.value || !open.value) return;
+
+    const target = event.target as Node | null;
+    if (!target) return;
+
+    if (node.contains(target)) {
+      return;
+    }
+
+    if (options.ignoreFocusOut && options.ignoreFocusOut(target)) {
+      return;
+    }
+
+    if (shouldCloseOnFocusOut.value) {
+      open.value = false;
+    }
+  }
+
+  // Document focusin listener closes non-modal surfaces when focus escapes to outside elements.
+  cleanupRegistry.add(
+    useEventListener(
+      () =>
+        isEnabled.value && open.value && shouldCloseOnFocusOut.value && !isModal.value
+          ? targetDocument.value
+          : null,
+      "focusin",
+      onNonModalFocusOut,
+      { capture: true },
+    ),
+  );
+
+  // Document pointerdown listener closes non-modal surfaces when clicking outside.
+  cleanupRegistry.add(
+    useEventListener(
+      () =>
+        isEnabled.value && open.value && shouldCloseOnFocusOut.value && !isModal.value
+          ? targetDocument.value
+          : null,
+      "pointerdown",
+      onNonModalPointerDown,
+      { capture: true },
+    ),
+  );
+
+  // --- Portal Focus Guards ----------------------------------------------------
+
+  let guardHandles: FocusGuardHandles | null = null;
 
   function onGuardFocus(type: "start" | "end", event: FocusEvent) {
     if (!isEnabled.value || !open.value) return;
 
-    const floating = getFloatingElement();
+    const floating = refs.floatingEl.value;
     if (!floating) return;
 
     if (isModal.value) {
@@ -315,7 +379,28 @@ export function useFocusTrap(
     }
   }
 
-  // --- Background Isolation --------------------------------------------------
+  // Dynamically synchronize guards when `guards` option updates while active.
+  cleanupRegistry.add(
+    watch(
+      shouldApplyGuards,
+      (guardsEnabled) => {
+        if (!trapIsActive.value) return;
+        if (!guardsEnabled) {
+          cleanupGuards();
+          return;
+        }
+        const floating = refs.floatingEl.value;
+        if (floating) {
+          setupGuards(floating);
+        }
+      },
+      { flush: "post" },
+    ),
+  );
+
+  // --- Background Inert Isolation ---------------------------------------------
+
+  let isolationRestore: (() => void) | null = null;
 
   function setupIsolation() {
     cleanupIsolation();
@@ -335,10 +420,61 @@ export function useFocusTrap(
     }
   }
 
-  // --- Initial & Return Focus ------------------------------------------------
+  // Dynamically synchronize isolation when `outsideElementsInert` option updates while active.
+  cleanupRegistry.add(
+    watch(
+      shouldInertOutside,
+      (inertEnabled) => {
+        if (!trapIsActive.value) return;
+        if (!inertEnabled) {
+          cleanupIsolation();
+          return;
+        }
+        setupIsolation();
+      },
+      { flush: "post" },
+    ),
+  );
+
+  // --- Initial & Return Focus -------------------------------------------------
+
+  let previouslyActiveElement: HTMLElement | null = null;
+  // Captured synchronously on open so a focus move before nextTick cannot
+  // overwrite the true trigger.
+  let pendingTriggerElement: HTMLElement | null = null;
+  // Temporary tabindex added to an otherwise unfocusable return target.
+  // Removed on deactivate so triggers never keep a mutated tabindex.
+  let temporaryTabindexTarget: HTMLElement | null = null;
+  // Fallback container tabindex added when no tabbable child exists.
+  // Removed on deactivate/re-focus so the panel DOM stays untouched when idle.
+  let temporaryFloatingTabindex = false;
 
   let isPointerDownOutside = false;
   let pointerDownOutsideTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let retryInitialFocusRafId: number | undefined;
+
+  function clearPointerDownOutsideTimeout() {
+    if (pointerDownOutsideTimeoutId != null) {
+      ownerWindow.value?.clearTimeout(pointerDownOutsideTimeoutId);
+      pointerDownOutsideTimeoutId = undefined;
+    }
+  }
+
+  function cancelRetryInitialFocus() {
+    if (retryInitialFocusRafId != null) {
+      ownerWindow.value?.cancelAnimationFrame(retryInitialFocusRafId);
+      retryInitialFocusRafId = undefined;
+    }
+  }
+
+  function capturePendingTrigger() {
+    // Synchronous save: nextTick activation would otherwise record whatever
+    // grabbed focus in between instead of the true opener.
+    const activeEl = targetDocument.value?.activeElement ?? null;
+    if (isHTMLElement(activeEl) && !refs.floatingEl.value?.contains(activeEl)) {
+      pendingTriggerElement = activeEl;
+    }
+  }
 
   function onDocumentPointerDownTracker(event: PointerEvent | MouseEvent) {
     if (!isEnabled.value || !open.value) return;
@@ -351,12 +487,13 @@ export function useFocusTrap(
       isPointerDownOutside = true;
       // Schedule/clear the debounce on the target's owner window so cross-realm (iframe)
       // targets resolve correctly and we never touch the global `window` (SSR-safe).
-      const ownerWindow = getWindow(target);
+      const win = getWindow(target) ?? ownerWindow.value;
       if (pointerDownOutsideTimeoutId != null) {
-        ownerWindow?.clearTimeout(pointerDownOutsideTimeoutId);
+        win?.clearTimeout(pointerDownOutsideTimeoutId);
       }
-      pointerDownOutsideTimeoutId = ownerWindow?.setTimeout(() => {
+      pointerDownOutsideTimeoutId = win?.setTimeout(() => {
         isPointerDownOutside = false;
+        pointerDownOutsideTimeoutId = undefined;
       }, 100);
     }
   }
@@ -364,7 +501,7 @@ export function useFocusTrap(
   // Always track pointer down events when open to handle returnFocus correctly
   cleanupRegistry.add(
     useEventListener(
-      () => (isEnabled.value && open.value ? getTargetDocument() : null),
+      () => (isEnabled.value && open.value ? targetDocument.value : null),
       "pointerdown",
       onDocumentPointerDownTracker,
       { capture: true },
@@ -372,7 +509,7 @@ export function useFocusTrap(
   );
 
   function applyInitialFocus(floating: HTMLElement) {
-    const rawTarget = toValue(initialFocusOption);
+    const rawTarget = toValue(options.initialFocus);
     if (rawTarget === false) {
       return;
     }
@@ -417,12 +554,15 @@ export function useFocusTrap(
   function retryInitialFocus(target: HTMLElement) {
     // Animated mounts (dialog fade, transform) are often not focusable on the
     // first tick. Retry once next frame instead of adding async options or deps.
-    const doc = getTargetDocument();
-    const win = doc?.defaultView ?? getWindow(target);
+    const win = targetDocument.value?.defaultView ?? getWindow(target);
     if (!win) return;
-    win.requestAnimationFrame(() => {
+    if (retryInitialFocusRafId != null) {
+      win.cancelAnimationFrame(retryInitialFocusRafId);
+    }
+    retryInitialFocusRafId = win.requestAnimationFrame(() => {
+      retryInitialFocusRafId = undefined;
       if (!isEnabled.value || !open.value || !trapIsActive.value) return;
-      if (getTargetDocument()?.activeElement === target) return;
+      if (targetDocument.value?.activeElement === target) return;
       if (!target.isConnected || !isElementFocusable(target)) return;
       target.focus({ preventScroll: shouldPreventScroll.value });
     });
@@ -449,7 +589,7 @@ export function useFocusTrap(
       return;
     }
 
-    const doc = getTargetDocument();
+    const doc = targetDocument.value;
     const activeEl = doc?.activeElement ?? null;
     const isFocusOnBody = activeEl === doc?.body;
     const isFocusInside = activeEl ? node.contains(activeEl) : false;
@@ -465,7 +605,7 @@ export function useFocusTrap(
 
     let targetElement: HTMLElement | null = null;
 
-    const customReturn = toValue(returnFocusOption);
+    const customReturn = toValue(options.returnFocus);
     if (isHTMLElement(customReturn) && customReturn.isConnected) {
       targetElement = customReturn;
     } else if (
@@ -477,7 +617,7 @@ export function useFocusTrap(
     ) {
       targetElement = customReturn.value;
     } else {
-      const anchor = getAnchorElement();
+      const anchor = getAnchorElement(refs.anchorEl.value);
       if (anchor && anchor.isConnected) {
         targetElement = anchor;
       } else if (previouslyActiveElement && previouslyActiveElement.isConnected) {
@@ -513,58 +653,12 @@ export function useFocusTrap(
     }
   }
 
-  // --- Document Event Listeners ------------------------------------------------
+  // --- Modal Stack & Trap Coordination ----------------------------------------
 
-  function onDocumentFocusIn(event: FocusEvent) {
-    // Route first: modal containment and non-modal dismissal are separate
-    // concerns sharing one document listener for subscription economy.
-    if (isModal.value) {
-      onModalFocusPullback(event);
-      return;
-    }
-
-    onNonModalFocusOut(event);
-  }
-
-  function onNonModalFocusOut(event: FocusEvent) {
-    if (!isEnabled.value || !open.value) return;
-
-    const target = event.target as Node | null;
-    if (!target) return;
-
-    if (node.contains(target)) {
-      return;
-    }
-
-    if (ignoreFocusOut && ignoreFocusOut(target)) {
-      return;
-    }
-
-    if (shouldCloseOnFocusOut.value) {
-      open.value = false;
-    }
-  }
-
-  function onDocumentPointerDown(event: PointerEvent | MouseEvent) {
-    if (!isEnabled.value || !open.value) return;
-
-    const target = event.target as Node | null;
-    if (!target) return;
-
-    if (node.contains(target)) {
-      return;
-    }
-
-    if (ignoreFocusOut && ignoreFocusOut(target)) {
-      return;
-    }
-
-    if (shouldCloseOnFocusOut.value) {
-      open.value = false;
-    }
-  }
-
-  // --- Lifecycle & Activation ------------------------------------------------
+  // Tracks guards/floating tabindex marked for this trap instance.
+  let trapScopeMarked = false;
+  // Whether this trap currently occupies the document modal stack.
+  let isModalStacked = false;
 
   function markTrapScope(floating: HTMLElement) {
     if (trapScopeMarked) return;
@@ -577,13 +671,13 @@ export function useFocusTrap(
   function unmarkTrapScope() {
     if (!trapScopeMarked) return;
     trapScopeMarked = false;
-    getFloatingElement()?.removeAttribute("data-vfloat-trap-scope");
+    refs.floatingEl.value?.removeAttribute("data-vfloat-trap-scope");
   }
 
   function registerModalStack() {
     // Only strict modals join the document stack; non-modals never compete.
-    if (!isModal.value) return;
-    const doc = getTargetDocument();
+    if (!isModal.value || isModalStacked) return;
+    const doc = targetDocument.value;
     if (doc) {
       pushTrapEntry(doc, trapEntry);
       isModalStacked = true;
@@ -593,19 +687,9 @@ export function useFocusTrap(
   function unregisterModalStack() {
     if (!isModalStacked) return;
     isModalStacked = false;
-    const doc = getTargetDocument();
+    const doc = targetDocument.value;
     if (doc) {
       removeTrapEntry(doc, trapEntry);
-    }
-  }
-
-  function syncModalStack(wasModal: boolean) {
-    // Modal toggles while open move the trap on/off the stack without focus.
-    if (wasModal === isModal.value && isModalStacked === isModal.value) return;
-    if (isModal.value) {
-      registerModalStack();
-    } else {
-      unregisterModalStack();
     }
   }
 
@@ -614,7 +698,7 @@ export function useFocusTrap(
       return;
     }
 
-    const floating = getFloatingElement();
+    const floating = refs.floatingEl.value;
     if (!floating) {
       trapIsActive.value = false;
       return;
@@ -624,7 +708,7 @@ export function useFocusTrap(
       // Prefer the synchronously captured trigger; fall back to whatever holds
       // focus now. Deferred capture alone loses the opener when focus moves
       // between open=true and nextTick.
-      const doc = getTargetDocument();
+      const doc = targetDocument.value;
       const activeEl = doc?.activeElement ?? null;
       if (!trapIsActive.value && isHTMLElement(activeEl) && !floating.contains(activeEl)) {
         previouslyActiveElement = pendingTriggerElement ?? activeEl;
@@ -644,8 +728,8 @@ export function useFocusTrap(
       cleanupIsolation();
       unmarkTrapScope();
 
-      if (onError) {
-        onError(error);
+      if (options.onError) {
+        options.onError(error);
       } else if (import.meta.env.DEV) {
         console.error("[useFocusTrap] Activation failed:", error);
       }
@@ -657,8 +741,10 @@ export function useFocusTrap(
     cleanupGuards();
     cleanupIsolation();
     unmarkTrapScope();
-    clearTemporaryFloatingTabindex(getFloatingElement());
+    clearTemporaryFloatingTabindex(refs.floatingEl.value);
     clearTemporaryReturnTabindex();
+    clearPointerDownOutsideTimeout();
+    cancelRetryInitialFocus();
     trapIsActive.value = false;
 
     if (returnFocus) {
@@ -668,124 +754,75 @@ export function useFocusTrap(
     }
   }
 
-  // Watch open and enabled states. Open/enabled drive focus movement;
-  // isolation-only options re-apply DOM state without stealing focus.
+  // Synchronously capture opener trigger when open becomes true before any intermediate focus jumps
   cleanupRegistry.add(
-    watchPostEffect(() => {
-      // Subscribe to reactive options
-      void isEnabled.value;
-      void isModal.value;
-      void shouldInertOutside.value;
-      void shouldApplyGuards.value;
-      void shouldReturnFocus.value;
-      void shouldPreventScroll.value;
+    watch(
+      () => isEnabled.value && open.value,
+      (isOpen) => {
+        if (isOpen) {
+          capturePendingTrigger();
+        }
+      },
+      { flush: "sync" },
+    ),
+  );
 
+  // Watch open, enabled, and floatingEl states to coordinate surface activation lifecycle.
+  cleanupRegistry.add(
+    watchPostEffect((onCleanup) => {
       if (isEnabled.value && open.value) {
-        if (floatingElOption.value) {
+        if (refs.floatingEl.value) {
           capturePendingTrigger();
           void nextTick(() => {
-            if (isEnabled.value && open.value) {
-              if (trapIsActive.value) {
-                reapplyIsolation();
-              } else {
-                activate();
-              }
+            if (isEnabled.value && open.value && !trapIsActive.value) {
+              activate();
             }
           });
+        } else if (trapIsActive.value) {
+          deactivate(false);
         }
       } else {
         pendingTriggerElement = null;
-        deactivate(shouldReturnFocus.value);
+        if (trapIsActive.value) {
+          deactivate(shouldReturnFocus.value);
+        }
       }
 
-      onWatcherCleanup(() => {
-        unregisterModalStack();
-        cleanupGuards();
-        cleanupIsolation();
-        unmarkTrapScope();
-        clearTemporaryFloatingTabindex(getFloatingElement());
+      onCleanup(() => {
+        if (!isEnabled.value || !open.value) {
+          unregisterModalStack();
+          cleanupGuards();
+          cleanupIsolation();
+          unmarkTrapScope();
+          clearTemporaryFloatingTabindex(refs.floatingEl.value);
+        }
       });
     }),
   );
 
-  function capturePendingTrigger() {
-    // Synchronous save: nextTick activation would otherwise record whatever
-    // grabbed focus in between instead of the true opener.
-    const activeEl = getTargetDocument()?.activeElement ?? null;
-    if (isHTMLElement(activeEl) && !getFloatingElement()?.contains(activeEl)) {
-      pendingTriggerElement = activeEl;
-    }
-  }
-
-  function reapplyIsolation() {
-    // Option toggles (modal/guards/inert) refresh side effects in place.
-    // Never move focus here; only open/enabled transitions may do that.
-    const wasModal = isModalStacked;
-    const floating = getFloatingElement();
-    if (!floating) return;
-    markTrapScope(floating);
-    setupGuards(floating);
-    setupIsolation();
-    syncModalStack(wasModal);
-  }
-
-  // Document keydown owns modal Tab wrapping so escaped focus still wraps.
+  // Dynamically synchronize modal stack membership when `modal` option updates while active.
   cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value && open.value && isModal.value ? getTargetDocument() : null),
-      "keydown",
-      onDocumentKeyDown,
-      { capture: true },
-    ),
-  );
-
-  // Keydown listener for non-modal closeOnTab.
-  cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value && open.value ? getFloatingElement() : null),
-      "keydown",
-      onFloatingKeyDown,
-    ),
-  );
-
-  // Focusout listener on floating element to recover focus if active child is removed in modal
-  cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value && open.value && isModal.value ? getFloatingElement() : null),
-      "focusout",
-      onFloatingFocusOut,
-    ),
-  );
-
-  // Document focusin owns modal containment; non-modal dismissal reuses it.
-  cleanupRegistry.add(
-    useEventListener(
-      () => (isEnabled.value && open.value ? getTargetDocument() : null),
-      "focusin",
-      onDocumentFocusIn,
-      { capture: true },
-    ),
-  );
-
-  // Non-modal outside pointer dismissal keeps its own listener, separate from
-  // modal containment, so each concern owns exactly one document handler.
-  cleanupRegistry.add(
-    useEventListener(
-      () =>
-        isEnabled.value && open.value && shouldCloseOnFocusOut.value && !isModal.value
-          ? getTargetDocument()
-          : null,
-      "pointerdown",
-      onDocumentPointerDown,
-      { capture: true },
+    watch(
+      isModal,
+      (modalEnabled) => {
+        if (!trapIsActive.value) return;
+        if (modalEnabled) {
+          registerModalStack();
+        } else {
+          unregisterModalStack();
+        }
+      },
+      { flush: "post" },
     ),
   );
 
   tryOnScopeDispose(() => {
-    const doc = getTargetDocument();
+    const doc = targetDocument.value;
     if (doc) {
       removeTrapEntry(doc, trapEntry);
     }
+    clearPointerDownOutsideTimeout();
+    cancelRetryInitialFocus();
     cleanupRegistry.cleanup();
     deactivate(false);
   });
