@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Decision Records"
+  short_description: "Create and maintain grouped VFloat ADRs"
+  default_prompt: "Use $architecture-decision-records to create or update a concise VFloat ADR."

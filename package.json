@@ -35,6 +35,8 @@
     "docs:lint": "pnpm --filter v-float-docs lint",
     "docs:lint:fix": "pnpm --filter v-float-docs lint:fix",
     "docs:format": "pnpm --filter v-float-docs format",
+    "adr:new": "node scripts/adr.ts new",
+    "adr:index": "node scripts/adr.ts index",
     "size": "node scripts/release/measure-size.mjs",
     "release:dry": "node scripts/release/ci-release.mjs --dry-run",
     "changelog": "changelogen",
