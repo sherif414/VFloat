@@ -22,8 +22,8 @@ Every VFloat file (especially composables) must follow this exact sequence:
 
 1. **Imports**: Third-party first (Vue, `@floating-ui/dom`, etc.), then internal VFloat modules (`@/...`).
 2. **Internal Module Constants/Types**: (Optional) File-private, non-exported types, interfaces, or constants needed by the module. Must NOT be exported.
-3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingNode`).
-4. **📌 Helpers Section**: (Optional) Module-level private pure functions and stateless calculation/lookup utilities. _Must NOT be exported (`function ...`, never `export function ...`). Must be strictly idempotent with zero side effects (no DOM mutations, no ref updates, no reactive scopes)._ _Omit banner if there are no helpers._
+3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingNode`), followed by the module-level coordination code it depends on (per-document listener sync, dispatch, gesture guards, timers). Coordination is impure by nature, so it belongs here — never in `📌 Helpers`. When `📌 Main` owns more than one capability, group them with module-level capability dividers (Section 2).
+4. **📌 Helpers Section**: (Optional) Module-level private pure functions and stateless calculation/lookup utilities. _Must NOT be exported (`function ...`, never `export function ...`). Must be strictly idempotent with zero side effects (no DOM mutations, no ref updates, no reactive scopes)._ _Omit banner if there are no helpers — a module whose only module-level functions are impure coordinators has no `📌 Helpers` section._
 5. **📌 Types Section**: (Optional) Publicly exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). _Internal types used only within the file belong in Section 2 as unexported declarations. Omit banner if there are no types._
 
 > [!IMPORTANT]
@@ -50,13 +50,33 @@ Used to group cohesive feature blocks inside large composables.
 
 - **Format**: Single-line dashed divider (`// --- Feature Name --------------------------------------------------`), padded to 80 characters.
 - **Spacing**: Always leave **1 empty line** between the divider and the first line of code.
-- **Usage Rule**: **Use sparingly.** Only apply internal dividers inside large, multi-feature composables (100+ lines). Small, single-concern composables should not use dividers.
+- **Usage Rule**: **Use sparingly.** Only apply internal dividers inside large, multi-feature composables (100+ lines). Small, single-concern composables should not use dividers. Module-level capability dividers are covered below.
 
 ```typescript
 // --- Rest Detection ---------------------------------------------------------
 
 let restCoords: Coords | null = null;
 let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
+```
+
+### Module-Level Capability Dividers (Inside `📌 Main`)
+
+Used to group the independent capabilities of a module-level coordination section, so a `📌 Main` that owns several concerns stays scannable.
+
+- **Format**: Same single-line dashed divider, unindented, padded to 80 characters.
+- **Spacing**: Always leave **1 empty line** between the divider and the first line of code.
+- **Placement**: Directly under `📌 Main`, after the primary exported function. Module constants stay in Section 2 above the banner.
+- **Usage Rule**: Apply only when `📌 Main` holds **two or more** capabilities (for example listener multiplexing, pointer dispatch, and a gesture guard). A module whose `📌 Main` is only the composable gets no dividers.
+- **Cohesion**: Every function a capability owns — its sync, its handlers, and its timers — belongs in that capability's block.
+
+```typescript
+// --- Listener Multiplexing ---------------------------------------------------
+
+function syncDocumentListeners(doc: Document, manager: DocumentManager): void { ... }
+
+// --- Pointer Dismissal Dispatch ----------------------------------------------
+
+function dispatchOutsideClick(doc: Document, event: MouseEvent): void { ... }
 ```
 
 ---
@@ -126,6 +146,8 @@ Divider names must answer: **"What user-facing behavior or subsystem does this b
 | **[Domain Subsystem] + [Capability]** | Dedicated feature engine / calculation | `Rest Detection`, `Safe Polygon Tracking`, `Focus Trapping`, `Search Buffer & Matcher`        |
 | **[Target] + [Coordination / Sync]**  | What entity is being synchronized      | `DOM Focus & Tabindex Sync`, `Initial & Return Focus`, `Modal Inert Isolation`                |
 
+These standards apply to both composable-internal feature dividers and module-level capability dividers.
+
 ---
 
 ## 5. Types Section Standard
@@ -174,6 +196,8 @@ Internals are functions, interfaces, types, constants, and variables used only w
 - [ ] Event listeners are decoupled and do not combine unrelated feature logic.
 - [ ] Internal feature dividers use single-line dashed comments (`// --- Feature Name ----`) with a trailing blank line.
 - [ ] Feature divider names are Title Case noun phrases describing functionality (no generic `// --- State ---` or `// --- Handlers ---`).
+- [ ] Module-level coordination code (listener sync, dispatch, gesture guards, timers) lives under `📌 Main`, never in `📌 Helpers`.
+- [ ] Module-level capability dividers are unindented, padded to 80 characters, and only used when `📌 Main` holds two or more capabilities.
 - [ ] Dynamic options (`MaybeRefOrGetter`) are normalized into a `computed` (e.g. `computed(() => toValue(options.enabled) ?? true)`); non-reactive options use object destructuring with default values. No `*Option` suffix renames.
 - [ ] Feature-scoped options are declared inside their respective feature blocks, not grouped in Shared Options & Root State.
 - [ ] Types and interfaces are positioned at the bottom of the file.
