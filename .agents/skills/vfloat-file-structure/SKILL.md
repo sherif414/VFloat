@@ -6,6 +6,8 @@ description: Enforce the unified file structure and feature-based code organizat
 # VFloat File Structure & Organization
 
 This skill defines the gold standard for file architecture and internal code organization across the VFloat repository. It ensures high scannability, vertical feature cohesion, and strict consistency.
+> [!NOTE]
+> **Examples Are Shape, Not Registry**: Identifiers in snippets, enumerations, and example tables (composable exports, divider labels, function/interface names, helper file names) illustrate form only — never a claim about what currently exists. Verify real names against the working tree: `git ls-tree --name-only HEAD:packages/vue/src/composables` for module directories, `git grep "export function use" -- packages/vue/src` for exports.
 
 ## When to use this Skill
 
@@ -22,7 +24,7 @@ Every VFloat file (especially composables) must follow this exact sequence:
 
 1. **Imports**: Third-party first (Vue, `@floating-ui/dom`, etc.), then internal VFloat modules (`@/...`).
 2. **Internal Module Constants/Types**: (Optional) File-private, non-exported types, interfaces, or constants needed by the module. Must NOT be exported.
-3. **📌 Main Section**: The primary exported function (e.g., `useClick`, `useRovingFocus`, `useFloatingNode`), followed by the module-level coordination code it depends on (per-document listener sync, dispatch, gesture guards, timers). Coordination is impure by nature, so it belongs here — never in `📌 Helpers`. When `📌 Main` owns more than one capability, group them with module-level capability dividers (Section 2).
+3. **📌 Main Section**: The primary exported function (e.g., `useXxx`), followed by the module-level coordination code it depends on (per-document listener sync, dispatch, gesture guards, timers). Coordination is impure by nature, so it belongs here — never in `📌 Helpers`. When `📌 Main` owns more than one capability, group them with module-level capability dividers (Section 2).
 4. **📌 Helpers Section**: (Optional) Module-level private pure functions and stateless calculation/lookup utilities. _Must NOT be exported (`function ...`, never `export function ...`). Must be strictly idempotent with zero side effects (no DOM mutations, no ref updates, no reactive scopes)._ _Omit banner if there are no helpers — a module whose only module-level functions are impure coordinators has no `📌 Helpers` section._
 5. **📌 Types Section**: (Optional) Publicly exported interfaces and types (`UseXOptions`, `UseXReturn`, `UseXContext`). _Internal types used only within the file belong in Section 2 as unexported declarations. Omit banner if there are no types._
 
@@ -53,10 +55,10 @@ Used to group cohesive feature blocks inside large composables.
 - **Usage Rule**: **Use sparingly.** Only apply internal dividers inside large, multi-feature composables (100+ lines). Small, single-concern composables should not use dividers. Module-level capability dividers are covered below.
 
 ```typescript
-// --- Rest Detection ---------------------------------------------------------
+// --- Feature Name ------------------------------------------------------------
 
-let restCoords: Coords | null = null;
-let restTimeoutId: ReturnType<typeof setTimeout> | undefined;
+let featureState: unknown = null;
+let featureTimerId: ReturnType<typeof setTimeout> | undefined;
 ```
 
 ### Module-Level Capability Dividers (Inside `📌 Main`)
@@ -70,13 +72,13 @@ Used to group the independent capabilities of a module-level coordination sectio
 - **Cohesion**: Every function a capability owns — its sync, its handlers, and its timers — belongs in that capability's block.
 
 ```typescript
-// --- Listener Multiplexing ---------------------------------------------------
+// --- First Capability --------------------------------------------------------
 
-function syncDocumentListeners(doc: Document, manager: DocumentManager): void { ... }
+function syncFirstCapability(doc: Document, manager: CapabilityManager): void { ... }
 
-// --- Pointer Dismissal Dispatch ----------------------------------------------
+// --- Second Capability -------------------------------------------------------
 
-function dispatchOutsideClick(doc: Document, event: MouseEvent): void { ... }
+function dispatchSecondCapability(doc: Document, event: MouseEvent): void { ... }
 ```
 
 ---
@@ -165,7 +167,7 @@ Only public contract types belong in this section. Keep internal working interfa
 // 📌 Types
 //=======================================================================================
 
-export interface UseClickOptions { ... }
+export interface UseXOptions { ... }
 ```
 
 ---
@@ -178,7 +180,7 @@ Internals are functions, interfaces, types, constants, and variables used only w
 - **No Speculative Exports**: Do not export symbols out of habit, convenience, or speculative future reuse.
 - **Composable Files**: Only export the primary composable function and its public contract types (`UseXOptions`, `UseXReturn`, `UseXContext`). Everything used solely within the composable (helper functions, internal state interfaces, DOM query helpers, local constants) must remain unexported.
 - **Helper Functions**: Helpers under `📌 Helpers` are used only inside the module and must never use `export`. Use `function ...`, never `export function ...`.
-- **Internal Helper Modules**: In multi-file feature directories, internal helper files (`*-controller.ts`, `geometry.ts`, `intent.ts`) must export only the specific symbols that collaborating files actually import. Any symbol used only within that helper file must stay unexported.
+- **Internal Helper Modules**: In multi-file feature directories, internal helper files (`*-controller.ts`, `*-geometry.ts`, `*-intent.ts`) must export only the specific symbols that collaborating files actually import. Any symbol used only within that helper file must stay unexported.
 - **Never Export for Tests**: Do not export module internals solely for unit test access. Test behavior through the composable's public interface.
 
 ---
