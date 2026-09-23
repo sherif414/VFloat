@@ -7,7 +7,7 @@ description: Enforce Behavior-Driven Development (BDD) testing standards, 3-leve
 
 This skill defines the testing standards and Behavior-Driven Development (BDD) methodology for the VFloat codebase. All VFloat tests run natively in **Vitest Browser Mode** (Playwright / Chromium). Tests must prioritize strict behavioral specifications, zero DOM/reactivity leakage, minimal file structure, and high-fidelity interaction modeling without coupling to internal implementation details.
 
-The reference BDD architectural specification is defined in [RFC 0005: Behavior-Driven Development (BDD) Testing Standards & Migration Framework](file:///C:/projects/VFloat.worktrees/tests_migration_to_bdd/RFC/0005-bdd-testing-standards.md).
+The original BDD architectural specification was `RFC/0005-bdd-testing-standards.md`, which was removed from the repository in commit `6f7f07e`; recover it with `git show 6f7f07e^:RFC/0005-bdd-testing-standards.md`.
 
 ## When to Use This Skill
 

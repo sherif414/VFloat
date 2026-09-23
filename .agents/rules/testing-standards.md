@@ -7,7 +7,7 @@ description: when writing, reviewing, refactoring, or running tests
 
 All test suites in VFloat **MUST** adhere to Behavior-Driven Development (BDD) testing standards. This rule applies to all test files (`*.test.ts`) across all packages.
 
-The single source of truth for the testing architecture is [RFC 0005: Behavior-Driven Development (BDD) Testing Standards & Migration Framework](file:///C:/projects/VFloat.worktrees/tests_migration_to_bdd/RFC/0005-bdd-testing-standards.md) and [.agents/skills/vfloat-test-standards/SKILL.md](file:///C:/projects/VFloat.worktrees/tests_migration_to_bdd/.agents/skills/vfloat-test-standards/SKILL.md).
+The single source of truth for the testing standards is [.agents/skills/vfloat-test-standards/SKILL.md](../skills/vfloat-test-standards/SKILL.md). Historical note: `RFC/0005-bdd-testing-standards.md` was removed from the repository in commit `6f7f07e`; recover it with `git show 6f7f07e^:RFC/0005-bdd-testing-standards.md`.
 
 ---
 
