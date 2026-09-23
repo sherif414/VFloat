@@ -118,15 +118,24 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
   });
 }
 
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
+// --- Listener Multiplexing ---------------------------------------------------
 
+/**
+ * Single sync entry point for every document listener this feature owns:
+ * dismissal listeners, drag gesture trackers, and the iframe blur watcher.
+ */
 function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManager): void {
+  syncEventListeners(doc, manager);
+  syncDragTracking(doc, manager);
+  syncBlurListener(doc, manager);
+}
+
+/**
+ * Diffs needed (event, phase) pairs against attached listeners. One listener per
+ * pair serves every entry that shares it, so N overlays never mean N listeners.
+ */
+function syncEventListeners(doc: Document, manager: DocumentOutsideClickManager): void {
   const neededEvents = new Map<string, { eventName: string; capture: boolean }>();
-  const needsDragTracking = manager.stack.some(
-    (entry) => entry.getOptions().event === "click" && entry.getOptions().ignoreDrag,
-  );
 
   for (const entry of manager.stack) {
     const eventName = entry.getOptions().event;
@@ -147,69 +156,14 @@ function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManag
     doc.addEventListener(eventName, listener, capture);
     manager.listeners.set(key, [{ eventName, listener }]);
   }
-
-  if (needsDragTracking && !manager.dragListenersAttached) {
-    manager.onMouseDown = (event) => {
-      if (event.button !== 0) return;
-      const target = getEventTarget(event);
-      if (!isNode(target)) return;
-      const win = getWindow(target) ?? doc.defaultView;
-      clearDragTimeout(manager, win);
-      manager.dragStartedEntries.clear();
-      manager.dragEndedEntries.clear();
-      for (const entry of manager.stack) {
-        if (entry.node.contains(target)) manager.dragStartedEntries.add(entry.node.id);
-      }
-    };
-    manager.onMouseUp = (event) => {
-      if (event.button !== 0) return;
-      const target = getEventTarget(event);
-      if (!isNode(target)) return;
-      const win = getWindow(target) ?? doc.defaultView;
-      manager.dragEndedEntries.clear();
-      for (const entry of manager.stack) {
-        if (entry.node.contains(target)) manager.dragEndedEntries.add(entry.node.id);
-      }
-      clearDragTimeout(manager, win);
-      manager.dragResetTimeoutId = win?.setTimeout(() => {
-        manager.dragStartedEntries.clear();
-        manager.dragEndedEntries.clear();
-        manager.dragResetTimeoutId = undefined;
-      }, 0);
-    };
-    doc.addEventListener("mousedown", manager.onMouseDown, true);
-    doc.addEventListener("mouseup", manager.onMouseUp, true);
-    manager.dragListenersAttached = true;
-  } else if (!needsDragTracking && manager.dragListenersAttached) {
-    if (manager.onMouseDown) doc.removeEventListener("mousedown", manager.onMouseDown, true);
-    if (manager.onMouseUp) doc.removeEventListener("mouseup", manager.onMouseUp, true);
-    clearDragTimeout(manager, doc.defaultView);
-    manager.dragStartedEntries.clear();
-    manager.dragEndedEntries.clear();
-    manager.onMouseDown = null;
-    manager.onMouseUp = null;
-    manager.dragListenersAttached = false;
-  }
-
-  if (manager.stack.length > 0 && !manager.onBlur && doc.defaultView) {
-    manager.onBlur = () => {
-      clearBlurTimeout(manager, doc.defaultView);
-      manager.blurTimeoutId = doc.defaultView?.setTimeout(() => {
-        manager.blurTimeoutId = undefined;
-        const target = doc.activeElement;
-        if (isHTMLElement(target) && target.tagName === "IFRAME") {
-          dispatchIframeBlur(doc, manager, target);
-        }
-      }, 0);
-    };
-    doc.defaultView.addEventListener("blur", manager.onBlur);
-  } else if (manager.stack.length === 0 && manager.onBlur && doc.defaultView) {
-    doc.defaultView.removeEventListener("blur", manager.onBlur);
-    manager.onBlur = null;
-    clearBlurTimeout(manager, doc.defaultView);
-  }
 }
 
+// --- Pointer Dismissal Dispatch ----------------------------------------------
+
+/**
+ * Pointer entry point: validates the physical event, then runs the shared
+ * candidate path for the listener's event name and phase.
+ */
 function dispatchOutsideClick(
   doc: Document,
   event: MouseEvent,
@@ -224,20 +178,11 @@ function dispatchOutsideClick(
   dispatchCandidates(manager, event, target, eventName, capture, { reason: "pointer", target });
 }
 
-function dispatchIframeBlur(
-  doc: Document,
-  manager: DocumentOutsideClickManager,
-  iframe: HTMLElement,
-): void {
-  const win = getWindow(iframe) ?? doc.defaultView;
-  // Use the iframe's realm so consumers can safely test against its MouseEvent constructor.
-  const event = new (win?.MouseEvent ?? MouseEvent)("click", { bubbles: false, cancelable: true });
-  dispatchCandidates(manager, event, iframe, "click", null, {
-    reason: "iframe-blur",
-    target: iframe,
-  });
-}
-
+/**
+ * Runs the ordered gate chain over the dispatch snapshot: scrollbar, family
+ * containment, drag suppression, consumer predicate, leaf-first deferral, then
+ * dismissal through the callback or the default close.
+ */
 function dispatchCandidates(
   manager: DocumentOutsideClickManager,
   event: MouseEvent,
@@ -309,10 +254,114 @@ function dispatchCandidates(
   }
 }
 
+// --- Drag Gesture Guard ------------------------------------------------------
+
+/**
+ * Attaches the pointer trackers only while some entry dismisses on `click` with
+ * drag suppression, and detaches them with their timers and gesture marks when
+ * the last such entry leaves.
+ */
+function syncDragTracking(doc: Document, manager: DocumentOutsideClickManager): void {
+  const needsDragTracking = manager.stack.some(
+    (entry) => entry.getOptions().event === "click" && entry.getOptions().ignoreDrag,
+  );
+  if (needsDragTracking === manager.dragListenersAttached) return;
+
+  if (needsDragTracking) {
+    manager.onMouseDown = (event) => recordDragStart(doc, manager, event);
+    manager.onMouseUp = (event) => recordDragEnd(doc, manager, event);
+    doc.addEventListener("mousedown", manager.onMouseDown, true);
+    doc.addEventListener("mouseup", manager.onMouseUp, true);
+  } else {
+    if (manager.onMouseDown) doc.removeEventListener("mousedown", manager.onMouseDown, true);
+    if (manager.onMouseUp) doc.removeEventListener("mouseup", manager.onMouseUp, true);
+    clearDragTimeout(manager, doc.defaultView);
+    manager.dragStartedEntries.clear();
+    manager.dragEndedEntries.clear();
+    manager.onMouseDown = null;
+    manager.onMouseUp = null;
+  }
+
+  manager.dragListenersAttached = needsDragTracking;
+}
+
+/**
+ * Marks the node families the gesture started inside, and cancels any pending
+ * reset so a new gesture always begins from a clean slate.
+ */
+function recordDragStart(
+  doc: Document,
+  manager: DocumentOutsideClickManager,
+  event: MouseEvent,
+): void {
+  if (event.button !== 0) return;
+  const target = getEventTarget(event);
+  if (!isNode(target)) return;
+  clearDragTimeout(manager, getWindow(target) ?? doc.defaultView);
+  manager.dragStartedEntries.clear();
+  manager.dragEndedEntries.clear();
+  for (const entry of manager.stack) {
+    if (entry.node.contains(target)) manager.dragStartedEntries.add(entry.node.id);
+  }
+}
+
+/**
+ * Marks where the gesture ended, then schedules the reset that clears both marks
+ * once the gesture's own click has been evaluated.
+ */
+function recordDragEnd(
+  doc: Document,
+  manager: DocumentOutsideClickManager,
+  event: MouseEvent,
+): void {
+  if (event.button !== 0) return;
+  const target = getEventTarget(event);
+  if (!isNode(target)) return;
+  const win = getWindow(target) ?? doc.defaultView;
+  manager.dragEndedEntries.clear();
+  for (const entry of manager.stack) {
+    if (entry.node.contains(target)) manager.dragEndedEntries.add(entry.node.id);
+  }
+  clearDragTimeout(manager, win);
+  manager.dragResetTimeoutId = win?.setTimeout(() => {
+    manager.dragStartedEntries.clear();
+    manager.dragEndedEntries.clear();
+    manager.dragResetTimeoutId = undefined;
+  }, 0);
+}
+
 function clearDragTimeout(manager: DocumentOutsideClickManager, win: Window | null): void {
   if (manager.dragResetTimeoutId !== undefined) {
     win?.clearTimeout(manager.dragResetTimeoutId);
     manager.dragResetTimeoutId = undefined;
+  }
+}
+
+// --- Iframe Blur Dismissal ---------------------------------------------------
+
+/**
+ * Watches window blur while any entry is registered. The activeElement check is
+ * deferred one task so focus has settled onto the iframe element by the time it
+ * runs.
+ */
+function syncBlurListener(doc: Document, manager: DocumentOutsideClickManager): void {
+  const win = doc.defaultView;
+  if (manager.stack.length > 0 && !manager.onBlur && win) {
+    manager.onBlur = () => {
+      clearBlurTimeout(manager, win);
+      manager.blurTimeoutId = win.setTimeout(() => {
+        manager.blurTimeoutId = undefined;
+        const target = doc.activeElement;
+        if (isHTMLElement(target) && target.tagName === "IFRAME") {
+          dispatchIframeBlur(doc, manager, target);
+        }
+      }, 0);
+    };
+    win.addEventListener("blur", manager.onBlur);
+  } else if (manager.stack.length === 0 && manager.onBlur && win) {
+    win.removeEventListener("blur", manager.onBlur);
+    manager.onBlur = null;
+    clearBlurTimeout(manager, win);
   }
 }
 
@@ -321,6 +370,23 @@ function clearBlurTimeout(manager: DocumentOutsideClickManager, win: Window | nu
     win?.clearTimeout(manager.blurTimeoutId);
     manager.blurTimeoutId = undefined;
   }
+}
+
+/**
+ * Runs the iframe-blur reason through the same candidate path as pointer input.
+ */
+function dispatchIframeBlur(
+  doc: Document,
+  manager: DocumentOutsideClickManager,
+  iframe: HTMLElement,
+): void {
+  const win = getWindow(iframe) ?? doc.defaultView;
+  // Use the iframe's realm so consumers can safely test against its MouseEvent constructor.
+  const event = new (win?.MouseEvent ?? MouseEvent)("click", { bubbles: false, cancelable: true });
+  dispatchCandidates(manager, event, iframe, "click", null, {
+    reason: "iframe-blur",
+    target: iframe,
+  });
 }
 
 //=======================================================================================
