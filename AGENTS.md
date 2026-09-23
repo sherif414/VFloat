@@ -9,6 +9,12 @@
 - All commit messages **MUST** adhere to the Conventional Commits specification defined in [.agents/rules/commit-message.md](.agents/rules/commit-message.md).
 - Follow [.agents/rules/commit-message.md](.agents/rules/commit-message.md) as the single source of truth for commit types, scopes, SemVer mapping, and the distinction between user-facing library features (`feat`/`fix`) and maintainer/AI tooling (`chore`).
 
+## Testing Standards
+
+- All tests **MUST** adhere to the Behavior-Driven Development (BDD) standards defined in [.agents/rules/testing-standards.md](.agents/rules/testing-standards.md) and [.agents/skills/vfloat-test-standards/SKILL.md](.agents/skills/vfloat-test-standards/SKILL.md).
+- Follow the 3-level hierarchy: `Feature:` -> `Scenario:` -> `Given/When/Then`.
+- Assert user-facing accessibility invariants (`aria-expanded`, `expect.element(el).toHaveFocus()`, visibility); never assert private reactive internals or inspect raw DOM activeElement pointers.
+
 ## Explicit Communication & User Agency
 
 - **No Silent Changes**: Never make silent, unrequested modifications to files, configurations, or working state (e.g., altering user-authored configs during a commit request, refactoring code outside the prompt scope).
@@ -116,6 +122,7 @@ This project uses `pnpm` as its package manager alongside **OXC** (`oxlint` and 
 
 - [ ] Run `pnpm install` after pulling remote changes and before getting started.
 - [ ] Always write targeted regression unit tests whenever fixing a bug, handling an edge case, or addressing an ordering/lifecycle dependency.
+- [ ] Enforce BDD testing standards for all new and modified test files: use the 3-level hierarchy (`Feature:` -> `Scenario:` -> `Given/When/Then`), prioritize user-facing accessibility invariants, and prevent implementation coupling.
 - [ ] Add concise code comments explaining _why_ something exists whenever handling edge cases, non-obvious control flow, tradeoffs, or coordination between moving parts.
 - [ ] Ensure full SSR & cross-realm (iframe) safety: resolve documents via `element.ownerDocument ?? getDocument()` and windows via `ownerDocument.defaultView ?? getWindow()`; execute timers (`setTimeout`, `clearTimeout`) on `ownerWindow`; never access bare `window`/`document` or un-guarded `instanceof Element` / `instanceof HTMLElement` in module/setup scopes; use `useId()` for deterministic IDs; prevent singleton memory retention in SSR.
 - [ ] Scope-aware validation:
