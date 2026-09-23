@@ -56,7 +56,7 @@ The header is the first line of the commit message and is **REQUIRED**. It **MUS
 
 Automated changelog generators and release tools (such as `changelogen` or `semantic-release`) parse `feat` and `fix` commits to generate public release notes and determine Semantic Version bumps.
 
-- **Library Features (`feat`)**: Changes that add new capabilities to the published npm package consumed by end-users (e.g., `feat(hover): add rest timeout option`, `feat(focus-manager): add trap focus support`).
+- **Library Features (`feat`)**: Changes that add new capabilities to the published npm package consumed by end-users (e.g., `feat(<module>): add rest timeout option`).
 - **Breaking API Changes & Removals (`feat!:` / `fix!:`)**: Any change to the public API surface—including redesigning composable signatures, simplifying parameters, or removing options—**MUST** use `feat!:` (or `fix!:` if correcting an erroneous API design). Because release tooling (`changelogen`) only includes user-facing types and excludes `refactor`, breaking changes tagged as `refactor!:` will be omitted from the changelog. `refactor` **MUST ONLY** be used for internal implementation changes that are 100% backwards compatible.
 - **AI Agent Tooling / Skills / Rules (`chore`)**: Changes to `.agents/`, `.gemini/`, skills, agent prompts, rules, or subagents are internal maintainer tooling and **MUST NEVER** use `feat` or `fix`. Always use `chore(skills)`, `chore(agents)`, or `chore(rules)` (e.g., `chore(skills): add diagnose skill`, `chore(agents): update issue workflow`).
 - **Maintainer Scripts & Release Tooling (`chore` / `ci` / `build`)**: Scripts in `scripts/`, release tools, docs deployment helpers, etc. **MUST NOT** use `feat` (e.g., use `chore(release): automate gh release step`).
@@ -64,12 +64,32 @@ Automated changelog generators and release tools (such as `changelogen` or `sema
 ### 4.2. Scope
 
 - A `scope` **MAY** be provided after a type.
-- If provided, the scope **MUST** be lowercase kebab-case describing the target module or subsystem.
-- **Canonical Library Scopes (`src/`)**:
-  - `floating-context`, `hover`, `click`, `focus-trap`, `list-navigation`, `arrow`, `dismiss`, `client-point`, `position`, `types`
-- **Canonical Tooling / Maintainer Scopes**:
-  - `skills`, `agents`, `rules`, `release`, `size`, `ci`, `docs`, `deps`, `lint`, `test`, `repo`
-- **Example:** `feat(hover):`, `fix(floating-context):`, `chore(skills):`, `ci(release):`
+- If provided, the scope **MUST** be lowercase kebab-case and **MUST be derived from the artifact the commit actually touches** — never recalled from a hardcoded list, because such a list silently rots the moment a module is added, renamed, or deleted.
+- **Derive the scope from the path:**
+
+| Changed path                                            | Scope                                                                       |
+| ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `packages/vue/src/composables/<module>/**`              | `<module>` — the directory name as it exists on disk                        |
+| `packages/vue/src/shared/**`                            | `shared`                                                                    |
+| `packages/vue/src/types.ts`                             | `types`                                                                     |
+| `packages/vue/src/index.ts` and public entrypoint exports | the module scope the export belongs to                                    |
+| `packages/vue/src/**` spanning several modules          | `vue`                                                                       |
+| Test files across the package                           | `test`                                                                      |
+| `playground/**`                                         | `playground`                                                                |
+| `docs/**`                                               | `docs`; the API reference specifically → `api`                              |
+| `RFC/**`, `ADR/**`, `plan/**`                            | `rfc`, `adr`, `plan`                                                        |
+| `.agents/skills/**`                                     | `skills`                                                                    |
+| `.agents/rules/**`                                      | `rules`                                                                     |
+| Other `.agents/**` (prompts, subagents, workflows)      | `agents`                                                                    |
+| `scripts/**`                                            | `release`, or the area the script serves                                    |
+| `package.json`, `vite.config.ts`, `tsconfig*.json`, lockfile | `deps` for dependency updates, `build` for build configuration         |
+| `.github/**`                                            | `ci`                                                                        |
+| Repo root, repo-wide tooling, workspace layout          | `repo`                                                                      |
+
+- **Verify the name instead of remembering it:** `git ls-tree --name-only HEAD:packages/vue/src/composables` prints the current module scopes. Use the same shape for any other directory (`git ls-tree --name-only HEAD:<dir>`).
+- The table lists **areas, not an allowlist**: a directory that appears today is a valid scope today, even if it did not exist when this rule was written.
+- Tooling, skill, and rule changes are maintainer changes and **MUST** use `chore` regardless of scope (§4.1.1).
+- **Take names from the repository, not from this page:** `git log --oneline -20` for real message shapes, `git ls-tree --name-only HEAD:<dir>` for real scope names. Any name, path, or SHA printed in this document illustrates **shape** only and is never a claim about what currently exists.
 
 ### 4.3. Description
 
@@ -163,7 +183,7 @@ revert: let us never again speak of the noodle incident
 
 This reverts the feature that caused a data corruption bug in production environments. We will re-evaluate the approach in a future sprint.
 
-Refs: 676104e, a215868
+Refs: <sha-of-reverted-commit>
 ```
 
 ---
@@ -183,6 +203,8 @@ If a commit is generated that does not meet this specification (e.g., using a ty
 ---
 
 ## 11. Full Examples
+
+Scopes, module names, and SHAs below illustrate message **shape** only — they are not a claim about the current codebase. Resolve real scopes per §4.2 (`git ls-tree`, `git log`) and real SHAs with `git log` / `git rev-parse`.
 
 ### Example 1: Simple Library Fix
 
@@ -211,9 +233,9 @@ floating context refs.
 ### Example 4: Commit with Body and Footers (including Breaking Change)
 
 ```
-feat(focus-manager)!: centralize focus management with native engine
+feat(<module>)!: centralize <capability> handling behind one composable
 
-BREAKING CHANGE: Standalone trap focus options have been replaced by the unified useFocusManager composable API.
+BREAKING CHANGE: Standalone <capability> options have been replaced by the unified composable API.
 ```
 
 ### Example 5: Maintainer / AI Agent Skill or Workflow (Never use `feat`)
