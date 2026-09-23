@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
-import { userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import {
   defineComponent,
   h,
@@ -10,8 +10,8 @@ import {
   type Ref,
   useTemplateRef,
 } from "vue";
-import { type FloatingNode, useFloatingNode } from "@/composables/floating-node";
-import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
+import { useFloatingNode } from "@/composables/floating-node";
+import { getTestEl } from "@/test-utils";
 import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 
 const OUTSIDE_STYLE = {
@@ -22,15 +22,19 @@ const OUTSIDE_STYLE = {
   zIndex: "1",
 } as const;
 
-function createTestComponent(options: UseOutsideClickOptions = {}) {
-  const openRef = ref(true);
-  let node!: FloatingNode;
+interface FixtureConfig {
+  defaultOpen?: boolean;
+  stopOutsideClickPropagation?: boolean;
+}
+
+function createTestComponent(options: UseOutsideClickOptions = {}, config: FixtureConfig = {}) {
+  const openRef = ref(config.defaultOpen ?? true);
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
     const floatingEl = useTemplateRef<HTMLElement>("floating");
 
-    node = useFloatingNode({
+    const node = useFloatingNode({
       anchorEl,
       floatingEl,
       open: openRef,
@@ -39,12 +43,60 @@ function createTestComponent(options: UseOutsideClickOptions = {}) {
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "anchor", "data-testid": "anchor" }, "Trigger"),
-        h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
-        h("div", { "data-testid": "outside", style: { ...OUTSIDE_STYLE, left: "0" } }, "Outside"),
+        h(
+          "button",
+          {
+            ref: "anchor",
+            type: "button",
+            "data-testid": "anchor",
+            "aria-expanded": String(openRef.value),
+          },
+          "Trigger",
+        ),
+        openRef.value
+          ? h("div", { ref: "floating", "data-testid": "floating" }, [
+              "Floating",
+              h(
+                "button",
+                {
+                  type: "button",
+                  "data-testid": "remove-inside",
+                  onClick: (event: MouseEvent) =>
+                    (event.currentTarget as HTMLButtonElement).remove(),
+                },
+                "Remove me",
+              ),
+              h(
+                "button",
+                {
+                  type: "button",
+                  draggable: true,
+                  "data-testid": "drag-handle",
+                },
+                "Drag",
+              ),
+              h("iframe", { "data-testid": "inside-iframe", title: "Inside frame" }),
+            ])
+          : null,
         h(
           "div",
-          { "data-testid": "ignored", style: { ...OUTSIDE_STYLE, left: "120px" } },
+          {
+            "data-testid": "outside",
+            style: { ...OUTSIDE_STYLE, left: "0" },
+            draggable: true,
+            onClick: config.stopOutsideClickPropagation
+              ? (event: MouseEvent) => event.stopPropagation()
+              : undefined,
+          },
+          "Outside",
+        ),
+        h(
+          "div",
+          {
+            id: "outside-click-ignore-target",
+            "data-testid": "ignored",
+            style: { ...OUTSIDE_STYLE, left: "120px" },
+          },
           "Ignored",
         ),
         h(
@@ -55,17 +107,16 @@ function createTestComponent(options: UseOutsideClickOptions = {}) {
           },
           [h("div", { style: { height: "300px" } }, "Scroll content")],
         ),
+        h("iframe", { "data-testid": "outside-iframe", title: "Outside frame" }),
       ]);
   });
 
-  return { Component, getNode: () => node, openRef };
+  return { Component };
 }
 
 function createTreeComponent(target: "parent" | "child") {
   const parentOpen = ref(true);
   const childOpen = ref(true);
-  let parentNode!: ReturnType<typeof useFloatingNode>;
-  let childNode!: ReturnType<typeof useFloatingNode>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
@@ -73,12 +124,12 @@ function createTreeComponent(target: "parent" | "child") {
     const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
 
-    parentNode = useFloatingNode({
+    const parentNode = useFloatingNode({
       anchorEl,
       floatingEl,
       open: parentOpen,
     });
-    childNode = useFloatingNode({
+    const childNode = useFloatingNode({
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
@@ -89,41 +140,63 @@ function createTreeComponent(target: "parent" | "child") {
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "anchor", "data-testid": "anchor" }, "Trigger"),
-        h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
-        h("button", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child Trigger"),
         h(
-          "div",
+          "button",
           {
-            ref: "child-floating",
-            "data-testid": "child-floating",
-            style: { width: "100px", height: "100px" },
+            ref: "anchor",
+            type: "button",
+            "data-testid": "anchor",
+            "aria-expanded": String(parentOpen.value),
           },
-          "Child Floating",
+          "Trigger",
         ),
+        parentOpen.value
+          ? h("div", { ref: "floating", "data-testid": "floating" }, "Floating")
+          : null,
+        h(
+          "button",
+          {
+            ref: "child-anchor",
+            type: "button",
+            "data-testid": "child-anchor",
+            "aria-expanded": String(childOpen.value),
+          },
+          "Child Trigger",
+        ),
+        childOpen.value
+          ? h(
+              "div",
+              {
+                ref: "child-floating",
+                "data-testid": "child-floating",
+                style: { width: "100px", height: "100px" },
+              },
+              "Child Floating",
+            )
+          : null,
       ]);
   });
 
-  return {
-    Component,
-    getParent: () => parentNode,
-    getChild: () => childNode,
-    parentOpen,
-    childOpen,
-  };
+  return { Component };
 }
 
-async function renderOutsideClick(options: UseOutsideClickOptions = {}) {
-  const fixture = createTestComponent(options);
+async function renderOutsideClick(
+  options: UseOutsideClickOptions = {},
+  config: FixtureConfig = {},
+) {
+  const fixture = createTestComponent(options, config);
   await render(fixture.Component);
   await nextTick();
   return {
-    anchorEl: getTestEl("anchor"),
-    floatingEl: getTestEl("floating"),
-    outsideEl: getTestEl("outside"),
-    ignoredEl: getTestEl("ignored"),
-    node: fixture.getNode(),
-    openRef: fixture.openRef,
+    anchorEl: page.getByTestId("anchor"),
+    floatingEl: page.getByTestId("floating"),
+    outsideEl: page.getByTestId("outside"),
+    ignoredEl: page.getByTestId("ignored"),
+    scrollableEl: page.getByTestId("outside-scrollable"),
+    removeInsideEl: page.getByTestId("remove-inside"),
+    dragHandleEl: page.getByTestId("drag-handle"),
+    outsideIframeEl: page.getByTestId("outside-iframe"),
+    insideIframeEl: page.getByTestId("inside-iframe"),
   };
 }
 
@@ -132,14 +205,10 @@ async function renderTreeOutsideClick(target: "parent" | "child") {
   await render(fixture.Component);
   await nextTick();
   return {
-    anchorEl: getTestEl("anchor"),
-    floatingEl: getTestEl("floating"),
-    childAnchorEl: getTestEl("child-anchor"),
-    childFloatingEl: getTestEl("child-floating"),
-    parentNode: fixture.getParent(),
-    childNode: fixture.getChild(),
-    parentOpen: fixture.parentOpen,
-    childOpen: fixture.childOpen,
+    anchorEl: page.getByTestId("anchor"),
+    floatingEl: page.getByTestId("floating"),
+    childAnchorEl: page.getByTestId("child-anchor"),
+    childFloatingEl: page.getByTestId("child-floating"),
   };
 }
 
@@ -156,8 +225,6 @@ function createFullTreeComponent(
 ) {
   const parentOpen = ref(true);
   const childOpen = ref(true);
-  let parentNode!: ReturnType<typeof useFloatingNode>;
-  let childNode!: ReturnType<typeof useFloatingNode>;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
@@ -165,12 +232,12 @@ function createFullTreeComponent(
     const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
     const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
 
-    parentNode = useFloatingNode({
+    const parentNode = useFloatingNode({
       anchorEl,
       floatingEl,
       open: parentOpen,
     });
-    childNode = useFloatingNode({
+    const childNode = useFloatingNode({
       anchorEl: childAnchorEl,
       floatingEl: childFloatingEl,
       open: childOpen,
@@ -191,29 +258,45 @@ function createFullTreeComponent(
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "anchor", "data-testid": "anchor" }, "Trigger"),
-        h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
-        h("button", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child Trigger"),
         h(
-          "div",
+          "button",
           {
-            ref: "child-floating",
-            "data-testid": "child-floating",
-            style: { width: "100px", height: "100px" },
+            ref: "anchor",
+            type: "button",
+            "data-testid": "anchor",
+            "aria-expanded": String(parentOpen.value),
           },
-          "Child Floating",
+          "Trigger",
         ),
+        parentOpen.value
+          ? h("div", { ref: "floating", "data-testid": "floating" }, "Floating")
+          : null,
+        h(
+          "button",
+          {
+            ref: "child-anchor",
+            type: "button",
+            "data-testid": "child-anchor",
+            "aria-expanded": String(childOpen.value),
+          },
+          "Child Trigger",
+        ),
+        childOpen.value
+          ? h(
+              "div",
+              {
+                ref: "child-floating",
+                "data-testid": "child-floating",
+                style: { width: "100px", height: "100px" },
+              },
+              "Child Floating",
+            )
+          : null,
         h("div", { "data-testid": "outside", style: { ...OUTSIDE_STYLE, left: "0" } }, "Outside"),
       ]);
   });
 
-  return {
-    Component,
-    getParent: () => parentNode,
-    getChild: () => childNode,
-    parentOpen,
-    childOpen,
-  };
+  return { Component };
 }
 
 async function renderFullTreeOutsideClick(
@@ -231,15 +314,11 @@ async function renderFullTreeOutsideClick(
   await render(fixture.Component);
   await nextTick();
   return {
-    anchorEl: getTestEl("anchor"),
-    floatingEl: getTestEl("floating"),
-    childAnchorEl: getTestEl("child-anchor"),
-    childFloatingEl: getTestEl("child-floating"),
-    outsideEl: getTestEl("outside"),
-    parentNode: fixture.getParent(),
-    childNode: fixture.getChild(),
-    parentOpen: fixture.parentOpen,
-    childOpen: fixture.childOpen,
+    anchorEl: page.getByTestId("anchor"),
+    floatingEl: page.getByTestId("floating"),
+    childAnchorEl: page.getByTestId("child-anchor"),
+    childFloatingEl: page.getByTestId("child-floating"),
+    outsideEl: page.getByTestId("outside"),
   };
 }
 
@@ -248,8 +327,6 @@ function createTwoOverlaysComponent(
 ) {
   const openA = ref(true);
   const openB = ref(true);
-  let nodeA!: ReturnType<typeof useFloatingNode>;
-  let nodeB!: ReturnType<typeof useFloatingNode>;
 
   const Component = defineComponent(() => {
     const anchorA = useTemplateRef<HTMLElement>("anchor-a");
@@ -257,23 +334,45 @@ function createTwoOverlaysComponent(
     const anchorB = useTemplateRef<HTMLElement>("anchor-b");
     const floatingB = useTemplateRef<HTMLElement>("floating-b");
 
-    nodeA = useFloatingNode({ anchorEl: anchorA, floatingEl: floatingA, open: openA });
-    nodeB = useFloatingNode({ anchorEl: anchorB, floatingEl: floatingB, open: openB });
+    const nodeA = useFloatingNode({ anchorEl: anchorA, floatingEl: floatingA, open: openA });
+    const nodeB = useFloatingNode({ anchorEl: anchorB, floatingEl: floatingB, open: openB });
 
     useOutsideClick(nodeA, { event: "click", capture: options.overlayACapture ?? true });
     useOutsideClick(nodeB, { event: "click", capture: options.overlayBCapture ?? false });
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "anchor-a", "data-testid": "anchor-a" }, "Trigger A"),
-        h("div", { ref: "floating-a", "data-testid": "floating-a" }, "Floating A"),
-        h("button", { ref: "anchor-b", "data-testid": "anchor-b" }, "Trigger B"),
-        h("div", { ref: "floating-b", "data-testid": "floating-b" }, "Floating B"),
+        h(
+          "button",
+          {
+            ref: "anchor-a",
+            type: "button",
+            "data-testid": "anchor-a",
+            "aria-expanded": String(openA.value),
+          },
+          "Trigger A",
+        ),
+        openA.value
+          ? h("div", { ref: "floating-a", "data-testid": "floating-a" }, "Floating A")
+          : null,
+        h(
+          "button",
+          {
+            ref: "anchor-b",
+            type: "button",
+            "data-testid": "anchor-b",
+            "aria-expanded": String(openB.value),
+          },
+          "Trigger B",
+        ),
+        openB.value
+          ? h("div", { ref: "floating-b", "data-testid": "floating-b" }, "Floating B")
+          : null,
         h("div", { "data-testid": "outside", style: { ...OUTSIDE_STYLE, left: "0" } }, "Outside"),
       ]);
   });
 
-  return { Component, openA, openB, getNodeA: () => nodeA, getNodeB: () => nodeB };
+  return { Component };
 }
 
 async function renderTwoOverlaysOutsideClick(
@@ -283,11 +382,11 @@ async function renderTwoOverlaysOutsideClick(
   await render(fixture.Component);
   await nextTick();
   return {
-    outsideEl: getTestEl("outside"),
-    openA: fixture.openA,
-    openB: fixture.openB,
-    nodeA: fixture.getNodeA(),
-    nodeB: fixture.getNodeB(),
+    outsideEl: page.getByTestId("outside"),
+    anchorAEl: page.getByTestId("anchor-a"),
+    floatingAEl: page.getByTestId("floating-a"),
+    anchorBEl: page.getByTestId("anchor-b"),
+    floatingBEl: page.getByTestId("floating-b"),
   };
 }
 
@@ -300,33 +399,39 @@ describe("Feature: useOutsideClick", () => {
   describe("Scenario: Basic outside dismissal and target filtering", () => {
     it("Given an open floating element, When an outside element is clicked, Then closes the floating element", async () => {
       // Given
-      const { outsideEl, node } = await renderOutsideClick({ event: "click" });
-      expect(node.open.value).toBe(true);
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({ event: "click" });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given event option is 'pointerdown', When pointerdown occurs on an outside element, Then closes the floating element", async () => {
       // Given
-      const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
-      expect(node.open.value).toBe(true);
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
+        event: "pointerdown",
+      });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When
-      outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
+      await userEvent.click(outsideEl);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given enabled is false, When an outside element is clicked, Then preserves open state", async () => {
       // Given
-      const { outsideEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
         enabled: false,
         event: "click",
       });
@@ -336,33 +441,37 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given an open floating element, When clicking the anchor or floating panel, Then preserves open state", async () => {
       // Given
-      const { anchorEl, floatingEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl } = await renderOutsideClick({
         event: "click",
       });
 
       // When: Click anchor
       await userEvent.click(anchorEl);
       await nextTick();
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When: Click floating panel
       await userEvent.click(floatingEl);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given a shouldIgnore predicate, When clicking an ignored element, Then ignores click and preserves open state", async () => {
       // Given
-      const { outsideEl, ignoredEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, outsideEl, ignoredEl } = await renderOutsideClick({
         event: "click",
-        shouldIgnore: (_event, target) => target === ignoredEl,
+        shouldIgnore: (_event, target) =>
+          target !== null && "id" in target && target.id === "outside-click-ignore-target",
       });
 
       // When: Click ignored element
@@ -370,20 +479,22 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When: Click non-ignored outside element
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given a custom onOutsideClick callback, When an outside element is clicked, Then invokes the callback without auto-closing", async () => {
       // Given
       const onOutsideClick = vi.fn();
-      const { outsideEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
         event: "click",
         onOutsideClick,
       });
@@ -394,19 +505,19 @@ describe("Feature: useOutsideClick", () => {
 
       // Then
       expect(onOutsideClick).toHaveBeenCalledTimes(1);
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given a floating element that is already closed, When an outside element is clicked, Then ignores invocation", async () => {
       // Given
       const onOutsideClick = vi.fn();
-      const { outsideEl, node } = await renderOutsideClick({
-        event: "click",
-        onOutsideClick,
-      });
-
-      node.open.value = false;
-      await nextTick();
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(
+        { event: "click", onOutsideClick },
+        { defaultOpen: false },
+      );
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
 
       // When
       await userEvent.click(outsideEl);
@@ -414,40 +525,41 @@ describe("Feature: useOutsideClick", () => {
 
       // Then
       expect(onOutsideClick).not.toHaveBeenCalled();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given secondary or auxiliary mouse buttons, When right or middle clicked outside, Then preserves open state", async () => {
       // Given
-      const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
+        event: "pointerdown",
+      });
 
-      // When: Right-click (button 2)
-      outsideEl.dispatchEvent(
-        new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 2 }),
-      );
+      // When: Right-click
+      await userEvent.click(outsideEl, { button: "right" });
       await nextTick();
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
-      // When: Middle-click (button 1)
-      outsideEl.dispatchEvent(
-        new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 1 }),
-      );
+      // When: Middle-click
+      await userEvent.click(outsideEl, { button: "middle" });
       await nextTick();
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
-      // When: Primary click (button 0)
-      outsideEl.dispatchEvent(
-        new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 }),
-      );
+      // When: Primary click
+      await userEvent.click(outsideEl);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given enabled is a reactive ref, When enabled toggles from false to true, Then synchronizes outside click behavior", async () => {
       // Given
       const enabled = ref(false);
-      const { outsideEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
         enabled,
         event: "click",
       });
@@ -455,7 +567,8 @@ describe("Feature: useOutsideClick", () => {
       // When clicked while disabled
       await userEvent.click(outsideEl);
       await nextTick();
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When enabled becomes true
       enabled.value = true;
@@ -465,163 +578,114 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
   });
 
   describe("Scenario: Drag gesture handling and boundary tracking", () => {
-    it("Given ignoreDrag is true, When mousedown fires inside floating element and click fires outside, Then preserves open state", async () => {
+    it("Given ignoreDrag is true, When a drag starts inside and releases outside, Then preserves open state", async () => {
       // Given
-      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
         event: "click",
         ignoreDrag: true,
       });
 
-      // When: Mouse down inside followed by click outside without intermediate mouseup
-      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-      outsideEl.dispatchEvent(makeMouseEvent("click"));
-      await nextTick();
+      // When
+      await userEvent.dragAndDrop(dragHandleEl, outsideEl);
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
-    it("Given ignoreDrag is true, When drag starts inside floating element and releases outside, Then preserves open state", async () => {
+    it("Given ignoreDrag is false, When a drag starts inside and releases outside, Then closes floating element", async () => {
       // Given
-      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
+        event: "click",
+        ignoreDrag: false,
+      });
+
+      // When
+      await userEvent.dragAndDrop(dragHandleEl, outsideEl);
+
+      // Then
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given ignoreDrag is true, When a drag starts outside and releases inside, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
         event: "click",
         ignoreDrag: true,
       });
 
-      // When: Mouse down inside, mouse up outside, followed by click outside
-      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-      outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
-      outsideEl.dispatchEvent(makeMouseEvent("click"));
-      await nextTick();
+      // When
+      await userEvent.dragAndDrop(outsideEl, dragHandleEl);
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
-    it("Given ignoreDrag is true, When drag starts outside and releases inside floating element, Then preserves open state", async () => {
-      // Given
-      const { floatingEl, outsideEl, node } = await renderOutsideClick({
-        event: "click",
-        ignoreDrag: true,
-      });
-
-      // When: Mouse down outside, mouse up inside, followed by click outside
-      outsideEl.dispatchEvent(makeMouseEvent("mousedown"));
-      floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
-      outsideEl.dispatchEvent(makeMouseEvent("click"));
-      await nextTick();
-
-      // Then
-      expect(node.open.value).toBe(true);
-    });
-
-    it("Given ignoreDrag is true, When mouseup occurs and reset timer completes, Then allows subsequent outside click to dismiss", async () => {
+    it("Given ignoreDrag is true, When a drag reset timer expires before the next click, Then closes normally", async () => {
       // Given
       vi.useFakeTimers();
-      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
         event: "click",
         ignoreDrag: true,
       });
 
-      // Start drag inside and release mouseup
-      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-      floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
+      // When: A drag completes and its reset timer expires
+      await userEvent.dragAndDrop(dragHandleEl, outsideEl);
+      await vi.advanceTimersByTimeAsync(10);
 
-      // Advance past reset timeout
-      vi.advanceTimersByTime(10);
+      // And: A new outside click occurs
+      await userEvent.click(outsideEl);
 
-      // When: Subsequent outside click
-      outsideEl.dispatchEvent(makeMouseEvent("click"));
-      await nextTick();
-
-      // Then: Closes normally
-      expect(node.open.value).toBe(false);
-    });
-
-    it("Given a new mousedown inside occurs before reset timer fires, When second gesture clicks outside, Then keeps drag protection active", async () => {
-      // Given
-      vi.useFakeTimers();
-      const { floatingEl, outsideEl, node } = await renderOutsideClick({
-        event: "click",
-        ignoreDrag: true,
-      });
-
-      // Gesture 1: mousedown inside, mouseup outside -> schedules drag reset
-      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-      outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
-
-      // Gesture 2: immediate new mousedown inside BEFORE timer 1 executes
-      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-
-      // Advance timer past first reset delay
-      vi.advanceTimersByTime(10);
-
-      // When: Gesture 2 click lands outside
-      outsideEl.dispatchEvent(makeMouseEvent("click"));
-      await nextTick();
-
-      // Then: Still protected by active second drag gesture
-      expect(node.open.value).toBe(true);
+      // Then
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
   });
 
   describe("Scenario: Scrollbar hit-testing and edge avoidance", () => {
-    it("Given ignoreScrollbar is true, When clicking element scrollbar gutter, Then preserves open state", async () => {
+    it("Given ignoreScrollbar is true, When clicking an element scrollbar gutter, Then preserves open state", async () => {
       // Given
-      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-      const scrollableEl = getTestEl("outside-scrollable");
-      const rect = scrollableEl.getBoundingClientRect();
-      Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+      const { anchorEl, floatingEl, scrollableEl } = await renderOutsideClick({
+        ignoreScrollbar: true,
+      });
+      const scrollableDOMEl = getTestEl("outside-scrollable");
+      Object.defineProperty(scrollableDOMEl, "clientWidth", { value: 85, configurable: true });
 
-      // When: Click on scrollbar gutter
-      const scrollbarX = rect.left + 90;
-      const scrollbarY = rect.top + 20;
-
-      scrollableEl.dispatchEvent(
-        new MouseEvent("pointerdown", {
-          clientX: scrollbarX,
-          clientY: scrollbarY,
-          bubbles: true,
-        }),
-      );
-      await nextTick();
+      // When
+      await userEvent.click(scrollableEl, { position: { x: 90, y: 20 } });
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given ignoreScrollbar is false, When clicking element scrollbar gutter, Then closes the floating element", async () => {
       // Given
-      const { node } = await renderOutsideClick({ ignoreScrollbar: false });
-      const scrollableEl = getTestEl("outside-scrollable");
-      const rect = scrollableEl.getBoundingClientRect();
-      Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+      const { anchorEl, floatingEl, scrollableEl } = await renderOutsideClick({
+        ignoreScrollbar: false,
+      });
+      const scrollableDOMEl = getTestEl("outside-scrollable");
+      Object.defineProperty(scrollableDOMEl, "clientWidth", { value: 85, configurable: true });
 
       // When
-      const scrollbarX = rect.left + 90;
-      const scrollbarY = rect.top + 20;
-
-      scrollableEl.dispatchEvent(
-        new MouseEvent("pointerdown", {
-          clientX: scrollbarX,
-          clientY: scrollbarY,
-          bubbles: true,
-        }),
-      );
-      await nextTick();
+      await userEvent.click(scrollableEl, { position: { x: 90, y: 20 } });
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given ignoreScrollbar is true, When clicking viewport scrollbar, Then preserves open state", async () => {
       // Given
-      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+      const { anchorEl, floatingEl } = await renderOutsideClick({ ignoreScrollbar: true });
       const origInnerWidth = window.innerWidth;
       Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
       Object.defineProperty(document.documentElement, "clientWidth", {
@@ -631,17 +695,11 @@ describe("Feature: useOutsideClick", () => {
 
       try {
         // When
-        document.documentElement.dispatchEvent(
-          new MouseEvent("pointerdown", {
-            clientX: 990,
-            clientY: 100,
-            bubbles: true,
-          }),
-        );
-        await nextTick();
+        await userEvent.click(document.documentElement, { position: { x: 990, y: 100 } });
 
         // Then
-        expect(node.open.value).toBe(true);
+        await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+        await expect.element(floatingEl).toBeVisible();
       } finally {
         Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
         delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
@@ -650,7 +708,7 @@ describe("Feature: useOutsideClick", () => {
 
     it("Given ignoreScrollbar is false, When clicking viewport scrollbar, Then closes the floating element", async () => {
       // Given
-      const { node } = await renderOutsideClick({ ignoreScrollbar: false });
+      const { anchorEl, floatingEl } = await renderOutsideClick({ ignoreScrollbar: false });
       const origInnerWidth = window.innerWidth;
       Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
       Object.defineProperty(document.documentElement, "clientWidth", {
@@ -660,17 +718,11 @@ describe("Feature: useOutsideClick", () => {
 
       try {
         // When
-        document.documentElement.dispatchEvent(
-          new MouseEvent("pointerdown", {
-            clientX: 990,
-            clientY: 100,
-            bubbles: true,
-          }),
-        );
-        await nextTick();
+        await userEvent.click(document.documentElement, { position: { x: 990, y: 100 } });
 
         // Then
-        expect(node.open.value).toBe(false);
+        await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+        await expect.element(floatingEl).not.toBeInTheDocument();
       } finally {
         Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
         delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
@@ -679,82 +731,51 @@ describe("Feature: useOutsideClick", () => {
 
     it("Given RTL direction with ignoreScrollbar true, When clicking left scrollbar edge, Then detects scrollbar correctly", async () => {
       // Given
-      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-      const scrollableEl = getTestEl("outside-scrollable");
-      scrollableEl.style.direction = "rtl";
-      const rect = scrollableEl.getBoundingClientRect();
-      Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+      const { anchorEl, floatingEl, scrollableEl } = await renderOutsideClick({
+        ignoreScrollbar: true,
+      });
+      const scrollableDOMEl = getTestEl("outside-scrollable");
+      scrollableDOMEl.style.direction = "rtl";
+      Object.defineProperty(scrollableDOMEl, "clientWidth", { value: 85, configurable: true });
 
-      // When: Click left edge (scrollbar gutter in RTL)
-      const scrollbarX = rect.left + 5;
-      const scrollbarY = rect.top + 20;
-
-      scrollableEl.dispatchEvent(
-        new MouseEvent("pointerdown", {
-          clientX: scrollbarX,
-          clientY: scrollbarY,
-          bubbles: true,
-          button: 0,
-        }),
-      );
-      await nextTick();
-      expect(node.open.value).toBe(true);
+      // When: Click the left scrollbar gutter in RTL
+      await userEvent.click(scrollableEl, { position: { x: 5, y: 20 } });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When: Click right content area in RTL
-      const contentX = rect.left + 90;
-      scrollableEl.dispatchEvent(
-        new MouseEvent("pointerdown", {
-          clientX: contentX,
-          clientY: scrollbarY,
-          bubbles: true,
-          button: 0,
-        }),
-      );
-      await nextTick();
+      await userEvent.click(scrollableEl, { position: { x: 90, y: 20 } });
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given an element with thick borders, When clicking on border, Then distinguishes borders from scrollbars and closes", async () => {
       // Given
-      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-      const outsideEl = getTestEl("outside");
-      outsideEl.style.border = "15px solid black";
-      const rect = outsideEl.getBoundingClientRect();
-      Object.defineProperty(outsideEl, "offsetWidth", { value: 100, configurable: true });
-      Object.defineProperty(outsideEl, "clientWidth", { value: 70, configurable: true });
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
+        ignoreScrollbar: true,
+      });
+      const outsideDOMEl = getTestEl("outside");
+      outsideDOMEl.style.border = "15px solid black";
+      Object.defineProperty(outsideDOMEl, "offsetWidth", { value: 100, configurable: true });
+      Object.defineProperty(outsideDOMEl, "clientWidth", { value: 70, configurable: true });
 
       // When: Click on right border area
-      outsideEl.dispatchEvent(
-        new MouseEvent("pointerdown", {
-          clientX: rect.left + 80,
-          clientY: rect.top + 20,
-          bubbles: true,
-          button: 0,
-        }),
-      );
-      await nextTick();
+      await userEvent.click(outsideEl, { position: { x: 80, y: 20 } });
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
   });
 
   describe("Scenario: Event phases, propagation, and capture options", () => {
     it("Given capture is true, When an outside element calls stopPropagation in bubble phase, Then still intercepts and closes", async () => {
       // Given
-      const { outsideEl, node } = await renderOutsideClick({
-        event: "click",
-        capture: true,
-      });
-
-      outsideEl.addEventListener(
-        "click",
-        (e) => {
-          e.stopPropagation();
-        },
-        { once: true },
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(
+        { event: "click", capture: true },
+        { stopOutsideClickPropagation: true },
       );
 
       // When
@@ -762,22 +783,15 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given capture is false, When an outside element calls stopPropagation in bubble phase, Then respects stopPropagation and stays open", async () => {
       // Given
-      const { outsideEl, node } = await renderOutsideClick({
-        event: "click",
-        capture: false,
-      });
-
-      outsideEl.addEventListener(
-        "click",
-        (e) => {
-          e.stopPropagation();
-        },
-        { once: true },
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(
+        { event: "click", capture: false },
+        { stopOutsideClickPropagation: true },
       );
 
       // When
@@ -785,185 +799,171 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given capture changes mid-open, When outside is clicked, Then maintains initial capture phase binding", async () => {
       // Given
       const options: UseOutsideClickOptions = { event: "click", capture: true };
-      const { outsideEl, node } = await renderOutsideClick(options);
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(options, {
+        stopOutsideClickPropagation: true,
+      });
 
       options.capture = false;
       await nextTick();
-
-      outsideEl.addEventListener(
-        "click",
-        (e) => {
-          e.stopPropagation();
-        },
-        { once: true },
-      );
 
       // When
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given independent overlays with mixed capture phases, When clicking outside, Then dismisses both without cross-phase lockout", async () => {
       // Given
-      const { outsideEl, openA, openB } = await renderTwoOverlaysOutsideClick({
-        overlayACapture: true,
-        overlayBCapture: false,
-      });
+      const { outsideEl, anchorAEl, floatingAEl, anchorBEl, floatingBEl } =
+        await renderTwoOverlaysOutsideClick({
+          overlayACapture: true,
+          overlayBCapture: false,
+        });
 
-      expect(openA.value).toBe(true);
-      expect(openB.value).toBe(true);
+      await expect.element(anchorAEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingAEl).toBeVisible();
+      await expect.element(anchorBEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingBEl).toBeVisible();
 
       // When
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Both overlays close across phases
-      expect(openA.value).toBe(false);
-      expect(openB.value).toBe(false);
+      await expect.element(anchorAEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingAEl).not.toBeInTheDocument();
+      await expect.element(anchorBEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingBEl).not.toBeInTheDocument();
     });
   });
 
   describe("Scenario: DOM hierarchy, unmounted elements, and iframe focus", () => {
     it("Given an element inside floating unmounts upon click, When clicked, Then preserves open state", async () => {
       // Given
-      const { floatingEl, node } = await renderOutsideClick({
-        event: "click",
-      });
-
-      const removeBtn = document.createElement("button");
-      removeBtn.textContent = "Remove Me";
-      floatingEl.appendChild(removeBtn);
-
-      removeBtn.addEventListener("click", () => {
-        removeBtn.remove();
-      });
+      const { anchorEl, floatingEl, removeInsideEl } = await renderOutsideClick({ event: "click" });
 
       // When
-      removeBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      await nextTick();
+      await userEvent.click(removeInsideEl);
 
       // Then
-      expect(node.open.value).toBe(true);
+      await expect.element(removeInsideEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
-    it("Given focus moves to an outside iframe, When window blurs, Then closes floating element", async () => {
+    it("Given an open floating element, When focus moves to an outside iframe, Then closes the floating element", async () => {
       // Given
+      const { anchorEl, floatingEl, outsideIframeEl } = await renderOutsideClick();
       vi.useFakeTimers();
-      const { node } = await renderOutsideClick();
 
-      const outsideIframe = document.createElement("iframe");
-      document.body.appendChild(outsideIframe);
-
-      Object.defineProperty(document, "activeElement", {
-        value: outsideIframe,
-        configurable: true,
-      });
-
-      // When: Window blurs to iframe
-      window.dispatchEvent(new FocusEvent("blur"));
-      vi.advanceTimersByTime(10);
+      // When
+      await userEvent.click(outsideIframeEl);
+      await vi.advanceTimersByTimeAsync(10);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(false);
-      outsideIframe.remove();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
-    it("Given focus moves to an inner iframe inside floating panel, When window blurs, Then preserves open state", async () => {
+    it("Given an open floating element, When focus moves to an iframe inside it, Then keeps the floating element open", async () => {
       // Given
+      const { anchorEl, floatingEl, insideIframeEl } = await renderOutsideClick();
       vi.useFakeTimers();
-      const { floatingEl, node } = await renderOutsideClick();
 
-      const innerIframe = document.createElement("iframe");
-      floatingEl.appendChild(innerIframe);
-
-      Object.defineProperty(document, "activeElement", {
-        value: innerIframe,
-        configurable: true,
-      });
-
-      // When: Window blurs to inner iframe
-      window.dispatchEvent(new FocusEvent("blur"));
-      vi.advanceTimersByTime(10);
+      // When
+      await userEvent.click(insideIframeEl);
+      await vi.advanceTimersByTimeAsync(10);
       await nextTick();
 
       // Then
-      expect(node.open.value).toBe(true);
-      innerIframe.remove();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
   });
 
   describe("Scenario: Tree hierarchies, parent-child coordination, and leaf-first unwinding", () => {
     it("Given a parent and child floating tree, When clicking inside child floating element, Then keeps parent open", async () => {
       // Given
-      const { childFloatingEl, parentOpen } = await renderTreeOutsideClick("parent");
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
+        await renderTreeOutsideClick("parent");
 
       // When
       await userEvent.click(childFloatingEl);
       await nextTick();
 
       // Then
-      expect(parentOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
     });
 
     it("Given a parent and child floating tree, When clicking inside parent floating blank area, Then closes child while parent stays open", async () => {
       // Given
-      const { floatingEl, parentOpen, childOpen } = await renderTreeOutsideClick("child");
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
+        await renderTreeOutsideClick("child");
 
       // When
       await userEvent.click(floatingEl);
       await nextTick();
 
       // Then
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
     });
 
     it("Given leafFirst is true, When clicking outside, Then unwinds the tree leaf-first across repeated clicks", async () => {
       // Given
-      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst: true,
-        childLeafFirst: true,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
+        await renderFullTreeOutsideClick({ parentLeafFirst: true, childLeafFirst: true });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // When: 1st outside click
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Child closes, parent remains open
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(true);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When: 2nd outside click
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Parent closes
-      expect(parentOpen.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given leafFirst is a reactive ref, When updated dynamically, Then switches to leaf-first unwinding order", async () => {
       // Given
       const parentLeafFirst = ref(false);
-      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst,
-        childLeafFirst: true,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
+        await renderFullTreeOutsideClick({ parentLeafFirst, childLeafFirst: true });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // When: Update leafFirst dynamically
       parentLeafFirst.value = true;
@@ -974,75 +974,89 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then: Only child closes
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(true);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // 2nd outside click
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Parent closes
-      expect(parentOpen.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given leafFirst is false, When clicking outside, Then closes all hierarchy levels simultaneously", async () => {
       // Given
-      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst: false,
-        childLeafFirst: false,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
+        await renderFullTreeOutsideClick({ parentLeafFirst: false, childLeafFirst: false });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // When
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(false);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
-    it("Given mixed capture settings across tree levels with leafFirst true, When clicking outside, Then coordinates leaf-first unwinding cleanly", async () => {
+    it("Given mixed capture settings across tree levels, When clicking outside twice, Then closes the child before the parent", async () => {
       // Given: Parent on bubble phase (capture: false), Child on capture phase (capture: true)
-      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst: true,
-        childLeafFirst: true,
-        parentCapture: false,
-        childCapture: true,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
+        await renderFullTreeOutsideClick({
+          parentLeafFirst: true,
+          childLeafFirst: true,
+          parentCapture: false,
+          childCapture: true,
+        });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // When: 1st outside click
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Child closes first
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(true);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When: 2nd outside click
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Parent closes
-      expect(parentOpen.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given an ancestor node re-registers dynamically while child is open, When clicking outside, Then maintains leaf-first tree order", async () => {
       // Given
       const parentEnabled = ref(true);
-      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst: true,
-        childLeafFirst: true,
-        parentEnabled,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
+        await renderFullTreeOutsideClick({
+          parentLeafFirst: true,
+          childLeafFirst: true,
+          parentEnabled,
+        });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // Temporarily disable and re-enable parent to trigger unregister + re-register
       parentEnabled.value = false;
@@ -1055,53 +1069,60 @@ describe("Feature: useOutsideClick", () => {
       await nextTick();
 
       // Then: Child closes first
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(true);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
       // When: 2nd outside click
       await userEvent.click(outsideEl);
       await nextTick();
 
       // Then: Parent closes
-      expect(parentOpen.value).toBe(false);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given clicking on ancestor anchor when leafFirst is true, When clicked, Then dismisses descendant branch immediately", async () => {
       // Given
-      const { anchorEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst: true,
-        childLeafFirst: true,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
+        await renderFullTreeOutsideClick({ parentLeafFirst: true, childLeafFirst: true });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // When: Clicking parent anchor is outside child
       await userEvent.click(anchorEl);
       await nextTick();
 
       // Then
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(true);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given clicking inside ancestor floating panel when leafFirst is true, When clicked, Then dismisses descendant branch immediately", async () => {
       // Given
-      const { floatingEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-        parentLeafFirst: true,
-        childLeafFirst: true,
-      });
+      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
+        await renderFullTreeOutsideClick({ parentLeafFirst: true, childLeafFirst: true });
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
       // When: Clicking parent floating panel is outside child
       await userEvent.click(floatingEl);
       await nextTick();
 
       // Then
-      expect(childOpen.value).toBe(false);
-      expect(parentOpen.value).toBe(true);
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
   });
 });
