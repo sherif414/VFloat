@@ -17,16 +17,19 @@ import {
   useFloatingNode,
   useFocusTrap,
 } from "@/composables";
-import { clearTrackedElements, getTestEl, trackElement } from "@/test-utils";
+import { getTestEl } from "@/test-utils";
+
+const cleanupElements: HTMLElement[] = [];
 
 function createOutsideButton(id = "outside"): HTMLButtonElement {
   // Created on demand with the same timing as the legacy suite: buttons that
   // tests move focus to must be appended after open, otherwise modal
   // isolation marks them inert and focus() becomes a no-op.
-  const outsideEl = trackElement(document.createElement("button"));
+  const outsideEl = document.createElement("button");
   outsideEl.id = id;
   outsideEl.textContent = id;
   document.body.appendChild(outsideEl);
+  cleanupElements.push(outsideEl);
   return outsideEl;
 }
 
@@ -209,100 +212,103 @@ async function openTrap(ctx: TrapFixture) {
   await flushFocus();
 }
 
-describe("useFocusTrap", () => {
+describe("Feature: useFocusTrap", () => {
   afterEach(() => {
-    // Drains iframe fixtures, the only non-render DOM left in this file.
-    clearTrackedElements();
+    for (const el of cleanupElements) {
+      el.remove();
+    }
+    cleanupElements.length = 0;
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  describe("focus containment", () => {
-    it("focuses initial focus element if specified as ref", async () => {
+  describe("Scenario: Focus containment and initial focus orchestration", () => {
+    it("Given a custom ref target, When the floating node opens, Then focus moves to the specified target", async () => {
       const targetRef = ref<HTMLElement | null>(null);
       const ctx = await renderTrap({ initialFocus: targetRef });
       const target = appendButton(ctx.floatingEl, "target");
       targetRef.value = target;
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(target);
+      await expect.element(target).toHaveFocus();
     });
 
-    it("focuses first tabbable element by default", async () => {
+    it("Given multiple tabbable elements, When opened without explicit target, Then focus moves to the first tabbable element by default", async () => {
       const ctx = await renderTrap();
       const first = appendButton(ctx.floatingEl, "first");
       appendButton(ctx.floatingEl, "second");
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(first);
+      await expect.element(first).toHaveFocus();
     });
 
-    it("falls back to floating element when no tabbable elements exist", async () => {
+    it("Given no tabbable children exist, When opened, Then focus falls back to the floating element itself", async () => {
       const ctx = await renderTrap();
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(ctx.floatingEl);
+      await expect.element(ctx.floatingEl).toHaveFocus();
     });
 
-    it("traps focus within floating element during forward and backward Tab cycles", async () => {
+    it("Given a modal focus trap, When tabbing forward and backward, Then focus wraps within boundary elements", async () => {
       const ctx = await renderTrap({ modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const middle = appendButton(ctx.floatingEl, "middle");
       const last = appendButton(ctx.floatingEl, "last");
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(first);
+      await expect.element(first).toHaveFocus();
 
       middle.focus();
-      expect(document.activeElement).toBe(middle);
+      await expect.element(middle).toHaveFocus();
 
       last.focus();
-      expect(document.activeElement).toBe(last);
+      await expect.element(last).toHaveFocus();
 
       // Tab on last element wraps to first
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", cancelable: true }));
-      expect(document.activeElement).toBe(first);
+      await expect.element(first).toHaveFocus();
 
       // Shift+Tab on first element wraps to last
       document.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, cancelable: true }),
       );
-      expect(document.activeElement).toBe(last);
+      await expect.element(last).toHaveFocus();
     });
 
-    it("accepts a function for initialFocus", async () => {
+    it("Given an initialFocus getter function, When opened, Then focus moves to the element returned by the function", async () => {
       const ctx = await renderTrap({
         initialFocus: () => document.querySelector<HTMLElement>("#fn-target"),
       });
       const target = appendButton(ctx.floatingEl, "fn-target");
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(target);
+      await expect.element(target).toHaveFocus();
     });
 
-    it("handles initialFocus: false (does not focus on open)", async () => {
+    it("Given initialFocus is set to false, When opened, Then previous focus remains undisturbed", async () => {
       const previousFocus = createOutsideButton("prev");
       previousFocus.focus();
       const ctx = await renderTrap({ initialFocus: false, modal: false });
       appendButton(ctx.floatingEl, "btn");
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(previousFocus);
+      await expect.element(previousFocus).toHaveFocus();
     });
 
-    it("handles initialFocus as HTMLElement ref directly", async () => {
-      const customTarget = trackElement(document.createElement("button"));
+    it("Given initialFocus is passed as a direct HTMLElement reference, When opened, Then focus moves directly to that element", async () => {
+      const customTarget = document.createElement("button");
       customTarget.id = "ref-target";
+      cleanupElements.push(customTarget);
       const ctx = await renderTrap({ initialFocus: customTarget });
       ctx.floatingEl.appendChild(customTarget);
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(customTarget);
+      await expect.element(customTarget).toHaveFocus();
     });
   });
 
-  describe("DOM cleanliness & boundary containment", () => {
-    it("does not inject artificial focus guard elements into the DOM", async () => {
+  describe("Scenario: DOM cleanliness and boundary wrapping", () => {
+    it("Given an active modal focus trap, When inspected, Then no artificial focus-guard sentinel nodes are injected into DOM", async () => {
       const ctx = await renderTrap({ modal: true });
       await openTrap(ctx);
 
@@ -310,43 +316,43 @@ describe("useFocusTrap", () => {
       expect(guards.length).toBe(0);
     });
 
-    it("wraps focus between first and last tabbables via document keydown", async () => {
+    it("Given edge tabbable elements, When Tab or Shift+Tab keydown events occur at document level, Then focus wraps to opposite boundaries", async () => {
       const ctx = await renderTrap({ modal: true });
       const first = appendButton(ctx.floatingEl, "first");
       const last = appendButton(ctx.floatingEl, "last");
 
       await openTrap(ctx);
-      expect(document.activeElement).toBe(first);
+      await expect.element(first).toHaveFocus();
 
       // Shift+Tab on first wraps to last
       document.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, cancelable: true }),
       );
-      expect(document.activeElement).toBe(last);
+      await expect.element(last).toHaveFocus();
 
       // Tab on last wraps to first
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", cancelable: true }));
-      expect(document.activeElement).toBe(first);
+      await expect.element(first).toHaveFocus();
     });
   });
 
-  describe("return focus", () => {
-    it("returns focus to the anchor trigger element on close", async () => {
+  describe("Scenario: Return focus coordination", () => {
+    it("Given returnFocus is enabled, When floating node closes, Then focus returns to the anchor trigger element", async () => {
       const previousFocus = createOutsideButton("prev");
       const ctx = await renderTrap({ returnFocus: true });
       previousFocus.focus();
       appendButton(ctx.floatingEl, "btn");
 
       await openTrap(ctx);
-      expect(document.activeElement).not.toBe(ctx.anchorEl);
+      await expect.element(ctx.anchorEl).not.toHaveFocus();
 
       ctx.node.open.value = false;
       await flushFocus();
 
-      expect(document.activeElement).toBe(ctx.anchorEl);
+      await expect.element(ctx.anchorEl).toHaveFocus();
     });
 
-    it("falls back to previously active element when anchor is unavailable", async () => {
+    it("Given anchor element is removed from DOM, When floating node closes, Then focus falls back to previously active element", async () => {
       const previousFocus = createOutsideButton("prev");
       const ctx = await renderTrap({ returnFocus: true });
       previousFocus.focus();
@@ -355,15 +361,15 @@ describe("useFocusTrap", () => {
       appendButton(ctx.floatingEl, "btn");
 
       await openTrap(ctx);
-      expect(document.activeElement).not.toBe(previousFocus);
+      await expect.element(previousFocus).not.toHaveFocus();
 
       ctx.node.open.value = false;
       await flushFocus();
 
-      expect(document.activeElement).toBe(previousFocus);
+      await expect.element(previousFocus).toHaveFocus();
     });
 
-    it("supports returning focus to a custom element ref", async () => {
+    it("Given a custom returnFocus element reference, When floating node closes, Then focus returns to the custom element", async () => {
       const customEl = createOutsideButton("custom-return");
       const ctx = await renderTrap({ returnFocus: customEl });
       appendButton(ctx.floatingEl, "btn");
@@ -372,10 +378,10 @@ describe("useFocusTrap", () => {
       ctx.node.open.value = false;
       await flushFocus();
 
-      expect(document.activeElement).toBe(customEl);
+      await expect.element(customEl).toHaveFocus();
     });
 
-    it("does not return focus when returnFocus is false", async () => {
+    it("Given returnFocus is disabled, When floating node closes, Then previously active focus is not restored", async () => {
       const previousFocus = createOutsideButton("prev");
       const ctx = await renderTrap({ returnFocus: false });
       previousFocus.focus();
@@ -385,10 +391,10 @@ describe("useFocusTrap", () => {
       ctx.node.open.value = false;
       await flushFocus();
 
-      expect(document.activeElement).not.toBe(previousFocus);
+      await expect.element(previousFocus).not.toHaveFocus();
     });
 
-    it("does not hijack focus when focus naturally moves to an outside element", async () => {
+    it("Given focus naturally moves to an outside element while open, When floating node closes, Then focus is not hijacked back to anchor", async () => {
       const ctx = await renderTrap({ returnFocus: true });
       appendButton(ctx.floatingEl, "btn");
 
@@ -404,10 +410,10 @@ describe("useFocusTrap", () => {
       await flushFocus();
 
       // Focus should remain on the outside element, not restored to anchor
-      expect(document.activeElement).toBe(outsideFocus);
+      await expect.element(outsideFocus).toHaveFocus();
     });
 
-    it("does not hijack focus when an outside pointerdown interaction is detected", async () => {
+    it("Given an outside pointerdown interaction is detected during closure, When floating node closes, Then return focus is suppressed", async () => {
       const previousFocus = createOutsideButton("prev");
       const ctx = await renderTrap({ returnFocus: true });
       previousFocus.focus();
@@ -425,12 +431,12 @@ describe("useFocusTrap", () => {
       await flushFocus();
 
       // Focus should NOT be pulled back to `prev` because of the outside pointerdown interaction
-      expect(document.activeElement).not.toBe(previousFocus);
+      await expect.element(previousFocus).not.toHaveFocus();
     });
   });
 
-  describe("non-modal & dismissal behavior", () => {
-    it("closes on document focusin when closeOnFocusOut is true", async () => {
+  describe("Scenario: Non-modal dismissal and outside focus filtering", () => {
+    it("Given closeOnFocusOut is enabled, When document focusin occurs on an outside element, Then floating node closes", async () => {
       const outsideEl = createOutsideButton();
       const ctx = await renderTrap({ modal: false, closeOnFocusOut: true });
       appendButton(ctx.floatingEl, "btn");
@@ -444,7 +450,7 @@ describe("useFocusTrap", () => {
       expect(ctx.node.open.value).toBe(false);
     });
 
-    it("does not close on outside pointerdown (delegated to useOutsideClick)", async () => {
+    it("Given a non-modal trap, When pointerdown occurs outside, Then trap leaves dismissal to dedicated outside-click composable", async () => {
       const outsideEl = createOutsideButton();
       const ctx = await renderTrap({ modal: false, closeOnFocusOut: true });
       appendButton(ctx.floatingEl, "btn");
@@ -458,7 +464,7 @@ describe("useFocusTrap", () => {
       expect(ctx.node.open.value).toBe(true);
     });
 
-    it("respects ignoreFocusOut predicate", async () => {
+    it("Given an ignoreFocusOut predicate, When focus moves to an ignored target, Then floating node remains open", async () => {
       const ignoredEl = createOutsideButton("ignored");
       const outsideEl = createOutsideButton("outside");
 
@@ -481,8 +487,8 @@ describe("useFocusTrap", () => {
     });
   });
 
-  describe("background isolation", () => {
-    it("isolates outside content with aria-hidden or inert and restores on close", async () => {
+  describe("Scenario: Background isolation and inert stacking", () => {
+    it("Given a modal focus trap opens, When inspected, Then outside background elements receive inert isolation and recover on close", async () => {
       const outsideEl = createOutsideButton();
       const ctx = await renderTrap({ modal: true });
       appendButton(ctx.floatingEl, "btn");
@@ -503,8 +509,8 @@ describe("useFocusTrap", () => {
     });
   });
 
-  describe("nested floating nodes", () => {
-    it("coordinates parent and child nodes without premature closing", async () => {
+  describe("Scenario: Nested floating nodes and parent-child containment", () => {
+    it("Given nested parent and child floating nodes, When focus moves into child panel, Then parent node remains open without premature closure", async () => {
       const ctx = await renderTreeTrap();
 
       appendButton(ctx.parentFloatingEl, "parent-btn");
@@ -521,8 +527,8 @@ describe("useFocusTrap", () => {
     });
   });
 
-  describe("lifecycle & manual controls", () => {
-    it("supports manual activate and deactivate methods", async () => {
+  describe("Scenario: Lifecycle and manual controls", () => {
+    it("Given manual trap controls, When deactivate is invoked, Then floating node open state transitions to false", async () => {
       const ctx = await renderTrap({}, true);
       appendButton(ctx.floatingEl, "btn");
 
@@ -535,7 +541,7 @@ describe("useFocusTrap", () => {
       expect(ctx.node.open.value).toBe(false);
     });
 
-    it("handles missing floating element gracefully without closing open state prematurely", async () => {
+    it("Given floating element ref is initially null, When element is mounted asynchronously, Then trap activates without closing open state prematurely", async () => {
       const ctx = await renderTrap();
       ctx.node.refs.floatingEl.value = null;
 
@@ -553,10 +559,10 @@ describe("useFocusTrap", () => {
     });
   });
 
-  describe("containment regressions", () => {
-    it("wraps Tab at the document level even when focus escaped to an outside element", async () => {
+  describe("Scenario: Containment regressions and edge cases", () => {
+    it("Given focus escaped outside programmatically, When Tab keydown is dispatched, Then focus wraps back inside the trap", async () => {
       const ctx = await renderTrap();
-      appendButton(ctx.floatingEl, "btn");
+      const btn = appendButton(ctx.floatingEl, "btn");
       const outsideEl = createOutsideButton();
       await openTrap(ctx);
 
@@ -567,12 +573,12 @@ describe("useFocusTrap", () => {
       outsideEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
       await flushFocus();
 
-      expect(document.activeElement?.id).toBe("btn");
+      await expect.element(btn).toHaveFocus();
     });
 
-    it("pulls focus back inside when focus lands outside programmatically", async () => {
+    it("Given focus lands outside programmatically, When focusin fires, Then focus is pulled back inside floating element", async () => {
       const ctx = await renderTrap();
-      appendButton(ctx.floatingEl, "btn");
+      const btn = appendButton(ctx.floatingEl, "btn");
       const outsideEl = createOutsideButton();
       await openTrap(ctx);
 
@@ -580,10 +586,10 @@ describe("useFocusTrap", () => {
       outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(document.activeElement?.id).toBe("btn");
+      await expect.element(btn).toHaveFocus();
     });
 
-    it("removes the temporary fallback tabindex from the panel after close", async () => {
+    it("Given floating panel lacked a tabindex, When trap closes, Then temporary fallback tabindex is completely removed", async () => {
       const ctx = await renderTrap();
       // Panel starts without tabindex and has no tabbable children.
       ctx.floatingEl.removeAttribute("tabindex");
@@ -597,7 +603,7 @@ describe("useFocusTrap", () => {
       expect(ctx.floatingEl.hasAttribute("tabindex")).toBe(false);
     });
 
-    it("restores focus to the opener captured synchronously, even if focus moved before activation", async () => {
+    it("Given focus moved synchronously before trap activation, When closed, Then focus returns to opener captured at invocation", async () => {
       const ctx = await renderTrap();
       const middle = createOutsideButton("middle");
       await nextTick();
@@ -611,10 +617,10 @@ describe("useFocusTrap", () => {
       ctx.node.open.value = false;
       await flushFocus();
 
-      expect(document.activeElement).toBe(ctx.anchorEl);
+      await expect.element(ctx.anchorEl).toHaveFocus();
     });
 
-    it("stacks two independent modals and keeps the shared background inert after the first closes", async () => {
+    it("Given two independent stacked modals, When first modal closes, Then shared background remains inert until all modals close", async () => {
       const fixture = createTwoTrapsComponent();
       await render(fixture.Component);
       vi.useFakeTimers();
@@ -641,7 +647,7 @@ describe("useFocusTrap", () => {
       expect(outsideEl.hasAttribute("inert")).toBe(false);
     });
 
-    it("re-focusing inside after an outside pointerdown is not swallowed by the pointer window", async () => {
+    it("Given outside pointerdown followed by immediate inside re-focus, When subsequent outside focus occurs, Then containment is still enforced", async () => {
       const ctx = await renderTrap();
       const btn = appendButton(ctx.floatingEl, "btn");
       const outsideEl = createOutsideButton();
@@ -653,32 +659,33 @@ describe("useFocusTrap", () => {
       btn.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(document.activeElement).toBe(btn);
+      await expect.element(btn).toHaveFocus();
 
       // A subsequent outside focus jump is still corrected, not ignored.
       outsideEl.focus();
       outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(document.activeElement?.id).toBe("btn");
+      await expect.element(btn).toHaveFocus();
     });
   });
 
-  describe("cross-realm iframe support", () => {
-    it("manages focus and guards inside an iframe document", async () => {
-      const iframe = trackElement(document.createElement("iframe"));
+  describe("Scenario: Cross-realm iframe support", () => {
+    it("Given a floating node inside an iframe document, When opened, Then focus is trapped inside iframe without top-realm sentinels", async () => {
+      const iframe = document.createElement("iframe");
       document.body.appendChild(iframe);
+      cleanupElements.push(iframe);
 
       const iframeDoc = iframe.contentDocument!;
-      const anchorEl = trackElement(iframeDoc.createElement("button"));
+      const anchorEl = iframeDoc.createElement("button");
       anchorEl.id = "iframe-anchor";
       iframeDoc.body.appendChild(anchorEl);
 
-      const floatingEl = trackElement(iframeDoc.createElement("div"));
+      const floatingEl = iframeDoc.createElement("div");
       floatingEl.id = "iframe-floating";
       iframeDoc.body.appendChild(floatingEl);
 
-      const button = trackElement(iframeDoc.createElement("button"));
+      const button = iframeDoc.createElement("button");
       button.id = "iframe-btn";
       floatingEl.appendChild(button);
 
@@ -700,6 +707,8 @@ describe("useFocusTrap", () => {
       open.value = true;
       await flushFocus();
 
+      // Cross-realm check: Vitest's `expect.element(button)` fails cross-realm instanceof HTMLElement check,
+      // so inspect the iframe realm activeElement directly.
       expect(iframeDoc.activeElement).toBe(button);
       expect(iframeDoc.querySelectorAll("[data-vfloat-focus-guard]").length).toBe(0);
 

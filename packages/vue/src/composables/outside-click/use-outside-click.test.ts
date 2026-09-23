@@ -11,8 +11,8 @@ import {
   useTemplateRef,
 } from "vue";
 import { type FloatingNode, useFloatingNode } from "@/composables/floating-node";
-import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
+import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 
 const OUTSIDE_STYLE = {
   position: "fixed",
@@ -291,713 +291,817 @@ async function renderTwoOverlaysOutsideClick(
   };
 }
 
-describe("useOutsideClick", () => {
+describe("Feature: useOutsideClick", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  it("closes on outside click by default", async () => {
-    const { outsideEl, node } = await renderOutsideClick({ event: "click" });
-
-    await userEvent.click(outsideEl);
-    await nextTick();
-
-    expect(node.open.value).toBe(false);
-  });
-
-  it("closes on outside pointerdown when configured", async () => {
-    const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
-
-    outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
-    await nextTick();
-
-    expect(node.open.value).toBe(false);
-  });
-
-  it("does not close when outside dismissal is disabled", async () => {
-    const { outsideEl, node } = await renderOutsideClick({
-      enabled: false,
-      event: "click",
-    });
-
-    await userEvent.click(outsideEl);
-    await nextTick();
-
-    expect(node.open.value).toBe(true);
-  });
-
-  it("does not close when clicking the anchor or floating element", async () => {
-    const { anchorEl, floatingEl, node } = await renderOutsideClick({
-      event: "click",
-    });
-
-    await userEvent.click(anchorEl);
-    await userEvent.click(floatingEl);
-    await nextTick();
-
-    expect(node.open.value).toBe(true);
-  });
-
-  it("uses the shouldIgnore predicate for per-target dismissal", async () => {
-    const { outsideEl, ignoredEl, node } = await renderOutsideClick({
-      event: "click",
-      shouldIgnore: (_event, target) => target === ignoredEl,
-    });
-
-    await userEvent.click(ignoredEl);
-    await nextTick();
-    expect(node.open.value).toBe(true);
-
-    await userEvent.click(outsideEl);
-    await nextTick();
-    expect(node.open.value).toBe(false);
-  });
-
-  it("calls onOutsideClick instead of closing when a custom handler is provided", async () => {
-    const onOutsideClick = vi.fn();
-    const { outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      onOutsideClick,
-    });
-
-    await userEvent.click(outsideEl);
-    await nextTick();
-
-    expect(onOutsideClick).toHaveBeenCalledTimes(1);
-    expect(node.open.value).toBe(true);
-  });
-
-  it("ignores outside click after a drag that started inside the floating element", async () => {
-    const { floatingEl, outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      ignoreDrag: true,
-    });
-
-    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-    outsideEl.dispatchEvent(makeMouseEvent("click"));
-    await nextTick();
-
-    expect(node.open.value).toBe(true);
-  });
-
-  it("keeps a parent open when clicking inside a child floating element", async () => {
-    const { childFloatingEl, parentOpen } = await renderTreeOutsideClick("parent");
-
-    await userEvent.click(childFloatingEl);
-    await nextTick();
-
-    expect(parentOpen.value).toBe(true);
-  });
-
-  it("treats parent blank areas as outside for child nodes", async () => {
-    const { floatingEl, parentOpen, childOpen } = await renderTreeOutsideClick("child");
-
-    await userEvent.click(floatingEl);
-    await nextTick();
-
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(false);
-  });
-
-  it("ignores outside press on scrollbars when ignoreScrollbar is true", async () => {
-    const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-    const scrollableEl = getTestEl("outside-scrollable");
-    const rect = scrollableEl.getBoundingClientRect();
-
-    // Headless Chromium uses overlay scrollbars by default (clientWidth === offsetWidth).
-    // Simulate classic 15px scrollbar gutter width.
-    Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
-
-    // Click near the right edge where the vertical scrollbar gutter resides
-    const scrollbarX = rect.left + 90;
-    const scrollbarY = rect.top + 20;
-
-    scrollableEl.dispatchEvent(
-      new MouseEvent("pointerdown", {
-        clientX: scrollbarX,
-        clientY: scrollbarY,
-        bubbles: true,
-      }),
-    );
-    await nextTick();
-
-    expect(node.open.value).toBe(true);
-  });
-
-  it("closes on scrollbar click when ignoreScrollbar is false", async () => {
-    const { node } = await renderOutsideClick({ ignoreScrollbar: false });
-    const scrollableEl = getTestEl("outside-scrollable");
-    const rect = scrollableEl.getBoundingClientRect();
-
-    // Headless Chromium uses overlay scrollbars by default (clientWidth === offsetWidth).
-    // Simulate classic 15px scrollbar gutter width.
-    Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
-
-    const scrollbarX = rect.left + 90;
-    const scrollbarY = rect.top + 20;
-
-    scrollableEl.dispatchEvent(
-      new MouseEvent("pointerdown", {
-        clientX: scrollbarX,
-        clientY: scrollbarY,
-        bubbles: true,
-      }),
-    );
-    await nextTick();
-
-    expect(node.open.value).toBe(false);
-  });
-
-  it("ignores clicks on the viewport scrollbar when ignoreScrollbar is true", async () => {
-    const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-
-    const origInnerWidth = window.innerWidth;
-    Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
-    Object.defineProperty(document.documentElement, "clientWidth", {
-      value: 985,
-      configurable: true,
-    });
-
-    try {
-      document.documentElement.dispatchEvent(
-        new MouseEvent("pointerdown", {
-          clientX: 990,
-          clientY: 100,
-          bubbles: true,
-        }),
-      );
-      await nextTick();
-
+  describe("Scenario: Basic outside dismissal and target filtering", () => {
+    it("Given an open floating element, When an outside element is clicked, Then closes the floating element", async () => {
+      // Given
+      const { outsideEl, node } = await renderOutsideClick({ event: "click" });
       expect(node.open.value).toBe(true);
-    } finally {
-      Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
-      delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
-    }
-  });
 
-  it("dismisses on viewport scrollbar click when ignoreScrollbar is false", async () => {
-    const { node } = await renderOutsideClick({ ignoreScrollbar: false });
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-    const origInnerWidth = window.innerWidth;
-    Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
-    Object.defineProperty(document.documentElement, "clientWidth", {
-      value: 985,
-      configurable: true,
+      // Then
+      expect(node.open.value).toBe(false);
     });
 
-    try {
-      document.documentElement.dispatchEvent(
+    it("Given event option is 'pointerdown', When pointerdown occurs on an outside element, Then closes the floating element", async () => {
+      // Given
+      const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
+      expect(node.open.value).toBe(true);
+
+      // When
+      outsideEl.dispatchEvent(makePointerEvent("pointerdown"));
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
+    });
+
+    it("Given enabled is false, When an outside element is clicked, Then preserves open state", async () => {
+      // Given
+      const { outsideEl, node } = await renderOutsideClick({
+        enabled: false,
+        event: "click",
+      });
+
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given an open floating element, When clicking the anchor or floating panel, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl, node } = await renderOutsideClick({
+        event: "click",
+      });
+
+      // When: Click anchor
+      await userEvent.click(anchorEl);
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      // When: Click floating panel
+      await userEvent.click(floatingEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given a shouldIgnore predicate, When clicking an ignored element, Then ignores click and preserves open state", async () => {
+      // Given
+      const { outsideEl, ignoredEl, node } = await renderOutsideClick({
+        event: "click",
+        shouldIgnore: (_event, target) => target === ignoredEl,
+      });
+
+      // When: Click ignored element
+      await userEvent.click(ignoredEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+
+      // When: Click non-ignored outside element
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
+    });
+
+    it("Given a custom onOutsideClick callback, When an outside element is clicked, Then invokes the callback without auto-closing", async () => {
+      // Given
+      const onOutsideClick = vi.fn();
+      const { outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        onOutsideClick,
+      });
+
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(onOutsideClick).toHaveBeenCalledTimes(1);
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given a floating element that is already closed, When an outside element is clicked, Then ignores invocation", async () => {
+      // Given
+      const onOutsideClick = vi.fn();
+      const { outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        onOutsideClick,
+      });
+
+      node.open.value = false;
+      await nextTick();
+
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(onOutsideClick).not.toHaveBeenCalled();
+    });
+
+    it("Given secondary or auxiliary mouse buttons, When right or middle clicked outside, Then preserves open state", async () => {
+      // Given
+      const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
+
+      // When: Right-click (button 2)
+      outsideEl.dispatchEvent(
+        new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 2 }),
+      );
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      // When: Middle-click (button 1)
+      outsideEl.dispatchEvent(
+        new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 1 }),
+      );
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      // When: Primary click (button 0)
+      outsideEl.dispatchEvent(
+        new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 }),
+      );
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
+    });
+
+    it("Given enabled is a reactive ref, When enabled toggles from false to true, Then synchronizes outside click behavior", async () => {
+      // Given
+      const enabled = ref(false);
+      const { outsideEl, node } = await renderOutsideClick({
+        enabled,
+        event: "click",
+      });
+
+      // When clicked while disabled
+      await userEvent.click(outsideEl);
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      // When enabled becomes true
+      enabled.value = true;
+      await nextTick();
+
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
+    });
+  });
+
+  describe("Scenario: Drag gesture handling and boundary tracking", () => {
+    it("Given ignoreDrag is true, When mousedown fires inside floating element and click fires outside, Then preserves open state", async () => {
+      // Given
+      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        ignoreDrag: true,
+      });
+
+      // When: Mouse down inside followed by click outside without intermediate mouseup
+      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+      outsideEl.dispatchEvent(makeMouseEvent("click"));
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given ignoreDrag is true, When drag starts inside floating element and releases outside, Then preserves open state", async () => {
+      // Given
+      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        ignoreDrag: true,
+      });
+
+      // When: Mouse down inside, mouse up outside, followed by click outside
+      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+      outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
+      outsideEl.dispatchEvent(makeMouseEvent("click"));
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given ignoreDrag is true, When drag starts outside and releases inside floating element, Then preserves open state", async () => {
+      // Given
+      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        ignoreDrag: true,
+      });
+
+      // When: Mouse down outside, mouse up inside, followed by click outside
+      outsideEl.dispatchEvent(makeMouseEvent("mousedown"));
+      floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
+      outsideEl.dispatchEvent(makeMouseEvent("click"));
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given ignoreDrag is true, When mouseup occurs and reset timer completes, Then allows subsequent outside click to dismiss", async () => {
+      // Given
+      vi.useFakeTimers();
+      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        ignoreDrag: true,
+      });
+
+      // Start drag inside and release mouseup
+      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+      floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
+
+      // Advance past reset timeout
+      vi.advanceTimersByTime(10);
+
+      // When: Subsequent outside click
+      outsideEl.dispatchEvent(makeMouseEvent("click"));
+      await nextTick();
+
+      // Then: Closes normally
+      expect(node.open.value).toBe(false);
+    });
+
+    it("Given a new mousedown inside occurs before reset timer fires, When second gesture clicks outside, Then keeps drag protection active", async () => {
+      // Given
+      vi.useFakeTimers();
+      const { floatingEl, outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        ignoreDrag: true,
+      });
+
+      // Gesture 1: mousedown inside, mouseup outside -> schedules drag reset
+      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+      outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
+
+      // Gesture 2: immediate new mousedown inside BEFORE timer 1 executes
+      floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
+
+      // Advance timer past first reset delay
+      vi.advanceTimersByTime(10);
+
+      // When: Gesture 2 click lands outside
+      outsideEl.dispatchEvent(makeMouseEvent("click"));
+      await nextTick();
+
+      // Then: Still protected by active second drag gesture
+      expect(node.open.value).toBe(true);
+    });
+  });
+
+  describe("Scenario: Scrollbar hit-testing and edge avoidance", () => {
+    it("Given ignoreScrollbar is true, When clicking element scrollbar gutter, Then preserves open state", async () => {
+      // Given
+      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+      const scrollableEl = getTestEl("outside-scrollable");
+      const rect = scrollableEl.getBoundingClientRect();
+      Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+
+      // When: Click on scrollbar gutter
+      const scrollbarX = rect.left + 90;
+      const scrollbarY = rect.top + 20;
+
+      scrollableEl.dispatchEvent(
         new MouseEvent("pointerdown", {
-          clientX: 990,
-          clientY: 100,
+          clientX: scrollbarX,
+          clientY: scrollbarY,
           bubbles: true,
         }),
       );
       await nextTick();
 
+      // Then
+      expect(node.open.value).toBe(true);
+    });
+
+    it("Given ignoreScrollbar is false, When clicking element scrollbar gutter, Then closes the floating element", async () => {
+      // Given
+      const { node } = await renderOutsideClick({ ignoreScrollbar: false });
+      const scrollableEl = getTestEl("outside-scrollable");
+      const rect = scrollableEl.getBoundingClientRect();
+      Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
+
+      // When
+      const scrollbarX = rect.left + 90;
+      const scrollbarY = rect.top + 20;
+
+      scrollableEl.dispatchEvent(
+        new MouseEvent("pointerdown", {
+          clientX: scrollbarX,
+          clientY: scrollbarY,
+          bubbles: true,
+        }),
+      );
+      await nextTick();
+
+      // Then
       expect(node.open.value).toBe(false);
-    } finally {
-      Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
-      delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
-    }
-  });
-
-  it("reacts dynamically when enabled option changes", async () => {
-    const enabled = ref(false);
-    const { outsideEl, node } = await renderOutsideClick({
-      enabled,
-      event: "click",
     });
 
-    await userEvent.click(outsideEl);
-    await nextTick();
-    expect(node.open.value).toBe(true);
+    it("Given ignoreScrollbar is true, When clicking viewport scrollbar, Then preserves open state", async () => {
+      // Given
+      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+      const origInnerWidth = window.innerWidth;
+      Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+      Object.defineProperty(document.documentElement, "clientWidth", {
+        value: 985,
+        configurable: true,
+      });
 
-    enabled.value = true;
-    await nextTick();
+      try {
+        // When
+        document.documentElement.dispatchEvent(
+          new MouseEvent("pointerdown", {
+            clientX: 990,
+            clientY: 100,
+            bubbles: true,
+          }),
+        );
+        await nextTick();
 
-    await userEvent.click(outsideEl);
-    await nextTick();
-    expect(node.open.value).toBe(false);
-  });
-
-  it("intercepts click even if stopPropagation is called in bubbling when capture is true", async () => {
-    const { outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      capture: true,
+        // Then
+        expect(node.open.value).toBe(true);
+      } finally {
+        Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
+        delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
+      }
     });
 
-    outsideEl.addEventListener(
-      "click",
-      (e) => {
-        e.stopPropagation();
-      },
-      { once: true },
-    );
+    it("Given ignoreScrollbar is false, When clicking viewport scrollbar, Then closes the floating element", async () => {
+      // Given
+      const { node } = await renderOutsideClick({ ignoreScrollbar: false });
+      const origInnerWidth = window.innerWidth;
+      Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+      Object.defineProperty(document.documentElement, "clientWidth", {
+        value: 985,
+        configurable: true,
+      });
 
-    await userEvent.click(outsideEl);
-    await nextTick();
+      try {
+        // When
+        document.documentElement.dispatchEvent(
+          new MouseEvent("pointerdown", {
+            clientX: 990,
+            clientY: 100,
+            bubbles: true,
+          }),
+        );
+        await nextTick();
 
-    expect(node.open.value).toBe(false);
-  });
-
-  it("allows bubbling stopPropagation to prevent dismissal when capture is false", async () => {
-    const { outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      capture: false,
+        // Then
+        expect(node.open.value).toBe(false);
+      } finally {
+        Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
+        delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
+      }
     });
 
-    outsideEl.addEventListener(
-      "click",
-      (e) => {
-        e.stopPropagation();
-      },
-      { once: true },
-    );
+    it("Given RTL direction with ignoreScrollbar true, When clicking left scrollbar edge, Then detects scrollbar correctly", async () => {
+      // Given
+      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+      const scrollableEl = getTestEl("outside-scrollable");
+      scrollableEl.style.direction = "rtl";
+      const rect = scrollableEl.getBoundingClientRect();
+      Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
 
-    await userEvent.click(outsideEl);
-    await nextTick();
+      // When: Click left edge (scrollbar gutter in RTL)
+      const scrollbarX = rect.left + 5;
+      const scrollbarY = rect.top + 20;
 
-    expect(node.open.value).toBe(true);
-  });
+      scrollableEl.dispatchEvent(
+        new MouseEvent("pointerdown", {
+          clientX: scrollbarX,
+          clientY: scrollbarY,
+          bubbles: true,
+          button: 0,
+        }),
+      );
+      await nextTick();
+      expect(node.open.value).toBe(true);
 
-  it("keeps the initial capture phase when capture changes mid-open", async () => {
-    const options: UseOutsideClickOptions = { event: "click", capture: true };
-    const { outsideEl, node } = await renderOutsideClick(options);
+      // When: Click right content area in RTL
+      const contentX = rect.left + 90;
+      scrollableEl.dispatchEvent(
+        new MouseEvent("pointerdown", {
+          clientX: contentX,
+          clientY: scrollbarY,
+          bubbles: true,
+          button: 0,
+        }),
+      );
+      await nextTick();
 
-    // Capture is a static setup option: flipping it while the overlay stays
-    // open must not re-key the active document listener.
-    options.capture = false;
-    await nextTick();
-
-    outsideEl.addEventListener(
-      "click",
-      (e) => {
-        e.stopPropagation();
-      },
-      { once: true },
-    );
-
-    await userEvent.click(outsideEl);
-    await nextTick();
-
-    expect(node.open.value).toBe(false);
-  });
-
-  it("does not trigger onOutsideClick when node is already closed", async () => {
-    const onOutsideClick = vi.fn();
-    const { outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      onOutsideClick,
+      // Then
+      expect(node.open.value).toBe(false);
     });
 
-    node.open.value = false;
-    await nextTick();
+    it("Given an element with thick borders, When clicking on border, Then distinguishes borders from scrollbars and closes", async () => {
+      // Given
+      const { node } = await renderOutsideClick({ ignoreScrollbar: true });
+      const outsideEl = getTestEl("outside");
+      outsideEl.style.border = "15px solid black";
+      const rect = outsideEl.getBoundingClientRect();
+      Object.defineProperty(outsideEl, "offsetWidth", { value: 100, configurable: true });
+      Object.defineProperty(outsideEl, "clientWidth", { value: 70, configurable: true });
 
-    await userEvent.click(outsideEl);
-    await nextTick();
+      // When: Click on right border area
+      outsideEl.dispatchEvent(
+        new MouseEvent("pointerdown", {
+          clientX: rect.left + 80,
+          clientY: rect.top + 20,
+          bubbles: true,
+          button: 0,
+        }),
+      );
+      await nextTick();
 
-    expect(onOutsideClick).not.toHaveBeenCalled();
+      // Then
+      expect(node.open.value).toBe(false);
+    });
   });
 
-  it("resets drag sequence after mouseup timeout completes", async () => {
-    vi.useFakeTimers();
+  describe("Scenario: Event phases, propagation, and capture options", () => {
+    it("Given capture is true, When an outside element calls stopPropagation in bubble phase, Then still intercepts and closes", async () => {
+      // Given
+      const { outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        capture: true,
+      });
 
-    const { floatingEl, outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      ignoreDrag: true,
+      outsideEl.addEventListener(
+        "click",
+        (e) => {
+          e.stopPropagation();
+        },
+        { once: true },
+      );
+
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
     });
 
-    // Start drag inside and release mouseup
-    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-    floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
+    it("Given capture is false, When an outside element calls stopPropagation in bubble phase, Then respects stopPropagation and stays open", async () => {
+      // Given
+      const { outsideEl, node } = await renderOutsideClick({
+        event: "click",
+        capture: false,
+      });
 
-    // Advance past the 0ms timeout that resets dragStartedInside
-    vi.advanceTimersByTime(10);
+      outsideEl.addEventListener(
+        "click",
+        (e) => {
+          e.stopPropagation();
+        },
+        { once: true },
+      );
 
-    // Subsequent outside click should close since drag was reset
-    outsideEl.dispatchEvent(makeMouseEvent("click"));
-    await nextTick();
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-    expect(node.open.value).toBe(false);
-  });
-
-  it("ignores non-primary button presses (right click and middle click)", async () => {
-    const { outsideEl, node } = await renderOutsideClick({ event: "pointerdown" });
-
-    // Secondary / right-click (button: 2)
-    outsideEl.dispatchEvent(
-      new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 2 }),
-    );
-    await nextTick();
-    expect(node.open.value).toBe(true);
-
-    // Auxiliary / middle-click (button: 1)
-    outsideEl.dispatchEvent(
-      new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 1 }),
-    );
-    await nextTick();
-    expect(node.open.value).toBe(true);
-
-    // Primary click (button: 0)
-    outsideEl.dispatchEvent(
-      new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 }),
-    );
-    await nextTick();
-    expect(node.open.value).toBe(false);
-  });
-
-  it("detects scrollbar clicks correctly in RTL layout", async () => {
-    const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-    const scrollableEl = getTestEl("outside-scrollable");
-    scrollableEl.style.direction = "rtl";
-    const rect = scrollableEl.getBoundingClientRect();
-
-    // 15px scrollbar gutter in a 100px element with clientWidth 85
-    Object.defineProperty(scrollableEl, "clientWidth", { value: 85, configurable: true });
-
-    // In RTL, the scrollbar is on the left edge (0 to 15px)
-    const scrollbarX = rect.left + 5;
-    const scrollbarY = rect.top + 20;
-
-    scrollableEl.dispatchEvent(
-      new MouseEvent("pointerdown", {
-        clientX: scrollbarX,
-        clientY: scrollbarY,
-        bubbles: true,
-        button: 0,
-      }),
-    );
-    await nextTick();
-    expect(node.open.value).toBe(true);
-
-    // Click on the right content area in RTL (85px to 100px) should dismiss
-    const contentX = rect.left + 90;
-    scrollableEl.dispatchEvent(
-      new MouseEvent("pointerdown", {
-        clientX: contentX,
-        clientY: scrollbarY,
-        bubbles: true,
-        button: 0,
-      }),
-    );
-    await nextTick();
-    expect(node.open.value).toBe(false);
-  });
-
-  it("does not mistake element borders for scrollbars", async () => {
-    const { node } = await renderOutsideClick({ ignoreScrollbar: true });
-    const outsideEl = getTestEl("outside");
-    outsideEl.style.border = "15px solid black";
-    const rect = outsideEl.getBoundingClientRect();
-
-    // offsetWidth is 100, clientWidth is 70 (borderLeft 15 + borderRight 15)
-    Object.defineProperty(outsideEl, "offsetWidth", { value: 100, configurable: true });
-    Object.defineProperty(outsideEl, "clientWidth", { value: 70, configurable: true });
-
-    // Click on the right border area
-    outsideEl.dispatchEvent(
-      new MouseEvent("pointerdown", {
-        clientX: rect.left + 80,
-        clientY: rect.top + 20,
-        bubbles: true,
-        button: 0,
-      }),
-    );
-    await nextTick();
-
-    // Should close because borders are not scrollbars
-    expect(node.open.value).toBe(false);
-  });
-
-  it("ignores outside click when drag started inside floating element and released outside", async () => {
-    const { floatingEl, outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      ignoreDrag: true,
+      // Then
+      expect(node.open.value).toBe(true);
     });
 
-    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-    outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
-    outsideEl.dispatchEvent(makeMouseEvent("click"));
-    await nextTick();
+    it("Given capture changes mid-open, When outside is clicked, Then maintains initial capture phase binding", async () => {
+      // Given
+      const options: UseOutsideClickOptions = { event: "click", capture: true };
+      const { outsideEl, node } = await renderOutsideClick(options);
 
-    expect(node.open.value).toBe(true);
+      options.capture = false;
+      await nextTick();
+
+      outsideEl.addEventListener(
+        "click",
+        (e) => {
+          e.stopPropagation();
+        },
+        { once: true },
+      );
+
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
+    });
+
+    it("Given independent overlays with mixed capture phases, When clicking outside, Then dismisses both without cross-phase lockout", async () => {
+      // Given
+      const { outsideEl, openA, openB } = await renderTwoOverlaysOutsideClick({
+        overlayACapture: true,
+        overlayBCapture: false,
+      });
+
+      expect(openA.value).toBe(true);
+      expect(openB.value).toBe(true);
+
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then: Both overlays close across phases
+      expect(openA.value).toBe(false);
+      expect(openB.value).toBe(false);
+    });
   });
 
-  it("ignores outside click when drag started outside and released inside floating element", async () => {
-    const { floatingEl, outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      ignoreDrag: true,
+  describe("Scenario: DOM hierarchy, unmounted elements, and iframe focus", () => {
+    it("Given an element inside floating unmounts upon click, When clicked, Then preserves open state", async () => {
+      // Given
+      const { floatingEl, node } = await renderOutsideClick({
+        event: "click",
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "Remove Me";
+      floatingEl.appendChild(removeBtn);
+
+      removeBtn.addEventListener("click", () => {
+        removeBtn.remove();
+      });
+
+      // When
+      removeBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
     });
 
-    outsideEl.dispatchEvent(makeMouseEvent("mousedown"));
-    floatingEl.dispatchEvent(makeMouseEvent("mouseup"));
-    outsideEl.dispatchEvent(makeMouseEvent("click"));
-    await nextTick();
+    it("Given focus moves to an outside iframe, When window blurs, Then closes floating element", async () => {
+      // Given
+      vi.useFakeTimers();
+      const { node } = await renderOutsideClick();
 
-    expect(node.open.value).toBe(true);
+      const outsideIframe = document.createElement("iframe");
+      document.body.appendChild(outsideIframe);
+
+      Object.defineProperty(document, "activeElement", {
+        value: outsideIframe,
+        configurable: true,
+      });
+
+      // When: Window blurs to iframe
+      window.dispatchEvent(new FocusEvent("blur"));
+      vi.advanceTimersByTime(10);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(false);
+      outsideIframe.remove();
+    });
+
+    it("Given focus moves to an inner iframe inside floating panel, When window blurs, Then preserves open state", async () => {
+      // Given
+      vi.useFakeTimers();
+      const { floatingEl, node } = await renderOutsideClick();
+
+      const innerIframe = document.createElement("iframe");
+      floatingEl.appendChild(innerIframe);
+
+      Object.defineProperty(document, "activeElement", {
+        value: innerIframe,
+        configurable: true,
+      });
+
+      // When: Window blurs to inner iframe
+      window.dispatchEvent(new FocusEvent("blur"));
+      vi.advanceTimersByTime(10);
+      await nextTick();
+
+      // Then
+      expect(node.open.value).toBe(true);
+      innerIframe.remove();
+    });
   });
 
-  it("does not dismiss when an element inside floating unmounts on click", async () => {
-    const { floatingEl, node } = await renderOutsideClick({
-      event: "click",
+  describe("Scenario: Tree hierarchies, parent-child coordination, and leaf-first unwinding", () => {
+    it("Given a parent and child floating tree, When clicking inside child floating element, Then keeps parent open", async () => {
+      // Given
+      const { childFloatingEl, parentOpen } = await renderTreeOutsideClick("parent");
+
+      // When
+      await userEvent.click(childFloatingEl);
+      await nextTick();
+
+      // Then
+      expect(parentOpen.value).toBe(true);
     });
 
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "Remove Me";
-    floatingEl.appendChild(removeBtn);
+    it("Given a parent and child floating tree, When clicking inside parent floating blank area, Then closes child while parent stays open", async () => {
+      // Given
+      const { floatingEl, parentOpen, childOpen } = await renderTreeOutsideClick("child");
 
-    removeBtn.addEventListener("click", () => {
-      removeBtn.remove();
+      // When
+      await userEvent.click(floatingEl);
+      await nextTick();
+
+      // Then
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(false);
     });
 
-    removeBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    await nextTick();
+    it("Given leafFirst is true, When clicking outside, Then unwinds the tree leaf-first across repeated clicks", async () => {
+      // Given
+      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst: true,
+        childLeafFirst: true,
+      });
 
-    expect(node.open.value).toBe(true);
-  });
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-  it("coordinates tree unwinding leaf-first when leafFirst is true", async () => {
-    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst: true,
-      childLeafFirst: true,
+      // When: 1st outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then: Child closes, parent remains open
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(true);
+
+      // When: 2nd outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then: Parent closes
+      expect(parentOpen.value).toBe(false);
     });
 
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
+    it("Given leafFirst is a reactive ref, When updated dynamically, Then switches to leaf-first unwinding order", async () => {
+      // Given
+      const parentLeafFirst = ref(false);
+      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst,
+        childLeafFirst: true,
+      });
 
-    // Click 1 outside: only child should close
-    await userEvent.click(outsideEl);
-    await nextTick();
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(true);
+      // When: Update leafFirst dynamically
+      parentLeafFirst.value = true;
+      await nextTick();
 
-    // Click 2 outside: parent now closes
-    await userEvent.click(outsideEl);
-    await nextTick();
+      // 1st outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-    expect(parentOpen.value).toBe(false);
-  });
+      // Then: Only child closes
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(true);
 
-  it("reactively updates tree unwinding when leafFirst ref changes", async () => {
-    const parentLeafFirst = ref(false);
-    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst,
-      childLeafFirst: true,
+      // 2nd outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then: Parent closes
+      expect(parentOpen.value).toBe(false);
     });
 
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
+    it("Given leafFirst is false, When clicking outside, Then closes all hierarchy levels simultaneously", async () => {
+      // Given
+      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst: false,
+        childLeafFirst: false,
+      });
 
-    // When false: clicking outside closes both simultaneously
-    // Let's set it to true dynamically:
-    parentLeafFirst.value = true;
-    await nextTick();
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-    // Click 1 outside: parentLeafFirst is true, so only child closes
-    await userEvent.click(outsideEl);
-    await nextTick();
+      // When
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(true);
-
-    // Click 2 outside: parent now closes
-    await userEvent.click(outsideEl);
-    await nextTick();
-
-    expect(parentOpen.value).toBe(false);
-  });
-
-  it("collapses all levels simultaneously on outside click when leafFirst is false", async () => {
-    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst: false,
-      childLeafFirst: false,
+      // Then
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(false);
     });
 
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
+    it("Given mixed capture settings across tree levels with leafFirst true, When clicking outside, Then coordinates leaf-first unwinding cleanly", async () => {
+      // Given: Parent on bubble phase (capture: false), Child on capture phase (capture: true)
+      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst: true,
+        childLeafFirst: true,
+        parentCapture: false,
+        childCapture: true,
+      });
 
-    // Click 1 outside: both should close simultaneously
-    await userEvent.click(outsideEl);
-    await nextTick();
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(false);
-  });
+      // When: 1st outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-  it("dismisses floating element when focus moves to an outside iframe", async () => {
-    vi.useFakeTimers();
-    const { node } = await renderOutsideClick();
+      // Then: Child closes first
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(true);
 
-    const outsideIframe = document.createElement("iframe");
-    document.body.appendChild(outsideIframe);
+      // When: 2nd outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-    // Simulate focus moving to the iframe
-    Object.defineProperty(document, "activeElement", {
-      value: outsideIframe,
-      configurable: true,
-    });
-    window.dispatchEvent(new FocusEvent("blur"));
-
-    vi.advanceTimersByTime(10);
-    await nextTick();
-
-    expect(node.open.value).toBe(false);
-    outsideIframe.remove();
-  });
-
-  it("does not dismiss floating element when focus moves to an inner iframe", async () => {
-    vi.useFakeTimers();
-    const { floatingEl, node } = await renderOutsideClick();
-
-    const innerIframe = document.createElement("iframe");
-    floatingEl.appendChild(innerIframe);
-
-    Object.defineProperty(document, "activeElement", {
-      value: innerIframe,
-      configurable: true,
-    });
-    window.dispatchEvent(new FocusEvent("blur"));
-
-    vi.advanceTimersByTime(10);
-    await nextTick();
-
-    expect(node.open.value).toBe(true);
-    innerIframe.remove();
-  });
-
-  it("coordinates tree unwinding leaf-first across mixed capture settings when leafFirst is true", async () => {
-    // Parent on bubble phase (capture: false), Child on capture phase (capture: true)
-    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst: true,
-      childLeafFirst: true,
-      parentCapture: false,
-      childCapture: true,
+      // Then: Parent closes
+      expect(parentOpen.value).toBe(false);
     });
 
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
+    it("Given an ancestor node re-registers dynamically while child is open, When clicking outside, Then maintains leaf-first tree order", async () => {
+      // Given
+      const parentEnabled = ref(true);
+      const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst: true,
+        childLeafFirst: true,
+        parentEnabled,
+      });
 
-    // Click 1 outside: capture listener closes child; bubble listener skips parent via event-scoped snapshot
-    await userEvent.click(outsideEl);
-    await nextTick();
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(true);
+      // Temporarily disable and re-enable parent to trigger unregister + re-register
+      parentEnabled.value = false;
+      await nextTick();
+      parentEnabled.value = true;
+      await nextTick();
 
-    // Click 2 outside: parent now closes
-    await userEvent.click(outsideEl);
-    await nextTick();
+      // When: 1st outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
 
-    expect(parentOpen.value).toBe(false);
-  });
+      // Then: Child closes first
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(true);
 
-  it("dismisses independent overlays with mixed capture phases without cross-phase lockout", async () => {
-    const { outsideEl, openA, openB } = await renderTwoOverlaysOutsideClick({
-      overlayACapture: true,
-      overlayBCapture: false,
+      // When: 2nd outside click
+      await userEvent.click(outsideEl);
+      await nextTick();
+
+      // Then: Parent closes
+      expect(parentOpen.value).toBe(false);
     });
 
-    expect(openA.value).toBe(true);
-    expect(openB.value).toBe(true);
+    it("Given clicking on ancestor anchor when leafFirst is true, When clicked, Then dismisses descendant branch immediately", async () => {
+      // Given
+      const { anchorEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst: true,
+        childLeafFirst: true,
+      });
 
-    // Single click outside should dismiss both overlays across capture and bubble phases
-    await userEvent.click(outsideEl);
-    await nextTick();
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-    expect(openA.value).toBe(false);
-    expect(openB.value).toBe(false);
-  });
+      // When: Clicking parent anchor is outside child
+      await userEvent.click(anchorEl);
+      await nextTick();
 
-  it("maintains leaf-first tree order when an ancestor re-registers while children remain open", async () => {
-    const parentEnabled = ref(true);
-    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst: true,
-      childLeafFirst: true,
-      parentEnabled,
+      // Then
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(true);
     });
 
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
+    it("Given clicking inside ancestor floating panel when leafFirst is true, When clicked, Then dismisses descendant branch immediately", async () => {
+      // Given
+      const { floatingEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+        parentLeafFirst: true,
+        childLeafFirst: true,
+      });
 
-    // Temporarily disable and re-enable parent to trigger watcher unregister + re-register
-    parentEnabled.value = false;
-    await nextTick();
-    parentEnabled.value = true;
-    await nextTick();
+      expect(parentOpen.value).toBe(true);
+      expect(childOpen.value).toBe(true);
 
-    // Leaf-first depth sorting ensures child still unwinds first
-    await userEvent.click(outsideEl);
-    await nextTick();
+      // When: Clicking parent floating panel is outside child
+      await userEvent.click(floatingEl);
+      await nextTick();
 
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(true);
-
-    // Second click dismisses parent
-    await userEvent.click(outsideEl);
-    await nextTick();
-
-    expect(parentOpen.value).toBe(false);
-  });
-
-  it("cancels pending drag reset timer on new mousedown to prevent wiping active drag tracking", async () => {
-    vi.useFakeTimers();
-
-    const { floatingEl, outsideEl, node } = await renderOutsideClick({
-      event: "click",
-      ignoreDrag: true,
+      // Then
+      expect(childOpen.value).toBe(false);
+      expect(parentOpen.value).toBe(true);
     });
-
-    // Gesture 1: mousedown inside, mouseup outside -> schedules drag reset timeout
-    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-    outsideEl.dispatchEvent(makeMouseEvent("mouseup"));
-
-    // Gesture 2: immediate new mousedown inside BEFORE timer 1 executes
-    floatingEl.dispatchEvent(makeMouseEvent("mousedown"));
-
-    // Advance timer past the reset delay of gesture 1
-    vi.advanceTimersByTime(10);
-
-    // Gesture 2 click lands outside; should NOT dismiss because drag started inside and wasn't wiped out
-    outsideEl.dispatchEvent(makeMouseEvent("click"));
-    await nextTick();
-
-    expect(node.open.value).toBe(true);
-  });
-
-  it("dismisses descendant branch immediately when clicking on ancestor anchor even if leafFirst is true", async () => {
-    const { anchorEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst: true,
-      childLeafFirst: true,
-    });
-
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
-
-    // Clicking parent anchor is inside parent, but outside child; child must dismiss immediately
-    await userEvent.click(anchorEl);
-    await nextTick();
-
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(true);
-  });
-
-  it("dismisses descendant branch immediately when clicking inside ancestor floating panel even if leafFirst is true", async () => {
-    const { floatingEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentLeafFirst: true,
-      childLeafFirst: true,
-    });
-
-    expect(parentOpen.value).toBe(true);
-    expect(childOpen.value).toBe(true);
-
-    // Clicking parent floating panel is inside parent, but outside child; child must dismiss immediately
-    await userEvent.click(floatingEl);
-    await nextTick();
-
-    expect(childOpen.value).toBe(false);
-    expect(parentOpen.value).toBe(true);
   });
 });

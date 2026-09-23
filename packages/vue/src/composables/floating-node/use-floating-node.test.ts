@@ -7,7 +7,7 @@ import { type FloatingNode, useFloatingNode } from "./use-floating-node";
 
 let scope: ReturnType<typeof effectScope> | undefined;
 
-describe("useFloatingNode", () => {
+describe("Feature: useFloatingNode composite tree orchestration", () => {
   beforeEach(() => {
     scope = effectScope();
   });
@@ -20,72 +20,74 @@ describe("useFloatingNode", () => {
     vi.useRealTimers();
   });
 
-  it("defaults open state to ref(false) when open option is omitted", () => {
-    let node!: ReturnType<typeof useFloatingNode>;
-    scope?.run(() => {
-      node = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
+  describe("Scenario: Node creation and controlled open state", () => {
+    it("Given omitted open option, When node is initialized, Then open state defaults to false", () => {
+      let node!: ReturnType<typeof useFloatingNode>;
+      scope?.run(() => {
+        node = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        });
       });
+
+      expect(node.open.value).toBe(false);
     });
 
-    expect(node.open.value).toBe(false);
-  });
-
-  it("supports initializing open state with open: ref(true)", () => {
-    let node!: ReturnType<typeof useFloatingNode>;
-    scope?.run(() => {
-      node = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-        open: ref(true),
+    it("Given open: ref(true) option, When node is initialized, Then open state initializes to true", () => {
+      let node!: ReturnType<typeof useFloatingNode>;
+      scope?.run(() => {
+        node = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          open: ref(true),
+        });
       });
+
+      expect(node.open.value).toBe(true);
     });
 
-    expect(node.open.value).toBe(true);
-  });
+    it("Given a controlled open ref, When node open or source ref changes, Then state synchronizes bi-directionally", () => {
+      const open = ref(false);
+      let node!: ReturnType<typeof useFloatingNode>;
 
-  it("uses controlled open state when passed as ref", () => {
-    const open = ref(false);
-    let node!: ReturnType<typeof useFloatingNode>;
-
-    scope?.run(() => {
-      node = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-        open,
+      scope?.run(() => {
+        node = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+          open,
+        });
       });
+
+      node.open.value = true;
+      expect(open.value).toBe(true);
+
+      open.value = false;
+      expect(node.open.value).toBe(false);
     });
 
-    node.open.value = true;
-    expect(open.value).toBe(true);
+    it("Given multiple floating nodes, When initialized, Then each node is assigned a unique stable symbol id", () => {
+      let node!: ReturnType<typeof useFloatingNode>;
+      let otherNode!: ReturnType<typeof useFloatingNode>;
 
-    open.value = false;
-    expect(node.open.value).toBe(false);
-  });
-
-  it("assigns each node a stable symbol id", () => {
-    let node!: ReturnType<typeof useFloatingNode>;
-    let otherNode!: ReturnType<typeof useFloatingNode>;
-
-    scope?.run(() => {
-      node = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
+      scope?.run(() => {
+        node = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        });
+        otherNode = useFloatingNode({
+          anchorEl: ref(null),
+          floatingEl: ref(null),
+        });
       });
-      otherNode = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-      });
+
+      expect(typeof node.id).toBe("symbol");
+      expect(node.id).toBe(node.id);
+      expect(node.id).not.toBe(otherNode.id);
     });
-
-    expect(typeof node.id).toBe("symbol");
-    expect(node.id).toBe(node.id);
-    expect(node.id).not.toBe(otherNode.id);
   });
 
-  describe("Criterion 1: Standalone composite node (N = 0)", () => {
-    it("initializes with null parent and empty children set", () => {
+  describe("Scenario: Standalone composite node (N = 0)", () => {
+    it("Given a standalone node, When initialized, Then parent is null and children set is empty", () => {
       let node!: FloatingNode;
       scope?.run(() => {
         node = useFloatingNode({
@@ -98,7 +100,7 @@ describe("useFloatingNode", () => {
       expect(node.children.value.size).toBe(0);
     });
 
-    it("contains() delegates to DOM containment of anchorEl and floatingEl", () => {
+    it("Given a standalone node with elements, When contains is checked, Then it delegates to DOM containment of anchor and floating elements", () => {
       const anchorEl = trackElement(document.createElement("button"));
       const floatingEl = trackElement(document.createElement("div"));
       const insideAnchor = trackElement(document.createElement("span"));
@@ -124,7 +126,7 @@ describe("useFloatingNode", () => {
       expect(node.contains(null)).toBe(false);
     });
 
-    it("traverse() visits standalone node with depth 0", () => {
+    it("Given a standalone node, When traverse is called, Then it visits the node with depth 0", () => {
       let node!: FloatingNode;
       const visited: { node: FloatingNode; depth: number }[] = [];
 
@@ -143,8 +145,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 2: Single-component nested hierarchy via parent option", () => {
-    it("establishes parent-child relationship declaratively and updates refs", () => {
+  describe("Scenario: Single-component nested hierarchy via parent option and traversal algorithms", () => {
+    it("Given root and child nodes with parent option, When initialized, Then parent-child relationship is established declaratively", () => {
       let root!: FloatingNode;
       let child!: FloatingNode;
 
@@ -164,7 +166,7 @@ describe("useFloatingNode", () => {
       expect(root.children.value.has(child)).toBe(true);
     });
 
-    it("contains() includes open descendant elements but ignores closed descendant elements", () => {
+    it("Given a parent and child node, When contains is checked, Then it includes open descendant elements but ignores closed descendant elements", () => {
       const rootAnchor = trackElement(document.createElement("button"));
       const rootFloating = trackElement(document.createElement("div"));
       const childAnchor = trackElement(document.createElement("button"));
@@ -196,7 +198,7 @@ describe("useFloatingNode", () => {
       expect(root.contains(childFloating)).toBe(true);
     });
 
-    it("contains() terminates early when target is found without scanning subsequent branches", () => {
+    it("Given a tree with multiple branches, When target element matches in an early branch, Then contains terminates early without scanning subsequent branches", () => {
       const rootAnchor = trackElement(document.createElement("button"));
       const rootFloating = trackElement(document.createElement("div"));
       const child1Floating = trackElement(document.createElement("div"));
@@ -240,7 +242,7 @@ describe("useFloatingNode", () => {
       expect(child2TraverseSpy).not.toHaveBeenCalled();
     });
 
-    it("traverse() executes top-down (default) and prunes branches when returning 'skip'", () => {
+    it("Given a nested tree, When traverse executes top-down and returns 'skip', Then it prunes that branch and visits remaining branches", () => {
       let root!: FloatingNode;
       let childA!: FloatingNode;
       let childB!: FloatingNode;
@@ -295,7 +297,7 @@ describe("useFloatingNode", () => {
       expect(prunedVisited).toEqual([root, childA, childB]);
     });
 
-    it("traverse() executes top-down and aborts globally when returning 'stop'", () => {
+    it("Given a nested tree, When traverse executes top-down and returns 'stop', Then it aborts traversal globally", () => {
       let root!: FloatingNode;
       let childA!: FloatingNode;
 
@@ -334,7 +336,7 @@ describe("useFloatingNode", () => {
       expect(visited).toEqual([root, childA]);
     });
 
-    it("traverse() executes bottom-up (post-order) visiting leaves before parents", () => {
+    it("Given a nested tree, When traverse executes bottom-up, Then it visits leaves before parents", () => {
       let root!: FloatingNode;
       let child!: FloatingNode;
       let grandchild!: FloatingNode;
@@ -372,7 +374,7 @@ describe("useFloatingNode", () => {
       ]);
     });
 
-    it("traverse() executes bottom-up and aborts globally when returning 'stop'", () => {
+    it("Given a nested tree, When traverse executes bottom-up and returns 'stop', Then it aborts traversal globally", () => {
       let root!: FloatingNode;
       let grandchildA!: FloatingNode;
 
@@ -414,7 +416,7 @@ describe("useFloatingNode", () => {
       expect(visited).toEqual([grandchildA]);
     });
 
-    it("traverse() treats 'skip' as safe no-op in bottom-up order", () => {
+    it("Given a nested tree, When traverse executes bottom-up and returns 'skip', Then it treats 'skip' as a safe no-op", () => {
       let root!: FloatingNode;
       let child!: FloatingNode;
       let grandchild!: FloatingNode;
@@ -451,7 +453,7 @@ describe("useFloatingNode", () => {
       expect(visited).toEqual([grandchild, child, root]);
     });
 
-    it("traverse() allows consumers to collect active floating elements across open branches", () => {
+    it("Given an open nested tree, When traverse collects active elements, Then it accumulates floating elements across open branches", () => {
       const rootFloating = trackElement(document.createElement("div"));
       const childFloating = trackElement(document.createElement("div"));
       const grandchildFloating = trackElement(document.createElement("div"));
@@ -505,7 +507,7 @@ describe("useFloatingNode", () => {
       expect(collectFloatingElements(root)).toEqual([rootFloating]);
     });
 
-    it("supports switching parent node imperatively via appendChild and removeChild", () => {
+    it("Given detached nodes, When appendChild and removeChild are called, Then it supports switching parent node imperatively", () => {
       let child!: FloatingNode;
       let root1!: FloatingNode;
       let root2!: FloatingNode;
@@ -545,8 +547,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 3: Multi-component prop-driven nested submenus", () => {
-    it("registers child into parent.children when child component mounts with :parent prop and cleans up on unmount", async () => {
+  describe("Scenario: Multi-component prop-driven nested submenus", () => {
+    it("Given a parent component, When child component mounts with :parent prop, Then it registers in parent.children and unregisters on unmount", async () => {
       let rootNode!: FloatingNode;
       let childNodeRef: FloatingNode | null = null;
       const showChild = ref(true);
@@ -603,8 +605,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 4: Leaf-first Escape key dismissal", () => {
-    it("unwinds nested stack layer-by-layer from deepest leaf to root on Escape key", async () => {
+  describe("Scenario: Leaf-first Escape key dismissal", () => {
+    it("Given a nested open stack with escape listeners, When Escape key is pressed sequentially, Then it unwinds layer-by-layer from deepest leaf to root", async () => {
       const rootOpen = ref(true);
       const childOpen = ref(true);
       const grandchildOpen = ref(true);
@@ -665,8 +667,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 5: Teardown and unmount cleanup", () => {
-    it("detaches from parent upon scope disposal of child node", () => {
+  describe("Scenario: Teardown and unmount cleanup", () => {
+    it("Given a child node, When its effect scope is disposed, Then it detaches from its parent", () => {
       let root!: FloatingNode;
       let child!: FloatingNode;
 
@@ -695,7 +697,7 @@ describe("useFloatingNode", () => {
       });
     });
 
-    it("clears all children linkages upon scope disposal of parent node", () => {
+    it("Given a parent node with children, When its effect scope is disposed, Then it clears all children linkages", () => {
       let child1!: FloatingNode;
       let child2!: FloatingNode;
 
@@ -731,8 +733,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 6: Edge cases & cycle/self-parenting prevention", () => {
-    it("warns and ignores when attempting to append node to itself", () => {
+  describe("Scenario: Edge cases and cycle/self-parenting prevention", () => {
+    it("Given a node, When attempting to append node to itself, Then it warns and ignores the operation", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       let node!: FloatingNode;
@@ -752,7 +754,7 @@ describe("useFloatingNode", () => {
       warnSpy.mockRestore();
     });
 
-    it("warns and ignores circular references when appending an ancestor as child", () => {
+    it("Given an ancestor and child node, When attempting to append ancestor as child, Then it warns and ignores circular references", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       let root!: FloatingNode;
@@ -786,7 +788,7 @@ describe("useFloatingNode", () => {
       warnSpy.mockRestore();
     });
 
-    it("appendChild is idempotent when child is already linked", () => {
+    it("Given an already linked child node, When appendChild is called again, Then the operation is idempotent", () => {
       let root!: FloatingNode;
       let child!: FloatingNode;
 
@@ -808,7 +810,7 @@ describe("useFloatingNode", () => {
       expect(root.children.value.size).toBe(1);
     });
 
-    it("removeChild safely ignores non-child nodes", () => {
+    it("Given a non-child node, When removeChild is called, Then it safely ignores the call without throwing", () => {
       let root!: FloatingNode;
       let stranger!: FloatingNode;
 
@@ -827,7 +829,7 @@ describe("useFloatingNode", () => {
       expect(root.children.value.size).toBe(0);
     });
 
-    it("handles null and undefined parent option without error", () => {
+    it("Given null or undefined parent option, When node is initialized, Then it handles the options gracefully without error", () => {
       let nodeNull!: FloatingNode;
       let nodeUndefined!: FloatingNode;
 
@@ -848,7 +850,7 @@ describe("useFloatingNode", () => {
       expect(nodeUndefined.parent.value).toBeNull();
     });
 
-    it("visits sibling branches in insertion order during traverse()", () => {
+    it("Given sibling branches, When traverse is executed, Then it visits sibling branches in insertion order", () => {
       let root!: FloatingNode;
       let branchA!: FloatingNode;
       let branchB!: FloatingNode;
@@ -882,8 +884,8 @@ describe("useFloatingNode", () => {
     });
   });
 
-  describe("Criterion 7: Standalone-by-default and opt-in Dependency Injection (DI)", () => {
-    it("creates a standalone node when parent is omitted, even when nested inside a parent component providing a floating node", async () => {
+  describe("Scenario: Standalone-by-default and opt-in Dependency Injection (DI)", () => {
+    it("Given an ancestor providing a node, When child omits parent option, Then child remains standalone and does not auto-adopt", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
 
@@ -914,7 +916,7 @@ describe("useFloatingNode", () => {
       expect(parentNode.children.value.size).toBe(0);
     });
 
-    it("implicitly registers child component node under parent component node when parent: 'auto' is specified", async () => {
+    it("Given an ancestor providing a node, When child specifies parent: 'auto', Then child implicitly registers under ancestor", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
 
@@ -945,7 +947,7 @@ describe("useFloatingNode", () => {
       expect(parentNode.children.value.has(childNode)).toBe(true);
     });
 
-    it("supports multi-level hierarchical chaining (Grandparent -> Parent -> Child) via parent: 'auto'", async () => {
+    it("Given a 3-level component tree with parent: 'auto', When mounted, Then it forms a multi-level hierarchical chain", async () => {
       let gpNode!: FloatingNode;
       let pNode!: FloatingNode;
       let cNode!: FloatingNode;
@@ -991,7 +993,7 @@ describe("useFloatingNode", () => {
       expect(gpNode.children.value.has(cNode)).toBe(false);
     });
 
-    it("prevents top-level/App.vue tooltips from adopting descendant floating elements across the app", async () => {
+    it("Given an application root tooltip, When descendant floating elements mount, Then root tooltip does not adopt them", async () => {
       let appTooltipNode!: FloatingNode;
       let childDropdownNode!: FloatingNode;
       let childModalNode!: FloatingNode;
@@ -1043,7 +1045,7 @@ describe("useFloatingNode", () => {
       expect(childModalNode.open.value).toBe(true);
     });
 
-    it("bypasses DI and creates standalone node when parent: null is explicitly passed", async () => {
+    it("Given an ancestor providing a node, When child passes parent: null, Then child bypasses DI and stays standalone", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
 
@@ -1074,7 +1076,7 @@ describe("useFloatingNode", () => {
       expect(parentNode.children.value.has(childNode)).toBe(false);
     });
 
-    it("overrides DI parent when an explicit parent node is passed", async () => {
+    it("Given an ancestor providing a node, When child passes an explicit parent node, Then it overrides the DI parent", async () => {
       let parentNode!: FloatingNode;
       let externalNode!: FloatingNode;
       let childNode!: FloatingNode;
@@ -1112,7 +1114,7 @@ describe("useFloatingNode", () => {
       expect(parentNode.children.value.has(childNode)).toBe(false);
     });
 
-    it("detaches child from injected parent when child component is unmounted", async () => {
+    it("Given a child registered via DI, When child unmounts, Then it detaches from injected parent", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
       const showChild = ref(true);
@@ -1151,7 +1153,7 @@ describe("useFloatingNode", () => {
       expect(childNode.parent.value).toBeNull();
     });
 
-    it("clears child parent reference when parent component is unmounted", async () => {
+    it("Given a parent registered via DI, When parent unmounts, Then child's parent reference is cleared", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
       const showParent = ref(true);
@@ -1194,7 +1196,7 @@ describe("useFloatingNode", () => {
       expect(childNode.parent.value).toBeNull();
     });
 
-    it("warns in DEV and stays standalone when parent: 'auto' is passed without an ancestor FloatingNode", async () => {
+    it("Given parent: 'auto' without an ancestor FloatingNode, When mounted, Then it warns in DEV and stays standalone", async () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       let node!: FloatingNode;
 
@@ -1220,7 +1222,7 @@ describe("useFloatingNode", () => {
       warnSpy.mockRestore();
     });
 
-    it("prevents providing node to descendants when provide: false is configured", async () => {
+    it("Given provide: false on parent node, When child specifies parent: 'auto', Then child does not adopt the parent", async () => {
       let parentNode!: FloatingNode;
       let childNode!: FloatingNode;
 
@@ -1253,7 +1255,7 @@ describe("useFloatingNode", () => {
       expect(parentNode.children.value.has(childNode)).toBe(false);
     });
 
-    it("operates cleanly as standalone root when called outside component context (e.g. effectScope)", () => {
+    it("Given an effectScope outside component context, When node is initialized, Then it operates cleanly as standalone root", () => {
       let node!: FloatingNode;
       scope?.run(() => {
         node = useFloatingNode({

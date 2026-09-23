@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
+import { page } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
 import { type FloatingNode, type UseFocusOptions, useFloatingNode, useFocus } from "@/composables";
+import { matchesFocusVisible } from "@/shared/platform";
 import { getTestEl } from "@/test-utils";
 
 vi.mock("@/shared/platform", async (importOriginal) => {
@@ -12,12 +14,11 @@ vi.mock("@/shared/platform", async (importOriginal) => {
   };
 });
 
-import { matchesFocusVisible } from "@/shared/platform";
-
 interface FixtureConfig {
   anchorKind?: "button" | "anchor-subtree";
   withOutside?: boolean;
   withIgnored?: boolean;
+  defaultOpen?: boolean;
 }
 
 function createTestComponent(
@@ -25,7 +26,7 @@ function createTestComponent(
   initialOpen = false,
   config: FixtureConfig = {},
 ) {
-  const openRef = ref(initialOpen);
+  const openRef = ref(config.defaultOpen ?? initialOpen);
   let node!: FloatingNode;
 
   const Component = defineComponent(() => {
@@ -44,12 +45,33 @@ function createTestComponent(
     return () =>
       h("div", { class: "test-wrapper" }, [
         anchorKind === "anchor-subtree"
-          ? h("div", { ref: "anchor", "data-testid": "anchor", tabindex: 0 }, [
+          ? h(
+              "div",
+              {
+                ref: "anchor",
+                "data-testid": "anchor",
+                tabindex: 0,
+                "aria-expanded": String(openRef.value),
+              },
+              ["Anchor", h("input", { "data-testid": "anchor-child", type: "text" })],
+            )
+          : h(
+              "button",
+              {
+                ref: "anchor",
+                "data-testid": "anchor",
+                type: "button",
+                "aria-expanded": String(openRef.value),
+              },
               "Anchor",
-              h("input", { "data-testid": "anchor-child", type: "text" }),
-            ])
-          : h("button", { ref: "anchor", "data-testid": "anchor", type: "button" }, "Anchor"),
-        h("div", { ref: "floating", "data-testid": "floating", tabindex: -1 }, "Floating content"),
+            ),
+        openRef.value
+          ? h(
+              "div",
+              { ref: "floating", "data-testid": "floating", tabindex: -1 },
+              "Floating content",
+            )
+          : null,
         ...(config.withOutside
           ? [h("button", { "data-testid": "outside", type: "button" }, "Outside")]
           : []),
@@ -91,10 +113,38 @@ function createTreeComponent(target: "parent" | "child") {
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("button", { ref: "parent-anchor", "data-testid": "parent-anchor" }, "Parent"),
-        h("div", { ref: "parent-floating", "data-testid": "parent-floating" }, "Parent floating"),
-        h("button", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child"),
-        h("div", { ref: "child-floating", "data-testid": "child-floating" }, "Child floating"),
+        h(
+          "button",
+          {
+            ref: "parent-anchor",
+            "data-testid": "parent-anchor",
+            "aria-expanded": String(parentOpen.value),
+          },
+          "Parent",
+        ),
+        parentOpen.value
+          ? h(
+              "div",
+              { ref: "parent-floating", "data-testid": "parent-floating", tabindex: -1 },
+              "Parent floating",
+            )
+          : null,
+        h(
+          "button",
+          {
+            ref: "child-anchor",
+            "data-testid": "child-anchor",
+            "aria-expanded": String(childOpen.value),
+          },
+          "Child",
+        ),
+        childOpen.value
+          ? h(
+              "div",
+              { ref: "child-floating", "data-testid": "child-floating", tabindex: -1 },
+              "Child floating",
+            )
+          : null,
         h("button", { "data-testid": "outside", type: "button" }, "Outside"),
       ]);
   });
@@ -108,33 +158,28 @@ async function flushFocus() {
   await nextTick();
 }
 
-interface FocusFixture {
-  anchorEl: HTMLElement;
-  floatingEl: HTMLElement;
-  node: FloatingNode;
-  openRef: ReturnType<typeof ref<boolean>>;
-  childInputEl: HTMLElement | null;
-  outsideEl: HTMLElement | null;
-  ignoredEl: HTMLElement | null;
-}
-
 async function renderFocus(
   options: UseFocusOptions = {},
   initialOpen = false,
   config: FixtureConfig = {},
-): Promise<FocusFixture> {
+) {
   const fixture = createTestComponent(options, initialOpen, config);
   await render(fixture.Component);
   vi.useFakeTimers();
   await nextTick();
   return {
-    anchorEl: getTestEl("anchor"),
-    floatingEl: getTestEl("floating"),
+    anchorEl: page.getByTestId("anchor"),
+    floatingEl: page.getByTestId("floating"),
+    rawAnchorEl: getTestEl("anchor"),
+    rawFloatingEl: config.defaultOpen || initialOpen ? getTestEl("floating") : null,
+    childInputEl: config.anchorKind === "anchor-subtree" ? page.getByTestId("anchor-child") : null,
+    rawChildInputEl: config.anchorKind === "anchor-subtree" ? getTestEl("anchor-child") : null,
+    outsideEl: config.withOutside || config.withIgnored ? page.getByTestId("outside") : null,
+    rawOutsideEl: config.withOutside || config.withIgnored ? getTestEl("outside") : null,
+    ignoredEl: config.withIgnored ? page.getByTestId("ignored") : null,
+    rawIgnoredEl: config.withIgnored ? getTestEl("ignored") : null,
     node: fixture.getNode(),
     openRef: fixture.openRef,
-    childInputEl: config.anchorKind === "anchor-subtree" ? getTestEl("anchor-child") : null,
-    outsideEl: config.withOutside || config.withIgnored ? getTestEl("outside") : null,
-    ignoredEl: config.withIgnored ? getTestEl("ignored") : null,
   };
 }
 
@@ -144,187 +189,278 @@ async function renderTreeFocus(target: "parent" | "child") {
   vi.useFakeTimers();
   await nextTick();
   return {
-    parentFloatingEl: getTestEl("parent-floating"),
-    childFloatingEl: getTestEl("child-floating"),
-    outsideEl: getTestEl("outside"),
+    parentAnchorEl: page.getByTestId("parent-anchor"),
+    parentFloatingEl: page.getByTestId("parent-floating"),
+    childAnchorEl: page.getByTestId("child-anchor"),
+    childFloatingEl: page.getByTestId("child-floating"),
+    outsideEl: page.getByTestId("outside"),
+    rawParentFloatingEl: getTestEl("parent-floating"),
+    rawChildFloatingEl: getTestEl("child-floating"),
+    rawOutsideEl: getTestEl("outside"),
     parentOpen: fixture.parentOpen,
     childOpen: fixture.childOpen,
   };
 }
 
-describe("useFocus", () => {
+describe("Feature: useFocus", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.mocked(matchesFocusVisible).mockReset();
     vi.useRealTimers();
   });
 
-  describe("opening behavior", () => {
-    it("opens on focus when focus-visible is not required", async () => {
-      const ctx = await renderFocus({ requireFocusVisible: false });
+  describe("Scenario: Opening floating element on anchor focus", () => {
+    it("Given requireFocusVisible is false, When anchor receives focus, Then opens floating element and marks anchor as expanded", async () => {
+      // Given
+      const { anchorEl, floatingEl, rawAnchorEl } = await renderFocus({
+        requireFocusVisible: false,
+      });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
 
-      ctx.anchorEl.focus();
+      // When
+      rawAnchorEl.focus();
       await flushFocus();
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then
+      await expect.element(anchorEl).toHaveFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
-    it("only opens when the focused element matches focus-visible", async () => {
+    it("Given requireFocusVisible is true, When focus occurs, Then only opens when element matches focus-visible", async () => {
+      // Given: Initially focus-visible returns false
       vi.mocked(matchesFocusVisible).mockReturnValue(false);
-      const ctx = await renderFocus({ requireFocusVisible: true });
-
-      ctx.anchorEl.focus();
-      await flushFocus();
-      expect(ctx.node.open.value).toBe(false);
-
-      vi.mocked(matchesFocusVisible).mockReturnValue(true);
-
-      ctx.anchorEl.blur();
-      await flushFocus();
-      ctx.anchorEl.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(true);
-    });
-
-    it("blocks one refocus after the window blurs while the closed anchor stays focused", async () => {
-      const ctx = await renderFocus({ requireFocusVisible: false });
-
-      ctx.anchorEl.focus();
-      await flushFocus();
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.node.open.value = false;
-      await flushFocus();
-      expect(ctx.node.open.value).toBe(false);
-
-      window.dispatchEvent(new Event("blur"));
-
-      ctx.anchorEl.blur();
-      ctx.anchorEl.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(false);
-
-      window.dispatchEvent(new Event("focus"));
-
-      ctx.anchorEl.blur();
-      ctx.anchorEl.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(true);
-    });
-  });
-
-  describe("closing behavior", () => {
-    it("closes when focus leaves both the anchor and floating element", async () => {
-      const ctx = await renderFocus({ requireFocusVisible: false }, false, { withOutside: true });
-
-      ctx.anchorEl.focus();
-      await flushFocus();
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.outsideEl!.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(false);
-    });
-
-    it("stays open when focus moves into the floating element", async () => {
-      const ctx = await renderFocus({ requireFocusVisible: false });
-
-      ctx.anchorEl.focus();
-      await flushFocus();
-
-      ctx.floatingEl.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(true);
-    });
-
-    it("stays open when focus moves within the anchor subtree", async () => {
-      const ctx = await renderFocus({ requireFocusVisible: false }, false, {
-        anchorKind: "anchor-subtree",
+      const { anchorEl, floatingEl, rawAnchorEl } = await renderFocus({
+        requireFocusVisible: true,
       });
 
-      ctx.anchorEl.focus();
-      await flushFocus();
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.childInputEl!.focus();
+      // When anchor focused without focus-visible
+      rawAnchorEl.focus();
       await flushFocus();
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then: Remains closed
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+
+      // When focus-visible returns true
+      vi.mocked(matchesFocusVisible).mockReturnValue(true);
+      rawAnchorEl.blur();
+      await flushFocus();
+      rawAnchorEl.focus();
+      await flushFocus();
+
+      // Then: Opens and sets aria-expanded
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given window blurs while closed anchor retains focus, When window refocuses, Then blocks ghost reopening", async () => {
+      // Given: Anchor opened then manually closed
+      const { anchorEl, floatingEl, rawAnchorEl, node } = await renderFocus({
+        requireFocusVisible: false,
+      });
+      rawAnchorEl.focus();
+      await flushFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+
+      node.open.value = false;
+      await flushFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When: Window blurs while anchor is still focused
+      window.dispatchEvent(new Event("blur"));
+
+      // Blur and refocus anchor while window was blurred
+      rawAnchorEl.blur();
+      rawAnchorEl.focus();
+      await flushFocus();
+
+      // Then: Ghost reopen is blocked
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+
+      // When: Window receives focus back
+      window.dispatchEvent(new Event("focus"));
+
+      rawAnchorEl.blur();
+      rawAnchorEl.focus();
+      await flushFocus();
+
+      // Then: Normal focus opens the floating element again
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
   });
 
-  describe("ignoreFocusOut predicate", () => {
-    it("keeps the floating element open when focus moves to an ignored element", async () => {
-      let ignoredEl: HTMLElement | null = null;
-      const ctx = await renderFocus(
+  describe("Scenario: Closing floating element on blur and focus-out", () => {
+    it("Given an open floating element, When focus leaves both anchor and floating element, Then closes floating element", async () => {
+      // Given: Opened via anchor focus
+      const { anchorEl, floatingEl, rawAnchorEl, rawOutsideEl } = await renderFocus(
+        { requireFocusVisible: false },
+        false,
+        { withOutside: true },
+      );
+      rawAnchorEl.focus();
+      await flushFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Focus moves outside
+      rawOutsideEl!.focus();
+      await flushFocus();
+
+      // Then: Floating element closes and anchor is collapsed
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given an open floating element, When focus moves into the floating element, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl, rawAnchorEl } = await renderFocus({
+        requireFocusVisible: false,
+      });
+      rawAnchorEl.focus();
+      await flushFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Focus moves into floating element
+      const rawFloatingEl = getTestEl("floating");
+      rawFloatingEl.focus();
+      await flushFocus();
+
+      // Then: Floating element remains open
+      await expect.element(floatingEl).toHaveFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given an anchor subtree, When focus moves within child elements of the anchor, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl, rawAnchorEl, rawChildInputEl } = await renderFocus(
+        { requireFocusVisible: false },
+        false,
+        { anchorKind: "anchor-subtree" },
+      );
+      rawAnchorEl.focus();
+      await flushFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Focus moves to child input inside anchor
+      rawChildInputEl!.focus();
+      await flushFocus();
+
+      // Then: Remains open
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+  });
+
+  describe("Scenario: Custom ignoreFocusOut predicate filtering", () => {
+    it("Given an ignoreFocusOut predicate, When focus moves to the ignored element, Then keeps floating element open", async () => {
+      // Given
+      let targetIgnoredEl: HTMLElement | null = null;
+      const { anchorEl, floatingEl, rawAnchorEl, rawOutsideEl, rawIgnoredEl } = await renderFocus(
         {
           requireFocusVisible: false,
-          ignoreFocusOut: (target) => target === ignoredEl,
+          ignoreFocusOut: (target) => target === targetIgnoredEl,
         },
         false,
         { withOutside: true, withIgnored: true },
       );
-      ignoredEl = ctx.ignoredEl;
+      targetIgnoredEl = rawIgnoredEl;
 
-      ctx.anchorEl.focus();
+      rawAnchorEl.focus();
       await flushFocus();
-      expect(ctx.node.open.value).toBe(true);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
 
-      ctx.ignoredEl!.focus();
-      await flushFocus();
-
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.outsideEl!.focus();
+      // When: Focus moves to the ignored element
+      rawIgnoredEl!.focus();
       await flushFocus();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then: Remains open
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Focus moves to non-ignored outside element
+      rawOutsideEl!.focus();
+      await flushFocus();
+
+      // Then: Closes
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
   });
 
-  describe("parent-linked nodes", () => {
-    it("keeps a parent open when focus moves into a child floating element", async () => {
-      const { childFloatingEl, outsideEl, parentOpen } = await renderTreeFocus("parent");
+  describe("Scenario: Parent and child floating node focus coordination", () => {
+    it("Given a parent floating element, When focus moves into a child floating element, Then keeps parent open", async () => {
+      // Given
+      const { parentAnchorEl, parentFloatingEl, rawChildFloatingEl, rawOutsideEl } =
+        await renderTreeFocus("parent");
+      await expect.element(parentAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(parentFloatingEl).toBeVisible();
 
-      childFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      // When: Focus moves to child floating element
+      rawChildFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(parentOpen.value).toBe(true);
+      // Then: Parent stays open
+      await expect.element(parentAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(parentFloatingEl).toBeVisible();
 
-      outsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      // When: Focus moves completely outside
+      rawOutsideEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(parentOpen.value).toBe(false);
+      // Then: Parent closes
+      await expect.element(parentAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(parentFloatingEl).not.toBeInTheDocument();
     });
 
-    it("closes a child when focus moves into the parent floating element", async () => {
-      const { parentFloatingEl, parentOpen, childOpen } = await renderTreeFocus("child");
+    it("Given a child floating element, When focus moves into parent floating element, Then closes child while parent stays open", async () => {
+      // Given
+      const {
+        parentAnchorEl,
+        parentFloatingEl,
+        childAnchorEl,
+        childFloatingEl,
+        rawParentFloatingEl,
+      } = await renderTreeFocus("child");
+      await expect.element(parentAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(childFloatingEl).toBeVisible();
 
-      parentFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      // When: Focus moves to parent floating element
+      rawParentFloatingEl.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await flushFocus();
 
-      expect(parentOpen.value).toBe(true);
-      expect(childOpen.value).toBe(false);
+      // Then: Parent stays open, child closes
+      await expect.element(parentAnchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(parentFloatingEl).toBeVisible();
+      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(childFloatingEl).not.toBeInTheDocument();
     });
   });
 
-  describe("lifecycle and cleanup", () => {
-    it("does not respond when disabled", async () => {
+  describe("Scenario: Dynamic enablement via enabled option", () => {
+    it("Given enabled is false, When anchor receives focus, Then preserves closed state", async () => {
+      // Given
       const enabled = ref(false);
-      const ctx = await renderFocus({
+      const { anchorEl, floatingEl, rawAnchorEl } = await renderFocus({
         enabled,
         requireFocusVisible: false,
       });
 
-      ctx.anchorEl.focus();
+      // When
+      rawAnchorEl.focus();
       await flushFocus();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
   });
 });

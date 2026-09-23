@@ -4,7 +4,7 @@ import {
   type Polygon,
   safePolygon,
 } from "@/composables/hover/polygon";
-import { clearTrackedElements, makeDOMRect, trackElement } from "@/test-utils";
+import { makeDOMRect } from "@/test-utils";
 
 // Deliberately local: fabricates `target`/`relatedTarget` per call, which real
 // MouseEvents cannot do. For dispatchable events use the shared builder instead.
@@ -25,14 +25,17 @@ type SafePolygonTestContext = CreateSafePolygonHandlerContext & {
   onCloseMock: ReturnType<typeof vi.fn>;
 };
 
+const cleanupElements: HTMLElement[] = [];
+
 function createContext(
   side: "top" | "right" | "bottom" | "left",
   overrides: Partial<CreateSafePolygonHandlerContext> = {},
 ): SafePolygonTestContext {
-  const anchorEl = trackElement(document.createElement("div"));
-  const floatingEl = trackElement(document.createElement("div"));
+  const anchorEl = document.createElement("div");
+  const floatingEl = document.createElement("div");
   document.body.appendChild(anchorEl);
   document.body.appendChild(floatingEl);
+  cleanupElements.push(anchorEl, floatingEl);
 
   const rects: Record<string, [number, number, number, number]> = {
     bottom: [75, 110, 150, 80],
@@ -57,37 +60,40 @@ function createContext(
   };
 }
 
-describe("safePolygon", () => {
+describe("Feature: safePolygon hover corridor protection", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
   afterEach(() => {
-    clearTrackedElements();
+    for (const el of cleanupElements) {
+      el.remove();
+    }
+    cleanupElements.length = 0;
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  describe("factory shape", () => {
-    it("returns a function (SafePolygon)", () => {
+  describe("Scenario: Handler instantiation and contract validation", () => {
+    it("Given factory invocation, When initialized without arguments, Then SafePolygon function is returned", () => {
       const result = safePolygon();
       expect(typeof result).toBe("function");
     });
 
-    it("SafePolygon returns a function (SafePolygonHandler) when given node", () => {
+    it("Given a valid context, When SafePolygon is invoked, Then a pointer event handler function is returned", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       expect(typeof handler).toBe("function");
     });
 
-    it("accepts empty options", () => {
+    it("Given empty options or undefined, When invoked, Then default options are accepted without throwing", () => {
       expect(() => safePolygon()).not.toThrow();
       expect(() => safePolygon({})).not.toThrow();
     });
   });
 
-  describe("guard clauses", () => {
-    it("returns early when domReference is null", () => {
+  describe("Scenario: Input guard clauses and null safety", () => {
+    it("Given missing domReference element, When pointermove occurs, Then handler exits early without triggering close", () => {
       const ctx = createContext("bottom");
       ctx.elements.domReference = null;
       const handler = safePolygon()(ctx);
@@ -95,7 +101,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
 
-    it("returns early when floating is null", () => {
+    it("Given missing floating element, When pointermove occurs, Then handler exits early without triggering close", () => {
       const ctx = createContext("bottom");
       ctx.elements.floating = null;
       const handler = safePolygon()(ctx);
@@ -103,7 +109,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
 
-    it("returns early when x is null", () => {
+    it("Given null x coordinate in context, When pointermove occurs, Then handler exits early without triggering close", () => {
       const ctx = createContext("bottom");
       (ctx as any).x = null;
       const handler = safePolygon()(ctx);
@@ -111,7 +117,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
 
-    it("returns early when y is null", () => {
+    it("Given null y coordinate in context, When pointermove occurs, Then handler exits early without triggering close", () => {
       const ctx = createContext("bottom");
       (ctx as any).y = null;
       const handler = safePolygon()(ctx);
@@ -120,8 +126,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("pointer over floating element", () => {
-    it("does not close when pointer is inside the floating element (non-leave)", () => {
+  describe("Scenario: Pointer interactions over floating element", () => {
+    it("Given pointer is inside the floating element, When pointermove occurs, Then close is not triggered", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       const floatEl = ctx.elements.floating as HTMLElement;
@@ -137,7 +143,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
 
-    it("sets hasLanded state when pointer enters floating (subsequent leave from floating triggers close)", () => {
+    it("Given pointer has entered floating element, When mouseleave subsequent to landing occurs, Then close is scheduled", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       const floatEl = ctx.elements.floating as HTMLElement;
@@ -162,8 +168,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("pointer over reference element", () => {
-    it("does not close when pointer is over reference (non-leave event)", () => {
+  describe("Scenario: Pointer interactions over reference element", () => {
+    it("Given pointer is over reference element, When pointermove occurs, Then close is not triggered", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       const refEl = ctx.elements.domReference as HTMLElement;
@@ -179,8 +185,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("mouseleave with relatedTarget inside floating", () => {
-    it("does not close when leaving to floating element (prevents open-close loop)", () => {
+  describe("Scenario: Mouseleave transition into floating target", () => {
+    it("Given mouseleave event targeting floating element as relatedTarget, When dispatched, Then close is prevented", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       const floatEl = ctx.elements.floating as HTMLElement;
@@ -197,8 +203,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("opposite-side guard", () => {
-    it("closes when pointer leaves opposite floating side=bottom", () => {
+  describe("Scenario: Opposite-side boundary breach detection", () => {
+    it("Given floating element below reference, When pointer moves in opposite direction above reference, Then close is triggered", () => {
       const ctx = createContext("bottom", { y: 1 });
       const handler = safePolygon()(ctx);
 
@@ -206,7 +212,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    it("closes when pointer leaves opposite floating side=top", () => {
+    it("Given floating element above reference, When pointer moves in opposite direction below reference, Then close is triggered", () => {
       const ctx = createContext("top", { y: 99 });
       const handler = safePolygon()(ctx);
 
@@ -214,7 +220,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    it("closes when pointer leaves opposite floating side=left", () => {
+    it("Given floating element to the left, When pointer moves in opposite direction to the right, Then close is triggered", () => {
       const ctx = createContext("left", { x: 150 });
       const handler = safePolygon()(ctx);
 
@@ -222,7 +228,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    it("closes when pointer leaves opposite floating side=right", () => {
+    it("Given floating element to the right, When pointer moves in opposite direction to the left, Then close is triggered", () => {
       const ctx = createContext("right", { x: 51 });
       const handler = safePolygon()(ctx);
 
@@ -231,8 +237,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("safe zone hit testing", () => {
-    it("keeps open when pointer is within the safe polygon below the anchor", () => {
+  describe("Scenario: Safe zone hit testing across placements", () => {
+    it("Given pointer is within safe polygon buffer corridor, When moving toward floating element, Then floating element remains open", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false })(ctx);
 
@@ -240,7 +246,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
 
-    it("closes when pointer is outside all safe zones", () => {
+    it("Given pointer leaves all safe zone corridors, When moving away, Then close is triggered", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false })(ctx);
 
@@ -248,19 +254,20 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).toHaveBeenCalled();
     });
 
-    for (const side of ["top", "bottom", "left", "right"] as const) {
-      it(`builds safe zones for floating side="${side}"`, () => {
+    it.each(["top", "bottom", "left", "right"] as const)(
+      "Given floating side '%s', When pointer moves far outside, Then close is triggered",
+      (side) => {
         const ctx = createContext(side, { x: 100, y: 50 });
         const handler = safePolygon({ requireIntent: false })(ctx);
 
         handler(makeMouseEvent("pointermove", { clientX: 900, clientY: 900 }));
         expect(ctx.onCloseMock).toHaveBeenCalled();
-      });
-    }
+      },
+    );
   });
 
-  describe("onPolygonChange callback", () => {
-    it("invokes onPolygonChange with polygon vertices on each move", () => {
+  describe("Scenario: Polygon vertices observer notification", () => {
+    it("Given an onPolygonChange callback, When pointer moves, Then updated polygon vertices are emitted", () => {
       const onPolygonChange = vi.fn();
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false, onPolygonChange })(ctx);
@@ -278,7 +285,7 @@ describe("safePolygon", () => {
       }
     });
 
-    it("is not called when guard clauses return early", () => {
+    it("Given incomplete context geometry, When guard clause triggers, Then onPolygonChange is not invoked", () => {
       const onPolygonChange = vi.fn();
       const ctx = createContext("bottom");
       ctx.elements.domReference = null;
@@ -289,8 +296,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("intent detection (requireIntent)", () => {
-    it("schedules a close when cursor speed is very slow (default requireIntent=true)", () => {
+  describe("Scenario: Intent detection and speed-based deceleration handling", () => {
+    it("Given requireIntent is enabled, When cursor decelerates to slow speed within corridor, Then close timeout is scheduled", () => {
       let now = 1000;
       const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
 
@@ -309,7 +316,7 @@ describe("safePolygon", () => {
       perfSpy.mockRestore();
     });
 
-    it("respects custom intentTimeout for deceleration delay", () => {
+    it("Given custom intentTimeout, When cursor decelerates, Then custom delay is respected before closing", () => {
       let now = 1000;
       const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
 
@@ -328,7 +335,7 @@ describe("safePolygon", () => {
       perfSpy.mockRestore();
     });
 
-    it("does not schedule close when requireIntent is false", () => {
+    it("Given requireIntent is false, When cursor stops or decelerates, Then close is not scheduled", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false })(ctx);
 
@@ -340,7 +347,7 @@ describe("safePolygon", () => {
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
 
-    it("does not schedule close after hasLanded (pointer visited floating)", () => {
+    it("Given pointer has landed on floating element, When cursor decelerates, Then close is not scheduled", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon()(ctx);
       const floatEl = ctx.elements.floating as HTMLElement;
@@ -363,8 +370,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("timer management", () => {
-    it("clears previous timeout on each new mousemove", () => {
+  describe("Scenario: Timer management and continuous motion debounce", () => {
+    it("Given continuous cursor motion, When subsequent moves occur, Then prior close timeouts are cancelled", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon()(ctx);
 
@@ -380,8 +387,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("buffer option", () => {
-    it("uses default buffer of 1 when not specified", () => {
+  describe("Scenario: Corridor buffer expansion", () => {
+    it("Given different buffer values, When constructing polygon, Then buffer expands polygon boundary coordinates", () => {
       const onPolygonChange = vi.fn();
       const ctx = createContext("bottom", { x: 100, y: 99 });
       ctx.buffer = 1;
@@ -405,8 +412,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("closure isolation", () => {
-    it("separate safePolygon() calls have independent state", () => {
+  describe("Scenario: Instance isolation across multiple safe polygons", () => {
+    it("Given multiple independent safePolygon instances, When one triggers close, Then the other instance state is isolated", () => {
       const sp1 = safePolygon({ requireIntent: false });
       const sp2 = safePolygon({ requireIntent: false });
 
@@ -424,14 +431,14 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("rectangular trough", () => {
+  describe("Scenario: Rectangular trough corridor between reference and floating gaps", () => {
     it.each([
       ["top", 100, 1, 100, -5],
       ["right", 149, 50, 180, 50],
       ["bottom", 100, 99, 100, 105],
       ["left", 51, 50, 20, 50],
     ] as const)(
-      "keeps open in the gap when the floating side is inferred as %s",
+      "Given side is '%s', When pointer is in intermediate gap trough, Then floating element remains open",
       (side, x, y, clientX, clientY) => {
         const ctx = createContext(side, { x, y });
         const handler = safePolygon({ requireIntent: false })(ctx);
@@ -442,8 +449,8 @@ describe("safePolygon", () => {
     );
   });
 
-  describe("blockPointerEvents", () => {
-    it("does not create an overlay by default (blockPointerEvents=false)", () => {
+  describe("Scenario: Pointer event blocking overlay management", () => {
+    it("Given blockPointerEvents is false by default, When initialized, Then no overlay DOM element is created", () => {
       const ctx = createContext("bottom");
       safePolygon()(ctx);
 
@@ -451,7 +458,7 @@ describe("safePolygon", () => {
       expect(overlay).toBeNull();
     });
 
-    it("creates an invisible fixed overlay element when blockPointerEvents is true", () => {
+    it("Given blockPointerEvents is true, When initialized, Then fixed overlay element is mounted and cleans up on dispose", () => {
       const ctx = createContext("bottom");
       const handler = safePolygon({ blockPointerEvents: true })(ctx);
 
@@ -466,7 +473,7 @@ describe("safePolygon", () => {
       expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
     });
 
-    it("cleans up overlay on close", () => {
+    it("Given an active overlay, When close is triggered, Then overlay element is removed from DOM", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ blockPointerEvents: true, requireIntent: false })(ctx);
 
@@ -477,7 +484,7 @@ describe("safePolygon", () => {
       expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
     });
 
-    it("cleans up overlay when cursor lands on floating element", () => {
+    it("Given an active overlay, When cursor lands on floating element, Then overlay element is immediately cleaned up", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ blockPointerEvents: true, requireIntent: false })(ctx);
 
@@ -496,8 +503,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("layout read throttling", () => {
-    it("caches getBoundingClientRect results within 16ms and refreshes after 16ms", () => {
+  describe("Scenario: Layout measurement caching and throttling", () => {
+    it("Given rapid pointer movements, When inspected within 16ms, Then getBoundingClientRect is throttled and cached", () => {
       let now = 1000;
       const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
 
@@ -531,8 +538,8 @@ describe("safePolygon", () => {
     });
   });
 
-  describe("hasLanded and pointer outside ref", () => {
-    it("closes when pointer has landed on floating, then moves outside both safe zones and ref rect", () => {
+  describe("Scenario: Landing state transitions and exit detection", () => {
+    it("Given pointer has landed on floating element, When pointer subsequently moves outside safe zones and reference, Then close is triggered", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ requireIntent: false })(ctx);
       const floatEl = ctx.elements.floating as HTMLElement;

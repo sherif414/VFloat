@@ -368,7 +368,7 @@ function createEqualDepthSiblingsComponent() {
 const SAFARI_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
 
-describe("useEscapeKey", () => {
+describe("Feature: useEscapeKey", () => {
   const originalUserAgent = window.navigator.userAgent;
 
   afterEach(() => {
@@ -380,101 +380,122 @@ describe("useEscapeKey", () => {
     vi.useRealTimers();
   });
 
-  describe("single node behavior", () => {
-    it("closes floating element on escape key press", async () => {
+  describe("Scenario: Dismissing single floating element on Escape", () => {
+    it("Given an open floating element, When Escape is pressed, Then closes the floating element", async () => {
+      // Given
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
+      expect(fixture.openRef.value).toBe(true);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(false);
     });
 
-    it("does not trigger when floating element is already closed", async () => {
+    it("Given a floating element that is already closed, When Escape is pressed, Then preserves closed state", async () => {
+      // Given
       const fixture = createTestComponent({}, { defaultOpen: false });
       await render(fixture.Component);
       await nextTick();
+      expect(fixture.openRef.value).toBe(false);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(false);
     });
 
-    it("respects enabled option", async () => {
+    it("Given enabled is false, When Escape is pressed, Then ignores the keypress and stays open", async () => {
+      // Given
       const fixture = createTestComponent({ enabled: false });
       await render(fixture.Component);
       await nextTick();
+      expect(fixture.openRef.value).toBe(true);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("respects reactive enabled option", async () => {
+    it("Given enabled is a reactive ref, When enabled toggles between true and false, Then synchronizes Escape handling", async () => {
+      // Given
       const enabled = ref(true);
       const fixture = createTestComponent({ enabled });
       await render(fixture.Component);
       await nextTick();
 
+      // When enabled is true, Escape closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
       expect(fixture.openRef.value).toBe(false);
 
+      // When re-opened and disabled
       fixture.openRef.value = true;
       enabled.value = false;
       await nextTick();
 
+      // When Escape is pressed while disabled
       await userEvent.keyboard("{Escape}");
       await nextTick();
+
+      // Then remains open
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("respects defaultPrevented from an earlier listener", async () => {
+    it("Given defaultPrevented was called by an earlier listener, When Escape is pressed, Then ignores dismissal", async () => {
+      // Given
       const onKeyDown = (event: KeyboardEvent) => {
         if (event.key === "Escape") {
           event.preventDefault();
         }
       };
-
       document.addEventListener("keydown", onKeyDown, { capture: true });
 
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
       document.removeEventListener("keydown", onKeyDown, { capture: true });
 
+      // Then
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("uses custom onEscape handler when provided", async () => {
+    it("Given a custom onEscape callback, When Escape is pressed, Then invokes onEscape without mutating open state", async () => {
+      // Given
       const customHandler = vi.fn();
       const fixture = createTestComponent({ onEscape: customHandler });
       await render(fixture.Component);
       await nextTick();
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(customHandler).toHaveBeenCalled();
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("consumes the event for custom onEscape handlers without leaking propagation", async () => {
+    it("Given a custom onEscape callback, When Escape is claimed, Then stops propagation to outer window listeners", async () => {
+      // Given
       const customHandler = vi.fn();
       const outerTargetListener = vi.fn();
       const outerWindowListener = vi.fn();
 
-      // A claimed Escape must never continue bubbling past the document-level dispatch:
-      // neither the event target (observing bubble listeners added later) nor window
-      // (the next propagation step after document) may observe it.
       document.addEventListener("keydown", (event) => {
         event.target?.addEventListener("keydown", outerTargetListener);
       });
@@ -484,45 +505,55 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
       window.removeEventListener("keydown", outerWindowListener);
 
+      // Then
       expect(customHandler).toHaveBeenCalledTimes(1);
       expect(outerTargetListener).not.toHaveBeenCalled();
       expect(outerWindowListener).not.toHaveBeenCalled();
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("ignores non-escape keys", async () => {
+    it("Given non-Escape keys are pressed, When Enter or Space is pressed, Then ignores them and stays open", async () => {
+      // Given
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
 
+      // When
       await userEvent.keyboard("{Enter}");
       await userEvent.keyboard(" ");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("handles capture option", async () => {
+    it("Given capture option is true, When Escape is pressed, Then intercepts in the capture phase and closes", async () => {
+      // Given
       const fixture = createTestComponent({ capture: true });
       await render(fixture.Component);
       await nextTick();
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(false);
     });
 
-    it("prevents default when preventDefault is enabled", async () => {
+    it("Given preventDefault is true, When Escape is pressed, Then marks the event as defaultPrevented and closes", async () => {
+      // Given
       const fixture = createTestComponent({ preventDefault: true });
       await render(fixture.Component);
       await nextTick();
 
+      // When
       const event = new KeyboardEvent("keydown", {
         key: "Escape",
         bubbles: true,
@@ -531,13 +562,15 @@ describe("useEscapeKey", () => {
       document.dispatchEvent(event);
       await nextTick();
 
+      // Then
       expect(event.defaultPrevented).toBe(true);
       expect(fixture.openRef.value).toBe(false);
     });
   });
 
-  describe("composition event handling", () => {
-    it("ignores escape during composition", async () => {
+  describe("Scenario: IME composition event handling", () => {
+    it("Given an active composition session, When Escape is pressed, Then ignores dismissal until composition ends", async () => {
+      // Given
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
@@ -545,41 +578,49 @@ describe("useEscapeKey", () => {
       // Start composition
       document.dispatchEvent(new CompositionEvent("compositionstart"));
 
+      // When: Escape during composition
       await userEvent.keyboard("{Escape}");
       await nextTick();
+
+      // Then: Remains open
       expect(fixture.openRef.value).toBe(true);
 
       // End composition
       document.dispatchEvent(new CompositionEvent("compositionend"));
 
+      // When: Escape after composition
       await userEvent.keyboard("{Escape}");
       await nextTick();
+
+      // Then: Closes
       expect(fixture.openRef.value).toBe(false);
     });
 
-    it("shares a single composition listener across multiple consumers", async () => {
+    it("Given multiple consumers, When rendered together, Then shares a single composition listener on document", async () => {
+      // Given
       const addEventListenerSpy = vi.spyOn(document, "addEventListener");
 
       const f1 = createTestComponent();
       const f2 = createTestComponent();
 
+      // When
       await render(f1.Component);
       await render(f2.Component);
       await nextTick();
 
+      // Then
       const compositionListeners = addEventListenerSpy.mock.calls.filter(
         ([type]) => type === "compositionstart" || type === "compositionend",
       );
-
-      // Only one pair of listeners on document regardless of component count
       expect(compositionListeners).toHaveLength(2);
 
       addEventListenerSpy.mockRestore();
     });
   });
 
-  describe("hierarchy resolution", () => {
-    it("closes linked descendants from deepest to root across repeated Escape presses", async () => {
+  describe("Scenario: Hierarchical multi-level tree unwinding", () => {
+    it("Given a 3-level linear floating hierarchy, When Escape is pressed repeatedly, Then closes from deepest leaf to root", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = create3LevelLinearTreeComponent();
 
@@ -608,25 +649,27 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      // 1st Escape -> deepest (subsub)
+      // When: 1st Escape -> deepest (subsub)
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
-      // 2nd Escape -> middle (sub)
+      // When: 2nd Escape -> middle (sub)
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
-      // 3rd Escape -> root
+      // When: 3rd Escape -> root
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.rootOpen.value).toBe(false);
       expect(fixture.subOpen.value).toBe(false);
       expect(fixture.subSubOpen.value).toBe(false);
       expect(calls).toEqual(["subsub", "sub", "root"]);
     });
 
-    it("closes the deepest open descendant across sibling branches", async () => {
+    it("Given sibling floating branches, When Escape is pressed, Then closes the deepest open descendant across branches", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = createSiblingBranchesComponent();
 
@@ -655,33 +698,38 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.branchAOpen.value).toBe(true);
       expect(fixture.branchBOpen.value).toBe(true);
       expect(fixture.branchB1Open.value).toBe(false);
       expect(calls).toEqual(["branch-b1"]);
     });
 
-    it("closes the focused sibling branch and preserves inactive sibling branch when target is within sibling", async () => {
+    it("Given focus inside a specific sibling branch, When Escape is pressed, Then closes the focused branch and preserves inactive branch", async () => {
+      // Given
       const fixture = createSiblingBranchesComponent();
-
       await render(fixture.Component);
       await nextTick();
 
-      const branchBItem = getTestEl("branch-b-item");
-      await userEvent.click(branchBItem);
+      const branchBItemEl = getTestEl("branch-b-item");
+      await userEvent.click(branchBItemEl);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.branchAOpen.value).toBe(true);
       expect(fixture.branchB1Open.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
     });
 
-    it("does not close Tree 1 when Escape is pressed with focus inside independent Tree 2", async () => {
+    it("Given two independent trees with focus inside Tree 2, When Escape is pressed, Then closes Tree 2 without affecting Tree 1", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = createTwoIndependentTreesComponent();
 
@@ -703,12 +751,14 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const t2Target = getTestEl("t2-target-button");
-      await userEvent.click(t2Target);
+      const t2TargetEl = getTestEl("t2-target-button");
+      await userEvent.click(t2TargetEl);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.tree1ChildOpen.value).toBe(true);
       expect(fixture.tree1RootOpen.value).toBe(true);
       expect(fixture.tree2ChildOpen.value).toBe(false);
@@ -716,24 +766,26 @@ describe("useEscapeKey", () => {
       expect(calls).toEqual(["tree2-child"]);
     });
 
-    it("unwinds the most recently opened tree leaf-first when focus is on document body", async () => {
+    it("Given focus is neutral on document body, When Escape is pressed, Then unwinds the most recently opened tree leaf-first", async () => {
+      // Given
       const fixture = createTwoIndependentTreesComponent();
       await render(fixture.Component);
       await nextTick();
 
-      // Neutral target: focus is outside both hierarchies, so the LIFO fallback tier
-      // picks the most recently opened tree (tree2) and unwinds its deepest open leaf.
+      // When: Neutral target on document body
       document.body.focus();
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then: Most recently opened tree (tree 2) unwinds its leaf
       expect(fixture.tree2ChildOpen.value).toBe(false);
       expect(fixture.tree2RootOpen.value).toBe(true);
       expect(fixture.tree1ChildOpen.value).toBe(true);
       expect(fixture.tree1RootOpen.value).toBe(true);
     });
 
-    it("closes open child and preserves root when target is root anchor element", async () => {
+    it("Given target is the root anchor element, When Escape is pressed, Then closes open child and preserves root", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = create3LevelLinearTreeComponent();
       fixture.subSubOpen.value = false;
@@ -756,18 +808,21 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const rootAnchor = getTestEl("root-anchor");
-      await userEvent.click(rootAnchor);
+      const rootAnchorEl = getTestEl("root-anchor");
+      await userEvent.click(rootAnchorEl);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.subOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["sub"]);
     });
 
-    it("closes open child and preserves root when target is inside root floating element", async () => {
+    it("Given target is inside root floating element, When Escape is pressed, Then closes child and preserves root", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = create3LevelLinearTreeComponent();
       fixture.subSubOpen.value = false;
@@ -790,18 +845,21 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const rootItem = getTestEl("root-item");
-      await userEvent.click(rootItem);
+      const rootItemEl = getTestEl("root-item");
+      await userEvent.click(rootItemEl);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.subOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["sub"]);
     });
 
-    it("closes 3-level hierarchy leaf-first when target is inside middle level", async () => {
+    it("Given target is inside middle level of 3-level tree, When Escape is pressed, Then closes leaf-first", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = create3LevelLinearTreeComponent();
 
@@ -830,10 +888,10 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const subItem = getTestEl("sub-item");
-      await userEvent.click(subItem);
+      const subItemEl = getTestEl("sub-item");
+      await userEvent.click(subItemEl);
 
-      // 1st Escape: subSub closes; sub and root remain open
+      // When: 1st Escape -> subsub closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
       expect(fixture.subSubOpen.value).toBe(false);
@@ -841,7 +899,7 @@ describe("useEscapeKey", () => {
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["subsub"]);
 
-      // 2nd Escape: sub closes; root remains open
+      // When: 2nd Escape -> sub closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
       expect(fixture.subOpen.value).toBe(false);
@@ -849,7 +907,8 @@ describe("useEscapeKey", () => {
       expect(calls).toEqual(["subsub", "sub"]);
     });
 
-    it("unwinds nested sibling branches cleanly when target is inside sibling branch", async () => {
+    it("Given target is inside a sibling branch, When Escape is pressed, Then unwinds the branch cleanly", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = createSiblingBranchesComponent();
 
@@ -885,10 +944,10 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const branchBItem = getTestEl("branch-b-item");
-      await userEvent.click(branchBItem);
+      const branchBItemEl = getTestEl("branch-b-item");
+      await userEvent.click(branchBItemEl);
 
-      // 1st Escape: branchB1 (leaf of branchB) closes; branchA and branchB remain open
+      // When: 1st Escape -> branchB1 closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
       expect(fixture.branchB1Open.value).toBe(false);
@@ -897,7 +956,7 @@ describe("useEscapeKey", () => {
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["branch-b1"]);
 
-      // 2nd Escape: branchB closes; branchA remains open
+      // When: 2nd Escape -> branchB closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
       expect(fixture.branchBOpen.value).toBe(false);
@@ -906,35 +965,42 @@ describe("useEscapeKey", () => {
       expect(calls).toEqual(["branch-b1", "branch-b"]);
     });
 
-    it("closes open floating element when Escape is pressed while focus is on an external page element", async () => {
+    it("Given focus on an external page button, When Escape is pressed, Then closes open floating element", async () => {
+      // Given
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
 
-      const outsideBtn = getTestEl("outside-btn");
-      await userEvent.click(outsideBtn);
+      const outsideBtnEl = getTestEl("outside-btn");
+      await userEvent.click(outsideBtnEl);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(false);
     });
 
-    it("closes open floating element when Escape is pressed while focus is on an external text input", async () => {
+    it("Given focus on an external text input, When Escape is pressed, Then closes open floating element", async () => {
+      // Given
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
 
-      const outsideInput = getTestEl("outside-input");
-      await userEvent.click(outsideInput);
+      const outsideInputEl = getTestEl("outside-input");
+      await userEvent.click(outsideInputEl);
 
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then
       expect(fixture.openRef.value).toBe(false);
     });
 
-    it("unwinds multi-level hierarchy leaf-first when Escape is pressed while focus is on an external page element", async () => {
+    it("Given focus on an external button with a multi-level tree, When Escape is pressed repeatedly, Then unwinds leaf-first", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = create3LevelLinearTreeComponent();
       fixture.subSubOpen.value = false;
@@ -957,44 +1023,43 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const outsideBtn = getTestEl("outside-btn");
-      await userEvent.click(outsideBtn);
+      const outsideBtnEl = getTestEl("outside-btn");
+      await userEvent.click(outsideBtnEl);
 
-      // 1st Escape on external button: child leaf closes first, root stays open
+      // When: 1st Escape -> child leaf closes first
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.subOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["sub"]);
 
-      // 2nd Escape on external button: root closes
+      // When: 2nd Escape -> root closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.subOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(false);
       expect(calls).toEqual(["sub", "root"]);
     });
 
-    it("gracefully unwinds to nearest registered ancestor when child did not call useEscapeKey", async () => {
+    it("Given an unregistered child node, When Escape is pressed, Then gracefully unwinds to nearest registered ancestor", async () => {
+      // Given
       const fixture = createRootOnlyRegisteredTreeComponent();
       await render(fixture.Component);
       await nextTick();
 
-      const childItem = getTestEl("child-item");
-      await userEvent.click(childItem);
+      const childItemEl = getTestEl("child-item");
+      await userEvent.click(childItemEl);
 
-      // Child did not register useEscapeKey, but is open and contained within root.
-      // Escape should resolve to child, fail to match an entry, and walk up parent
-      // chain to root so root closes gracefully rather than silently dropping the key.
+      // When
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then: Root closes gracefully
       expect(fixture.rootOpen.value).toBe(false);
     });
 
-    it("gracefully unwinds 3-level tree leaf-first when deepest leaf did not call useEscapeKey", async () => {
+    it("Given deepest leaf did not register useEscapeKey, When Escape is pressed, Then unwinds 3-level tree leaf-first via parent", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = createPartiallyRegisteredTreeComponent();
 
@@ -1016,27 +1081,25 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const subchildItem = getTestEl("subchild-item");
-      await userEvent.click(subchildItem);
+      const subchildItemEl = getTestEl("subchild-item");
+      await userEvent.click(subchildItemEl);
 
-      // 1st Escape: subchild is deepest open descendant but not registered.
-      // Resolution walks up to childNode (which is registered), closing childNode.
+      // When: 1st Escape -> childNode closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.childOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["child"]);
 
-      // 2nd Escape: root closes
+      // When: 2nd Escape -> root closes
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.rootOpen.value).toBe(false);
       expect(calls).toEqual(["child", "root"]);
     });
 
-    it("breaks ties between equal-depth sibling branches using LIFO stack order (branch B opened after branch A)", async () => {
+    it("Given equal-depth sibling branches (branch B opened after branch A), When Escape is pressed, Then closes branch B first via LIFO stack order", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = createEqualDepthSiblingsComponent();
 
@@ -1064,27 +1127,26 @@ describe("useEscapeKey", () => {
       fixture.branchBOpen.value = true;
       await nextTick();
 
-      const outsideBtn = getTestEl("outside-btn");
-      await userEvent.click(outsideBtn);
+      const outsideBtnEl = getTestEl("outside-btn");
+      await userEvent.click(outsideBtnEl);
 
-      // 1st Escape: Branch B was opened more recently -> closes first
+      // When: 1st Escape -> Branch B closes first
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.branchBOpen.value).toBe(false);
       expect(fixture.branchAOpen.value).toBe(true);
       expect(calls).toEqual(["branch-b"]);
 
-      // 2nd Escape: Branch A closes next
+      // When: 2nd Escape -> Branch A closes next
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.branchAOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["branch-b", "branch-a"]);
     });
 
-    it("breaks ties between equal-depth sibling branches using LIFO stack order (branch A opened after branch B)", async () => {
+    it("Given equal-depth sibling branches (branch A opened after branch B), When Escape is pressed, Then closes branch A first via LIFO stack order", async () => {
+      // Given
       const calls: string[] = [];
       const fixture = createEqualDepthSiblingsComponent();
 
@@ -1112,60 +1174,64 @@ describe("useEscapeKey", () => {
       fixture.branchAOpen.value = true;
       await nextTick();
 
-      const outsideBtn = getTestEl("outside-btn");
-      await userEvent.click(outsideBtn);
+      const outsideBtnEl = getTestEl("outside-btn");
+      await userEvent.click(outsideBtnEl);
 
-      // 1st Escape: Branch A was opened more recently -> closes first
+      // When: 1st Escape -> Branch A closes first
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.branchAOpen.value).toBe(false);
       expect(fixture.branchBOpen.value).toBe(true);
       expect(calls).toEqual(["branch-a"]);
 
-      // 2nd Escape: Branch B closes next
+      // When: 2nd Escape -> Branch B closes next
       await userEvent.keyboard("{Escape}");
       await nextTick();
-
       expect(fixture.branchBOpen.value).toBe(false);
       expect(fixture.rootOpen.value).toBe(true);
       expect(calls).toEqual(["branch-a", "branch-b"]);
     });
   });
 
-  describe("IME and WebKit composition resilience (WebKit Bug 165004)", () => {
-    it("does not close on Escape when event.isComposing or keyCode 229 is set", async () => {
+  describe("Scenario: WebKit composition resilience (WebKit Bug 165004)", () => {
+    it("Given event.isComposing or keyCode 229, When Escape is pressed, Then ignores dismissal", async () => {
+      // Given
       const fixture = createTestComponent();
       await render(fixture.Component);
       await nextTick();
 
-      const anchor = getTestEl("anchor");
-      await userEvent.click(anchor);
+      const anchorEl = getTestEl("anchor");
+      await userEvent.click(anchorEl);
 
-      // Standard browser IME keydown with isComposing: true
+      // When: Standard browser IME keydown with isComposing: true
       const composingEvent = new KeyboardEvent("keydown", {
         key: "Escape",
         bubbles: true,
         cancelable: true,
       });
       Object.defineProperty(composingEvent, "isComposing", { value: true });
-      anchor.dispatchEvent(composingEvent);
+      anchorEl.dispatchEvent(composingEvent);
       await nextTick();
+
+      // Then
       expect(fixture.openRef.value).toBe(true);
 
-      // Standard legacy IME keyCode 229
+      // When: Standard legacy IME keyCode 229
       const keyCode229Event = new KeyboardEvent("keydown", {
         key: "Escape",
         keyCode: 229,
         bubbles: true,
         cancelable: true,
       });
-      anchor.dispatchEvent(keyCode229Event);
+      anchorEl.dispatchEvent(keyCode229Event);
       await nextTick();
+
+      // Then
       expect(fixture.openRef.value).toBe(true);
     });
 
-    it("prevents premature dismissal when WebKit fires compositionend before keydown (WebKit Bug 165004)", async () => {
+    it("Given WebKit Bug 165004 firing compositionend before keydown, When Escape is pressed to dismiss IME candidate list, Then prevents premature dismissal", async () => {
+      // Given
       Object.defineProperty(window.navigator, "userAgent", {
         configurable: true,
         value: SAFARI_USER_AGENT,
@@ -1175,14 +1241,13 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      const anchor = getTestEl("anchor");
-      await userEvent.click(anchor);
+      const anchorEl = getTestEl("anchor");
+      await userEvent.click(anchorEl);
 
       // Start IME composition
       document.dispatchEvent(new CompositionEvent("compositionstart"));
 
-      // In Safari (Bug 165004), pressing Escape to close IME candidate list dispatches
-      // compositionend first, immediately followed by keydown without isComposing
+      // WebKit fires compositionend immediately followed by trailing keydown
       document.dispatchEvent(new CompositionEvent("compositionend"));
 
       const trailingKeydown = new KeyboardEvent("keydown", {
@@ -1190,24 +1255,27 @@ describe("useEscapeKey", () => {
         bubbles: true,
         cancelable: true,
       });
-      anchor.dispatchEvent(trailingKeydown);
+      anchorEl.dispatchEvent(trailingKeydown);
       await nextTick();
 
-      // Floating element must remain OPEN because composition-state debounced the reset
+      // Then: Floating element remains open
       expect(fixture.openRef.value).toBe(true);
 
       // Wait for debounce window (5ms) to pass
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      // Subsequent Escape closes the overlay normally
+      // When: Subsequent Escape keypress arrives
       await userEvent.keyboard("{Escape}");
       await nextTick();
+
+      // Then: Closes normally
       expect(fixture.openRef.value).toBe(false);
     });
   });
 
-  describe("shared per-document listener architecture", () => {
-    it("attaches 0 document listeners when overlay is closed and removes on close", async () => {
+  describe("Scenario: Shared per-document listener architecture", () => {
+    it("Given an overlay is initially closed, When opened and then closed, Then attaches listener only while open", async () => {
+      // Given
       const addSpy = vi.spyOn(document, "addEventListener");
       const removeSpy = vi.spyOn(document, "removeEventListener");
 
@@ -1222,71 +1290,76 @@ describe("useEscapeKey", () => {
       // Closed initially: no keydown listener attached
       expect(escapeKeydownAdds().length).toBe(0);
 
-      // Open: exactly 1 keydown listener attached
+      // When: Opened
       fixture.openRef.value = true;
       await nextTick();
+
+      // Then: Exactly 1 keydown listener attached
       expect(escapeKeydownAdds().length).toBe(1);
 
-      // Close: listener removed
+      // When: Closed
       fixture.openRef.value = false;
       await nextTick();
+
+      // Then: Listener removed
       expect(escapeKeydownRemoves().length).toBe(1);
 
       addSpy.mockRestore();
       removeSpy.mockRestore();
     });
 
-    it("shares a single document keydown listener across multiple open overlays", async () => {
+    it("Given multiple open overlays, When active simultaneously, Then shares a single document keydown listener", async () => {
+      // Given
       const addSpy = vi.spyOn(document, "addEventListener");
 
       const fixture = create3LevelLinearTreeComponent();
       await render(fixture.Component);
       await nextTick();
 
+      // Then: Exactly 1 bubble keydown listener on document despite 3 active overlays
       const keydownAdds = addSpy.mock.calls.filter(([event]) => event === "keydown");
-      // Exactly 1 bubble keydown listener on document despite 3 active overlays
       expect(keydownAdds.length).toBe(1);
 
       addSpy.mockRestore();
     });
 
-    it("allows inner elements to stop propagation in bubble phase, but intercepts in capture phase", async () => {
-      // Test bubble phase (default): inner element stopPropagation protects overlay
+    it("Given an inner element that stops propagation, When in bubble phase vs capture phase, Then respects stopPropagation in bubble but intercepts in capture", async () => {
+      // Bubble phase (default)
       const bubbleFixture = createTestComponent();
       await render(bubbleFixture.Component);
       await nextTick();
 
-      const outsideInput = getTestEl("outside-input");
-      outsideInput.addEventListener("keydown", (e) => {
+      const outsideInputEl = getTestEl("outside-input");
+      outsideInputEl.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.stopPropagation();
         }
       });
 
-      await userEvent.click(outsideInput);
+      await userEvent.click(outsideInputEl);
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
       // Bubble phase respects inner element's stopPropagation
       expect(bubbleFixture.openRef.value).toBe(true);
 
-      // Test capture phase: overlay intercepts before inner element can stop propagation
+      // Capture phase
       const captureFixture = createTestComponent({ capture: true });
       await render(captureFixture.Component);
       await nextTick();
 
-      const captureOutsideInput = document.querySelectorAll<HTMLInputElement>(
+      const captureOutsideInputEl = document.querySelectorAll<HTMLInputElement>(
         "[data-testid='outside-input']",
       )[1];
-      expect(captureOutsideInput).toBeDefined();
+      expect(captureOutsideInputEl).toBeDefined();
 
-      captureOutsideInput!.addEventListener("keydown", (e) => {
+      captureOutsideInputEl!.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.stopPropagation();
         }
       });
 
-      await userEvent.click(captureOutsideInput!);
+      await userEvent.click(captureOutsideInputEl!);
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
@@ -1294,46 +1367,47 @@ describe("useEscapeKey", () => {
       expect(captureFixture.openRef.value).toBe(false);
     });
 
-    it("resolves retargeted Shadow DOM events via composedPath", async () => {
+    it("Given retargeted Shadow DOM events, When Escape is pressed, Then resolves the originating target via composedPath", async () => {
+      // Given
       const fixture = createTwoIndependentTreesComponent();
       await render(fixture.Component);
       await nextTick();
 
-      const shadowTarget = getTestEl("t2-target-button");
-      const retargetedHost = getTestEl("t2-floating");
+      const shadowTargetEl = getTestEl("t2-target-button");
+      const retargetedHostEl = getTestEl("t2-floating");
       const retargetedEvent = new KeyboardEvent("keydown", {
         key: "Escape",
         bubbles: true,
         cancelable: true,
       });
-      // Simulate Shadow DOM retargeting: the document-level listener observes the
-      // host while composedPath() still exposes the original inner target.
+
       Object.defineProperty(retargetedEvent, "target", {
         configurable: true,
-        value: retargetedHost,
+        value: retargetedHostEl,
       });
       Object.defineProperty(retargetedEvent, "composedPath", {
         configurable: true,
-        value: () => [shadowTarget, retargetedHost, document.body, document],
+        value: () => [shadowTargetEl, retargetedHostEl, document.body, document],
       });
+
+      // When
       document.dispatchEvent(retargetedEvent);
       await nextTick();
 
-      // Tree 2 owns the composed target, so it unwinds while Tree 1 stays open.
+      // Then: Tree 2 owns composed target, so it unwinds while Tree 1 stays open
       expect(fixture.tree2ChildOpen.value).toBe(false);
       expect(fixture.tree2RootOpen.value).toBe(true);
       expect(fixture.tree1ChildOpen.value).toBe(true);
       expect(fixture.tree1RootOpen.value).toBe(true);
     });
 
-    it("falls back to event.target when composedPath is empty", async () => {
+    it("Given synthetic events with empty composedPath, When Escape is pressed, Then falls back to event.target", async () => {
+      // Given
       const fixture = createTwoIndependentTreesComponent();
       await render(fixture.Component);
       await nextTick();
 
-      // Synthetic events may expose an empty composedPath; resolution must
-      // fall back to the dispatch target instead of dropping the keypress.
-      const treeBButton = getTestEl("t2-target-button");
+      const treeBButtonEl = getTestEl("t2-target-button");
       const emptyPathEvent = new KeyboardEvent("keydown", {
         key: "Escape",
         bubbles: true,
@@ -1343,16 +1417,20 @@ describe("useEscapeKey", () => {
         configurable: true,
         value: () => [] as EventTarget[],
       });
-      treeBButton.dispatchEvent(emptyPathEvent);
+
+      // When
+      treeBButtonEl.dispatchEvent(emptyPathEvent);
       await nextTick();
 
+      // Then
       expect(fixture.tree2ChildOpen.value).toBe(false);
       expect(fixture.tree2RootOpen.value).toBe(true);
       expect(fixture.tree1ChildOpen.value).toBe(true);
       expect(fixture.tree1RootOpen.value).toBe(true);
     });
 
-    it("executes dynamically updated onEscape on an open overlay", async () => {
+    it("Given onEscape callback is updated dynamically while overlay is open, When Escape is pressed, Then executes the updated callback", async () => {
+      // Given
       const calls: string[] = [];
       const options: UseEscapeKeyOptions = {
         onEscape: () => {
@@ -1364,16 +1442,17 @@ describe("useEscapeKey", () => {
       await render(fixture.Component);
       await nextTick();
 
-      // Mutate callback dynamically while overlay remains open
+      // When: Mutate callback dynamically
       options.onEscape = () => {
         calls.push("updated");
       };
 
-      const anchor = getTestEl("anchor");
-      await userEvent.click(anchor);
+      const anchorEl = getTestEl("anchor");
+      await userEvent.click(anchorEl);
       await userEvent.keyboard("{Escape}");
       await nextTick();
 
+      // Then: Updated callback was executed
       expect(calls).toEqual(["updated"]);
     });
   });
