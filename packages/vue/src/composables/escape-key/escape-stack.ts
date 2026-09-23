@@ -1,6 +1,7 @@
 import type { FloatingNode } from "@/composables/floating-node";
 import { getEventTarget, isNode } from "@/shared/dom";
 import { isImeComposing } from "@/shared/composition-state";
+import { createStackManager } from "@/shared/stack-manager";
 
 export interface EscapeEntryOptions {
   /**
@@ -38,24 +39,7 @@ interface DocumentEscapeManager {
 // 📌 Main
 //=======================================================================================
 
-const documentManagers = new WeakMap<Document, DocumentEscapeManager>();
 const handledEscapeEvents = new WeakSet<KeyboardEvent>();
-
-/**
- * Retrieves or initializes the document escape manager for a specific document.
- */
-function getDocumentManager(doc: Document): DocumentEscapeManager {
-  let manager = documentManagers.get(doc);
-  if (!manager) {
-    manager = {
-      stack: [],
-      captureListener: null,
-      bubbleListener: null,
-    };
-    documentManagers.set(doc, manager);
-  }
-  return manager;
-}
 
 /**
  * Synchronizes capture and bubble document keydown listeners based on stack entries.
@@ -88,6 +72,11 @@ function syncDocumentListeners(doc: Document, manager: DocumentEscapeManager): v
   }
 }
 
+const stackManager = createStackManager<EscapeEntry, DocumentEscapeManager>(
+  () => ({ stack: [], captureListener: null, bubbleListener: null }),
+  syncDocumentListeners,
+);
+
 /**
  * Handles Escape key events centrally per document.
  */
@@ -103,7 +92,7 @@ function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | 
     return;
   }
 
-  const manager = documentManagers.get(doc);
+  const manager = stackManager.get(doc);
   if (!manager || manager.stack.length === 0) return;
 
   const activeEntry = resolveActiveEscapeEntry(manager, getEventTarget(event));
@@ -147,13 +136,7 @@ function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | 
  * and synchronizes shared document listeners.
  */
 export function pushEscapeEntry(doc: Document, entry: EscapeEntry): void {
-  const manager = getDocumentManager(doc);
-  const existingIdx = manager.stack.indexOf(entry);
-  if (existingIdx !== -1) {
-    manager.stack.splice(existingIdx, 1);
-  }
-  manager.stack.push(entry);
-  syncDocumentListeners(doc, manager);
+  stackManager.push(doc, entry);
 }
 
 /**
@@ -161,13 +144,7 @@ export function pushEscapeEntry(doc: Document, entry: EscapeEntry): void {
  * listeners if no active entries remain.
  */
 export function removeEscapeEntry(doc: Document, entry: EscapeEntry): void {
-  const manager = documentManagers.get(doc);
-  if (!manager) return;
-  const idx = manager.stack.indexOf(entry);
-  if (idx !== -1) {
-    manager.stack.splice(idx, 1);
-  }
-  syncDocumentListeners(doc, manager);
+  stackManager.remove(doc, entry);
 }
 
 /**

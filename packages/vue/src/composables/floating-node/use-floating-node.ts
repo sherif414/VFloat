@@ -177,6 +177,35 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     });
   };
 
+  const getDepth = (): number => {
+    let depth = 0;
+    let current = parent.value;
+    while (current) {
+      depth++;
+      current = current.parent.value;
+    }
+    return depth;
+  };
+
+  const hasOpenChild = (): boolean => {
+    for (const child of children.value) {
+      if (child.open.value) return true;
+    }
+    return false;
+  };
+
+  const isTargetWithinAncestorElements = (target: EventTarget | null): boolean => {
+    let current = parent.value;
+    while (current) {
+      if (
+        isTargetWithinElements(current.refs.anchorEl.value, current.refs.floatingEl.value, target)
+      )
+        return true;
+      current = current.parent.value;
+    }
+    return false;
+  };
+
   const node: FloatingNode = {
     id,
     refs: {
@@ -190,6 +219,9 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     appendChild,
     removeChild,
     contains,
+    getDepth,
+    hasOpenChild,
+    isTargetWithinAncestorElements,
     traverse,
   };
 
@@ -347,6 +379,21 @@ export interface FloatingNode {
    * Checks whether the given target is contained within this node's elements or any of its open descendants.
    */
   contains: (target: EventTarget | null) => boolean;
+
+  /**
+   * Returns this node's number of ancestors.
+   */
+  getDepth: () => number;
+
+  /**
+   * Returns whether any immediate child is open.
+   */
+  hasOpenChild: () => boolean;
+
+  /**
+   * Returns whether the target is directly inside an ancestor's anchor or floating element.
+   */
+  isTargetWithinAncestorElements: (target: EventTarget | null) => boolean;
 
   /**
    * Recursively traverses this node and its descendants in depth-first order.
