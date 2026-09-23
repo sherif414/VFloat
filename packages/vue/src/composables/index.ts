@@ -75,11 +75,7 @@ export {
 export type { InlineOptions, Middleware, Placement, Strategy } from "./middlewares";
 // Middlewares
 export { arrow, autoPlacement, flip, hide, inline, offset, shift, size } from "./middlewares";
-export type {
-  OutsideClickPredicate,
-  UseOutsideClickContext,
-  UseOutsideClickOptions,
-} from "./outside-click";
+export type { OutsideClickPredicate, UseOutsideClickOptions } from "./outside-click";
 // Outside Click
 export { useOutsideClick } from "./outside-click";
 export type {

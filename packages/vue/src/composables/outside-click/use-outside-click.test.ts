@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { userEvent } from "vitest/browser";
-import { defineComponent, h, nextTick, ref, type Ref, useTemplateRef } from "vue";
+import {
+  defineComponent,
+  h,
+  type MaybeRefOrGetter,
+  nextTick,
+  ref,
+  type Ref,
+  useTemplateRef,
+} from "vue";
 import { type FloatingNode, useFloatingNode } from "@/composables/floating-node";
 import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
@@ -137,8 +145,8 @@ async function renderTreeOutsideClick(target: "parent" | "child") {
 
 function createFullTreeComponent(
   options: {
-    parentBubbles?: boolean;
-    childBubbles?: boolean;
+    parentLeafFirst?: MaybeRefOrGetter<boolean>;
+    childLeafFirst?: MaybeRefOrGetter<boolean>;
     parentCapture?: boolean;
     childCapture?: boolean;
     parentEvent?: "click" | "pointerdown";
@@ -171,13 +179,13 @@ function createFullTreeComponent(
 
     useOutsideClick(parentNode, {
       event: options.parentEvent ?? "click",
-      bubbles: options.parentBubbles ?? true,
+      leafFirst: options.parentLeafFirst ?? false,
       capture: options.parentCapture ?? true,
       enabled: options.parentEnabled,
     });
     useOutsideClick(childNode, {
       event: options.childEvent ?? "click",
-      bubbles: options.childBubbles ?? true,
+      leafFirst: options.childLeafFirst ?? false,
       capture: options.childCapture ?? true,
     });
 
@@ -210,8 +218,8 @@ function createFullTreeComponent(
 
 async function renderFullTreeOutsideClick(
   options: {
-    parentBubbles?: boolean;
-    childBubbles?: boolean;
+    parentLeafFirst?: MaybeRefOrGetter<boolean>;
+    childLeafFirst?: MaybeRefOrGetter<boolean>;
     parentCapture?: boolean;
     childCapture?: boolean;
     parentEvent?: "click" | "pointerdown";
@@ -331,10 +339,10 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(true);
   });
 
-  it("uses the ignoreClick predicate for per-target dismissal", async () => {
+  it("uses the shouldIgnore predicate for per-target dismissal", async () => {
     const { outsideEl, ignoredEl, node } = await renderOutsideClick({
       event: "click",
-      ignoreClick: (_event, target) => target === ignoredEl,
+      shouldIgnore: (_event, target) => target === ignoredEl,
     });
 
     await userEvent.click(ignoredEl);
@@ -346,17 +354,17 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(false);
   });
 
-  it("calls onClick instead of closing when a custom handler is provided", async () => {
-    const onClick = vi.fn();
+  it("calls onOutsideClick instead of closing when a custom handler is provided", async () => {
+    const onOutsideClick = vi.fn();
     const { outsideEl, node } = await renderOutsideClick({
       event: "click",
-      onClick,
+      onOutsideClick,
     });
 
     await userEvent.click(outsideEl);
     await nextTick();
 
-    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onOutsideClick).toHaveBeenCalledTimes(1);
     expect(node.open.value).toBe(true);
   });
 
@@ -577,11 +585,11 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(false);
   });
 
-  it("does not trigger onClick when node is already closed", async () => {
-    const onClick = vi.fn();
+  it("does not trigger onOutsideClick when node is already closed", async () => {
+    const onOutsideClick = vi.fn();
     const { outsideEl, node } = await renderOutsideClick({
       event: "click",
-      onClick,
+      onOutsideClick,
     });
 
     node.open.value = false;
@@ -590,7 +598,7 @@ describe("useOutsideClick", () => {
     await userEvent.click(outsideEl);
     await nextTick();
 
-    expect(onClick).not.toHaveBeenCalled();
+    expect(onOutsideClick).not.toHaveBeenCalled();
   });
 
   it("resets drag sequence after mouseup timeout completes", async () => {
@@ -750,10 +758,10 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(true);
   });
 
-  it("coordinates tree unwinding leaf-first when bubbles is false", async () => {
+  it("coordinates tree unwinding leaf-first when leafFirst is true", async () => {
     const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentBubbles: false,
-      childBubbles: false,
+      parentLeafFirst: true,
+      childLeafFirst: true,
     });
 
     expect(parentOpen.value).toBe(true);
@@ -773,10 +781,39 @@ describe("useOutsideClick", () => {
     expect(parentOpen.value).toBe(false);
   });
 
-  it("collapses all levels simultaneously on outside click when bubbles is true", async () => {
+  it("reactively updates tree unwinding when leafFirst ref changes", async () => {
+    const parentLeafFirst = ref(false);
     const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentBubbles: true,
-      childBubbles: true,
+      parentLeafFirst,
+      childLeafFirst: true,
+    });
+
+    expect(parentOpen.value).toBe(true);
+    expect(childOpen.value).toBe(true);
+
+    // When false: clicking outside closes both simultaneously
+    // Let's set it to true dynamically:
+    parentLeafFirst.value = true;
+    await nextTick();
+
+    // Click 1 outside: parentLeafFirst is true, so only child closes
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(childOpen.value).toBe(false);
+    expect(parentOpen.value).toBe(true);
+
+    // Click 2 outside: parent now closes
+    await userEvent.click(outsideEl);
+    await nextTick();
+
+    expect(parentOpen.value).toBe(false);
+  });
+
+  it("collapses all levels simultaneously on outside click when leafFirst is false", async () => {
+    const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
+      parentLeafFirst: false,
+      childLeafFirst: false,
     });
 
     expect(parentOpen.value).toBe(true);
@@ -831,11 +868,11 @@ describe("useOutsideClick", () => {
     innerIframe.remove();
   });
 
-  it("coordinates tree unwinding leaf-first across mixed capture settings when bubbles is false", async () => {
+  it("coordinates tree unwinding leaf-first across mixed capture settings when leafFirst is true", async () => {
     // Parent on bubble phase (capture: false), Child on capture phase (capture: true)
     const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentBubbles: false,
-      childBubbles: false,
+      parentLeafFirst: true,
+      childLeafFirst: true,
       parentCapture: false,
       childCapture: true,
     });
@@ -877,8 +914,8 @@ describe("useOutsideClick", () => {
   it("maintains leaf-first tree order when an ancestor re-registers while children remain open", async () => {
     const parentEnabled = ref(true);
     const { outsideEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentBubbles: false,
-      childBubbles: false,
+      parentLeafFirst: true,
+      childLeafFirst: true,
       parentEnabled,
     });
 
@@ -930,10 +967,10 @@ describe("useOutsideClick", () => {
     expect(node.open.value).toBe(true);
   });
 
-  it("dismisses descendant branch immediately when clicking on ancestor anchor even if bubbles is false", async () => {
+  it("dismisses descendant branch immediately when clicking on ancestor anchor even if leafFirst is true", async () => {
     const { anchorEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentBubbles: false,
-      childBubbles: false,
+      parentLeafFirst: true,
+      childLeafFirst: true,
     });
 
     expect(parentOpen.value).toBe(true);
@@ -947,10 +984,10 @@ describe("useOutsideClick", () => {
     expect(parentOpen.value).toBe(true);
   });
 
-  it("dismisses descendant branch immediately when clicking inside ancestor floating panel even if bubbles is false", async () => {
+  it("dismisses descendant branch immediately when clicking inside ancestor floating panel even if leafFirst is true", async () => {
     const { floatingEl, parentOpen, childOpen } = await renderFullTreeOutsideClick({
-      parentBubbles: false,
-      childBubbles: false,
+      parentLeafFirst: true,
+      childLeafFirst: true,
     });
 
     expect(parentOpen.value).toBe(true);

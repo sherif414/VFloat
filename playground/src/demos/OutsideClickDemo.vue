@@ -4,7 +4,7 @@ import { useFloatingNode, useOutsideClick, usePosition } from "@/composables";
 
 // --- Configuration toggles ---------------------------------------------------
 
-const bubbles = ref(false);
+const leafFirst = ref(true);
 const eventType = ref<"pointerdown" | "click">("pointerdown");
 const ignoreScrollbar = ref(true);
 const ignoreDrag = ref(true);
@@ -68,13 +68,11 @@ const rootPosition = usePosition(rootNode, {
 });
 
 useOutsideClick(rootNode, {
-  get bubbles() {
-    return bubbles.value;
-  },
-  event: eventType,
-  ignoreScrollbar,
-  ignoreDrag,
-  ignoreClick: checkIgnoreClick,
+  leafFirst,
+  event: eventType.value,
+  ignoreScrollbar: ignoreScrollbar.value,
+  ignoreDrag: ignoreDrag.value,
+  shouldIgnore: checkIgnoreClick,
 });
 
 // --- Level 1 (Child Popover) -------------------------------------------------
@@ -96,13 +94,11 @@ const childPosition = usePosition(childNode, {
 });
 
 useOutsideClick(childNode, {
-  get bubbles() {
-    return bubbles.value;
-  },
-  event: eventType,
-  ignoreScrollbar,
-  ignoreDrag,
-  ignoreClick: checkIgnoreClick,
+  leafFirst,
+  event: eventType.value,
+  ignoreScrollbar: ignoreScrollbar.value,
+  ignoreDrag: ignoreDrag.value,
+  shouldIgnore: checkIgnoreClick,
 });
 
 // --- Level 2 (Grandchild / Leaf Submenu) --------------------------------------
@@ -124,13 +120,11 @@ const leafPosition = usePosition(leafNode, {
 });
 
 useOutsideClick(leafNode, {
-  get bubbles() {
-    return bubbles.value;
-  },
-  event: eventType,
-  ignoreScrollbar,
-  ignoreDrag,
-  ignoreClick: checkIgnoreClick,
+  leafFirst,
+  event: eventType.value,
+  ignoreScrollbar: ignoreScrollbar.value,
+  ignoreDrag: ignoreDrag.value,
+  shouldIgnore: checkIgnoreClick,
 });
 
 // --- Lifecycle logging -------------------------------------------------------
@@ -200,10 +194,10 @@ const activeStackCount = computed(() => {
     <section class="controls-panel">
       <div class="controls-grid">
         <label class="toggle-control">
-          <input v-model="bubbles" type="checkbox" class="toggle-checkbox" />
-          <span class="toggle-label">bubbles</span>
+          <input v-model="leafFirst" type="checkbox" class="toggle-checkbox" />
+          <span class="toggle-label">leafFirst</span>
           <span class="toggle-desc">
-            {{ bubbles ? "True: dismiss all" : "False: peel leaf first" }}
+            {{ leafFirst ? "True: peel leaf first" : "False: dismiss all" }}
           </span>
         </label>
 
@@ -283,7 +277,7 @@ const activeStackCount = computed(() => {
             </div>
 
             <p class="panel-description">
-              Root entry on the stack. With bubbles set to false, clicking outside while children
+              Root entry on the stack. With leafFirst set to true, clicking outside while children
               are open will dismiss the child first.
             </p>
 
@@ -334,7 +328,7 @@ const activeStackCount = computed(() => {
 
             <p class="panel-description">
               Child of Level 0. Clicking outside this menu will dismiss it before the root dialog
-              when bubbles is false.
+              when leafFirst is true.
             </p>
 
             <div class="menu-list">

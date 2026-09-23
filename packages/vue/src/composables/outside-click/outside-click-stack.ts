@@ -1,20 +1,8 @@
-import { type MaybeRefOrGetter, toValue } from "vue";
+import { toValue } from "vue";
 import type { FloatingNode, FloatingNodeId } from "@/composables/floating-node";
 import { getEventTarget, isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
 import { isTargetWithinElements } from "@/shared/elements";
-
-interface DocumentOutsideClickManager {
-  stack: OutsideClickEntry[];
-  listeners: Map<string, (event: Event) => void>;
-  dragListenersAttached: boolean;
-  onMouseDown: ((event: MouseEvent) => void) | null;
-  onMouseUp: ((event: MouseEvent) => void) | null;
-  onBlur: ((event: FocusEvent) => void) | null;
-  dragStartedEntries: Set<FloatingNodeId>;
-  dragEndedEntries: Set<FloatingNodeId>;
-  dragResetTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
-  blurTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
-}
+import type { UseOutsideClickOptions } from "./use-outside-click";
 
 const documentManagers = new WeakMap<Document, DocumentOutsideClickManager>();
 const eventSnapshots = new WeakMap<Event, Map<FloatingNodeId, boolean>>();
@@ -105,7 +93,7 @@ function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManag
   let needsDragTracking = false;
 
   for (const entry of manager.stack) {
-    const eventName = toValue(entry.options?.event ?? "pointerdown");
+    const eventName = entry.options?.event ?? "pointerdown";
     // `capture` is a static setup option: read once per sync so listener keys stay
     // stable while the overlay is open. Changing it takes effect on close/re-open.
     const capture = Boolean(entry.options?.capture ?? true);
@@ -114,7 +102,7 @@ function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManag
       neededListeners.set(key, { eventName, capture });
     }
 
-    if (eventName === "click" && toValue(entry.options?.ignoreDrag ?? true)) {
+    if (eventName === "click" && (entry.options?.ignoreDrag ?? true)) {
       needsDragTracking = true;
     }
   }
@@ -246,7 +234,7 @@ function dispatchOutsideClick(
   const candidates: OutsideClickEntry[] = [];
   for (const entry of manager.stack) {
     if (!entry.node.open.value) continue;
-    const entryEvent = toValue(entry.options?.event ?? "pointerdown");
+    const entryEvent = entry.options?.event ?? "pointerdown";
     const entryCapture = Boolean(entry.options?.capture ?? true);
     if (entryEvent === phaseEventName && entryCapture === isCapture) {
       candidates.push(entry);
@@ -291,7 +279,7 @@ function dispatchOutsideClick(
 
     // 1. Scrollbar click check
     if (
-      toValue(options?.ignoreScrollbar ?? true) &&
+      (options?.ignoreScrollbar ?? true) &&
       scrollbarTarget &&
       isClickOnScrollbar(event, scrollbarTarget)
     ) {
@@ -304,7 +292,7 @@ function dispatchOutsideClick(
     }
 
     // 3. Drag gesture check (only when event is "click" and ignoreDrag is true)
-    if (phaseEventName === "click" && toValue(options?.ignoreDrag ?? true)) {
+    if (phaseEventName === "click" && (options?.ignoreDrag ?? true)) {
       if (manager.dragStartedEntries.has(node.id) || manager.dragEndedEntries.has(node.id)) {
         manager.dragStartedEntries.delete(node.id);
         manager.dragEndedEntries.delete(node.id);
@@ -313,21 +301,21 @@ function dispatchOutsideClick(
     }
 
     // 4. Ignore predicate
-    if (options?.ignoreClick?.(event, target)) {
+    if (options?.shouldIgnore?.(event, target)) {
       continue;
     }
 
-    // 5. Bubbling control: if bubbles is false and node had open children, let child dismiss first.
+    // 5. Leaf-first unwinding: if leafFirst is true and node had open children, let child dismiss first.
     // Exception: when clicking directly on an ancestor's elements, the user is intentionally interacting
     // with an upper layer of the hierarchy, so descendant branches must unwind immediately.
     const isInsideAncestor = isTargetWithinAncestor(node, target);
-    if (options?.bubbles === false && initiallyOpenChildMap.get(node.id) && !isInsideAncestor) {
+    if (toValue(options?.leafFirst) && initiallyOpenChildMap.get(node.id) && !isInsideAncestor) {
       continue;
     }
 
     // 6. Dismiss
-    if (options?.onClick) {
-      options.onClick(event);
+    if (options?.onOutsideClick) {
+      options.onOutsideClick(event);
     } else {
       node.open.value = false;
     }
@@ -362,17 +350,17 @@ function dispatchIframeBlur(
       continue;
     }
 
-    if (entry.options?.ignoreClick?.(fakeEvent, iframe)) {
+    if (entry.options?.shouldIgnore?.(fakeEvent, iframe)) {
       continue;
     }
 
-    if (entry.options?.onClick) {
-      entry.options.onClick(fakeEvent);
+    if (entry.options?.onOutsideClick) {
+      entry.options.onOutsideClick(fakeEvent);
     } else {
       entry.node.open.value = false;
     }
 
-    if (entry.options?.bubbles === false) {
+    if (toValue(entry.options?.leafFirst)) {
       break;
     }
   }
@@ -425,22 +413,7 @@ export type OutsideClickPredicate = (event: MouseEvent, target: EventTarget | nu
 /**
  * Options accepted by each entry on the outside-click stack.
  */
-export interface OutsideClickEntryOptions {
-  enabled?: MaybeRefOrGetter<boolean>;
-  event?: MaybeRefOrGetter<"pointerdown" | "mousedown" | "click">;
-  /**
-   * Which document event phase handles dismissal.
-   * Static: read once during listener setup. Changing it mid-open takes
-   * effect on close/re-open.
-   * @default true
-   */
-  capture?: boolean;
-  bubbles?: boolean;
-  ignoreScrollbar?: MaybeRefOrGetter<boolean>;
-  ignoreDrag?: MaybeRefOrGetter<boolean>;
-  ignoreClick?: OutsideClickPredicate;
-  onClick?: (event: MouseEvent) => void;
-}
+export interface OutsideClickEntryOptions extends UseOutsideClickOptions {}
 
 /**
  * An entry on the document-level outside-click stack.
@@ -448,4 +421,17 @@ export interface OutsideClickEntryOptions {
 export interface OutsideClickEntry {
   node: FloatingNode;
   readonly options?: OutsideClickEntryOptions;
+}
+
+interface DocumentOutsideClickManager {
+  stack: OutsideClickEntry[];
+  listeners: Map<string, (event: Event) => void>;
+  dragListenersAttached: boolean;
+  onMouseDown: ((event: MouseEvent) => void) | null;
+  onMouseUp: ((event: MouseEvent) => void) | null;
+  onBlur: ((event: FocusEvent) => void) | null;
+  dragStartedEntries: Set<FloatingNodeId>;
+  dragEndedEntries: Set<FloatingNodeId>;
+  dragResetTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
+  blurTimeoutId: ReturnType<Window["setTimeout"]> | undefined;
 }
