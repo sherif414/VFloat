@@ -84,13 +84,13 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
   const event = options.event ?? "pointerdown";
   const entry: OutsideClickEntry = {
     node,
-    capture: toValue(options.capture ?? true),
+    capture: options.capture ?? true,
     getOptions: () => ({
       event,
-      capture: toValue(options.capture ?? true),
+      capture: options.capture ?? true,
       leafFirst: toValue(options.leafFirst ?? false),
-      ignoreScrollbar: toValue(options.ignoreScrollbar ?? true),
-      ignoreDrag: toValue(options.ignoreDrag ?? true),
+      ignoreScrollbar: options.ignoreScrollbar ?? true,
+      ignoreDrag: options.ignoreDrag ?? true,
       shouldIgnore: options.shouldIgnore,
       onOutsideClick: options.onOutsideClick,
     }),
@@ -343,20 +343,52 @@ export type OutsideClickPredicate = (
 
 /** Options for configuring outside-click dismissal. */
 export interface UseOutsideClickOptions {
-  /** Whether outside-click detection is enabled. Reactive; defaults to true. */
+  /**
+   * Whether outside-click detection is enabled.
+   * Reactive: can be dynamically toggled (e.g., during form submission or modal states).
+   * @default true
+   */
   enabled?: MaybeRefOrGetter<boolean>;
-  /** Whether open trees unwind one level at a time. Reactive; defaults to false. */
+  /**
+   * Whether to unwind nested floating trees one level at a time (leaf-first).
+   * When `true`, a parent node with open children will not dismiss until
+   * its children dismiss first.
+   * Reactive: can be bound to component props or dynamic workflow states.
+   * @default false
+   */
   leafFirst?: MaybeRefOrGetter<boolean>;
-  /** Listener event selected at setup; changing it takes effect on reopen. Defaults to pointerdown. */
+  /**
+   * Which document event triggers dismissal.
+   * Static configuration determined by the component's UX pattern.
+   * @default "pointerdown"
+   */
   event?: "pointerdown" | "mousedown" | "click";
-  /** Reactive candidate ordering hint; capture candidates run first. Defaults to true. */
-  capture?: MaybeRefOrGetter<boolean>;
-  /** Whether pointer scrollbar interactions are ignored. Reactive; defaults to true. */
-  ignoreScrollbar?: MaybeRefOrGetter<boolean>;
-  /** Whether click dismissal is suppressed for drag gestures. Reactive; defaults to true. */
-  ignoreDrag?: MaybeRefOrGetter<boolean>;
-  /** Custom predicate evaluated after floating-family containment. */
+  /**
+   * Which document event phase handles dismissal.
+   * Static: read once during listener setup. Changing it mid-open takes
+   * effect on close/re-open.
+   * @default true
+   */
+  capture?: boolean;
+  /**
+   * Whether clicks on scrollbar gutters are ignored.
+   * @default true
+   */
+  ignoreScrollbar?: boolean;
+  /**
+   * For `event: "click"`, whether to ignore mouseup outside when the drag
+   * started inside the floating surface.
+   * @default true
+   */
+  ignoreDrag?: boolean;
+  /**
+   * Custom predicate to ignore specific outside interactions.
+   * Evaluated after the composite node family check.
+   */
   shouldIgnore?: OutsideClickPredicate;
-  /** Custom dismissal callback; receives event and dismissal context. */
+  /**
+   * Custom callback invoked when an outside interaction occurs.
+   * When provided, replaces default `node.open.value = false`.
+   */
   onOutsideClick?: (event: MouseEvent, info: OutsideClickInfo) => void;
 }
