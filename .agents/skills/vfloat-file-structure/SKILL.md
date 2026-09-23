@@ -70,7 +70,10 @@ Inside the main composable function, organize code based on the complexity tier:
 Follows a linear flow separated only by blank lines (no internal dividers):
 
 1. **JSDoc**: Comprehensive description with `@param`, `@returns`, and `@example`.
-2. **Options Access**: Do not destructure options. Access infrequently used options directly via `options.xxx` (e.g. `toValue(options.delay ?? 0)`). Only extract a local for options read 2+ times (e.g. a `computed` wrapper). Never rename options with an `*Option` suffix.
+2. **Options Normalization**:
+   - **Dynamic Options (`MaybeRefOrGetter<T>`)**: Normalize into a `computed` at the top of the composable (e.g. `const isEnabled = computed(() => toValue(options.enabled) ?? true);`). Unwrapping must always be sequenced as `toValue(options.prop) ?? default` (never `toValue(options.prop ?? default)`). Never inline `toValue(options.prop ?? default)` inside event handlers, watchers, or internal callbacks.
+   - **Non-Reactive Options**: Extract once via object destructuring with default values at the top of the composable (e.g. `const { event = "pointerdown", capture = true } = options;`).
+   - Never rename options with an `*Option` suffix.
 3. **Derived State & Reactive Refs**: `computed` wrappers, reactive refs.
 4. **Event Handlers & Action Functions**: Logic and user action handlers.
 5. **Wiring & Listeners**: `watch`, `watchPostEffect`, `useEventListener`.
@@ -95,6 +98,7 @@ composable()
 ```
 
 - **Feature-Scoped Options Vertical Cohesion**: `Shared Options & Root State` must **only** contain options read across 2 or more distinct feature blocks, along with root DOM targets and lifecycle refs. Any option consumed exclusively within a single feature block must be defined directly inside that feature block alongside its private state, handlers, and effects.
+- **Options Normalization Consistency**: Apply the same normalization standard: dynamic `MaybeRefOrGetter` options are normalized into a `computed` (`computed(() => toValue(options.prop) ?? default)`), while non-reactive options are extracted via object destructuring with default values at the top of the composable.
 
 ### Single-Concern Separation Rule
 
@@ -170,7 +174,7 @@ Internals are functions, interfaces, types, constants, and variables used only w
 - [ ] Event listeners are decoupled and do not combine unrelated feature logic.
 - [ ] Internal feature dividers use single-line dashed comments (`// --- Feature Name ----`) with a trailing blank line.
 - [ ] Feature divider names are Title Case noun phrases describing functionality (no generic `// --- State ---` or `// --- Handlers ---`).
-- [ ] Options are accessed directly via `options.xxx` with inline defaults (e.g. `toValue(options.enabled ?? true)`); only options read 2+ times get a local/computed. No `*Option` suffix renames.
+- [ ] Dynamic options (`MaybeRefOrGetter`) are normalized into a `computed` (e.g. `computed(() => toValue(options.enabled) ?? true)`); non-reactive options use object destructuring with default values. No `*Option` suffix renames.
 - [ ] Feature-scoped options are declared inside their respective feature blocks, not grouped in Shared Options & Root State.
 - [ ] Types and interfaces are positioned at the bottom of the file.
 - [ ] Module internals (entities used only within the defining module and not imported elsewhere) are unexported.
