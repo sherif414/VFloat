@@ -621,7 +621,7 @@ describe("useTypeahead", () => {
         const floatingEl = useTemplateRef<HTMLDivElement>("floating");
         const elementsList = ref<Array<HTMLElement | null>>([]);
 
-        const node = useFloatingNode({ anchorEl, floatingEl, defaultOpen: true });
+        const node = useFloatingNode({ anchorEl, floatingEl, open: ref(true) });
         roving = useRovingFocus(node, { elementsList });
         useTypeahead(node, {
           target: roving,
@@ -666,7 +666,7 @@ describe("useTypeahead", () => {
         const floatingEl = useTemplateRef<HTMLDivElement>("floating");
         const elementsList = ref<Array<HTMLElement | null>>([]);
 
-        const node = useFloatingNode({ anchorEl, floatingEl, defaultOpen: true });
+        const node = useFloatingNode({ anchorEl, floatingEl, open: ref(true) });
         descendant = useAriaActivedescendant(node, { elementsList });
         useTypeahead(node, {
           target: descendant,
@@ -714,7 +714,7 @@ describe("useTypeahead", () => {
         const floatingEl = useTemplateRef<HTMLDivElement>("floating");
         const elementsList = ref<Array<HTMLElement | null>>([]);
 
-        const node = useFloatingNode({ anchorEl, floatingEl, defaultOpen: true });
+        const node = useFloatingNode({ anchorEl, floatingEl, open: ref(true) });
         roving = useRovingFocus(node, { elementsList });
         useTypeahead(node, {
           target: roving,

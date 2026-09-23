@@ -25,7 +25,6 @@ const floatingEl = shallowRef<HTMLElement | null>(null);
 const context = useFloatingNode({
   anchorEl,
   floatingEl,
-  defaultOpen: false,
 });
 
 const position = usePosition(context, {

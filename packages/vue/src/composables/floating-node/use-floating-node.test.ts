@@ -20,31 +20,29 @@ describe("useFloatingNode", () => {
     vi.useRealTimers();
   });
 
-  it("uses defaultOpen for uncontrolled state", () => {
+  it("defaults open state to ref(false) when open option is omitted", () => {
     let node!: ReturnType<typeof useFloatingNode>;
     scope?.run(() => {
       node = useFloatingNode({
         anchorEl: ref(null),
         floatingEl: ref(null),
-        defaultOpen: true,
-      });
-    });
-
-    expect(node.open.value).toBe(true);
-  });
-
-  it("prefers controlled open state over defaultOpen", () => {
-    let node!: ReturnType<typeof useFloatingNode>;
-    scope?.run(() => {
-      node = useFloatingNode({
-        anchorEl: ref(null),
-        floatingEl: ref(null),
-        open: ref(false),
-        defaultOpen: true,
       });
     });
 
     expect(node.open.value).toBe(false);
+  });
+
+  it("supports initializing open state with open: ref(true)", () => {
+    let node!: ReturnType<typeof useFloatingNode>;
+    scope?.run(() => {
+      node = useFloatingNode({
+        anchorEl: ref(null),
+        floatingEl: ref(null),
+        open: ref(true),
+      });
+    });
+
+    expect(node.open.value).toBe(true);
   });
 
   it("uses controlled open state when passed as ref", () => {
@@ -114,7 +112,7 @@ describe("useFloatingNode", () => {
         node = useFloatingNode({
           anchorEl: ref(anchorEl),
           floatingEl: ref(floatingEl),
-          defaultOpen: true,
+          open: ref(true),
         });
       });
 
@@ -179,7 +177,7 @@ describe("useFloatingNode", () => {
         root = useFloatingNode({
           anchorEl: ref(rootAnchor),
           floatingEl: ref(rootFloating),
-          defaultOpen: true,
+          open: ref(true),
         });
         useFloatingNode({
           anchorEl: ref(childAnchor),
@@ -212,18 +210,18 @@ describe("useFloatingNode", () => {
         root = useFloatingNode({
           anchorEl: ref(rootAnchor),
           floatingEl: ref(rootFloating),
-          defaultOpen: true,
+          open: ref(true),
         });
         child1 = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(child1Floating),
-          defaultOpen: true,
+          open: ref(true),
           parent: root,
         });
         child2 = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(child2Floating),
-          defaultOpen: true,
+          open: ref(true),
           parent: root,
         });
       });
@@ -466,7 +464,7 @@ describe("useFloatingNode", () => {
         root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(rootFloating),
-          defaultOpen: true,
+          open: ref(true),
         });
         const child = useFloatingNode({
           anchorEl: ref(null),
@@ -580,7 +578,7 @@ describe("useFloatingNode", () => {
           rootNode = useFloatingNode({
             anchorEl,
             floatingEl,
-            defaultOpen: true,
+            open: ref(true),
           });
 
           return () =>
@@ -859,19 +857,19 @@ describe("useFloatingNode", () => {
         root = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
-          defaultOpen: true,
+          open: ref(true),
         });
         branchA = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parent: root,
-          defaultOpen: true,
+          open: ref(true),
         });
         branchB = useFloatingNode({
           anchorEl: ref(null),
           floatingEl: ref(null),
           parent: root,
-          defaultOpen: true,
+          open: ref(true),
         });
       });
 
@@ -1003,7 +1001,7 @@ describe("useFloatingNode", () => {
           childDropdownNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
-            defaultOpen: true,
+            open: ref(true),
           });
           return () => h("div", { "data-testid": "dropdown" });
         },
@@ -1014,7 +1012,7 @@ describe("useFloatingNode", () => {
           childModalNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
-            defaultOpen: true,
+            open: ref(true),
           });
           return () => h("div", { "data-testid": "modal" });
         },
@@ -1025,7 +1023,7 @@ describe("useFloatingNode", () => {
           appTooltipNode = useFloatingNode({
             anchorEl: ref(null),
             floatingEl: ref(null),
-            defaultOpen: true,
+            open: ref(true),
           });
           return () => h("div", { "data-testid": "app" }, [h(ChildDropdown), h(ChildModal)]);
         },

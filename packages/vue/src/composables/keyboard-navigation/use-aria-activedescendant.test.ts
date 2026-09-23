@@ -41,7 +41,7 @@ const createTestComponent = (
       useFloatingNode({
         anchorEl,
         floatingEl: listboxEl,
-        defaultOpen: true,
+        open: ref(true),
       });
     testNode = floatingNode;
 
@@ -234,7 +234,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: listboxEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId } = useAriaActivedescendant(node, {
@@ -301,7 +301,7 @@ describe("useAriaActivedescendant", () => {
       const node = useFloatingNode({
         anchorEl: targetEl,
         floatingEl: containerEl,
-        defaultOpen: true,
+        open: ref(true),
       });
 
       const { activeId } = useAriaActivedescendant(node, {
@@ -805,7 +805,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: listboxEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId, activeIndex } = useAriaActivedescendant(node, {
@@ -1033,7 +1033,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId } = useAriaActivedescendant(node, {
@@ -1349,7 +1349,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: listboxEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId } = useAriaActivedescendant(node, {
@@ -1567,7 +1567,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: listboxEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId } = useAriaActivedescendant(node, {
@@ -1631,7 +1631,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: listboxEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId } = useAriaActivedescendant(node, {
@@ -1707,7 +1707,7 @@ describe("useAriaActivedescendant", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: listboxEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const { getItemId } = useAriaActivedescendant(node, {

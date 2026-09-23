@@ -40,7 +40,7 @@ describe("useRovingFocus", () => {
         useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
       testNode = floatingNode;
 
@@ -879,7 +879,7 @@ describe("useRovingFocus", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         useRovingFocus(node, { elementsList });
@@ -1328,7 +1328,7 @@ describe("useRovingFocus", () => {
         const node = useFloatingNode({
           anchorEl,
           floatingEl: containerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         const roving = useRovingFocus(node, {
@@ -1840,7 +1840,7 @@ describe("useRovingFocus", () => {
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         rootRoving = useRovingFocus(rootNode, {
@@ -1851,7 +1851,7 @@ describe("useRovingFocus", () => {
         const childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          defaultOpen: true,
+          open: ref(true),
           parent: rootNode,
         });
 
@@ -1931,7 +1931,7 @@ describe("useRovingFocus", () => {
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         rootRoving = useRovingFocus(rootNode, {
@@ -1942,7 +1942,7 @@ describe("useRovingFocus", () => {
         useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          defaultOpen: true,
+          open: ref(true),
           parent: rootNode,
         });
 
@@ -2015,7 +2015,7 @@ describe("useRovingFocus", () => {
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootContainerEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         rootRoving = useRovingFocus(rootNode, {
@@ -2026,7 +2026,7 @@ describe("useRovingFocus", () => {
         childNode = useFloatingNode({
           anchorEl: childAnchorEl,
           floatingEl: childContainerEl,
-          defaultOpen: true,
+          open: ref(true),
           parent: rootNode,
         });
 
@@ -2092,13 +2092,13 @@ describe("useRovingFocus", () => {
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          defaultOpen: true,
+          open: ref(true),
           parent: rootNode,
         });
 
@@ -2160,13 +2160,13 @@ describe("useRovingFocus", () => {
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          defaultOpen: true,
+          open: ref(true),
           parent: rootNode,
         });
 
@@ -2223,13 +2223,13 @@ describe("useRovingFocus", () => {
         const rootNode = useFloatingNode({
           anchorEl: rootAnchorEl,
           floatingEl: rootFloatingEl,
-          defaultOpen: true,
+          open: ref(true),
         });
 
         childNode = useFloatingNode({
           anchorEl: subTriggerEl,
           floatingEl: childFloatingEl,
-          defaultOpen: true,
+          open: ref(true),
           parent: rootNode,
         });
 

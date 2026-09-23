@@ -47,7 +47,7 @@ export const floatingInternals = new WeakMap<FloatingNodeId, FloatingInternals>(
  */
 export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const id = createFloatingNodeId();
-  const open = options.open ?? ref(options.defaultOpen ?? false);
+  const open = options.open ?? ref(false);
 
   const parent = shallowRef<FloatingNode | null>(null);
   const children = shallowRef<ReadonlySet<FloatingNode>>(new Set());
@@ -385,14 +385,10 @@ export interface UseFloatingNodeOptions {
   arrowEl?: Ref<HTMLElement | null>;
 
   /**
-   * Optional controlled open state.
+   * Optional open state ref. When omitted, an internal `ref(false)` is created.
+   * If an initial open state of `true` is desired, pass `open: ref(true)`.
    */
   open?: Ref<boolean>;
-
-  /**
-   * Initial open state when `open` is not provided.
-   */
-  defaultOpen?: boolean;
 
   /**
    * Parent node reference for establishing composite hierarchies (submenus, cascades).
