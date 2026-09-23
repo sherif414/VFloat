@@ -120,126 +120,134 @@ async function renderRole(
   };
 }
 
-describe("useRole", () => {
+describe("Feature: useRole ARIA semantics synchronization", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  it("syncs menu trigger, floating, and item roles", async () => {
-    const { anchorEl, floatingEl, getItemEl, openRef } = await renderRole(
-      {
+  describe("Scenario: Menu hierarchy semantics and item states", () => {
+    it("Given a menu configuration with disabled items, When rendered and toggled open, Then trigger, floating, and item ARIA attributes synchronize accurately", async () => {
+      const { anchorEl, floatingEl, getItemEl, openRef } = await renderRole(
+        {
+          role: "menu",
+          label: "Actions",
+          disabledIndices: [1],
+        },
+        false,
+      );
+
+      await expect.element(anchorEl).toHaveAttribute("aria-haspopup", "menu");
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(anchorEl).toHaveAttribute("aria-controls", "floating");
+      await expect.element(floatingEl).toHaveAttribute("role", "menu");
+      await expect.element(floatingEl).toHaveAttribute("aria-label", "Actions");
+      await expect.element(getItemEl(0)).toHaveAttribute("role", "menuitem");
+      expect(getItemEl(0).hasAttribute("tabindex")).toBe(false);
+      await expect.element(getItemEl(1)).toHaveAttribute("aria-disabled", "true");
+
+      openRef.value = true;
+      await nextTick();
+      await nextTick();
+
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("Given a menu with dynamic item roles and checked indices, When rendered, Then it applies menuitemcheckbox and aria-checked states", async () => {
+      const { getItemEl } = await renderRole({
         role: "menu",
-        label: "Actions",
-        disabledIndices: [1],
-      },
-      false,
-    );
+        itemRole: (index) => (index === 0 ? "menuitemcheckbox" : "menuitem"),
+        checkedIndices: [0],
+      });
 
-    expect(anchorEl.getAttribute("aria-haspopup")).toBe("menu");
-    expect(anchorEl.getAttribute("aria-expanded")).toBe("false");
-    expect(anchorEl.getAttribute("aria-controls")).toBe("floating");
-    expect(floatingEl.getAttribute("role")).toBe("menu");
-    expect(floatingEl.getAttribute("aria-label")).toBe("Actions");
-    expect(getItemEl(0).getAttribute("role")).toBe("menuitem");
-    expect(getItemEl(0).hasAttribute("tabindex")).toBe(false);
-    expect(getItemEl(1).getAttribute("aria-disabled")).toBe("true");
-
-    openRef.value = true;
-    await nextTick();
-    await nextTick();
-
-    expect(anchorEl.getAttribute("aria-expanded")).toBe("true");
-  });
-
-  it("supports per-item checkbox roles and checked state", async () => {
-    const { getItemEl } = await renderRole({
-      role: "menu",
-      itemRole: (index) => (index === 0 ? "menuitemcheckbox" : "menuitem"),
-      checkedIndices: [0],
+      await expect.element(getItemEl(0)).toHaveAttribute("role", "menuitemcheckbox");
+      await expect.element(getItemEl(0)).toHaveAttribute("aria-checked", "true");
+      expect(getItemEl(1).hasAttribute("aria-checked")).toBe(false);
     });
 
-    expect(getItemEl(0).getAttribute("role")).toBe("menuitemcheckbox");
-    expect(getItemEl(0).getAttribute("aria-checked")).toBe("true");
-    expect(getItemEl(1).hasAttribute("aria-checked")).toBe(false);
+    it("Given a parent menu with a child menu node, When rendered and child menu opens, Then the submenu item reflects aria-haspopup and aria-expanded", async () => {
+      const { getItemEl, childOpenRef } = await renderRole({ role: "menu" }, true, {
+        withChildMenu: true,
+      });
+
+      await expect.element(getItemEl(1)).toHaveAttribute("role", "menuitem");
+      await expect.element(getItemEl(1)).toHaveAttribute("aria-haspopup", "menu");
+      await expect.element(getItemEl(1)).toHaveAttribute("aria-expanded", "false");
+      await expect.element(getItemEl(1)).toHaveAttribute("aria-controls", "child-menu");
+
+      childOpenRef.value = true;
+      await nextTick();
+      await nextTick();
+
+      await expect.element(getItemEl(1)).toHaveAttribute("aria-expanded", "true");
+    });
   });
 
-  it("syncs listbox options and selected state", async () => {
-    const { floatingEl, getItemEl } = await renderRole({
-      role: "listbox",
-      selectedIndices: (index) => index === 2,
+  describe("Scenario: Composite widget roles (listbox, tree, and grid)", () => {
+    it("Given a listbox role with selected indices, When rendered, Then floating element and options reflect listbox and aria-selected states", async () => {
+      const { floatingEl, getItemEl } = await renderRole({
+        role: "listbox",
+        selectedIndices: (index) => index === 2,
+      });
+
+      await expect.element(floatingEl).toHaveAttribute("role", "listbox");
+      await expect.element(getItemEl(0)).toHaveAttribute("role", "option");
+      await expect.element(getItemEl(2)).toHaveAttribute("aria-selected", "true");
     });
 
-    expect(floatingEl.getAttribute("role")).toBe("listbox");
-    expect(getItemEl(0).getAttribute("role")).toBe("option");
-    expect(getItemEl(2).getAttribute("aria-selected")).toBe("true");
-  });
+    it("Given tree and grid roles with selected items, When rendered, Then elements reflect treeitem, gridcell, and aria-selected attributes", async () => {
+      const tree = await renderRole({
+        role: "tree",
+        selectedIndices: [1],
+      });
 
-  it("syncs tree and grid roles with items", async () => {
-    const tree = await renderRole({
-      role: "tree",
-      selectedIndices: [1],
+      await expect.element(tree.floatingEl).toHaveAttribute("role", "tree");
+      await expect.element(tree.getItemEl(0)).toHaveAttribute("role", "treeitem");
+      await expect.element(tree.getItemEl(1)).toHaveAttribute("aria-selected", "true");
+
+      const grid = await renderRole({
+        role: "grid",
+        selectedIndices: [0],
+      });
+
+      await expect.element(grid.floatingEl).toHaveAttribute("role", "grid");
+      await expect.element(grid.getItemEl(0)).toHaveAttribute("role", "gridcell");
+      await expect.element(grid.getItemEl(0)).toHaveAttribute("aria-selected", "true");
     });
+  });
 
-    expect(tree.floatingEl.getAttribute("role")).toBe("tree");
-    expect(tree.getItemEl(0).getAttribute("role")).toBe("treeitem");
-    expect(tree.getItemEl(1).getAttribute("aria-selected")).toBe("true");
+  describe("Scenario: Tooltip descriptive relationship", () => {
+    it("Given a tooltip role, When open state transitions, Then aria-describedby is linked to the anchor only while open", async () => {
+      const { anchorEl, floatingEl, openRef } = await renderRole({ role: "tooltip" }, false);
 
-    const grid = await renderRole({
-      role: "grid",
-      selectedIndices: [0],
+      await expect.element(floatingEl).toHaveAttribute("role", "tooltip");
+      expect(anchorEl.hasAttribute("aria-describedby")).toBe(false);
+
+      openRef.value = true;
+      await nextTick();
+      await nextTick();
+
+      await expect.element(anchorEl).toHaveAttribute("aria-describedby", "floating");
     });
-
-    expect(grid.floatingEl.getAttribute("role")).toBe("grid");
-    expect(grid.getItemEl(0).getAttribute("role")).toBe("gridcell");
-    expect(grid.getItemEl(0).getAttribute("aria-selected")).toBe("true");
   });
 
-  it("lets child menu nodes manage submenu trigger relationships", async () => {
-    const { getItemEl, childOpenRef } = await renderRole({ role: "menu" }, true, {
-      withChildMenu: true,
+  describe("Scenario: Teardown and attribute restoration", () => {
+    it("Given pre-existing element attributes, When cleanup is invoked, Then modified ARIA attributes are restored to original template values", async () => {
+      // The template value must exist before the first sync run so the
+      // composable captures it as the restore value.
+      const { anchorEl, floatingEl, result } = await renderRole(
+        { role: "dialog", modal: true },
+        true,
+        { anchorAttrs: { "aria-expanded": "template-value" } },
+      );
+
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+
+      result.cleanup();
+
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "template-value");
+      expect(floatingEl.hasAttribute("role")).toBe(false);
+      expect(floatingEl.hasAttribute("aria-modal")).toBe(false);
     });
-
-    expect(getItemEl(1).getAttribute("role")).toBe("menuitem");
-    expect(getItemEl(1).getAttribute("aria-haspopup")).toBe("menu");
-    expect(getItemEl(1).getAttribute("aria-expanded")).toBe("false");
-    expect(getItemEl(1).getAttribute("aria-controls")).toBe("child-menu");
-
-    childOpenRef.value = true;
-    await nextTick();
-    await nextTick();
-
-    expect(getItemEl(1).getAttribute("aria-expanded")).toBe("true");
-  });
-
-  it("links tooltips to the anchor only while open", async () => {
-    const { anchorEl, floatingEl, openRef } = await renderRole({ role: "tooltip" }, false);
-
-    expect(floatingEl.getAttribute("role")).toBe("tooltip");
-    expect(anchorEl.hasAttribute("aria-describedby")).toBe(false);
-
-    openRef.value = true;
-    await nextTick();
-    await nextTick();
-
-    expect(anchorEl.getAttribute("aria-describedby")).toBe("floating");
-  });
-
-  it("restores attributes on cleanup", async () => {
-    // The template value must exist before the first sync run so the
-    // composable captures it as the restore value.
-    const { anchorEl, floatingEl, result } = await renderRole(
-      { role: "dialog", modal: true },
-      true,
-      { anchorAttrs: { "aria-expanded": "template-value" } },
-    );
-
-    expect(anchorEl.getAttribute("aria-expanded")).toBe("true");
-
-    result.cleanup();
-
-    expect(anchorEl.getAttribute("aria-expanded")).toBe("template-value");
-    expect(floatingEl.hasAttribute("role")).toBe(false);
-    expect(floatingEl.hasAttribute("aria-modal")).toBe(false);
   });
 });

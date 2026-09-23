@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { defineComponent, h, nextTick, onMounted, ref, shallowRef, useTemplateRef } from "vue";
-import type { FloatingNode } from "@/composables";
-import { type UseHoverOptions, useFloatingNode, useHover } from "@/composables";
+import type { FloatingNode, UseHoverOptions } from "@/composables";
+import { useFloatingNode, useHover } from "@/composables";
 import { getTestEl, makePointerEvent, stubElementRect } from "@/test-utils";
 
 interface FixtureConfig {
@@ -34,7 +34,15 @@ function createTestComponent(options: UseHoverOptions = {}, config: FixtureConfi
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("div", { ref: "anchor", "data-testid": "anchor" }, "Anchor"),
+        h(
+          "div",
+          {
+            ref: "anchor",
+            "data-testid": "anchor",
+            "aria-expanded": String(open.value),
+          },
+          "Anchor",
+        ),
         h("div", { ref: "floating", "data-testid": "floating" }, "Floating"),
         h("div", { "data-testid": "anchor-2" }, "Anchor 2"),
         ...(config.withIgnored ? [h("div", { "data-testid": "ignored" }, "Ignored")] : []),
@@ -78,9 +86,25 @@ function createTreeComponent(
 
     return () =>
       h("div", { class: "test-wrapper" }, [
-        h("div", { ref: "parent-anchor", "data-testid": "parent-anchor" }, "Parent anchor"),
+        h(
+          "div",
+          {
+            ref: "parent-anchor",
+            "data-testid": "parent-anchor",
+            "aria-expanded": String(parentOpen.value),
+          },
+          "Parent anchor",
+        ),
         h("div", { ref: "parent-floating", "data-testid": "parent-floating" }, "Parent floating"),
-        h("div", { ref: "child-anchor", "data-testid": "child-anchor" }, "Child anchor"),
+        h(
+          "div",
+          {
+            ref: "child-anchor",
+            "data-testid": "child-anchor",
+            "aria-expanded": String(childOpen.value),
+          },
+          "Child anchor",
+        ),
         h("div", { ref: "child-floating", "data-testid": "child-floating" }, "Child floating"),
       ]);
   });
@@ -146,171 +170,198 @@ async function renderTreeHover(
   };
 }
 
-describe("useHover", () => {
+describe("Feature: useHover", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  describe("core functionality", () => {
-    it("opens when pointer enters reference element", async () => {
-      const ctx = await renderHover();
+  describe("Scenario: Basic pointer enter and leave triggering", () => {
+    it("Given a closed floating element, When pointer enters reference element, Then opens the floating element", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover();
+      expect(node.open.value).toBe(false);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then
+      expect(node.open.value).toBe(true);
+      expect(anchorEl.getAttribute("aria-expanded")).toBe("true");
     });
 
-    it("closes when pointer leaves reference element", async () => {
-      const ctx = await renderHover();
+    it("Given an open floating element, When pointer leaves reference element, Then closes the floating element", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover();
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
-      await nextTick();
-
-      expect(ctx.node.open.value).toBe(false);
+      // Then
+      expect(node.open.value).toBe(false);
+      expect(anchorEl.getAttribute("aria-expanded")).toBe("false");
     });
 
-    it("does not close immediately if pointer moves from reference to floating element", async () => {
-      const ctx = await renderHover({ delay: 10 });
-
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+    it("Given an open floating element with delay, When pointer moves directly from reference to floating element, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl, node } = await renderHover({ delay: 10 });
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
-      );
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When: Pointer transitions into floating element
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: floatingEl }));
+      floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then: Remains open
+      expect(node.open.value).toBe(true);
 
-      ctx.floatingEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      // When: Pointer leaves floating element into document body
+      floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then: Closes
+      expect(node.open.value).toBe(false);
     });
 
-    it("attaches/reattaches listeners when element refs change", async () => {
-      const ctx = await renderHover();
-      const oldRef = ctx.anchorEl;
+    it("Given reference element ref changes dynamically, When pointer enters new reference element, Then opens floating element", async () => {
+      // Given
+      const { anchorEl, anchor2El, node } = await renderHover();
+      const oldRefEl = anchorEl;
 
-      ctx.node.refs.anchorEl.value = null;
+      node.refs.anchorEl.value = null;
       await nextTick();
 
-      oldRef.dispatchEvent(makePointerEvent("pointerenter"));
+      oldRefEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
-      ctx.node.refs.anchorEl.value = ctx.anchor2El;
+      // When
+      node.refs.anchorEl.value = anchor2El;
       await nextTick();
 
-      ctx.anchor2El.dispatchEvent(makePointerEvent("pointerenter"));
+      anchor2El.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+
+      // Then
+      expect(node.open.value).toBe(true);
     });
 
-    it("disables functionality when enabled becomes false", async () => {
+    it("Given enabled changes to false, When pointer enters reference element, Then preserves closed state", async () => {
+      // Given
       const enabled = ref(true);
-      const ctx = await renderHover({ enabled });
+      const { anchorEl, node } = await renderHover({ enabled });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
+      // When: Disabled dynamically
       enabled.value = false;
       await nextTick();
 
-      ctx.node.open.value = false;
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      node.open.value = false;
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+
+      // Then
+      expect(node.open.value).toBe(false);
     });
   });
 
-  describe("delay configuration", () => {
-    it("respects delay.open (object notation)", async () => {
-      const ctx = await renderHover({ delay: { open: 100 } });
+  describe("Scenario: Open and close delay configuration", () => {
+    it("Given delay.open is specified, When pointer enters reference element, Then waits for open delay before opening", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: { open: 100 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then: Remains closed before delay
+      expect(node.open.value).toBe(false);
       vi.advanceTimersByTime(99);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
+
+      // Then: Opens after delay
       vi.advanceTimersByTime(1);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("respects delay.close (object notation)", async () => {
-      const ctx = await renderHover({ delay: { close: 100 } });
+    it("Given delay.close is specified, When pointer leaves reference element, Then waits for close delay before closing", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: { close: 100 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
 
+      // Then: Remains open before close delay
+      expect(node.open.value).toBe(true);
       vi.advanceTimersByTime(99);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
+
+      // Then: Closes after close delay
       vi.advanceTimersByTime(1);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
 
-    it("respects delay (number notation) for both open and close", async () => {
-      const ctx = await renderHover({ delay: 150 });
+    it("Given a numeric delay is specified, When pointer enters and leaves, Then applies the delay to both open and close", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: 150 });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When entering
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then
+      expect(node.open.value).toBe(false);
       vi.advanceTimersByTime(150);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      // When leaving
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then
+      expect(node.open.value).toBe(true);
       vi.advanceTimersByTime(150);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
   });
 
-  describe("ignorePointerLeave predicate", () => {
-    it("keeps the parent open when the pointer leaves into an ignored element", async () => {
-      let ignoredEl: HTMLElement | null = null;
-      const ctx = await renderHover(
+  describe("Scenario: Custom ignorePointerLeave predicate", () => {
+    it("Given ignorePointerLeave predicate matches target, When pointer leaves into ignored element, Then preserves open state", async () => {
+      // Given
+      let targetIgnoredEl: HTMLElement | null = null;
+      const { anchorEl, ignoredEl, node } = await renderHover(
         {
-          ignorePointerLeave: (target) => target === ignoredEl,
+          ignorePointerLeave: (target) => target === targetIgnoredEl,
         },
         { withIgnored: true },
       );
-      ignoredEl = ctx.ignoredEl;
+      targetIgnoredEl = ignoredEl;
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
+      expect(node.open.value).toBe(true);
 
-      expect(ctx.node.open.value).toBe(true);
-
-      ctx.anchorEl.dispatchEvent(
+      // When
+      anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           relatedTarget: ignoredEl,
           clientX: 15,
@@ -319,174 +370,209 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then
+      expect(node.open.value).toBe(true);
     });
   });
 
-  describe("parent-linked nodes", () => {
-    it("keeps a parent open when the pointer leaves into a child floating element", async () => {
-      const ctx = await renderTreeHover("parent", false, true);
+  describe("Scenario: Parent and child floating node hover coordination", () => {
+    it("Given a parent floating element, When pointer leaves parent into a child floating element, Then keeps parent open", async () => {
+      // Given
+      const { parentAnchorEl, childFloatingEl, parentOpen } = await renderTreeHover(
+        "parent",
+        false,
+        true,
+      );
 
-      ctx.parentAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      parentAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
+      expect(parentOpen.value).toBe(true);
 
-      expect(ctx.parentOpen.value).toBe(true);
-
-      ctx.parentAnchorEl.dispatchEvent(
+      // When
+      parentAnchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
-          relatedTarget: ctx.childFloatingEl,
+          relatedTarget: childFloatingEl,
         }),
       );
       await nextTick();
 
-      expect(ctx.parentOpen.value).toBe(true);
+      // Then
+      expect(parentOpen.value).toBe(true);
     });
 
-    it("closes a child when the pointer leaves into the parent floating element", async () => {
-      const ctx = await renderTreeHover("child", true, false);
+    it("Given a child floating element, When pointer leaves child into parent floating element, Then closes child while parent stays open", async () => {
+      // Given
+      const { childAnchorEl, parentFloatingEl, childOpen } = await renderTreeHover(
+        "child",
+        true,
+        false,
+      );
 
-      ctx.childAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      childAnchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
+      expect(childOpen.value).toBe(true);
 
-      expect(ctx.childOpen.value).toBe(true);
-
-      ctx.childAnchorEl.dispatchEvent(
+      // When
+      childAnchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
-          relatedTarget: ctx.parentFloatingEl,
+          relatedTarget: parentFloatingEl,
         }),
       );
       await nextTick();
 
-      expect(ctx.childOpen.value).toBe(false);
+      // Then
+      expect(childOpen.value).toBe(false);
     });
   });
 
-  describe("rest period (restMs)", () => {
-    it("waits for restMs before opening if pointer rests", async () => {
-      const ctx = await renderHover({ restMs: 50 });
+  describe("Scenario: Rest period requirements (restMs)", () => {
+    it("Given restMs is specified, When pointer enters and rests, Then opens after restMs duration expires", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ restMs: 50 });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
+      // Then
       vi.advanceTimersByTime(49);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
       vi.advanceTimersByTime(1);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("resets rest timer if pointer moves significantly before restMs expires", async () => {
-      const ctx = await renderHover({ restMs: 50 });
+    it("Given restMs is specified, When pointer moves significantly before restMs expires, Then resets the rest timer", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ restMs: 50 });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       vi.advanceTimersByTime(25);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 30, clientY: 10 }));
+      // When: Significant pointer move
+      anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 30, clientY: 10 }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
+      // Then: Rest timer restarted
       vi.advanceTimersByTime(30);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       vi.advanceTimersByTime(20);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("cancels rest period timer if pointer leaves before restMs expires", async () => {
-      const ctx = await renderHover({ restMs: 50 });
+    it("Given restMs is specified, When pointer leaves reference before restMs expires, Then cancels pending rest timer", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ restMs: 50 });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
 
       vi.advanceTimersByTime(30);
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
 
+      // Then
       vi.advanceTimersByTime(100);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
 
-    it("forces floating element open after fallback delay (1000ms) even if pointer moves continuously", async () => {
-      const ctx = await renderHover({ restMs: 100 });
+    it("Given restMs is specified, When pointer moves continuously for 1000ms, Then forces floating element open via fallback delay", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ restMs: 100 });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 0, clientY: 0 }));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 0, clientY: 0 }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
+      // When: Pointer moves continuously without resting
       for (let time = 50; time <= 950; time += 50) {
         vi.advanceTimersByTime(50);
-        ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: time, clientY: 0 }));
+        anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: time, clientY: 0 }));
         await nextTick();
-        expect(ctx.node.open.value).toBe(false);
+        expect(node.open.value).toBe(false);
       }
 
+      // Then: Fallback threshold (1000ms) triggers opening
       vi.advanceTimersByTime(50);
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("respects fallback delay when delay.open is specified alongside restMs", async () => {
-      const ctx = await renderHover({
+    it("Given delay.open is larger than fallback, When pointer moves continuously past delay.open, Then opens after custom fallback expires", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({
         delay: { open: 1200 },
         restMs: 50,
       });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 0, clientY: 0 }));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 0, clientY: 0 }));
       await nextTick();
 
+      // When
       for (let time = 30; time <= 1170; time += 30) {
         vi.advanceTimersByTime(30);
-        ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: time, clientY: 0 }));
+        anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: time, clientY: 0 }));
         await nextTick();
-        expect(ctx.node.open.value).toBe(false);
+        expect(node.open.value).toBe(false);
       }
 
+      // Then
       vi.advanceTimersByTime(30);
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("opens after restMs when pointer rests even if delay.open is specified", async () => {
-      const ctx = await renderHover({
+    it("Given delay.open is specified alongside restMs, When pointer rests on reference, Then opens after restMs without waiting for full delay.open", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({
         delay: { open: 200 },
         restMs: 50,
       });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 10, clientY: 10 }));
       await nextTick();
 
+      // Then
       vi.advanceTimersByTime(49);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       vi.advanceTimersByTime(1);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
   });
 
-  describe("mouse-only mode (mouseOnly)", () => {
-    it("ignores non-mouse pointer types when mouseOnly is true", async () => {
-      const ctx = await renderHover({ mouseOnly: true });
+  describe("Scenario: Modality filtering with mouseOnly", () => {
+    it("Given mouseOnly is true, When non-mouse pointer interactions occur, Then ignores touch and pen pointers and only responds to mouse", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ mouseOnly: true });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "touch" }));
+      // When: Touch pointer
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "touch" }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "pen" }));
+      // When: Pen pointer
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "pen" }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "mouse" }));
+      // When: Mouse pointer
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter", { pointerType: "mouse" }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
+      // When: Touch pointer leave
+      anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           pointerType: "touch",
           relatedTarget: document.body,
@@ -494,223 +580,231 @@ describe("useHover", () => {
       );
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
+      // When: Mouse pointer leave
+      anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           pointerType: "mouse",
           relatedTarget: document.body,
         }),
       );
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
   });
 
-  describe("edge case handling", () => {
-    it("cancels pending open delay if pointer leaves reference", async () => {
-      const ctx = await renderHover({ delay: { open: 100 } });
+  describe("Scenario: Interruptions, cancellations, and external dismissals", () => {
+    it("Given a pending open delay, When pointer leaves reference before delay expires, Then cancels pending opening", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: { open: 100 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(50);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
       vi.runAllTimers();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then
+      expect(node.open.value).toBe(false);
     });
 
-    it("cancels pending close delay if pointer re-enters reference", async () => {
-      const ctx = await renderHover({ delay: { close: 100 } });
+    it("Given a pending close delay, When pointer re-enters reference before delay expires, Then cancels close delay and stays open", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: { close: 100 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
       vi.advanceTimersByTime(50);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(100);
 
-      expect(ctx.node.open.value).toBe(true);
+      // Then
+      expect(node.open.value).toBe(true);
     });
 
-    it("closes (respecting delay) if pointer leaves floating element", async () => {
-      const ctx = await renderHover({ delay: { close: 100 } });
+    it("Given pointer is inside floating element with close delay, When pointer leaves floating element, Then closes after close delay", async () => {
+      // Given
+      const { anchorEl, floatingEl, node } = await renderHover({ delay: { close: 100 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
-      );
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: floatingEl }));
+      floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(150);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.floatingEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      // When
+      floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
 
+      // Then
       vi.advanceTimersByTime(99);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
       vi.advanceTimersByTime(1);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
 
-    it("reacts to external state changes", async () => {
-      const ctx = await renderHover();
+    it("Given an active floating element, When open state is toggled externally, Then synchronizes state accordingly", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover();
 
-      ctx.node.open.value = true;
+      // When: Externally opened
+      node.open.value = true;
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.node.open.value = false;
+      // When: Externally closed
+      node.open.value = false;
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
 
-    it("does not re-open when dismissed externally while cursor remains on anchor until re-entry", async () => {
-      const ctx = await renderHover({ delay: { open: 50 } });
+    it("Given floating element is dismissed externally while cursor remains on anchor, When cursor moves within anchor, Then prevents re-opening until re-entry", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: { open: 50 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(50);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      // External dismissal (e.g., Escape pressed or outside click) while pointer stays inside anchor
-      ctx.node.open.value = false;
+      // When: External dismissal (e.g., Escape pressed or outside click) while pointer stays inside anchor
+      node.open.value = false;
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       // Moving or waiting inside the anchor does not re-open
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 20, clientY: 20 }));
+      anchorEl.dispatchEvent(makePointerEvent("pointermove", { clientX: 20, clientY: 20 }));
       vi.advanceTimersByTime(200);
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       // Leaving and re-entering restores hover opening
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       await nextTick();
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(50);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("cancels pending close delay when returning to anchor while open without scheduling open delay", async () => {
-      const ctx = await renderHover({ delay: { open: 200, close: 100 } });
+    it("Given pointer returns from floating element back to anchor while open, When entering anchor, Then cancels close delay without scheduling open delay", async () => {
+      // Given
+      const { anchorEl, floatingEl, node } = await renderHover({
+        delay: { open: 200, close: 100 },
+      });
 
       // Open initial tooltip
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(200);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
       // Move into floating element
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
-      );
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: floatingEl }));
+      floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
       // Leave floating element towards anchor (starts 100ms close delay)
-      ctx.floatingEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: ctx.anchorEl }),
-      );
+      floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: anchorEl }));
       await nextTick();
       vi.advanceTimersByTime(40); // 40ms into 100ms close delay
 
-      // Re-enter anchor element: close delay cancelled, surface stays open
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When: Re-enter anchor element: close delay cancelled, surface stays open
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      // Even after 100ms total, it stays open (close timer was cancelled)
+      // Then: Even after 100ms total, it stays open (close timer was cancelled)
       vi.advanceTimersByTime(100);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
     });
 
-    it("handles pointercancel on anchor and floating element similarly to pointerleave", async () => {
-      const ctx = await renderHover();
+    it("Given pointercancel fires on anchor or floating element, When interrupted, Then closes the floating element", async () => {
+      // Given
+      const { anchorEl, floatingEl, node } = await renderHover();
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      // System interrupts with pointercancel on anchor
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointercancel"));
+      // When: System interrupts with pointercancel on anchor
+      anchorEl.dispatchEvent(makePointerEvent("pointercancel"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+
+      // Then
+      expect(node.open.value).toBe(false);
 
       // Re-enter and move to floating element
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: ctx.floatingEl }),
-      );
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: floatingEl }));
+      floatingEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      // Pointercancel on floating element
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointercancel"));
+      // When: Pointercancel on floating element
+      floatingEl.dispatchEvent(makePointerEvent("pointercancel"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+
+      // Then
+      expect(node.open.value).toBe(false);
     });
   });
 
-  describe("safePolygon behavior", () => {
-    it("keeps open when leaving reference towards floating with safePolygon enabled", async () => {
-      const ctx = await renderHover({ safePolygon: true });
+  describe("Scenario: Safe polygon corridor traversal", () => {
+    it("Given safePolygon is enabled, When pointer leaves reference and moves through the safe corridor toward floating element, Then keeps floating element open", async () => {
+      // Given
+      const { anchorEl, floatingEl, node } = await renderHover({ safePolygon: true });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
+      // When: Pointer leaves anchor towards floating element
       const leaveEvt = makePointerEvent("pointerleave", {
         clientX: 25,
         clientY: 100,
         relatedTarget: document.body,
       });
-      ctx.anchorEl.dispatchEvent(leaveEvt);
+      anchorEl.dispatchEvent(leaveEvt);
 
       vi.advanceTimersByTime(0);
       await nextTick();
+      expect(node.open.value).toBe(true);
 
-      expect(ctx.node.open.value).toBe(true);
-
+      // Pointer moves along corridor
       document.dispatchEvent(makePointerEvent("pointermove", { clientX: 25, clientY: 105 }));
       vi.advanceTimersByTime(20);
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
-      expect(ctx.node.open.value).toBe(true);
+      // Enters floating element
+      floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
+      expect(node.open.value).toBe(true);
 
-      ctx.floatingEl.dispatchEvent(
+      // When: Pointer leaves floating element into unrelated space
+      floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           relatedTarget: document.body,
           clientX: 25,
@@ -722,50 +816,51 @@ describe("useHover", () => {
       await nextTick();
 
       document.dispatchEvent(makePointerEvent("pointermove", { clientX: 500, clientY: 500 }));
-
       vi.runAllTimers();
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then
+      expect(node.open.value).toBe(false);
     });
 
-    it("does not initiate safe polygon if reference is left before opening", async () => {
+    it("Given reference element is left before tooltip opens, When safe polygon is configured, Then does not initiate safe corridor", async () => {
+      // Given
       const onPolygonChange = vi.fn();
-      const ctx = await renderHover({
+      const { anchorEl, node } = await renderHover({
         delay: { open: 100 },
         safePolygon: { onPolygonChange },
       });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
       vi.advanceTimersByTime(30);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       // On initial pointerenter, clearPolygon resets polygon to []
       expect(onPolygonChange).toHaveBeenCalledTimes(1);
       expect(onPolygonChange).toHaveBeenLastCalledWith([]);
 
-      ctx.anchorEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      // When: Pointer leaves before opening
+      anchorEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       vi.advanceTimersByTime(10);
       await nextTick();
 
-      // Safe polygon is never initiated because tooltip was never opened
+      // Then: Safe polygon was never initiated
       expect(onPolygonChange).toHaveBeenCalledTimes(1);
       vi.advanceTimersByTime(100);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
     });
 
-    it("registers pointermove listener synchronously with passive: true upon pointerleave", async () => {
+    it("Given safePolygon is enabled, When pointerleave occurs on reference, Then attaches passive pointermove listener synchronously", async () => {
+      // Given
       const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+      const { anchorEl } = await renderHover({ safePolygon: true });
 
-      const ctx = await renderHover({ safePolygon: true });
-
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      ctx.anchorEl.dispatchEvent(
+      // When
+      anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           clientX: 25,
           clientY: 100,
@@ -773,7 +868,7 @@ describe("useHover", () => {
         }),
       );
 
-      // Synchronously attached without timer ticks
+      // Then: Synchronously attached without timer ticks
       expect(addEventListenerSpy).toHaveBeenCalledWith("pointermove", expect.any(Function), {
         passive: true,
       });
@@ -781,15 +876,16 @@ describe("useHover", () => {
       addEventListenerSpy.mockRestore();
     });
 
-    it("cleans up blockPointerEvents overlay when clearPolygon is called on re-entry", async () => {
-      const ctx = await renderHover({
+    it("Given blockPointerEvents overlay is active, When pointer re-enters anchor, Then cleans up overlay synchronously", async () => {
+      // Given
+      const { anchorEl } = await renderHover({
         safePolygon: { blockPointerEvents: true },
       });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
-      ctx.anchorEl.dispatchEvent(
+      anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           clientX: 25,
           clientY: 100,
@@ -799,22 +895,24 @@ describe("useHover", () => {
 
       expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
 
-      // Re-enter anchor
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      // When: Re-enter anchor
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
+      // Then
       expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
     });
 
-    it("does not initiate safe polygon when pointer leaves floating element", async () => {
+    it("Given pointer is inside floating element with safePolygon enabled, When pointer leaves floating element, Then does not initiate safe corridor and closes", async () => {
+      // Given
       const addEventListenerSpy = vi.spyOn(document, "addEventListener");
-      const ctx = await renderHover({ safePolygon: true });
+      const { anchorEl, floatingEl, node } = await renderHover({ safePolygon: true });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      ctx.anchorEl.dispatchEvent(
+      anchorEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           relatedTarget: document.body,
           clientX: 25,
@@ -823,12 +921,13 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      ctx.floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
+      floatingEl.dispatchEvent(makePointerEvent("pointerenter", { clientX: 25, clientY: 110 }));
       await nextTick();
 
       addEventListenerSpy.mockClear();
 
-      ctx.floatingEl.dispatchEvent(
+      // When: Leaving floating element
+      floatingEl.dispatchEvent(
         makePointerEvent("pointerleave", {
           relatedTarget: document.body,
           clientX: 25,
@@ -837,59 +936,63 @@ describe("useHover", () => {
       );
       await nextTick();
 
-      // Should not register a document-level pointermove listener for safePolygon
+      // Then: Should not register a document-level pointermove listener for safePolygon
       expect(addEventListenerSpy).not.toHaveBeenCalledWith("pointermove", expect.any(Function), {
         passive: true,
       });
       // Closes according to normal delay rules (immediate when delay is 0)
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
       addEventListenerSpy.mockRestore();
     });
   });
 
-  describe("lifecycle & cleanup", () => {
-    it("removes event listeners on unmount", async () => {
-      const ctx = await renderHover();
+  describe("Scenario: Lifecycle, element detachment, and unmount cleanup", () => {
+    it("Given a mounted component with active hover listeners, When component is unmounted, Then detaches all event listeners", async () => {
+      // Given
+      const { anchorEl, floatingEl, view, node } = await renderHover();
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+      expect(node.open.value).toBe(true);
 
-      await ctx.view.unmount();
+      // When: Component unmounts
+      await view.unmount();
       await nextTick();
 
-      ctx.node.open.value = false;
+      node.open.value = false;
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
-      ctx.node.open.value = true;
-      ctx.floatingEl.dispatchEvent(
-        makePointerEvent("pointerleave", { relatedTarget: document.body }),
-      );
+      node.open.value = true;
+      floatingEl.dispatchEvent(makePointerEvent("pointerleave", { relatedTarget: document.body }));
       vi.runAllTimers();
       await nextTick();
-      expect(ctx.node.open.value).toBe(true);
+
+      // Then
+      expect(node.open.value).toBe(true);
     });
 
-    it("cancels scheduled open when anchor element is removed from DOM during open delay", async () => {
-      const ctx = await renderHover({ delay: { open: 100 } });
+    it("Given an active open delay, When anchor element is removed from DOM before delay expires, Then cancels scheduled open", async () => {
+      // Given
+      const { anchorEl, node } = await renderHover({ delay: { open: 100 } });
 
-      ctx.anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       vi.advanceTimersByTime(50);
-      expect(ctx.node.open.value).toBe(false);
+      expect(node.open.value).toBe(false);
 
-      // Unmount anchor element before delay expires
-      ctx.anchorEl.remove();
+      // When: Unmount anchor element before delay expires
+      anchorEl.remove();
       await nextTick();
 
       vi.advanceTimersByTime(60);
       await nextTick();
 
-      expect(ctx.node.open.value).toBe(false);
+      // Then
+      expect(node.open.value).toBe(false);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
@@ -111,23 +111,28 @@ const createTestComponent = (
   return { Component, getReturn: () => composableReturn, countRef, getNode: () => testNode };
 };
 
-describe("useAriaActivedescendant", () => {
-  describe("Suite 1: ID generation & resolution", () => {
-    it("generates deterministic IDs using default prefix", async () => {
+describe("Feature: useAriaActivedescendant", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  describe("Scenario: ID generation and resolution", () => {
+    it("Given default options, When generating item IDs, Then deterministic IDs with default prefix are returned", async () => {
       const { Component, getReturn } = createTestComponent();
       await render(Component);
       const id = getReturn().getItemId(0);
       expect(id).toMatch(/^vfloat-.*-opt-0$/);
     });
 
-    it("uses custom idPrefix when provided", async () => {
+    it("Given a custom idPrefix, When generating item IDs, Then IDs prepend the custom prefix", async () => {
       const { Component, getReturn } = createTestComponent({ idPrefix: "custom-id" });
       await render(Component);
       const id = getReturn().getItemId(1);
       expect(id).toBe("custom-id-opt-1");
     });
 
-    it("uses custom getItemId callback when provided", async () => {
+    it("Given a custom getItemId callback, When resolving an ID, Then the custom callback result is used", async () => {
       const { Component, getReturn } = createTestComponent({
         getItemId: (idx) => `item-${idx}`,
       });
@@ -136,7 +141,7 @@ describe("useAriaActivedescendant", () => {
       expect(id).toBe("item-2");
     });
 
-    it("uses getItemKey callback to generate stable key-based IDs", async () => {
+    it("Given a getItemKey callback, When resolving an ID, Then stable key-based IDs are generated", async () => {
       const { Component, getReturn } = createTestComponent({
         getItemKey: (idx) => `key-${idx * 10}`,
         idPrefix: "test",
@@ -146,7 +151,7 @@ describe("useAriaActivedescendant", () => {
       expect(id).toBe("test-opt-key-20");
     });
 
-    it("supports key parameter in getItemId", async () => {
+    it("Given a key parameter passed to getItemId, When resolving an ID, Then the key is incorporated into the ID", async () => {
       const { Component, getReturn } = createTestComponent({ idPrefix: "test" });
       await render(Component);
       const id = getReturn().getItemId(3, "alpha");
@@ -154,8 +159,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 2: aria-activedescendant attribute management & mounted DOM validation", () => {
-    it("sets aria-activedescendant on anchor when item is active and mounted", async () => {
+  describe("Scenario: aria-activedescendant attribute management and mounted DOM validation", () => {
+    it("Given an active and mounted item, When rendered, Then aria-activedescendant is set on anchor", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -164,7 +169,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("aria-activedescendant", expect.stringMatching(/.*-opt-0/));
     });
 
-    it("removes aria-activedescendant when no item is active", async () => {
+    it("Given an active item, When active state is cleared, Then aria-activedescendant is removed from anchor", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -174,7 +179,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
 
-    it("removes aria-activedescendant when disabled (enabled: false)", async () => {
+    it("Given enabled transitions to false, When observed, Then aria-activedescendant is removed from anchor", async () => {
       const enabled = ref(true);
       const { Component } = createTestComponent({ defaultIndex: 0, enabled });
       await render(Component);
@@ -185,7 +190,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
 
-    it("updates aria-activedescendant directly without attribute removal churn during item transitions", async () => {
+    it("Given active item transitions, When updating, Then aria-activedescendant updates directly without attribute churn", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -212,7 +217,7 @@ describe("useAriaActivedescendant", () => {
       expect(mutations[0]).toBe(getReturn().getItemId(1));
     });
 
-    it("does NOT emit dangling ID when active item is not mounted in the DOM", async () => {
+    it("Given an active item is not mounted in the DOM, When inspected, Then no dangling ID is emitted on anchor", async () => {
       // In virtual lists where items are not in the DOM, activeId should be undefined
       const virtualizer = { scrollToIndex: vi.fn(), count: 100 };
       const { Component } = createTestComponent({ defaultIndex: 50, virtualizer } as any, {
@@ -224,7 +229,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
 
-    it("commits aria-activedescendant once virtual item is rendered and mounted in the DOM", async () => {
+    it("Given an unrendered virtual item becomes mounted, When rendered, Then aria-activedescendant is committed to anchor", async () => {
       const isRendered = ref(false);
       const Component = defineComponent(() => {
         const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
@@ -265,7 +270,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).toHaveAttribute("aria-activedescendant", "virt-opt-50");
     });
 
-    it("rejects invalid/whitespace IDs and does not emit them", async () => {
+    it("Given an invalid ID with whitespace, When validated, Then the invalid ID is rejected and not emitted", async () => {
       const { Component } = createTestComponent({
         defaultIndex: 0,
         getItemId: () => "invalid id with spaces",
@@ -275,7 +280,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).not.toHaveAttribute("aria-activedescendant");
     });
 
-    it("resolves active element and commits aria-activedescendant inside Shadow DOM", async () => {
+    it("Given elements inside Shadow DOM, When item becomes active, Then aria-activedescendant resolves within shadow root", async () => {
       const host = document.createElement("div");
       document.body.appendChild(host);
       const shadow = host.attachShadow({ mode: "open" });
@@ -318,15 +323,15 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 3: data-active & selection separation", () => {
-    it("sets data-active on the active option", async () => {
+  describe("Scenario: data-active state and consumer selection separation", () => {
+    it("Given an active item, When rendered, Then data-active attribute is set on the active option", async () => {
       const { Component } = createTestComponent({ defaultIndex: 1 });
       await render(Component);
       const option2 = page.getByRole("option", { name: "option 2" });
       await expect.element(option2).toHaveAttribute("data-active", "");
     });
 
-    it("removes data-active from previously active option (only one at a time)", async () => {
+    it("Given active item changes, When observed, Then data-active is removed from previous option and set on new option", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 1 });
       await render(Component);
       const option2 = page.getByRole("option", { name: "option 2" });
@@ -338,7 +343,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option3).toHaveAttribute("data-active", "");
     });
 
-    it("does NOT hardcode aria-selected on options (selection is consumer-controlled)", async () => {
+    it("Given active descendants, When rendered, Then aria-selected is not forced on options", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -348,14 +353,14 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option2).not.toHaveAttribute("aria-selected");
     });
 
-    it("sets aria-disabled='true' on disabled options", async () => {
+    it("Given disabled options, When rendered, Then aria-disabled is set to true", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [1] });
       await render(Component);
       const option2 = page.getByRole("option", { name: "option 2" });
       await expect.element(option2).toHaveAttribute("aria-disabled", "true");
     });
 
-    it("does not set aria-disabled on enabled options (attribute absent)", async () => {
+    it("Given enabled options, When rendered, Then aria-disabled attribute is absent", async () => {
       const { Component } = createTestComponent();
       await render(Component);
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -363,8 +368,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 4: keyboard navigation — vertical (default)", () => {
-    it("navigates to next item on ArrowDown", async () => {
+  describe("Scenario: Keyboard navigation with vertical orientation", () => {
+    it("Given vertical orientation, When ArrowDown is pressed, Then active index moves to the next item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -374,7 +379,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option2).toHaveAttribute("data-active", "");
     });
 
-    it("navigates to previous item on ArrowUp", async () => {
+    it("Given vertical orientation, When ArrowUp is pressed, Then active index moves to the previous item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 2 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -384,7 +389,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option2).toHaveAttribute("data-active", "");
     });
 
-    it("navigates to first item on Home on non-editable targets", async () => {
+    it("Given non-editable target, When Home is pressed, Then active index moves to the first item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 3 }, { isButtonTarget: true });
       await render(Component);
       const anchor = page.getByRole("button", { name: "anchor-button" });
@@ -394,7 +399,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option1).toHaveAttribute("data-active", "");
     });
 
-    it("navigates to last item on End on non-editable targets", async () => {
+    it("Given non-editable target, When End is pressed, Then active index moves to the last item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 }, { isButtonTarget: true });
       await render(Component);
       const anchor = page.getByRole("button", { name: "anchor-button" });
@@ -404,7 +409,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option5).toHaveAttribute("data-active", "");
     });
 
-    it("does not navigate on ArrowLeft/ArrowRight in vertical mode", async () => {
+    it("Given vertical orientation, When ArrowLeft or ArrowRight is pressed, Then active index remains unchanged", async () => {
       const { Component } = createTestComponent({ defaultIndex: 1 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -416,7 +421,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option2).toHaveAttribute("data-active", "");
     });
 
-    it("ignores keys with modifier (Ctrl, Meta, Alt)", async () => {
+    it("Given navigation keys with modifier flags, When pressed, Then the events are ignored", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -428,7 +433,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option1).toHaveAttribute("data-active", "");
     });
 
-    it("ignores IME composition events", async () => {
+    it("Given active IME composition, When navigation or Enter keys occur, Then events are ignored without selection", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent({ defaultIndex: 0, onSelect: onSelectMock });
       await render(Component);
@@ -465,7 +470,7 @@ describe("useAriaActivedescendant", () => {
       expect(onSelectMock).not.toHaveBeenCalled();
     });
 
-    it("prevents default on navigation keys", async () => {
+    it("Given navigation keys, When processed, Then default browser scrolling is prevented", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -482,7 +487,7 @@ describe("useAriaActivedescendant", () => {
       expect(prevented).toBe(true);
     });
 
-    it("does not prevent default on unhandled keys (Tab, Escape pass through)", async () => {
+    it("Given unhandled keys like Tab or Escape, When dispatched, Then default prevention does not occur", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -497,8 +502,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 5: keyboard navigation — horizontal", () => {
-    it("navigates to next item on ArrowRight", async () => {
+  describe("Scenario: Keyboard navigation with horizontal orientation", () => {
+    it("Given horizontal orientation, When ArrowRight is pressed, Then active index moves to the next item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0, orientation: "horizontal" });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -508,7 +513,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option2).toHaveAttribute("data-active", "");
     });
 
-    it("navigates to previous item on ArrowLeft", async () => {
+    it("Given horizontal orientation, When ArrowLeft is pressed, Then active index moves to the previous item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 1, orientation: "horizontal" });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -518,7 +523,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option1).toHaveAttribute("data-active", "");
     });
 
-    it("does not navigate on ArrowDown/ArrowUp in horizontal mode", async () => {
+    it("Given horizontal orientation, When ArrowDown or ArrowUp is pressed, Then active index remains unchanged", async () => {
       const { Component } = createTestComponent({ defaultIndex: 1, orientation: "horizontal" });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -531,8 +536,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 6: keyboard navigation — both orientation", () => {
-    it("navigates on all four arrow keys (Down/Right → next, Up/Left → previous)", async () => {
+  describe("Scenario: Keyboard navigation with bidirectional orientation", () => {
+    it("Given bidirectional orientation, When all four arrow keys are pressed, Then active index moves in corresponding directions", async () => {
       const { Component } = createTestComponent({ defaultIndex: 1, orientation: "both" });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -560,8 +565,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 7: keyboard navigation — RTL", () => {
-    it("swaps ArrowLeft/ArrowRight in horizontal RTL mode", async () => {
+  describe("Scenario: Keyboard navigation in right-to-left layout", () => {
+    it("Given horizontal RTL mode, When ArrowLeft and ArrowRight are pressed, Then navigation directions are inverted", async () => {
       const { Component } = createTestComponent({
         defaultIndex: 1,
         orientation: "horizontal",
@@ -582,7 +587,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("detects RTL from container dir attribute", async () => {
+    it("Given container with dir='rtl', When ArrowLeft is pressed, Then RTL is automatically detected and advances to next item", async () => {
       const { Component } = createTestComponent(
         { defaultIndex: 1, orientation: "horizontal" },
         { dir: "rtl" },
@@ -598,8 +603,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 8: boundary behavior — no loop", () => {
-    it("stays on last item when pressing ArrowDown at end (loop: false)", async () => {
+  describe("Scenario: Boundary behavior when loop is disabled", () => {
+    it("Given loop is disabled, When pressing ArrowDown at the end of collection, Then active index stays on last item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 4, loop: false });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -610,7 +615,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("stays on first item when pressing ArrowUp at start (loop: false)", async () => {
+    it("Given loop is disabled, When pressing ArrowUp at the start of collection, Then active index stays on first item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0, loop: false });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -622,8 +627,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 9: boundary behavior — loop", () => {
-    it("wraps to first item when pressing ArrowDown at end (loop: true)", async () => {
+  describe("Scenario: Boundary behavior when loop is enabled", () => {
+    it("Given loop is enabled, When pressing ArrowDown at the end of collection, Then active index wraps to the first item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 4, loop: true });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -634,7 +639,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("wraps to last item when pressing ArrowUp at start (loop: true)", async () => {
+    it("Given loop is enabled, When pressing ArrowUp at the start of collection, Then active index wraps to the last item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0, loop: true });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -646,8 +651,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 10: disabled item handling", () => {
-    it("skips disabled items during keyboard navigation", async () => {
+  describe("Scenario: Disabled item filtering and focus handling", () => {
+    it("Given disabled items in collection, When navigating via keyboard, Then disabled items are skipped", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 }, { disabledIndices: [1] });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -658,7 +663,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("skips aria-disabled items during keyboard navigation", async () => {
+    it("Given aria-disabled items in collection, When navigating via keyboard, Then aria-disabled items are skipped", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 }, { ariaDisabledIndices: [1] });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -669,7 +674,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("skips items matching isItemDisabled predicate", async () => {
+    it("Given an isItemDisabled predicate, When navigating, Then matching items are skipped", async () => {
       const { Component } = createTestComponent({
         defaultIndex: 0,
         isItemDisabled: (idx) => idx === 1,
@@ -683,7 +688,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("allows focusing disabled items when focusDisabledElements is true", async () => {
+    it("Given focusDisabledElements is enabled, When navigating, Then disabled items receive focus", async () => {
       const { Component } = createTestComponent(
         { defaultIndex: 0, focusDisabledElements: true },
         { disabledIndices: [1] },
@@ -697,7 +702,7 @@ describe("useAriaActivedescendant", () => {
         .toHaveAttribute("data-active", "");
     });
 
-    it("blocks selection on disabled items even when focusDisabledElements is true", async () => {
+    it("Given focusDisabledElements is enabled, When Enter is pressed on disabled item, Then selection is blocked", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent(
         {
@@ -715,8 +720,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 11: selection & editable input preservation", () => {
-    it("calls onSelect with correct index and event on Enter when an item is active", async () => {
+  describe("Scenario: Selection coordination and editable input preservation", () => {
+    it("Given an active item, When Enter is pressed, Then onSelect callback is invoked with active index and event", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent({ defaultIndex: 2, onSelect: onSelectMock });
       await render(Component);
@@ -726,7 +731,7 @@ describe("useAriaActivedescendant", () => {
       expect(onSelectMock).toHaveBeenCalledWith(2, expect.any(Event));
     });
 
-    it("does not call onSelect on Enter when no item is active (Enter passes through)", async () => {
+    it("Given no active item, When Enter is pressed, Then onSelect is not called and key passes through", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent({ defaultIndex: -1, onSelect: onSelectMock });
       await render(Component);
@@ -736,7 +741,7 @@ describe("useAriaActivedescendant", () => {
       expect(onSelectMock).not.toHaveBeenCalled();
     });
 
-    it("preserves Space character typing inside editable inputs (does not select)", async () => {
+    it("Given an editable text input anchor, When typing Space, Then space character is inserted without triggering selection", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent({ defaultIndex: 1, onSelect: onSelectMock });
       await render(Component);
@@ -747,7 +752,7 @@ describe("useAriaActivedescendant", () => {
       expect(onSelectMock).not.toHaveBeenCalled();
     });
 
-    it("calls onSelect on Space on non-editable targets", async () => {
+    it("Given a non-editable button target, When Space is pressed, Then onSelect callback is invoked", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent(
         { defaultIndex: 1, onSelect: onSelectMock },
@@ -760,7 +765,7 @@ describe("useAriaActivedescendant", () => {
       expect(onSelectMock).toHaveBeenCalledWith(1, expect.any(Event));
     });
 
-    it("preserves Home and End keys for native text caret movement in editable inputs", async () => {
+    it("Given an editable input, When Home or End is pressed, Then native text caret movement is preserved without changing active item", async () => {
       const { Component } = createTestComponent({ defaultIndex: 2 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -773,8 +778,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 12: pointer hover navigation & virtual hover", () => {
-    it("activates item on pointermove when focusOnHover is true", async () => {
+  describe("Scenario: Pointer hover navigation and virtual hover", () => {
+    it("Given focusOnHover is enabled, When pointermove occurs over an option, Then that option becomes active", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
       await nextTick();
@@ -786,7 +791,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option3).toHaveAttribute("data-active", "");
     });
 
-    it("does not activate on pointermove when focusOnHover is false", async () => {
+    it("Given focusOnHover is disabled, When pointermove occurs over an option, Then active index does not change", async () => {
       const { Component } = createTestComponent({ focusOnHover: false });
       await render(Component);
       const option3 = page.getByRole("option", { name: "option 3" });
@@ -797,7 +802,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option3).not.toHaveAttribute("data-active");
     });
 
-    it("activates item on hover using data-index in virtualized lists without elementsList", async () => {
+    it("Given virtualized list without elementsList, When hovering an item with data-index, Then that item is activated", async () => {
       const Component = defineComponent(() => {
         const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
@@ -845,7 +850,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option2).toHaveAttribute("data-active", "");
     });
 
-    it("ignores synthetic pointermove events with identical coordinates during scroll", async () => {
+    it("Given pointer hovering over option, When synthetic pointermove fires with identical coordinates during scroll, Then active index is not hijacked", async () => {
       const { Component, getReturn } = createTestComponent({ focusOnHover: true });
       await render(Component);
       await nextTick();
@@ -888,8 +893,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 13: pointer focus protection & interactive descendants", () => {
-    it("prevents pointerdown default on options to retain anchor focus", async () => {
+  describe("Scenario: Pointer focus protection and interactive descendants", () => {
+    it("Given pointerdown on an option, When dispatched, Then default is prevented to keep focus on anchor", async () => {
       const { Component } = createTestComponent();
       await render(Component);
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -903,7 +908,7 @@ describe("useAriaActivedescendant", () => {
       expect(prevented).toBe(true);
     });
 
-    it("does NOT prevent default when clicking an interactive child inside an option", async () => {
+    it("Given pointerdown on an interactive child within an option, When clicked, Then default is not prevented", async () => {
       const { Component } = createTestComponent({}, { withInteractiveChild: true });
       await render(Component);
       // Non-exact match: with an interactive child the option's accessible
@@ -921,7 +926,7 @@ describe("useAriaActivedescendant", () => {
       expect(prevented).toBe(false);
     });
 
-    it("respects preventPointerDown: false option", async () => {
+    it("Given preventPointerDown is false, When pointerdown occurs on option, Then default is not prevented", async () => {
       const { Component } = createTestComponent({ preventPointerDown: false });
       await render(Component);
       const option1 = page.getByRole("option", { name: "option 1" });
@@ -935,7 +940,7 @@ describe("useAriaActivedescendant", () => {
       expect(prevented).toBe(false);
     });
 
-    it("does NOT prevent default when clicking non-option container surfaces", async () => {
+    it("Given pointerdown on non-option container surfaces, When clicked, Then default is not prevented", async () => {
       const { Component } = createTestComponent();
       await render(Component);
       const listbox = page.getByRole("listbox");
@@ -950,8 +955,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 14: controlled vs uncontrolled state & external sync", () => {
-    it("syncs with external activeIndex ref and triggers scroll reveal", async () => {
+  describe("Scenario: Controlled vs uncontrolled active state synchronization", () => {
+    it("Given an external activeIndex ref, When ref updates externally, Then active option and scroll reveal synchronize", async () => {
       const activeIndex = ref(0);
       const { Component } = createTestComponent({ activeIndex }, { itemCount: 10 });
       await render(Component);
@@ -966,7 +971,7 @@ describe("useAriaActivedescendant", () => {
       expect(listbox.scrollTop).toBeGreaterThan(0);
     });
 
-    it("fires onActiveIndexChange on navigation", async () => {
+    it("Given an onActiveIndexChange callback, When navigation changes active index, Then callback is invoked with new index", async () => {
       const onChangeMock = vi.fn();
       const { Component } = createTestComponent({
         defaultIndex: 0,
@@ -980,8 +985,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 15: programmatic navigation", () => {
-    it("setActiveIndex programmatically sets active item", async () => {
+  describe("Scenario: Programmatic navigation controls", () => {
+    it("Given programmatic controls, When setActiveIndex is called, Then target item becomes active", async () => {
       const { Component, getReturn } = createTestComponent();
       await render(Component);
       getReturn().setActiveIndex(2);
@@ -990,7 +995,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(option3).toHaveAttribute("data-active", "");
     });
 
-    it("clearActive resets to -1", async () => {
+    it("Given an active item, When clearActive is called, Then active index resets to -1 and attribute is removed", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 2 });
       await render(Component);
       getReturn().clearActive();
@@ -1000,8 +1005,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 16: focus-entry synchronization", () => {
-    it("reveals and syncs active item when target receives focus", async () => {
+  describe("Scenario: Target focus-entry synchronization", () => {
+    it("Given an active index, When focus enters anchor target, Then active item is revealed and scrolled into view", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 0 }, { itemCount: 10 });
       await render(Component);
       const listbox = page.getByRole("listbox").element() as HTMLElement;
@@ -1023,8 +1028,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 17: bounded scrolling — vertical, horizontal, bidirectional", () => {
-    it("adjusts horizontal container scrollLeft for horizontal lists", async () => {
+  describe("Scenario: Bounded scrolling across dimensions", () => {
+    it("Given horizontal list orientation, When navigating horizontally, Then container scrollLeft adjusts to reveal items", async () => {
       const Component = defineComponent(() => {
         const anchorEl = useTemplateRef<HTMLElement>("anchor");
         const containerEl = useTemplateRef<HTMLElement>("container");
@@ -1082,8 +1087,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 18: virtualizer integration & stable item keys", () => {
-    it("calls virtualizer.scrollToIndex on navigation and external activeIndex change", async () => {
+  describe("Scenario: Virtualizer integration and stable item keys", () => {
+    it("Given a virtualizer integration, When active index changes, Then virtualizer scrollToIndex is called", async () => {
       const virtualizer = { scrollToIndex: vi.fn(), count: 100 };
       const activeIndex = ref(0);
       const { Component } = createTestComponent({ virtualizer, activeIndex } as any, {
@@ -1096,7 +1101,7 @@ describe("useAriaActivedescendant", () => {
       expect(virtualizer.scrollToIndex).toHaveBeenCalledWith(42, { align: "auto" });
     });
 
-    it("generates stable key-based ID from getItemId with key", async () => {
+    it("Given getItemId with key, When called, Then stable key-based ID is generated", async () => {
       const { Component, getReturn } = createTestComponent({ idPrefix: "virt" });
       await render(Component);
       const id = getReturn().getItemId(5, "unique-row-5");
@@ -1104,8 +1109,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 19: DOM focus invariant", () => {
-    it("DOM focus never leaves the anchor during keyboard navigation", async () => {
+  describe("Scenario: DOM focus retention invariant", () => {
+    it("Given keyboard navigation, When navigating across items, Then DOM focus never leaves the anchor", async () => {
       const { Component } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -1115,7 +1120,7 @@ describe("useAriaActivedescendant", () => {
       await expect.element(anchor).toHaveFocus();
     });
 
-    it("DOM focus never leaves the anchor during programmatic navigation", async () => {
+    it("Given programmatic navigation, When updating active index, Then DOM focus never leaves the anchor", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 0 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -1126,8 +1131,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 20: generic API surface", () => {
-    it("provides activeIndex, activeId, focusIndex, and getItemId", async () => {
+  describe("Scenario: Composable API surface and return properties", () => {
+    it("Given composable initialization, When inspected, Then public API methods and reactive state refs are exposed", async () => {
       const { Component, getReturn } = createTestComponent();
       await render(Component);
       const ret = getReturn();
@@ -1141,8 +1146,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 21: reactive bounds auto-correction", () => {
-    it("resets activeIndex to -1 when collection becomes empty", async () => {
+  describe("Scenario: Reactive bounds auto-correction on collection updates", () => {
+    it("Given collection becomes empty, When observed, Then activeIndex resets to -1 and activeId is cleared", async () => {
       const { Component, countRef, getReturn } = createTestComponent(
         { defaultIndex: 2 },
         { itemCount: 5 },
@@ -1157,7 +1162,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeId.value).toBeUndefined();
     });
 
-    it("resets activeIndex to -1 when active index exceeds new collection bounds", async () => {
+    it("Given collection is filtered to fewer items, When activeIndex exceeds new bounds, Then activeIndex resets to -1", async () => {
       const { Component, countRef, getReturn } = createTestComponent(
         { defaultIndex: 4 },
         { itemCount: 5 },
@@ -1172,7 +1177,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(-1);
     });
 
-    it("preserves activeIndex when still within new collection bounds", async () => {
+    it("Given collection is filtered, When activeIndex remains within new bounds, Then activeIndex is preserved", async () => {
       const { Component, countRef, getReturn } = createTestComponent(
         { defaultIndex: 1 },
         { itemCount: 5 },
@@ -1187,8 +1192,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 22: PageUp and PageDown keyboard navigation", () => {
-    it("navigates forward by default pageSize (10) on PageDown", async () => {
+  describe("Scenario: PageUp and PageDown keyboard navigation", () => {
+    it("Given PageDown key press, When default pageSize is used, Then active index advances by 10 items", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 0 }, { itemCount: 25 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -1198,7 +1203,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(10);
     });
 
-    it("navigates backward by default pageSize (10) on PageUp", async () => {
+    it("Given PageUp key press, When default pageSize is used, Then active index moves back by 10 items", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 15 }, { itemCount: 25 });
       await render(Component);
       const anchor = page.getByRole("textbox", { name: "anchor" });
@@ -1208,7 +1213,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(5);
     });
 
-    it("respects custom pageSize option", async () => {
+    it("Given a custom pageSize option, When PageDown and PageUp are pressed, Then active index steps by custom size", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 1, pageSize: 3 },
         { itemCount: 10 },
@@ -1224,7 +1229,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(1);
     });
 
-    it("clamps to boundary when jumping past end or start (loop: false)", async () => {
+    it("Given jump past boundaries with loop disabled, When paging, Then active index clamps to collection edges", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 2, pageSize: 5 },
         { itemCount: 5 },
@@ -1240,7 +1245,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(0);
     });
 
-    it("skips disabled items during page navigation", async () => {
+    it("Given disabled items in page range, When paging, Then disabled items are skipped during page leap", async () => {
       // Items 0..5, disabled: 3. defaultIndex: 1, pageSize: 2 -> step 1 lands on 2, step 2 would land on 3 (disabled) -> lands on 4
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 1, pageSize: 2 },
@@ -1254,7 +1259,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(4);
     });
 
-    it("supports programmatic page-up and page-down via focusIndex", async () => {
+    it("Given programmatic focusIndex, When page-down and page-up actions are passed, Then active index updates by page size", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 2, pageSize: 4 },
         { itemCount: 15 },
@@ -1270,7 +1275,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(2);
     });
 
-    it("ignores PageUp and PageDown when modifier keys (Ctrl, Meta, Alt, Shift) are pressed", async () => {
+    it("Given PageUp and PageDown with modifier keys, When pressed, Then page navigation is ignored", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 2, pageSize: 5 },
         { itemCount: 15 },
@@ -1319,8 +1324,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 23: virtualizer isIndexRendered coordination", () => {
-    it("skips DOM search and keeps activeId undefined when isIndexRendered returns false", async () => {
+  describe("Scenario: Virtualizer isIndexRendered coordination", () => {
+    it("Given isIndexRendered returns false, When evaluated, Then DOM query is skipped and activeId remains undefined", async () => {
       const isIndexRendered = vi.fn().mockReturnValue(false);
       const virtualizer = { scrollToIndex: vi.fn(), count: 50, isIndexRendered };
       const { Component, getReturn } = createTestComponent(
@@ -1336,7 +1341,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeId.value).toBeUndefined();
     });
 
-    it("commits activeId once isIndexRendered returns true and element is mounted", async () => {
+    it("Given isIndexRendered transitions to true upon mounting, When re-evaluated, Then activeId is committed to anchor", async () => {
       let rendered = false;
       const isIndexRendered = vi.fn(() => rendered);
       const virtualizer = { scrollToIndex: vi.fn(), count: 50, isIndexRendered };
@@ -1381,8 +1386,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 24: scrollIntoView option & scrollToActive method", () => {
-    it("does not scroll container when scrollIntoView is false", async () => {
+  describe("Scenario: ScrollIntoView option and manual scrollToActive invocation", () => {
+    it("Given scrollIntoView is false, When active index changes, Then container scrollTop remains unchanged", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 0, scrollIntoView: false },
         { itemCount: 10 },
@@ -1398,7 +1403,7 @@ describe("useAriaActivedescendant", () => {
       expect(listbox.scrollTop).toBe(0);
     });
 
-    it("imperatively scrolls active item with scrollToActive()", async () => {
+    it("Given scrollIntoView is false, When scrollToActive is imperatively called, Then active item is scrolled into view", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 0, scrollIntoView: false },
         { itemCount: 10 },
@@ -1415,7 +1420,7 @@ describe("useAriaActivedescendant", () => {
       expect(listbox.scrollTop).toBeGreaterThan(0);
     });
 
-    it("does not leak preventScroll suppression across subsequent navigation actions", async () => {
+    it("Given navigation with preventScroll, When subsequent navigation occurs without preventScroll, Then scroll suppression does not leak", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: 0 }, { itemCount: 10 });
       await render(Component);
       const listbox = page.getByRole("listbox").element() as HTMLElement;
@@ -1431,8 +1436,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 25: focusout & resetOnBlur synchronization", () => {
-    it("resets activeIndex to defaultIndex when focus leaves target to outside element", async () => {
+  describe("Scenario: Focusout handling and resetOnBlur synchronization", () => {
+    it("Given resetOnBlur is true, When focus leaves target to an outside element, Then activeIndex resets to defaultIndex", async () => {
       const { Component, getReturn } = createTestComponent({ defaultIndex: -1, resetOnBlur: true });
       await render(Component);
 
@@ -1453,7 +1458,7 @@ describe("useAriaActivedescendant", () => {
       outsideEl.remove();
     });
 
-    it("preserves activeIndex on focusout when resetOnBlur is false (default)", async () => {
+    it("Given resetOnBlur is false, When focus leaves target to an outside element, Then activeIndex is preserved", async () => {
       const { Component, getReturn } = createTestComponent({
         defaultIndex: -1,
         resetOnBlur: false,
@@ -1477,7 +1482,7 @@ describe("useAriaActivedescendant", () => {
       outsideEl.remove();
     });
 
-    it("does not reset activeIndex when focus moves from target into the listbox container", async () => {
+    it("Given resetOnBlur is true, When focus moves from target into interactive listbox child, Then activeIndex is not reset", async () => {
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: -1, resetOnBlur: true },
         { withInteractiveChild: true },
@@ -1500,8 +1505,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 26: pointerleave & clearOnPointerLeave synchronization", () => {
-    it("clears activeIndex on pointerleave when clearOnPointerLeave is true", async () => {
+  describe("Scenario: Pointerleave handling and clearOnPointerLeave synchronization", () => {
+    it("Given clearOnPointerLeave is true, When pointer leaves listbox container, Then activeIndex clears to -1", async () => {
       const { Component, getReturn } = createTestComponent({
         focusOnHover: true,
         clearOnPointerLeave: true,
@@ -1517,7 +1522,7 @@ describe("useAriaActivedescendant", () => {
       expect(getReturn().activeIndex.value).toBe(-1);
     });
 
-    it("preserves activeIndex on pointerleave when clearOnPointerLeave is false (default)", async () => {
+    it("Given clearOnPointerLeave is false, When pointer leaves listbox container, Then activeIndex is preserved", async () => {
       const { Component, getReturn } = createTestComponent({
         focusOnHover: true,
         clearOnPointerLeave: false,
@@ -1534,8 +1539,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 27: pointer hover does not trigger container scroll jumps", () => {
-    it("updates active item on hover without modifying container scrollTop", async () => {
+  describe("Scenario: Pointer hover scroll stability without jumps", () => {
+    it("Given focusOnHover is enabled, When hovering across items, Then active item updates without causing container scroll jumps", async () => {
       const { Component, getReturn } = createTestComponent(
         { focusOnHover: true },
         { itemCount: 10 },
@@ -1557,8 +1562,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 28: oversized element bounded scroll alignment", () => {
-    it("aligns top of item with top of container when element is taller than container", async () => {
+  describe("Scenario: Oversized element bounded scroll alignment", () => {
+    it("Given an element taller than scroll container, When activated, Then top of element is aligned with top of container", async () => {
       const Component = defineComponent(() => {
         const anchorEl = useTemplateRef<HTMLElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
@@ -1621,8 +1626,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("scroll optimization: offset-based geometry fast-path", () => {
-    it("uses offset-based fast-path when container is positioned without calling getBoundingClientRect", async () => {
+  describe("Scenario: Offset-based geometry fast-path optimization", () => {
+    it("Given a positioned container, When scrolling active item, Then offset fast-path is used without calling getBoundingClientRect", async () => {
       const Component = defineComponent(() => {
         const anchorEl = useTemplateRef<HTMLElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
@@ -1698,7 +1703,7 @@ describe("useAriaActivedescendant", () => {
       containerRectSpy.mockRestore();
     });
 
-    it("falls back to getBoundingClientRect when container is not positioned (offsetParent !== container)", async () => {
+    it("Given an unpositioned container, When scrolling active item, Then getBoundingClientRect fallback path is used", async () => {
       const Component = defineComponent(() => {
         const anchorEl = useTemplateRef<HTMLElement>("anchor");
         const listboxEl = useTemplateRef<HTMLElement>("listbox");
@@ -1770,8 +1775,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 29: open state coordination (context.open)", () => {
-    it("resets activeIndex to -1 and removes aria-activedescendant when context.open becomes false", async () => {
+  describe("Scenario: Floating node open state coordination", () => {
+    it("Given floating node open state becomes false, When closed, Then activeIndex resets to -1 and aria attribute is removed", async () => {
       const open = ref(true);
       const anchorEl = ref<HTMLElement | null>(null);
       const floatingEl = ref<HTMLElement | null>(null);
@@ -1796,8 +1801,8 @@ describe("useAriaActivedescendant", () => {
     });
   });
 
-  describe("Suite 30: IME composition safety", () => {
-    it("ignores navigation and selection keystrokes during active IME composition", async () => {
+  describe("Scenario: IME composition input safety", () => {
+    it("Given active IME composition session, When navigation or Enter keys occur, Then keystrokes are ignored until composition ends", async () => {
       const onSelect = vi.fn();
       const { Component, getReturn } = createTestComponent(
         { defaultIndex: 1, onSelect },
@@ -1826,7 +1831,7 @@ describe("useAriaActivedescendant", () => {
       expect(onSelect).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
     });
 
-    it("protects against selection when event.isComposing is true directly", async () => {
+    it("Given keydown event with isComposing true, When dispatched, Then item selection is prevented", async () => {
       const onSelect = vi.fn();
       const { Component } = createTestComponent({ defaultIndex: 0, onSelect }, { itemCount: 5 });
       await render(Component);

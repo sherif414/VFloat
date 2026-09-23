@@ -1,105 +1,183 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearTrackedElements, trackElement } from "@/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-vue";
+import { defineComponent, h, nextTick } from "vue";
+import { getTestEl } from "@/test-utils";
 import { isolateOutsideElements } from "./inert-stack";
 
-describe("isolateOutsideElements", () => {
-  let container: HTMLDivElement;
-  let outsideEl: HTMLDivElement;
-  let modalEl: HTMLDivElement;
-
-  beforeEach(() => {
-    container = trackElement(document.createElement("div"));
-    outsideEl = trackElement(document.createElement("div"));
-    outsideEl.id = "outside";
-
-    modalEl = trackElement(document.createElement("div"));
-    modalEl.id = "modal";
-
-    document.body.append(container, outsideEl, modalEl);
+function createInertFixture() {
+  const Component = defineComponent(() => {
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("div", { "data-testid": "container" }, "Container"),
+        h("div", { "data-testid": "outside" }, "Outside"),
+        h("div", { "data-testid": "modal" }, "Modal"),
+      ]);
   });
 
+  return render(Component);
+}
+
+function createNestedTreeFixture() {
+  const Component = defineComponent(() => {
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("div", { "data-testid": "outside" }, "Outside"),
+        h("div", { "data-testid": "nested-parent" }, [
+          h("div", { "data-testid": "nested-modal" }, "Nested Modal"),
+          h("div", { "data-testid": "nested-sibling" }, "Nested Sibling"),
+        ]),
+      ]);
+  });
+
+  return render(Component);
+}
+
+describe("Feature: Inert Stack Management", () => {
   afterEach(() => {
-    clearTrackedElements();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  it("isolates elements outside the allowed roots and restores on cleanup", () => {
-    const handle = isolateOutsideElements([modalEl]);
+  describe("Scenario: Isolating outside sibling elements from modal roots", () => {
+    it("Given rendered modal and outside elements, When isolateOutsideElements is called, Then marks outside elements as inert and restores them on cleanup", async () => {
+      // Given
+      await createInertFixture();
+      await nextTick();
 
-    expect(outsideEl.hasAttribute("inert")).toBe(true);
-    expect(container.hasAttribute("inert")).toBe(true);
-    expect(modalEl.hasAttribute("inert")).toBe(false);
+      const modalEl = getTestEl("modal");
+      const outsideEl = getTestEl("outside");
+      const containerEl = getTestEl("container");
 
-    handle.restore();
+      // When: Isolate outside elements
+      const handle = isolateOutsideElements([modalEl]);
 
-    expect(outsideEl.hasAttribute("inert")).toBe(false);
-    expect(container.hasAttribute("inert")).toBe(false);
-    expect(modalEl.hasAttribute("inert")).toBe(false);
+      // Then
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
+      expect(containerEl.hasAttribute("inert")).toBe(true);
+      expect(modalEl.hasAttribute("inert")).toBe(false);
+
+      // When: Restore
+      handle.restore();
+
+      // Then
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+      expect(containerEl.hasAttribute("inert")).toBe(false);
+      expect(modalEl.hasAttribute("inert")).toBe(false);
+    });
+
+    it("Given nested ancestor trees, When isolating a nested modal, Then preserves ancestors while isolating outside sibling branches", async () => {
+      // Given
+      await createNestedTreeFixture();
+      await nextTick();
+
+      const nestedModalEl = getTestEl("nested-modal");
+      const nestedParentEl = getTestEl("nested-parent");
+      const nestedSiblingEl = getTestEl("nested-sibling");
+      const outsideEl = getTestEl("outside");
+
+      // When: Isolate nested modal
+      const handle = isolateOutsideElements([nestedModalEl]);
+
+      // Then
+      expect(nestedParentEl.hasAttribute("inert")).toBe(false);
+      expect(nestedModalEl.hasAttribute("inert")).toBe(false);
+      expect(nestedSiblingEl.hasAttribute("inert")).toBe(true);
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
+
+      // When: Restore
+      handle.restore();
+
+      // Then
+      expect(nestedSiblingEl.hasAttribute("inert")).toBe(false);
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+    });
+
+    it("Given preferInert is false, When isolating outside elements, Then falls back to aria-hidden attributes", async () => {
+      // Given
+      await createInertFixture();
+      await nextTick();
+
+      const modalEl = getTestEl("modal");
+      const outsideEl = getTestEl("outside");
+
+      // When: Isolate with preferInert false
+      const handle = isolateOutsideElements([modalEl], false);
+
+      // Then
+      expect(outsideEl.getAttribute("aria-hidden")).toBe("true");
+      expect(modalEl.hasAttribute("aria-hidden")).toBe(false);
+
+      // When: Restore
+      handle.restore();
+
+      // Then
+      expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
+    });
+
+    it("Given empty allowed elements list, When isolating, Then safely no-ops without applying inert", async () => {
+      // Given
+      await createInertFixture();
+      await nextTick();
+
+      const outsideEl = getTestEl("outside");
+
+      // When
+      const handle = isolateOutsideElements([]);
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+
+      // When: Restore
+      handle.restore();
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+    });
   });
 
-  it("traverses ancestors of allowed roots and isolates only outside branches", () => {
-    const nestedParent = trackElement(document.createElement("div"));
-    const nestedModal = trackElement(document.createElement("div"));
-    const nestedSibling = trackElement(document.createElement("div"));
+  describe("Scenario: Overlapping isolations and reference counting", () => {
+    it("Given multiple overlapping isolations, When an early isolation is restored, Then keeps background inert until all isolations finish", async () => {
+      // Given
+      await createInertFixture();
+      await nextTick();
 
-    nestedParent.append(nestedModal, nestedSibling);
-    document.body.appendChild(nestedParent);
+      const modalEl = getTestEl("modal");
+      const outsideEl = getTestEl("outside");
 
-    const handle = isolateOutsideElements([nestedModal]);
+      // When: First isolation
+      const firstHandle = isolateOutsideElements([modalEl]);
+      // When: Second isolation
+      const secondHandle = isolateOutsideElements([modalEl]);
 
-    expect(nestedParent.hasAttribute("inert")).toBe(false);
-    expect(nestedModal.hasAttribute("inert")).toBe(false);
-    expect(nestedSibling.hasAttribute("inert")).toBe(true);
-    expect(outsideEl.hasAttribute("inert")).toBe(true);
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
 
-    handle.restore();
+      // When: First handle restored
+      firstHandle.restore();
 
-    expect(nestedSibling.hasAttribute("inert")).toBe(false);
-    expect(outsideEl.hasAttribute("inert")).toBe(false);
-  });
+      // Then: Still inert due to second handle
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
 
-  it("uses aria-hidden fallback when preferInert is false", () => {
-    const handle = isolateOutsideElements([modalEl], false);
+      // When: Second handle restored
+      secondHandle.restore();
 
-    expect(outsideEl.getAttribute("aria-hidden")).toBe("true");
-    expect(modalEl.hasAttribute("aria-hidden")).toBe(false);
+      // Then: Fully restored
+      expect(outsideEl.hasAttribute("inert")).toBe(false);
+    });
 
-    handle.restore();
+    it("Given pre-existing inert attribute on an element, When restored, Then preserves the original inert state", async () => {
+      // Given
+      await createInertFixture();
+      await nextTick();
 
-    expect(outsideEl.hasAttribute("aria-hidden")).toBe(false);
-  });
+      const modalEl = getTestEl("modal");
+      const outsideEl = getTestEl("outside");
 
-  it("handles empty allowed elements gracefully", () => {
-    const handle = isolateOutsideElements([]);
-    expect(outsideEl.hasAttribute("inert")).toBe(false);
+      outsideEl.setAttribute("inert", "");
+      (outsideEl as HTMLElement & { inert: boolean }).inert = true;
 
-    handle.restore();
-    expect(outsideEl.hasAttribute("inert")).toBe(false);
-  });
+      // When
+      const handle = isolateOutsideElements([modalEl]);
+      handle.restore();
 
-  it("reference-counts overlapping isolations so an early restore keeps the other trap inert", () => {
-    const first = isolateOutsideElements([modalEl]);
-    const second = isolateOutsideElements([modalEl]);
-
-    expect(outsideEl.hasAttribute("inert")).toBe(true);
-
-    first.restore();
-    // Second trap is still open; the shared background node must stay inert.
-    expect(outsideEl.hasAttribute("inert")).toBe(true);
-
-    second.restore();
-    expect(outsideEl.hasAttribute("inert")).toBe(false);
-  });
-
-  it("restores a pre-existing inert attribute and property instead of stripping them", () => {
-    outsideEl.setAttribute("inert", "");
-    (outsideEl as HTMLElement & { inert: boolean }).inert = true;
-
-    const handle = isolateOutsideElements([modalEl]);
-    handle.restore();
-
-    expect(outsideEl.hasAttribute("inert")).toBe(true);
-    expect((outsideEl as HTMLElement & { inert: boolean }).inert).toBe(true);
+      // Then: Pre-existing inert preserved
+      expect(outsideEl.hasAttribute("inert")).toBe(true);
+      expect((outsideEl as HTMLElement & { inert: boolean }).inert).toBe(true);
+    });
   });
 });

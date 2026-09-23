@@ -9,10 +9,12 @@ import {
   useRovingFocus,
 } from "./use-roving-focus";
 
-describe("useRovingFocus", () => {
+describe("Feature: useRovingFocus", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
+
   interface FixtureConfig {
     itemCount?: number;
     disabledIndices?: number[];
@@ -87,8 +89,8 @@ describe("useRovingFocus", () => {
     return { Component, getRoving: () => rovingReturn, getContext: () => testNode };
   };
 
-  describe("sequential tab order & focus entry (WCAG single tab stop)", () => {
-    it("enters the composite widget on the first enabled item when tabbing in", async () => {
+  describe("Scenario: Sequential tab order and focus entry as a single tab stop", () => {
+    it("Given the initial composite widget, When tabbing in from a preceding page element, Then focus lands on the first enabled item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -103,7 +105,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("enters on initial activeIndex when tabbing into the widget", async () => {
+    it("Given an explicit initial activeIndex, When tabbing into the widget, Then focus lands on that specified item", async () => {
       const { Component } = createTestComponent({ activeIndex: ref(2) });
       await render(Component);
 
@@ -115,7 +117,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("skips default item if disabled and tabs into the first enabled item", async () => {
+    it("Given default entry item is disabled, When tabbing into the widget, Then disabled item is skipped and focus lands on first enabled item", async () => {
       const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0, 1] });
       await render(Component);
 
@@ -134,7 +136,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("acts as a single tab stop and exits widget into the next page element on Tab", async () => {
+    it("Given focus inside the widget, When Tab is pressed, Then focus exits the widget to the next page element as a single tab stop", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -158,8 +160,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("vertical keyboard navigation", () => {
-    it("navigates to next/previous item on ArrowDown/ArrowUp", async () => {
+  describe("Scenario: Vertical keyboard navigation", () => {
+    it("Given vertical orientation, When ArrowDown or ArrowUp is pressed, Then focus navigates to the next or previous item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -180,7 +182,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("jumps to first item on Home and last item on End", async () => {
+    it("Given vertical orientation, When Home or End is pressed, Then focus jumps directly to the first or last item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -197,7 +199,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("stops at boundaries when loop is false", async () => {
+    it("Given loop is disabled, When navigating past the start or end, Then focus stops at the boundary items", async () => {
       const { Component } = createTestComponent({ loop: false });
       await render(Component);
 
@@ -215,7 +217,7 @@ describe("useRovingFocus", () => {
       await expect.element(option5).toHaveFocus();
     });
 
-    it("wraps around boundaries when loop is true", async () => {
+    it("Given loop is enabled, When navigating past the start or end, Then focus wraps around the boundary items", async () => {
       const { Component } = createTestComponent({ loop: true });
       await render(Component);
 
@@ -230,7 +232,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("skips disabled and aria-disabled items during navigation", async () => {
+    it("Given disabled or aria-disabled items in the list, When navigating with arrow keys, Then disabled items are skipped", async () => {
       const { Component } = createTestComponent(
         {},
         { disabledIndices: [1], ariaDisabledIndices: [2] },
@@ -248,7 +250,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("jumps by pageSize on PageDown and PageUp keys", async () => {
+    it("Given pageSize is configured, When PageDown or PageUp is pressed, Then focus jumps by the page size", async () => {
       const { Component } = createTestComponent({ pageSize: 4 }, { itemCount: 15 });
       await render(Component);
 
@@ -277,8 +279,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("horizontal & RTL navigation", () => {
-    it("navigates on ArrowRight and ArrowLeft in horizontal orientation", async () => {
+  describe("Scenario: Horizontal and right-to-left keyboard navigation", () => {
+    it("Given horizontal orientation, When ArrowRight or ArrowLeft is pressed, Then focus navigates to the next or previous item", async () => {
       const { Component } = createTestComponent({ orientation: "horizontal" });
       await render(Component);
 
@@ -293,7 +295,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("inverts horizontal arrow directions in RTL mode", async () => {
+    it("Given horizontal orientation in RTL layout, When ArrowLeft or ArrowRight is pressed, Then arrow navigation directions are inverted", async () => {
       const { Component } = createTestComponent({ orientation: "horizontal" }, { dir: "rtl" });
       await render(Component);
 
@@ -310,8 +312,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("both orientation (radio group pattern)", () => {
-    it("navigates with all four arrow keys when orientation is both", async () => {
+  describe("Scenario: Bidirectional orientation navigation", () => {
+    it("Given orientation is set to both, When any of the four arrow keys is pressed, Then focus moves in the matching direction", async () => {
       const { Component } = createTestComponent({ orientation: "both" });
       await render(Component);
 
@@ -338,7 +340,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("respects RTL inversion for horizontal keys in both orientation", async () => {
+    it("Given orientation is set to both in RTL layout, When horizontal arrow keys are pressed, Then RTL inversion applies to horizontal keys", async () => {
       const { Component } = createTestComponent({ orientation: "both" }, { dir: "rtl" });
       await render(Component);
 
@@ -357,8 +359,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("onSelect callback", () => {
-    it("fires onSelect when Enter or Space is pressed on active item", async () => {
+  describe("Scenario: Item selection via onSelect callback", () => {
+    it("Given an active focused item, When Enter or Space is pressed, Then onSelect callback is invoked with the active index and event", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent({ onSelect: onSelectMock });
       await render(Component);
@@ -376,8 +378,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("onEnter and onExit callbacks (nested navigation)", () => {
-    it("fires onEnter when ArrowRight is pressed on active item in vertical orientation", async () => {
+  describe("Scenario: Nested menu navigation via onEnter and onExit callbacks", () => {
+    it("Given vertical orientation, When ArrowRight is pressed on an active item, Then onEnter callback is invoked", async () => {
       const onEnterMock = vi.fn();
       const { Component } = createTestComponent({ onEnter: onEnterMock });
       await render(Component);
@@ -390,7 +392,7 @@ describe("useRovingFocus", () => {
       expect(onEnterMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
     });
 
-    it("fires onEnter when ArrowLeft is pressed in vertical RTL orientation", async () => {
+    it("Given vertical RTL orientation, When ArrowLeft is pressed on an active item, Then onEnter callback is invoked", async () => {
       const onEnterMock = vi.fn();
       const { Component } = createTestComponent(
         { onEnter: onEnterMock, rtl: true },
@@ -406,7 +408,7 @@ describe("useRovingFocus", () => {
       expect(onEnterMock).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
     });
 
-    it("fires onEnter when ArrowDown or ArrowUp is pressed in horizontal orientation", async () => {
+    it("Given horizontal orientation, When ArrowDown or ArrowUp is pressed on an active item, Then onEnter callback is invoked", async () => {
       const onEnterMock = vi.fn();
       const { Component } = createTestComponent({
         orientation: "horizontal",
@@ -426,7 +428,7 @@ describe("useRovingFocus", () => {
       expect(onEnterMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
     });
 
-    it("does not fire onEnter when active item is disabled", async () => {
+    it("Given active item is disabled, When enter-intent arrow key is pressed, Then onEnter callback is not invoked", async () => {
       const onEnterMock = vi.fn();
       const { Component } = createTestComponent(
         { activeIndex: ref(0), focusDisabledElements: true, onEnter: onEnterMock },
@@ -445,7 +447,7 @@ describe("useRovingFocus", () => {
       expect(onEnterMock).not.toHaveBeenCalled();
     });
 
-    it("fires onExit when ArrowLeft is pressed in vertical orientation", async () => {
+    it("Given vertical orientation, When ArrowLeft is pressed on an active item, Then onExit callback is invoked", async () => {
       const onExitMock = vi.fn();
       const { Component } = createTestComponent({ onExit: onExitMock });
       await render(Component);
@@ -458,7 +460,7 @@ describe("useRovingFocus", () => {
       expect(onExitMock).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
     });
 
-    it("fires onExit when ArrowRight is pressed in vertical RTL orientation", async () => {
+    it("Given vertical RTL orientation, When ArrowRight is pressed on an active item, Then onExit callback is invoked", async () => {
       const onExitMock = vi.fn();
       const { Component } = createTestComponent({ onExit: onExitMock, rtl: true }, { dir: "rtl" });
       await render(Component);
@@ -471,7 +473,7 @@ describe("useRovingFocus", () => {
       expect(onExitMock).toHaveBeenCalledWith(1, expect.any(KeyboardEvent));
     });
 
-    it("fires onExit even if currently active item is disabled", async () => {
+    it("Given active item is disabled, When exit-intent arrow key is pressed, Then onExit callback is still invoked", async () => {
       const onExitMock = vi.fn();
       const { Component } = createTestComponent(
         { activeIndex: ref(0), focusDisabledElements: true, onExit: onExitMock },
@@ -491,7 +493,7 @@ describe("useRovingFocus", () => {
       expect(onExitMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
     });
 
-    it("prevents default by default, but allows bubbling if callback returns false", async () => {
+    it("Given an onEnter callback, When returning false, Then event default prevention is avoided", async () => {
       let preventDefaultSpy = vi.fn();
       const onEnterReturnFalse = vi.fn((_idx, e: KeyboardEvent) => {
         preventDefaultSpy = vi.spyOn(e, "preventDefault");
@@ -509,7 +511,7 @@ describe("useRovingFocus", () => {
       expect(preventDefaultSpy).not.toHaveBeenCalled();
     });
 
-    it("does not prevent default when onEnter/onExit are not provided", async () => {
+    it("Given onEnter and onExit callbacks are omitted, When arrow keys occur, Then default prevention is not triggered", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -532,8 +534,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("controlled activeIndex state", () => {
-    it("updates controlled activeIndex ref when navigation occurs", async () => {
+  describe("Scenario: Controlled activeIndex state synchronization", () => {
+    it("Given a controlled activeIndex ref, When keyboard navigation occurs, Then the controlled ref is updated through change handler", async () => {
       const controlledIndex = ref(0);
       // Wire onActiveIndexChange to close the controlled-state loop:
       // useControllableState writes through onChange, which must update the
@@ -558,7 +560,7 @@ describe("useRovingFocus", () => {
       expect(controlledIndex.value).toBe(2);
     });
 
-    it("reflects external activeIndex changes in tabindex without stealing DOM focus", async () => {
+    it("Given a controlled activeIndex ref, When the ref is changed externally, Then tabindex updates without stealing DOM focus", async () => {
       const controlledIndex = ref(0);
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
       await render(Component);
@@ -577,7 +579,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("does not auto-revert controlled activeIndex but falls back tabindex when target is disabled", async () => {
+    it("Given a controlled activeIndex set to a disabled item, When evaluated, Then activeIndex is not auto-reverted and tabindex falls back", async () => {
       const controlledIndex = ref(0);
       const { Component, getRoving } = createTestComponent(
         { activeIndex: controlledIndex },
@@ -597,7 +599,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().getTabindex(1)).toBe(-1);
     });
 
-    it("invokes onActiveIndexChange callback when activeIndex updates", async () => {
+    it("Given an onActiveIndexChange callback, When navigation occurs, Then the callback is invoked with the new active index", async () => {
       const onActiveIndexChangeMock = vi.fn();
       const { Component } = createTestComponent({
         onActiveIndexChange: onActiveIndexChangeMock,
@@ -615,8 +617,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focusOnHover option", () => {
-    it("moves focus to hovered item when focusOnHover is true", async () => {
+  describe("Scenario: Pointer hover focus orchestration", () => {
+    it("Given focusOnHover is enabled, When hovering an item with a mouse pointer, Then focus moves to the hovered item", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
@@ -630,7 +632,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("does not move focus on hover when focusOnHover is false by default", async () => {
+    it("Given focusOnHover is disabled by default, When hovering an item, Then DOM focus remains on the previously focused item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -644,7 +646,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).not.toHaveFocus();
     });
 
-    it("skips disabled items when hovered", async () => {
+    it("Given focusOnHover is enabled, When hovering a disabled item, Then focus does not move to the disabled item", async () => {
       const { Component } = createTestComponent({ focusOnHover: true }, { disabledIndices: [1] });
       await render(Component);
 
@@ -657,7 +659,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("ignores touch pointer events", async () => {
+    it("Given focusOnHover is enabled, When pointermove originates from a touch device, Then the touch event is ignored", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
@@ -677,8 +679,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("programmatic navigation methods", () => {
-    it("supports next, prev, first, last, and focusIndex methods", async () => {
+  describe("Scenario: Programmatic navigation and focus methods", () => {
+    it("Given programmatic navigation methods, When next, prev, first, last, or numeric index is invoked, Then focus moves accordingly", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -706,7 +708,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("sets activeIndex state without moving DOM focus when setActiveIndex is called", async () => {
+    it("Given setActiveIndex is called programmatically, When invoked, Then activeIndex state updates without moving DOM focus", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -724,7 +726,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).not.toHaveFocus();
     });
 
-    it("continues from the last active item after activeIndex is cleared", async () => {
+    it("Given activeIndex is cleared to -1, When focusIndex('next') is invoked, Then navigation resumes from the last active item", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -738,7 +740,7 @@ describe("useRovingFocus", () => {
       await expect.element(option4).toHaveFocus();
     });
 
-    it("resets activeIndex and focus history when reset() is called", async () => {
+    it("Given a roving focus instance with active focus, When reset() is called, Then activeIndex and resting tabStopIndex return to entryIndex", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
       await render(Component);
 
@@ -757,7 +759,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().getTabindex(2)).toBe(-1);
     });
 
-    it("exposes reactive tabStopIndex matching getTabindex resolution", async () => {
+    it("Given reactive tabStopIndex, When navigation occurs, Then tabStopIndex reactively matches getTabindex resolution", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 0 });
       await render(Component);
 
@@ -775,7 +777,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().getTabindex(0)).toBe(-1);
     });
 
-    it("navigates directionally using focusIndex('page-down') and focusIndex('page-up')", async () => {
+    it("Given focusIndex with page actions, When 'page-down' or 'page-up' is called, Then focus leaps by pageSize", async () => {
       const { Component, getRoving } = createTestComponent({ pageSize: 3 }, { itemCount: 10 });
       await render(Component);
 
@@ -796,7 +798,7 @@ describe("useRovingFocus", () => {
       await expect.element(option4).toHaveFocus();
     });
 
-    it("resets active focus when focusIndex('reset') is called", async () => {
+    it("Given focusIndex with 'reset', When called, Then active focus is reset back to resting entryIndex", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
       await render(Component);
 
@@ -809,7 +811,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().tabStopIndex.value).toBe(1);
     });
 
-    it("handles undefined ref values for pageSize and orientation cleanly", async () => {
+    it("Given undefined ref values for pageSize and orientation, When evaluated, Then sensible default values are used", async () => {
       const pageSizeRef = ref<number | undefined>(undefined);
       const orientationRef = ref<"vertical" | "horizontal" | undefined>(undefined);
       const { Component, getRoving } = createTestComponent(
@@ -831,8 +833,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("disabled state & modifier key ignoring", () => {
-    it("does not navigate when enabled is false", async () => {
+  describe("Scenario: Disabled item handling and modifier key filtering", () => {
+    it("Given enabled is set to false, When keyboard navigation keys are pressed, Then navigation is disabled", async () => {
       const { Component } = createTestComponent({ enabled: false });
       await render(Component);
 
@@ -843,7 +845,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("ignores key combinations with ctrl, alt, or meta keys", async () => {
+    it("Given modifier keys (Ctrl, Alt, Meta) are held, When arrow keys are pressed, Then the key combination is ignored", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -857,7 +859,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("handles all options disabled safely", async () => {
+    it("Given all items in the list are disabled, When navigating, Then errors are avoided and no item receives focus", async () => {
       const { Component } = createTestComponent({}, { itemCount: 3, disabledIndices: [0, 1, 2] });
       await render(Component);
 
@@ -867,8 +869,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("dynamic item updates", () => {
-    it("supports dynamically appending new items to the list and navigating to them", async () => {
+  describe("Scenario: Dynamic item list updates and bounds auto-correction", () => {
+    it("Given an element list that grows dynamically, When new items are appended, Then keyboard navigation reaches the new items", async () => {
       const count = ref(3);
 
       const DynamicComponent = defineComponent(() => {
@@ -918,8 +920,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("tabindex resolution", () => {
-    it("sets tabindex=0 on the first item and tabindex=-1 on all others by default", async () => {
+  describe("Scenario: Tabindex management and roving tabindex resolution", () => {
+    it("Given default roving focus configuration, When initialized, Then first item receives tabindex=0 and others receive -1", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -932,7 +934,7 @@ describe("useRovingFocus", () => {
       expect(option3.element().tabIndex).toBe(-1);
     });
 
-    it("respects entryIndex when specified", async () => {
+    it("Given a custom entryIndex, When initialized, Then the entryIndex item receives tabindex=0", async () => {
       const { Component } = createTestComponent({ entryIndex: 2 });
       await render(Component);
 
@@ -943,7 +945,7 @@ describe("useRovingFocus", () => {
       expect(option3.element().tabIndex).toBe(0);
     });
 
-    it("skips hard-disabled items on mount and gives tabindex=0 to the first enabled item", async () => {
+    it("Given first item is disabled on mount, When initialized, Then first enabled item receives tabindex=0", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [0] });
       await render(Component);
 
@@ -954,7 +956,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveAttribute("tabindex", "0");
     });
 
-    it("skips aria-disabled items on mount when allowDisabledFocus is false", async () => {
+    it("Given first item is aria-disabled and allowDisabledFocus is false, When mounted, Then first enabled item receives tabindex=0", async () => {
       const { Component } = createTestComponent(
         { focusDisabledElements: false },
         { ariaDisabledIndices: [0] },
@@ -968,7 +970,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveAttribute("tabindex", "0");
     });
 
-    it("designates a fallback tabindex=0 entry target when entryIndex is omitted", async () => {
+    it("Given entryIndex is omitted, When initialized, Then a fallback tabindex=0 entry target is designated while activeIndex is -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -980,7 +982,7 @@ describe("useRovingFocus", () => {
       expect(option2.element().tabIndex).toBe(-1);
     });
 
-    it("moves tabindex=0 on keyboard navigation", async () => {
+    it("Given keyboard navigation, When moving between items, Then tabindex=0 roves to the newly active item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -997,7 +999,7 @@ describe("useRovingFocus", () => {
       expect(option2.element().tabIndex).toBe(0);
     });
 
-    it("updates tabindex on mouse click selection", async () => {
+    it("Given pointer click on an item, When clicked, Then tabindex=0 updates to the clicked item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
@@ -1010,7 +1012,7 @@ describe("useRovingFocus", () => {
       expect(option4.element().tabIndex).toBe(0);
     });
 
-    it("skips disabled items during arrow navigation", async () => {
+    it("Given disabled items in the list, When navigating with arrow keys, Then tabindex skips disabled items", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [1] });
       await render(Component);
 
@@ -1027,7 +1029,7 @@ describe("useRovingFocus", () => {
       expect(option3.element().tabIndex).toBe(0);
     });
 
-    it("enters the widget at tabindex=0 and exits to next focusable element on Tab", async () => {
+    it("Given entryIndex is configured, When tabbing in and out, Then Tab enters at tabindex=0 and exits to next focusable element", async () => {
       const { Component } = createTestComponent({ entryIndex: 1 });
       await render(Component);
 
@@ -1044,7 +1046,7 @@ describe("useRovingFocus", () => {
       await expect.element(afterBtn).toHaveFocus();
     });
 
-    it("enters back into the active item on Shift+Tab from outside", async () => {
+    it("Given focus is outside the widget, When Shift+Tab is pressed, Then focus enters the active item from behind", async () => {
       const { Component } = createTestComponent({ entryIndex: 2 });
       await render(Component);
 
@@ -1057,7 +1059,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("updates getTabindex return values when setActiveIndex is called programmatically", async () => {
+    it("Given setActiveIndex is called programmatically, When invoked, Then getTabindex return values update accordingly", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1077,8 +1079,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("allowDisabledFocus option (WAI-ARIA APG discoverability)", () => {
-    it("enters on initial activeIndex even if disabled when allowDisabledFocus is true", async () => {
+  describe("Scenario: Disabled element focusability for ARIA discoverability", () => {
+    it("Given focusDisabledElements is true, When tabbing into the widget, Then initial activeIndex receives focus even if disabled", async () => {
       const { Component } = createTestComponent(
         { activeIndex: ref(0), focusDisabledElements: true },
         { ariaDisabledIndices: [0] },
@@ -1093,7 +1095,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("navigates through disabled and aria-disabled items when allowDisabledFocus is true", async () => {
+    it("Given focusDisabledElements is true, When navigating with arrow keys, Then disabled and aria-disabled items receive focus", async () => {
       const { Component } = createTestComponent(
         { focusDisabledElements: true },
         { ariaDisabledIndices: [1, 2] },
@@ -1125,7 +1127,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("does not trigger onSelect when Enter or Space is pressed on a focused disabled item", async () => {
+    it("Given focusDisabledElements is true, When Enter or Space is pressed on focused disabled item, Then onSelect is not triggered", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent(
         { focusDisabledElements: true, onSelect: onSelectMock },
@@ -1149,7 +1151,7 @@ describe("useRovingFocus", () => {
       expect(onSelectMock).not.toHaveBeenCalled();
     });
 
-    it("triggers onSelect on enabled items when allowDisabledFocus is true", async () => {
+    it("Given focusDisabledElements is true, When Enter or Space is pressed on focused enabled item, Then onSelect is triggered normally", async () => {
       const onSelectMock = vi.fn();
       const { Component } = createTestComponent(
         { focusDisabledElements: true, onSelect: onSelectMock },
@@ -1165,7 +1167,7 @@ describe("useRovingFocus", () => {
       expect(onSelectMock).toHaveBeenCalledWith(0, expect.any(KeyboardEvent));
     });
 
-    it("focuses disabled items on hover when focusOnHover and allowDisabledFocus are both true", async () => {
+    it("Given focusOnHover and focusDisabledElements are both true, When hovering disabled items, Then disabled items receive focus", async () => {
       const { Component } = createTestComponent(
         { focusOnHover: true, focusDisabledElements: true },
         { ariaDisabledIndices: [1] },
@@ -1182,7 +1184,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("supports programmatic navigation to disabled items when allowDisabledFocus is true", async () => {
+    it("Given focusDisabledElements is true, When using programmatic focus methods, Then disabled items can be focused", async () => {
       const { Component, getRoving } = createTestComponent(
         { focusDisabledElements: true },
         { ariaDisabledIndices: [1, 4] },
@@ -1205,7 +1207,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("reflects external activeIndex targeting a disabled item in tabindex when allowDisabledFocus is true", async () => {
+    it("Given focusDisabledElements is true, When external activeIndex targets a disabled item, Then tabindex=0 is applied to it", async () => {
       const controlledIndex = ref(0);
       const { Component } = createTestComponent(
         {
@@ -1228,7 +1230,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("corrects tab stop resolution but not activeIndex when allowDisabledFocus changes to false", async () => {
+    it("Given focusDisabledElements transitions from true to false, When observed, Then tab stop resolution corrects without jumping DOM focus", async () => {
       const allowDisabledFocusRef = ref(true);
       const { Component, getRoving } = createTestComponent(
         { focusDisabledElements: allowDisabledFocusRef },
@@ -1263,8 +1265,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focus stealing prevention & mount isolation", () => {
-    it("does not steal document focus on mount when element 0 is disabled", async () => {
+  describe("Scenario: Mount isolation and focus stealing prevention", () => {
+    it("Given item 0 is disabled on mount, When widget mounts, Then document focus is not stolen while tabindex initializes correctly", async () => {
       const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0] });
       await render(Component);
 
@@ -1280,7 +1282,7 @@ describe("useRovingFocus", () => {
       expect((option2.element() as HTMLElement).tabIndex).toBe(0);
     });
 
-    it("does not steal focus when activeIndex changes externally while widget is unfocused", async () => {
+    it("Given widget is currently unfocused, When activeIndex changes externally, Then focus is not stolen from the active page element", async () => {
       const controlledIndex = ref(0);
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
       await render(Component);
@@ -1301,8 +1303,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("uncontrolled entryIndex & async element mounting", () => {
-    it("starts at entryIndex in uncontrolled mode", async () => {
+  describe("Scenario: Uncontrolled entryIndex and asynchronous element mounting", () => {
+    it("Given uncontrolled mode with entryIndex, When initialized, Then activeIndex is -1 and entryIndex item has tabindex=0", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 2 });
       await render(Component);
 
@@ -1317,7 +1319,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("preserves entryIndex when elements populate asynchronously", async () => {
+    it("Given elements populate asynchronously, When loaded, Then entryIndex is preserved and receives focus on tab in", async () => {
       const isLoaded = ref(false);
 
       const AsyncComponent = defineComponent(() => {
@@ -1378,8 +1380,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("unfocused (-1) initial state & sequential tab stop fallback", () => {
-    it("initializes with activeIndex = -1 without highlighting an initial item", async () => {
+  describe("Scenario: Unfocused initial state and sequential tab stop fallback", () => {
+    it("Given initial uncontrolled configuration, When mounted, Then activeIndex is -1 without prematurely highlighting an item", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1393,7 +1395,7 @@ describe("useRovingFocus", () => {
       expect((option2.element() as HTMLElement).tabIndex).toBe(-1);
     });
 
-    it("enters on fallback element when tabbing in with activeIndex = -1 and syncs activeIndex", async () => {
+    it("Given initial activeIndex is -1, When tabbing in from outside, Then focus lands on fallback element and syncs activeIndex", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1407,7 +1409,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(0);
     });
 
-    it("navigates to first item on focusIndex('next') from initial activeIndex = -1", async () => {
+    it("Given initial activeIndex is -1, When focusIndex('next') is called, Then focus navigates to the first enabled item", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1419,7 +1421,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(0);
     });
 
-    it("navigates to last item on focusIndex('prev') from initial activeIndex = -1", async () => {
+    it("Given initial activeIndex is -1, When focusIndex('prev') is called, Then focus navigates to the last enabled item", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1432,8 +1434,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focusin native focus synchronization", () => {
-    it("synchronizes activeIndex when an item is clicked directly and navigates correctly thereafter", async () => {
+  describe("Scenario: Native focusin synchronization", () => {
+    it("Given an item clicked directly in the DOM, When clicked, Then activeIndex synchronizes and subsequent arrow navigation is relative to it", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1452,8 +1454,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focusOnHover scroll prevention", () => {
-    it("focuses hovered item without calling scrollIntoView", async () => {
+  describe("Scenario: Pointer hover scroll stability", () => {
+    it("Given focusOnHover is true, When hovering an item, Then focus moves to the item without calling scrollIntoView", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
@@ -1472,8 +1474,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("entryIndex reactive anchoring & APG priority resolution", () => {
-    it("enters the composite widget on entryIndex when tabbing in", async () => {
+  describe("Scenario: Reactive entryIndex anchoring and APG priority resolution", () => {
+    it("Given reactive entryIndex ref, When tabbing in, Then focus lands on the item corresponding to entryIndex", async () => {
       const selectedIndex = ref(2);
       const { Component } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
@@ -1488,7 +1490,7 @@ describe("useRovingFocus", () => {
       await expect.element(option3).toHaveFocus();
     });
 
-    it("restores entry focus to entryIndex after a transient arrow preview is dismissed", async () => {
+    it("Given a transient arrow preview is dismissed, When tabbing back in, Then entry focus restores to entryIndex rather than previewed item", async () => {
       const selectedIndex = ref(2);
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
@@ -1519,7 +1521,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(2);
     });
 
-    it("reflects dynamic entryIndex updates in tabindex without stealing DOM focus", async () => {
+    it("Given dynamic entryIndex updates while widget is unfocused, When updated, Then resting tabindex reflects change without stealing focus", async () => {
       const selectedIndex = ref(1);
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
@@ -1545,7 +1547,7 @@ describe("useRovingFocus", () => {
       await expect.element(option4).not.toHaveFocus();
     });
 
-    it("falls back to first enabled item when entryIndex is disabled", async () => {
+    it("Given entryIndex targets a disabled item, When tabbing in, Then focus falls back to the first enabled item", async () => {
       const selectedIndex = ref(1); // option 2 is disabled
       const { Component, getRoving } = createTestComponent(
         { entryIndex: selectedIndex },
@@ -1567,7 +1569,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).not.toHaveFocus();
     });
 
-    it("falls back to first enabled item when entryIndex is null or undefined", async () => {
+    it("Given entryIndex is null or undefined, When tabbing in, Then focus falls back to the first enabled item", async () => {
       const selectedIndex = ref<number | null>(null);
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
@@ -1582,7 +1584,7 @@ describe("useRovingFocus", () => {
       await expect.element(option1).toHaveFocus();
     });
 
-    it("disables sequential tab-stop entry when entryIndex is explicitly -1", async () => {
+    it("Given entryIndex is explicitly -1, When evaluated, Then sequential tab-stop entry into the widget is disabled", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: -1 });
       await render(Component);
 
@@ -1591,8 +1593,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focusout boundary handling", () => {
-    it("clears activeIndex to -1 when focus leaves the container", async () => {
+  describe("Scenario: Focusout boundary handling and blur synchronization", () => {
+    it("Given focus inside the widget, When focus leaves the container, Then activeIndex clears to -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1608,7 +1610,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(-1);
     });
 
-    it("does not clear activeIndex when focus moves between items inside the container", async () => {
+    it("Given focus moving between items within the container, When focus changes, Then activeIndex is not cleared to -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1625,8 +1627,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("entryFocusMode (last-focused vs entry-index)", () => {
-    it("restores focus to the last focused element on re-entry when entryFocusMode is last-focused (default)", async () => {
+  describe("Scenario: Entry focus mode resolution between last-focused and entry-index", () => {
+    it("Given entryFocusMode is 'last-focused', When re-entering widget via Shift+Tab, Then focus returns to the last focused item", async () => {
       const { Component } = createTestComponent({
         entryIndex: 1,
         entryFocusMode: "last-focused",
@@ -1657,7 +1659,7 @@ describe("useRovingFocus", () => {
       await expect.element(option4).toHaveFocus();
     });
 
-    it("unconditionally resets focus to entryIndex on re-entry when entryFocusMode is entry-index", async () => {
+    it("Given entryFocusMode is 'entry-index', When re-entering widget via Shift+Tab, Then focus resets to entryIndex", async () => {
       const { Component } = createTestComponent({
         entryIndex: 1,
         entryFocusMode: "entry-index",
@@ -1688,7 +1690,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("syncs resting tab stop when entryIndex updates reactively while widget is unfocused", async () => {
+    it("Given entryIndex updates reactively while widget is unfocused, When re-entering, Then resting tab stop syncs to updated entryIndex", async () => {
       const entryIndexRef = ref(1);
       const { Component, getRoving } = createTestComponent({
         entryIndex: entryIndexRef,
@@ -1725,8 +1727,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("focus synchronization fast-path optimizations", () => {
-    it("uses fast-path when activeIndex element receives focusin without linear scanning", async () => {
+  describe("Scenario: Focus synchronization fast-path optimizations", () => {
+    it("Given focusin event targets already active element, When fired, Then fast-path executes without linear element scanning", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
       await nextTick();
@@ -1754,7 +1756,7 @@ describe("useRovingFocus", () => {
       option1ContainsSpy.mockRestore();
     });
 
-    it("falls back to linear scan when focusin target differs from activeIndex", async () => {
+    it("Given focusin event targets a different element than activeIndex, When fired, Then linear scan fallback identifies correct index", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
       await nextTick();
@@ -1773,7 +1775,7 @@ describe("useRovingFocus", () => {
       expect(roving.activeIndex.value).toBe(2);
     });
 
-    it("uses fast-path in resolveFocusedIndex by probing lastFocusedIndex first", async () => {
+    it("Given activeIndex cleared externally while DOM focus remains, When navigating, Then resolveFocusedIndex probes lastFocusedIndex first", async () => {
       const activeIndexRef = ref(-1);
       const { Component, getRoving } = createTestComponent({
         activeIndex: activeIndexRef,
@@ -1791,7 +1793,7 @@ describe("useRovingFocus", () => {
 
       const option1 = page.getByRole("option", { name: "option 1" }).element() as HTMLElement;
       const option4 = page.getByRole("option", { name: "option 4" }).element() as HTMLElement;
-      expect(document.activeElement).toBe(option4);
+      await expect.element(option4).toHaveFocus();
 
       // Simulate activeIndex cleared externally to -1 while DOM focus remains on option4
       activeIndexRef.value = -1;
@@ -1811,8 +1813,8 @@ describe("useRovingFocus", () => {
     });
   });
 
-  describe("FloatingNode integration & nested floating surfaces", () => {
-    it("resolves containerEl from node.refs.floatingEl by default", async () => {
+  describe("Scenario: FloatingNode integration and nested floating tree coordination", () => {
+    it("Given a FloatingNode without explicit containerEl, When initialized, Then containerEl resolves from node.refs.floatingEl", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -1827,7 +1829,7 @@ describe("useRovingFocus", () => {
       await expect.element(option2).toHaveFocus();
     });
 
-    it("preserves activeIndex on focusout when focus enters a teleported child floating element", async () => {
+    it("Given nested parent and child floating nodes, When focus enters teleported child element, Then parent activeIndex is preserved", async () => {
       let rootRoving!: UseRovingFocusReturn;
 
       const RootWithChild = defineComponent(() => {
@@ -1919,7 +1921,7 @@ describe("useRovingFocus", () => {
       expect(rootRoving.activeIndex.value).toBe(1);
     });
 
-    it("preserves activeIndex on pointerleave when pointer enters a teleported child floating element", async () => {
+    it("Given nested parent and child floating nodes, When pointer enters teleported child element, Then parent activeIndex is preserved on pointerleave", async () => {
       let rootRoving!: UseRovingFocusReturn;
 
       const RootWithChild = defineComponent(() => {
@@ -1985,7 +1987,7 @@ describe("useRovingFocus", () => {
       expect(rootRoving.activeIndex.value).toBe(0);
     });
 
-    it("clears activeIndex on focusout when focus leaves to an external element outside the floating tree", async () => {
+    it("Given focus leaves the entire floating tree, When focusout fires, Then activeIndex clears to -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
@@ -2002,7 +2004,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(-1);
     });
 
-    it("closes open descendant submenus when navigating between sibling items in parent menu", async () => {
+    it("Given open descendant submenus, When navigating between sibling items in parent menu, Then open descendant submenus automatically close", async () => {
       let childNode!: FloatingNode;
       let rootRoving!: UseRovingFocusReturn;
 
@@ -2078,7 +2080,7 @@ describe("useRovingFocus", () => {
       expect(childNode.open.value).toBe(false);
     });
 
-    it("automatically closes submenu and returns focus to anchorEl on exit intent in child node", async () => {
+    it("Given focus in child submenu, When exit-intent arrow key is pressed, Then child submenu closes and focus returns to anchor trigger", async () => {
       let childNode!: FloatingNode;
       let childRoving!: UseRovingFocusReturn;
 
@@ -2146,7 +2148,7 @@ describe("useRovingFocus", () => {
       await expect.element(subTrigger).toHaveFocus();
     });
 
-    it("supports RTL exit intent (ArrowRight) to close child submenu and restore focus", async () => {
+    it("Given child submenu in RTL layout, When ArrowRight is pressed on sub item, Then child submenu closes and returns focus to anchor", async () => {
       let childNode!: FloatingNode;
       let childRoving!: UseRovingFocusReturn;
 
@@ -2209,7 +2211,7 @@ describe("useRovingFocus", () => {
       await expect.element(subTrigger).toHaveFocus();
     });
 
-    it("prefers custom onExit over default exit behavior in child node", async () => {
+    it("Given a custom onExit callback on child node, When exit key is pressed, Then custom handler intercepts exit without default close", async () => {
       let childNode!: FloatingNode;
       const customOnExit = vi.fn();
 
@@ -2269,7 +2271,7 @@ describe("useRovingFocus", () => {
       expect(childNode.open.value).toBe(true);
     });
 
-    it("automatically resets roving focus when node.open transitions to false", async () => {
+    it("Given node.open transitions to false, When closed, Then roving focus resets and tabStopIndex restores to entryIndex", async () => {
       const { Component, getRoving, getContext } = createTestComponent();
       await render(Component);
 
@@ -2285,7 +2287,7 @@ describe("useRovingFocus", () => {
       expect(getRoving().tabStopIndex.value).toBe(0); // restored to entryIndex
     });
 
-    it("does not exit or close root node on exit key when onExit is omitted", async () => {
+    it("Given root floating node without onExit handler, When exit arrow key is pressed, Then root node does not close or exit", async () => {
       const { Component, getRoving, getContext } = createTestComponent();
       await render(Component);
 
