@@ -1,4 +1,4 @@
-import { computed, type MaybeRefOrGetter, toValue, watch } from "vue";
+import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watch } from "vue";
 import type { FloatingNode, FloatingNodeId } from "@/composables/floating-node";
 import { getEventTarget, isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
 import { getDocument, getWindow } from "@/shared/env";
@@ -73,6 +73,7 @@ const eventOpenChildren = new WeakMap<Event, Map<FloatingNodeId, boolean>>();
  * ```
  */
 export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOptions = {}): void {
+  const enabled = computed(() => toValue(options.enabled) ?? true);
   const ownerDocument = computed(
     () =>
       node.refs.floatingEl.value?.ownerDocument ??
@@ -88,7 +89,7 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
     getOptions: () => ({
       event,
       capture: options.capture ?? true,
-      leafFirst: toValue(options.leafFirst ?? false),
+      leafFirst: toValue(options.leafFirst) ?? false,
       ignoreScrollbar: options.ignoreScrollbar ?? true,
       ignoreDrag: options.ignoreDrag ?? true,
       shouldIgnore: options.shouldIgnore,
@@ -99,24 +100,16 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
   // --- Outside Click Registration ----------------------------------------------
 
   watch(
-    () => [toValue(options.enabled ?? true), node.open.value, ownerDocument.value] as const,
-    ([enabled, open, doc], _, onCleanup) => {
+    [enabled, node.open, ownerDocument],
+    ([enabled, open, doc]) => {
       if (!enabled || !open || !doc) return;
       stackManager.push(doc, entry);
-      onCleanup(() => stackManager.remove(doc, entry));
+
+      onWatcherCleanup(() => {
+        stackManager.remove(doc, entry);
+      });
     },
     { immediate: true, flush: "sync" },
-  );
-
-  // --- Click Drag Suppression ---------------------------------------------------
-
-  watch(
-    () => toValue(options.ignoreDrag ?? true),
-    () => {
-      const doc = ownerDocument.value;
-      if (doc && node.open.value && toValue(options.enabled ?? true)) stackManager.resync(doc);
-    },
-    { flush: "sync" },
   );
 
   tryOnScopeDispose(() => {
