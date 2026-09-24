@@ -16,6 +16,15 @@ pnpm adr:index
 
 <!-- adr-index:start -->
 
-No ADRs have been recorded yet.
+## Architecture
+
+| ADR | Decision | Status | Date |
+| --- | --- | --- | --- |
+| [ADR-architecture-0001](./architecture/0001-cross-realm-dom-and-iframe-environment-resolution.md) | Cross-realm DOM and iframe environment resolution | accepted | 2026-09-24 |
+## Interactions
+
+| ADR | Decision | Status | Date |
+| --- | --- | --- | --- |
+| [ADR-interactions-0001](./interactions/0001-per-instance-listeners-for-outside-click-dismissal.md) | Per-instance listeners for outside-click dismissal | accepted | 2026-09-24 |
 
 <!-- adr-index:end -->
