@@ -10,7 +10,6 @@ import {
   type Ref,
   ref,
   type ShallowRef,
-  shallowReadonly,
   shallowRef,
 } from "vue";
 import { isTargetWithinElements } from "@/shared/elements";
@@ -18,7 +17,6 @@ import { tryOnScopeDispose } from "@/shared/lifecycle";
 import type { VirtualElement } from "@/types";
 
 const FLOATING_NODE_KEY: InjectionKey<FloatingNode> = Symbol("v-float-node-context");
-const internalParentMap = new WeakMap<FloatingNodeId, ShallowRef<FloatingNode | null>>();
 
 /**
  * Internal registry storing non-public capabilities (middleware registries)
@@ -53,19 +51,16 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   const children = shallowRef<ReadonlySet<FloatingNode>>(new Set());
 
   const appendChild = (child: FloatingNode): (() => void) => {
-    if (isSameFloatingNode(child, node)) {
-      if (import.meta.env.DEV) {
-        console.warn("[FloatingNode] A node cannot be its own parent.");
-      }
-      return () => {};
-    }
-
     // Cycle detection: walk up this node's parent chain to ensure `child` is not an ancestor
     let ancestor: FloatingNode | null = node;
     while (ancestor) {
       if (isSameFloatingNode(ancestor, child)) {
         if (import.meta.env.DEV) {
-          console.warn("[FloatingNode] Cannot append child: cycle detected.");
+          console.warn(
+            ancestor === node
+              ? "[FloatingNode] A node cannot be its own parent."
+              : "[FloatingNode] Cannot append child: cycle detected.",
+          );
         }
         return () => {};
       }
@@ -74,9 +69,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
 
     // If already linked under this parent, return teardown
     if (findChildById(children.value, child) && isSameFloatingNode(child.parent.value, node)) {
-      return () => {
-        removeChild(child);
-      };
+      return () => removeChild(child);
     }
 
     // If child is linked to another parent, detach from that parent first
@@ -85,15 +78,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     }
 
     // Update child's parent reference
-    const childParentRef =
-      internalParentMap.get(child.id) ?? (child.parent as ShallowRef<FloatingNode | null>);
-    if (childParentRef && "value" in childParentRef) {
-      try {
-        childParentRef.value = node;
-      } catch {
-        // Fallback for mocked readonly refs in tests
-      }
-    }
+    (child.parent as ShallowRef<FloatingNode | null>).value = node;
 
     // Add child to children set (compared by id so re-created wrappers never duplicate)
     const next = new Set(children.value);
@@ -102,9 +87,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     next.add(child);
     children.value = next;
 
-    return () => {
-      removeChild(child);
-    };
+    return () => removeChild(child);
   };
 
   const removeChild = (child: FloatingNode): void => {
@@ -116,15 +99,7 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     children.value = next;
 
     if (isSameFloatingNode(child.parent.value, node)) {
-      const parent =
-        internalParentMap.get(child.id) ?? (child.parent as ShallowRef<FloatingNode | null>);
-      if (parent && "value" in parent) {
-        try {
-          parent.value = null;
-        } catch {
-          // Fallback for mocked readonly refs in tests
-        }
-      }
+      (child.parent as ShallowRef<FloatingNode | null>).value = null;
     }
   };
 
@@ -133,66 +108,37 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     options: TraverseOptions = {},
     depth = 0,
   ): boolean => {
-    const order = options.order ?? "top-down";
-
-    if (order === "top-down") {
-      const action = visitor(node, depth);
-      if (action === "stop") {
-        return false;
-      }
-      if (action !== "skip") {
-        for (const child of children.value) {
-          if (!child.traverse(visitor, options, depth + 1)) {
-            return false;
-          }
-        }
-      }
-    } else {
+    const visitChildren = (): boolean => {
       for (const child of children.value) {
-        if (!child.traverse(visitor, options, depth + 1)) {
-          return false;
+        if (!child.traverse(visitor, options, depth + 1)) return false;
+      }
+      return true;
+    };
+
+    if (options.order === "bottom-up") {
+      return visitChildren() && visitor(node, depth) !== "stop";
+    }
+
+    const action = visitor(node, depth);
+    return action !== "stop" && (action === "skip" || visitChildren());
+  };
+
+  const contains = (target: EventTarget | null): boolean =>
+    Boolean(
+      target &&
+      !traverse((current, depth) => {
+        if (depth > 0 && !current.open.value) return "skip";
+        if (
+          isTargetWithinElements(current.refs.anchorEl.value, current.refs.floatingEl.value, target)
+        ) {
+          return "stop";
         }
-      }
-      const action = visitor(node, depth);
-      if (action === "stop") {
-        return false;
-      }
-    }
+      }),
+    );
 
-    return true;
-  };
+  const getDepth = (): number => (parent.value ? 1 + parent.value.getDepth() : 0);
 
-  const contains = (target: EventTarget | null): boolean => {
-    if (!target) return false;
-
-    return !traverse((current, depth) => {
-      if (depth > 0 && !current.open.value) {
-        return "skip";
-      }
-      if (
-        isTargetWithinElements(current.refs.anchorEl.value, current.refs.floatingEl.value, target)
-      ) {
-        return "stop";
-      }
-    });
-  };
-
-  const getDepth = (): number => {
-    let depth = 0;
-    let current = parent.value;
-    while (current) {
-      depth++;
-      current = current.parent.value;
-    }
-    return depth;
-  };
-
-  const hasOpenChild = (): boolean => {
-    for (const child of children.value) {
-      if (child.open.value) return true;
-    }
-    return false;
-  };
+  const hasOpenChild = (): boolean => children.value.values().some((child) => child.open.value);
 
   const isTargetWithinAncestorElements = (target: EventTarget | null): boolean => {
     let current = parent.value;
@@ -214,8 +160,8 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
       arrowEl: options.arrowEl ?? ref<HTMLElement | null>(null),
     },
     open,
-    parent: shallowReadonly(parent) as Readonly<ShallowRef<FloatingNode | null>>,
-    children: shallowReadonly(children) as Readonly<ShallowRef<ReadonlySet<FloatingNode>>>,
+    parent: parent as Readonly<ShallowRef<FloatingNode | null>>,
+    children: children as Readonly<ShallowRef<ReadonlySet<FloatingNode>>>,
     appendChild,
     removeChild,
     contains,
@@ -224,8 +170,6 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
     isTargetWithinAncestorElements,
     traverse,
   };
-
-  internalParentMap.set(id, parent);
 
   if (getCurrentInstance() && options.provide !== false) {
     provide(FLOATING_NODE_KEY, node);
@@ -245,16 +189,13 @@ export function useFloatingNode(options: UseFloatingNodeOptions): FloatingNode {
   }
 
   if (targetParent) {
-    const unbind = targetParent.appendChild(node);
-    tryOnScopeDispose(unbind);
+    targetParent.appendChild(node);
   }
 
   // Teardown on scope disposal: severs bi-directional links (both upstream parent
   // and downstream children) as a fail-safe for independent lifecycles or imperative usage.
   tryOnScopeDispose(() => {
-    if (parent.value) {
-      parent.value.removeChild(node);
-    }
+    parent.value?.removeChild(node);
     for (const child of children.value) {
       removeChild(child);
     }
@@ -275,11 +216,8 @@ function createFloatingNodeId(): FloatingNodeId {
  * Compares two floating nodes by stable id instead of object identity,
  * so re-created wrappers or proxies representing the same node still match.
  */
-function isSameFloatingNode(
-  a: FloatingNode | null | undefined,
-  b: FloatingNode | null | undefined,
-): boolean {
-  return !!a && !!b && a.id === b.id;
+function isSameFloatingNode(a?: FloatingNode | null, b?: FloatingNode | null): boolean {
+  return Boolean(a && b && a.id === b.id);
 }
 
 /**
@@ -290,10 +228,7 @@ function findChildById(
   children: ReadonlySet<FloatingNode>,
   child: FloatingNode,
 ): FloatingNode | undefined {
-  for (const existing of children) {
-    if (existing.id === child.id) return existing;
-  }
-  return undefined;
+  return children.values().find((existing) => existing.id === child.id);
 }
 
 //=======================================================================================
