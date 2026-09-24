@@ -4,10 +4,8 @@ import { useFloatingNode, useOutsideClick, usePosition } from "@/composables";
 
 // --- Configuration toggles ---------------------------------------------------
 
-const leafFirst = ref(true);
-const eventType = ref<"pointerdown" | "click">("pointerdown");
+const enabled = ref(true);
 const ignoreScrollbar = ref(true);
-const ignoreDrag = ref(true);
 
 // --- Activity log ------------------------------------------------------------
 
@@ -15,17 +13,17 @@ interface LogEntry {
   id: number;
   time: string;
   message: string;
-  type: "info" | "dismiss" | "ignore";
+  type: "info" | "dismiss" | "ignore" | "touch";
 }
 
 const logs = ref<LogEntry[]>([]);
 let logCounter = 0;
 
-function addLog(message: string, type: "info" | "dismiss" | "ignore" = "info") {
+function addLog(message: string, type: "info" | "dismiss" | "ignore" | "touch" = "info") {
   const now = new Date();
   const time = now.toTimeString().slice(0, 8);
   logs.value.unshift({ id: ++logCounter, time, message, type });
-  if (logs.value.length > 20) {
+  if (logs.value.length > 25) {
     logs.value.pop();
   }
 }
@@ -41,10 +39,10 @@ const whitelistedClickCount = ref(0);
 
 function handleWhitelistClick() {
   whitelistedClickCount.value++;
-  addLog("Clicked whitelisted button. Outside click ignored.", "ignore");
+  addLog("Clicked whitelisted target. Outside click ignored.", "ignore");
 }
 
-function checkIgnoreClick(_event: MouseEvent, target: EventTarget | null): boolean {
+function checkIgnoreClick(_event: MouseEvent | PointerEvent, target: EventTarget | null): boolean {
   const btn = whitelistEl.value;
   if (!btn || !target || !(target instanceof Node)) return false;
   return btn.contains(target);
@@ -68,11 +66,16 @@ const rootPosition = usePosition(rootNode, {
 });
 
 useOutsideClick(rootNode, {
-  leafFirst,
-  event: eventType.value,
-  ignoreScrollbar: ignoreScrollbar.value,
-  ignoreDrag: ignoreDrag.value,
+  enabled,
+  ignoreScrollbar,
   shouldIgnore: checkIgnoreClick,
+  onOutsideClick(e) {
+    const isTouch = (e as PointerEvent).pointerType === "touch";
+    const isVirtual = e.detail === 0;
+    const kind = isTouch ? "Touch Tap" : isVirtual ? "Keyboard/Virtual" : "Mouse Press";
+    addLog(`Level 0: Dismissed by outside [${e.type}] (${kind})`, "dismiss");
+    rootOpen.value = false;
+  },
 });
 
 // --- Level 1 (Child Popover) -------------------------------------------------
@@ -94,11 +97,16 @@ const childPosition = usePosition(childNode, {
 });
 
 useOutsideClick(childNode, {
-  leafFirst,
-  event: eventType.value,
-  ignoreScrollbar: ignoreScrollbar.value,
-  ignoreDrag: ignoreDrag.value,
+  enabled,
+  ignoreScrollbar,
   shouldIgnore: checkIgnoreClick,
+  onOutsideClick(e) {
+    const isTouch = (e as PointerEvent).pointerType === "touch";
+    const isVirtual = e.detail === 0;
+    const kind = isTouch ? "Touch Tap" : isVirtual ? "Keyboard/Virtual" : "Mouse Press";
+    addLog(`Level 1: Dismissed by outside [${e.type}] (${kind})`, "dismiss");
+    childOpen.value = false;
+  },
 });
 
 // --- Level 2 (Grandchild / Leaf Submenu) --------------------------------------
@@ -120,32 +128,34 @@ const leafPosition = usePosition(leafNode, {
 });
 
 useOutsideClick(leafNode, {
-  leafFirst,
-  event: eventType.value,
-  ignoreScrollbar: ignoreScrollbar.value,
-  ignoreDrag: ignoreDrag.value,
+  enabled,
+  ignoreScrollbar,
   shouldIgnore: checkIgnoreClick,
+  onOutsideClick(e) {
+    const isTouch = (e as PointerEvent).pointerType === "touch";
+    const isVirtual = e.detail === 0;
+    const kind = isTouch ? "Touch Tap" : isVirtual ? "Keyboard/Virtual" : "Mouse Press";
+    addLog(`Level 2: Dismissed by outside [${e.type}] (${kind})`, "dismiss");
+    leafOpen.value = false;
+  },
 });
 
 // --- Lifecycle logging -------------------------------------------------------
 
 watch(rootOpen, (isOpen) => {
-  addLog(
-    isOpen ? "Level 0: Dialog opened" : "Level 0: Dialog dismissed",
-    isOpen ? "info" : "dismiss",
-  );
+  addLog(isOpen ? "Level 0: Dialog opened" : "Level 0: Dialog closed", isOpen ? "info" : "dismiss");
 });
 
 watch(childOpen, (isOpen) => {
   addLog(
-    isOpen ? "Level 1: Filter menu opened" : "Level 1: Filter menu dismissed",
+    isOpen ? "Level 1: Filter menu opened" : "Level 1: Filter menu closed",
     isOpen ? "info" : "dismiss",
   );
 });
 
 watch(leafOpen, (isOpen) => {
   addLog(
-    isOpen ? "Level 2: Tag picker opened" : "Level 2: Tag picker dismissed",
+    isOpen ? "Level 2: Tag picker opened" : "Level 2: Tag picker closed",
     isOpen ? "info" : "dismiss",
   );
 });
@@ -175,50 +185,110 @@ const activeStackCount = computed(() => {
   if (leafOpen.value) count++;
   return count;
 });
+
+// --- Device & Input Simulators -----------------------------------------------
+
+const testStageEl = useTemplateRef<HTMLElement>("stageArea");
+
+function simulateTouchScroll() {
+  const target = testStageEl.value ?? document.body;
+  addLog("Simulating Touch Scroll: dispatched pointerdown with pointerType='touch'", "touch");
+  target.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+      pointerType: "touch",
+    }),
+  );
+  addLog("Touch scroll started. Dialog safely stays open (no premature dismissal).", "info");
+}
+
+function simulateTouchTap() {
+  const target = testStageEl.value ?? document.body;
+  addLog("Simulating Touch Tap: dispatched click with pointerType='touch'", "touch");
+  target.dispatchEvent(
+    new PointerEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      pointerType: "touch",
+    }),
+  );
+}
+
+function simulateVirtualClick() {
+  const target = testStageEl.value ?? document.body;
+  addLog("Simulating Keyboard Click: dispatched click with detail=0", "info");
+  target.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      detail: 0,
+    }),
+  );
+}
 </script>
 
 <template>
   <div class="demo-container">
     <header class="demo-header">
       <div class="demo-title-row">
-        <h2 class="demo-title">Outside click stack</h2>
+        <h2 class="demo-title">Outside click coordination</h2>
         <span class="demo-badge"> {{ activeStackCount }} active on stack </span>
       </div>
       <p class="demo-subtitle">
-        Test multi-level outside click coordination, leaf-first unpeeling, drag suppression, and
-        scrollbar filtering.
+        Zero-config outside click with unified platform handling: instant mouse pointerdown,
+        scroll-safe touch tap, keyboard virtual click, and text drag protection.
       </p>
     </header>
+
+    <!-- Unified Engine Info Banner -->
+    <div class="engine-banner">
+      <div class="engine-banner__item">
+        <span class="engine-banner__icon">🖱️</span>
+        <div>
+          <span class="engine-banner__label">Desktop Mouse & Pen</span>
+          <span class="engine-banner__sub">Instant on <code>pointerdown</code></span>
+        </div>
+      </div>
+      <div class="engine-banner__sep" />
+      <div class="engine-banner__item">
+        <span class="engine-banner__icon">📱</span>
+        <div>
+          <span class="engine-banner__label">Touchscreens</span>
+          <span class="engine-banner__sub">Scroll-safe on <code>click</code> (tap)</span>
+        </div>
+      </div>
+      <div class="engine-banner__sep" />
+      <div class="engine-banner__item">
+        <span class="engine-banner__icon">⌨️</span>
+        <div>
+          <span class="engine-banner__label">Keyboard / A11y</span>
+          <span class="engine-banner__sub">Accessible on <code>detail === 0</code></span>
+        </div>
+      </div>
+      <div class="engine-banner__sep" />
+      <div class="engine-banner__item">
+        <span class="engine-banner__icon">✍️</span>
+        <div>
+          <span class="engine-banner__label">Text Selection</span>
+          <span class="engine-banner__sub">Drag inside-to-outside immune</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Controls Toolbar -->
     <section class="controls-panel">
       <div class="controls-grid">
         <label class="toggle-control">
-          <input v-model="leafFirst" type="checkbox" class="toggle-checkbox" />
-          <span class="toggle-label">leafFirst</span>
-          <span class="toggle-desc">
-            {{ leafFirst ? "True: peel leaf first" : "False: dismiss all" }}
-          </span>
-        </label>
-
-        <label class="toggle-control">
-          <span class="toggle-label">event</span>
-          <select v-model="eventType" class="select-input">
-            <option value="pointerdown">pointerdown</option>
-            <option value="click">click</option>
-          </select>
+          <input v-model="enabled" type="checkbox" class="toggle-checkbox" />
+          <span class="toggle-label">enabled</span>
+          <span class="toggle-desc">{{ enabled ? "Active" : "Disabled" }}</span>
         </label>
 
         <label class="toggle-control">
           <input v-model="ignoreScrollbar" type="checkbox" class="toggle-checkbox" />
           <span class="toggle-label">ignoreScrollbar</span>
           <span class="toggle-desc">{{ ignoreScrollbar ? "Enabled" : "Disabled" }}</span>
-        </label>
-
-        <label class="toggle-control">
-          <input v-model="ignoreDrag" type="checkbox" class="toggle-checkbox" />
-          <span class="toggle-label">ignoreDrag</span>
-          <span class="toggle-desc">{{ ignoreDrag ? "Enabled" : "Disabled" }}</span>
         </label>
       </div>
 
@@ -236,12 +306,26 @@ const activeStackCount = computed(() => {
           Whitelisted target [ignoreClick: {{ whitelistedClickCount }}]
         </button>
       </div>
+
+      <!-- Simulator Row -->
+      <div class="simulator-row">
+        <span class="simulator-label">Simulate gestures:</span>
+        <button type="button" class="btn btn--sim" @click="simulateTouchScroll">
+          📱 Touch scroll (ignored)
+        </button>
+        <button type="button" class="btn btn--sim" @click="simulateTouchTap">
+          👆 Touch tap (dismisses)
+        </button>
+        <button type="button" class="btn btn--sim" @click="simulateVirtualClick">
+          ⌨️ Virtual click (dismisses)
+        </button>
+      </div>
     </section>
 
     <!-- Main Workspace -->
     <div class="workspace-grid">
       <!-- Interactive Stage -->
-      <section class="stage-area">
+      <section ref="stageArea" class="stage-area">
         <button
           ref="rootTrigger"
           type="button"
@@ -255,8 +339,8 @@ const activeStackCount = computed(() => {
         <div class="external-scroll-card">
           <div class="test-card__title">External scrollbar (outside popups)</div>
           <p class="test-card__text">
-            Click this scrollbar to test ignoreScrollbar. When true, clicks on this scrollbar leave
-            the dialog open. When false, clicking this scrollbar dismisses the dialog.
+            Click this scrollbar to test <code>ignoreScrollbar</code>. When true, clicks on this
+            scrollbar gutter leave the dialog open.
           </p>
           <div class="external-scroll-box">
             <div v-for="i in 15" :key="i" class="scroll-row">External content item {{ i }}</div>
@@ -277,8 +361,8 @@ const activeStackCount = computed(() => {
             </div>
 
             <p class="panel-description">
-              Root entry on the stack. With leafFirst set to true, clicking outside while children
-              are open will dismiss the child first.
+              Root overlay. Clean-slate dismissal closes all open descendant levels simultaneously
+              when clicking outside.
             </p>
 
             <div class="panel-actions">
@@ -294,16 +378,16 @@ const activeStackCount = computed(() => {
 
             <!-- Drag test area -->
             <div class="test-card">
-              <div class="test-card__title">Drag gesture test area</div>
-              <p class="test-card__text">
-                Select text here, drag pointer outside this card, and release. If ignoreDrag is
-                enabled and event is click, the dialog stays open.
+              <div class="test-card__title">Text drag selection test</div>
+              <p class="test-card__text select-test">
+                Select this text with your mouse, drag outside this card, and release. Because mouse
+                pointerdown occurred inside, trailing clicks outside are safely ignored!
               </p>
             </div>
 
             <!-- Scrollbar test container -->
             <div class="test-card">
-              <div class="test-card__title">Scrollbar test box</div>
+              <div class="test-card__title">Panel internal scrollbar</div>
               <div class="scroll-box">
                 <div v-for="i in 12" :key="i" class="scroll-row">
                   Scroll item {{ i }}. Clicking the scrollbar will not dismiss.
@@ -327,8 +411,8 @@ const activeStackCount = computed(() => {
             </div>
 
             <p class="panel-description">
-              Child of Level 0. Clicking outside this menu will dismiss it before the root dialog
-              when leafFirst is true.
+              Child of Level 0. Clicking inside Level 0's dialog closes this child menu while
+              leaving the dialog open.
             </p>
 
             <div class="menu-list">
@@ -365,7 +449,8 @@ const activeStackCount = computed(() => {
             </div>
 
             <p class="panel-description">
-              Deepest node. This leaf always receives the first dismissal signal in the stack.
+              Deepest node in the hierarchy. Clicking outside the entire tree dismisses all 3
+              levels.
             </p>
 
             <div class="tag-grid">
@@ -510,6 +595,51 @@ const activeStackCount = computed(() => {
   line-height: 1.5;
 }
 
+/* Engine banner */
+.engine-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(94, 106, 210, 0.08);
+  border: 1px solid rgba(94, 106, 210, 0.2);
+  flex-wrap: wrap;
+}
+
+.engine-banner__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-banner__icon {
+  font-size: 18px;
+}
+
+.engine-banner__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e4e7ff;
+}
+
+.engine-banner__sub {
+  display: block;
+  font-size: 10px;
+  color: rgba(247, 248, 248, 0.5);
+}
+
+.engine-banner__sub code {
+  color: #bec6ff;
+}
+
+.engine-banner__sep {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Controls */
 .controls-panel {
   display: flex;
@@ -550,20 +680,27 @@ const activeStackCount = computed(() => {
   color: rgba(247, 248, 248, 0.45);
 }
 
-.select-input {
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: #16181d;
-  color: #f7f8f8;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: 12px;
-  cursor: pointer;
-}
-
 .actions-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.simulator-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.simulator-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(247, 248, 248, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Buttons */
@@ -601,51 +738,68 @@ const activeStackCount = computed(() => {
 
 .btn--secondary:hover {
   background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .btn--highlight {
-  background: rgba(46, 160, 67, 0.15);
-  color: #7ee787;
-  border-color: rgba(46, 160, 67, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .btn--highlight:hover {
-  background: rgba(46, 160, 67, 0.25);
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.btn--sim {
+  background: rgba(94, 106, 210, 0.12);
+  color: #bec6ff;
+  border-color: rgba(94, 106, 210, 0.25);
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+.btn--sim:hover {
+  background: rgba(94, 106, 210, 0.22);
+  color: #ffffff;
 }
 
 .btn--nested {
-  background: rgba(94, 106, 210, 0.15);
-  color: #bec6ff;
-  border-color: rgba(94, 106, 210, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f8f8;
+  border-color: rgba(255, 255, 255, 0.15);
+  width: 100%;
+  justify-content: space-between;
 }
 
 .btn--nested:hover {
-  background: rgba(94, 106, 210, 0.25);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .btn-text {
   background: transparent;
   border: 0;
-  padding: 0;
+  color: rgba(247, 248, 248, 0.45);
   font-size: 11px;
-  color: rgba(247, 248, 248, 0.5);
   cursor: pointer;
+  padding: 2px 4px;
 }
 
 .btn-text:hover {
   color: #f7f8f8;
 }
 
-/* Workspace */
+/* Workspace Grid */
 .workspace-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 280px;
   gap: 16px;
+  align-items: start;
 }
 
-@media (min-width: 768px) {
+@media (max-width: 768px) {
   .workspace-grid {
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -653,60 +807,234 @@ const activeStackCount = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  align-items: flex-start;
-  min-height: 260px;
-  padding: 24px;
+  padding: 20px;
   border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  min-height: 380px;
 }
 
-.external-scroll-card {
-  width: 100%;
-  max-width: 320px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.external-scroll-box {
-  max-height: 110px;
-  overflow-y: scroll;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  scrollbar-width: auto;
-  scrollbar-color: rgba(255, 255, 255, 0.35) rgba(0, 0, 0, 0.2);
-}
-
-.external-scroll-box::-webkit-scrollbar {
-  width: 16px;
-}
-
-.external-scroll-box::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-}
-
-.external-scroll-box::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
-
-/* Inspector */
-.inspector-column {
+/* Floating Panels */
+.floating-panel {
+  position: absolute;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #16181d;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.root-panel {
+  width: 320px;
+}
+
+.child-panel {
+  width: 240px;
+}
+
+.leaf-panel {
+  width: 220px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.panel-tag.level-0 {
+  background: rgba(94, 106, 210, 0.2);
+  color: #bec6ff;
+  border: 1px solid rgba(94, 106, 210, 0.4);
+}
+
+.panel-tag.level-1 {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.panel-tag.level-2 {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.icon-close {
+  background: transparent;
+  border: 0;
+  color: rgba(247, 248, 248, 0.45);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.icon-close:hover {
+  color: #f7f8f8;
+}
+
+.panel-description {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(247, 248, 248, 0.6);
+  line-height: 1.4;
+}
+
+/* Menu Items */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: rgba(247, 248, 248, 0.85);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.menu-item__arrow {
+  color: rgba(247, 248, 248, 0.4);
+}
+
+/* Tag Grid */
+.tag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.tag-pill {
+  padding: 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f8f8;
+}
+
+.tag-pill--red {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.tag-pill--blue {
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.tag-pill--green {
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.tag-pill--purple {
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+/* Test Cards */
+.test-card {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.test-card__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(247, 248, 248, 0.7);
+  margin-bottom: 6px;
+}
+
+.test-card__text {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(247, 248, 248, 0.5);
+  line-height: 1.4;
+}
+
+.select-test {
+  user-select: text;
+  background: rgba(94, 106, 210, 0.08);
+  padding: 6px;
+  border-radius: 4px;
+  cursor: text;
+}
+
+.scroll-box {
+  max-height: 90px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.scroll-row {
+  font-size: 11px;
+  padding: 3px 0;
+  color: rgba(247, 248, 248, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.scroll-row:last-child {
+  border-bottom: 0;
+}
+
+.external-scroll-card {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.external-scroll-box {
+  max-height: 100px;
+  overflow-y: scroll;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px;
+  margin-top: 8px;
+}
+
+/* Inspector Column */
+.inspector-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .inspector-card {
-  padding: 12px;
+  padding: 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -716,7 +1044,7 @@ const activeStackCount = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .inspector-title {
@@ -728,13 +1056,15 @@ const activeStackCount = computed(() => {
 
 .inspector-count {
   font-size: 11px;
-  color: rgba(247, 248, 248, 0.4);
+  color: #bec6ff;
+  font-weight: 500;
 }
 
+/* Stack Tree */
 .stack-tree {
   list-style: none;
-  margin: 0;
   padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -748,15 +1078,14 @@ const activeStackCount = computed(() => {
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 11px;
-  color: rgba(247, 248, 248, 0.5);
-  transition: all 0.14s ease;
+  opacity: 0.45;
+  transition: opacity 0.14s ease;
 }
 
 .stack-item.is-active {
-  background: rgba(94, 106, 210, 0.1);
+  opacity: 1;
+  background: rgba(94, 106, 210, 0.08);
   border-color: rgba(94, 106, 210, 0.25);
-  color: #f7f8f8;
 }
 
 .stack-item--indent-1 {
@@ -771,47 +1100,53 @@ const activeStackCount = computed(() => {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .stack-item.is-active .stack-indicator {
-  background: #7ee787;
-  box-shadow: 0 0 6px rgba(126, 231, 135, 0.6);
+  background: #5e6ad2;
+  box-shadow: 0 0 6px #5e6ad2;
 }
 
 .stack-info {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   width: 100%;
 }
 
-.stack-status {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.stack-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(247, 248, 248, 0.85);
 }
 
-/* Event log */
+.stack-status {
+  font-size: 10px;
+  color: rgba(247, 248, 248, 0.45);
+}
+
+.stack-item.is-active .stack-status {
+  color: #bec6ff;
+}
+
+/* Log */
 .log-container {
-  height: 180px;
+  max-height: 220px;
   overflow-y: auto;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .log-empty {
   font-size: 11px;
-  color: rgba(247, 248, 248, 0.3);
-  text-align: center;
-  padding: 40px 10px;
+  color: rgba(247, 248, 248, 0.4);
+  font-style: italic;
+  padding: 8px 0;
 }
 
 .log-list {
   list-style: none;
-  margin: 0;
   padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -820,231 +1155,39 @@ const activeStackCount = computed(() => {
 .log-item {
   display: flex;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.4;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.log-item--info {
   color: rgba(247, 248, 248, 0.7);
+}
+
+.log-item--dismiss {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.log-item--ignore {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.log-item--touch {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .log-time {
   color: rgba(247, 248, 248, 0.35);
+  font-family: monospace;
   flex-shrink: 0;
 }
 
-.log-item--dismiss {
-  color: #ff9b9b;
-}
-
-.log-item--ignore {
-  color: #7ee787;
-}
-</style>
-
-<style>
-/* Unscoped floating panels rendered into body */
-.floating-panel {
-  background: #16181d;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(0, 0, 0, 0.4);
-  color: #f7f8f8;
-  z-index: 60;
-  outline: none;
-}
-
-.root-panel {
-  width: 320px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.child-panel {
-  width: 240px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.leaf-panel {
-  width: 210px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.panel-tag {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.panel-tag.level-0 {
-  background: rgba(94, 106, 210, 0.2);
-  color: #bec6ff;
-}
-
-.panel-tag.level-1 {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fcd34d;
-}
-
-.panel-tag.level-2 {
-  background: rgba(236, 72, 153, 0.2);
-  color: #f472b6;
-}
-
-.icon-close {
-  background: transparent;
-  border: 0;
-  color: rgba(247, 248, 248, 0.4);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 4px;
-}
-
-.icon-close:hover {
-  color: #f7f8f8;
-}
-
-.panel-description {
-  margin: 0;
-  font-size: 11px;
-  color: rgba(247, 248, 248, 0.65);
-  line-height: 1.4;
-}
-
-.test-card {
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.test-card__title {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(247, 248, 248, 0.8);
-}
-
-.test-card__text {
-  margin: 0;
-  font-size: 10px;
-  color: rgba(247, 248, 248, 0.5);
-  line-height: 1.4;
-  user-select: text;
-  cursor: text;
-}
-
-.scroll-box {
-  max-height: 90px;
-  overflow-y: scroll;
-  padding: 4px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.scroll-row {
-  font-size: 10px;
-  color: rgba(247, 248, 248, 0.6);
-  padding: 3px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.scroll-row:last-child {
-  border-bottom: none;
-}
-
-/* Menu list */
-.menu-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 6px 8px;
-  border-radius: 5px;
-  border: 0;
-  background: transparent;
-  color: rgba(247, 248, 248, 0.85);
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.menu-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.menu-item__arrow {
-  color: rgba(247, 248, 248, 0.4);
-}
-
-/* Tag grid */
-.tag-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-}
-
-.tag-pill {
-  padding: 6px 8px;
-  border-radius: 5px;
-  border: 1px solid transparent;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: center;
-  transition: opacity 0.12s ease;
-}
-
-.tag-pill:hover {
-  opacity: 0.85;
-}
-
-.tag-pill--red {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
-}
-
-.tag-pill--blue {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
-}
-
-.tag-pill--green {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: #86efac;
-}
-
-.tag-pill--purple {
-  background: rgba(168, 85, 247, 0.15);
-  border-color: rgba(168, 85, 247, 0.3);
-  color: #d8b4fe;
+.log-message {
+  word-break: break-word;
 }
 </style>

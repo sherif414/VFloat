@@ -86,6 +86,9 @@ function createTestComponent(options: UseOutsideClickOptions = {}, config: Fixtu
             onClick: config.stopOutsideClickPropagation
               ? (event: MouseEvent) => event.stopPropagation()
               : undefined,
+            onPointerdown: config.stopOutsideClickPropagation
+              ? (event: PointerEvent) => event.stopPropagation()
+              : undefined,
           },
           "Outside",
         ),
@@ -135,7 +138,7 @@ function createTreeComponent(target: "parent" | "child") {
       parent: parentNode,
     });
 
-    useOutsideClick(target === "parent" ? parentNode : childNode, { event: "click" });
+    useOutsideClick(target === "parent" ? parentNode : childNode);
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -215,8 +218,6 @@ function createFullTreeComponent(
   options: {
     parentCapture?: boolean;
     childCapture?: boolean;
-    parentEvent?: "click" | "pointerdown";
-    childEvent?: "click" | "pointerdown";
     parentEnabled?: Ref<boolean>;
   } = {},
 ) {
@@ -242,12 +243,10 @@ function createFullTreeComponent(
     });
 
     useOutsideClick(parentNode, {
-      event: options.parentEvent ?? "click",
       capture: options.parentCapture ?? true,
       enabled: options.parentEnabled,
     });
     useOutsideClick(childNode, {
-      event: options.childEvent ?? "click",
       capture: options.childCapture ?? true,
     });
 
@@ -300,8 +299,6 @@ async function renderFullTreeOutsideClick(
     childLeafFirst?: MaybeRefOrGetter<boolean>;
     parentCapture?: boolean;
     childCapture?: boolean;
-    parentEvent?: "click" | "pointerdown";
-    childEvent?: "click" | "pointerdown";
     parentEnabled?: Ref<boolean>;
   } = {},
 ) {
@@ -332,8 +329,8 @@ function createTwoOverlaysComponent(
     const nodeA = useFloatingNode({ anchorEl: anchorA, floatingEl: floatingA, open: openA });
     const nodeB = useFloatingNode({ anchorEl: anchorB, floatingEl: floatingB, open: openB });
 
-    useOutsideClick(nodeA, { event: "click", capture: options.overlayACapture ?? true });
-    useOutsideClick(nodeB, { event: "click", capture: options.overlayBCapture ?? false });
+    useOutsideClick(nodeA, { capture: options.overlayACapture ?? true });
+    useOutsideClick(nodeB, { capture: options.overlayBCapture ?? false });
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -394,7 +391,7 @@ describe("Feature: useOutsideClick", () => {
   describe("Scenario: Basic outside dismissal and target filtering", () => {
     it("Given an open floating element, When an outside element is clicked, Then closes the floating element", async () => {
       // Given
-      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({ event: "click" });
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick();
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
 
@@ -407,16 +404,65 @@ describe("Feature: useOutsideClick", () => {
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
-    it("Given event option is 'pointerdown', When pointerdown occurs on an outside element, Then closes the floating element", async () => {
+    it("Given touch pointerdown occurs outside, When pointerdown fires, Then preserves open state to allow scrolling", async () => {
       // Given
-      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
-        event: "pointerdown",
-      });
+      const { anchorEl, floatingEl } = await renderOutsideClick();
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
 
-      // When
-      await userEvent.click(outsideEl);
+      // When: touch pointerdown fires outside (user touches screen to begin a scroll)
+      const outsideDOM = getTestEl("outside");
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+        }),
+      );
+      await nextTick();
+
+      // Then: stays open so scrolling is not interrupted
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given touch tap occurs outside, When tap completes with click, Then closes the floating element", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderOutsideClick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: touch tap completes by firing a click event with pointerType "touch"
+      const outsideDOM = getTestEl("outside");
+      outsideDOM.dispatchEvent(
+        new PointerEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+        }),
+      );
+      await nextTick();
+
+      // Then
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given a virtual click from keyboard or assistive tech (detail 0), When click fires, Then closes the floating element", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderOutsideClick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: keyboard activation or screen reader produces a click with detail 0
+      const outsideDOM = getTestEl("outside");
+      outsideDOM.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          detail: 0,
+        }),
+      );
       await nextTick();
 
       // Then
@@ -428,7 +474,6 @@ describe("Feature: useOutsideClick", () => {
       // Given
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
         enabled: false,
-        event: "click",
       });
 
       // When
@@ -442,9 +487,7 @@ describe("Feature: useOutsideClick", () => {
 
     it("Given an open floating element, When clicking the anchor or floating panel, Then preserves open state", async () => {
       // Given
-      const { anchorEl, floatingEl } = await renderOutsideClick({
-        event: "click",
-      });
+      const { anchorEl, floatingEl } = await renderOutsideClick();
 
       // When: Click anchor
       await userEvent.click(anchorEl);
@@ -464,7 +507,6 @@ describe("Feature: useOutsideClick", () => {
     it("Given a shouldIgnore predicate, When clicking an ignored element, Then ignores click and preserves open state", async () => {
       // Given
       const { anchorEl, floatingEl, outsideEl, ignoredEl } = await renderOutsideClick({
-        event: "click",
         shouldIgnore: (_event, target) =>
           target !== null && "id" in target && target.id === "outside-click-ignore-target",
       });
@@ -490,7 +532,6 @@ describe("Feature: useOutsideClick", () => {
       // Given
       const onOutsideClick = vi.fn();
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
-        event: "click",
         onOutsideClick,
       });
 
@@ -508,7 +549,7 @@ describe("Feature: useOutsideClick", () => {
       // Given
       const onOutsideClick = vi.fn();
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(
-        { event: "click", onOutsideClick },
+        { onOutsideClick },
         { defaultOpen: false },
       );
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
@@ -526,9 +567,7 @@ describe("Feature: useOutsideClick", () => {
 
     it("Given secondary or auxiliary mouse buttons, When right or middle clicked outside, Then preserves open state", async () => {
       // Given
-      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
-        event: "pointerdown",
-      });
+      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick();
 
       // When: Right-click
       await userEvent.click(outsideEl, { button: "right" });
@@ -556,7 +595,6 @@ describe("Feature: useOutsideClick", () => {
       const enabled = ref(false);
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
         enabled,
-        event: "click",
       });
 
       // When clicked while disabled
@@ -579,67 +617,32 @@ describe("Feature: useOutsideClick", () => {
   });
 
   describe("Scenario: Drag gesture handling and boundary tracking", () => {
-    it("Given ignoreDrag is true, When a drag starts inside and releases outside, Then preserves open state", async () => {
+    it("Given a drag starts inside and releases outside, When dragging finishes, Then preserves open state", async () => {
       // Given
-      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
-        event: "click",
-        ignoreDrag: true,
-      });
+      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick();
 
-      // When
+      // When: Drag starts inside and ends outside
       await userEvent.dragAndDrop(dragHandleEl, outsideEl);
 
-      // Then
+      // Then: The overlay remains open because initial pointerdown was inside
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
     });
 
-    it("Given ignoreDrag is false, When a drag starts inside and releases outside, Then closes floating element", async () => {
+    it("Given a drag started inside and completed outside, When an outside element is subsequently clicked, Then closes normally", async () => {
       // Given
-      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
-        event: "click",
-        ignoreDrag: false,
-      });
+      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick();
 
-      // When
+      // When: Drag starts inside and finishes outside
       await userEvent.dragAndDrop(dragHandleEl, outsideEl);
-
-      // Then
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
-    });
-
-    it("Given ignoreDrag is true, When a drag starts outside and releases inside, Then preserves open state", async () => {
-      // Given
-      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
-        event: "click",
-        ignoreDrag: true,
-      });
-
-      // When
-      await userEvent.dragAndDrop(outsideEl, dragHandleEl);
-
-      // Then
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
-    });
-
-    it("Given ignoreDrag is true, When a drag reset timer expires before the next click, Then closes normally", async () => {
-      // Given
-      vi.useFakeTimers();
-      const { anchorEl, floatingEl, dragHandleEl, outsideEl } = await renderOutsideClick({
-        event: "click",
-        ignoreDrag: true,
-      });
-
-      // When: A drag completes and its reset timer expires
-      await userEvent.dragAndDrop(dragHandleEl, outsideEl);
-      await vi.advanceTimersByTimeAsync(10);
 
       // And: A new outside click occurs
       await userEvent.click(outsideEl);
+      await nextTick();
 
-      // Then
+      // Then: Now it closes
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
@@ -738,42 +741,81 @@ describe("Feature: useOutsideClick", () => {
 
     it("Given RTL direction with ignoreScrollbar true, When clicking left scrollbar edge, Then detects scrollbar correctly", async () => {
       // Given
-      const { anchorEl, floatingEl, scrollableEl } = await renderOutsideClick({
-        ignoreScrollbar: true,
+      const origDir = document.documentElement.dir;
+      document.documentElement.dir = "rtl";
+      const origInnerWidth = window.innerWidth;
+      Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+      Object.defineProperty(document.documentElement, "clientWidth", {
+        value: 985,
+        configurable: true,
       });
-      const scrollableDOMEl = getTestEl("outside-scrollable");
-      scrollableDOMEl.style.direction = "rtl";
-      Object.defineProperty(scrollableDOMEl, "clientWidth", { value: 85, configurable: true });
+      const origGetBoundingClientRect = document.documentElement.getBoundingClientRect.bind(
+        document.documentElement,
+      );
+      document.documentElement.getBoundingClientRect = () =>
+        ({ left: 15, top: 0, width: 985, height: 800, right: 1000, bottom: 800 }) as DOMRect;
 
-      // When: Click the left scrollbar gutter in RTL
-      await userEvent.click(scrollableEl, { position: { x: 5, y: 20 } });
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
+      const { anchorEl, floatingEl } = await renderOutsideClick({ ignoreScrollbar: true });
 
-      // When: Click right content area in RTL
-      await userEvent.click(scrollableEl, { position: { x: 90, y: 20 } });
+      try {
+        // When: Click inside the RTL scrollbar zone (x <= 15)
+        document.documentElement.dispatchEvent(
+          new MouseEvent("pointerdown", {
+            clientX: 10,
+            clientY: 100,
+            bubbles: true,
+          }),
+        );
 
-      // Then
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
+        // Then
+        await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+        await expect.element(floatingEl).toBeVisible();
+      } finally {
+        document.documentElement.dir = origDir;
+        Object.defineProperty(window, "innerWidth", { value: origInnerWidth, configurable: true });
+        delete (document.documentElement as unknown as { clientWidth?: number }).clientWidth;
+        document.documentElement.getBoundingClientRect = origGetBoundingClientRect;
+      }
     });
 
     it("Given an element with thick borders, When clicking on border, Then distinguishes borders from scrollbars and closes", async () => {
       // Given
-      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick({
+      const { anchorEl, floatingEl, scrollableEl } = await renderOutsideClick({
         ignoreScrollbar: true,
       });
-      const outsideDOMEl = getTestEl("outside");
-      outsideDOMEl.style.border = "15px solid black";
-      Object.defineProperty(outsideDOMEl, "offsetWidth", { value: 100, configurable: true });
-      Object.defineProperty(outsideDOMEl, "clientWidth", { value: 70, configurable: true });
+      const scrollableDOMEl = getTestEl("outside-scrollable");
+      Object.defineProperty(scrollableDOMEl, "offsetWidth", { value: 100, configurable: true });
+      Object.defineProperty(scrollableDOMEl, "clientWidth", { value: 80, configurable: true });
+      Object.defineProperty(scrollableDOMEl, "offsetHeight", { value: 100, configurable: true });
+      Object.defineProperty(scrollableDOMEl, "clientHeight", { value: 100, configurable: true });
 
-      // When: Click on right border area
-      await userEvent.click(outsideEl, { position: { x: 80, y: 20 } });
+      const origGetComputedStyle = window.getComputedStyle;
+      window.getComputedStyle = (el: Element) => {
+        const style = origGetComputedStyle(el);
+        if (el === scrollableDOMEl) {
+          return new Proxy(style, {
+            get(target, prop) {
+              if (prop === "borderLeftWidth" || prop === "borderRightWidth") return "10px";
+              if (prop === "borderTopWidth" || prop === "borderBottomWidth") return "0px";
+              if (prop === "direction") return "ltr";
+              return Reflect.get(target, prop);
+            },
+          });
+        }
+        return style;
+      };
 
-      // Then
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
+      try {
+        // When: Click on the border (x = 5, within the 10px left border)
+        await userEvent.click(scrollableEl, { position: { x: 5, y: 20 } });
+        await nextTick();
+
+        // Then: Border clicks are not scrollbars and should dismiss
+        await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+        await expect.element(floatingEl).not.toBeInTheDocument();
+      } finally {
+        window.getComputedStyle = origGetComputedStyle;
+      }
     });
   });
 
@@ -781,7 +823,7 @@ describe("Feature: useOutsideClick", () => {
     it("Given capture is true, When an outside element calls stopPropagation in bubble phase, Then still intercepts and closes", async () => {
       // Given
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(
-        { event: "click", capture: true },
+        { capture: true },
         { stopOutsideClickPropagation: true },
       );
 
@@ -797,7 +839,7 @@ describe("Feature: useOutsideClick", () => {
     it("Given capture is false, When an outside element calls stopPropagation in bubble phase, Then respects stopPropagation and stays open", async () => {
       // Given
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(
-        { event: "click", capture: false },
+        { capture: false },
         { stopOutsideClickPropagation: true },
       );
 
@@ -812,7 +854,7 @@ describe("Feature: useOutsideClick", () => {
 
     it("Given capture changes mid-open, When outside is clicked, Then maintains initial capture phase binding", async () => {
       // Given
-      const options: UseOutsideClickOptions = { event: "click", capture: true };
+      const options: UseOutsideClickOptions = { capture: true };
       const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(options, {
         stopOutsideClickPropagation: true,
       });
@@ -820,11 +862,11 @@ describe("Feature: useOutsideClick", () => {
       options.capture = false;
       await nextTick();
 
-      // When
+      // When: Click outside while stopPropagation is active
       await userEvent.click(outsideEl);
       await nextTick();
 
-      // Then
+      // Then: Still closed because initial capture: true listener was registered in capture phase
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
@@ -842,11 +884,11 @@ describe("Feature: useOutsideClick", () => {
       await expect.element(anchorBEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingBEl).toBeVisible();
 
-      // When
+      // When: Click outside in blank area
       await userEvent.click(outsideEl);
       await nextTick();
 
-      // Then: Both overlays close across phases
+      // Then: Both overlays close cleanly regardless of phase differences
       await expect.element(anchorAEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingAEl).not.toBeInTheDocument();
       await expect.element(anchorBEl).toHaveAttribute("aria-expanded", "false");
@@ -857,7 +899,7 @@ describe("Feature: useOutsideClick", () => {
   describe("Scenario: DOM hierarchy, unmounted elements, and iframe focus", () => {
     it("Given an element inside floating unmounts upon click, When clicked, Then preserves open state", async () => {
       // Given
-      const { anchorEl, floatingEl, removeInsideEl } = await renderOutsideClick({ event: "click" });
+      const { anchorEl, floatingEl, removeInsideEl } = await renderOutsideClick();
 
       // When
       await userEvent.click(removeInsideEl);
