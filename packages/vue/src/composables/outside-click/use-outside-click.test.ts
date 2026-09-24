@@ -214,8 +214,6 @@ async function renderTreeOutsideClick(target: "parent" | "child") {
 
 function createFullTreeComponent(
   options: {
-    parentLeafFirst?: MaybeRefOrGetter<boolean>;
-    childLeafFirst?: MaybeRefOrGetter<boolean>;
     parentCapture?: boolean;
     childCapture?: boolean;
     parentEvent?: "click" | "pointerdown";
@@ -246,13 +244,11 @@ function createFullTreeComponent(
 
     useOutsideClick(parentNode, {
       event: options.parentEvent ?? "click",
-      leafFirst: options.parentLeafFirst ?? false,
       capture: options.parentCapture ?? true,
       enabled: options.parentEnabled,
     });
     useOutsideClick(childNode, {
       event: options.childEvent ?? "click",
-      leafFirst: options.childLeafFirst ?? false,
       capture: options.childCapture ?? true,
     });
 
@@ -925,73 +921,10 @@ describe("Feature: useOutsideClick", () => {
       await expect.element(childFloatingEl).not.toBeInTheDocument();
     });
 
-    it("Given leafFirst is true, When clicking outside, Then unwinds the tree leaf-first across repeated clicks", async () => {
+    it("Given a nested floating tree, When clicking outside, Then closes all hierarchy levels simultaneously", async () => {
       // Given
       const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
-        await renderFullTreeOutsideClick({ parentLeafFirst: true, childLeafFirst: true });
-
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(childFloatingEl).toBeVisible();
-
-      // When: 1st outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Child closes, parent remains open
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(childFloatingEl).not.toBeInTheDocument();
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-
-      // When: 2nd outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Parent closes
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
-    });
-
-    it("Given leafFirst is a reactive ref, When updated dynamically, Then switches to leaf-first unwinding order", async () => {
-      // Given
-      const parentLeafFirst = ref(false);
-      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
-        await renderFullTreeOutsideClick({ parentLeafFirst, childLeafFirst: true });
-
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(childFloatingEl).toBeVisible();
-
-      // When: Update leafFirst dynamically
-      parentLeafFirst.value = true;
-      await nextTick();
-
-      // 1st outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Only child closes
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(childFloatingEl).not.toBeInTheDocument();
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-
-      // 2nd outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Parent closes
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
-    });
-
-    it("Given leafFirst is false, When clicking outside, Then closes all hierarchy levels simultaneously", async () => {
-      // Given
-      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
-        await renderFullTreeOutsideClick({ parentLeafFirst: false, childLeafFirst: false });
+        await renderFullTreeOutsideClick();
 
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
@@ -1002,123 +935,49 @@ describe("Feature: useOutsideClick", () => {
       await userEvent.click(outsideEl);
       await nextTick();
 
-      // Then
+      // Then: Both parent and child close simultaneously on outside click
       await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(childFloatingEl).not.toBeInTheDocument();
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
-    it("Given mixed capture settings across tree levels, When clicking outside twice, Then closes the child before the parent", async () => {
-      // Given: Parent on bubble phase (capture: false), Child on capture phase (capture: true)
-      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
-        await renderFullTreeOutsideClick({
-          parentLeafFirst: true,
-          childLeafFirst: true,
-          parentCapture: false,
-          childCapture: true,
-        });
-
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(childFloatingEl).toBeVisible();
-
-      // When: 1st outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Child closes first
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(childFloatingEl).not.toBeInTheDocument();
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-
-      // When: 2nd outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Parent closes
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
-    });
-
-    it("Given an ancestor node re-registers dynamically while child is open, When clicking outside, Then maintains leaf-first tree order", async () => {
-      // Given
-      const parentEnabled = ref(true);
-      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl, outsideEl } =
-        await renderFullTreeOutsideClick({
-          parentLeafFirst: true,
-          childLeafFirst: true,
-          parentEnabled,
-        });
-
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(childFloatingEl).toBeVisible();
-
-      // Temporarily disable and re-enable parent to trigger unregister + re-register
-      parentEnabled.value = false;
-      await nextTick();
-      parentEnabled.value = true;
-      await nextTick();
-
-      // When: 1st outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Child closes first
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(childFloatingEl).not.toBeInTheDocument();
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-
-      // When: 2nd outside click
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Parent closes
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
-    });
-
-    it("Given clicking on ancestor anchor when leafFirst is true, When clicked, Then dismisses descendant branch immediately", async () => {
+    it("Given clicking on ancestor anchor, When clicked, Then dismisses descendant branch immediately", async () => {
       // Given
       const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
-        await renderFullTreeOutsideClick({ parentLeafFirst: true, childLeafFirst: true });
+        await renderFullTreeOutsideClick();
 
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
       await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(childFloatingEl).toBeVisible();
 
-      // When: Clicking parent anchor is outside child
+      // When: Clicking parent anchor is outside child but inside parent
       await userEvent.click(anchorEl);
       await nextTick();
 
-      // Then
+      // Then: Child closes, parent stays open
       await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(childFloatingEl).not.toBeInTheDocument();
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
     });
 
-    it("Given clicking inside ancestor floating panel when leafFirst is true, When clicked, Then dismisses descendant branch immediately", async () => {
+    it("Given clicking inside ancestor floating panel, When clicked, Then dismisses descendant branch immediately", async () => {
       // Given
       const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
-        await renderFullTreeOutsideClick({ parentLeafFirst: true, childLeafFirst: true });
+        await renderFullTreeOutsideClick();
 
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
       await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(childFloatingEl).toBeVisible();
 
-      // When: Clicking parent floating panel is outside child
+      // When: Clicking parent floating panel is outside child but inside parent
       await userEvent.click(floatingEl);
       await nextTick();
 
-      // Then
+      // Then: Child closes, parent stays open
       await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(childFloatingEl).not.toBeInTheDocument();
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");

@@ -1,60 +1,9 @@
-import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watch } from "vue";
-import type { FloatingNode, FloatingNodeId } from "@/composables/floating-node";
+import { computed, type MaybeRefOrGetter, toValue } from "vue";
+import type { FloatingNode } from "@/composables/floating-node";
 import { getEventTarget, isClickOnScrollbar, isHTMLElement, isNode } from "@/shared/dom";
 import { getDocument, getWindow } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
-import { createStackManager } from "@/shared/stack-manager";
-
-interface ResolvedOutsideClickOptions {
-  event: "pointerdown" | "mousedown" | "click";
-  capture: boolean;
-  leafFirst: boolean;
-  ignoreScrollbar: boolean;
-  ignoreDrag: boolean;
-  shouldIgnore?: OutsideClickPredicate;
-  onOutsideClick?: (event: MouseEvent, info: OutsideClickInfo) => void;
-}
-
-interface OutsideClickInfo {
-  reason: "pointer" | "iframe-blur";
-  target: EventTarget | null;
-}
-
-interface OutsideClickEntry {
-  node: FloatingNode;
-  capture: boolean;
-  getOptions: () => ResolvedOutsideClickOptions;
-}
-
-interface DocumentOutsideClickManager {
-  stack: OutsideClickEntry[];
-  listeners: Map<string, { eventName: string; listener: (event: Event) => void }[]>;
-  dragListenersAttached: boolean;
-  onMouseDown: ((event: MouseEvent) => void) | null;
-  onMouseUp: ((event: MouseEvent) => void) | null;
-  onBlur: ((event: FocusEvent) => void) | null;
-  dragStartedEntries: Set<FloatingNodeId>;
-  dragEndedEntries: Set<FloatingNodeId>;
-  dragResetTimeoutId: number | undefined;
-  blurTimeoutId: number | undefined;
-}
-
-const stackManager = createStackManager<OutsideClickEntry, DocumentOutsideClickManager>(
-  () => ({
-    stack: [],
-    listeners: new Map(),
-    dragListenersAttached: false,
-    onMouseDown: null,
-    onMouseUp: null,
-    onBlur: null,
-    dragStartedEntries: new Set(),
-    dragEndedEntries: new Set(),
-    dragResetTimeoutId: undefined,
-    blurTimeoutId: undefined,
-  }),
-  syncDocumentListeners,
-);
-const eventOpenChildren = new WeakMap<Event, Map<FloatingNodeId, boolean>>();
+import { useEventListener } from "@/shared/use-event-listener";
 
 //=======================================================================================
 // 📌 Main
@@ -63,16 +12,18 @@ const eventOpenChildren = new WeakMap<Event, Map<FloatingNodeId, boolean>>();
 /**
  * Closes a floating node when pointer input lands outside its floating family.
  *
- * Supports nested tree hierarchies, scrollbar filtering, drag suppression,
- * iframe blur dismissal, and configurable event triggers.
+ * Supports scrollbar filtering, drag suppression, iframe blur dismissal,
+ * and configurable event triggers using per-instance document listeners.
  * @param node - The floating node with refs and open state.
  * @param options - Configuration options for outside-click dismissal.
  * @example
  * ```ts
- * useOutsideClick(node, { leafFirst: true });
+ * useOutsideClick(node);
  * ```
  */
 export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOptions = {}): void {
+  // --- Shared Options & Environment --------------------------------------------
+
   const enabled = computed(() => toValue(options.enabled) ?? true);
   const ownerDocument = computed(
     () =>
@@ -82,316 +33,208 @@ export function useOutsideClick(node: FloatingNode, options: UseOutsideClickOpti
         : undefined) ??
       getDocument(),
   );
-  const event = options.event ?? "pointerdown";
-  const entry: OutsideClickEntry = {
-    node,
-    capture: options.capture ?? true,
-    getOptions: () => ({
-      event,
-      capture: options.capture ?? true,
-      leafFirst: toValue(options.leafFirst) ?? false,
-      ignoreScrollbar: options.ignoreScrollbar ?? true,
-      ignoreDrag: options.ignoreDrag ?? true,
-      shouldIgnore: options.shouldIgnore,
-      onOutsideClick: options.onOutsideClick,
-    }),
-  };
+  const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? getWindow());
 
-  // --- Outside Click Registration ----------------------------------------------
+  // --- Drag Gesture Guard ------------------------------------------------------
 
-  watch(
-    [enabled, node.open, ownerDocument],
-    ([enabled, open, doc]) => {
-      if (!enabled || !open || !doc) return;
-      stackManager.push(doc, entry);
+  const { event = "pointerdown", ignoreDrag = true } = options;
+  let dragStartTarget: Node | null = null;
+  let dragEndTarget: Node | null = null;
+  let dragResetTimeoutId: number | undefined;
 
-      onWatcherCleanup(() => {
-        stackManager.remove(doc, entry);
+  function clearDragState(): void {
+    if (dragResetTimeoutId !== undefined) {
+      ownerWindow.value?.clearTimeout(dragResetTimeoutId);
+      dragResetTimeoutId = undefined;
+    }
+    dragStartTarget = null;
+    dragEndTarget = null;
+  }
+
+  function isDragGesture(): boolean {
+    if (event !== "click" || !ignoreDrag) {
+      return false;
+    }
+
+    // Fast path: When mousedown and mouseup hit the exact same node (the vast
+    // majority of stationary clicks), it is structurally impossible for one endpoint
+    // to be inside and the other outside. Reference equality lets us skip DOM traversal entirely.
+    if (dragStartTarget === dragEndTarget) {
+      clearDragState();
+      return false;
+    }
+
+    // By the time isDragGesture() runs in handleClick, node.contains(clickTarget)
+    // has already evaluated to false (the click's common ancestor is outside).
+    // Therefore, drag suppression applies if and only if either endpoint started
+    // or ended inside the floating node boundary.
+    const startedInside = dragStartTarget !== null && node.contains(dragStartTarget);
+    const endedInside = dragEndTarget !== null && node.contains(dragEndTarget);
+
+    clearDragState();
+    return startedInside || endedInside;
+  }
+
+  function handleMouseDown(e: MouseEvent): void {
+    if (e.button !== 0) return;
+    const target = getEventTarget(e);
+    if (!isNode(target)) return;
+    clearDragState();
+    dragStartTarget = target;
+  }
+
+  function handleMouseUp(e: MouseEvent): void {
+    if (e.button !== 0) return;
+    const target = getEventTarget(e);
+    if (!isNode(target)) return;
+    dragEndTarget = target;
+    if (dragResetTimeoutId !== undefined) {
+      ownerWindow.value?.clearTimeout(dragResetTimeoutId);
+    }
+    // - If the browser emits a trailing 'click', handleClick consumes these targets synchronously.
+    // - If the browser drops the 'click' (e.g. text selection or native drag-and-drop),
+    //   this timer clears the Node references to prevent memory leaks and stale state.
+    dragResetTimeoutId = ownerWindow.value?.setTimeout(() => {
+      dragResetTimeoutId = undefined;
+      dragStartTarget = null;
+      dragEndTarget = null;
+    }, 0);
+  }
+
+  const dragTarget = () =>
+    enabled.value && node.open.value && event === "click" && ignoreDrag
+      ? ownerDocument.value
+      : null;
+
+  useEventListener(dragTarget, "mousedown", handleMouseDown, true);
+  useEventListener(dragTarget, "mouseup", handleMouseUp, true);
+
+  tryOnScopeDispose(clearDragState);
+
+  // --- Pointer Outside Dismissal -----------------------------------------------
+
+  const { capture = true, ignoreScrollbar = true, shouldIgnore, onOutsideClick } = options;
+
+  function handleClick(e: MouseEvent): void {
+    if (!enabled.value || !node.open.value || e.button !== 0) return;
+
+    const target = getEventTarget(e);
+    if (!target || !isNode(target) || !target.isConnected) return;
+
+    if (ignoreScrollbar) {
+      const scrollbarTarget = resolveScrollbarTarget(target);
+      if (scrollbarTarget && isClickOnScrollbar(e, scrollbarTarget)) {
+        return;
+      }
+    }
+
+    if (node.contains(target)) {
+      clearDragState();
+      return;
+    }
+
+    if (isDragGesture()) {
+      return;
+    }
+
+    const info: OutsideClickInfo = { reason: "pointer", target };
+    if (shouldIgnore?.(e, target, info)) {
+      return;
+    }
+
+    if (onOutsideClick) {
+      onOutsideClick(e, info);
+    } else {
+      node.open.value = false;
+    }
+  }
+
+  useEventListener(
+    () => (enabled.value && node.open.value ? ownerDocument.value : null),
+    event,
+    handleClick,
+    capture,
+  );
+
+  // --- Iframe Blur Dismissal ---------------------------------------------------
+
+  let blurTimeoutId: number | undefined;
+
+  function clearBlurTimeout(): void {
+    if (blurTimeoutId !== undefined) {
+      ownerWindow.value?.clearTimeout(blurTimeoutId);
+      blurTimeoutId = undefined;
+    }
+  }
+
+  function handleBlur(): void {
+    clearBlurTimeout();
+    blurTimeoutId = ownerWindow.value?.setTimeout(() => {
+      blurTimeoutId = undefined;
+      const doc = ownerDocument.value;
+      const activeEl = doc?.activeElement;
+      if (!doc || !isHTMLElement(activeEl) || activeEl.tagName !== "IFRAME") {
+        return;
+      }
+
+      if (node.contains(activeEl)) return;
+
+      const iframeWin = getWindow(activeEl) ?? doc.defaultView;
+      const syntheticEvent = new (iframeWin?.MouseEvent ?? MouseEvent)("click", {
+        bubbles: false,
+        cancelable: true,
       });
-    },
-    { immediate: true, flush: "sync" },
+      const info: OutsideClickInfo = { reason: "iframe-blur", target: activeEl };
+
+      if (shouldIgnore?.(syntheticEvent, activeEl, info)) return;
+
+      if (onOutsideClick) {
+        onOutsideClick(syntheticEvent, info);
+      } else {
+        node.open.value = false;
+      }
+    }, 0);
+  }
+
+  useEventListener(
+    () => (enabled.value && node.open.value ? ownerWindow.value : null),
+    "blur",
+    handleBlur,
   );
 
-  tryOnScopeDispose(() => {
-    const doc = ownerDocument.value;
-    if (doc) stackManager.remove(doc, entry);
-  });
+  tryOnScopeDispose(clearBlurTimeout);
 }
 
-// --- Listener Multiplexing ---------------------------------------------------
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 /**
- * Single sync entry point for every document listener this feature owns:
- * dismissal listeners, drag gesture trackers, and the iframe blur watcher.
+ * Resolves the measurable HTMLElement for scrollbar hit-testing.
+ * When clicking the viewport scrollbar, event.target is the Document node,
+ * so we resolve to document.documentElement (<html>).
  */
-function syncDocumentListeners(doc: Document, manager: DocumentOutsideClickManager): void {
-  syncEventListeners(doc, manager);
-  syncDragTracking(doc, manager);
-  syncBlurListener(doc, manager);
-}
-
-/**
- * Diffs needed (event, phase) pairs against attached listeners. One listener per
- * pair serves every entry that shares it, so N overlays never mean N listeners.
- */
-function syncEventListeners(doc: Document, manager: DocumentOutsideClickManager): void {
-  const neededEvents = new Map<string, { eventName: string; capture: boolean }>();
-
-  for (const entry of manager.stack) {
-    const eventName = entry.getOptions().event;
-    const key = `${eventName}:${entry.capture ? "capture" : "bubble"}`;
-    neededEvents.set(key, { eventName, capture: entry.capture });
+function resolveScrollbarTarget(target: EventTarget | null): HTMLElement | null {
+  if (isHTMLElement(target)) {
+    return target;
   }
-  for (const [key, records] of manager.listeners) {
-    if (neededEvents.has(key)) continue;
-    for (const { eventName, listener } of records) {
-      doc.removeEventListener(eventName, listener, key.endsWith(":capture"));
-    }
-    manager.listeners.delete(key);
+  if (isNode(target) && target.nodeType === Node.DOCUMENT_NODE) {
+    return (target as Document).documentElement;
   }
-  for (const [key, { eventName, capture }] of neededEvents) {
-    if (manager.listeners.has(key)) continue;
-    const listener = (event: Event) =>
-      dispatchOutsideClick(doc, event as MouseEvent, eventName, capture);
-    doc.addEventListener(eventName, listener, capture);
-    manager.listeners.set(key, [{ eventName, listener }]);
-  }
-}
-
-// --- Pointer Dismissal Dispatch ----------------------------------------------
-
-/**
- * Pointer entry point: validates the physical event, then runs the shared
- * candidate path for the listener's event name and phase.
- */
-function dispatchOutsideClick(
-  doc: Document,
-  event: MouseEvent,
-  eventName: string,
-  capture: boolean,
-): void {
-  if (event.button !== 0) return;
-  const manager = stackManager.get(doc);
-  if (!manager?.stack.length) return;
-  const target = getEventTarget(event);
-  if (!target || !isNode(target) || !target.isConnected) return;
-  dispatchCandidates(manager, event, target, eventName, capture, { reason: "pointer", target });
-}
-
-/**
- * Runs the ordered gate chain over the dispatch snapshot: scrollbar, family
- * containment, drag suppression, consumer predicate, leaf-first deferral, then
- * dismissal through the callback or the default close.
- */
-function dispatchCandidates(
-  manager: DocumentOutsideClickManager,
-  event: MouseEvent,
-  target: EventTarget,
-  eventName: string,
-  capture: boolean | null,
-  info: OutsideClickInfo,
-): void {
-  const openEntries = manager.stack.filter((entry) => entry.node.open.value);
-  const candidates = openEntries
-    .map((entry, index) => ({ entry, index, resolved: entry.getOptions() }))
-    .filter(
-      ({ entry, resolved }) =>
-        info.reason === "iframe-blur" ||
-        (resolved.event === eventName && entry.capture === capture),
-    );
-  let openChildren = eventOpenChildren.get(event);
-  if (!openChildren) {
-    openChildren = new Map<FloatingNodeId, boolean>();
-    for (const { node } of openEntries) openChildren.set(node.id, node.hasOpenChild());
-    eventOpenChildren.set(event, openChildren);
-  }
-  const depths = new Map<FloatingNodeId, number>();
-  for (const { entry } of candidates) depths.set(entry.node.id, entry.node.getDepth());
-  // Phase-first ordering makes the reactive capture option an ordering hint, not listener policy.
-  candidates.sort(
-    (a, b) =>
-      Number(b.entry.capture) - Number(a.entry.capture) ||
-      (depths.get(b.entry.node.id) ?? 0) - (depths.get(a.entry.node.id) ?? 0) ||
-      b.index - a.index,
-  );
-
-  for (const { entry, resolved } of candidates) {
-    const { node } = entry;
-    if (!node.open.value) continue;
-    const scrollbarTarget = isHTMLElement(target)
-      ? target
-      : isNode(target) && target.nodeType === 9
-        ? (target as Document).documentElement
-        : null;
-    if (
-      info.reason === "pointer" &&
-      resolved.ignoreScrollbar &&
-      scrollbarTarget &&
-      isClickOnScrollbar(event, scrollbarTarget)
-    )
-      continue;
-    if (node.contains(target)) continue;
-    if (
-      info.reason === "pointer" &&
-      eventName === "click" &&
-      resolved.ignoreDrag &&
-      (manager.dragStartedEntries.has(node.id) || manager.dragEndedEntries.has(node.id))
-    ) {
-      // Consuming both marks prevents a single drag gesture from shielding a later click.
-      manager.dragStartedEntries.delete(node.id);
-      manager.dragEndedEntries.delete(node.id);
-      continue;
-    }
-    if (resolved.shouldIgnore?.(event, target, info)) continue;
-    if (
-      resolved.leafFirst &&
-      openChildren.get(node.id) &&
-      !node.isTargetWithinAncestorElements(target)
-    )
-      continue;
-    if (resolved.onOutsideClick) resolved.onOutsideClick(event, info);
-    else node.open.value = false;
-  }
-}
-
-// --- Drag Gesture Guard ------------------------------------------------------
-
-/**
- * Attaches the pointer trackers only while some entry dismisses on `click` with
- * drag suppression, and detaches them with their timers and gesture marks when
- * the last such entry leaves.
- */
-function syncDragTracking(doc: Document, manager: DocumentOutsideClickManager): void {
-  const needsDragTracking = manager.stack.some(
-    (entry) => entry.getOptions().event === "click" && entry.getOptions().ignoreDrag,
-  );
-  if (needsDragTracking === manager.dragListenersAttached) return;
-
-  if (needsDragTracking) {
-    manager.onMouseDown = (event) => recordDragStart(doc, manager, event);
-    manager.onMouseUp = (event) => recordDragEnd(doc, manager, event);
-    doc.addEventListener("mousedown", manager.onMouseDown, true);
-    doc.addEventListener("mouseup", manager.onMouseUp, true);
-  } else {
-    if (manager.onMouseDown) doc.removeEventListener("mousedown", manager.onMouseDown, true);
-    if (manager.onMouseUp) doc.removeEventListener("mouseup", manager.onMouseUp, true);
-    clearDragTimeout(manager, doc.defaultView);
-    manager.dragStartedEntries.clear();
-    manager.dragEndedEntries.clear();
-    manager.onMouseDown = null;
-    manager.onMouseUp = null;
-  }
-
-  manager.dragListenersAttached = needsDragTracking;
-}
-
-/**
- * Marks the node families the gesture started inside, and cancels any pending
- * reset so a new gesture always begins from a clean slate.
- */
-function recordDragStart(
-  doc: Document,
-  manager: DocumentOutsideClickManager,
-  event: MouseEvent,
-): void {
-  if (event.button !== 0) return;
-  const target = getEventTarget(event);
-  if (!isNode(target)) return;
-  clearDragTimeout(manager, getWindow(target) ?? doc.defaultView);
-  manager.dragStartedEntries.clear();
-  manager.dragEndedEntries.clear();
-  for (const entry of manager.stack) {
-    if (entry.node.contains(target)) manager.dragStartedEntries.add(entry.node.id);
-  }
-}
-
-/**
- * Marks where the gesture ended, then schedules the reset that clears both marks
- * once the gesture's own click has been evaluated.
- */
-function recordDragEnd(
-  doc: Document,
-  manager: DocumentOutsideClickManager,
-  event: MouseEvent,
-): void {
-  if (event.button !== 0) return;
-  const target = getEventTarget(event);
-  if (!isNode(target)) return;
-  const win = getWindow(target) ?? doc.defaultView;
-  manager.dragEndedEntries.clear();
-  for (const entry of manager.stack) {
-    if (entry.node.contains(target)) manager.dragEndedEntries.add(entry.node.id);
-  }
-  clearDragTimeout(manager, win);
-  manager.dragResetTimeoutId = win?.setTimeout(() => {
-    manager.dragStartedEntries.clear();
-    manager.dragEndedEntries.clear();
-    manager.dragResetTimeoutId = undefined;
-  }, 0);
-}
-
-function clearDragTimeout(manager: DocumentOutsideClickManager, win: Window | null): void {
-  if (manager.dragResetTimeoutId !== undefined) {
-    win?.clearTimeout(manager.dragResetTimeoutId);
-    manager.dragResetTimeoutId = undefined;
-  }
-}
-
-// --- Iframe Blur Dismissal ---------------------------------------------------
-
-/**
- * Watches window blur while any entry is registered. The activeElement check is
- * deferred one task so focus has settled onto the iframe element by the time it
- * runs.
- */
-function syncBlurListener(doc: Document, manager: DocumentOutsideClickManager): void {
-  const win = doc.defaultView;
-  if (manager.stack.length > 0 && !manager.onBlur && win) {
-    manager.onBlur = () => {
-      clearBlurTimeout(manager, win);
-      manager.blurTimeoutId = win.setTimeout(() => {
-        manager.blurTimeoutId = undefined;
-        const target = doc.activeElement;
-        if (isHTMLElement(target) && target.tagName === "IFRAME") {
-          dispatchIframeBlur(doc, manager, target);
-        }
-      }, 0);
-    };
-    win.addEventListener("blur", manager.onBlur);
-  } else if (manager.stack.length === 0 && manager.onBlur && win) {
-    win.removeEventListener("blur", manager.onBlur);
-    manager.onBlur = null;
-    clearBlurTimeout(manager, win);
-  }
-}
-
-function clearBlurTimeout(manager: DocumentOutsideClickManager, win: Window | null): void {
-  if (manager.blurTimeoutId !== undefined) {
-    win?.clearTimeout(manager.blurTimeoutId);
-    manager.blurTimeoutId = undefined;
-  }
-}
-
-/**
- * Runs the iframe-blur reason through the same candidate path as pointer input.
- */
-function dispatchIframeBlur(
-  doc: Document,
-  manager: DocumentOutsideClickManager,
-  iframe: HTMLElement,
-): void {
-  const win = getWindow(iframe) ?? doc.defaultView;
-  // Use the iframe's realm so consumers can safely test against its MouseEvent constructor.
-  const event = new (win?.MouseEvent ?? MouseEvent)("click", { bubbles: false, cancelable: true });
-  dispatchCandidates(manager, event, iframe, "click", null, {
-    reason: "iframe-blur",
-    target: iframe,
-  });
+  return null;
 }
 
 //=======================================================================================
 // 📌 Types
 //=======================================================================================
+
+/** Information passed to the outside-click callback and predicate. */
+export interface OutsideClickInfo {
+  /** The reason the interaction was triggered. */
+  reason: "pointer" | "iframe-blur";
+  /** The target that received the interaction, if available. */
+  target: EventTarget | null;
+}
 
 /** Predicate used to decide whether an outside interaction should be skipped. */
 export type OutsideClickPredicate = (
@@ -408,14 +251,6 @@ export interface UseOutsideClickOptions {
    * @default true
    */
   enabled?: MaybeRefOrGetter<boolean>;
-  /**
-   * Whether to unwind nested floating trees one level at a time (leaf-first).
-   * When `true`, a parent node with open children will not dismiss until
-   * its children dismiss first.
-   * Reactive: can be bound to component props or dynamic workflow states.
-   * @default false
-   */
-  leafFirst?: MaybeRefOrGetter<boolean>;
   /**
    * Which document event triggers dismissal.
    * Static configuration determined by the component's UX pattern.
