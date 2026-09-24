@@ -61,4 +61,16 @@ If an ADR is added, renamed, or its metadata changes, run:
 pnpm adr:index
 ```
 
-Do not hand-edit the generated section of `ADR/README.md`. Preserve the existing number and filename when editing a decision. For a decision that no longer applies, update its status and link to the replacement inside the `Decision` section rather than deleting its history.
+Do not hand-edit the generated section of `ADR/README.md`. Preserve the existing number and filename of existing decisions. Never delete historical ADR files.
+
+## Lifecycle & avoiding the "status trap"
+
+ADRs are **append-only, point-in-time historical records**. They document the context, constraints, and rationale of a decision at the moment it was made.
+
+- **Do not treat ADRs as a mutable state machine**: Requiring an exhaustive retrospective audit of all historical records whenever an architectural direction changes creates maintenance paralysis (the "status trap").
+- **Forward-linking over backward-auditing**: When a new decision replaces or evolves a previous one, document this in the **new** ADR's `## Context` section (e.g., "Supersedes ADR-architecture-0001 due to..."). You do not need to hunt down and re-litigate older records.
+- **Source of truth separation**:
+  - **Living codebase & `docs/`**: The authoritative source of truth for how VFloat behaves and is architected today.
+  - **ADR archive (`ADR/`)**: A chronological record of why architectural choices were made.
+- **Status updates are optional**: Historical records naturally retain `status: accepted` reflecting their historical acceptance. Retroactively changing an older ADR's status to `superseded` is acceptable if convenient, but never a mandatory blocking ceremony.
+
