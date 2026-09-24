@@ -70,7 +70,6 @@ function createTestComponent(options: UseOutsideClickOptions = {}, config: Fixtu
                 "button",
                 {
                   type: "button",
-                  draggable: true,
                   "data-testid": "drag-handle",
                 },
                 "Drag",
@@ -105,7 +104,7 @@ function createTestComponent(options: UseOutsideClickOptions = {}, config: Fixtu
             "data-testid": "outside-scrollable",
             style: { ...OUTSIDE_STYLE, left: "240px", overflowY: "scroll" },
           },
-          [h("div", { style: { height: "300px" } }, "Scroll content")],
+          [h("div", { style: { height: "300px", pointerEvents: "none" } }, "Scroll content")],
         ),
         h("iframe", { "data-testid": "outside-iframe", title: "Outside frame" }),
       ]);
@@ -691,7 +690,13 @@ describe("Feature: useOutsideClick", () => {
 
       try {
         // When
-        await userEvent.click(document.documentElement, { position: { x: 990, y: 100 } });
+        document.documentElement.dispatchEvent(
+          new MouseEvent("pointerdown", {
+            clientX: 990,
+            clientY: 100,
+            bubbles: true,
+          }),
+        );
 
         // Then
         await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
@@ -714,7 +719,13 @@ describe("Feature: useOutsideClick", () => {
 
       try {
         // When
-        await userEvent.click(document.documentElement, { position: { x: 990, y: 100 } });
+        document.documentElement.dispatchEvent(
+          new MouseEvent("pointerdown", {
+            clientX: 990,
+            clientY: 100,
+            bubbles: true,
+          }),
+        );
 
         // Then
         await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
