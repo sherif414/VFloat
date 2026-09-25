@@ -387,7 +387,7 @@ export interface UseFloatingNodeOptions {
    * When `true` (default), descendant components passing `parent: "auto"` can discover and attach to this node.
    * Set to `false` to prevent this node from acting as a DI parent to any descendant nodes.
    *
-   * @default true
+   * @default false
    */
   provide?: boolean;
 }
