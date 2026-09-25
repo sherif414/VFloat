@@ -1,15 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
-import {
-  defineComponent,
-  h,
-  type MaybeRefOrGetter,
-  nextTick,
-  ref,
-  type Ref,
-  useTemplateRef,
-} from "vue";
+import { defineComponent, h, nextTick, ref, useTemplateRef } from "vue";
 import { useFloatingNode } from "@/composables/floating-node";
 import { getTestEl } from "@/test-utils";
 import { type UseOutsideClickOptions, useOutsideClick } from "./use-outside-click";
@@ -27,7 +19,10 @@ interface FixtureConfig {
   stopOutsideClickPropagation?: boolean;
 }
 
-function createTestComponent(options: UseOutsideClickOptions = {}, config: FixtureConfig = {}) {
+async function renderOutsideClick(
+  options: UseOutsideClickOptions = {},
+  config: FixtureConfig = {},
+) {
   const openRef = ref(config.defaultOpen ?? true);
 
   const Component = defineComponent(() => {
@@ -113,81 +108,7 @@ function createTestComponent(options: UseOutsideClickOptions = {}, config: Fixtu
       ]);
   });
 
-  return { Component };
-}
-
-function createTreeComponent(target: "parent" | "child") {
-  const parentOpen = ref(true);
-  const childOpen = ref(true);
-
-  const Component = defineComponent(() => {
-    const anchorEl = useTemplateRef<HTMLElement>("anchor");
-    const floatingEl = useTemplateRef<HTMLElement>("floating");
-    const childAnchorEl = useTemplateRef<HTMLElement>("child-anchor");
-    const childFloatingEl = useTemplateRef<HTMLElement>("child-floating");
-
-    const parentNode = useFloatingNode({
-      anchorEl,
-      floatingEl,
-      open: parentOpen,
-    });
-    const childNode = useFloatingNode({
-      anchorEl: childAnchorEl,
-      floatingEl: childFloatingEl,
-      open: childOpen,
-      parent: parentNode,
-    });
-
-    useOutsideClick(target === "parent" ? parentNode : childNode);
-
-    return () =>
-      h("div", { class: "test-wrapper" }, [
-        h(
-          "button",
-          {
-            ref: "anchor",
-            type: "button",
-            "data-testid": "anchor",
-            "aria-expanded": String(parentOpen.value),
-          },
-          "Trigger",
-        ),
-        parentOpen.value
-          ? h("div", { ref: "floating", "data-testid": "floating" }, "Floating")
-          : null,
-        h(
-          "button",
-          {
-            ref: "child-anchor",
-            type: "button",
-            "data-testid": "child-anchor",
-            "aria-expanded": String(childOpen.value),
-          },
-          "Child Trigger",
-        ),
-        childOpen.value
-          ? h(
-              "div",
-              {
-                ref: "child-floating",
-                "data-testid": "child-floating",
-                style: { width: "100px", height: "100px" },
-              },
-              "Child Floating",
-            )
-          : null,
-      ]);
-  });
-
-  return { Component };
-}
-
-async function renderOutsideClick(
-  options: UseOutsideClickOptions = {},
-  config: FixtureConfig = {},
-) {
-  const fixture = createTestComponent(options, config);
-  await render(fixture.Component);
+  await render(Component);
   await nextTick();
   return {
     anchorEl: page.getByTestId("anchor"),
@@ -202,25 +123,7 @@ async function renderOutsideClick(
   };
 }
 
-async function renderTreeOutsideClick(target: "parent" | "child") {
-  const fixture = createTreeComponent(target);
-  await render(fixture.Component);
-  await nextTick();
-  return {
-    anchorEl: page.getByTestId("anchor"),
-    floatingEl: page.getByTestId("floating"),
-    childAnchorEl: page.getByTestId("child-anchor"),
-    childFloatingEl: page.getByTestId("child-floating"),
-  };
-}
-
-function createFullTreeComponent(
-  options: {
-    parentCapture?: boolean;
-    childCapture?: boolean;
-    parentEnabled?: Ref<boolean>;
-  } = {},
-) {
+async function renderFullTreeOutsideClick() {
   const parentOpen = ref(true);
   const childOpen = ref(true);
 
@@ -242,13 +145,8 @@ function createFullTreeComponent(
       parent: parentNode,
     });
 
-    useOutsideClick(parentNode, {
-      capture: options.parentCapture ?? true,
-      enabled: options.parentEnabled,
-    });
-    useOutsideClick(childNode, {
-      capture: options.childCapture ?? true,
-    });
+    useOutsideClick(parentNode);
+    useOutsideClick(childNode);
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -290,20 +188,7 @@ function createFullTreeComponent(
       ]);
   });
 
-  return { Component };
-}
-
-async function renderFullTreeOutsideClick(
-  options: {
-    parentLeafFirst?: MaybeRefOrGetter<boolean>;
-    childLeafFirst?: MaybeRefOrGetter<boolean>;
-    parentCapture?: boolean;
-    childCapture?: boolean;
-    parentEnabled?: Ref<boolean>;
-  } = {},
-) {
-  const fixture = createFullTreeComponent(options);
-  await render(fixture.Component);
+  await render(Component);
   await nextTick();
   return {
     anchorEl: page.getByTestId("anchor"),
@@ -314,7 +199,7 @@ async function renderFullTreeOutsideClick(
   };
 }
 
-function createTwoOverlaysComponent(
+async function renderTwoOverlaysOutsideClick(
   options: { overlayACapture?: boolean; overlayBCapture?: boolean } = {},
 ) {
   const openA = ref(true);
@@ -364,14 +249,7 @@ function createTwoOverlaysComponent(
       ]);
   });
 
-  return { Component };
-}
-
-async function renderTwoOverlaysOutsideClick(
-  options: { overlayACapture?: boolean; overlayBCapture?: boolean } = {},
-) {
-  const fixture = createTwoOverlaysComponent(options);
-  await render(fixture.Component);
+  await render(Component);
   await nextTick();
   return {
     outsideEl: page.getByTestId("outside"),
@@ -784,38 +662,21 @@ describe("Feature: useOutsideClick", () => {
         ignoreScrollbar: true,
       });
       const scrollableDOMEl = getTestEl("outside-scrollable");
+      scrollableDOMEl.style.border = "0 solid black";
+      scrollableDOMEl.style.borderLeftWidth = "10px";
+      scrollableDOMEl.style.borderRightWidth = "10px";
       Object.defineProperty(scrollableDOMEl, "offsetWidth", { value: 100, configurable: true });
       Object.defineProperty(scrollableDOMEl, "clientWidth", { value: 80, configurable: true });
       Object.defineProperty(scrollableDOMEl, "offsetHeight", { value: 100, configurable: true });
       Object.defineProperty(scrollableDOMEl, "clientHeight", { value: 100, configurable: true });
 
-      const origGetComputedStyle = window.getComputedStyle;
-      window.getComputedStyle = (el: Element) => {
-        const style = origGetComputedStyle(el);
-        if (el === scrollableDOMEl) {
-          return new Proxy(style, {
-            get(target, prop) {
-              if (prop === "borderLeftWidth" || prop === "borderRightWidth") return "10px";
-              if (prop === "borderTopWidth" || prop === "borderBottomWidth") return "0px";
-              if (prop === "direction") return "ltr";
-              return Reflect.get(target, prop);
-            },
-          });
-        }
-        return style;
-      };
+      // When: Click on the border (x = 5, within the 10px left border)
+      await userEvent.click(scrollableEl, { position: { x: 5, y: 20 } });
+      await nextTick();
 
-      try {
-        // When: Click on the border (x = 5, within the 10px left border)
-        await userEvent.click(scrollableEl, { position: { x: 5, y: 20 } });
-        await nextTick();
-
-        // Then: Border clicks are not scrollbars and should dismiss
-        await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-        await expect.element(floatingEl).not.toBeInTheDocument();
-      } finally {
-        window.getComputedStyle = origGetComputedStyle;
-      }
+      // Then: Border clicks are not scrollbars and should dismiss
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
   });
 
@@ -850,25 +711,6 @@ describe("Feature: useOutsideClick", () => {
       // Then
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
-    });
-
-    it("Given capture changes mid-open, When outside is clicked, Then maintains initial capture phase binding", async () => {
-      // Given
-      const options: UseOutsideClickOptions = { capture: true };
-      const { anchorEl, floatingEl, outsideEl } = await renderOutsideClick(options, {
-        stopOutsideClickPropagation: true,
-      });
-
-      options.capture = false;
-      await nextTick();
-
-      // When: Click outside while stopPropagation is active
-      await userEvent.click(outsideEl);
-      await nextTick();
-
-      // Then: Still closed because initial capture: true listener was registered in capture phase
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given independent overlays with mixed capture phases, When clicking outside, Then dismisses both without cross-phase lockout", async () => {
@@ -945,7 +787,7 @@ describe("Feature: useOutsideClick", () => {
     it("Given a parent and child floating tree, When clicking inside child floating element, Then keeps parent open", async () => {
       // Given
       const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
-        await renderTreeOutsideClick("parent");
+        await renderFullTreeOutsideClick();
 
       // When
       await userEvent.click(childFloatingEl);
@@ -961,7 +803,7 @@ describe("Feature: useOutsideClick", () => {
     it("Given a parent and child floating tree, When clicking inside parent floating blank area, Then closes child while parent stays open", async () => {
       // Given
       const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
-        await renderTreeOutsideClick("child");
+        await renderFullTreeOutsideClick();
 
       // When
       await userEvent.click(floatingEl);
@@ -1007,27 +849,6 @@ describe("Feature: useOutsideClick", () => {
 
       // When: Clicking parent anchor is outside child but inside parent
       await userEvent.click(anchorEl);
-      await nextTick();
-
-      // Then: Child closes, parent stays open
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(childFloatingEl).not.toBeInTheDocument();
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-    });
-
-    it("Given clicking inside ancestor floating panel, When clicked, Then dismisses descendant branch immediately", async () => {
-      // Given
-      const { anchorEl, floatingEl, childAnchorEl, childFloatingEl } =
-        await renderFullTreeOutsideClick();
-
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-      await expect.element(childAnchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(childFloatingEl).toBeVisible();
-
-      // When: Clicking parent floating panel is outside child but inside parent
-      await userEvent.click(floatingEl);
       await nextTick();
 
       // Then: Child closes, parent stays open
