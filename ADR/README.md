@@ -27,5 +27,6 @@ pnpm adr:index
 | --- | --- | --- | --- |
 | [ADR-interactions-0001](./interactions/0001-per-instance-listeners-for-outside-click-dismissal.md) | Per-instance listeners for outside-click dismissal | accepted | 2026-09-24 |
 | [ADR-interactions-0002](./interactions/0002-unified-touch-pointer-and-virtual-click-model-for-outside-click-dismissal.md) | Unified touch, pointer, and virtual click model for outside-click dismissal | accepted | 2026-09-24 |
+| [ADR-interactions-0003](./interactions/0003-native-pointer-lifecycle-for-touch-outside-click-dismissal.md) | Native pointer lifecycle for touch outside click dismissal | accepted | 2026-09-25 |
 
 <!-- adr-index:end -->
