@@ -12,7 +12,7 @@ import {
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
-import { isImeComposing, useComposition } from "@/shared/composition-state";
+import { useComposition } from "@/shared/composition-state";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -98,7 +98,7 @@ export function useAriaActivedescendant(
     isKeyHandled,
   } = options;
 
-  useComposition();
+  const isImeComposing = useComposition();
 
   // --- Shared Options & Root State --------------------------------------------
 

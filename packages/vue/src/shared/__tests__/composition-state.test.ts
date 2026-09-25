@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope } from "vue";
-import { isImeComposing, useComposition } from "../composition-state";
+import { useComposition } from "../composition-state";
 
 const SAFARI_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
@@ -24,23 +24,19 @@ describe("Feature: Shared IME composition state", () => {
   describe("Scenario: Standard and browser-specific composition lifecycle", () => {
     it("Given a standard browser environment, When compositionstart and compositionend fire, Then composition state updates and resets synchronously", () => {
       const scope = effectScope();
-      let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+      let isImeComposing!: ReturnType<typeof useComposition>;
 
       scope.run(() => {
-        const { isComposing } = useComposition();
-        isComposingRef = isComposing;
+        isImeComposing = useComposition();
       });
 
-      expect(isComposingRef.value).toBe(false);
       expect(isImeComposing()).toBe(false);
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(isComposingRef.value).toBe(true);
       expect(isImeComposing()).toBe(true);
 
       document.dispatchEvent(new CompositionEvent("compositionend"));
       // Spec-compliant browsers (Chrome, Firefox) reset synchronously (W3C UI Events § 3.6.5)
-      expect(isComposingRef.value).toBe(false);
       expect(isImeComposing()).toBe(false);
 
       scope.stop();
@@ -53,27 +49,22 @@ describe("Feature: Shared IME composition state", () => {
       });
 
       const scope = effectScope();
-      let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+      let isImeComposing!: ReturnType<typeof useComposition>;
 
       scope.run(() => {
-        const { isComposing } = useComposition();
-        isComposingRef = isComposing;
+        isImeComposing = useComposition();
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(isComposingRef.value).toBe(true);
       expect(isImeComposing()).toBe(true);
 
       document.dispatchEvent(new CompositionEvent("compositionend"));
-      expect(isComposingRef.value).toBe(true);
       expect(isImeComposing()).toBe(true);
 
       vi.advanceTimersByTime(4);
-      expect(isComposingRef.value).toBe(true);
       expect(isImeComposing()).toBe(true);
 
       vi.advanceTimersByTime(1);
-      expect(isComposingRef.value).toBe(false);
       expect(isImeComposing()).toBe(false);
 
       scope.stop();
@@ -86,25 +77,24 @@ describe("Feature: Shared IME composition state", () => {
       });
 
       const scope = effectScope();
-      let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+      let isImeComposing!: ReturnType<typeof useComposition>;
 
       scope.run(() => {
-        const { isComposing } = useComposition();
-        isComposingRef = isComposing;
+        isImeComposing = useComposition();
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
       document.dispatchEvent(new CompositionEvent("compositionend"));
-      expect(isComposingRef.value).toBe(true);
+      expect(isImeComposing()).toBe(true);
 
       vi.advanceTimersByTime(2);
       // User starts composing again within 2ms
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(isComposingRef.value).toBe(true);
+      expect(isImeComposing()).toBe(true);
 
       // After remaining time would have elapsed, it must still be true
       vi.advanceTimersByTime(10);
-      expect(isComposingRef.value).toBe(true);
+      expect(isImeComposing()).toBe(true);
 
       scope.stop();
     });
@@ -113,33 +103,31 @@ describe("Feature: Shared IME composition state", () => {
   describe("Scenario: Interruption and blur handling", () => {
     it("Given active composition, When the window blurs, Then composition state resets immediately", () => {
       const scope = effectScope();
-      let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+      let isImeComposing!: ReturnType<typeof useComposition>;
 
       scope.run(() => {
-        const { isComposing } = useComposition();
-        isComposingRef = isComposing;
+        isImeComposing = useComposition();
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(isComposingRef.value).toBe(true);
+      expect(isImeComposing()).toBe(true);
 
       window.dispatchEvent(new Event("blur"));
-      expect(isComposingRef.value).toBe(false);
+      expect(isImeComposing()).toBe(false);
 
       scope.stop();
     });
 
     it("Given active composition, When document visibility changes to hidden, Then composition state resets immediately", () => {
       const scope = effectScope();
-      let isComposingRef!: ReturnType<typeof useComposition>["isComposing"];
+      let isImeComposing!: ReturnType<typeof useComposition>;
 
       scope.run(() => {
-        const { isComposing } = useComposition();
-        isComposingRef = isComposing;
+        isImeComposing = useComposition();
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(isComposingRef.value).toBe(true);
+      expect(isImeComposing()).toBe(true);
 
       Object.defineProperty(document, "hidden", {
         configurable: true,
@@ -147,7 +135,7 @@ describe("Feature: Shared IME composition state", () => {
       });
 
       document.dispatchEvent(new Event("visibilitychange"));
-      expect(isComposingRef.value).toBe(false);
+      expect(isImeComposing()).toBe(false);
 
       Object.defineProperty(document, "hidden", {
         configurable: true,
@@ -161,30 +149,30 @@ describe("Feature: Shared IME composition state", () => {
   describe("Scenario: Shared singleton consumer counting and scope disposal", () => {
     it("Given usage outside an active effect scope, When scoped consumers are stopped, Then it does not leak references and re-creates cleanly", () => {
       // Calling outside a scope should work safely without incrementing consumers
-      const { isComposing: compOutside } = useComposition();
-      expect(compOutside.value).toBe(false);
+      const isComposingOutside = useComposition();
+      expect(isComposingOutside()).toBe(false);
 
       const scope = effectScope();
-      let compInside!: ReturnType<typeof useComposition>;
+      let isComposingInside!: ReturnType<typeof useComposition>;
 
       scope.run(() => {
-        compInside = useComposition();
+        isComposingInside = useComposition();
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(compOutside.value).toBe(true);
-      expect(compInside.isComposing.value).toBe(true);
+      expect(isComposingOutside()).toBe(true);
+      expect(isComposingInside()).toBe(true);
 
       // Disposing the only scoped consumer should cleanly tear down the shared state
       scope.stop();
 
       // Re-invoking in a new scope gets a clean fresh state
       const newScope = effectScope();
-      let compNew!: ReturnType<typeof useComposition>;
+      let isComposingNew!: ReturnType<typeof useComposition>;
       newScope.run(() => {
-        compNew = useComposition();
+        isComposingNew = useComposition();
       });
-      expect(compNew.isComposing.value).toBe(false);
+      expect(isComposingNew()).toBe(false);
       newScope.stop();
     });
 
@@ -203,17 +191,17 @@ describe("Feature: Shared IME composition state", () => {
         comp2 = useComposition();
       });
 
-      expect(comp1.isComposing).toBe(comp2.isComposing);
+      expect(comp1).toBe(comp2);
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));
-      expect(comp1.isComposing.value).toBe(true);
-      expect(comp2.isComposing.value).toBe(true);
+      expect(comp1()).toBe(true);
+      expect(comp2()).toBe(true);
 
       scope1.stop();
-      expect(comp2.isComposing.value).toBe(true);
+      expect(comp2()).toBe(true);
 
       document.dispatchEvent(new CompositionEvent("compositionend"));
-      expect(comp2.isComposing.value).toBe(false);
+      expect(comp2()).toBe(false);
 
       scope2.stop();
     });
@@ -221,6 +209,7 @@ describe("Feature: Shared IME composition state", () => {
 
   describe("Scenario: isImeComposing heuristic evaluation with KeyboardEvent", () => {
     it("Given a KeyboardEvent with isComposing true, When isImeComposing is checked, Then it returns true", () => {
+      const isImeComposing = useComposition();
       const event = new KeyboardEvent("keydown", { key: "Enter" });
       Object.defineProperty(event, "isComposing", { value: true });
 
@@ -228,11 +217,13 @@ describe("Feature: Shared IME composition state", () => {
     });
 
     it("Given a KeyboardEvent with keyCode 229, When isImeComposing is checked, Then it returns true", () => {
+      const isImeComposing = useComposition();
       const event = new KeyboardEvent("keydown", { keyCode: 229 } as any);
       expect(isImeComposing(event)).toBe(true);
     });
 
     it("Given a KeyboardEvent with key 'Process', When isImeComposing is checked, Then it returns true", () => {
+      const isImeComposing = useComposition();
       const event = new KeyboardEvent("keydown", { key: "Process" });
       expect(isImeComposing(event)).toBe(true);
     });
@@ -244,8 +235,9 @@ describe("Feature: Shared IME composition state", () => {
       });
 
       const scope = effectScope();
+      let isImeComposing!: ReturnType<typeof useComposition>;
       scope.run(() => {
-        useComposition();
+        isImeComposing = useComposition();
       });
 
       document.dispatchEvent(new CompositionEvent("compositionstart"));

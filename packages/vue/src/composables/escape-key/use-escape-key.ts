@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue, watchEffect } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
-import { isImeComposing, useComposition } from "@/shared/composition-state";
+import { useComposition } from "@/shared/composition-state";
 import { getEventTarget, isNode } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument } from "@/shared/env";
@@ -9,6 +9,7 @@ interface EscapeEntry {
   node: FloatingNode;
   doc: Document;
   options: UseEscapeKeyOptions;
+  isImeComposing: (event?: KeyboardEvent | null) => boolean;
 }
 
 interface DocumentListeners {
@@ -53,7 +54,7 @@ const documentListeners = new WeakMap<Document, DocumentListeners>();
  * ```
  */
 export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = {}): void {
-  useComposition();
+  const isImeComposing = useComposition();
 
   const isEnabled = computed(() => toValue(options.enabled) ?? true);
   const ownerDoc = computed(
@@ -68,7 +69,7 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
       const doc = ownerDoc.value;
       if (!isEnabled.value || !node.open.value || !doc) return;
 
-      const entry: EscapeEntry = { node, doc, options };
+      const entry: EscapeEntry = { node, doc, options, isImeComposing };
       pushEscapeEntry(entry);
       onCleanup(() => removeEscapeEntry(entry));
     },
@@ -132,17 +133,12 @@ function removeEscapeEntry(entry: EscapeEntry): void {
 }
 
 function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | "bubble"): void {
-  if (
-    event.key !== "Escape" ||
-    event.defaultPrevented ||
-    isImeComposing(event) ||
-    handledEscapeEvents.has(event)
-  ) {
+  if (event.key !== "Escape" || event.defaultPrevented || handledEscapeEvents.has(event)) {
     return;
   }
 
   const activeEntry = resolveActiveEscapeEntry(getEventTarget(event));
-  if (!activeEntry) return;
+  if (!activeEntry || activeEntry.isImeComposing(event)) return;
 
   const isCapture = Boolean(activeEntry.options.capture);
   if ((phase === "capture") !== isCapture) {

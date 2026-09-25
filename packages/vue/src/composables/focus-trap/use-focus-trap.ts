@@ -10,7 +10,7 @@ import {
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
-import { isImeComposing, useComposition } from "@/shared/composition-state";
+import { useComposition } from "@/shared/composition-state";
 import { isElement, isHTMLElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
@@ -46,7 +46,7 @@ export function useFocusTrap(
   node: FloatingNode,
   options: UseFocusTrapOptions = {},
 ): UseFocusTrapReturn {
-  useComposition();
+  const isImeComposing = useComposition();
 
   const { open, refs } = node;
 

@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
-import { isImeComposing, useComposition } from "@/shared/composition-state";
+import { useComposition } from "@/shared/composition-state";
 import {
   isElement,
   isHTMLElement,
@@ -31,7 +31,7 @@ type PointerType = "mouse" | "touch" | "pen" | (string & {});
  * ```
  */
 export function useClick(node: FloatingNode, options: UseClickOptions = {}): void {
-  useComposition();
+  const isImeComposing = useComposition();
 
   const { open, refs } = node;
 

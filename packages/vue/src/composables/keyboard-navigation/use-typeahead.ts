@@ -1,6 +1,6 @@
 import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
-import { isImeComposing, useComposition } from "@/shared/composition-state";
+import { useComposition } from "@/shared/composition-state";
 import { isTypeableElement } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
@@ -64,7 +64,7 @@ export function useTypeahead(
   const { open } = node;
   const target = options.target;
 
-  useComposition();
+  const isImeComposing = useComposition();
 
   // --- Shared Options & Root State --------------------------------------------------
 
@@ -148,6 +148,7 @@ export function useTypeahead(
 
   function onKeyDown(e: KeyboardEvent) {
     if (!isEnabled.value || e.defaultPrevented) return;
+    if (isImeComposing(e)) return;
     if (isTypeableElement(e.target as Element | null)) return;
 
     // Navigation, selection, and dismissal keys hand control to sibling
@@ -213,12 +214,11 @@ export function useTypeahead(
 //=======================================================================================
 
 /**
- * Whether a keydown can never extend a typeahead query: IME composition,
+ * Whether a keydown can never extend a typeahead query:
  * shortcut modifiers (Shift stays allowed for capitalized letters),
  * user-ignored keys, and non-printable keys.
  */
 function isIgnoredKey(e: KeyboardEvent, ignoreKeys: readonly string[]): boolean {
-  if (isImeComposing(e)) return true;
   if (e.ctrlKey || e.metaKey || e.altKey) return true;
   if (ignoreKeys.includes(e.key)) return true;
   return e.key.length !== 1;

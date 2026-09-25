@@ -73,7 +73,7 @@ export function useRovingFocus(
     onActiveIndexChange,
   } = options;
 
-  useComposition();
+  const isImeComposing = useComposition();
 
   // --- Shared Options & Root State --------------------------------------------
 
@@ -347,6 +347,7 @@ export function useRovingFocus(
 
   useEventListener(containerEl, "keydown", (e: KeyboardEvent) => {
     if (e.defaultPrevented || !isEnabled.value) return;
+    if (isImeComposing(e)) return;
 
     const intent = resolveKeyIntent(e, {
       orientation: orientation.value,

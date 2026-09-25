@@ -1,4 +1,4 @@
-import { effectScope, getCurrentScope, onScopeDispose, readonly, type Ref, ref } from "vue";
+import { effectScope, getCurrentScope, onScopeDispose, type Ref, ref } from "vue";
 import { getDocument, getWindow, isServer } from "@/shared/env";
 import { isWebKit } from "@/shared/platform";
 import { useEventListener } from "@/shared/use-event-listener";
@@ -10,25 +10,27 @@ interface CompositionState {
 }
 
 // Shared client-side singleton across all composable instances.
-// SSR Safety: The `isServer` guard at the start of `useComposition()` returns early with a
-// fresh ref, preventing any shared state allocation or leakage across SSR requests.
+// SSR Safety: The `isServer` guard at the start of `useComposition()` returns early,
+// preventing any shared state allocation or leakage across SSR requests.
 let sharedCompositionState: CompositionState | undefined;
+
+export type UseCompositionReturn = (event?: KeyboardEvent | null) => boolean;
 
 //=======================================================================================
 // 📌 Main
 //=======================================================================================
 
 /**
- * Exposes whether the user is currently composing text through an IME (Input Method Editor).
+ * Exposes an evaluator function to check whether the user is currently composing text through an IME.
  *
  * Maintains a reference-counted shared singleton across active composable scopes, attaching
  * document-level composition listeners only while at least one consumer is active.
+ *
+ * @returns The `isImeComposing` function.
  */
-export function useComposition() {
+export function useComposition(): UseCompositionReturn {
   if (isServer) {
-    return {
-      isComposing: readonly(ref(false)),
-    };
+    return isImeComposing;
   }
 
   const state = getSharedCompositionState();
@@ -45,10 +47,12 @@ export function useComposition() {
     });
   }
 
-  return {
-    isComposing: readonly(state.isComposing),
-  };
+  return isImeComposing;
 }
+
+//=======================================================================================
+// 📌 Helpers
+//=======================================================================================
 
 /**
  * Returns true if IME text composition is currently active or within the WebKit debounce window.
@@ -58,7 +62,7 @@ export function useComposition() {
  *
  * @param event - Optional native KeyboardEvent to evaluate.
  */
-export function isImeComposing(event?: KeyboardEvent | null): boolean {
+function isImeComposing(event?: KeyboardEvent | null): boolean {
   if (event) {
     if (event.isComposing || event.key === "Process" || event.keyCode === 229) {
       return true;
@@ -66,10 +70,6 @@ export function isImeComposing(event?: KeyboardEvent | null): boolean {
   }
   return sharedCompositionState?.isComposing.value ?? false;
 }
-
-//=======================================================================================
-// 📌 Helpers
-//=======================================================================================
 
 function getSharedCompositionState(): CompositionState {
   if (sharedCompositionState) {
