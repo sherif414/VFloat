@@ -295,6 +295,7 @@ describe("Feature: useOutsideClick", () => {
           bubbles: true,
           cancelable: true,
           pointerType: "touch",
+          pointerId: 1,
         }),
       );
       await nextTick();
@@ -304,26 +305,136 @@ describe("Feature: useOutsideClick", () => {
       await expect.element(floatingEl).toBeVisible();
     });
 
-    it("Given touch tap occurs outside, When tap completes with click, Then closes the floating element", async () => {
+    it("Given touch pointerdown occurs outside, When pointerup fires without scrolling, Then closes the floating element", async () => {
       // Given
       const { anchorEl, floatingEl } = await renderOutsideClick();
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
 
-      // When: touch tap completes by firing a click event with pointerType "touch"
+      // When: touch tap completes with pointerup
       const outsideDOM = getTestEl("outside");
       outsideDOM.dispatchEvent(
-        new PointerEvent("click", {
+        new PointerEvent("pointerdown", {
           bubbles: true,
           cancelable: true,
           pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
         }),
       );
       await nextTick();
 
-      // Then
+      // Then: closes the floating element
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given touch pointerdown occurs outside, When pointercancel fires from scrolling, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderOutsideClick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: touch interaction is canceled by browser scrolling
+      const outsideDOM = getTestEl("outside");
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointercancel", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      await nextTick();
+
+      // Then: stays open without interrupting scrolling
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given touch starts inside floating element and releases outside, When pointerup fires outside, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderOutsideClick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: touch starts inside floating surface and releases outside
+      const floatingDOM = getTestEl("floating");
+      const outsideDOM = getTestEl("outside");
+      floatingDOM.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      await nextTick();
+
+      // Then: overlay remains open because initial touch contact was inside
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given a custom onOutsideClick callback, When touch tap completes with trailing click, Then invokes callback exactly once", async () => {
+      // Given
+      const onOutsideClick = vi.fn();
+      const { anchorEl, floatingEl } = await renderOutsideClick({ onOutsideClick });
+
+      // When: touch tap completes with pointerup followed by synthetic trailing click
+      const outsideDOM = getTestEl("outside");
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      outsideDOM.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+          pointerId: 1,
+        }),
+      );
+      outsideDOM.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          detail: 1,
+        }),
+      );
+      await nextTick();
+
+      // Then: callback is invoked exactly once for the tap gesture
+      expect(onOutsideClick).toHaveBeenCalledTimes(1);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given a virtual click from keyboard or assistive tech (detail 0), When click fires, Then closes the floating element", async () => {
