@@ -7,7 +7,7 @@ date: 2026-09-25
 
 ## Context
 
-ADR 0002 adopted a touch-on-click model for `useOutsideClick`: desktop mouse dismissals occurred eagerly on `pointerdown`, while touch dismissals were skipped on `pointerdown` and deferred to the browser's subsequent `click` event to prevent premature closure during scrolling.
+[ADR-interactions-0002](./0002-unified-touch-pointer-and-virtual-click-model-for-outside-click-dismissal.md) adopted a touch-on-click model for `useOutsideClick`: desktop mouse dismissals occurred eagerly on `pointerdown`, while touch dismissals were skipped on `pointerdown` and deferred to the browser's subsequent `click` event to prevent premature closure during scrolling.
 
 This created a critical architectural failure on iOS devices. WebKit by design suppresses synthetic `click` events on non-interactive elements (such as plain `<div>` containers, `<body>`, or blank background whitespace) unless the element is natively clickable (`<a>`, `<button>`) or has an explicit click handler attached directly to it. When an iOS user tapped background whitespace to dismiss an overlay:
 1. `pointerdown` intentionally ignored touch input.
@@ -16,7 +16,7 @@ This created a critical architectural failure on iOS devices. WebKit by design s
 
 ## Decision
 
-1. Supersede the touch-on-click model from ADR 0002 with a native W3C Pointer Events lifecycle model in `useOutsideClick`:
+1. Supersede the touch-on-click model from [ADR-interactions-0002](./0002-unified-touch-pointer-and-virtual-click-model-for-outside-click-dismissal.md) with a native W3C Pointer Events lifecycle model in `useOutsideClick`:
    - **Desktop Mouse & Pen**: Handled eagerly on `pointerdown` ($t=0$), preserving instant desktop responsiveness.
    - **Touchscreens**:
      - On `pointerdown`, if `event.pointerType === "touch"`, record the active `pointerId` and whether the touch initiated outside the floating family (`isTouchDownOutside`). Do not dismiss yet.
