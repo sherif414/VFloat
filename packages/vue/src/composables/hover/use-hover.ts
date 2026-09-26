@@ -7,10 +7,18 @@ import {
   watchPostEffect,
 } from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
+import { floatingInternals } from "@/composables/floating-node/use-floating-node";
 import { getAnchorElement } from "@/shared/elements";
 import { getDocument, getWindow } from "@/shared/env";
 import { tryOnScopeDispose } from "@/shared/lifecycle";
-import { type SafePolygonHandler, type SafePolygonOptions, safePolygon } from "./polygon";
+import {
+  isPointerLeavingOppositeSide,
+  resolveSide,
+  type SafePolygonHandler,
+  type SafePolygonOptions,
+  type Side,
+  safePolygon,
+} from "./polygon";
 
 /**
  * Minimum movement threshold in pixels to reset the rest detection timer.
@@ -45,7 +53,7 @@ const REST_FALLBACK_MS = 1000;
  * ```
  */
 export function useHover(node: FloatingNode, options: UseHoverOptions = {}): void {
-  const { open, refs } = node;
+  const { open, refs, children } = node;
 
   const isEnabled = computed(() => toValue(options.enabled ?? true));
   const showDelay = computed<number>(() => resolveDelay(toValue(options.delay), "open"));
@@ -55,6 +63,11 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
   const ownerDocument = computed(() => anchorEl.value?.ownerDocument ?? getDocument());
   const ownerWindow = computed(() => ownerDocument.value?.defaultView ?? getWindow());
+
+  // Submenu preservation: a parent surface must stay open while any of its
+  // immediate children is open, otherwise moving the pointer from a parent menu
+  // into its submenu would dismiss the parent underneath the cursor.
+  const hasOpenChild = computed(() => children.value.values().some((child) => child.open.value));
 
   // --- Interaction Facts & Transitions ----------------------------------------
 
@@ -74,7 +87,9 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
   }
 
   function canClose(): boolean {
-    return !pointerInsideAnchor && !pointerInsideFloating && !safePolygonActive;
+    return (
+      !pointerInsideAnchor && !pointerInsideFloating && !safePolygonActive && !hasOpenChild.value
+    );
   }
 
   function scheduleOpen(delay: number): void {
@@ -137,6 +152,13 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
       cancelRestDetection();
       transitionId++;
     }
+  });
+
+  // Re-evaluate parent close eligibility when a child submenu closes.
+  // Without this, the parent stays stuck open because no pointer event
+  // is dispatched to it when the cursor leaves a child into empty space.
+  watch(hasOpenChild, (hasOpen) => {
+    if (!hasOpen) reconcile();
   });
 
   // --- Rest Detection ---------------------------------------------------------
@@ -247,6 +269,18 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
 
     const { clientX, clientY } = e;
 
+    const internals = floatingInternals.get(node.id);
+    const placementSide = internals?.placement?.value?.split("-")[0] as Side | undefined;
+    const resolvedSide =
+      placementSide ?? resolveSide(floatEl.getBoundingClientRect(), refEl.getBoundingClientRect());
+
+    if (
+      isPointerLeavingOppositeSide(resolvedSide, clientX, clientY, refEl.getBoundingClientRect())
+    ) {
+      safePolygonActive = false;
+      return;
+    }
+
     polygonPointerMoveHandler = safePolygon(safePolygonOptions.value)({
       x: clientX,
       y: clientY,
@@ -254,7 +288,8 @@ export function useHover(node: FloatingNode, options: UseHoverOptions = {}): voi
         domReference: refEl,
         floating: floatEl,
       },
-      buffer: safePolygonOptions.value?.buffer ?? 1,
+      side: resolvedSide,
+      hasOpenChild: () => hasOpenChild.value,
       onClose: () => {
         clearPolygon();
         reconcile();
@@ -452,7 +487,7 @@ export interface UseHoverOptions {
    * region between the reference and floating elements.
    * - `true`: enabled with defaults
    * - `false | undefined`: disabled
-   * - `SafePolygonOptions`: enabled with custom configuration (buffer, requireIntent, intentTimeout, blockPointerEvents, change callback)
+   * - `SafePolygonOptions`: enabled with custom configuration (buffer, requireIntent, intentTimeout, blockPointerEvents, getScope, change callback)
    * @default false
    */
   safePolygon?: MaybeRefOrGetter<boolean | SafePolygonOptions>;

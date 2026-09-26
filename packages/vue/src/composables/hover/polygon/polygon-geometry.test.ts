@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildRectangularTrough,
   buildSafePolygon,
-  getCursorSpeed,
+  isInsideAxisAlignedRect,
   isPointInPolygon,
   resolveSide,
 } from "@/composables/hover/polygon";
@@ -48,20 +47,6 @@ describe("Feature: Hover corridor polygon geometry", () => {
     });
   });
 
-  describe("Scenario: Rectangular trough construction", () => {
-    it("Given reference and floating bounding boxes, When building a trough corridor, Then a 4-point polygon connecting boundaries is constructed", () => {
-      const trough = buildRectangularTrough(
-        "bottom",
-        createRect(75, 110, 150, 80),
-        createRect(50, 0, 100, 100),
-      );
-
-      expect(trough).toHaveLength(4);
-      expect(isPointInPolygon([100, 105], trough)).toBe(true);
-      expect(isPointInPolygon([0, 0], trough)).toBe(false);
-    });
-  });
-
   describe("Scenario: Safe polygon construction", () => {
     it("Given cursor position and target geometry, When constructing a safe polygon corridor, Then an expanded buffer polygon is built", () => {
       const polygon = buildSafePolygon(
@@ -96,21 +81,19 @@ describe("Feature: Hover corridor polygon geometry", () => {
     });
   });
 
-  describe("Scenario: Cursor velocity measurement", () => {
-    it("Given successive cursor coordinates with positive elapsed time, When calculating speed, Then pixel velocity per millisecond is computed", () => {
-      const speed = getCursorSpeed(20, 10, 10, 10, 1000, 1020);
+  describe("Scenario: Fast axis-aligned bounding box containment", () => {
+    it("Given bounding box corners in any order, When point is tested, Then containment is correctly determined", () => {
+      // Ordered min/max
+      expect(isInsideAxisAlignedRect(50, 50, 0, 0, 100, 100)).toBe(true);
+      expect(isInsideAxisAlignedRect(150, 50, 0, 0, 100, 100)).toBe(false);
 
-      expect(speed.speed).toBe(0.5);
-      expect(speed.lastX).toBe(20);
-      expect(speed.lastCursorTime).toBe(1020);
-    });
+      // Inverted min/max coordinates
+      expect(isInsideAxisAlignedRect(50, 50, 100, 100, 0, 0)).toBe(true);
+      expect(isInsideAxisAlignedRect(50, 150, 100, 100, 0, 0)).toBe(false);
 
-    it("Given zero elapsed time or missing previous coordinates, When calculating speed, Then null speed is returned", () => {
-      const zeroElapsed = getCursorSpeed(20, 10, 10, 10, 1000, 1000);
-      expect(zeroElapsed.speed).toBeNull();
-
-      const missingPrevious = getCursorSpeed(20, 10, null, null, 1000, 1020);
-      expect(missingPrevious.speed).toBeNull();
+      // Exact boundaries
+      expect(isInsideAxisAlignedRect(0, 0, 0, 0, 100, 100)).toBe(true);
+      expect(isInsideAxisAlignedRect(100, 100, 0, 0, 100, 100)).toBe(true);
     });
   });
 });

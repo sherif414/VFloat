@@ -3,6 +3,8 @@ import {
   type CreateSafePolygonHandlerContext,
   type Polygon,
   safePolygon,
+  type SafePolygonHandler,
+  type SafePolygonOptions,
 } from "@/composables/hover/polygon";
 import { makeDOMRect } from "@/test-utils";
 
@@ -26,6 +28,20 @@ type SafePolygonTestContext = CreateSafePolygonHandlerContext & {
 };
 
 const cleanupElements: HTMLElement[] = [];
+const cleanupHandlers: SafePolygonHandler[] = [];
+
+/**
+ * Builds a handler and registers it for teardown. Shielded handlers mutate
+ * `document.body`, so a leaked shield would bleed into unrelated tests.
+ */
+function createHandler(
+  options: SafePolygonOptions,
+  ctx: CreateSafePolygonHandlerContext,
+): SafePolygonHandler {
+  const handler = safePolygon(options)(ctx);
+  cleanupHandlers.push(handler);
+  return handler;
+}
 
 function createContext(
   side: "top" | "right" | "bottom" | "left",
@@ -54,9 +70,11 @@ function createContext(
     x: overrides.x ?? 100,
     y: overrides.y ?? 50,
     elements: { domReference: anchorEl, floating: floatingEl },
-    buffer: overrides.buffer ?? 1,
+    buffer: "buffer" in overrides ? overrides.buffer : 1,
     onClose: onCloseMock,
     onCloseMock,
+    hasOpenChild: overrides.hasOpenChild,
+    side: overrides.side,
   };
 }
 
@@ -66,6 +84,10 @@ describe("Feature: safePolygon hover corridor protection", () => {
   });
 
   afterEach(() => {
+    for (const handler of cleanupHandlers) {
+      handler.cleanup?.();
+    }
+    cleanupHandlers.length = 0;
     for (const el of cleanupElements) {
       el.remove();
     }
@@ -183,6 +205,32 @@ describe("Feature: safePolygon hover corridor protection", () => {
       );
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
     });
+
+    it("Given pointer re-enters reference after initial corridor entry, When pointer subsequently moves back into safe polygon triangle, Then corridor protection is preserved", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon({ requireIntent: false })(ctx);
+      const refEl = ctx.elements.domReference as HTMLElement;
+
+      // 1. Pointer moves from leave point into the polygon triangle area
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+
+      // 2. Pointer re-enters reference element (geometric containment)
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 80,
+          clientY: 50,
+          target: refEl,
+        }),
+      );
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+
+      // 3. Pointer leaves reference back into the safe polygon triangle.
+      //    With the hasLanded bug, this would close because hasLanded was
+      //    erroneously set to true on reference re-entry.
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+    });
   });
 
   describe("Scenario: Mouseleave transition into floating target", () => {
@@ -297,7 +345,7 @@ describe("Feature: safePolygon hover corridor protection", () => {
   });
 
   describe("Scenario: Intent detection and speed-based deceleration handling", () => {
-    it("Given requireIntent is enabled, When cursor decelerates to slow speed within corridor, Then close timeout is scheduled", () => {
+    it("Given requireIntent is enabled, When cursor decelerates to slow speed within corridor, Then close is triggered without waiting for the watchdog", () => {
       let now = 1000;
       const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
 
@@ -307,25 +355,46 @@ describe("Feature: safePolygon hover corridor protection", () => {
       handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
 
+      // A 0.5px crawl over 5000ms is far below the 0.1 px/ms intent speed.
       now += 5000;
+      handler(makeMouseEvent("pointermove", { clientX: 160.5, clientY: 109 }));
 
-      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109.01 }));
+      expect(ctx.onCloseMock).toHaveBeenCalledTimes(1);
+      perfSpy.mockRestore();
+    });
 
-      vi.advanceTimersByTime(40);
+    it("Given a continuous sub-threshold crawl, When every move is slower than the intent speed, Then close is not deferred indefinitely", () => {
+      let now = 1000;
+      const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
+
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon()(ctx);
+
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+
+      // Each hop is 0.2px per 1000ms. A watchdog-only implementation would
+      // rearm on every event and never fire.
+      for (let hop = 0; hop < 5; hop += 1) {
+        now += 1000;
+        handler(makeMouseEvent("pointermove", { clientX: 160 + hop * 0.2, clientY: 109 }));
+      }
+
       expect(ctx.onCloseMock).toHaveBeenCalled();
       perfSpy.mockRestore();
     });
 
-    it("Given custom intentTimeout, When cursor decelerates, Then custom delay is respected before closing", () => {
+    it("Given custom intentTimeout, When cursor moves at full speed then stops dispatching events, Then custom delay is respected before closing", () => {
       let now = 1000;
       const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
 
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon({ intentTimeout: 120 })(ctx);
 
+      // clientX 160 -> 200 over 10ms is 4px/ms, well above the intent speed, so
+      // only the watchdog decides the outcome here.
       handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
-      now += 5000;
-      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109.01 }));
+      now += 10;
+      handler(makeMouseEvent("pointermove", { clientX: 200, clientY: 109 }));
 
       vi.advanceTimersByTime(40);
       expect(ctx.onCloseMock).not.toHaveBeenCalled();
@@ -333,6 +402,19 @@ describe("Feature: safePolygon hover corridor protection", () => {
       vi.advanceTimersByTime(80);
       expect(ctx.onCloseMock).toHaveBeenCalled();
       perfSpy.mockRestore();
+    });
+
+    it("Given cursor moves into safe corridor and ceases motion, When intentTimeout elapses, Then close is triggered", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon({ intentTimeout: 50 })(ctx);
+
+      // Rapid move into safe corridor (clientX 160 is in the polygon, outside the trough)
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+
+      // Hand stops moving, zero events dispatched. Advance by intentTimeout
+      vi.advanceTimersByTime(50);
+      expect(ctx.onCloseMock).toHaveBeenCalledTimes(1);
     });
 
     it("Given requireIntent is false, When cursor stops or decelerates, Then close is not scheduled", () => {
@@ -410,6 +492,77 @@ describe("Feature: safePolygon hover corridor protection", () => {
 
       expect(poly1).not.toEqual(poly2);
     });
+
+    it("Given neither a context nor an options buffer, When constructing the polygon, Then the corridor defaults to half a pixel", () => {
+      const onPolygonChange = vi.fn();
+      const ctx = createContext("bottom", { x: 100, y: 99, buffer: undefined });
+      const handler = safePolygon({ requireIntent: false, onPolygonChange })(ctx);
+
+      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
+
+      expect(onPolygonChange.mock.calls[0]![0]).toEqual([
+        [100.25, 98.5],
+        [99.75, 98.5],
+        [75, 110.5],
+        [225, 110.5],
+      ]);
+    });
+
+    it("Given both a context and an options buffer, When constructing the polygon, Then the options buffer takes precedence", () => {
+      const onPolygonChange = vi.fn();
+      const ctx = createContext("bottom", { x: 100, y: 99, buffer: 10 });
+      const handler = safePolygon({ requireIntent: false, buffer: 0.5, onPolygonChange })(ctx);
+
+      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
+
+      expect(onPolygonChange.mock.calls[0]![0]).toEqual([
+        [100.25, 98.5],
+        [99.75, 98.5],
+        [75, 110.5],
+        [225, 110.5],
+      ]);
+    });
+  });
+
+  describe("Scenario: Corridor traversal state isolation", () => {
+    it("Given one factory reused for two traversals, When the first lands on the floating element, Then the second traversal is not treated as already landed", () => {
+      const sp = safePolygon({ requireIntent: false });
+      const first = createContext("bottom", { x: 100, y: 99 });
+      const firstHandler = sp(first);
+
+      firstHandler(
+        makeMouseEvent("pointermove", {
+          clientX: 100,
+          clientY: 130,
+          target: first.elements.floating,
+        }),
+      );
+      expect(first.onCloseMock).not.toHaveBeenCalled();
+
+      // A second traversal starts from a fresh leave point. If `hasLanded` were
+      // shared across handlers this move would close immediately.
+      const second = createContext("bottom", { x: 100, y: 99 });
+      const secondHandler = sp(second);
+
+      secondHandler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      expect(second.onCloseMock).not.toHaveBeenCalled();
+    });
+
+    it("Given one factory reused for two traversals, When the first parks inside the corridor, Then the second traversal still arms the intent watchdog", () => {
+      const sp = safePolygon();
+      const first = createContext("bottom", { x: 100, y: 99 });
+      sp(first)(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+
+      vi.advanceTimersByTime(1000);
+
+      const second = createContext("bottom", { x: 100, y: 99 });
+      const secondHandler = sp(second);
+
+      secondHandler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      vi.advanceTimersByTime(40);
+
+      expect(second.onCloseMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("Scenario: Instance isolation across multiple safe polygons", () => {
@@ -449,57 +602,141 @@ describe("Feature: safePolygon hover corridor protection", () => {
     );
   });
 
-  describe("Scenario: Pointer event blocking overlay management", () => {
-    it("Given blockPointerEvents is false by default, When initialized, Then no overlay DOM element is created", () => {
+  describe("Scenario: Background pointer event shielding", () => {
+    it("Given blockPointerEvents is false by default, When the corridor starts, Then no pointer-events shield is applied", () => {
       const ctx = createContext("bottom");
-      safePolygon()(ctx);
+      createHandler({}, ctx);
 
-      const overlay = document.querySelector("[data-vfloat-safe-polygon-overlay]");
-      expect(overlay).toBeNull();
+      const anchorEl = ctx.elements.domReference as HTMLElement;
+      const floatingEl = ctx.elements.floating as HTMLElement;
+
+      expect(document.body.style.pointerEvents).toBe("");
+      expect(anchorEl.style.pointerEvents).toBe("");
+      expect(floatingEl.style.pointerEvents).toBe("");
     });
 
-    it("Given blockPointerEvents is true, When initialized, Then fixed overlay element is mounted and cleans up on dispose", () => {
+    it("Given blockPointerEvents is true, When the corridor starts, Then the scope is shielded while both corridor ends stay interactive", () => {
       const ctx = createContext("bottom");
-      const handler = safePolygon({ blockPointerEvents: true })(ctx);
+      createHandler({ blockPointerEvents: true }, ctx);
 
-      const overlay = document.querySelector(
-        "[data-vfloat-safe-polygon-overlay]",
-      ) as HTMLElement | null;
-      expect(overlay).not.toBeNull();
-      expect(overlay?.style.position).toBe("fixed");
-      expect(overlay?.style.zIndex).toBe("2147483647");
+      const anchorEl = ctx.elements.domReference as HTMLElement;
+      const floatingEl = ctx.elements.floating as HTMLElement;
+
+      expect(document.body.style.pointerEvents).toBe("none");
+      expect(anchorEl.style.pointerEvents).toBe("auto");
+      expect(floatingEl.style.pointerEvents).toBe("auto");
+    });
+
+    it("Given blockPointerEvents is true, When the corridor is torn down, Then previous inline pointer-events values are restored", () => {
+      const ctx = createContext("bottom");
+      const handler = createHandler({ blockPointerEvents: true }, ctx);
 
       handler.cleanup?.();
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+
+      expect(document.body.style.pointerEvents).toBe("");
+      expect((ctx.elements.domReference as HTMLElement).style.pointerEvents).toBe("");
+      expect((ctx.elements.floating as HTMLElement).style.pointerEvents).toBe("");
     });
 
-    it("Given an active overlay, When close is triggered, Then overlay element is removed from DOM", () => {
+    it("Given an active shield, When close is triggered, Then the shield is released", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
-      const handler = safePolygon({ blockPointerEvents: true, requireIntent: false })(ctx);
+      const handler = createHandler({ blockPointerEvents: true, requireIntent: false }, ctx);
 
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
+      expect(document.body.style.pointerEvents).toBe("none");
 
       handler(makeMouseEvent("pointermove", { clientX: 500, clientY: 500 }));
+
       expect(ctx.onCloseMock).toHaveBeenCalled();
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+      expect(document.body.style.pointerEvents).toBe("");
     });
 
-    it("Given an active overlay, When cursor lands on floating element, Then overlay element is immediately cleaned up", () => {
+    it("Given an active shield, When the cursor lands on the floating element, Then the shield is released immediately", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
-      const handler = safePolygon({ blockPointerEvents: true, requireIntent: false })(ctx);
+      const handler = createHandler({ blockPointerEvents: true, requireIntent: false }, ctx);
+      const floatingEl = ctx.elements.floating as HTMLElement;
 
-      const floatEl = ctx.elements.floating as HTMLElement;
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
+      expect(document.body.style.pointerEvents).toBe("none");
 
       handler(
         makeMouseEvent("pointermove", {
           clientX: 100,
           clientY: 130,
-          target: floatEl,
+          target: floatingEl,
         }),
       );
 
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+      expect(document.body.style.pointerEvents).toBe("");
+    });
+
+    it("Given an active shield, When the cursor returns to the reference element, Then the shield is released immediately", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = createHandler({ blockPointerEvents: true }, ctx);
+
+      expect(document.body.style.pointerEvents).toBe("none");
+
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 80,
+          clientY: 50,
+          target: ctx.elements.domReference as HTMLElement,
+        }),
+      );
+
+      expect(document.body.style.pointerEvents).toBe("");
+    });
+
+    it("Given a pre-existing inline pointer-events value, When the shield is released, Then the original value is preserved", () => {
+      const ctx = createContext("bottom");
+      const anchorEl = ctx.elements.domReference as HTMLElement;
+      anchorEl.style.pointerEvents = "all";
+
+      const handler = createHandler({ blockPointerEvents: true }, ctx);
+      expect(anchorEl.style.pointerEvents).toBe("auto");
+
+      handler.cleanup?.();
+      expect(anchorEl.style.pointerEvents).toBe("all");
+    });
+
+    it("Given a getScope resolver, When the corridor starts, Then only the resolved subtree is shielded", () => {
+      const scopeEl = document.createElement("div");
+      document.body.appendChild(scopeEl);
+      cleanupElements.push(scopeEl);
+
+      const ctx = createContext("bottom");
+      createHandler({ blockPointerEvents: true, getScope: () => scopeEl }, ctx);
+
+      expect(scopeEl.style.pointerEvents).toBe("none");
+      expect(document.body.style.pointerEvents).toBe("");
+    });
+
+    it("Given a getScope resolver, When the corridor is torn down, Then the resolved subtree is restored", () => {
+      const scopeEl = document.createElement("div");
+      document.body.appendChild(scopeEl);
+      cleanupElements.push(scopeEl);
+
+      const ctx = createContext("bottom");
+      const handler = createHandler({ blockPointerEvents: true, getScope: () => scopeEl }, ctx);
+
+      expect(scopeEl.style.pointerEvents).toBe("none");
+
+      handler.cleanup?.();
+      expect(scopeEl.style.pointerEvents).toBe("");
+    });
+
+    it("Given two nested corridors sharing one scope, When the inner corridor is torn down first, Then the outer shield stays applied", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const inner = createContext("bottom", { x: 100, y: 99 });
+
+      const outerHandler = createHandler({ blockPointerEvents: true, requireIntent: false }, ctx);
+      const innerHandler = createHandler({ blockPointerEvents: true, requireIntent: false }, inner);
+
+      expect(document.body.style.pointerEvents).toBe("none");
+
+      innerHandler.cleanup?.();
+      expect(document.body.style.pointerEvents).toBe("none");
+
+      outerHandler.cleanup?.();
+      expect(document.body.style.pointerEvents).toBe("");
     });
   });
 
@@ -554,6 +791,52 @@ describe("Feature: safePolygon hover corridor protection", () => {
 
       handler(makeMouseEvent("pointermove", { clientX: 900, clientY: 900 }));
       expect(ctx.onCloseMock).toHaveBeenCalled();
+    });
+
+    it("Given pointer has landed on floating element, When pointer moves backward into polygon triangle, Then close is immediately triggered", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      const handler = safePolygon()(ctx);
+      const floatEl = ctx.elements.floating as HTMLElement;
+
+      // 1. Move onto floating element
+      handler(
+        makeMouseEvent("pointermove", {
+          clientX: 100,
+          clientY: 130,
+          target: floatEl,
+        }),
+      );
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+
+      // 2. Move backward into safe corridor triangle (clientX: 160, clientY: 109 is inside polygon)
+      handler(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
+      expect(ctx.onCloseMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Scenario: Submenu preservation and open child protection", () => {
+    it("Given hasOpenChild returns true, When pointer moves outside safe corridor, Then close is prevented", () => {
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      ctx.hasOpenChild = () => true;
+      const handler = safePolygon()(ctx);
+
+      // Pointer moves completely outside safe areas
+      handler(makeMouseEvent("pointermove", { clientX: 999, clientY: 999 }));
+      expect(ctx.onCloseMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Scenario: Authoritative side specification", () => {
+    it("Given side is explicitly provided in context, When safe polygon is created, Then provided side takes precedence", () => {
+      const onPolygonChange = vi.fn();
+      const ctx = createContext("bottom", { x: 100, y: 99 });
+      ctx.side = "right";
+      const handler = safePolygon({ requireIntent: false, onPolygonChange })(ctx);
+
+      handler(makeMouseEvent("pointermove", { clientX: 100, clientY: 105 }));
+      expect(onPolygonChange).toHaveBeenCalledTimes(1);
+      const poly = onPolygonChange.mock.calls[0]![0] as Polygon;
+      expect(poly).toHaveLength(4);
     });
   });
 });

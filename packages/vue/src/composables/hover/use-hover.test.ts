@@ -423,6 +423,46 @@ describe("Feature: useHover", () => {
       // Then
       expect(childOpen.value).toBe(false);
     });
+
+    it("Given parent node with an open child, When parent receives pointerleave, Then canClose prevents parent from closing", async () => {
+      // Given: parent is open and child is open
+      const { parentAnchorEl, parentOpen } = await renderTreeHover("parent", true, true);
+
+      // When: pointer leaves parent anchor into empty space
+      parentAnchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          relatedTarget: document.body,
+        }),
+      );
+      vi.runAllTimers();
+      await nextTick();
+
+      // Then: Parent stays open because child is open
+      expect(parentOpen.value).toBe(true);
+    });
+
+    it("Given parent and child are both open with cursor outside both, When child closes, Then parent auto-reconciles and closes", async () => {
+      // Given: parent and child are open, cursor has left both elements
+      const { parentAnchorEl, childOpen, parentOpen } = await renderTreeHover("parent", true, true);
+
+      // Simulate cursor leaving parent anchor into empty space
+      parentAnchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          relatedTarget: document.body,
+        }),
+      );
+      await nextTick();
+      // Parent stays open because child is still open
+      expect(parentOpen.value).toBe(true);
+
+      // When: child submenu closes (e.g. via escape key or outside click)
+      childOpen.value = false;
+      vi.runAllTimers();
+      await nextTick();
+
+      // Then: hasOpenChild watcher fires reconcile → parent auto-closes
+      expect(parentOpen.value).toBe(false);
+    });
   });
 
   describe("Scenario: Rest period requirements (restMs)", () => {
@@ -876,9 +916,39 @@ describe("Feature: useHover", () => {
       addEventListenerSpy.mockRestore();
     });
 
-    it("Given blockPointerEvents overlay is active, When pointer re-enters anchor, Then cleans up overlay synchronously", async () => {
+    it("Given safePolygon is enabled, When pointer leaves reference through opposite side, Then does not start safe polygon and closes", async () => {
+      const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+      const { anchorEl, node } = await renderHover({
+        safePolygon: { blockPointerEvents: true },
+      });
+
+      anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
+      await nextTick();
+      expect(node.open.value).toBe(true);
+
+      // When: Leave from the top (opposite side of bottom-positioned floating element)
+      anchorEl.dispatchEvent(
+        makePointerEvent("pointerleave", {
+          clientX: 25,
+          clientY: -10,
+          relatedTarget: document.body,
+        }),
+      );
+      await nextTick();
+
+      // Then: Did not attach pointermove listener or apply a shield
+      expect(addEventListenerSpy).not.toHaveBeenCalledWith("pointermove", expect.any(Function), {
+        passive: true,
+      });
+      expect(document.body.style.pointerEvents).toBe("");
+      expect(node.open.value).toBe(false);
+
+      addEventListenerSpy.mockRestore();
+    });
+
+    it("Given blockPointerEvents shield is active, When pointer re-enters anchor, Then releases the shield synchronously", async () => {
       // Given
-      const { anchorEl } = await renderHover({
+      const { anchorEl, floatingEl } = await renderHover({
         safePolygon: { blockPointerEvents: true },
       });
 
@@ -893,14 +963,16 @@ describe("Feature: useHover", () => {
         }),
       );
 
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).not.toBeNull();
+      expect(document.body.style.pointerEvents).toBe("none");
+      expect(floatingEl.style.pointerEvents).toBe("auto");
 
       // When: Re-enter anchor
       anchorEl.dispatchEvent(makePointerEvent("pointerenter"));
       await nextTick();
 
       // Then
-      expect(document.querySelector("[data-vfloat-safe-polygon-overlay]")).toBeNull();
+      expect(document.body.style.pointerEvents).toBe("");
+      expect(floatingEl.style.pointerEvents).toBe("");
     });
 
     it("Given pointer is inside floating element with safePolygon enabled, When pointer leaves floating element, Then does not initiate safe corridor and closes", async () => {

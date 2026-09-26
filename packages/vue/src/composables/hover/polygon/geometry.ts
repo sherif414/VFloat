@@ -65,6 +65,25 @@ export function isInside(point: Point, rect: Rect): boolean {
 }
 
 /**
+ * Fast axis-aligned bounding box containment test without allocations.
+ */
+export function isInsideAxisAlignedRect(
+  x: number,
+  y: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): boolean {
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2);
+  const maxY = Math.max(y1, y2);
+
+  return x >= minX && x <= maxX && y >= minY && y <= maxY;
+}
+
+/**
  * Ray-casting point-in-polygon test used by the safe-polygon bridge.
  */
 export function isPointInPolygon(point: Point, polygon: Polygon) {
@@ -86,45 +105,6 @@ export function isPointInPolygon(point: Point, polygon: Polygon) {
 }
 
 /**
- * Computes pointer speed between two samples.
- */
-export function getCursorSpeed(
-  x: number,
-  y: number,
-  lastX: number | null,
-  lastY: number | null,
-  lastCursorTime: number,
-  currentTime: number,
-): {
-  speed: number | null;
-  lastX: number;
-  lastY: number;
-  lastCursorTime: number;
-} {
-  const elapsedTime = currentTime - lastCursorTime;
-
-  if (lastX === null || lastY === null || elapsedTime === 0) {
-    return {
-      speed: null,
-      lastX: x,
-      lastY: y,
-      lastCursorTime: currentTime,
-    };
-  }
-
-  const deltaX = x - lastX;
-  const deltaY = y - lastY;
-  const distance = Math.hypot(deltaX, deltaY);
-
-  return {
-    speed: distance / elapsedTime,
-    lastX: x,
-    lastY: y,
-    lastCursorTime: currentTime,
-  };
-}
-
-/**
  * Detects when the pointer exits from the side opposite the floating content.
  *
  * In that case the user is moving away from the floating element, so the safe
@@ -142,53 +122,6 @@ export function isPointerLeavingOppositeSide(
     (side === "left" && leaveX >= (refRect?.right ?? 0) - 1) ||
     (side === "right" && leaveX <= (refRect?.left ?? 0) + 1)
   );
-}
-
-/**
- * Builds the rectangular corridor between the anchor and floating element.
- */
-export function buildRectangularTrough(
-  side: Side,
-  rect: DOMRect | undefined,
-  refRect: DOMRect | undefined,
-): Polygon {
-  const isFloatingWider = (rect?.width ?? 0) > (refRect?.width ?? 0);
-  const isFloatingTaller = (rect?.height ?? 0) > (refRect?.height ?? 0);
-  const left = (isFloatingWider ? refRect : rect)?.left ?? 0;
-  const right = (isFloatingWider ? refRect : rect)?.right ?? 0;
-  const top = (isFloatingTaller ? refRect : rect)?.top ?? 0;
-  const bottom = (isFloatingTaller ? refRect : rect)?.bottom ?? 0;
-
-  switch (side) {
-    case "top":
-      return [
-        [left, (refRect?.top ?? 0) + 1],
-        [left, (rect?.bottom ?? 0) - 1],
-        [right, (rect?.bottom ?? 0) - 1],
-        [right, (refRect?.top ?? 0) + 1],
-      ];
-    case "bottom":
-      return [
-        [left, (rect?.top ?? 0) + 1],
-        [left, (refRect?.bottom ?? 0) - 1],
-        [right, (refRect?.bottom ?? 0) - 1],
-        [right, (rect?.top ?? 0) + 1],
-      ];
-    case "left":
-      return [
-        [(rect?.right ?? 0) - 1, bottom],
-        [(rect?.right ?? 0) - 1, top],
-        [(refRect?.left ?? 0) + 1, top],
-        [(refRect?.left ?? 0) + 1, bottom],
-      ];
-    case "right":
-      return [
-        [(refRect?.right ?? 0) - 1, bottom],
-        [(refRect?.right ?? 0) - 1, top],
-        [(rect?.left ?? 0) + 1, top],
-        [(rect?.left ?? 0) + 1, bottom],
-      ];
-  }
 }
 
 /**
