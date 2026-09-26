@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, useTemplateRef, watch } from "vue";
+import { computed, nextTick, ref, shallowRef, useTemplateRef, watch } from "vue";
 import {
   useClick,
   useEscapeKey,
@@ -12,6 +12,20 @@ import {
 } from "@/composables";
 
 const EXPORT_INDEX = 2;
+
+// --- Safe polygon visualization ----------------------------------------------
+
+const showCorridor = ref(true);
+const submenuGap = ref(20);
+const polygonPoints = shallowRef<Array<[number, number]>>([]);
+
+const polygonPointsString = computed(() =>
+  polygonPoints.value.map(([x, y]) => `${x},${y}`).join(" "),
+);
+
+watch(showCorridor, (show) => {
+  if (!show) polygonPoints.value = [];
+});
 
 // --- Composite nodes ---------------------------------------------------------
 
@@ -35,17 +49,45 @@ const rootPosition = usePosition(rootNode, {
 });
 const subPosition = usePosition(subNode, {
   placement: "right-start",
-  middlewares: { offset: 4, flip: true, shift: { padding: 8 } },
+  middlewares: computed(() => ({
+    offset: submenuGap.value,
+    flip: true,
+    shift: { padding: 8 },
+  })),
 });
 
 // --- Interactions ---------------------------------------------------------------
 
 useClick(rootNode);
-useHover(subNode, { delay: { open: 120, close: 200 }, safePolygon: true });
+useClick(subNode, { toggle: false });
+useHover(subNode, {
+  delay: { open: 120, close: 150 },
+  safePolygon: {
+    buffer: 4,
+    blockPointerEvents: true,
+    onPolygonChange: (points) => {
+      if (showCorridor.value) {
+        polygonPoints.value = points;
+      } else {
+        polygonPoints.value = [];
+      }
+    },
+  },
+});
 useOutsideClick(rootNode);
-useEscapeKey(rootNode);
-useRole(rootNode, { role: "menu", label: "File actions" });
-useRole(subNode, { role: "menu", label: "Export as" });
+useOutsideClick(subNode);
+useEscapeKey(rootNode, {
+  onEscape: () => {
+    rootNode.open.value = false;
+    triggerEl.value?.focus();
+  },
+});
+useEscapeKey(subNode, {
+  onEscape: () => {
+    subNode.open.value = false;
+    exportTriggerEl.value?.focus();
+  },
+});
 
 // Closing the root cascades explicitly; open never cascades on its own.
 function closeDescendants() {
@@ -69,14 +111,17 @@ watch(
 const rootItems = ref<Array<HTMLElement | null>>([]);
 const subItems = ref<Array<HTMLElement | null>>([]);
 
+useRole(rootNode, { role: "menu", label: "File actions", listRef: rootItems });
+useRole(subNode, { role: "menu", label: "Export as", listRef: subItems });
+
 function closeMenu() {
-  closeDescendants();
   rootNode.open.value = false;
+  triggerEl.value?.focus();
 }
 
 function openSubmenu(focusFirst: boolean) {
   if (!rootNode.open.value) return;
-  if (!subNode.open.value) subNode.open.value = true;
+  subNode.open.value = true;
   if (focusFirst) void nextTick(() => subRoving.focusIndex(0));
 }
 
@@ -96,6 +141,7 @@ function setSubItemRef(idx: number) {
 const rootRoving = useRovingFocus(rootNode, {
   elementsList: rootItems,
   loop: true,
+  focusOnHover: true,
   onSelect: (idx) => {
     if (idx === EXPORT_INDEX) openSubmenu(true);
     else closeMenu();
@@ -108,6 +154,7 @@ const rootRoving = useRovingFocus(rootNode, {
 const subRoving = useRovingFocus(subNode, {
   elementsList: subItems,
   loop: true,
+  focusOnHover: true,
   onSelect: () => closeMenu(),
 });
 
@@ -122,46 +169,58 @@ watch(
 
 <template>
   <div class="menu-demo">
+    <div class="demo-controls">
+      <label class="demo-toggle">
+        <input v-model="showCorridor" type="checkbox" />
+        <span>Visualize safe polygon</span>
+      </label>
+
+      <label class="demo-slider">
+        <span>Gap: {{ submenuGap }}px</span>
+        <input v-model.number="submenuGap" type="range" min="4" max="48" step="2" />
+      </label>
+
+      <span v-if="showCorridor && polygonPoints.length > 0" class="demo-badge">
+        <span class="demo-badge__pulse" />
+        Corridor active ({{ polygonPoints.length }} vertices)
+      </span>
+    </div>
+
     <button ref="trigger" type="button" class="linear-btn">File actions <kbd>⌄</kbd></button>
 
     <Teleport to="body">
       <div
         v-if="rootNode.open.value"
         ref="menu"
-        role="menu"
-        aria-label="File actions"
         class="linear-menu"
         :style="rootPosition.styles.value"
       >
         <button
           type="button"
-          role="menuitem"
           :ref="setRootItemRef(0)"
           :tabindex="rootRoving.getTabindex(0)"
           class="linear-item"
+          :class="{ 'linear-item--active': rootRoving.activeIndex.value === 0 }"
           @click="closeMenu"
         >
           New file
         </button>
         <button
           type="button"
-          role="menuitem"
           :ref="setRootItemRef(1)"
           :tabindex="rootRoving.getTabindex(1)"
           class="linear-item"
+          :class="{ 'linear-item--active': rootRoving.activeIndex.value === 1 }"
           @click="closeMenu"
         >
           Open…
         </button>
         <button
           type="button"
-          role="menuitem"
-          aria-haspopup="menu"
-          :aria-expanded="subNode.open.value"
           :ref="setRootItemRef(2)"
           :tabindex="rootRoving.getTabindex(2)"
           class="linear-item"
-          @click="openSubmenu(false)"
+          :class="{ 'linear-item--active': rootRoving.activeIndex.value === 2 }"
         >
           Export
           <span class="linear-item__chevron">›</span>
@@ -169,10 +228,10 @@ watch(
         <div class="linear-sep" />
         <button
           type="button"
-          role="menuitem"
           :ref="setRootItemRef(3)"
           :tabindex="rootRoving.getTabindex(3)"
           class="linear-item linear-item--danger"
+          :class="{ 'linear-item--active': rootRoving.activeIndex.value === 3 }"
           @click="closeMenu"
         >
           Delete
@@ -184,8 +243,6 @@ watch(
       <div
         v-if="subNode.open.value"
         ref="submenu"
-        role="menu"
-        aria-label="Export as"
         class="linear-menu"
         :style="subPosition.styles.value"
       >
@@ -193,15 +250,34 @@ watch(
           v-for="(format, idx) in ['PDF', 'PNG', 'SVG'] as const"
           :key="format"
           type="button"
-          role="menuitem"
           :ref="setSubItemRef(idx)"
           :tabindex="subRoving.getTabindex(idx)"
           class="linear-item"
+          :class="{ 'linear-item--active': subRoving.activeIndex.value === idx }"
           @click="closeMenu"
         >
           {{ format }}
         </button>
       </div>
+    </Teleport>
+
+    <!-- Safe Polygon Corridor Visualization -->
+    <Teleport to="body">
+      <svg
+        v-if="showCorridor && polygonPoints.length > 0"
+        class="safe-polygon-overlay"
+        aria-hidden="true"
+      >
+        <polygon :points="polygonPointsString" class="safe-polygon-shape" />
+        <circle
+          v-for="([x, y], idx) in polygonPoints"
+          :key="idx"
+          :cx="x"
+          :cy="y"
+          r="3.5"
+          class="safe-polygon-vertex"
+        />
+      </svg>
     </Teleport>
   </div>
 </template>
@@ -209,8 +285,62 @@ watch(
 <style scoped>
 .menu-demo {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   padding: 48px 0;
+}
+.demo-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 24px;
+}
+.demo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(247, 248, 248, 0.75);
+  cursor: pointer;
+  user-select: none;
+}
+.demo-toggle input[type="checkbox"] {
+  accent-color: #5e6ad2;
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 9999px;
+  background: rgba(94, 106, 210, 0.16);
+  border: 1px solid rgba(113, 124, 239, 0.4);
+  color: #c7cbff;
+}
+.demo-badge__pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #717cef;
+  box-shadow: 0 0 6px #717cef;
+}
+.demo-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(247, 248, 248, 0.75);
+}
+.demo-slider input[type="range"] {
+  width: 80px;
+  accent-color: #5e6ad2;
+  cursor: pointer;
 }
 .linear-btn {
   display: inline-flex;
@@ -262,11 +392,10 @@ watch(
   border-radius: 5px;
   padding: 7px 8px;
   cursor: pointer;
-}
-.linear-item:hover,
-.linear-item:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
   outline: none;
+}
+.linear-item--active {
+  background: rgba(255, 255, 255, 0.08);
 }
 .linear-item__chevron {
   margin-left: auto;
@@ -279,5 +408,25 @@ watch(
   height: 1px;
   margin: 4px 6px;
   background: rgba(255, 255, 255, 0.08);
+}
+.safe-polygon-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 100;
+  overflow: visible;
+}
+.safe-polygon-shape {
+  fill: rgba(99, 102, 241, 0.32);
+  stroke: #818cf8;
+  stroke-width: 2;
+  stroke-dasharray: 6 3;
+}
+.safe-polygon-vertex {
+  fill: #6366f1;
+  stroke: #ffffff;
+  stroke-width: 2;
 }
 </style>
