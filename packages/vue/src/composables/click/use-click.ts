@@ -186,7 +186,7 @@ function getClosestElement(target: EventTarget | null): Element | null {
 /**
  * Recognizes native button elements that natively dispatch synthetic click events on Space/Enter.
  */
-export function isButtonTarget(target: EventTarget | null): boolean {
+function isButtonTarget(target: EventTarget | null): boolean {
   const element = getClosestElement(target);
   if (!element) return false;
   return Boolean(element.closest?.(BUTTON_SELECTOR));
@@ -195,7 +195,7 @@ export function isButtonTarget(target: EventTarget | null): boolean {
 /**
  * Skips custom Space handling when the focused element already behaves like a text field.
  */
-export function isTypeableElement(target: EventTarget | null): boolean {
+function isTypeableElement(target: EventTarget | null): boolean {
   if (!isHTMLElement(target)) return false;
   return _isTypeableElement(target);
 }
@@ -203,7 +203,7 @@ export function isTypeableElement(target: EventTarget | null): boolean {
 /**
  * Recognizes native link elements that natively dispatch synthetic click events on Enter.
  */
-export function isLinkTarget(target: EventTarget | null): boolean {
+function isLinkTarget(target: EventTarget | null): boolean {
   const element = getClosestElement(target);
   if (!element) return false;
   return Boolean(element.closest?.(LINK_SELECTOR));

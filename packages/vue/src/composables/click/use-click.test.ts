@@ -10,13 +10,15 @@ import {
   useFloatingNode,
 } from "@/composables";
 import { getTestEl, makeMouseEvent, makePointerEvent } from "@/test-utils";
-import { isButtonTarget, isLinkTarget } from "./use-click";
 
 type AnchorKind =
   | "button"
   | "role-button"
   | "link"
   | "bare-link"
+  | "summary"
+  | "nested-button"
+  | "nested-link"
   | "text-input"
   | "button-input"
   | "plain-div";
@@ -42,6 +44,18 @@ function renderAnchor(kind: AnchorKind, extraProps: Record<string, unknown> = {}
         { ref: "anchor", "data-testid": "anchor", tabindex: 0, ...extraProps },
         "Link without href",
       );
+    case "summary":
+      return h("details", [
+        h("summary", { ref: "anchor", "data-testid": "anchor", ...extraProps }, "Summary Trigger"),
+      ]);
+    case "nested-button":
+      return h("button", { ref: "anchor", "data-testid": "anchor", ...extraProps }, [
+        h("span", { "data-testid": "anchor-child" }, "Child Icon"),
+      ]);
+    case "nested-link":
+      return h("a", { ref: "anchor", "data-testid": "anchor", href: "#", ...extraProps }, [
+        h("span", { "data-testid": "anchor-child" }, "Child Link"),
+      ]);
     case "text-input":
       return h("input", { ref: "anchor", "data-testid": "anchor", type: "text", ...extraProps });
     case "button-input":
@@ -160,6 +174,40 @@ describe("Feature: useClick", () => {
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
     });
+
+    it("Given an open floating element with toggle disabled, When the anchor is clicked, Then preserves open state", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({ toggle: false }, { defaultOpen: true });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When
+      await userEvent.click(anchorEl);
+
+      // Then
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given anchor element, When auxiliary mouse buttons (right or middle) are clicked, Then preserves closed state", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When right-clicked
+      await userEvent.click(anchorEl, { button: "right" });
+
+      // Then remains closed
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+
+      // When middle-clicked
+      await userEvent.click(anchorEl, { button: "middle" });
+
+      // Then remains closed
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
   });
 
   describe("Scenario: Pointer event handling and modality filtering", () => {
@@ -176,49 +224,43 @@ describe("Feature: useClick", () => {
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
-    it("Given event option is 'mousedown', When mousedown is dispatched on anchor, Then toggles open state immediately", async () => {
+    it("Given event option is 'mousedown', When anchor is clicked via user gesture, Then toggles open state on mousedown without double-toggling on click", async () => {
       // Given
       const { anchorEl, floatingEl } = await renderClick({
         event: "mousedown",
         toggle: true,
       });
-      const rawAnchorEl = getTestEl("anchor");
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
 
-      // When
-      rawAnchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
-      await nextTick();
+      // When: User clicks anchor (triggers pointerdown -> mousedown -> click sequence)
+      await userEvent.click(anchorEl);
 
-      // Then
+      // Then: Opens cleanly on mousedown and does not double-toggle back to closed on click
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
 
-      // When mousedown fires again
-      rawAnchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
-      await nextTick();
+      // When: Clicked a second time
+      await userEvent.click(anchorEl);
 
-      // Then
+      // Then: Closes cleanly
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
-    it("Given event option is 'mousedown', When pointerdown occurs before mousedown, Then tracks pointerType and opens", async () => {
+    it("Given event option is 'mousedown', When auxiliary mouse buttons (right or middle) are clicked, Then preserves closed state", async () => {
       // Given
-      const { anchorEl, floatingEl } = await renderClick({
-        event: "mousedown",
-        toggle: true,
-      });
-      const rawAnchorEl = getTestEl("anchor");
+      const { anchorEl, floatingEl } = await renderClick({ event: "mousedown" });
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
 
-      // When
-      rawAnchorEl.dispatchEvent(makePointerEvent("pointerdown", { button: 0 }));
-      rawAnchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
-      await nextTick();
+      // When: Right click
+      await userEvent.click(anchorEl, { button: "right" });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
 
-      // Then
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
+      // When: Middle click
+      await userEvent.click(anchorEl, { button: "middle" });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
     it("Given unknown pointer device with empty pointerType, When event is 'mousedown', Then opens and avoids double-toggle on subsequent click", async () => {
@@ -280,6 +322,22 @@ describe("Feature: useClick", () => {
       await expect.element(floatingEl).toBeVisible();
     });
 
+    it("Given ignoreTouch is true, When touched via touch pointer events, Then preserves closed state", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({ ignoreTouch: true });
+      const rawAnchorEl = getTestEl("anchor");
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When: Touch sequence arrives
+      rawAnchorEl.dispatchEvent(makePointerEvent("pointerdown", { pointerType: "touch" }));
+      rawAnchorEl.dispatchEvent(makeMouseEvent("click", { detail: 1 }));
+      await nextTick();
+
+      // Then: Does not open
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
     it("Given a touch gesture when event is 'mousedown', When pointerdown and mousedown fire, Then defers opening until the trailing click", async () => {
       // Given
       const { anchorEl, floatingEl } = await renderClick({
@@ -308,20 +366,45 @@ describe("Feature: useClick", () => {
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
     });
-  });
 
-  describe("Scenario: Keyboard activation on Enter and Space keys", () => {
-    it("Given ignoreKeyboard is true, When synthetic keyboard click with detail 0 is dispatched, Then preserves closed state", async () => {
+    it("Given event option is a reactive ref, When switched from 'click' to 'mousedown', Then opens on mousedown", async () => {
       // Given
-      const { anchorEl, floatingEl } = await renderClick({ ignoreKeyboard: true });
+      const eventOption = ref<"click" | "mousedown">("click");
+      const { anchorEl, floatingEl } = await renderClick({ event: eventOption });
       const rawAnchorEl = getTestEl("anchor");
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
 
-      // When
-      rawAnchorEl.dispatchEvent(makeMouseEvent("click", { detail: 0 }));
+      // When: In 'click' mode, mousedown alone does not open
+      rawAnchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
+      await nextTick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+
+      // When: Dynamically switched to 'mousedown'
+      eventOption.value = "mousedown";
       await nextTick();
 
-      // Then
+      // Then: mousedown immediately opens
+      rawAnchorEl.dispatchEvent(makeMouseEvent("mousedown", { button: 0 }));
+      await nextTick();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+  });
+
+  describe("Scenario: Keyboard activation on Enter and Space keys", () => {
+    it("Given ignoreKeyboard is true on a native button, When activated via Enter key, Then preserves closed state", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({ ignoreKeyboard: true });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When: Pressing Enter on native button dispatches browser click with detail 0
+      await userEvent.keyboard("{Enter}");
+
+      // Then: Preserves closed state
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
@@ -376,10 +459,11 @@ describe("Feature: useClick", () => {
       // Given
       const { anchorEl, floatingEl } = await renderClick(
         { ignoreKeyboard: true },
-        { anchorKind: "plain-div" },
+        { anchorKind: "role-button" },
       );
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When
       await userEvent.keyboard(" ");
@@ -394,6 +478,7 @@ describe("Feature: useClick", () => {
       const { anchorEl, floatingEl } = await renderClick({ ignoreKeyboard: true });
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When
       await userEvent.keyboard("{Enter}");
@@ -402,9 +487,54 @@ describe("Feature: useClick", () => {
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
+
+    it("Given an open element opened by Enter key, When repeating Enter keydown events fire with repeat true, Then ignores repeat events and remains open", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "role-button" });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      // When: Initial Enter opens
+      await userEvent.keyboard("{Enter}");
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Repeating keydown arrives while holding key
+      const repeatEvent = new KeyboardEvent("keydown", {
+        key: "Enter",
+        repeat: true,
+        bubbles: true,
+      });
+      rawAnchorEl.dispatchEvent(repeatEvent);
+      await nextTick();
+
+      // Then: Still remains open (does not toggle closed)
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given a focused custom trigger, When Space key is pressed down, Then prevents default to suppress page scrolling", async () => {
+      // Given
+      const { anchorEl } = await renderClick({}, { anchorKind: "role-button" });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      // When: Space keydown is dispatched
+      const spaceEvent = new KeyboardEvent("keydown", {
+        key: " ",
+        bubbles: true,
+        cancelable: true,
+      });
+      rawAnchorEl.dispatchEvent(spaceEvent);
+
+      // Then: Prevents default browser scroll action
+      expect(spaceEvent.defaultPrevented).toBe(true);
+    });
   });
 
-  describe("Scenario: Dynamic enablement via enabled option", () => {
+  describe("Scenario: Dynamic enablement and option reactivity", () => {
     it("Given enabled is initially false, When anchor is clicked, Then ignores click until enabled becomes true", async () => {
       // Given
       const enabled = ref(false);
@@ -447,6 +577,53 @@ describe("Feature: useClick", () => {
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
       await expect.element(floatingEl).toBeVisible();
     });
+
+    it("Given toggle option is a reactive ref, When toggle value is changed dynamically, Then respects the updated toggle behavior", async () => {
+      // Given
+      const toggle = ref(false);
+      const { anchorEl, floatingEl } = await renderClick({ toggle });
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When opened with toggle = false
+      await userEvent.click(anchorEl);
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When clicked again while toggle = false
+      await userEvent.click(anchorEl);
+
+      // Then remains open
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When toggle is dynamically switched to true
+      toggle.value = true;
+      await nextTick();
+      await userEvent.click(anchorEl);
+
+      // Then closes
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given a mounted component, When the component is unmounted, Then detaches all listeners from anchor", async () => {
+      // Given
+      const fixture = createTestComponent();
+      const screen = await render(fixture.Component);
+      await nextTick();
+      const rawAnchorEl = getTestEl("anchor");
+
+      // When: Component unmounts
+      await screen.unmount();
+      await nextTick();
+
+      // When: Click event dispatched on old element
+      rawAnchorEl.dispatchEvent(makeMouseEvent("click", { button: 0 }));
+      await nextTick();
+
+      // Then: Open state was not modified
+      expect(fixture.openRef.value).toBe(false);
+    });
   });
 
   describe("Scenario: Anchor element types and virtual triggers", () => {
@@ -455,6 +632,7 @@ describe("Feature: useClick", () => {
       const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "role-button" });
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When Enter pressed
       await userEvent.keyboard("{Enter}");
@@ -476,6 +654,7 @@ describe("Feature: useClick", () => {
       const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "link" });
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When Enter pressed
       await userEvent.keyboard("{Enter}");
@@ -497,6 +676,7 @@ describe("Feature: useClick", () => {
       const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "bare-link" });
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When Enter pressed
       await userEvent.keyboard("{Enter}");
@@ -513,11 +693,97 @@ describe("Feature: useClick", () => {
       await expect.element(floatingEl).not.toBeInTheDocument();
     });
 
+    it("Given a summary element trigger, When Enter and Space keys are pressed, Then toggles open state without double-triggering", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "summary" });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      // When: Enter pressed on summary
+      await userEvent.keyboard("{Enter}");
+
+      // Then: Opens cleanly
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Space pressed on summary
+      await userEvent.keyboard(" ");
+
+      // Then: Closes cleanly
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given a native button with nested child elements, When child element is clicked, Then identifies button target and toggles open state cleanly", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "nested-button" });
+      const childEl = page.getByTestId("anchor-child");
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When: Clicked on nested child inside button
+      await userEvent.click(childEl);
+
+      // Then: Opens without double-toggling
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Clicked again on child
+      await userEvent.click(childEl);
+
+      // Then: Closes cleanly
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given a link element with nested child elements, When child element receives Enter key, Then identifies link target and opens without double-triggering", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "nested-link" });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      // When: Enter pressed
+      await userEvent.keyboard("{Enter}");
+
+      // Then: Opens cleanly
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+    });
+
+    it("Given a button trigger with text node descendants, When event target is a text node or non-element, Then resolves target safely", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "nested-button" });
+      const childEl = getTestEl("anchor-child");
+      const textNode = childEl.firstChild!;
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+
+      // When: Keydown event targeting the text node arrives
+      const textEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      textNode.dispatchEvent(textEvent);
+      await nextTick();
+
+      // Then: Native button target recognition resolves parent element and suppresses duplicate handling
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+
+      // When: Event target is non-element object (e.g. window)
+      const windowEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      Object.defineProperty(windowEvent, "target", { value: window });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.dispatchEvent(windowEvent);
+      await nextTick();
+
+      // Then: Handled safely without throwing and opens since window is not a button target
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+    });
+
     it("Given a typeable text input anchor, When typing characters or pressing Enter, Then preserves closed state", async () => {
       // Given
       const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "text-input" });
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When typing text
       await userEvent.keyboard("hello world");
@@ -539,6 +805,7 @@ describe("Feature: useClick", () => {
       const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "button-input" });
       const rawAnchorEl = getTestEl("anchor");
       rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
 
       // When Enter pressed
       await userEvent.keyboard("{Enter}");
@@ -639,131 +906,6 @@ describe("Feature: useClick", () => {
     });
   });
 
-  describe("Scenario: Target identification helpers (isButtonTarget, isLinkTarget)", () => {
-    it("Given button elements and nested descendants, When evaluated by isButtonTarget, Then identifies them as button targets", () => {
-      // Given
-      const buttonEl = document.createElement("button");
-      const spanEl = document.createElement("span");
-      const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const textNode = document.createTextNode("Click");
-
-      svgEl.appendChild(pathEl);
-      spanEl.appendChild(textNode);
-      buttonEl.appendChild(spanEl);
-      buttonEl.appendChild(svgEl);
-
-      // Then: Direct button and nested elements
-      expect(isButtonTarget(buttonEl)).toBe(true);
-      expect(isButtonTarget(spanEl)).toBe(true);
-      expect(isButtonTarget(svgEl)).toBe(true);
-      expect(isButtonTarget(pathEl)).toBe(true);
-      expect(isButtonTarget(textNode)).toBe(true);
-
-      // Given: Input button variations
-      const buttonInputEl = document.createElement("input");
-      buttonInputEl.type = "button";
-      expect(isButtonTarget(buttonInputEl)).toBe(true);
-
-      const submitInputEl = document.createElement("input");
-      submitInputEl.type = "submit";
-      expect(isButtonTarget(submitInputEl)).toBe(true);
-
-      const resetInputEl = document.createElement("input");
-      resetInputEl.type = "reset";
-      expect(isButtonTarget(resetInputEl)).toBe(true);
-
-      const imageInputEl = document.createElement("input");
-      imageInputEl.type = "image";
-      expect(isButtonTarget(imageInputEl)).toBe(true);
-
-      // Given: Summary element
-      const summaryEl = document.createElement("summary");
-      const summarySpanEl = document.createElement("span");
-      summaryEl.appendChild(summarySpanEl);
-      expect(isButtonTarget(summaryEl)).toBe(true);
-      expect(isButtonTarget(summarySpanEl)).toBe(true);
-
-      // Given: Non-button elements
-      const textInputEl = document.createElement("input");
-      textInputEl.type = "text";
-      expect(isButtonTarget(textInputEl)).toBe(false);
-
-      const divEl = document.createElement("div");
-      const divChildEl = document.createElement("span");
-      divEl.appendChild(divChildEl);
-      expect(isButtonTarget(divEl)).toBe(false);
-      expect(isButtonTarget(divChildEl)).toBe(false);
-
-      const roleButtonEl = document.createElement("div");
-      roleButtonEl.setAttribute("role", "button");
-      const roleButtonSpanEl = document.createElement("span");
-      roleButtonEl.appendChild(roleButtonSpanEl);
-      expect(isButtonTarget(roleButtonEl)).toBe(false);
-      expect(isButtonTarget(roleButtonSpanEl)).toBe(false);
-
-      const linkEl = document.createElement("a");
-      linkEl.href = "#";
-      const linkSpanEl = document.createElement("span");
-      linkEl.appendChild(linkSpanEl);
-      expect(isButtonTarget(linkEl)).toBe(false);
-      expect(isButtonTarget(linkSpanEl)).toBe(false);
-
-      // Non-elements
-      expect(isButtonTarget(null)).toBe(false);
-      expect(isButtonTarget(undefined as unknown as EventTarget)).toBe(false);
-      expect(isButtonTarget(window)).toBe(false);
-      expect(isButtonTarget(document)).toBe(false);
-      expect(isButtonTarget(document.createTextNode("detached"))).toBe(false);
-    });
-
-    it("Given link elements with href and nested descendants, When evaluated by isLinkTarget, Then identifies them as link targets", () => {
-      // Given
-      const linkEl = document.createElement("a");
-      linkEl.href = "https://example.com";
-      const spanEl = document.createElement("span");
-      const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const textNode = document.createTextNode("Link text");
-
-      svgEl.appendChild(pathEl);
-      spanEl.appendChild(textNode);
-      linkEl.appendChild(spanEl);
-      linkEl.appendChild(svgEl);
-
-      // Then: Direct link and nested elements
-      expect(isLinkTarget(linkEl)).toBe(true);
-      expect(isLinkTarget(spanEl)).toBe(true);
-      expect(isLinkTarget(svgEl)).toBe(true);
-      expect(isLinkTarget(pathEl)).toBe(true);
-      expect(isLinkTarget(textNode)).toBe(true);
-
-      // Given: Bare link without href
-      const bareLinkEl = document.createElement("a");
-      const bareSpanEl = document.createElement("span");
-      bareLinkEl.appendChild(bareSpanEl);
-      expect(isLinkTarget(bareLinkEl)).toBe(false);
-      expect(isLinkTarget(bareSpanEl)).toBe(false);
-
-      // Given: Non-links
-      const buttonEl = document.createElement("button");
-      const buttonSpanEl = document.createElement("span");
-      buttonEl.appendChild(buttonSpanEl);
-      expect(isLinkTarget(buttonEl)).toBe(false);
-      expect(isLinkTarget(buttonSpanEl)).toBe(false);
-
-      const divEl = document.createElement("div");
-      expect(isLinkTarget(divEl)).toBe(false);
-
-      // Non-elements
-      expect(isLinkTarget(null)).toBe(false);
-      expect(isLinkTarget(undefined as unknown as EventTarget)).toBe(false);
-      expect(isLinkTarget(window)).toBe(false);
-      expect(isLinkTarget(document)).toBe(false);
-      expect(isLinkTarget(document.createTextNode("detached"))).toBe(false);
-    });
-  });
-
   describe("Scenario: IME composition safety", () => {
     it("Given an active IME composition session on a non-button trigger, When Enter or Space is pressed, Then ignores activation until composition ends", async () => {
       // Given
@@ -814,6 +956,32 @@ describe("Feature: useClick", () => {
       // Then
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
       await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
+    it("Given an in-progress Space keypress on a custom trigger, When keyup occurs while IME composition is active, Then ignores activation", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "role-button" });
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      // When: Space keydown fires before IME begins
+      rawAnchorEl.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+      await nextTick();
+
+      // When: IME starts before keyup
+      document.dispatchEvent(new CompositionEvent("compositionstart"));
+
+      // When: Keyup arrives during IME
+      rawAnchorEl.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+      await nextTick();
+
+      // Then: Does not open
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+
+      // End IME
+      document.dispatchEvent(new CompositionEvent("compositionend"));
     });
   });
 });
