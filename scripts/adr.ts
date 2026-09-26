@@ -132,24 +132,26 @@ function renderRecords(records: AdrRecord[]): string {
     return "No ADRs have been recorded yet.";
   }
 
-  const sections: string[] = [];
-  let currentGroup = "";
-
+  const groups = new Map<string, AdrRecord[]>();
   for (const record of records) {
-    if (record.group !== currentGroup) {
-      currentGroup = record.group;
-      sections.push(
-        `## ${formatGroupTitle(record.group)}\n\n| ADR | Decision | Status | Date |\n| --- | --- | --- | --- |`,
-      );
-    }
+    const list = groups.get(record.group) ?? [];
+    list.push(record);
+    groups.set(record.group, list);
+  }
 
-    const id = `ADR-${record.group}-${String(record.number).padStart(4, "0")}`;
+  const sections: string[] = [];
+  for (const [group, groupRecords] of groups) {
+    const rows = groupRecords.map((record) => {
+      const id = `ADR-${record.group}-${String(record.number).padStart(4, "0")}`;
+      return `| [${id}](${record.path}) | ${record.title} | ${record.status} | ${record.date || ""} |`;
+    });
+
     sections.push(
-      `| [${id}](${record.path}) | ${record.title} | ${record.status} | ${record.date || ""} |`,
+      `## ${formatGroupTitle(group)}\n\n| ADR | Decision | Status | Date |\n| --- | --- | --- | --- |\n${rows.join("\n")}`,
     );
   }
 
-  return sections.join("\n");
+  return sections.join("\n\n");
 }
 
 /** Replaces only the generated section while preserving the README introduction. */
