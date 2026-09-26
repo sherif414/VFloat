@@ -11,7 +11,7 @@
 
 ## Testing Standards
 
-- All tests **MUST** adhere to the Behavior-Driven Development (BDD) standards defined in [.agents/rules/testing-standards.md](.agents/rules/testing-standards.md) and [.agents/skills/vfloat-test-standards/SKILL.md](.agents/skills/vfloat-test-standards/SKILL.md).
+- All tests **MUST** adhere to the Behavior-Driven Development (BDD) standards defined in [.agents/rules/testing-standards.md](.agents/rules/testing-standards.md) and the [vfloat-test-standards skill](.agents/skills/vfloat-test-standards/SKILL.md).
 - Follow the 3-level hierarchy: `Feature:` -> `Scenario:` -> `Given/When/Then`.
 - Assert user-facing accessibility invariants (`aria-expanded`, `expect.element(el).toHaveFocus()`, visibility); never assert private reactive internals or inspect raw DOM activeElement pointers.
 
