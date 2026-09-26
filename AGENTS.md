@@ -19,6 +19,7 @@
 - **Strict Staging Isolation**: When asked to commit changes, strictly stage only the specific files modified by the agent as part of the active task (`git add <specific-files>`). Never use blanket commands (`git add .` / `git add -A`) or stage pre-existing unstaged/user-authored changes unless explicitly instructed to commit everything.
 - **Rollback Scope Boundary**: When asked to revert, reset, or roll back changes, strictly target only the modifications or commits introduced during the active task. Never reset beyond the task boundary or discard user commits without explicit confirmation.
 - **Pragmatic Scope Discipline**: When investigating or hardening architectural concerns (such as cross-realm or SSR safety), focus strictly on realistic library use cases (such as elements inside same-origin iframes, portals, and SVG anchors). Do not over-engineer or divert focus into irrelevant or near-impossible scenarios (such as cross-origin security restrictions, obscure XML parsers, or synthetic mocks) unless explicitly requested.
+- **RFC Isolation & Non-Authority**: Files in `RFC/` are historical, write-once proposal drafts and discarded exploratory ideas. They are **never** a source of truth for existing library behavior, APIs, or architecture. Agents **must never** read, search, cite, or consult files in `RFC/` during feature implementation, bug fixes, or refactoring unless the user explicitly instructs to inspect or write an RFC. The authoritative sources of truth are exclusively the living code in `packages/vue/src/`, test suites, documentation in `docs/`, and settled records in `ADR/`.
 
 ## Specialized Skills & Rules Index
 
@@ -28,6 +29,7 @@ Consult the authoritative skills and rules for domain-specific tasks rather than
 - **Testing Standards**: Follow [`vfloat-test-standards`](.agents/skills/vfloat-test-standards/SKILL.md) and [`.agents/rules/testing-standards.md`](.agents/rules/testing-standards.md) for Behavior-Driven Development (BDD) hierarchy (`Feature:` -> `Scenario:` -> `Given/When/Then`), test tier classification (P/S/I), fixture factories, and Vitest Browser Mode validation.
 - **Commit Messages**: Follow [`.agents/rules/commit-message.md`](.agents/rules/commit-message.md) for the Conventional Commits specification, scope definitions, and SemVer mappings.
 - **Architecture Decision Records**: Follow [`architecture-decision-records`](.agents/skills/architecture-decision-records/SKILL.md) when proposing, documenting, or superseding durable architectural choices in `ADR/`.
+- **RFC Proposals**: Follow [`rfc-writer`](.agents/skills/rfc-writer/SKILL.md) only when explicitly instructed to write or review a proposal in `RFC/`.
 - **Documentation**: Follow [`documentation-writer`](.agents/skills/documentation-writer/SKILL.md) when creating, updating, or reviewing documentation in `docs/api` or `docs/guide`.
 - **Bug Diagnosis**: Follow [`diagnose`](.agents/skills/diagnose/SKILL.md) for disciplined bug reproduction and root-cause analysis loops.
 
