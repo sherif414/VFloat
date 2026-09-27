@@ -32,6 +32,7 @@ Consult the authoritative skills and rules for domain-specific tasks rather than
 - **RFC Proposals**: Follow [`rfc-writer`](.agents/skills/rfc-writer/SKILL.md) only when explicitly instructed to write or review a proposal in `RFC/`.
 - **Documentation**: Follow [`documentation-writer`](.agents/skills/documentation-writer/SKILL.md) when creating, updating, or reviewing documentation in `docs/api` or `docs/guide`.
 - **Bug Diagnosis**: Follow [`diagnose`](.agents/skills/diagnose/SKILL.md) for disciplined bug reproduction and root-cause analysis loops.
+- **Execution Economy & Deliberation**: Follow [`.agents/rules/execution-economy.md`](.agents/rules/execution-economy.md) for deliberation-first reasoning, upfront context planning, single-pass file reading, and tool call minimization.
 
 ## Development Toolchain & Workflows
 
