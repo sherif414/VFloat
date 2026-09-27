@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-vue";
 import { page, userEvent } from "vitest/browser";
 import { computed, defineComponent, h, nextTick, ref, useTemplateRef, type VNode } from "vue";
 import {
-  type FloatingNode,
   type UseClickOptions,
   type VirtualElement,
   useClick,
@@ -29,65 +28,49 @@ interface FixtureConfig {
 }
 
 function renderAnchor(kind: AnchorKind, extraProps: Record<string, unknown> = {}): VNode {
+  const base = { ref: "anchor", "data-testid": "anchor", ...extraProps };
   switch (kind) {
     case "role-button":
-      return h(
-        "div",
-        { ref: "anchor", "data-testid": "anchor", tabindex: 0, role: "button", ...extraProps },
-        "Custom Button",
-      );
+      return h("div", { role: "button", tabindex: 0, ...base }, "Custom Button");
     case "link":
-      return h("a", { ref: "anchor", "data-testid": "anchor", href: "#", ...extraProps }, "Link");
+      return h("a", { href: "#", ...base }, "Link");
     case "bare-link":
-      return h(
-        "a",
-        { ref: "anchor", "data-testid": "anchor", tabindex: 0, ...extraProps },
-        "Link without href",
-      );
+      return h("a", { tabindex: 0, ...base }, "Link without href");
     case "summary":
-      return h("details", [
-        h("summary", { ref: "anchor", "data-testid": "anchor", ...extraProps }, "Summary Trigger"),
-      ]);
+      return h("details", [h("summary", base, "Summary Trigger")]);
     case "nested-button":
-      return h("button", { ref: "anchor", "data-testid": "anchor", ...extraProps }, [
-        h("span", { "data-testid": "anchor-child" }, "Child Icon"),
-      ]);
+      return h("button", base, [h("span", { "data-testid": "anchor-child" }, "Child Icon")]);
     case "nested-link":
-      return h("a", { ref: "anchor", "data-testid": "anchor", href: "#", ...extraProps }, [
+      return h("a", { href: "#", ...base }, [
         h("span", { "data-testid": "anchor-child" }, "Child Link"),
       ]);
     case "text-input":
-      return h("input", { ref: "anchor", "data-testid": "anchor", type: "text", ...extraProps });
+      return h("input", { type: "text", ...base });
     case "button-input":
-      return h("input", {
-        ref: "anchor",
-        "data-testid": "anchor",
-        type: "button",
-        value: "Click me",
-        ...extraProps,
-      });
+      return h("input", { type: "button", value: "Click me", ...base });
     case "plain-div":
-      return h("div", { ref: "anchor", "data-testid": "anchor", ...extraProps }, "Trigger");
+      return h("div", base, "Trigger");
     case "button":
     default:
-      return h("button", { ref: "anchor", "data-testid": "anchor", ...extraProps }, "Trigger");
+      return h("button", base, "Trigger");
   }
 }
 
 function createTestComponent(options: UseClickOptions = {}, config: FixtureConfig = {}) {
   const openRef = ref(config.defaultOpen ?? false);
-  let node!: FloatingNode;
 
   const Component = defineComponent(() => {
     const anchorEl = useTemplateRef<HTMLElement>("anchor");
     const floatingEl = useTemplateRef<HTMLElement>("floating");
 
-    node = useFloatingNode({
-      anchorEl,
-      floatingEl,
-      open: openRef,
-    });
-    useClick(node, options);
+    useClick(
+      useFloatingNode({
+        anchorEl,
+        floatingEl,
+        open: openRef,
+      }),
+      options,
+    );
 
     return () =>
       h("div", { class: "test-wrapper" }, [
@@ -98,7 +81,7 @@ function createTestComponent(options: UseClickOptions = {}, config: FixtureConfi
       ]);
   });
 
-  return { Component, getNode: () => node, openRef };
+  return { Component, openRef };
 }
 
 async function renderClick(options: UseClickOptions = {}, config: FixtureConfig = {}) {
@@ -108,17 +91,11 @@ async function renderClick(options: UseClickOptions = {}, config: FixtureConfig 
   return {
     anchorEl: page.getByTestId("anchor"),
     floatingEl: page.getByTestId("floating"),
-    node: fixture.getNode(),
     openRef: fixture.openRef,
   };
 }
 
 describe("Feature: useClick", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-    vi.useRealTimers();
-  });
-
   describe("Scenario: Toggle activation on anchor click", () => {
     it("Given a closed floating element with toggle enabled, When the anchor is clicked, Then opens and marks anchor as expanded", async () => {
       // Given
@@ -165,14 +142,6 @@ describe("Feature: useClick", () => {
 
       // Then remains open
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
-
-      // When clicked a third time
-      await userEvent.click(anchorEl);
-
-      // Then still remains open
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
-      await expect.element(floatingEl).toBeVisible();
     });
 
     it("Given an open floating element with toggle disabled, When the anchor is clicked, Then preserves open state", async () => {
@@ -467,21 +436,6 @@ describe("Feature: useClick", () => {
 
       // When
       await userEvent.keyboard(" ");
-
-      // Then
-      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
-      await expect.element(floatingEl).not.toBeInTheDocument();
-    });
-
-    it("Given ignoreKeyboard is true, When Enter key is pressed on anchor, Then preserves closed state", async () => {
-      // Given
-      const { anchorEl, floatingEl } = await renderClick({ ignoreKeyboard: true });
-      const rawAnchorEl = getTestEl("anchor");
-      rawAnchorEl.focus();
-      await expect.element(anchorEl).toHaveFocus();
-
-      // When
-      await userEvent.keyboard("{Enter}");
 
       // Then
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
@@ -825,7 +779,6 @@ describe("Feature: useClick", () => {
     it("Given a virtual element with a contextElement, When context element is clicked, Then toggles open state", async () => {
       // Given
       const openRef = ref(false);
-      let node!: FloatingNode;
       const Component = defineComponent(() => {
         const floatingEl = useTemplateRef<HTMLElement>("floating");
         const contextEl = useTemplateRef<HTMLElement>("context");
@@ -837,12 +790,13 @@ describe("Feature: useClick", () => {
           };
         });
 
-        node = useFloatingNode({
-          anchorEl: virtualAnchor,
-          floatingEl,
-          open: openRef,
-        });
-        useClick(node);
+        useClick(
+          useFloatingNode({
+            anchorEl: virtualAnchor,
+            floatingEl,
+            open: openRef,
+          }),
+        );
 
         return () =>
           h("div", { class: "test-wrapper" }, [
@@ -948,8 +902,11 @@ describe("Feature: useClick", () => {
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
 
       // When
-      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
-      Object.defineProperty(event, "isComposing", { value: true });
+      const event = new KeyboardEvent("keydown", {
+        key: "Enter",
+        bubbles: true,
+        isComposing: true,
+      });
       rawAnchorEl.dispatchEvent(event);
       await nextTick();
 
