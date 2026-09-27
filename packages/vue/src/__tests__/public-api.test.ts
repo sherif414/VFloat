@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import * as VFloat from "@/index";
 
 describe("Feature: VFloat Public API Surface", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
   describe("Scenario: Public symbol boundary and encapsulation", () => {
     it("Given the library index entrypoint, When inspected, Then it exports only approved public runtime symbols", () => {
       const exportedKeys = Object.keys(VFloat).sort();

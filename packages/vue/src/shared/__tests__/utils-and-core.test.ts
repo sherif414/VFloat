@@ -22,24 +22,23 @@ import { isMac, isSafari, isWebKit, matchesFocusVisible } from "@/shared/platfor
 import { clearTrackedElements, trackElement } from "@/test-utils";
 import type { VirtualElement } from "@/types";
 
-const originalPlatform = navigator.platform;
-const originalUserAgent = navigator.userAgent;
-
-afterEach(() => {
-  Object.defineProperty(window.navigator, "platform", {
-    configurable: true,
-    value: originalPlatform,
-  });
-  Object.defineProperty(window.navigator, "userAgent", {
-    configurable: true,
-    value: originalUserAgent,
-  });
-  clearTrackedElements();
-  vi.clearAllMocks();
-  vi.useRealTimers();
-});
-
 describe("Feature: DOM utilities and core infrastructure helpers", () => {
+  const originalPlatform = navigator.platform;
+  const originalUserAgent = navigator.userAgent;
+
+  afterEach(() => {
+    Object.defineProperty(window.navigator, "platform", {
+      configurable: true,
+      value: originalPlatform,
+    });
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: originalUserAgent,
+    });
+    clearTrackedElements();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
   describe("Scenario: Platform and element type predicates", () => {
     it("Given various platform configurations and DOM elements, When predicate utilities are evaluated, Then they classify functions, elements, input types, and platform features correctly", () => {
       Object.defineProperty(window.navigator, "platform", {
@@ -172,7 +171,7 @@ describe("Feature: DOM utilities and core infrastructure helpers", () => {
       ).toBe(false);
 
       // RTL container scrollbar
-      const rtlTarget = document.createElement("div");
+      const rtlTarget = trackElement(document.createElement("div"));
       rtlTarget.dir = "rtl";
       rtlTarget.style.direction = "rtl";
       document.body.appendChild(rtlTarget);
@@ -361,7 +360,7 @@ describe("Feature: DOM utilities and core infrastructure helpers", () => {
     });
 
     it("Given elements from detached iframes with null defaultView, When evaluated, Then typeable and node predicates handle them gracefully", () => {
-      const iframe = document.createElement("iframe");
+      const iframe = trackElement(document.createElement("iframe"));
       document.body.appendChild(iframe);
 
       const iframeDoc = iframe.contentDocument!;

@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSSRApp, defineComponent, h, ref } from "vue";
 import { renderToString } from "vue/server-renderer";
 import * as VFloat from "@/index";
 
 describe("Feature: Server-Side Rendering (SSR) environment compatibility", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
   describe("Scenario: Full composable suite SSR rendering", () => {
     it("Given a component composing all public VFloat composables, When rendered to string on Node.js, Then it outputs valid HTML markup without throwing", async () => {
       const TestComponent = defineComponent({

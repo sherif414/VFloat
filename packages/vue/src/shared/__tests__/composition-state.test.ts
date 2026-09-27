@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { effectScope } from "vue";
 import { useComposition } from "../composition-state";
 
@@ -7,10 +7,6 @@ const SAFARI_USER_AGENT =
 
 describe("Feature: Shared IME composition state", () => {
   const originalUserAgent = window.navigator.userAgent;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
 
   afterEach(() => {
     Object.defineProperty(window.navigator, "userAgent", {
@@ -43,6 +39,7 @@ describe("Feature: Shared IME composition state", () => {
     });
 
     it("Given a WebKit/Safari user agent, When compositionend fires, Then state remains true during the 5ms debounce window and resets after", () => {
+      vi.useFakeTimers();
       Object.defineProperty(window.navigator, "userAgent", {
         configurable: true,
         value: SAFARI_USER_AGENT,
@@ -71,6 +68,7 @@ describe("Feature: Shared IME composition state", () => {
     });
 
     it("Given a WebKit/Safari debounce window in progress, When a new compositionstart fires, Then the pending reset timer is cancelled", () => {
+      vi.useFakeTimers();
       Object.defineProperty(window.navigator, "userAgent", {
         configurable: true,
         value: SAFARI_USER_AGENT,
@@ -229,6 +227,7 @@ describe("Feature: Shared IME composition state", () => {
     });
 
     it("Given WebKit trailing keydown during debounce window, When isImeComposing is evaluated, Then it returns true until debounce elapses", () => {
+      vi.useFakeTimers();
       Object.defineProperty(window.navigator, "userAgent", {
         configurable: true,
         value: SAFARI_USER_AGENT,
