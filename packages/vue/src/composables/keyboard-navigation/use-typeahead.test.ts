@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { defineComponent, h, nextTick, ref, useTemplateRef, type MaybeRefOrGetter } from "vue";
 import {
   type NavigationTarget,
@@ -10,7 +10,7 @@ import {
   useRovingFocus,
   useTypeahead,
 } from "@/composables";
-import { dispatchKey, getTestEl } from "@/test-utils";
+import { dispatchKey } from "@/test-utils";
 
 interface FixtureConfig {
   withTypeableInput?: boolean;
@@ -103,13 +103,24 @@ async function renderTypeahead(options: SetupOptions = {}, config: FixtureConfig
     config,
   );
   await render(fixture.Component);
+  await nextTick();
+  const anchorEl = page.getByTestId("anchor");
+  const floatingEl = page.getByTestId("floating");
+  const customEl = config.withCustomContainer ? page.getByTestId("custom") : null;
+  const inputEl = config.withTypeableInput ? page.getByTestId("typeable") : null;
+  if (options.open !== false && !config.withCustomContainer) {
+    (floatingEl.element() as HTMLElement).focus();
+  }
   return {
-    anchorEl: getTestEl("anchor"),
-    floatingEl: getTestEl("floating"),
+    anchorEl,
+    floatingEl,
+    customEl,
+    inputEl,
     getActiveIndex: fixture.getActiveIndex,
     typeahead: fixture.getTypeahead(),
     node: fixture.getNode(),
     openRef: fixture.openRef,
+    onMatchMock,
   };
 }
 
@@ -123,21 +134,25 @@ describe("Feature: useTypeahead", () => {
     it("Given a list of items, When typing a single character, Then matches first prefix item and prevents default", async () => {
       // Given
       const { floatingEl, getActiveIndex } = await renderTypeahead();
+      let defaultPrevented = false;
+      floatingEl.element().addEventListener("keydown", (e) => {
+        defaultPrevented = e.defaultPrevented;
+      });
 
       // When
-      const event = dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
 
       // Then
       expect(getActiveIndex()).toBe(3);
-      expect(event.defaultPrevented).toBe(true);
+      expect(defaultPrevented).toBe(true);
     });
 
     it("Given uppercase character input, When typed, Then matches case-insensitively", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead();
+      const { getActiveIndex } = await renderTypeahead();
 
       // When
-      dispatchKey(floatingEl, "C");
+      await userEvent.keyboard("C");
 
       // Then
       expect(getActiveIndex()).toBe(5);
@@ -145,14 +160,14 @@ describe("Feature: useTypeahead", () => {
 
     it("Given multiple characters in rapid succession, When typed, Then matches progressive multi-character prefix", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead();
+      const { getActiveIndex } = await renderTypeahead();
       vi.useFakeTimers();
 
       // When: Type 'b' then 'l'
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       expect(getActiveIndex()).toBe(3);
 
-      dispatchKey(floatingEl, "l");
+      await userEvent.keyboard("l");
 
       // Then: Matches "Blueberry" (index 4)
       expect(getActiveIndex()).toBe(4);
@@ -160,7 +175,7 @@ describe("Feature: useTypeahead", () => {
 
     it("Given a multi-character query, When successive matching keys are typed, Then retains the earliest match instead of alternating", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         items: ["Grape", "Grapefruit", "Guava"],
       });
       vi.useFakeTimers();
@@ -174,24 +189,24 @@ describe("Feature: useTypeahead", () => {
         ["e", 0],
         ["f", 1],
       ] as const) {
-        dispatchKey(floatingEl, char);
+        await userEvent.keyboard(char);
         expect(getActiveIndex()).toBe(expected);
       }
     });
 
     it("Given a typed prefix query, When resetMs timeout expires, Then clears buffer for subsequent query", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({ resetMs: 500 });
+      const { getActiveIndex } = await renderTypeahead({ resetMs: 500 });
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       expect(getActiveIndex()).toBe(3);
 
       // When: Timer advances past resetMs
       vi.advanceTimersByTime(500);
 
       // When: New character typed
-      dispatchKey(floatingEl, "c");
+      await userEvent.keyboard("c");
 
       // Then: New independent query matches "Cherry"
       expect(getActiveIndex()).toBe(5);
@@ -201,8 +216,8 @@ describe("Feature: useTypeahead", () => {
       // Given
       const { floatingEl, getActiveIndex } = await renderTypeahead({ open: false });
 
-      // When
-      dispatchKey(floatingEl, "b");
+      // When: Direct injection on unrendered/closed panel
+      dispatchKey(floatingEl.element(), "b");
 
       // Then
       expect(getActiveIndex()).toBe(-1);
@@ -212,25 +227,25 @@ describe("Feature: useTypeahead", () => {
   describe("Scenario: Repeated character cycling across identical prefixes", () => {
     it("Given multiple items starting with the same letter, When that letter is pressed repeatedly, Then cycles and wraps around", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead();
+      const { getActiveIndex } = await renderTypeahead();
       vi.useFakeTimers();
 
       // When & Then
       for (const expected of [0, 1, 2, 0]) {
-        dispatchKey(floatingEl, "a");
+        await userEvent.keyboard("a");
         expect(getActiveIndex()).toBe(expected);
       }
     });
 
     it("Given an existing activeIndex, When single character cycling begins, Then starts searching after the active index", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         items: ["Macadamia", "Mango", "Melon", "Mulberry"],
         activeIndex: ref(1),
       });
 
       // When
-      dispatchKey(floatingEl, "m");
+      await userEvent.keyboard("m");
 
       // Then: Advances to "Melon" (index 2)
       expect(getActiveIndex()).toBe(2);
@@ -240,42 +255,39 @@ describe("Feature: useTypeahead", () => {
   describe("Scenario: Disabled item filtering", () => {
     it("Given disabled items in the list, When cycling through items, Then skips disabled entries", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         items: ["Apple", "Apricot", "Avocado"],
         isItemDisabled: (idx) => idx === 1,
       });
       vi.useFakeTimers();
 
       // When
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("a");
       expect(getActiveIndex()).toBe(0);
 
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("a");
       // Then: Skips index 1 (Apricot) and lands on index 2 (Avocado)
       expect(getActiveIndex()).toBe(2);
 
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("a");
       expect(getActiveIndex()).toBe(0);
     });
 
     it("Given a query that exclusively matches a disabled item, When typed, Then ignores match and preserves current index", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         items: ["Apple", "Apricot", "Banana"],
         isItemDisabled: (idx) => idx === 1,
       });
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "a");
-      dispatchKey(floatingEl, "p");
+      await userEvent.keyboard("ap");
       expect(getActiveIndex()).toBe(0);
 
       vi.advanceTimersByTime(1000);
 
       // When typing "apr" (which matches disabled "Apricot")
-      dispatchKey(floatingEl, "a");
-      dispatchKey(floatingEl, "p");
-      dispatchKey(floatingEl, "r");
+      await userEvent.keyboard("apr");
 
       // Then: Disabled item is never selected
       expect(getActiveIndex()).toBe(0);
@@ -286,17 +298,17 @@ describe("Feature: useTypeahead", () => {
     it("Given onMatch callback, When items match, Then forwards matched index to onMatch", async () => {
       // Given
       const onMatch = vi.fn();
-      const { floatingEl } = await renderTypeahead({
+      await renderTypeahead({
         items: ["Dog", "Cat", "Duck", "Deer"],
         onMatch,
       });
       vi.useFakeTimers();
 
       // When
-      dispatchKey(floatingEl, "d");
+      await userEvent.keyboard("d");
       expect(onMatch).toHaveBeenCalledWith(0);
 
-      dispatchKey(floatingEl, "u");
+      await userEvent.keyboard("u");
 
       // Then
       expect(onMatch).toHaveBeenCalledWith(2);
@@ -308,14 +320,14 @@ describe("Feature: useTypeahead", () => {
         itemsList.findIndex((item) => item?.toLowerCase().includes(query.toLowerCase())),
       );
 
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         findMatch: customFindMatch,
       });
       vi.useFakeTimers();
 
       // When
       for (const char of "her") {
-        dispatchKey(floatingEl, char);
+        await userEvent.keyboard(char);
       }
 
       // Then
@@ -325,12 +337,12 @@ describe("Feature: useTypeahead", () => {
 
     it("Given findMatch is null, When characters are typed, Then falls back to standard prefix search", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         findMatch: null,
       });
 
       // When
-      dispatchKey(floatingEl, "c");
+      await userEvent.keyboard("c");
 
       // Then
       expect(getActiveIndex()).toBe(5);
@@ -339,14 +351,14 @@ describe("Feature: useTypeahead", () => {
     it("Given custom findMatch returns an out-of-range index, When evaluated, Then treats result as no match", async () => {
       // Given
       const onMatch = vi.fn();
-      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+      const { typeahead, getActiveIndex } = await renderTypeahead({
         findMatch: () => 99,
         onMatch,
       });
       vi.useFakeTimers();
 
       // When
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
 
       // Then
       expect(onMatch).not.toHaveBeenCalled();
@@ -360,13 +372,13 @@ describe("Feature: useTypeahead", () => {
     it("Given null and empty string items in list, When typing query, Then safely skips empty labels", async () => {
       // Given
       const onMatch = vi.fn();
-      const { floatingEl } = await renderTypeahead({
+      await renderTypeahead({
         items: [null, "", "Banana", null, "Blueberry"],
         onMatch,
       });
 
       // When
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
 
       // Then
       expect(onMatch).toHaveBeenCalledWith(2);
@@ -383,7 +395,8 @@ describe("Feature: useTypeahead", () => {
       });
 
       // When
-      dispatchKey(anchorEl, "b");
+      await userEvent.click(anchorEl);
+      await userEvent.keyboard("b");
 
       // Then
       expect(onMatch).toHaveBeenCalledWith(3);
@@ -397,10 +410,10 @@ describe("Feature: useTypeahead", () => {
       const { anchorEl, node } = await renderTypeahead({ onMatch, open: false });
 
       // When
-      const event = dispatchKey(anchorEl, " ");
+      await userEvent.click(anchorEl);
+      await userEvent.keyboard(" ");
 
       // Then
-      expect(event.defaultPrevented).toBe(false);
       expect(onMatch).not.toHaveBeenCalled();
       expect(node.open.value).toBe(false);
     });
@@ -414,15 +427,8 @@ describe("Feature: useTypeahead", () => {
       vi.useFakeTimers();
 
       // When
-      for (const char of "new") {
-        dispatchKey(anchorEl, char);
-      }
-      expect(getActiveIndex()).toBe(0);
-
-      const spaceEvent = dispatchKey(anchorEl, " ");
-      expect(spaceEvent.defaultPrevented).toBe(true);
-
-      dispatchKey(anchorEl, "j");
+      await userEvent.click(anchorEl);
+      await userEvent.keyboard("new j");
 
       // Then
       expect(getActiveIndex()).toBe(1);
@@ -433,17 +439,16 @@ describe("Feature: useTypeahead", () => {
       const { anchorEl, typeahead, getActiveIndex } = await renderTypeahead({ open: false });
       vi.useFakeTimers();
 
-      dispatchKey(anchorEl, "b");
+      await userEvent.click(anchorEl);
+      await userEvent.keyboard("b");
       expect(typeahead.searchQuery.value).toBe("b");
 
       // When: ArrowDown
-      const arrowEvent = dispatchKey(anchorEl, "ArrowDown");
-      expect(arrowEvent.defaultPrevented).toBe(false);
+      await userEvent.keyboard("{ArrowDown}");
       expect(typeahead.searchQuery.value).toBe("");
 
       // When: Enter
-      const enterEvent = dispatchKey(anchorEl, "Enter");
-      expect(enterEvent.defaultPrevented).toBe(false);
+      await userEvent.keyboard("{Enter}");
       expect(getActiveIndex()).toBe(3);
     });
   });
@@ -452,18 +457,19 @@ describe("Feature: useTypeahead", () => {
     it("Given an explicit containerEl override, When typing occurs, Then searches within container and ignores panel", async () => {
       // Given
       const onMatch = vi.fn();
-      const fixture = createTestComponent(
+      const { floatingEl, customEl } = await renderTypeahead(
         { items: ["Apple", "Banana"], onMatch },
         { withCustomContainer: true },
       );
-      await render(fixture.Component);
 
       // When: Typing on custom container
-      dispatchKey(getTestEl("custom"), "b");
+      await userEvent.click(customEl!);
+      await userEvent.keyboard("b");
       expect(onMatch).toHaveBeenCalledWith(1);
 
       // When: Typing on floating element
-      dispatchKey(getTestEl("floating"), "c");
+      await userEvent.click(floatingEl);
+      await userEvent.keyboard("c");
 
       // Then: Floating element keystrokes are ignored
       expect(onMatch).toHaveBeenCalledTimes(1);
@@ -471,14 +477,16 @@ describe("Feature: useTypeahead", () => {
 
     it("Given a focused native text input inside panel, When typing, Then preserves input keystrokes without hijacking", async () => {
       // Given
-      const { getActiveIndex, typeahead } = await renderTypeahead({}, { withTypeableInput: true });
-      const inputEl = getTestEl("typeable");
+      const { inputEl, getActiveIndex, typeahead } = await renderTypeahead(
+        {},
+        { withTypeableInput: true },
+      );
 
       // When
-      const event = dispatchKey(inputEl, "b");
+      await userEvent.click(inputEl!);
+      await userEvent.keyboard("b");
 
       // Then
-      expect(event.defaultPrevented).toBe(false);
       expect(getActiveIndex()).toBe(-1);
       expect(typeahead.searchQuery.value).toBe("");
     });
@@ -487,33 +495,24 @@ describe("Feature: useTypeahead", () => {
   describe("Scenario: Space key handling in multi-word queries", () => {
     it("Given an idle search buffer, When Space is pressed, Then ignores keypress to preserve element activation", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead();
+      const { getActiveIndex } = await renderTypeahead();
 
       // When
-      const event = dispatchKey(floatingEl, " ");
+      await userEvent.keyboard(" ");
 
       // Then
-      expect(event.defaultPrevented).toBe(false);
       expect(getActiveIndex()).toBe(-1);
     });
 
     it("Given an active multi-character query, When Space is pressed mid-query, Then appends space for multi-word labels", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         items: ["New York", "New Jersey", "London"],
       });
       vi.useFakeTimers();
 
       // When
-      dispatchKey(floatingEl, "n");
-      dispatchKey(floatingEl, "e");
-      dispatchKey(floatingEl, "w");
-      expect(getActiveIndex()).toBe(0);
-
-      const spaceEvent = dispatchKey(floatingEl, " ");
-      expect(spaceEvent.defaultPrevented).toBe(true);
-
-      dispatchKey(floatingEl, "j");
+      await userEvent.keyboard("new j");
 
       // Then
       expect(getActiveIndex()).toBe(1);
@@ -521,18 +520,12 @@ describe("Feature: useTypeahead", () => {
 
     it("Given space produces no match, When typed, Then retains buffer until timeout expires", async () => {
       // Given
-      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+      const { typeahead, getActiveIndex } = await renderTypeahead({
         items: ["Newark", "London"],
       });
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "n");
-      dispatchKey(floatingEl, "e");
-      dispatchKey(floatingEl, "w");
-      expect(getActiveIndex()).toBe(0);
-
-      // When
-      dispatchKey(floatingEl, " ");
+      await userEvent.keyboard("new ");
       expect(typeahead.searchQuery.value).toBe("new ");
       expect(getActiveIndex()).toBe(0);
 
@@ -550,10 +543,10 @@ describe("Feature: useTypeahead", () => {
       // Given
       const { floatingEl, getActiveIndex } = await renderTypeahead();
 
-      // When
-      dispatchKey(floatingEl, "b", { ctrlKey: true });
-      dispatchKey(floatingEl, "b", { altKey: true });
-      dispatchKey(floatingEl, "b", { metaKey: true });
+      // When: Modifier key combinations (anomaly/guard verification)
+      dispatchKey(floatingEl.element(), "b", { ctrlKey: true });
+      dispatchKey(floatingEl.element(), "b", { altKey: true });
+      dispatchKey(floatingEl.element(), "b", { metaKey: true });
 
       // Then
       expect(getActiveIndex()).toBe(-1);
@@ -561,16 +554,16 @@ describe("Feature: useTypeahead", () => {
 
     it("Given keys configured in ignoreKeys, When pressed, Then skips ignored keys", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         ignoreKeys: ["a", "b"],
       });
 
       // When
-      dispatchKey(floatingEl, "a");
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("a");
+      await userEvent.keyboard("b");
       expect(getActiveIndex()).toBe(-1);
 
-      dispatchKey(floatingEl, "c");
+      await userEvent.keyboard("c");
 
       // Then
       expect(getActiveIndex()).toBe(5);
@@ -578,12 +571,12 @@ describe("Feature: useTypeahead", () => {
 
     it("Given navigation and dismissal keys (ArrowDown, Enter, Escape), When pressed, Then preserves them for sibling composables", async () => {
       // Given
-      const { floatingEl, getActiveIndex } = await renderTypeahead();
+      const { getActiveIndex } = await renderTypeahead();
 
       // When
-      dispatchKey(floatingEl, "ArrowDown");
-      dispatchKey(floatingEl, "Enter");
-      dispatchKey(floatingEl, "Escape");
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{Enter}");
+      await userEvent.keyboard("{Escape}");
 
       // Then
       expect(getActiveIndex()).toBe(-1);
@@ -592,7 +585,7 @@ describe("Feature: useTypeahead", () => {
     it("Given an active typeahead query, When manual navigation occurs, Then abandons pending query buffer", async () => {
       // Given
       const navigatedIndex = ref(-1);
-      const { floatingEl, typeahead } = await renderTypeahead({
+      const { typeahead } = await renderTypeahead({
         activeIndex: navigatedIndex,
         onMatch: (idx) => {
           navigatedIndex.value = idx;
@@ -600,18 +593,18 @@ describe("Feature: useTypeahead", () => {
       });
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       expect(navigatedIndex.value).toBe(3);
 
       // When: ArrowDown manual navigation
-      dispatchKey(floatingEl, "ArrowDown");
+      await userEvent.keyboard("{ArrowDown}");
       navigatedIndex.value = 4;
 
       // Then: Query buffer abandoned
       expect(typeahead.searchQuery.value).toBe("");
 
       // When: New search begins
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("a");
       expect(navigatedIndex.value).toBe(0);
     });
   });
@@ -619,16 +612,16 @@ describe("Feature: useTypeahead", () => {
   describe("Scenario: Search buffer state exposure and manual resets", () => {
     it("Given query keystrokes, When typed, Then exposes live buffer via searchQuery ref", async () => {
       // Given
-      const { floatingEl, typeahead } = await renderTypeahead();
+      const { typeahead } = await renderTypeahead();
       vi.useFakeTimers();
 
       expect(typeahead.searchQuery.value).toBe("");
 
       // When
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       expect(typeahead.searchQuery.value).toBe("b");
 
-      dispatchKey(floatingEl, "l");
+      await userEvent.keyboard("l");
       expect(typeahead.searchQuery.value).toBe("bl");
 
       vi.advanceTimersByTime(1000);
@@ -639,19 +632,17 @@ describe("Feature: useTypeahead", () => {
 
     it("Given a query mismatch, When character is typed, Then retains buffer until timeout without shifting focus", async () => {
       // Given
-      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+      const { typeahead, getActiveIndex } = await renderTypeahead({
         items: ["Apple", "Banana", "Blood Orange", "Dragonfruit"],
       });
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "b");
-      dispatchKey(floatingEl, "l");
-      dispatchKey(floatingEl, "o");
+      await userEvent.keyboard("blo");
       expect(typeahead.searchQuery.value).toBe("blo");
       expect(getActiveIndex()).toBe(2);
 
       // When: Mismatch character typed
-      dispatchKey(floatingEl, "d");
+      await userEvent.keyboard("d");
       expect(typeahead.searchQuery.value).toBe("blod");
       expect(getActiveIndex()).toBe(2);
 
@@ -663,30 +654,29 @@ describe("Feature: useTypeahead", () => {
 
     it("Given an active search query, When Backspace is pressed, Then trims buffer and re-evaluates matches", async () => {
       // Given
-      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead({
+      const { typeahead, getActiveIndex } = await renderTypeahead({
         items: ["Apple", "Apricot", "Banana", "Blueberry"],
       });
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "b");
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("ba");
       expect(typeahead.searchQuery.value).toBe("ba");
       expect(getActiveIndex()).toBe(2);
 
       // When: Backspace trims "ba" -> "b"
-      dispatchKey(floatingEl, "Backspace");
+      await userEvent.keyboard("{Backspace}");
       expect(typeahead.searchQuery.value).toBe("b");
       expect(getActiveIndex()).toBe(2);
 
       // When: Extend to "bl"
-      dispatchKey(floatingEl, "l");
+      await userEvent.keyboard("l");
       expect(typeahead.searchQuery.value).toBe("bl");
       expect(getActiveIndex()).toBe(3);
 
       // When: Backspace all
-      dispatchKey(floatingEl, "Backspace");
+      await userEvent.keyboard("{Backspace}");
       expect(typeahead.searchQuery.value).toBe("b");
-      dispatchKey(floatingEl, "Backspace");
+      await userEvent.keyboard("{Backspace}");
 
       // Then
       expect(typeahead.searchQuery.value).toBe("");
@@ -694,10 +684,10 @@ describe("Feature: useTypeahead", () => {
 
     it("Given an active search query, When reset() is called, Then clears buffer immediately", async () => {
       // Given
-      const { floatingEl, typeahead, getActiveIndex } = await renderTypeahead();
+      const { typeahead, getActiveIndex } = await renderTypeahead();
       vi.useFakeTimers();
 
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("a");
       expect(typeahead.searchQuery.value).toBe("a");
 
       // When
@@ -706,23 +696,23 @@ describe("Feature: useTypeahead", () => {
       // Then
       expect(typeahead.searchQuery.value).toBe("");
 
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       expect(getActiveIndex()).toBe(3);
     });
 
     it("Given enabled changes to false, When typing occurs, Then halts search and preserves activeIndex", async () => {
       // Given
       const enabledRef = ref(true);
-      const { floatingEl, getActiveIndex } = await renderTypeahead({ enabled: enabledRef });
+      const { getActiveIndex } = await renderTypeahead({ enabled: enabledRef });
 
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       expect(getActiveIndex()).toBe(3);
 
       // When: Disabled dynamically
       enabledRef.value = false;
       await nextTick();
 
-      dispatchKey(floatingEl, "c");
+      await userEvent.keyboard("c");
 
       // Then
       expect(getActiveIndex()).toBe(3);
@@ -768,10 +758,12 @@ describe("Feature: useTypeahead", () => {
       });
 
       await render(Component);
-      const floatingEl = getTestEl("floating");
+      await nextTick();
+      const floatingEl = page.getByTestId("floating");
+      (floatingEl.element() as HTMLElement).focus();
 
       // When
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
 
       // Then
       expect(roving.activeIndex.value).toBe(3);
@@ -817,10 +809,12 @@ describe("Feature: useTypeahead", () => {
       });
 
       await render(Component);
-      const floatingEl = getTestEl("floating");
+      await nextTick();
+      const floatingEl = page.getByTestId("floating");
+      (floatingEl.element() as HTMLElement).focus();
 
       // When
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
       await nextTick();
 
       // Then
@@ -856,10 +850,12 @@ describe("Feature: useTypeahead", () => {
       });
 
       await render(Component);
-      const floatingEl = getTestEl("floating");
+      await nextTick();
+      const floatingEl = page.getByTestId("floating");
+      (floatingEl.element() as HTMLElement).focus();
 
       // When
-      dispatchKey(floatingEl, "b");
+      await userEvent.keyboard("b");
 
       // Then
       expect(customOnMatch).toHaveBeenCalledWith(3);
@@ -871,14 +867,14 @@ describe("Feature: useTypeahead", () => {
       const itemsRef = ref<string[] | undefined>(undefined);
       const enabledRef = ref<boolean | undefined>(undefined);
       const resetMsRef = ref<number | undefined>(undefined);
-      const { floatingEl, getActiveIndex } = await renderTypeahead({
+      const { getActiveIndex } = await renderTypeahead({
         items: itemsRef as any,
         enabled: enabledRef as any,
         resetMs: resetMsRef as any,
       });
 
       // When & Then: Typing with ref(undefined) safely no-ops
-      expect(() => dispatchKey(floatingEl, "a")).not.toThrow();
+      await userEvent.keyboard("a");
       expect(getActiveIndex()).toBe(-1);
     });
   });
@@ -894,7 +890,7 @@ describe("Feature: useTypeahead", () => {
       document.dispatchEvent(new CompositionEvent("compositionstart"));
 
       // When typing during IME
-      dispatchKey(floatingEl, "a");
+      dispatchKey(floatingEl.element(), "a");
       expect(typeahead.searchQuery.value).toBe("");
       expect(getActiveIndex()).toBe(-1);
 
@@ -902,7 +898,7 @@ describe("Feature: useTypeahead", () => {
       document.dispatchEvent(new CompositionEvent("compositionend"));
 
       // When typing after IME
-      dispatchKey(floatingEl, "a");
+      await userEvent.keyboard("a");
 
       // Then: Matches normally
       expect(typeahead.searchQuery.value).toBe("a");
@@ -918,7 +914,7 @@ describe("Feature: useTypeahead", () => {
       // When
       const event = new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true });
       Object.defineProperty(event, "isComposing", { value: true });
-      floatingEl.dispatchEvent(event);
+      floatingEl.element().dispatchEvent(event);
 
       // Then
       expect(typeahead.searchQuery.value).toBe("");

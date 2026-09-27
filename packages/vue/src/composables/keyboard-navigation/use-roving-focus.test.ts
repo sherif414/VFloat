@@ -9,154 +9,163 @@ import {
   useRovingFocus,
 } from "./use-roving-focus";
 
+interface FixtureConfig {
+  itemCount?: number;
+  disabledIndices?: number[];
+  ariaDisabledIndices?: number[];
+  dir?: string;
+  tabindex?: number | ((idx: number) => number | undefined);
+  unmanaged?: boolean;
+  node?: FloatingNode;
+}
+
+function createTestComponent(
+  options: Partial<UseRovingFocusOptions> = {},
+  config: FixtureConfig = {},
+) {
+  let rovingReturn!: UseRovingFocusReturn;
+  let testNode!: FloatingNode;
+
+  const Component = defineComponent(() => {
+    const containerEl = useTemplateRef<HTMLDivElement>("container");
+    const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
+    const elementsList = ref<(HTMLElement | null)[]>([]);
+
+    const floatingNode =
+      config.node ??
+      useFloatingNode({
+        anchorEl,
+        floatingEl: containerEl,
+        open: ref(true),
+      });
+    testNode = floatingNode;
+
+    rovingReturn = useRovingFocus(floatingNode, {
+      elementsList,
+      ...options,
+    });
+
+    const register = (el: Element | null, idx: number) => {
+      elementsList.value[idx] = el as HTMLElement;
+    };
+
+    const count = config.itemCount ?? 5;
+    const disabledSet = new Set(config.disabledIndices ?? []);
+    const ariaDisabledSet = new Set(config.ariaDisabledIndices ?? []);
+
+    return () =>
+      h("div", { class: "test-wrapper" }, [
+        h("button", { id: "before-btn", ref: "anchor" }, "Before Widget"),
+        h(
+          "div",
+          {
+            ref: "container",
+            "data-testid": "container",
+            dir: config.dir,
+          },
+          Array.from({ length: count }).map((_, idx) =>
+            h(
+              "button",
+              {
+                role: "option",
+                ref: (el) => register(el as Element, idx),
+                tabindex: rovingReturn.getTabindex(idx),
+                disabled: disabledSet.has(idx) ? true : undefined,
+                "aria-disabled": ariaDisabledSet.has(idx) ? "true" : undefined,
+              },
+              "option " + (idx + 1),
+            ),
+          ),
+        ),
+        h("button", { id: "after-btn" }, "After Widget"),
+      ]);
+  });
+
+  return { Component, getRoving: () => rovingReturn, getContext: () => testNode };
+}
+
+async function renderRovingFocus(
+  options: Partial<UseRovingFocusOptions> = {},
+  config: FixtureConfig = {},
+) {
+  const fixture = createTestComponent(options, config);
+  await render(fixture.Component);
+  await nextTick();
+  return {
+    beforeBtnEl: page.getByRole("button", { name: "Before Widget" }),
+    afterBtnEl: page.getByRole("button", { name: "After Widget" }),
+    containerEl: page.getByTestId("container"),
+    getOptionEl: (idx: number) => page.getByRole("option", { name: `option ${idx + 1}` }),
+    roving: fixture.getRoving(),
+    node: fixture.getContext(),
+  };
+}
+
 describe("Feature: useRovingFocus", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  interface FixtureConfig {
-    itemCount?: number;
-    disabledIndices?: number[];
-    ariaDisabledIndices?: number[];
-    dir?: string;
-    tabindex?: number | ((idx: number) => number | undefined);
-    unmanaged?: boolean;
-    node?: FloatingNode;
-  }
-
-  const createTestComponent = (
-    options: Partial<UseRovingFocusOptions> = {},
-    config: FixtureConfig = {},
-  ) => {
-    let rovingReturn!: UseRovingFocusReturn;
-    let testNode!: FloatingNode;
-
-    const Component = defineComponent(() => {
-      const containerEl = useTemplateRef<HTMLDivElement>("container");
-      const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
-      const elementsList = ref<(HTMLElement | null)[]>([]);
-
-      const floatingNode =
-        config.node ??
-        useFloatingNode({
-          anchorEl,
-          floatingEl: containerEl,
-          open: ref(true),
-        });
-      testNode = floatingNode;
-
-      rovingReturn = useRovingFocus(floatingNode, {
-        elementsList,
-        ...options,
-      });
-
-      const register = (el: Element | null, idx: number) => {
-        elementsList.value[idx] = el as HTMLElement;
-      };
-
-      const count = config.itemCount ?? 5;
-      const disabledSet = new Set(config.disabledIndices ?? []);
-      const ariaDisabledSet = new Set(config.ariaDisabledIndices ?? []);
-
-      return () =>
-        h("div", { class: "test-wrapper" }, [
-          h("button", { id: "before-btn", ref: "anchor" }, "Before Widget"),
-          h(
-            "div",
-            {
-              ref: "container",
-              dir: config.dir,
-            },
-            Array.from({ length: count }).map((_, idx) =>
-              h(
-                "button",
-                {
-                  role: "option",
-                  ref: (el) => register(el as Element, idx),
-                  tabindex: rovingReturn.getTabindex(idx),
-                  disabled: disabledSet.has(idx) ? true : undefined,
-                  "aria-disabled": ariaDisabledSet.has(idx) ? "true" : undefined,
-                },
-                "option " + (idx + 1),
-              ),
-            ),
-          ),
-          h("button", { id: "after-btn" }, "After Widget"),
-        ]);
-    });
-
-    return { Component, getRoving: () => rovingReturn, getContext: () => testNode };
-  };
-
   describe("Scenario: Sequential tab order and focus entry as a single tab stop", () => {
     it("Given the initial composite widget, When tabbing in from a preceding page element, Then focus lands on the first enabled item", async () => {
-      const { Component } = createTestComponent();
-      await render(Component);
+      const { beforeBtnEl, containerEl, getOptionEl } = await renderRovingFocus();
+      await expect.element(containerEl).toBeInTheDocument();
+      const option1El = getOptionEl(0);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option1 = page.getByRole("option", { name: "option 1" });
-
-      await userEvent.click(beforeBtn);
-      await expect.element(beforeBtn).toHaveFocus();
+      await userEvent.click(beforeBtnEl);
+      await expect.element(beforeBtnEl).toHaveFocus();
 
       // Tab moves focus into the widget on the default active item
       await userEvent.tab();
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given an explicit initial activeIndex, When tabbing into the widget, Then focus lands on that specified item", async () => {
-      const { Component } = createTestComponent({ activeIndex: ref(2) });
-      await render(Component);
+      const { beforeBtnEl, getOptionEl } = await renderRovingFocus({ activeIndex: ref(2) });
+      const option3El = getOptionEl(2);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option3 = page.getByRole("option", { name: "option 3" });
-
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given default entry item is disabled, When tabbing into the widget, Then disabled item is skipped and focus lands on first enabled item", async () => {
-      const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0, 1] });
-      await render(Component);
+      const { beforeBtnEl, getOptionEl } = await renderRovingFocus(
+        { entryIndex: 0 },
+        { disabledIndices: [0, 1] },
+      );
+      const option1El = getOptionEl(0);
+      const option3El = getOptionEl(2);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(beforeBtnEl);
+      await expect.element(beforeBtnEl).toHaveFocus();
 
-      await userEvent.click(beforeBtn);
-      await expect.element(beforeBtn).toHaveFocus();
-
-      expect(
-        (page.getByRole("option", { name: "option 1" }).element() as HTMLElement).tabIndex,
-      ).toBe(-1);
-      expect(option3.element().tabIndex).toBe(0);
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option3El).toHaveAttribute("tabindex", "0");
 
       await userEvent.tab();
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given focus inside the widget, When Tab is pressed, Then focus exits the widget to the next page element as a single tab stop", async () => {
-      const { Component } = createTestComponent();
-      await render(Component);
-
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const { afterBtnEl, getOptionEl } = await renderRovingFocus();
+      const option1El = getOptionEl(0);
+      const option3El = getOptionEl(2);
 
       // 1. Enter widget and navigate to option 3 with arrow keys
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowDown}");
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
 
       // 2. Tab exits widget entirely into the next page element (single tab stop)
       await userEvent.tab();
-      await expect.element(afterBtn).toHaveFocus();
+      await expect.element(afterBtnEl).toHaveFocus();
 
       // 3. Shift+Tab returns to the widget and restores focus on the last focused item (option 3) per WAI-ARIA APG
       await userEvent.tab({ shift: true });
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
   });
 
@@ -165,71 +174,71 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
-
-      await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option2).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option3El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowUp}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
     });
 
     it("Given vertical orientation, When Home or End is pressed, Then focus jumps directly to the first or last item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option5 = page.getByRole("option", { name: "option 5" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option5El = page.getByRole("option", { name: "option 5" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{End}");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
 
       await userEvent.keyboard("{Home}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given loop is disabled, When navigating past the start or end, Then focus stops at the boundary items", async () => {
       const { Component } = createTestComponent({ loop: false });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option5 = page.getByRole("option", { name: "option 5" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option5El = page.getByRole("option", { name: "option 5" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowUp}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{End}");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
     });
 
     it("Given loop is enabled, When navigating past the start or end, Then focus wraps around the boundary items", async () => {
       const { Component } = createTestComponent({ loop: true });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option5 = page.getByRole("option", { name: "option 5" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option5El = page.getByRole("option", { name: "option 5" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowUp}");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given disabled or aria-disabled items in the list, When navigating with arrow keys, Then disabled items are skipped", async () => {
@@ -239,43 +248,43 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowUp}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given pageSize is configured, When PageDown or PageUp is pressed, Then focus jumps by the page size", async () => {
       const { Component } = createTestComponent({ pageSize: 4 }, { itemCount: 15 });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option5 = page.getByRole("option", { name: "option 5" });
-      const option9 = page.getByRole("option", { name: "option 9" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option5El = page.getByRole("option", { name: "option 5" });
+      const option9El = page.getByRole("option", { name: "option 9" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
-
-      await userEvent.keyboard("{PageDown}");
-      await expect.element(option5).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{PageDown}");
-      await expect.element(option9).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
+
+      await userEvent.keyboard("{PageDown}");
+      await expect.element(option9El).toHaveFocus();
 
       await userEvent.keyboard("{PageUp}");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
 
       await userEvent.keyboard("{PageUp}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       // Stops at boundary when loop is false
       await userEvent.keyboard("{PageUp}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
   });
 
@@ -284,31 +293,31 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ orientation: "horizontal" });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowRight}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowLeft}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given horizontal orientation in RTL layout, When ArrowLeft or ArrowRight is pressed, Then arrow navigation directions are inverted", async () => {
       const { Component } = createTestComponent({ orientation: "horizontal" }, { dir: "rtl" });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       // In RTL, ArrowLeft moves forward (next) and ArrowRight moves backward (prev)
       await userEvent.keyboard("{ArrowLeft}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowRight}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
   });
 
@@ -317,45 +326,45 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ orientation: "both" });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
 
       // ArrowDown -> next
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // ArrowRight -> next
       await userEvent.keyboard("{ArrowRight}");
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
 
       // ArrowUp -> previous
       await userEvent.keyboard("{ArrowUp}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // ArrowLeft -> previous
       await userEvent.keyboard("{ArrowLeft}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given orientation is set to both in RTL layout, When horizontal arrow keys are pressed, Then RTL inversion applies to horizontal keys", async () => {
       const { Component } = createTestComponent({ orientation: "both" }, { dir: "rtl" });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
 
       // In RTL with orientation "both", ArrowLeft moves forward (next)
       await userEvent.keyboard("{ArrowLeft}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // ArrowRight moves backward (prev)
       await userEvent.keyboard("{ArrowRight}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
   });
 
@@ -365,8 +374,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ onSelect: onSelectMock });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{Enter}");
       expect(onSelectMock).toHaveBeenCalledTimes(1);
@@ -384,8 +393,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ onEnter: onEnterMock });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{ArrowRight}");
       expect(onEnterMock).toHaveBeenCalledTimes(1);
@@ -400,8 +409,8 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option2 = page.getByRole("option", { name: "option 2" });
-      await userEvent.click(option2);
+      const option2El = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option2El);
 
       await userEvent.keyboard("{ArrowLeft}");
       expect(onEnterMock).toHaveBeenCalledTimes(1);
@@ -416,8 +425,8 @@ describe("Feature: useRovingFocus", () => {
       });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{ArrowDown}");
       expect(onEnterMock).toHaveBeenCalledTimes(1);
@@ -436,12 +445,12 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowRight}");
       expect(onEnterMock).not.toHaveBeenCalled();
@@ -452,8 +461,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ onExit: onExitMock });
       await render(Component);
 
-      const option2 = page.getByRole("option", { name: "option 2" });
-      await userEvent.click(option2);
+      const option2El = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option2El);
 
       await userEvent.keyboard("{ArrowLeft}");
       expect(onExitMock).toHaveBeenCalledTimes(1);
@@ -465,8 +474,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ onExit: onExitMock, rtl: true }, { dir: "rtl" });
       await render(Component);
 
-      const option2 = page.getByRole("option", { name: "option 2" });
-      await userEvent.click(option2);
+      const option2El = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option2El);
 
       await userEvent.keyboard("{ArrowRight}");
       expect(onExitMock).toHaveBeenCalledTimes(1);
@@ -481,12 +490,12 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowLeft}");
       expect(onExitMock).toHaveBeenCalledTimes(1);
@@ -503,8 +512,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ onEnter: onEnterReturnFalse });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{ArrowRight}");
       expect(onEnterReturnFalse).toHaveBeenCalledTimes(1);
@@ -515,8 +524,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       let prevented = false;
       const keydownListener = (e: KeyboardEvent) => {
@@ -548,13 +557,13 @@ describe("Feature: useRovingFocus", () => {
       });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{ArrowDown}");
       expect(controlledIndex.value).toBe(1);
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       await userEvent.keyboard("{ArrowDown}");
       expect(controlledIndex.value).toBe(2);
@@ -565,18 +574,18 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       // External ref change updates tabindex attributes but does NOT
       // steal DOM focus — prevents disorienting focus jumps per WCAG.
       controlledIndex.value = 2;
-      await expect.element(option3).toHaveAttribute("tabindex", "0");
-      await expect.element(option1).toHaveAttribute("tabindex", "-1");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option3El).toHaveAttribute("tabindex", "0");
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given a controlled activeIndex set to a disabled item, When evaluated, Then activeIndex is not auto-reverted and tabindex falls back", async () => {
@@ -587,14 +596,14 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       // Set controlled index to a disabled item — the ref is not auto-reverted
       // (prevents feedback loops), but getTabindex falls through to tabStopIndex.
       controlledIndex.value = 1;
       expect(controlledIndex.value).toBe(1);
-      // tabStopIndex remains at 0 (last valid), so option1 gets tabindex=0
+      // tabStopIndex remains at 0 (last valid), so option1El gets tabindex=0
       expect(getRoving().getTabindex(0)).toBe(0);
       expect(getRoving().getTabindex(1)).toBe(-1);
     });
@@ -606,8 +615,8 @@ describe("Feature: useRovingFocus", () => {
       });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{ArrowDown}");
       expect(onActiveIndexChangeMock).toHaveBeenCalledWith(1);
@@ -622,60 +631,60 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
-      await userEvent.hover(option3);
-      await expect.element(option3).toHaveFocus();
+      await userEvent.hover(option3El);
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given focusOnHover is disabled by default, When hovering an item, Then DOM focus remains on the previously focused item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
-      await userEvent.hover(option3);
+      await userEvent.click(option1El);
+      await userEvent.hover(option3El);
 
-      await expect.element(option1).toHaveFocus();
-      await expect.element(option3).not.toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
+      await expect.element(option3El).not.toHaveFocus();
     });
 
     it("Given focusOnHover is enabled, When hovering a disabled item, Then focus does not move to the disabled item", async () => {
       const { Component } = createTestComponent({ focusOnHover: true }, { disabledIndices: [1] });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
-      await userEvent.hover(option2);
+      await userEvent.click(option1El);
+      await userEvent.hover(option2El);
 
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given focusOnHover is enabled, When pointermove originates from a touch device, Then the touch event is ignored", async () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
 
-      option3.element().dispatchEvent(
+      option3El.element().dispatchEvent(
         new PointerEvent("pointermove", {
           pointerType: "touch",
           bubbles: true,
         }),
       );
 
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
   });
 
@@ -684,68 +693,68 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option4 = page.getByRole("option", { name: "option 4" });
-      const option5 = page.getByRole("option", { name: "option 5" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      const option5El = page.getByRole("option", { name: "option 5" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
 
       getRoving().focusIndex("next");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       getRoving().focusIndex("last");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
 
       getRoving().focusIndex("prev");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
 
       getRoving().focusIndex("first");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       getRoving().focusIndex(2);
-      const option3 = page.getByRole("option", { name: "option 3" });
-      await expect.element(option3).toHaveFocus();
+      const option3El = page.getByRole("option", { name: "option 3" });
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given setActiveIndex is called programmatically, When invoked, Then activeIndex state updates without moving DOM focus", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       getRoving().setActiveIndex(2);
       expect(getRoving().activeIndex.value).toBe(2);
       expect(getRoving().getTabindex(2)).toBe(0);
       expect(getRoving().getTabindex(0)).toBe(-1);
-      await expect.element(option1).toHaveFocus();
-      await expect.element(option3).not.toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
+      await expect.element(option3El).not.toHaveFocus();
     });
 
     it("Given activeIndex is cleared to -1, When focusIndex('next') is invoked, Then navigation resumes from the last active item", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option3El = page.getByRole("option", { name: "option 3" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
-      await userEvent.click(option3);
+      await userEvent.click(option3El);
       getRoving().setActiveIndex(-1);
       getRoving().focusIndex("next");
 
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
     });
 
     it("Given a roving focus instance with active focus, When reset() is called, Then activeIndex and resting tabStopIndex return to entryIndex", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
       await render(Component);
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      await userEvent.click(option3);
+      const option3El = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(option3El);
 
       expect(getRoving().activeIndex.value).toBe(2);
       expect(getRoving().tabStopIndex.value).toBe(2);
@@ -763,15 +772,15 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 0 });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
       expect(getRoving().tabStopIndex.value).toBe(0);
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowDown}");
 
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
       expect(getRoving().tabStopIndex.value).toBe(1);
       expect(getRoving().getTabindex(1)).toBe(0);
       expect(getRoving().getTabindex(0)).toBe(-1);
@@ -781,29 +790,29 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent({ pageSize: 3 }, { itemCount: 10 });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option4 = page.getByRole("option", { name: "option 4" });
-      const option7 = page.getByRole("option", { name: "option 7" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      const option7El = page.getByRole("option", { name: "option 7" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
-
-      getRoving().focusIndex("page-down");
-      await expect.element(option4).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       getRoving().focusIndex("page-down");
-      await expect.element(option7).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
+
+      getRoving().focusIndex("page-down");
+      await expect.element(option7El).toHaveFocus();
 
       getRoving().focusIndex("page-up");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
     });
 
     it("Given focusIndex with 'reset', When called, Then active focus is reset back to resting entryIndex", async () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: 1 });
       await render(Component);
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      await userEvent.click(option3);
+      const option3El = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(option3El);
       expect(getRoving().activeIndex.value).toBe(2);
 
       getRoving().focusIndex("reset");
@@ -820,15 +829,15 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option11 = page.getByRole("option", { name: "option 11" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option11El = page.getByRole("option", { name: "option 11" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       // Should default to 10 and vertical orientation
       await userEvent.keyboard("{PageDown}");
-      await expect.element(option11).toHaveFocus();
+      await expect.element(option11El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(10);
     });
   });
@@ -838,34 +847,34 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ enabled: false });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given modifier keys (Ctrl, Alt, Meta) are held, When arrow keys are pressed, Then the key combination is ignored", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{Control>}{ArrowDown}{/Control}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given all items in the list are disabled, When navigating, Then errors are avoided and no item receives focus", async () => {
       const { Component } = createTestComponent({}, { itemCount: 3, disabledIndices: [0, 1, 2] });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const option1El = page.getByRole("option", { name: "option 1" });
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option1).not.toHaveFocus();
+      await expect.element(option1El).not.toHaveFocus();
     });
   });
 
@@ -908,15 +917,15 @@ describe("Feature: useRovingFocus", () => {
       });
 
       await render(DynamicComponent);
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       count.value++;
-      const option4 = page.getByRole("option", { name: "option 4" });
-      await expect.element(option4).toBeInTheDocument();
+      const option4El = page.getByRole("option", { name: "option 4" });
+      await expect.element(option4El).toBeInTheDocument();
 
       await userEvent.keyboard("{End}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
     });
   });
 
@@ -925,35 +934,35 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      expect(option1.element().tabIndex).toBe(0);
-      expect(option2.element().tabIndex).toBe(-1);
-      expect(option3.element().tabIndex).toBe(-1);
+      await expect.element(option1El).toHaveAttribute("tabindex", "0");
+      await expect.element(option2El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option3El).toHaveAttribute("tabindex", "-1");
     });
 
     it("Given a custom entryIndex, When initialized, Then the entryIndex item receives tabindex=0", async () => {
       const { Component } = createTestComponent({ entryIndex: 2 });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      expect(option1.element().tabIndex).toBe(-1);
-      expect(option3.element().tabIndex).toBe(0);
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option3El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given first item is disabled on mount, When initialized, Then first enabled item receives tabindex=0", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [0] });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await expect.element(option1).toHaveAttribute("tabindex", "-1");
-      await expect.element(option2).toHaveAttribute("tabindex", "0");
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option2El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given first item is aria-disabled and allowDisabledFocus is false, When mounted, Then first enabled item receives tabindex=0", async () => {
@@ -963,100 +972,100 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await expect.element(option1).toHaveAttribute("tabindex", "-1");
-      await expect.element(option2).toHaveAttribute("tabindex", "0");
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option2El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given entryIndex is omitted, When initialized, Then a fallback tabindex=0 entry target is designated while activeIndex is -1", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
       expect(getRoving().activeIndex.value).toBe(-1);
-      expect(option1.element().tabIndex).toBe(0);
-      expect(option2.element().tabIndex).toBe(-1);
+      await expect.element(option1El).toHaveAttribute("tabindex", "0");
+      await expect.element(option2El).toHaveAttribute("tabindex", "-1");
     });
 
     it("Given keyboard navigation, When moving between items, Then tabindex=0 roves to the newly active item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
-      expect(option1.element().tabIndex).toBe(0);
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveAttribute("tabindex", "0");
 
       await userEvent.keyboard("{ArrowDown}");
 
-      await expect.element(option2).toHaveFocus();
-      expect(option1.element().tabIndex).toBe(-1);
-      expect(option2.element().tabIndex).toBe(0);
+      await expect.element(option2El).toHaveFocus();
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option2El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given pointer click on an item, When clicked, Then tabindex=0 updates to the clicked item", async () => {
       const { Component } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
-      await userEvent.click(option4);
+      await userEvent.click(option4El);
 
-      expect(option1.element().tabIndex).toBe(-1);
-      expect(option4.element().tabIndex).toBe(0);
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option4El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given disabled items in the list, When navigating with arrow keys, Then tabindex skips disabled items", async () => {
       const { Component } = createTestComponent({}, { disabledIndices: [1] });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowDown}");
 
-      await expect.element(option3).toHaveFocus();
-      expect(option1.element().tabIndex).toBe(-1);
-      expect(option2.element().tabIndex).toBe(-1);
-      expect(option3.element().tabIndex).toBe(0);
+      await expect.element(option3El).toHaveFocus();
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option2El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option3El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given entryIndex is configured, When tabbing in and out, Then Tab enters at tabindex=0 and exits to next focusable element", async () => {
       const { Component } = createTestComponent({ entryIndex: 1 });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
 
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       await userEvent.tab();
-      await expect.element(afterBtn).toHaveFocus();
+      await expect.element(afterBtnEl).toHaveFocus();
     });
 
     it("Given focus is outside the widget, When Shift+Tab is pressed, Then focus enters the active item from behind", async () => {
       const { Component } = createTestComponent({ entryIndex: 2 });
       await render(Component);
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const option3El = page.getByRole("option", { name: "option 3" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
-      await userEvent.click(afterBtn);
+      await userEvent.click(afterBtnEl);
       await userEvent.tab({ shift: true });
 
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given setActiveIndex is called programmatically, When invoked, Then getTabindex return values update accordingly", async () => {
@@ -1070,11 +1079,11 @@ describe("Feature: useRovingFocus", () => {
 
       roving.setActiveIndex(3);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
-      await expect.element(option1).toHaveAttribute("tabindex", "-1");
-      await expect.element(option4).toHaveAttribute("tabindex", "0");
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option4El).toHaveAttribute("tabindex", "0");
       expect(roving.getTabindex(3)).toBe(0);
     });
   });
@@ -1087,12 +1096,12 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given focusDisabledElements is true, When navigating with arrow keys, Then disabled and aria-disabled items receive focus", async () => {
@@ -1102,29 +1111,29 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option3 = page.getByRole("option", { name: "option 3" });
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option3El = page.getByRole("option", { name: "option 3" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
       // Moves to aria-disabled item 2
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // Moves to aria-disabled item 3
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
 
       // Moves to enabled item 4
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
 
       // Moves back up to aria-disabled item 3
       await userEvent.keyboard("{ArrowUp}");
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given focusDisabledElements is true, When Enter or Space is pressed on focused disabled item, Then onSelect is not triggered", async () => {
@@ -1135,12 +1144,12 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // Enter on disabled item must not invoke onSelect
       await userEvent.keyboard("{Enter}");
@@ -1159,8 +1168,8 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
 
       await userEvent.keyboard("{Enter}");
       expect(onSelectMock).toHaveBeenCalledTimes(1);
@@ -1174,14 +1183,14 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
 
-      await userEvent.hover(option2);
-      await expect.element(option2).toHaveFocus();
+      await userEvent.hover(option2El);
+      await expect.element(option2El).toHaveFocus();
     });
 
     it("Given focusDisabledElements is true, When using programmatic focus methods, Then disabled items can be focused", async () => {
@@ -1191,20 +1200,20 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option5 = page.getByRole("option", { name: "option 5" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option5El = page.getByRole("option", { name: "option 5" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
 
       getRoving().focusIndex("next");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       getRoving().focusIndex("last");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
 
       getRoving().focusIndex(1);
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
     });
 
     it("Given focusDisabledElements is true, When external activeIndex targets a disabled item, Then tabindex=0 is applied to it", async () => {
@@ -1218,16 +1227,16 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      await userEvent.click(option1El);
 
       // External ref change — tabindex updates but DOM focus is not stolen
       controlledIndex.value = 1;
       expect(controlledIndex.value).toBe(1);
-      await expect.element(option2).toHaveAttribute("tabindex", "0");
-      await expect.element(option1).toHaveAttribute("tabindex", "-1");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option2El).toHaveAttribute("tabindex", "0");
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given focusDisabledElements transitions from true to false, When observed, Then tab stop resolution corrects without jumping DOM focus", async () => {
@@ -1238,15 +1247,15 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option2);
-      await expect.element(option2).toHaveFocus();
+      await userEvent.click(option2El);
+      await expect.element(option2El).toHaveFocus();
 
       // Navigate to the disabled item (allowed because focusDisabledElements=true)
       getRoving().focusIndex(0);
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       // Flipping focusDisabledElements to false does NOT auto-move focus or
       // auto-correct activeIndex. getTabindex resolves to first navigable element = index 1.
@@ -1257,11 +1266,11 @@ describe("Feature: useRovingFocus", () => {
       expect(getRoving().getTabindex(1)).toBe(0);
       expect(getRoving().getTabindex(0)).toBe(-1);
       // DOM focus remains where it was — no auto-correction
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
 
       // Next keyboard action navigates correctly from the DOM focus position
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
     });
   });
 
@@ -1270,16 +1279,16 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ entryIndex: 0 }, { disabledIndices: [0] });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
       // No element in the widget should have received focus on mount
-      await expect.element(option1).not.toHaveFocus();
-      await expect.element(option2).not.toHaveFocus();
+      await expect.element(option1El).not.toHaveFocus();
+      await expect.element(option2El).not.toHaveFocus();
 
       // But tabindex should be properly initialized for sequential tab entry
-      expect((option1.element() as HTMLElement).tabIndex).toBe(-1);
-      expect((option2.element() as HTMLElement).tabIndex).toBe(0);
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
+      await expect.element(option2El).toHaveAttribute("tabindex", "0");
     });
 
     it("Given widget is currently unfocused, When activeIndex changes externally, Then focus is not stolen from the active page element", async () => {
@@ -1287,19 +1296,19 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ activeIndex: controlledIndex });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(beforeBtn);
-      await expect.element(beforeBtn).toHaveFocus();
+      await userEvent.click(beforeBtnEl);
+      await expect.element(beforeBtnEl).toHaveFocus();
 
-      // Changing controlledIndex while beforeBtn is focused must not steal focus
+      // Changing controlledIndex while beforeBtnEl is focused must not steal focus
       controlledIndex.value = 2;
-      await expect.element(beforeBtn).toHaveFocus();
-      await expect.element(option3).not.toHaveFocus();
-      expect((option3.element() as HTMLElement).tabIndex).toBe(0);
-      expect((option1.element() as HTMLElement).tabIndex).toBe(-1);
+      await expect.element(beforeBtnEl).toHaveFocus();
+      await expect.element(option3El).not.toHaveFocus();
+      await expect.element(option3El).toHaveAttribute("tabindex", "0");
+      await expect.element(option1El).toHaveAttribute("tabindex", "-1");
     });
   });
 
@@ -1311,12 +1320,12 @@ describe("Feature: useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(-1);
       expect(getRoving().getTabindex(2)).toBe(0);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given elements populate asynchronously, When loaded, Then entryIndex is preserved and receives focus on tab in", async () => {
@@ -1366,17 +1375,17 @@ describe("Feature: useRovingFocus", () => {
       });
 
       await render(AsyncComponent);
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
 
       // Trigger async loading of elements
       isLoaded.value = true;
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      await expect.element(option3).toBeInTheDocument();
+      const option3El = page.getByRole("option", { name: "option 3" });
+      await expect.element(option3El).toBeInTheDocument();
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
   });
 
@@ -1387,25 +1396,25 @@ describe("Feature: useRovingFocus", () => {
 
       expect(getRoving().activeIndex.value).toBe(-1);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
       // Fallback designates option 1 as tabindex="0"
-      expect((option1.element() as HTMLElement).tabIndex).toBe(0);
-      expect((option2.element() as HTMLElement).tabIndex).toBe(-1);
+      await expect.element(option1El).toHaveAttribute("tabindex", "0");
+      await expect.element(option2El).toHaveAttribute("tabindex", "-1");
     });
 
     it("Given initial activeIndex is -1, When tabbing in from outside, Then focus lands on fallback element and syncs activeIndex", async () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
 
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
 
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(0);
     });
 
@@ -1413,11 +1422,11 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const option1El = page.getByRole("option", { name: "option 1" });
 
       // Programmatic next from -1 targets first enabled item
       getRoving().focusIndex("next");
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(0);
     });
 
@@ -1425,11 +1434,11 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option5 = page.getByRole("option", { name: "option 5" });
+      const option5El = page.getByRole("option", { name: "option 5" });
 
       // Programmatic prev from -1 targets last enabled item
       getRoving().focusIndex("prev");
-      await expect.element(option5).toHaveFocus();
+      await expect.element(option5El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(4);
     });
   });
@@ -1439,17 +1448,17 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option3El = page.getByRole("option", { name: "option 3" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
       // Directly click option 3
-      await userEvent.click(option3);
-      await expect.element(option3).toHaveFocus();
+      await userEvent.click(option3El);
+      await expect.element(option3El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(2);
 
       // Press ArrowDown -> should move to option 4 (index 3), not jump to option 2
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(3);
     });
   });
@@ -1459,17 +1468,17 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      const option3El = option3.element() as HTMLElement;
+      const rawOption3El = option3El.element() as HTMLElement;
       const scrollSpy = vi.fn();
-      option3El.scrollIntoView = scrollSpy;
+      rawOption3El.scrollIntoView = scrollSpy;
 
-      await userEvent.click(option1);
-      await userEvent.hover(option3);
+      await userEvent.click(option1El);
+      await userEvent.hover(option3El);
 
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
       expect(scrollSpy).not.toHaveBeenCalled();
     });
   });
@@ -1480,14 +1489,14 @@ describe("Feature: useRovingFocus", () => {
       const { Component } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option3 = page.getByRole("option", { name: "option 3" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option3El = page.getByRole("option", { name: "option 3" });
 
-      await userEvent.click(beforeBtn);
-      await expect.element(beforeBtn).toHaveFocus();
+      await userEvent.click(beforeBtnEl);
+      await expect.element(beforeBtnEl).toHaveFocus();
 
       await userEvent.tab();
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
     });
 
     it("Given a transient arrow preview is dismissed, When tabbing back in, Then entry focus restores to entryIndex rather than previewed item", async () => {
@@ -1495,29 +1504,29 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option3 = page.getByRole("option", { name: "option 3" });
-      const option4 = page.getByRole("option", { name: "option 4" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option3El = page.getByRole("option", { name: "option 3" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
       // 1. Tab into widget -> lands on option 3 (entryIndex: 2)
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
 
       // 2. Preview option 4 using ArrowDown without committing selection
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(3);
 
       // 3. User closes widget / dismisses -> activeIndex reset to -1
       getRoving().setActiveIndex(-1);
-      await userEvent.click(afterBtn);
-      await expect.element(afterBtn).toHaveFocus();
+      await userEvent.click(afterBtnEl);
+      await expect.element(afterBtnEl).toHaveFocus();
 
       // 4. Tab back into widget -> focus returns to committed entryIndex (option 3), not option 4
       await userEvent.tab({ shift: true });
-      await expect.element(option3).toHaveFocus();
+      await expect.element(option3El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(2);
     });
 
@@ -1526,16 +1535,16 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
 
-      const option4 = page.getByRole("option", { name: "option 4" });
+      const option4El = page.getByRole("option", { name: "option 4" });
 
       expect(getRoving().getTabindex(1)).toBe(0);
       expect(getRoving().getTabindex(0)).toBe(-1);
       expect(getRoving().getTabindex(3)).toBe(-1);
 
       // Focus outside the widget
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      await userEvent.click(beforeBtn);
-      await expect.element(beforeBtn).toHaveFocus();
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      await userEvent.click(beforeBtnEl);
+      await expect.element(beforeBtnEl).toHaveFocus();
 
       // External selection changes
       selectedIndex.value = 3;
@@ -1543,8 +1552,8 @@ describe("Feature: useRovingFocus", () => {
       expect(getRoving().getTabindex(3)).toBe(0);
       expect(getRoving().getTabindex(1)).toBe(-1);
       // DOM focus is not hijacked
-      await expect.element(beforeBtn).toHaveFocus();
-      await expect.element(option4).not.toHaveFocus();
+      await expect.element(beforeBtnEl).toHaveFocus();
+      await expect.element(option4El).not.toHaveFocus();
     });
 
     it("Given entryIndex targets a disabled item, When tabbing in, Then focus falls back to the first enabled item", async () => {
@@ -1555,18 +1564,18 @@ describe("Feature: useRovingFocus", () => {
       );
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
       expect(getRoving().getTabindex(0)).toBe(0);
       expect(getRoving().getTabindex(1)).toBe(-1);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      await userEvent.click(beforeBtn);
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
 
-      await expect.element(option1).toHaveFocus();
-      await expect.element(option2).not.toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
+      await expect.element(option2El).not.toHaveFocus();
     });
 
     it("Given entryIndex is null or undefined, When tabbing in, Then focus falls back to the first enabled item", async () => {
@@ -1574,14 +1583,14 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent({ entryIndex: selectedIndex });
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
+      const option1El = page.getByRole("option", { name: "option 1" });
       expect(getRoving().getTabindex(0)).toBe(0);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      await userEvent.click(beforeBtn);
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
 
-      await expect.element(option1).toHaveFocus();
+      await expect.element(option1El).toHaveFocus();
     });
 
     it("Given entryIndex is explicitly -1, When evaluated, Then sequential tab-stop entry into the widget is disabled", async () => {
@@ -1598,15 +1607,15 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(0);
 
-      await userEvent.click(afterBtn);
-      await expect.element(afterBtn).toHaveFocus();
+      await userEvent.click(afterBtnEl);
+      await expect.element(afterBtnEl).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(-1);
     });
 
@@ -1614,15 +1623,15 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
-      await expect.element(option1).toHaveFocus();
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(0);
 
-      await userEvent.click(option2);
-      await expect.element(option2).toHaveFocus();
+      await userEvent.click(option2El);
+      await expect.element(option2El).toHaveFocus();
       expect(getRoving().activeIndex.value).toBe(1);
     });
   });
@@ -1635,28 +1644,28 @@ describe("Feature: useRovingFocus", () => {
       });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option4 = page.getByRole("option", { name: "option 4" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
       // 1. Initial tab entry lands on entryIndex (option 2)
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // 2. Navigate to option 4
       await userEvent.keyboard("{ArrowDown}");
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
 
-      // 3. Tab out to afterBtn
+      // 3. Tab out to afterBtnEl
       await userEvent.tab();
-      await expect.element(afterBtn).toHaveFocus();
+      await expect.element(afterBtnEl).toHaveFocus();
 
       // 4. Shift+Tab back into the widget -> restores focus to option 4 (last focused element)
       await userEvent.tab({ shift: true });
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
     });
 
     it("Given entryFocusMode is 'entry-index', When re-entering widget via Shift+Tab, Then focus resets to entryIndex", async () => {
@@ -1666,28 +1675,28 @@ describe("Feature: useRovingFocus", () => {
       });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option4 = page.getByRole("option", { name: "option 4" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
       // 1. Initial tab entry lands on entryIndex (option 2)
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
 
       // 2. Navigate to option 4
       await userEvent.keyboard("{ArrowDown}");
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
 
-      // 3. Tab out to afterBtn
+      // 3. Tab out to afterBtnEl
       await userEvent.tab();
-      await expect.element(afterBtn).toHaveFocus();
+      await expect.element(afterBtnEl).toHaveFocus();
 
       // 4. Shift+Tab back into the widget -> resets to entryIndex (option 2)
       await userEvent.tab({ shift: true });
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
     });
 
     it("Given entryIndex updates reactively while widget is unfocused, When re-entering, Then resting tab stop syncs to updated entryIndex", async () => {
@@ -1698,22 +1707,22 @@ describe("Feature: useRovingFocus", () => {
       });
       await render(Component);
 
-      const beforeBtn = page.getByRole("button", { name: "Before Widget" });
-      const option2 = page.getByRole("option", { name: "option 2" });
-      const option4 = page.getByRole("option", { name: "option 4" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const beforeBtnEl = page.getByRole("button", { name: "Before Widget" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
       // 1. Enter and navigate to option 4
-      await userEvent.click(beforeBtn);
+      await userEvent.click(beforeBtnEl);
       await userEvent.tab();
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
       await userEvent.keyboard("{ArrowDown}");
       await userEvent.keyboard("{ArrowDown}");
-      await expect.element(option4).toHaveFocus();
+      await expect.element(option4El).toHaveFocus();
 
       // 2. Leave widget
       await userEvent.tab();
-      await expect.element(afterBtn).toHaveFocus();
+      await expect.element(afterBtnEl).toHaveFocus();
 
       // 3. External application changes entryIndex (e.g. selected tab updated externally to index 0)
       entryIndexRef.value = 0;
@@ -1722,8 +1731,8 @@ describe("Feature: useRovingFocus", () => {
 
       // 4. Re-entering widget lands on the newly updated entryIndex (option 1)
       await userEvent.tab({ shift: true });
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await expect.element(option1).toHaveFocus();
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await expect.element(option1El).toHaveFocus();
     });
   });
 
@@ -1738,18 +1747,21 @@ describe("Feature: useRovingFocus", () => {
       roving.focusIndex(2);
       await nextTick();
 
-      const option3 = page.getByRole("option", { name: "option 3" }).element() as HTMLElement;
-      await expect.element(page.getByRole("option", { name: "option 3" })).toHaveFocus();
+      const option3El = page.getByRole("option", { name: "option 3" });
+      await expect.element(option3El).toHaveFocus();
 
       // Spy on option elements' contains method
-      const option1 = page.getByRole("option", { name: "option 1" }).element() as HTMLElement;
-      const option1ContainsSpy = vi.spyOn(option1, "contains");
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const rawOption1El = option1El.element() as HTMLElement;
+      const option1ContainsSpy = vi.spyOn(rawOption1El, "contains");
 
-      // Trigger focusin with target = option3 (already activeIndex 2)
-      option3.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      // Trigger focusin with target = option3El (already activeIndex 2)
+      (option3El.element() as HTMLElement).dispatchEvent(
+        new FocusEvent("focusin", { bubbles: true }),
+      );
       await nextTick();
 
-      // option1 (index 0) should NOT have been scanned via contains()
+      // option1El (index 0) should NOT have been scanned via contains()
       expect(option1ContainsSpy).not.toHaveBeenCalled();
       expect(roving.activeIndex.value).toBe(2);
 
@@ -1766,9 +1778,11 @@ describe("Feature: useRovingFocus", () => {
       await nextTick();
       expect(roving.activeIndex.value).toBe(0);
 
-      const option3 = page.getByRole("option", { name: "option 3" }).element() as HTMLElement;
-      // Focus target is option3 while activeIndex is 0
-      option3.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const option3El = page.getByRole("option", { name: "option 3" });
+      // Focus target is option3El while activeIndex is 0
+      (option3El.element() as HTMLElement).dispatchEvent(
+        new FocusEvent("focusin", { bubbles: true }),
+      );
       await nextTick();
 
       // Should fall back to linear scan and find index 2
@@ -1791,21 +1805,22 @@ describe("Feature: useRovingFocus", () => {
       roving.focusIndex(3);
       await nextTick();
 
-      const option1 = page.getByRole("option", { name: "option 1" }).element() as HTMLElement;
-      const option4 = page.getByRole("option", { name: "option 4" }).element() as HTMLElement;
-      await expect.element(option4).toHaveFocus();
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+      await expect.element(option4El).toHaveFocus();
 
-      // Simulate activeIndex cleared externally to -1 while DOM focus remains on option4
+      // Simulate activeIndex cleared externally to -1 while DOM focus remains on option4El
       activeIndexRef.value = -1;
       await nextTick();
 
-      const option1ContainsSpy = vi.spyOn(option1, "contains");
+      const rawOption1El = option1El.element() as HTMLElement;
+      const option1ContainsSpy = vi.spyOn(rawOption1El, "contains");
 
-      // Navigate down from option4 (should resume from index 3 via lastFocusedIndex fast-path -> index 4)
-      option4.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      // Navigate down from option4El (should resume from index 3 via lastFocusedIndex fast-path -> index 4)
+      await userEvent.keyboard("{ArrowDown}");
       await nextTick();
 
-      // option1 should NOT have been scanned
+      // option1El should NOT have been scanned
       expect(option1ContainsSpy).not.toHaveBeenCalled();
       expect(roving.activeIndex.value).toBe(4);
 
@@ -1818,15 +1833,15 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const option2 = page.getByRole("option", { name: "option 2" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       expect(getRoving().activeIndex.value).toBe(0);
 
       await userEvent.keyboard("{ArrowDown}");
       expect(getRoving().activeIndex.value).toBe(1);
-      await expect.element(option2).toHaveFocus();
+      await expect.element(option2El).toHaveFocus();
     });
 
     it("Given nested parent and child floating nodes, When focus enters teleported child element, Then parent activeIndex is preserved", async () => {
@@ -1905,16 +1920,16 @@ describe("Feature: useRovingFocus", () => {
 
       await render(RootWithChild);
 
-      const rootOption2 = page.getByRole("option", { name: "Root Option 2 (Sub Trigger)" });
-      const childOption1 = page.getByRole("option", { name: "Child Option 1" });
+      const rootOption2El = page.getByRole("option", { name: "Root Option 2 (Sub Trigger)" });
+      const childOption1El = page.getByRole("option", { name: "Child Option 1" });
 
       // Focus root option 2
-      await userEvent.click(rootOption2);
+      await userEvent.click(rootOption2El);
       expect(rootRoving.activeIndex.value).toBe(1);
 
       // Now move focus to child option 1 (simulating entering teleported submenu)
-      await userEvent.click(childOption1);
-      await expect.element(childOption1).toHaveFocus();
+      await userEvent.click(childOption1El);
+      await expect.element(childOption1El).toHaveFocus();
 
       // Parent container received focusout, but target is within descendant child in FloatingTree:
       // Parent's activeIndex must NOT be wiped to -1!
@@ -1969,17 +1984,17 @@ describe("Feature: useRovingFocus", () => {
 
       await render(RootWithChild);
 
-      const rootOption1 = page.getByRole("option", { name: "Root Option 1" });
-      await userEvent.click(rootOption1);
+      const rootOption1El = page.getByRole("option", { name: "Root Option 1" });
+      await userEvent.click(rootOption1El);
       expect(rootRoving.activeIndex.value).toBe(0);
 
-      const rootContainer = page.getByRole("option", { name: "Root Option 1" }).element()
+      const rootContainerEl = page.getByRole("option", { name: "Root Option 1" }).element()
         ?.parentElement as HTMLElement;
-      const childContainer = document.getElementById("child-submenu") as HTMLElement;
+      const childContainerEl = document.getElementById("child-submenu") as HTMLElement;
 
       // Dispatch pointerleave from rootContainer with relatedTarget set to childContainer
-      rootContainer.dispatchEvent(
-        new PointerEvent("pointerleave", { bubbles: false, relatedTarget: childContainer }),
+      rootContainerEl.dispatchEvent(
+        new PointerEvent("pointerleave", { bubbles: false, relatedTarget: childContainerEl }),
       );
       await nextTick();
 
@@ -1991,15 +2006,15 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      const afterBtn = page.getByRole("button", { name: "After Widget" });
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const afterBtnEl = page.getByRole("button", { name: "After Widget" });
 
-      await userEvent.click(option1);
+      await userEvent.click(option1El);
       expect(getRoving().activeIndex.value).toBe(0);
 
-      // Move focus outside widget to afterBtn
-      await userEvent.click(afterBtn);
-      await expect.element(afterBtn).toHaveFocus();
+      // Move focus outside widget to afterBtnEl
+      await userEvent.click(afterBtnEl);
+      await expect.element(afterBtnEl).toHaveFocus();
 
       expect(getRoving().activeIndex.value).toBe(-1);
     });
@@ -2064,17 +2079,17 @@ describe("Feature: useRovingFocus", () => {
 
       await render(RootWithChild);
 
-      const item1 = page.getByRole("option", { name: "Parent Item 1 (Submenu open)" });
-      const item2 = page.getByRole("option", { name: "Parent Item 2" });
+      const item1El = page.getByRole("option", { name: "Parent Item 1 (Submenu open)" });
+      const item2El = page.getByRole("option", { name: "Parent Item 2" });
 
-      await userEvent.click(item1);
+      await userEvent.click(item1El);
       expect(rootRoving.activeIndex.value).toBe(0);
       expect(childNode.open.value).toBe(true);
 
       // ArrowDown to sibling item 2
       await userEvent.keyboard("{ArrowDown}");
       expect(rootRoving.activeIndex.value).toBe(1);
-      await expect.element(item2).toHaveFocus();
+      await expect.element(item2El).toHaveFocus();
 
       // Child node should have been closed automatically
       expect(childNode.open.value).toBe(false);
@@ -2131,11 +2146,11 @@ describe("Feature: useRovingFocus", () => {
 
       await render(SubmenuFixture);
 
-      const subTrigger = page.getByRole("button", { name: "Open Submenu" });
-      const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
+      const subTriggerEl = page.getByRole("button", { name: "Open Submenu" });
+      const subItem1El = page.getByRole("option", { name: "Sub Item 1" });
 
-      await userEvent.click(subItem1);
-      await expect.element(subItem1).toHaveFocus();
+      await userEvent.click(subItem1El);
+      await expect.element(subItem1El).toHaveFocus();
       expect(childRoving.activeIndex.value).toBe(0);
 
       // Press ArrowLeft (exit intent in vertical LTR)
@@ -2145,7 +2160,7 @@ describe("Feature: useRovingFocus", () => {
       expect(childNode.open.value).toBe(false);
 
       // Focus should return to the anchor trigger
-      await expect.element(subTrigger).toHaveFocus();
+      await expect.element(subTriggerEl).toHaveFocus();
     });
 
     it("Given child submenu in RTL layout, When ArrowRight is pressed on sub item, Then child submenu closes and returns focus to anchor", async () => {
@@ -2198,17 +2213,17 @@ describe("Feature: useRovingFocus", () => {
 
       await render(SubmenuFixtureRtl);
 
-      const subTrigger = page.getByRole("button", { name: "Open Submenu" });
-      const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
+      const subTriggerEl = page.getByRole("button", { name: "Open Submenu" });
+      const subItem1El = page.getByRole("option", { name: "Sub Item 1" });
 
-      await userEvent.click(subItem1);
-      await expect.element(subItem1).toHaveFocus();
+      await userEvent.click(subItem1El);
+      await expect.element(subItem1El).toHaveFocus();
 
       // Press ArrowRight (exit intent in RTL)
       await userEvent.keyboard("{ArrowRight}");
 
       expect(childNode.open.value).toBe(false);
-      await expect.element(subTrigger).toHaveFocus();
+      await expect.element(subTriggerEl).toHaveFocus();
     });
 
     it("Given a custom onExit callback on child node, When exit key is pressed, Then custom handler intercepts exit without default close", async () => {
@@ -2260,8 +2275,8 @@ describe("Feature: useRovingFocus", () => {
 
       await render(SubmenuFixture);
 
-      const subItem1 = page.getByRole("option", { name: "Sub Item 1" });
-      await userEvent.click(subItem1);
+      const subItem1El = page.getByRole("option", { name: "Sub Item 1" });
+      await userEvent.click(subItem1El);
 
       await userEvent.keyboard("{ArrowLeft}");
 
@@ -2275,8 +2290,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving, getContext } = createTestComponent();
       await render(Component);
 
-      const option3 = page.getByRole("option", { name: "option 3" });
-      await userEvent.click(option3);
+      const option3El = page.getByRole("option", { name: "option 3" });
+      await userEvent.click(option3El);
       expect(getRoving().activeIndex.value).toBe(2);
 
       // Close the node
@@ -2291,8 +2306,8 @@ describe("Feature: useRovingFocus", () => {
       const { Component, getRoving, getContext } = createTestComponent();
       await render(Component);
 
-      const option1 = page.getByRole("option", { name: "option 1" });
-      await userEvent.click(option1);
+      const option1El = page.getByRole("option", { name: "option 1" });
+      await userEvent.click(option1El);
       expect(getRoving().activeIndex.value).toBe(0);
 
       await userEvent.keyboard("{ArrowLeft}");
