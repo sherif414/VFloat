@@ -77,59 +77,54 @@ export function useEscapeKey(node: FloatingNode, options: UseEscapeKeyOptions = 
   );
 }
 
-// --- Document Listener & Stack Coordination -----------------------------------
+// --- Document Listener & Stack Coordination ----------------------------------
 
 function syncDocumentListeners(doc: Document): void {
-  const needsCapture = escapeStack.some(
-    (entry) => entry.doc === doc && Boolean(entry.options.capture),
-  );
-  const needsBubble = escapeStack.some((entry) => entry.doc === doc && !entry.options.capture);
-
   let listeners = documentListeners.get(doc);
-  if (!listeners) {
-    if (!needsCapture && !needsBubble) return;
-    listeners = { captureListener: null, bubbleListener: null };
-    documentListeners.set(doc, listeners);
-  }
 
-  const phases = [
-    [needsCapture, true, "captureListener"],
-    [needsBubble, false, "bubbleListener"],
-  ] as const;
+  for (const capture of [true, false]) {
+    const key = capture ? "captureListener" : "bubbleListener";
+    const needed = escapeStack.some(
+      (entry) => entry.doc === doc && Boolean(entry.options.capture) === capture,
+    );
 
-  for (const [needed, capture, key] of phases) {
-    if (needed && !listeners[key]) {
+    if (needed && !listeners?.[key]) {
+      if (!listeners) {
+        listeners = { captureListener: null, bubbleListener: null };
+        documentListeners.set(doc, listeners);
+      }
       const listener = (event: KeyboardEvent) => {
         dispatchEscape(doc, event, capture ? "capture" : "bubble");
       };
       listeners[key] = listener;
       doc.addEventListener("keydown", listener, capture);
-    } else if (!needed && listeners[key]) {
+    } else if (!needed && listeners?.[key]) {
       doc.removeEventListener("keydown", listeners[key], capture);
       listeners[key] = null;
     }
   }
 
-  if (!needsCapture && !needsBubble) {
+  if (listeners && !listeners.captureListener && !listeners.bubbleListener) {
     documentListeners.delete(doc);
   }
 }
 
-function pushEscapeEntry(entry: EscapeEntry): void {
-  const index = escapeStack.findIndex((e) => e.node.id === entry.node.id);
+function removeEntryFromStack(node: FloatingNode): void {
+  const index = escapeStack.findIndex((e) => e.node.id === node.id);
   if (index !== -1) {
     escapeStack.splice(index, 1);
   }
+}
+
+function pushEscapeEntry(entry: EscapeEntry): void {
+  removeEntryFromStack(entry.node);
   escapeStack.push(entry);
   syncDocumentListeners(entry.doc);
 }
 
 function removeEscapeEntry(entry: EscapeEntry): void {
-  const index = escapeStack.findIndex((e) => e.node.id === entry.node.id);
-  if (index !== -1) {
-    escapeStack.splice(index, 1);
-    syncDocumentListeners(entry.doc);
-  }
+  removeEntryFromStack(entry.node);
+  syncDocumentListeners(entry.doc);
 }
 
 function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | "bubble"): void {
@@ -156,7 +151,6 @@ function dispatchEscape(doc: Document, event: KeyboardEvent, phase: "capture" | 
   // Once an entry claims the event it is fully consumed: stop propagation for both
   // the default close path and custom onEscape handlers so the keypress never leaks
   // to outer UI (native <dialog>, route-level key handlers, etc.).
-  event.stopPropagation();
   event.stopImmediatePropagation();
 
   if (options.onEscape) {
@@ -181,8 +175,7 @@ function resolveActiveEscapeEntry(target: EventTarget | null): EscapeEntry | nul
 
       if (root.contains(targetNode)) {
         const owner = findTargetOwner(root, targetNode);
-        const deepest = findDeepestOpenDescendant(owner);
-        const entry = findEntryForNode(deepest);
+        const entry = resolveEntryForTree(owner);
         if (entry) return entry;
       }
     }
@@ -191,8 +184,7 @@ function resolveActiveEscapeEntry(target: EventTarget | null): EscapeEntry | nul
   for (let i = escapeStack.length - 1; i >= 0; i--) {
     const candidate = escapeStack[i].node;
     if (candidate.open.value) {
-      const deepest = findDeepestOpenDescendant(candidate);
-      const entry = findEntryForNode(deepest);
+      const entry = resolveEntryForTree(candidate);
       if (entry) return entry;
     }
   }
@@ -200,10 +192,15 @@ function resolveActiveEscapeEntry(target: EventTarget | null): EscapeEntry | nul
   return null;
 }
 
+function resolveEntryForTree(node: FloatingNode): EscapeEntry | null {
+  return findEntryForNode(findDeepestOpenDescendant(node));
+}
+
 function findEntryForNode(startNode: FloatingNode): EscapeEntry | null {
   let curr: FloatingNode | null = startNode;
   while (curr) {
-    const entry = escapeStack.findLast((e) => e.node.id === curr?.id);
+    const nodeId = curr.id;
+    const entry = escapeStack.findLast((e) => e.node.id === nodeId);
     if (entry) return entry;
     curr = curr.parent?.value ?? null;
   }
