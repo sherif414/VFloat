@@ -192,9 +192,9 @@ Always run targeted validation commands to falsify or confirm changes:
 
 ```bash
 # 1. Run a specific targeted test file (Browser Mode):
-pnpm --filter v-float test:run packages/vue/src/composables/<feature>/<file>.test.ts
-# or directly:
-pnpm vitest run packages/vue/src/composables/<feature>/<file>.test.ts
+pnpm test:run <fileName>
+# e.g.:
+pnpm test:run use-focus.test.ts
 
 # 2. Run all unit and browser test suites:
 pnpm run test:run

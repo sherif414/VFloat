@@ -43,7 +43,7 @@ This project uses `pnpm` alongside **OXC** (`oxlint` and `oxfmt`), **Vitest** (B
 - **Lint & Format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`
 - **Tests**:
   - Run all tests: `pnpm run test:run`
-  - Run targeted test file: `vitest run <path/to/test>`
+  - Run targeted test file: `pnpm test:run <fileName>`
   - Run SSR tests: `pnpm run test:ssr`
 - **Documentation**: `pnpm docs:build`, `pnpm docs:lint`, `pnpm docs:format`
 
