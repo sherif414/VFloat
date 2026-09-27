@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-vue";
+import { page } from "vitest/browser";
 import { defineComponent, h, nextTick, onMounted, ref, useTemplateRef } from "vue";
 import { useFloatingNode } from "@/composables";
 import { type UseRoleOptions, type UseRoleReturn, useRole } from "@/composables/role/use-role";
-import { getTestEl } from "@/test-utils";
 
 interface FixtureConfig {
   itemCount?: number;
@@ -108,11 +108,12 @@ async function renderRole(
   const fixture = createTestComponent(options, initialOpen, config);
   const view = await render(fixture.Component);
   await nextTick();
-  await nextTick();
   return {
-    anchorEl: getTestEl("anchor", view.container),
-    floatingEl: getTestEl("floating", view.container),
-    getItemEl: (idx: number) => getTestEl(`item-${idx}`, view.container),
+    view,
+    anchorEl: page.getByTestId("anchor"),
+    floatingEl: page.getByTestId("floating"),
+    getItemEl: (idx: number) => page.getByTestId(`item-${idx}`),
+    childFloatingEl: page.getByTestId("child-floating"),
     openRef: fixture.openRef,
     childOpenRef: fixture.childOpenRef,
     result: fixture.getResult(),
@@ -143,7 +144,7 @@ describe("Feature: useRole ARIA semantics synchronization", () => {
       await expect.element(floatingEl).toHaveAttribute("role", "menu");
       await expect.element(floatingEl).toHaveAttribute("aria-label", "Actions");
       await expect.element(getItemEl(0)).toHaveAttribute("role", "menuitem");
-      expect(getItemEl(0).hasAttribute("tabindex")).toBe(false);
+      await expect.element(getItemEl(0)).not.toHaveAttribute("tabindex");
       await expect.element(getItemEl(1)).toHaveAttribute("aria-disabled", "true");
 
       openRef.value = true;
@@ -162,7 +163,7 @@ describe("Feature: useRole ARIA semantics synchronization", () => {
 
       await expect.element(getItemEl(0)).toHaveAttribute("role", "menuitemcheckbox");
       await expect.element(getItemEl(0)).toHaveAttribute("aria-checked", "true");
-      expect(getItemEl(1).hasAttribute("aria-checked")).toBe(false);
+      await expect.element(getItemEl(1)).not.toHaveAttribute("aria-checked");
     });
 
     it("Given a parent menu with a child menu node, When rendered and child menu opens, Then the submenu item reflects aria-haspopup and aria-expanded", async () => {
@@ -195,24 +196,26 @@ describe("Feature: useRole ARIA semantics synchronization", () => {
       await expect.element(getItemEl(2)).toHaveAttribute("aria-selected", "true");
     });
 
-    it("Given tree and grid roles with selected items, When rendered, Then elements reflect treeitem, gridcell, and aria-selected attributes", async () => {
-      const tree = await renderRole({
+    it("Given a tree role with selected items, When rendered, Then elements reflect treeitem and aria-selected attributes", async () => {
+      const { floatingEl, getItemEl } = await renderRole({
         role: "tree",
         selectedIndices: [1],
       });
 
-      await expect.element(tree.floatingEl).toHaveAttribute("role", "tree");
-      await expect.element(tree.getItemEl(0)).toHaveAttribute("role", "treeitem");
-      await expect.element(tree.getItemEl(1)).toHaveAttribute("aria-selected", "true");
+      await expect.element(floatingEl).toHaveAttribute("role", "tree");
+      await expect.element(getItemEl(0)).toHaveAttribute("role", "treeitem");
+      await expect.element(getItemEl(1)).toHaveAttribute("aria-selected", "true");
+    });
 
-      const grid = await renderRole({
+    it("Given a grid role with selected items, When rendered, Then elements reflect gridcell and aria-selected attributes", async () => {
+      const { floatingEl, getItemEl } = await renderRole({
         role: "grid",
         selectedIndices: [0],
       });
 
-      await expect.element(grid.floatingEl).toHaveAttribute("role", "grid");
-      await expect.element(grid.getItemEl(0)).toHaveAttribute("role", "gridcell");
-      await expect.element(grid.getItemEl(0)).toHaveAttribute("aria-selected", "true");
+      await expect.element(floatingEl).toHaveAttribute("role", "grid");
+      await expect.element(getItemEl(0)).toHaveAttribute("role", "gridcell");
+      await expect.element(getItemEl(0)).toHaveAttribute("aria-selected", "true");
     });
   });
 
@@ -221,13 +224,60 @@ describe("Feature: useRole ARIA semantics synchronization", () => {
       const { anchorEl, floatingEl, openRef } = await renderRole({ role: "tooltip" }, false);
 
       await expect.element(floatingEl).toHaveAttribute("role", "tooltip");
-      expect(anchorEl.hasAttribute("aria-describedby")).toBe(false);
+      await expect.element(anchorEl).not.toHaveAttribute("aria-describedby");
 
       openRef.value = true;
       await nextTick();
       await nextTick();
 
       await expect.element(anchorEl).toHaveAttribute("aria-describedby", "floating");
+    });
+  });
+
+  describe("Scenario: Conditional activation and controls toggle", () => {
+    it("Given enabled set to false, When rendered, Then no ARIA attributes are applied", async () => {
+      const { anchorEl, floatingEl, getItemEl } = await renderRole(
+        {
+          enabled: false,
+          role: "menu",
+        },
+        true,
+      );
+
+      await expect.element(anchorEl).not.toHaveAttribute("aria-haspopup");
+      await expect.element(anchorEl).not.toHaveAttribute("aria-expanded");
+      await expect.element(anchorEl).not.toHaveAttribute("aria-controls");
+      await expect.element(floatingEl).not.toHaveAttribute("role");
+      await expect.element(getItemEl(0)).not.toHaveAttribute("role");
+    });
+
+    it("Given controls set to false, When rendered, Then aria-controls is omitted from trigger", async () => {
+      const { anchorEl, floatingEl } = await renderRole(
+        {
+          role: "dialog",
+          controls: false,
+        },
+        true,
+      );
+
+      await expect.element(anchorEl).toHaveAttribute("aria-haspopup", "dialog");
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(anchorEl).not.toHaveAttribute("aria-controls");
+      await expect.element(floatingEl).toHaveAttribute("role", "dialog");
+    });
+
+    it("Given labelledBy and describedBy options, When rendered, Then floating element reflects matching ARIA relationship attributes", async () => {
+      const { floatingEl } = await renderRole(
+        {
+          role: "dialog",
+          labelledBy: "heading-id",
+          describedBy: "desc-id",
+        },
+        true,
+      );
+
+      await expect.element(floatingEl).toHaveAttribute("aria-labelledby", "heading-id");
+      await expect.element(floatingEl).toHaveAttribute("aria-describedby", "desc-id");
     });
   });
 
@@ -246,8 +296,8 @@ describe("Feature: useRole ARIA semantics synchronization", () => {
       result.cleanup();
 
       await expect.element(anchorEl).toHaveAttribute("aria-expanded", "template-value");
-      expect(floatingEl.hasAttribute("role")).toBe(false);
-      expect(floatingEl.hasAttribute("aria-modal")).toBe(false);
+      await expect.element(floatingEl).not.toHaveAttribute("role");
+      await expect.element(floatingEl).not.toHaveAttribute("aria-modal");
     });
   });
 });
