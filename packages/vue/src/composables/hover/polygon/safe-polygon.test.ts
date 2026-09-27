@@ -27,7 +27,6 @@ type SafePolygonTestContext = CreateSafePolygonHandlerContext & {
   onCloseMock: ReturnType<typeof vi.fn>;
 };
 
-const cleanupElements: HTMLElement[] = [];
 const cleanupHandlers: SafePolygonHandler[] = [];
 
 /**
@@ -49,9 +48,6 @@ function createContext(
 ): SafePolygonTestContext {
   const anchorEl = document.createElement("div");
   const floatingEl = document.createElement("div");
-  document.body.appendChild(anchorEl);
-  document.body.appendChild(floatingEl);
-  cleanupElements.push(anchorEl, floatingEl);
 
   const rects: Record<string, [number, number, number, number]> = {
     bottom: [75, 110, 150, 80],
@@ -79,19 +75,12 @@ function createContext(
 }
 
 describe("Feature: safePolygon hover corridor protection", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
   afterEach(() => {
     for (const handler of cleanupHandlers) {
       handler.cleanup?.();
     }
     cleanupHandlers.length = 0;
-    for (const el of cleanupElements) {
-      el.remove();
-    }
-    cleanupElements.length = 0;
+    document.body.style.pointerEvents = "";
     vi.clearAllMocks();
     vi.useRealTimers();
   });
@@ -166,6 +155,7 @@ describe("Feature: safePolygon hover corridor protection", () => {
     });
 
     it("Given pointer has entered floating element, When mouseleave subsequent to landing occurs, Then close is scheduled", () => {
+      vi.useFakeTimers();
       const ctx = createContext("bottom");
       const handler = safePolygon()(ctx);
       const floatEl = ctx.elements.floating as HTMLElement;
@@ -345,6 +335,10 @@ describe("Feature: safePolygon hover corridor protection", () => {
   });
 
   describe("Scenario: Intent detection and speed-based deceleration handling", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
     it("Given requireIntent is enabled, When cursor decelerates to slow speed within corridor, Then close is triggered without waiting for the watchdog", () => {
       let now = 1000;
       const perfSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
@@ -453,6 +447,10 @@ describe("Feature: safePolygon hover corridor protection", () => {
   });
 
   describe("Scenario: Timer management and continuous motion debounce", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
     it("Given continuous cursor motion, When subsequent moves occur, Then prior close timeouts are cancelled", () => {
       const ctx = createContext("bottom", { x: 100, y: 99 });
       const handler = safePolygon()(ctx);
@@ -549,6 +547,7 @@ describe("Feature: safePolygon hover corridor protection", () => {
     });
 
     it("Given one factory reused for two traversals, When the first parks inside the corridor, Then the second traversal still arms the intent watchdog", () => {
+      vi.useFakeTimers();
       const sp = safePolygon();
       const first = createContext("bottom", { x: 100, y: 99 });
       sp(first)(makeMouseEvent("pointermove", { clientX: 160, clientY: 109 }));
@@ -699,9 +698,6 @@ describe("Feature: safePolygon hover corridor protection", () => {
 
     it("Given a getScope resolver, When the corridor starts, Then only the resolved subtree is shielded", () => {
       const scopeEl = document.createElement("div");
-      document.body.appendChild(scopeEl);
-      cleanupElements.push(scopeEl);
-
       const ctx = createContext("bottom");
       createHandler({ blockPointerEvents: true, getScope: () => scopeEl }, ctx);
 
@@ -711,9 +707,6 @@ describe("Feature: safePolygon hover corridor protection", () => {
 
     it("Given a getScope resolver, When the corridor is torn down, Then the resolved subtree is restored", () => {
       const scopeEl = document.createElement("div");
-      document.body.appendChild(scopeEl);
-      cleanupElements.push(scopeEl);
-
       const ctx = createContext("bottom");
       const handler = createHandler({ blockPointerEvents: true, getScope: () => scopeEl }, ctx);
 
