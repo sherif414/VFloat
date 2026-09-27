@@ -31,6 +31,7 @@ const createPointerEventData = (
 });
 
 interface FixtureConfig {
+  defaultOpen?: boolean;
   initialAnchor?: HTMLElement | null;
 }
 
@@ -38,7 +39,7 @@ function createTestComponent(
   options: Partial<UseClientPointOptions> = {},
   config: FixtureConfig = {},
 ) {
-  const open = ref(false);
+  const openRef = ref(config.defaultOpen ?? false);
   // Writable mirror so tests can swap or clear the tracking target mid-flight.
   const trackingAreaRef = shallowRef<HTMLElement | null>(null);
   let node!: FloatingNode;
@@ -50,7 +51,7 @@ function createTestComponent(
     node = useFloatingNode({
       anchorEl: ref<AnchorElement>(config.initialAnchor ?? null),
       floatingEl: ref<FloatingElement>(null),
-      open,
+      open: openRef,
     });
     result = useClientPoint(node, {
       trackingAreaEl: trackingAreaRef,
@@ -68,7 +69,14 @@ function createTestComponent(
       ]);
   });
 
-  return { Component, getNode: () => node, getResult: () => result, open, trackingAreaRef };
+  return {
+    Component,
+    getNode: () => node,
+    getResult: () => result,
+    open: openRef,
+    openRef,
+    trackingAreaRef,
+  };
 }
 
 async function renderClientPoint(
@@ -79,12 +87,15 @@ async function renderClientPoint(
   await render(fixture.Component);
   await nextTick();
   const result = fixture.getResult();
+  const spareTargetEl = getTestEl("spare-target");
   return {
-    open: fixture.open,
+    open: fixture.openRef,
+    openRef: fixture.openRef,
     node: fixture.getNode(),
     coordinates: result.coordinates,
     trackingAreaEl: getTestEl("tracking-area"),
-    spareEl: getTestEl("spare-target"),
+    spareEl: spareTargetEl,
+    spareTargetEl,
     trackingAreaRef: fixture.trackingAreaRef,
   };
 }
@@ -97,18 +108,18 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
 
   describe("Scenario: Virtual element factory and geometry", () => {
     it("Given coordinates and a reference element, When creating a virtual element, Then it exposes matching bounding client rect dimensions", () => {
-      const reference = document.createElement("div");
+      const referenceEl = document.createElement("div");
       const referenceRect = makeDOMRect(10, 20, 120, 40);
       const getBoundingClientRectSpy = vi
-        .spyOn(reference, "getBoundingClientRect")
+        .spyOn(referenceEl, "getBoundingClientRect")
         .mockReturnValue(referenceRect);
 
-      const virtualElement = createVirtualElement({
+      const virtualEl = createVirtualElement({
         coordinates: { x: 150, y: 260 },
-        trackingTarget: reference,
+        trackingTarget: referenceEl,
       });
 
-      const rect = virtualElement.getBoundingClientRect();
+      const rect = virtualEl.getBoundingClientRect();
       expect(rect.x).toBe(150);
       expect(rect.y).toBe(260);
       expect(rect.width).toBe(0);
@@ -117,19 +128,49 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
     });
 
     it("Given partial coordinates with baseline coordinates, When calculating rect, Then it falls back to baseline values", () => {
-      const reference = document.createElement("div");
+      const referenceEl = document.createElement("div");
       const referenceRect = makeDOMRect(5, 15, 200, 80);
-      vi.spyOn(reference, "getBoundingClientRect").mockReturnValue(referenceRect);
+      vi.spyOn(referenceEl, "getBoundingClientRect").mockReturnValue(referenceRect);
 
-      const virtualElement = createVirtualElement({
+      const virtualEl = createVirtualElement({
         coordinates: { x: null, y: 220 },
         baselineCoordinates: { x: 120, y: null },
-        trackingTarget: reference,
+        trackingTarget: referenceEl,
       });
 
-      const rect = virtualElement.getBoundingClientRect();
+      const rect = virtualEl.getBoundingClientRect();
       expect(rect.x).toBe(120);
       expect(rect.y).toBe(220);
+      expect(rect.width).toBe(0);
+      expect(rect.height).toBe(0);
+    });
+
+    it("Given null coordinates and no baseline coordinates, When calculating rect, Then it falls back to the reference element rect", () => {
+      const referenceEl = document.createElement("div");
+      const referenceRect = makeDOMRect(25, 45, 100, 50);
+      vi.spyOn(referenceEl, "getBoundingClientRect").mockReturnValue(referenceRect);
+
+      const virtualEl = createVirtualElement({
+        coordinates: { x: null, y: null },
+        trackingTarget: referenceEl,
+      });
+
+      const rect = virtualEl.getBoundingClientRect();
+      expect(rect.x).toBe(25);
+      expect(rect.y).toBe(45);
+      expect(rect.width).toBe(0);
+      expect(rect.height).toBe(0);
+    });
+
+    it("Given null coordinates and null tracking target, When calculating rect, Then it falls back to default zero coordinates", () => {
+      const virtualEl = createVirtualElement({
+        coordinates: { x: null, y: null },
+        trackingTarget: null,
+      });
+
+      const rect = virtualEl.getBoundingClientRect();
+      expect(rect.x).toBe(0);
+      expect(rect.y).toBe(0);
       expect(rect.width).toBe(0);
       expect(rect.height).toBe(0);
     });
@@ -150,6 +191,11 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
   });
 
   describe("Scenario: FollowTracker pointer event evaluation", () => {
+    it("Given a FollowTracker, When inspecting required events, Then it registers pointerdown, pointermove, and pointerenter", () => {
+      const tracker = new FollowTracker();
+      expect(tracker.getRequiredEvents()).toEqual(["pointerdown", "pointermove", "pointerenter"]);
+    });
+
     it("Given a FollowTracker, When a pointerdown event occurs regardless of open state, Then it returns the pointer coordinates", () => {
       const tracker = new FollowTracker();
       const event = createPointerEventData("pointerdown", { x: 80, y: 120 });
@@ -157,6 +203,14 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
       const result = tracker.process(event, { isOpen: false });
 
       expect(result).toEqual({ x: 80, y: 120 });
+    });
+
+    it("Given a FollowTracker, When pointerenter occurs, Then it returns coordinates regardless of open state", () => {
+      const tracker = new FollowTracker();
+      const event = createPointerEventData("pointerenter", { x: 75, y: 125 });
+
+      expect(tracker.process(event, { isOpen: false })).toEqual({ x: 75, y: 125 });
+      expect(tracker.process(event, { isOpen: true })).toEqual({ x: 75, y: 125 });
     });
 
     it("Given a FollowTracker, When pointermove events occur, Then it returns coordinates only when open and pointer is mouse-like", () => {
@@ -174,6 +228,11 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
   });
 
   describe("Scenario: StaticTracker trigger coordinate capture and lifecycle", () => {
+    it("Given a StaticTracker, When inspecting required events, Then it registers pointerdown, pointerenter, and pointermove", () => {
+      const tracker = new StaticTracker();
+      expect(tracker.getRequiredEvents()).toEqual(["pointerdown", "pointerenter", "pointermove"]);
+    });
+
     it("Given a StaticTracker, When pointerdown occurs while closed, Then it stores coordinates and exposes them upon opening", () => {
       const tracker = new StaticTracker();
       const pointerdown = createPointerEventData("pointerdown", {
@@ -249,10 +308,10 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
       );
       await nextTick();
 
-      const virtualAnchor = node.refs.anchorEl.value;
+      const virtualAnchorEl = node.refs.anchorEl.value;
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
-      expect(isVirtualElement(virtualAnchor)).toBe(true);
-      expect((virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
+      expect(isVirtualElement(virtualAnchorEl)).toBe(true);
+      expect((virtualAnchorEl as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
         document.documentElement,
       );
     });
@@ -588,7 +647,7 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
       open.value = false;
       await nextTick();
 
-      const initialAnchor = node.refs.anchorEl.value;
+      const initialAnchorEl = node.refs.anchorEl.value;
 
       trackingAreaEl.dispatchEvent(
         makePointerEvent("pointermove", {
@@ -597,13 +656,14 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
         }),
       );
 
-      expect(node.refs.anchorEl.value).toBe(initialAnchor);
+      expect(node.refs.anchorEl.value).toBe(initialAnchorEl);
     });
 
     it("Given an active virtual anchor, When tracking area ref changes, Then contextElement updates to the new element", async () => {
-      const { node, open, spareEl, trackingAreaEl, trackingAreaRef } = await renderClientPoint({
-        trackingMode: "follow",
-      });
+      const { node, open, spareTargetEl, trackingAreaEl, trackingAreaRef } =
+        await renderClientPoint({
+          trackingMode: "follow",
+        });
 
       open.value = true;
       await nextTick();
@@ -616,22 +676,22 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
       );
       await nextTick();
 
-      const initialVirtualElement = node.refs.anchorEl.value;
-      expect(initialVirtualElement).toBeDefined();
-      expect(isVirtualElement(initialVirtualElement)).toBe(true);
-      expect(
-        (initialVirtualElement as Exclude<AnchorElement, HTMLElement | null>).contextElement,
-      ).toBe(trackingAreaEl);
+      const initialVirtualEl = node.refs.anchorEl.value;
+      expect(initialVirtualEl).toBeDefined();
+      expect(isVirtualElement(initialVirtualEl)).toBe(true);
+      expect((initialVirtualEl as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
+        trackingAreaEl,
+      );
 
-      trackingAreaRef.value = spareEl;
+      trackingAreaRef.value = spareTargetEl;
       await nextTick();
 
-      const updatedVirtualElement = node.refs.anchorEl.value;
-      expect(updatedVirtualElement).toBeDefined();
-      expect(isVirtualElement(updatedVirtualElement)).toBe(true);
-      expect(
-        (updatedVirtualElement as Exclude<AnchorElement, HTMLElement | null>).contextElement,
-      ).toBe(spareEl);
+      const updatedVirtualEl = node.refs.anchorEl.value;
+      expect(updatedVirtualEl).toBeDefined();
+      expect(isVirtualElement(updatedVirtualEl)).toBe(true);
+      expect((updatedVirtualEl as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
+        spareTargetEl,
+      );
     });
 
     it("Given null tracking area ref, When pointer moves, Then contextElement falls back to documentElement", async () => {
@@ -651,17 +711,17 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
       );
       await nextTick();
 
-      const virtualAnchor = node.refs.anchorEl.value;
-      expect(virtualAnchor).toBeDefined();
-      expect(isVirtualElement(virtualAnchor)).toBe(true);
-      expect((virtualAnchor as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
+      const virtualAnchorEl = node.refs.anchorEl.value;
+      expect(virtualAnchorEl).toBeDefined();
+      expect(isVirtualElement(virtualAnchorEl)).toBe(true);
+      expect((virtualAnchorEl as Exclude<AnchorElement, HTMLElement | null>).contextElement).toBe(
         document.documentElement,
       );
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
     });
 
     it("Given active tracking, When tracking area changes, Then existing coordinates are preserved", async () => {
-      const { coordinates, node, open, spareEl, trackingAreaEl, trackingAreaRef } =
+      const { coordinates, node, open, spareTargetEl, trackingAreaEl, trackingAreaRef } =
         await renderClientPoint({
           trackingMode: "follow",
         });
@@ -679,7 +739,7 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
 
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
 
-      trackingAreaRef.value = spareEl;
+      trackingAreaRef.value = spareTargetEl;
       await nextTick();
 
       expect(coordinates.value).toEqual({ x: 100, y: 200 });
