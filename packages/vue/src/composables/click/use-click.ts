@@ -153,9 +153,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     if (e.key === " ") {
       e.preventDefault();
       didKeyDown = true;
-    }
-
-    if (e.key === "Enter") {
+    } else {
       if (isLinkTarget(e.target, boundary)) return;
       toggleOpen();
     }
