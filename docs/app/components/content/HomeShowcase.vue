@@ -222,7 +222,7 @@ onMounted(() => {
 
 <style scoped>
 .showcase-card {
-  margin: 1.5rem 0 2rem;
+  margin: 0;
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   background: var(--vp-c-bg-elv);
@@ -318,7 +318,7 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .showcase-card {
-    margin: 1rem 0 1.5rem;
+    margin: 0;
     border-radius: 10px;
   }
 

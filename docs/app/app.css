@@ -54,13 +54,13 @@
 
 .home-showcase-section {
   max-width: 1152px;
-  margin: 1.5rem auto 2.5rem;
+  margin: 1.5rem auto 3rem;
   padding: 0 1.5rem;
 }
 
 @media (max-width: 640px) {
   .home-showcase-section {
-    margin: 1rem auto 2rem;
+    margin: 1.25rem auto 2rem;
     padding: 0 1rem;
   }
 }

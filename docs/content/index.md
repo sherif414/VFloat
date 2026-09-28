@@ -16,18 +16,20 @@ links:
   color: primary
   trailingIcon: i-lucide-arrow-right
   size: lg
+  class: rounded-full px-5
 - label: API Reference
   to: /api
   color: neutral
   variant: outline
   icon: i-lucide-code-xml
   size: lg
+  class: rounded-full px-5
 
 ---
 
+::home-install
 ::
 
-::home-install
 ::
 
 ::home-showcase

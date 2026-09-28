@@ -29,9 +29,14 @@ export default defineAppConfig({
   ui: {
     pageHero: {
       slots: {
-        container: "pt-10 pb-4 sm:pt-16 sm:pb-6 gap-6 sm:gap-y-8",
-        title: "text-4xl sm:text-6xl font-bold tracking-tight text-highlighted text-balance",
-        description: "text-base sm:text-lg text-muted text-balance mt-3 sm:mt-4",
+        container: "flex flex-col items-center pt-8 pb-2 sm:pt-12 sm:pb-4 gap-5 sm:gap-6",
+        wrapper: "max-w-3xl mx-auto text-center",
+        title:
+          "text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-highlighted text-balance",
+        description:
+          "text-base sm:text-lg text-muted text-balance mt-3 sm:mt-4 max-w-2xl mx-auto leading-relaxed",
+        footer: "mt-6 sm:mt-7",
+        links: "flex flex-wrap gap-3 sm:gap-3.5 justify-center",
       },
     },
   },

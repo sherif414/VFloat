@@ -99,24 +99,35 @@ onUnmounted(() => {
         </span>
       </button>
     </div>
-    <p class="vf-install-caption">Requires Vue 3.5+ &middot; ESM &middot; MIT</p>
+    <p class="vf-install-caption">
+      <span>Requires Vue 3.5+</span>
+      <span class="vf-install-sep" aria-hidden="true">&middot;</span>
+      <span>ESM</span>
+      <span class="vf-install-sep" aria-hidden="true">&middot;</span>
+      <span>MIT</span>
+    </p>
   </div>
 </template>
 
 <style scoped>
 .vf-install {
-  width: min(420px, 100%);
-  margin: 1.25rem auto 0;
+  width: min(400px, 100%);
+  margin: 0 auto;
 }
 
 .vf-install-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.5rem 0.5rem 0.9rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.85rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   background: var(--vp-c-bg-alt);
+  transition: border-color 0.15s ease;
+}
+
+.vf-install-row:focus-within {
+  border-color: var(--vp-c-brand-2);
 }
 
 .vf-install-prompt {
@@ -203,22 +214,31 @@ onUnmounted(() => {
 }
 
 .vf-install-caption {
-  margin: 0.55rem 0 0;
-  font-size: 0.76rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.74rem;
   line-height: 1.4;
   color: var(--vp-c-text-3);
   text-align: center;
-  text-wrap: balance;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  letter-spacing: 0.01em;
+}
+
+.vf-install-sep {
+  opacity: 0.6;
+  user-select: none;
 }
 
 @media (max-width: 480px) {
   .vf-install {
-    margin-top: 1rem;
+    width: 100%;
   }
 
   .vf-install-row {
-    padding: 0.45rem 0.45rem 0.45rem 0.8rem;
-    gap: 0.45rem;
+    padding: 0.4rem 0.4rem 0.4rem 0.75rem;
+    gap: 0.4rem;
   }
 
   .vf-install-code {
@@ -226,12 +246,13 @@ onUnmounted(() => {
   }
 
   .vf-install-copy {
-    padding: 0.32rem 0.55rem;
-    font-size: 0.73rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.72rem;
   }
 
   .vf-install-caption {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
+    gap: 0.35rem;
   }
 }
 
