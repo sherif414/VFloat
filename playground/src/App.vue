@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onWatcherCleanup, shallowRef, watchPostEffect } from "vue";
+import ClickDemo from "./demos/ClickDemo.vue";
 import OutsideClickDemo from "./demos/OutsideClickDemo.vue";
 import MenuDemo from "./demos/MenuDemo.vue";
 import TypeaheadDemo from "./demos/TypeaheadDemo.vue";
@@ -13,6 +14,11 @@ interface DemoEntry {
 }
 
 const demos: DemoEntry[] = [
+  {
+    id: "click",
+    title: "Click trigger",
+    component: ClickDemo,
+  },
   {
     id: "iframe-trap",
     title: "Cross-document focus trap",
