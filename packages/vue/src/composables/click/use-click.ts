@@ -143,6 +143,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   }
 
   function onKeyDown(e: KeyboardEvent): void {
+    if (e.key !== " " && e.key !== "Enter") return;
     pointerType = undefined;
     if (e.repeat) return;
     if (isImeComposing(e)) return;
