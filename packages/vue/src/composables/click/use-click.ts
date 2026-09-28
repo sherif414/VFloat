@@ -143,6 +143,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   }
 
   function onKeyDown(e: KeyboardEvent): void {
+    if (e.key !== " " && e.key !== "Enter") return;
     pointerType = undefined;
     if (e.repeat) return;
     if (isImeComposing(e)) return;
@@ -152,9 +153,7 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     if (e.key === " ") {
       e.preventDefault();
       didKeyDown = true;
-    }
-
-    if (e.key === "Enter") {
+    } else {
       if (isLinkTarget(e.target, boundary)) return;
       toggleOpen();
     }
