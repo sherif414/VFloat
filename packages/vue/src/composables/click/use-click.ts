@@ -4,7 +4,6 @@ import type { FloatingNode } from "@/composables/floating-node";
 import { useComposition } from "@/shared/composition-state";
 import {
   isElement,
-  isHTMLElement,
   isMouseLikePointerType,
   isNode,
   isShadowRoot,
@@ -211,7 +210,6 @@ function isButtonTarget(target: EventTarget | null, boundary?: Element | null): 
  */
 function isTypeableElement(target: EventTarget | null): boolean {
   const element = getClosestElement(target);
-  if (!isHTMLElement(element)) return false;
   return _isTypeableElement(element);
 }
 
