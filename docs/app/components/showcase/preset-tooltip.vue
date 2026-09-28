@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import type { Placement, UsePositionMiddlewaresOptions } from "v-float";
 import { computed, shallowRef, watch } from "vue";
-import { useArrow, useFloatingNode, useFocus, useHover, usePosition, useRole } from "v-float";
+import {
+  useArrow,
+  useClick,
+  useFloatingNode,
+  useFocus,
+  useHover,
+  useOutsideClick,
+  usePosition,
+  useRole,
+} from "v-float";
 
 interface Props {
   placement: Placement;
@@ -74,6 +83,14 @@ useFocus(context, {
   enabled: () => props.isActive && !props.keepOpen,
 });
 
+useClick(context, {
+  enabled: () => props.isActive && !props.keepOpen,
+});
+
+useOutsideClick(context, {
+  enabled: () => props.isActive && !props.keepOpen,
+});
+
 useRole(context, {
   role: "tooltip",
 });
@@ -112,7 +129,8 @@ defineExpose({
           <circle cx="5" cy="13" r="1.5" />
           <circle cx="11" cy="13" r="1.5" />
         </svg>
-        <span>Hover me</span>
+        <span class="anchor-btn__text-hover">Hover me</span>
+        <span class="anchor-btn__text-touch">Tap me</span>
       </button>
     </div>
 
@@ -121,7 +139,14 @@ defineExpose({
       ref="floatingEl"
       role="tooltip"
       class="floating-panel panel-tooltip"
-      :style="position.styles.value"
+      :style="[
+        position.styles.value,
+        {
+          pointerEvents: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+        },
+      ]"
     >
       <span>Copy link to clipboard</span>
       <kbd class="shortcut-tag">⌘C</kbd>
@@ -160,18 +185,25 @@ defineExpose({
   font-weight: 500;
   cursor: grab;
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
   box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 }
 
 .anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
   background: var(--vp-c-bg-soft);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.anchor-btn:active {
+  transform: scale(0.98);
+  background: var(--vp-c-bg-soft);
 }
 
 .anchor-btn:focus-visible {
@@ -192,6 +224,27 @@ defineExpose({
 .anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
+}
+
+.anchor-btn__text-touch {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .anchor-btn__text-hover {
+    display: none;
+  }
+  .anchor-btn__text-touch {
+    display: inline;
+  }
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .anchor-btn {
+    min-height: 42px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
 }
 
 .floating-panel {
@@ -215,6 +268,14 @@ defineExpose({
   font-size: 0.82rem;
   font-weight: 500;
   white-space: nowrap;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.panel-tooltip * {
+  pointer-events: none !important;
+  user-select: none !important;
 }
 
 .shortcut-tag {

@@ -125,15 +125,35 @@ onMounted(() => {
           <!-- Caption Helper -->
           <div class="sandbox-caption">
             <template v-if="activePreset === 'tooltip'">
-              Hover to open. Drag anchor to test collision flipping.
+              <span class="caption--desktop"
+                >Hover to open. Drag anchor to test collision flipping.</span
+              >
+              <span class="caption--touch"
+                >Tap to open. Drag anchor to test collision flipping.</span
+              >
             </template>
             <template v-else-if="activePreset === 'popover'">
-              Click to open card. Drag anchor near edges to observe placement adaptation.
+              <span class="caption--desktop"
+                >Click to open card. Drag anchor near edges to observe placement adaptation.</span
+              >
+              <span class="caption--touch"
+                >Tap to open card. Drag anchor near edges to observe placement adaptation.</span
+              >
             </template>
             <template v-else-if="activePreset === 'menu'">
-              Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.
+              <span class="caption--desktop"
+                >Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.</span
+              >
+              <span class="caption--touch">Tap to open menu and choose an action.</span>
             </template>
-            <template v-else> Move your cursor across this area to track coordinates. </template>
+            <template v-else>
+              <span class="caption--desktop"
+                >Move your cursor across this area to track coordinates.</span
+              >
+              <span class="caption--touch"
+                >Touch and drag across this area to track coordinates.</span
+              >
+            </template>
           </div>
 
           <!-- Reset Button (Icon-Only, Resets Position & Options) -->
@@ -276,6 +296,19 @@ onMounted(() => {
   color: var(--vp-c-text-2);
 }
 
+.caption--touch {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .caption--desktop {
+    display: none;
+  }
+  .caption--touch {
+    display: inline;
+  }
+}
+
 .reset-icon-btn {
   position: absolute;
   bottom: 0.75rem;
@@ -293,6 +326,7 @@ onMounted(() => {
   color: var(--vp-c-text-2);
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition:
     color 0.15s ease,
     border-color 0.15s ease,
@@ -331,15 +365,22 @@ onMounted(() => {
   }
 
   .reset-icon-btn {
-    bottom: 0.5rem;
-    right: 0.5rem;
-    width: 26px;
-    height: 26px;
+    bottom: 0.6rem;
+    right: 0.6rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+  }
+
+  .reset-icon-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
   .sandbox-caption {
-    bottom: 0.5rem;
-    font-size: 0.72rem;
+    bottom: 0.55rem;
+    font-size: 0.73rem;
+    padding: 0 2.2rem;
   }
 }
 </style>

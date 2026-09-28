@@ -99,7 +99,6 @@ useFocusTrap(context, {
   modal: false,
   initialFocus: floatingEl,
   returnFocus: true,
-  guards: false,
 });
 
 const menuItemEls = shallowRef<HTMLElement[]>([]);
@@ -235,18 +234,25 @@ defineExpose({
   font-weight: 500;
   cursor: grab;
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
   box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 }
 
 .anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
   background: var(--vp-c-bg-soft);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.anchor-btn:active {
+  transform: scale(0.98);
+  background: var(--vp-c-bg-soft);
 }
 
 .anchor-btn:focus-visible {
@@ -286,6 +292,14 @@ defineExpose({
   color: var(--vp-c-brand-1);
 }
 
+@media (pointer: coarse), (max-width: 640px) {
+  .anchor-btn {
+    min-height: 42px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
 .floating-panel {
   position: absolute;
   top: 0;
@@ -299,9 +313,9 @@ defineExpose({
 }
 
 .panel-menu {
-  width: 180px;
+  width: 184px;
   max-width: calc(100% - 16px);
-  padding: 0.3rem;
+  padding: 0.35rem;
   border-radius: 8px;
   outline: none;
 }
@@ -316,13 +330,33 @@ defineExpose({
   color: var(--vp-c-text-1);
   cursor: pointer;
   touch-action: manipulation;
-  transition: background-color 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.1s ease,
+    color 0.1s ease;
 }
 
 .menu-item:hover,
 .menu-item.is-active {
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-brand-1);
+}
+
+.menu-item:active {
+  background: var(--vp-c-bg-mute);
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .panel-menu {
+    width: 200px;
+    padding: 0.4rem;
+  }
+
+  .menu-item {
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.84rem;
+  }
 }
 
 .menu-item.is-danger {
@@ -333,6 +367,10 @@ defineExpose({
 .menu-item.is-danger.is-active {
   background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.1)));
   color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
+}
+
+.menu-item.is-danger:active {
+  background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.15)));
 }
 
 .menu-item__shortcut {

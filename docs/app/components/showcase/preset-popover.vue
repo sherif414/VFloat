@@ -218,18 +218,25 @@ defineExpose({
   font-weight: 500;
   cursor: grab;
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
   box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 }
 
 .anchor-btn:hover {
   border-color: var(--vp-c-brand-1);
   background: var(--vp-c-bg-soft);
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.anchor-btn:active {
+  transform: scale(0.98);
+  background: var(--vp-c-bg-soft);
 }
 
 .anchor-btn:focus-visible {
@@ -254,6 +261,14 @@ defineExpose({
 .anchor-btn__drag-icon {
   color: var(--vp-c-text-3);
   opacity: 0.7;
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .anchor-btn {
+    min-height: 42px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
 }
 
 .floating-panel {
@@ -288,19 +303,31 @@ defineExpose({
 }
 
 .popover-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
+  border-radius: 6px;
   background: transparent;
   color: var(--vp-c-text-3);
-  font-size: 0.75rem;
   cursor: pointer;
-  padding: 0.15rem 0.3rem;
-  border-radius: 4px;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .popover-close-btn:hover {
   color: var(--vp-c-text-1);
   background: var(--vp-c-bg-soft);
+}
+
+.popover-close-btn:active {
+  background: var(--vp-c-bg-mute);
 }
 
 .popover-description {
@@ -317,14 +344,28 @@ defineExpose({
 }
 
 .action-btn {
-  padding: 0.32rem 0.65rem;
+  padding: 0.35rem 0.7rem;
   border-radius: 6px;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.12s ease;
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .popover-close-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .action-btn {
+    min-height: 34px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.82rem;
+  }
 }
 
 .action-btn--primary {
@@ -338,6 +379,10 @@ defineExpose({
   opacity: 0.95;
 }
 
+.action-btn--primary:active {
+  transform: scale(0.97);
+}
+
 .action-btn--secondary {
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-soft);
@@ -347,5 +392,9 @@ defineExpose({
 .action-btn--secondary:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
+}
+
+.action-btn--secondary:active {
+  transform: scale(0.97);
 }
 </style>

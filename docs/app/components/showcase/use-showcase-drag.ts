@@ -18,12 +18,20 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
   let dragStartOffset = { x: 0, y: 0 };
   let currentSandboxEl: HTMLElement | null = null;
   let updateCallback: (() => void) | undefined;
+  let activePointerId: number | null = null;
+  let capturedTarget: HTMLElement | null = null;
+  let hasMoved = false;
 
   function onPointerMove(e: PointerEvent) {
     if (!isDragging.value || !currentSandboxEl) return;
+    if (activePointerId !== null && e.pointerId !== activePointerId) return;
 
     const dx = e.clientX - dragStartPointer.x;
     const dy = e.clientY - dragStartPointer.y;
+
+    if (!hasMoved && Math.hypot(dx, dy) > 4) {
+      hasMoved = true;
+    }
 
     const sandboxRect = currentSandboxEl.getBoundingClientRect();
     const maxExtentX = Math.max(0, sandboxRect.width / 2 - 30);
@@ -40,11 +48,40 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
     updateCallback?.();
   }
 
-  function onPointerUp() {
-    isDragging.value = false;
+  function cleanupListeners() {
     if (typeof window !== "undefined") {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    }
+    if (capturedTarget && activePointerId !== null) {
+      try {
+        if (capturedTarget.hasPointerCapture(activePointerId)) {
+          capturedTarget.releasePointerCapture(activePointerId);
+        }
+      } catch {
+        // Ignore failure if already released
+      }
+      capturedTarget = null;
+    }
+    activePointerId = null;
+  }
+
+  function onPointerUp() {
+    isDragging.value = false;
+    cleanupListeners();
+
+    if (hasMoved && typeof window !== "undefined") {
+      // Suppress trailing click event after dragging so popovers/menus do not toggle unintentionally
+      const preventClick = (clickEvent: MouseEvent) => {
+        clickEvent.preventDefault();
+        clickEvent.stopPropagation();
+        clickEvent.stopImmediatePropagation();
+      };
+      window.addEventListener("click", preventClick, { capture: true, once: true });
+      window.setTimeout(() => {
+        window.removeEventListener("click", preventClick, { capture: true });
+      }, 120);
     }
   }
 
@@ -53,16 +90,29 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
     sandboxEl: HTMLElement | null,
     onUpdate?: () => void,
   ) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !e.isPrimary) return;
     isDragging.value = true;
+    hasMoved = false;
     currentSandboxEl = sandboxEl;
     updateCallback = onUpdate;
+    activePointerId = e.pointerId;
     dragStartPointer = { x: e.clientX, y: e.clientY };
     dragStartOffset = { ...anchorOffset.value };
+
+    const target = e.currentTarget as HTMLElement | null;
+    if (target?.setPointerCapture) {
+      try {
+        target.setPointerCapture(e.pointerId);
+        capturedTarget = target;
+      } catch {
+        capturedTarget = null;
+      }
+    }
 
     if (typeof window !== "undefined") {
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
+      window.addEventListener("pointercancel", onPointerUp);
     }
   }
 
@@ -74,10 +124,7 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
   }
 
   onBeforeUnmount(() => {
-    if (typeof window !== "undefined") {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    }
+    cleanupListeners();
   });
 
   return {

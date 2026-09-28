@@ -479,14 +479,16 @@ function selectPlacementOption(val: Placement) {
     background: var(--vp-c-bg-alt);
     border: 1px solid var(--vp-c-divider);
     border-radius: 8px;
-    padding: 2px;
+    padding: 3px;
   }
 
   .preset-tab {
     flex: 1 0 auto;
     text-align: center;
-    padding: 0.35rem 0.55rem;
+    min-height: 34px;
+    padding: 0.4rem 0.55rem;
     font-size: 0.8rem;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .header-actions {
@@ -496,19 +498,30 @@ function selectPlacementOption(val: Placement) {
   }
 
   .header-actions__options {
-    gap: 0.35rem;
+    gap: 0.45rem;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .placement-btn,
+  .action-btn {
+    height: 32px;
+    padding: 0 0.65rem;
+    font-size: 0.78rem;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 @media (max-width: 380px) {
   .preset-tab {
-    padding: 0.3rem 0.4rem;
-    font-size: 0.75rem;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.76rem;
   }
 
   .placement-btn,
   .action-btn {
-    padding: 0 0.45rem;
+    height: 30px;
+    padding: 0 0.5rem;
     font-size: 0.74rem;
     gap: 0.25rem;
   }
@@ -526,7 +539,7 @@ function selectPlacementOption(val: Placement) {
 }
 
 .placement-dropdown-menu {
-  width: 140px;
+  width: 150px;
   padding: 4px;
   background: var(--vp-c-bg-elv);
   border: 1px solid var(--vp-c-divider);
@@ -543,22 +556,42 @@ function selectPlacementOption(val: Placement) {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.35rem 0.55rem;
+  min-height: 32px;
+  padding: 0.4rem 0.65rem;
   border: none;
   border-radius: 5px;
   background: transparent;
   color: var(--vp-c-text-2);
   font-family: var(--vp-font-family-base, sans-serif);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.12s ease;
 }
 
 .placement-dropdown-item:hover {
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-1);
+}
+
+.placement-dropdown-item:active {
+  background: var(--vp-c-bg-mute);
+}
+
+@media (pointer: coarse) {
+  .placement-dropdown-menu {
+    width: 160px;
+    padding: 6px;
+    gap: 3px;
+  }
+
+  .placement-dropdown-item {
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+  }
 }
 
 .placement-dropdown-item.is-active {
