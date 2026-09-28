@@ -20,7 +20,8 @@ type AnchorKind =
   | "nested-link"
   | "text-input"
   | "button-input"
-  | "plain-div";
+  | "plain-div"
+  | "role-button-in-summary";
 
 interface FixtureConfig {
   anchorKind?: AnchorKind;
@@ -30,6 +31,12 @@ interface FixtureConfig {
 function renderAnchor(kind: AnchorKind, extraProps: Record<string, unknown> = {}): VNode {
   const base = { ref: "anchor", "data-testid": "anchor", ...extraProps };
   switch (kind) {
+    case "role-button-in-summary":
+      return h("details", [
+        h("summary", [
+          h("div", { role: "button", tabindex: 0, ...base }, "Custom Button In Summary"),
+        ]),
+      ]);
     case "role-button":
       return h("div", { role: "button", tabindex: 0, ...base }, "Custom Button");
     case "link":
@@ -581,6 +588,31 @@ describe("Feature: useClick", () => {
   });
 
   describe("Scenario: Anchor element types and virtual triggers", () => {
+    it("Given a role='button' anchor nested inside an ancestor summary, When Space and Enter are pressed, Then toggles open state without being suppressed by ancestor summary", async () => {
+      // Given
+      const { anchorEl, floatingEl } = await renderClick(
+        {},
+        { anchorKind: "role-button-in-summary" },
+      );
+      const rawAnchorEl = getTestEl("anchor");
+      rawAnchorEl.focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      // When: Enter pressed on the nested role-button
+      await userEvent.keyboard("{Enter}");
+
+      // Then: Opens cleanly because ancestor summary is outside the anchor boundary
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "true");
+      await expect.element(floatingEl).toBeVisible();
+
+      // When: Space pressed
+      await userEvent.keyboard(" ");
+
+      // Then: Closes cleanly
+      await expect.element(anchorEl).toHaveAttribute("aria-expanded", "false");
+      await expect.element(floatingEl).not.toBeInTheDocument();
+    });
+
     it("Given a div with role='button', When Enter and Space keys are pressed, Then toggles open state", async () => {
       // Given
       const { anchorEl, floatingEl } = await renderClick({}, { anchorKind: "role-button" });

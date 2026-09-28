@@ -1,4 +1,5 @@
 import { computed, type MaybeRefOrGetter, onWatcherCleanup, toValue, watchPostEffect } from "vue";
+
 import type { FloatingNode } from "@/composables/floating-node";
 import { useComposition } from "@/shared/composition-state";
 import {
@@ -6,11 +7,17 @@ import {
   isHTMLElement,
   isMouseLikePointerType,
   isNode,
+  isShadowRoot,
   isTypeableElement as _isTypeableElement,
 } from "@/shared/dom";
 import { getAnchorElement } from "@/shared/elements";
 
 type PointerType = "mouse" | "touch" | "pen" | (string & {});
+
+const BUTTON_SELECTOR =
+  'button, input[type="button"], input[type="submit"], input[type="reset"], input[type="image"], summary';
+
+const LINK_SELECTOR = "a[href]";
 
 //=======================================================================================
 // 📌 Main
@@ -31,25 +38,16 @@ type PointerType = "mouse" | "touch" | "pen" | (string & {});
  * ```
  */
 export function useClick(node: FloatingNode, options: UseClickOptions = {}): void {
-  const isImeComposing = useComposition();
-
   const { open, refs } = node;
 
-  // --- Modality & Open State Tracking -----------------------------------------
-
-  let pointerType: PointerType | undefined = undefined;
-  let didKeyDown: boolean = false;
-  let didHandleMouseDown: boolean = false;
-
-  const ignoreKeyboard = computed(() => toValue(options.ignoreKeyboard ?? false));
-  const isEnabled = computed(() => toValue(options.enabled ?? true));
+  const isEnabled = computed(() => toValue(options.enabled) ?? true);
+  const isToggle = computed(() => toValue(options.toggle) ?? true);
+  const ignoreKeyboard = computed(() => toValue(options.ignoreKeyboard) ?? false);
   const anchorEl = computed(() => getAnchorElement(refs.anchorEl.value));
 
-  function toggleOpen() {
-    const toggle = toValue(options.toggle ?? true);
-
+  function toggleOpen(): void {
     if (open.value) {
-      if (toggle) {
+      if (isToggle.value) {
         open.value = false;
       }
     } else {
@@ -57,21 +55,34 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     }
   }
 
-  function clearInteractionState() {
+  // --- Pointer Click Activation ------------------------------------------------
+
+  const eventName = computed(() => toValue(options.event) ?? "click");
+  const ignoreMouse = computed(() => toValue(options.ignoreMouse) ?? false);
+  const ignoreTouch = computed(() => toValue(options.ignoreTouch) ?? false);
+
+  let pointerType: PointerType | undefined = undefined;
+  let didHandleMouseDown = false;
+
+  function clearPointerState(): void {
     pointerType = undefined;
-    didKeyDown = false;
     didHandleMouseDown = false;
   }
 
-  // --- Pointers ---------------------------------------------------------------
+  function shouldIgnorePointerType(type: PointerType | undefined): boolean {
+    if (ignoreMouse.value && isMouseLikePointerType(type, true)) {
+      return true;
+    }
+    return type === "touch" && ignoreTouch.value;
+  }
 
-  function onPointerDown(e: PointerEvent) {
+  function onPointerDown(e: PointerEvent): void {
     pointerType = e.pointerType as PointerType;
   }
 
-  function onMouseDown(e: MouseEvent) {
+  function onMouseDown(e: MouseEvent): void {
     if (e.button !== 0) return;
-    if (toValue(options.event ?? "click") !== "mousedown") return;
+    if (eventName.value !== "mousedown") return;
     if (pointerType === "touch") return;
     if (shouldIgnorePointerType(pointerType)) return;
 
@@ -82,61 +93,25 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
   function onClick(e: MouseEvent): void {
     if (e.button !== 0) return;
 
-    if (toValue(options.event ?? "click") === "mousedown" && didHandleMouseDown) {
-      clearInteractionState();
+    if (eventName.value === "mousedown" && didHandleMouseDown) {
+      clearPointerState();
       return;
     }
 
     if (shouldIgnorePointerType(pointerType)) {
-      clearInteractionState();
+      clearPointerState();
       return;
     }
 
     // Synthetic click from keyboard activation (detail === 0 and no active pointer gesture)
     if (pointerType === undefined && e.detail === 0 && ignoreKeyboard.value) {
-      clearInteractionState();
+      clearPointerState();
       return;
     }
 
     toggleOpen();
-    clearInteractionState();
+    clearPointerState();
   }
-
-  function shouldIgnorePointerType(type: PointerType | undefined): boolean {
-    if (isMouseLikePointerType(type, true) && toValue(options.ignoreMouse ?? false)) {
-      return true;
-    }
-    return type === "touch" && toValue(options.ignoreTouch ?? false);
-  }
-
-  // --- Keyboard ---------------------------------------------------------------
-
-  function onKeyDown(e: KeyboardEvent) {
-    pointerType = undefined;
-    if (e.repeat) return;
-    if (isImeComposing(e)) return;
-    if (isButtonTarget(e.target) || isTypeableElement(e.target)) return;
-
-    if (e.key === " ") {
-      e.preventDefault();
-      didKeyDown = true;
-    }
-
-    if (e.key === "Enter") {
-      if (isLinkTarget(e.target)) return;
-      toggleOpen();
-    }
-  }
-
-  function onKeyUp(e: KeyboardEvent) {
-    if (e.key === " " && didKeyDown) {
-      didKeyDown = false;
-      if (isImeComposing(e)) return;
-      toggleOpen();
-    }
-  }
-
-  // --- Trigger Event Registration ---------------------------------------------
 
   watchPostEffect(() => {
     const el = anchorEl.value;
@@ -146,23 +121,64 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
     el.addEventListener("mousedown", onMouseDown);
     el.addEventListener("click", onClick);
 
-    // Clear stale interaction state if the pointer gesture is cancelled (e.g. touch drag/scroll)
-    // or if the element/window loses focus before keyup (e.g. blur while holding Space).
-    el.addEventListener("pointercancel", clearInteractionState);
-
-    if (!ignoreKeyboard.value) {
-      el.addEventListener("keydown", onKeyDown);
-      el.addEventListener("keyup", onKeyUp);
-    }
+    // Clear stale interaction state if the pointer gesture is cancelled (e.g. touch drag/scroll).
+    el.addEventListener("pointercancel", clearPointerState);
 
     onWatcherCleanup(() => {
       el.removeEventListener("pointerdown", onPointerDown);
       el.removeEventListener("mousedown", onMouseDown);
       el.removeEventListener("click", onClick);
-      el.removeEventListener("pointercancel", clearInteractionState);
+      el.removeEventListener("pointercancel", clearPointerState);
+      clearPointerState();
+    });
+  });
+
+  // --- Keyboard Trigger Activation ---------------------------------------------
+
+  const isImeComposing = useComposition();
+  let didKeyDown = false;
+
+  function clearKeyboardState(): void {
+    didKeyDown = false;
+  }
+
+  function onKeyDown(e: KeyboardEvent): void {
+    pointerType = undefined;
+    if (e.repeat) return;
+    if (isImeComposing(e)) return;
+    const boundary = anchorEl.value;
+    if (isButtonTarget(e.target, boundary) || isTypeableElement(e.target)) return;
+
+    if (e.key === " ") {
+      e.preventDefault();
+      didKeyDown = true;
+    }
+
+    if (e.key === "Enter") {
+      if (isLinkTarget(e.target, boundary)) return;
+      toggleOpen();
+    }
+  }
+
+  function onKeyUp(e: KeyboardEvent): void {
+    if (e.key === " " && didKeyDown) {
+      didKeyDown = false;
+      if (isImeComposing(e)) return;
+      toggleOpen();
+    }
+  }
+
+  watchPostEffect(() => {
+    const el = anchorEl.value;
+    if (!isEnabled.value || ignoreKeyboard.value || !el) return;
+
+    el.addEventListener("keydown", onKeyDown);
+    el.addEventListener("keyup", onKeyUp);
+
+    onWatcherCleanup(() => {
       el.removeEventListener("keydown", onKeyDown);
       el.removeEventListener("keyup", onKeyUp);
-      clearInteractionState();
+      clearKeyboardState();
     });
   });
 }
@@ -171,42 +187,44 @@ export function useClick(node: FloatingNode, options: UseClickOptions = {}): voi
 // 📌 Helpers
 //=======================================================================================
 
-const BUTTON_SELECTOR =
-  'button, input[type="button"], input[type="submit"], input[type="reset"], input[type="image"], summary';
-
-const LINK_SELECTOR = "a[href]";
-
 function getClosestElement(target: EventTarget | null): Element | null {
-  if (!target || typeof target !== "object") return null;
-  if (isElement(target)) return target;
-  if (isNode(target) && isElement(target.parentElement)) return target.parentElement;
+  let current: Node | null = isNode(target) ? target : null;
+  while (current) {
+    if (isElement(current)) return current;
+    current = isShadowRoot(current) ? current.host : current.parentNode;
+  }
   return null;
 }
 
 /**
  * Recognizes native button elements that natively dispatch synthetic click events on Space/Enter.
  */
-function isButtonTarget(target: EventTarget | null): boolean {
+function isButtonTarget(target: EventTarget | null, boundary?: Element | null): boolean {
   const element = getClosestElement(target);
   if (!element) return false;
-  return Boolean(element.closest?.(BUTTON_SELECTOR));
+  const button = element.closest?.(BUTTON_SELECTOR);
+  if (!button) return false;
+  return boundary ? boundary.contains(button) : true;
 }
 
 /**
  * Skips custom Space handling when the focused element already behaves like a text field.
  */
 function isTypeableElement(target: EventTarget | null): boolean {
-  if (!isHTMLElement(target)) return false;
-  return _isTypeableElement(target);
+  const element = getClosestElement(target);
+  if (!isHTMLElement(element)) return false;
+  return _isTypeableElement(element);
 }
 
 /**
  * Recognizes native link elements that natively dispatch synthetic click events on Enter.
  */
-function isLinkTarget(target: EventTarget | null): boolean {
+function isLinkTarget(target: EventTarget | null, boundary?: Element | null): boolean {
   const element = getClosestElement(target);
   if (!element) return false;
-  return Boolean(element.closest?.(LINK_SELECTOR));
+  const link = element.closest?.(LINK_SELECTOR);
+  if (!link) return false;
+  return boundary ? boundary.contains(link) : true;
 }
 
 //=======================================================================================
