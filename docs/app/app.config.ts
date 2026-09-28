@@ -1,11 +1,6 @@
 export default defineAppConfig({
   header: {
     title: "VFloat",
-    logo: {
-      light: "/vfloat-mark.svg",
-      dark: "/vfloat-mark.svg",
-      alt: "VFloat",
-    },
   },
 
   navigation: {

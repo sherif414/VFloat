@@ -56,6 +56,12 @@ function loadPackageSize() {
 export default defineNuxtConfig({
   extends: ["docus"],
 
+  app: {
+    head: {
+      link: [{ rel: "icon", href: "data:," }],
+    },
+  },
+
   site: {
     name: "VFloat",
     url: "https://vfloat.pages.dev",

@@ -155,7 +155,7 @@ A Vue-green scale does all the interface work; the mark's cyan stays inside its 
 
 ## Layout
 
-A centered single column on a 1376px maximum stage. The nav is a 64px hairline-divided bar (brand mark, wordmark, Guide/API, local search, appearance toggle, GitHub). The home hero is a centered 760px column; the interactive showcase that follows is capped at 1152px. Doc pages use the stock sidebar (272px, 320px on mobile) with guide/API groupings.
+A centered single column on a 1376px maximum stage. The nav is a 64px hairline-divided bar (logo-less typographic wordmark, Guide/API, local search, appearance toggle, GitHub). The home hero is a centered 760px column; the interactive showcase that follows is capped at 1152px. Doc pages use the stock sidebar (272px, 320px on mobile) with guide/API groupings.
 
 Density is airy: 1.5–2rem separates showcase and demo sections, 1rem pads panels, 0.4–0.75rem gaps controls. Demo panels hold a clamped stage height (18–24rem) so every example reads as a self-contained instrument. Responsive behavior is two stock breakpoints with small custom adjustments: below 768px the showcase header stacks and the view switch centers; below 640px card radii step down (12px to 10px) and captions shrink. There is no formal spacing scale — rhythm is literal values, consistent by habit.
 
@@ -207,7 +207,7 @@ Tiny 3px instruction chips: sunken fill, hairline border, mono 0.72rem muted tex
 Fenced code renders the palenight scheme on sunken paper; inline code is a 4px chip with pale-blue text. Code tabs are never the default view — preview first, code on request.
 
 ### Navigation
-Stock VitePress default chrome with two VFloat touches: the brand mark before the wordmark and the local search box. Sidebar groupings follow the config; no further custom visual rules. Leave the rest alone.
+Docus header chrome with a clean, logo-less typographic wordmark (`VFloat`) and local search. Sidebar groupings follow the config; no further custom visual rules. Leave the rest alone.
 
 ## Do's and Don'ts
 
