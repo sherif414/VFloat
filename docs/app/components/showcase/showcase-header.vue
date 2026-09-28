@@ -299,8 +299,10 @@ function selectPlacementOption(val: Placement) {
   position: relative;
   display: flex;
   gap: 0.2rem;
-  padding: 2px;
+  padding: 3px;
   border-radius: 8px;
+  background: var(--vp-c-bg-alt);
+  border: 1px solid var(--vp-c-divider);
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -312,9 +314,9 @@ function selectPlacementOption(val: Placement) {
 
 .preset-tab-indicator {
   position: absolute;
-  top: 2px;
+  top: 3px;
   left: 0;
-  height: calc(100% - 4px);
+  height: calc(100% - 6px);
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   background: var(--vp-c-bg-elv);
@@ -359,7 +361,12 @@ function selectPlacementOption(val: Placement) {
 
 .preset-tab.is-active {
   color: var(--vp-c-brand-1);
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.preset-nav:not(:has(.preset-tab-indicator.is-positioned)) .preset-tab.is-active {
+  background: var(--vp-c-bg-elv);
+  border-color: var(--vp-c-divider);
 }
 
 /* ============================================================================
@@ -451,7 +458,7 @@ function selectPlacementOption(val: Placement) {
   background: var(--vp-c-brand-soft);
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-brand-1);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .action-btn__icon {

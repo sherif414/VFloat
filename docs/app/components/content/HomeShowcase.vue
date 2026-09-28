@@ -226,7 +226,7 @@ onMounted(() => {
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   background: var(--vp-c-bg-elv);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--vp-shadow-2, 0 4px 20px rgba(0, 0, 0, 0.08));
   overflow: hidden;
   font-family: var(--vp-font-family-base, sans-serif);
 }
@@ -244,7 +244,9 @@ onMounted(() => {
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: var(--vp-c-bg-alt);
+  background-color: var(--vp-c-bg-alt);
+  background-image: radial-gradient(var(--vp-c-divider) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .sandbox-caption {

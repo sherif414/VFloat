@@ -4,7 +4,7 @@ description: Headless floating UI primitives for Vue 3
 canonical_url: https://vfloat.pages.dev
 ---
 
-::u-page-hero{class="py-12 sm:py-16"}
+::u-page-hero
 ---
 
 title: Floating primitives for Vue 3
@@ -15,13 +15,13 @@ links:
   to: /guide
   color: primary
   trailingIcon: i-lucide-arrow-right
-  size: xl
+  size: lg
 - label: API Reference
   to: /api
   color: neutral
   variant: outline
   icon: i-lucide-code-xml
-  size: xl
+  size: lg
 
 ---
 
@@ -33,7 +33,7 @@ links:
 ::home-showcase
 ::
 
-::u-container{class="py-12 sm:py-16"}
+::u-container{class="pt-2 pb-20 sm:pb-28"}
 :::u-page-grid
 ::::u-page-card
 ---

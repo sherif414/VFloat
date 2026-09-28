@@ -157,7 +157,20 @@ defineExpose({
           <circle cx="11" cy="13" r="1.5" />
         </svg>
         <span>Actions</span>
-        <span class="anchor-btn__chevron">▾</span>
+        <svg
+          class="anchor-btn__chevron"
+          width="10"
+          height="10"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6l4 4 4-4" />
+        </svg>
       </button>
     </div>
 
@@ -261,8 +274,16 @@ defineExpose({
 }
 
 .anchor-btn__chevron {
-  font-size: 0.75rem;
+  width: 10px;
+  height: 10px;
   color: var(--vp-c-text-3);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.anchor-btn.is-active .anchor-btn__chevron {
+  transform: rotate(180deg);
+  color: var(--vp-c-brand-1);
 }
 
 .floating-panel {
