@@ -2316,4 +2316,156 @@ describe("Feature: useRovingFocus", () => {
       expect(getRoving().activeIndex.value).toBe(0);
     });
   });
+
+  describe("Scenario: Anchor keyboard opening via arrow keys (openOnArrowKeyDown)", () => {
+    function createMenuTriggerFixture(
+      options: Partial<UseRovingFocusOptions> = {},
+      fixtureConfig: { defaultOpen?: boolean; disabledIndices?: number[]; itemCount?: number } = {},
+    ) {
+      const openRef = ref(fixtureConfig.defaultOpen ?? false);
+      let node!: FloatingNode;
+      let roving!: UseRovingFocusReturn;
+      const count = fixtureConfig.itemCount ?? 3;
+      const disabledSet = new Set(fixtureConfig.disabledIndices ?? []);
+
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLButtonElement>("anchor");
+        const floatingEl = useTemplateRef<HTMLDivElement>("floating");
+        const elementsList = ref<(HTMLElement | null)[]>([]);
+
+        node = useFloatingNode({
+          anchorEl,
+          floatingEl,
+          open: openRef,
+        });
+
+        roving = useRovingFocus(node, {
+          elementsList,
+          openOnArrowKeyDown: true,
+          ...options,
+        });
+
+        return () =>
+          h("div", [
+            h("button", { ref: "anchor", "data-testid": "anchor" }, "Menu Button"),
+            openRef.value
+              ? h(
+                  "div",
+                  { ref: "floating", "data-testid": "menu", role: "menu" },
+                  Array.from({ length: count }).map((_, idx) =>
+                    h(
+                      "button",
+                      {
+                        key: idx,
+                        ref: (el) => {
+                          elementsList.value[idx] = el as HTMLElement;
+                        },
+                        role: "menuitem",
+                        tabindex: roving.getTabindex(idx),
+                        disabled: disabledSet.has(idx) ? true : undefined,
+                      },
+                      `Item ${idx + 1}`,
+                    ),
+                  ),
+                )
+              : null,
+          ]);
+      });
+
+      return { Component, getNode: () => node, getRoving: () => roving, openRef };
+    }
+
+    it("Given closed menu with openOnArrowKeyDown, When ArrowDown is pressed on anchor, Then opens and shifts focus to first item", async () => {
+      const fixture = createMenuTriggerFixture();
+      await render(fixture.Component);
+
+      const anchorEl = page.getByTestId("anchor");
+      (anchorEl.element() as HTMLElement).focus();
+      await expect.element(anchorEl).toHaveFocus();
+      expect(fixture.openRef.value).toBe(false);
+
+      await userEvent.keyboard("{ArrowDown}");
+
+      expect(fixture.openRef.value).toBe(true);
+      const item1El = page.getByRole("menuitem", { name: "Item 1" });
+      await expect.element(item1El).toBeVisible();
+      await expect.element(item1El).toHaveFocus();
+      expect(fixture.getRoving().activeIndex.value).toBe(0);
+    });
+
+    it("Given closed menu with openOnArrowKeyDown, When ArrowUp is pressed on anchor, Then opens and shifts focus to last item", async () => {
+      const fixture = createMenuTriggerFixture();
+      await render(fixture.Component);
+
+      const anchorEl = page.getByTestId("anchor");
+      (anchorEl.element() as HTMLElement).focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowUp}");
+
+      expect(fixture.openRef.value).toBe(true);
+      const item3El = page.getByRole("menuitem", { name: "Item 3" });
+      await expect.element(item3El).toBeVisible();
+      await expect.element(item3El).toHaveFocus();
+      expect(fixture.getRoving().activeIndex.value).toBe(2);
+    });
+
+    it("Given closed menu with disabled first item, When ArrowDown is pressed on anchor, Then opens and shifts focus to first navigable item", async () => {
+      const fixture = createMenuTriggerFixture({}, { disabledIndices: [0] });
+      await render(fixture.Component);
+
+      const anchorEl = page.getByTestId("anchor");
+      (anchorEl.element() as HTMLElement).focus();
+
+      await userEvent.keyboard("{ArrowDown}");
+
+      expect(fixture.openRef.value).toBe(true);
+      const item2El = page.getByRole("menuitem", { name: "Item 2" });
+      await expect.element(item2El).toHaveFocus();
+      expect(fixture.getRoving().activeIndex.value).toBe(1);
+    });
+
+    it("Given closed menu with openOnArrowKeyDown predicate returning false, When key is pressed on anchor, Then does not open", async () => {
+      const fixture = createMenuTriggerFixture({
+        openOnArrowKeyDown: (e) => e.key === "ArrowDown",
+      });
+      await render(fixture.Component);
+
+      const anchorEl = page.getByTestId("anchor");
+      (anchorEl.element() as HTMLElement).focus();
+
+      await userEvent.keyboard("{ArrowUp}");
+
+      expect(fixture.openRef.value).toBe(false);
+      await expect.element(anchorEl).toHaveFocus();
+    });
+
+    it("Given openOnArrowKeyDown is disabled (false), When ArrowDown is pressed on anchor, Then does not open", async () => {
+      const fixture = createMenuTriggerFixture({ openOnArrowKeyDown: false });
+      await render(fixture.Component);
+
+      const anchorEl = page.getByTestId("anchor");
+      (anchorEl.element() as HTMLElement).focus();
+
+      await userEvent.keyboard("{ArrowDown}");
+
+      expect(fixture.openRef.value).toBe(false);
+      await expect.element(anchorEl).toHaveFocus();
+    });
+
+    it("Given already open menu with focus on anchor, When ArrowDown is pressed on anchor, Then shifts focus to first item", async () => {
+      const fixture = createMenuTriggerFixture({}, { defaultOpen: true });
+      await render(fixture.Component);
+
+      const anchorEl = page.getByTestId("anchor");
+      (anchorEl.element() as HTMLElement).focus();
+      await expect.element(anchorEl).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowDown}");
+
+      const item1El = page.getByRole("menuitem", { name: "Item 1" });
+      await expect.element(item1El).toHaveFocus();
+      expect(fixture.getRoving().activeIndex.value).toBe(0);
+    });
+  });
 });

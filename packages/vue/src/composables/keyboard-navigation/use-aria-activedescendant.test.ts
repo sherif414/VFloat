@@ -1789,4 +1789,161 @@ describe("Feature: useAriaActivedescendant", () => {
       expect(onSelect).not.toHaveBeenCalled();
     });
   });
+
+  describe("Scenario: Anchor keyboard opening via arrow keys (openOnArrowKeyDown)", () => {
+    function createComboboxFixture(
+      options: Partial<UseAriaActivedescendantOptions> = {},
+      fixtureConfig: { defaultOpen?: boolean; itemCount?: number } = {},
+    ) {
+      const openRef = ref(fixtureConfig.defaultOpen ?? false);
+      let node!: FloatingNode;
+      let returnVal!: UseAriaActivedescendantReturn;
+      const count = fixtureConfig.itemCount ?? 3;
+
+      const Component = defineComponent(() => {
+        const anchorEl = useTemplateRef<HTMLInputElement>("anchor");
+        const listboxEl = useTemplateRef<HTMLUListElement>("listbox");
+        const elementsList = ref<(HTMLElement | null)[]>([]);
+
+        node = useFloatingNode({
+          anchorEl,
+          floatingEl: listboxEl,
+          open: openRef,
+        });
+
+        returnVal = useAriaActivedescendant(node, {
+          elementsList,
+          ...options,
+        });
+
+        return () =>
+          h("div", [
+            h("input", {
+              ref: "anchor",
+              "data-testid": "input",
+              "aria-label": "Combobox input",
+            }),
+            openRef.value
+              ? h(
+                  "ul",
+                  { ref: "listbox", "data-testid": "listbox", role: "listbox" },
+                  Array.from({ length: count }).map((_, idx) =>
+                    h(
+                      "li",
+                      {
+                        key: idx,
+                        id: returnVal.getItemId(idx),
+                        ref: (el) => {
+                          elementsList.value[idx] = el as HTMLElement;
+                        },
+                        role: "option",
+                      },
+                      `Option ${idx + 1}`,
+                    ),
+                  ),
+                )
+              : null,
+          ]);
+      });
+
+      return { Component, getNode: () => node, getReturn: () => returnVal, openRef };
+    }
+
+    it("Given closed combobox with openOnArrowKeyDown, When ArrowDown is pressed on input, Then opens and sets activeDescendant to first item", async () => {
+      const fixture = createComboboxFixture();
+      await render(fixture.Component);
+
+      const inputEl = page.getByTestId("input");
+      (inputEl.element() as HTMLElement).focus();
+      await expect.element(inputEl).toHaveFocus();
+      expect(fixture.openRef.value).toBe(false);
+
+      await userEvent.keyboard("{ArrowDown}");
+
+      expect(fixture.openRef.value).toBe(true);
+      await expect.element(inputEl).toHaveFocus();
+      expect(fixture.getReturn().activeIndex.value).toBe(0);
+      await expect
+        .element(inputEl)
+        .toHaveAttribute("aria-activedescendant", fixture.getReturn().getItemId(0));
+    });
+
+    it("Given closed combobox with openOnArrowKeyDown, When ArrowUp is pressed on input, Then opens and sets activeDescendant to last item", async () => {
+      const fixture = createComboboxFixture();
+      await render(fixture.Component);
+
+      const inputEl = page.getByTestId("input");
+      (inputEl.element() as HTMLElement).focus();
+      await expect.element(inputEl).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowUp}");
+
+      expect(fixture.openRef.value).toBe(true);
+      await expect.element(inputEl).toHaveFocus();
+      expect(fixture.getReturn().activeIndex.value).toBe(2);
+      await expect
+        .element(inputEl)
+        .toHaveAttribute("aria-activedescendant", fixture.getReturn().getItemId(2));
+    });
+
+    it("Given closed combobox with openOnArrowKeyDown, When Alt + ArrowDown is pressed on input, Then opens without moving virtual selection", async () => {
+      const fixture = createComboboxFixture();
+      await render(fixture.Component);
+
+      const inputEl = page.getByTestId("input");
+      (inputEl.element() as HTMLElement).focus();
+      await expect.element(inputEl).toHaveFocus();
+
+      await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+
+      expect(fixture.openRef.value).toBe(true);
+      await expect.element(inputEl).toHaveFocus();
+      expect(fixture.getReturn().activeIndex.value).toBe(-1);
+      await expect.element(inputEl).not.toHaveAttribute("aria-activedescendant");
+    });
+
+    it("Given open combobox, When Alt + ArrowUp is pressed on input, Then closes popup", async () => {
+      const fixture = createComboboxFixture({}, { defaultOpen: true });
+      await render(fixture.Component);
+
+      const inputEl = page.getByTestId("input");
+      (inputEl.element() as HTMLElement).focus();
+      await expect.element(inputEl).toHaveFocus();
+
+      await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+
+      expect(fixture.openRef.value).toBe(false);
+      await expect.element(inputEl).toHaveFocus();
+    });
+
+    it("Given openOnArrowKeyDown is disabled (false), When ArrowDown is pressed on closed input, Then does not open popup", async () => {
+      const fixture = createComboboxFixture({ openOnArrowKeyDown: false });
+      await render(fixture.Component);
+
+      const inputEl = page.getByTestId("input");
+      (inputEl.element() as HTMLElement).focus();
+      await expect.element(inputEl).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowDown}");
+
+      expect(fixture.openRef.value).toBe(false);
+      await expect.element(inputEl).toHaveFocus();
+    });
+
+    it("Given closed combobox with predicate returning false, When key is pressed on input, Then does not open", async () => {
+      const fixture = createComboboxFixture({
+        openOnArrowKeyDown: (e) => e.key === "ArrowDown",
+      });
+      await render(fixture.Component);
+
+      const inputEl = page.getByTestId("input");
+      (inputEl.element() as HTMLElement).focus();
+      await expect.element(inputEl).toHaveFocus();
+
+      await userEvent.keyboard("{ArrowUp}");
+
+      expect(fixture.openRef.value).toBe(false);
+      await expect.element(inputEl).toHaveFocus();
+    });
+  });
 });

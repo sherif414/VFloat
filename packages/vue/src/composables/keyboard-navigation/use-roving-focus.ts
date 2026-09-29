@@ -1,4 +1,14 @@
-import { computed, type MaybeRefOrGetter, readonly, type Ref, ref, toValue, watch } from "vue";
+import {
+  computed,
+  type MaybeRefOrGetter,
+  nextTick,
+  readonly,
+  type Ref,
+  ref,
+  toValue,
+  watch,
+  watchPostEffect,
+} from "vue";
 import type { FloatingNode } from "@/composables/floating-node";
 import { useComposition } from "@/shared/composition-state";
 import { getAnchorElement as resolveAnchorElement } from "@/shared/elements";
@@ -67,6 +77,7 @@ export function useRovingFocus(
     enabled = true,
     focusOnHover = false,
     focusDisabledElements = false,
+    openOnArrowKeyDown = false,
     onSelect,
     onEnter,
     onExit,
@@ -99,6 +110,9 @@ export function useRovingFocus(
   // Tracks the entryIndex value when focus last occurred so dynamic entryIndex
   // changes synchronously supersede stale focus history without imperative watchers.
   const entryIndexAtLastFocus = ref<number | null | undefined>(undefined);
+
+  // Staged entry intent when opened via anchor arrow keydown while elements are mounting
+  const pendingEntryIntent = ref<"first" | "last" | null>(null);
 
   // --- Element Validity -------------------------------------------------------
 
@@ -162,6 +176,9 @@ export function useRovingFocus(
       if (activeIndex.value >= 0) {
         return activeIndex.value;
       }
+      if (pendingEntryIntent.value !== null) {
+        return pendingEntryIntent.value === "first" ? 0 : -1;
+      }
       if (entry !== undefined && entry !== null) {
         return entry >= 0 ? entry : -1;
       }
@@ -171,6 +188,22 @@ export function useRovingFocus(
     // Tier 1: If activeIndex is valid and navigable, it owns the tab stop.
     if (activeIndex.value >= 0 && isNavigable(activeIndex.value)) {
       return activeIndex.value;
+    }
+
+    // Tier 1b: If pendingEntryIntent is active, resolve target tab stop for staged entry
+    if (pendingEntryIntent.value !== null) {
+      const intent = pendingEntryIntent.value;
+      const target = resolveNavigableIndexByIntent(
+        intent,
+        intent === "first" ? -1 : list.length,
+        list.length,
+        (i) => !isNavigable(i),
+        isLoop.value,
+        currentPageSize.value,
+      );
+      if (target !== null) {
+        return target;
+      }
     }
 
     const hasEntryChanged = entry !== entryIndexAtLastFocus.value;
@@ -501,12 +534,92 @@ export function useRovingFocus(
     },
   );
 
+  // --- Anchor Keyboard Trigger -----------------------------------------------
+
+  function shouldOpenOnArrow(event: KeyboardEvent): boolean {
+    if (typeof openOnArrowKeyDown === "function") {
+      return openOnArrowKeyDown(event);
+    }
+    return Boolean(openOnArrowKeyDown);
+  }
+
+  function resolvePendingEntryIntent(): void {
+    if (!pendingEntryIntent.value) return;
+    const list = toValue(elementsList);
+    if (list.length === 0) return;
+
+    const intent = pendingEntryIntent.value;
+    pendingEntryIntent.value = null;
+
+    const targetIdx = resolveNavigableIndexByIntent(
+      intent,
+      intent === "first" ? -1 : list.length,
+      list.length,
+      (i) => !isNavigable(i),
+      isLoop.value,
+      currentPageSize.value,
+    );
+
+    if (targetIdx !== null) {
+      focusIndex(targetIdx);
+    }
+  }
+
+  watchPostEffect(() => {
+    if (!node.open.value || !pendingEntryIntent.value) return;
+    if (toValue(elementsList).length > 0) {
+      resolvePendingEntryIntent();
+    }
+  });
+
+  const anchorEl = computed(() => resolveAnchorElement(node.refs.anchorEl?.value ?? null));
+
+  useEventListener(anchorEl, "keydown", (e: KeyboardEvent) => {
+    if (e.defaultPrevented || !isEnabled.value) return;
+    if (isImeComposing(e)) return;
+
+    if (!shouldOpenOnArrow(e)) return;
+
+    const intent = resolveAnchorArrowIntent(e, orientation.value, isRtl.value);
+    if (!intent) return;
+
+    e.preventDefault();
+
+    if (!node.open.value) {
+      pendingEntryIntent.value = intent;
+      node.open.value = true;
+      void nextTick(() => {
+        if (node.open.value && pendingEntryIntent.value) {
+          resolvePendingEntryIntent();
+        }
+      });
+    } else {
+      const list = toValue(elementsList);
+      if (list.length > 0) {
+        const targetIdx = resolveNavigableIndexByIntent(
+          intent,
+          intent === "first" ? -1 : list.length,
+          list.length,
+          (i) => !isNavigable(i),
+          isLoop.value,
+          currentPageSize.value,
+        );
+        if (targetIdx !== null) {
+          focusIndex(targetIdx);
+        }
+      } else {
+        pendingEntryIntent.value = intent;
+      }
+    }
+  });
+
   // --- Lifecycle Coordination -------------------------------------------------
 
   if (node?.open) {
     watch(node.open, (isOpen) => {
       if (!isOpen) {
         reset();
+        pendingEntryIntent.value = null;
       }
     });
   }
@@ -545,6 +658,38 @@ function resolveEntryIndex(
   }
 
   return -1;
+}
+
+/**
+ * Resolves keyboard arrow intent for opening a closed widget from its anchor.
+ */
+function resolveAnchorArrowIntent(
+  event: KeyboardEvent,
+  orientation: "vertical" | "horizontal" | "both",
+  rtl: boolean,
+): "first" | "last" | null {
+  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return null;
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return null;
+
+  const key = event.key;
+  if (orientation === "vertical") {
+    if (key === "ArrowDown") return "first";
+    if (key === "ArrowUp") return "last";
+  } else if (orientation === "horizontal") {
+    if (key === "ArrowDown") return "first";
+    if (key === "ArrowUp") return "last";
+    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    if (key === forwardKey) return "first";
+    if (key === backwardKey) return "last";
+  } else if (orientation === "both") {
+    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    if (key === "ArrowDown" || key === forwardKey) return "first";
+    if (key === "ArrowUp" || key === backwardKey) return "last";
+  }
+
+  return null;
 }
 
 //=======================================================================================
@@ -704,6 +849,15 @@ export interface UseRovingFocusOptions {
    * @default false
    */
   focusDisabledElements?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether pressing an arrow key on the anchor element opens the floating element when closed.
+   * - `true`: ArrowDown opens and targets first item; ArrowUp opens and targets last item.
+   * - `false`: Arrow keys on anchor are ignored when closed.
+   * - Predicate: `(event: KeyboardEvent) => boolean`.
+   * @default false
+   */
+  openOnArrowKeyDown?: boolean | ((event: KeyboardEvent) => boolean);
 
   /**
    * Callback fired when Enter or Space is pressed on the active element.

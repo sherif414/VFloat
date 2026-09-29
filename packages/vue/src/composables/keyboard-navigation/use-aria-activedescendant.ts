@@ -4,6 +4,7 @@ import {
   type MaybeRefOrGetter,
   nextTick,
   readonly,
+  ref,
   type Ref,
   shallowRef,
   toValue,
@@ -92,6 +93,7 @@ export function useAriaActivedescendant(
     clearOnPointerLeave = false,
     resetOnBlur = false,
     focusDisabledElements = false,
+    openOnArrowKeyDown = true,
     virtualizer,
     onSelect,
     onActiveIndexChange,
@@ -115,6 +117,9 @@ export function useAriaActivedescendant(
   );
   const containerElement = computed(() => toValue(containerEl) ?? node.refs.floatingEl.value);
   const isRtl = useRtl(targetElement, { rtl });
+
+  // Staged entry intent when opened via arrow keydown while collection is mounting
+  const pendingEntryIntent = ref<"first" | "last" | "none" | null>(null);
 
   const isEditable = computed(() => {
     const opt = toValue(editable);
@@ -526,6 +531,39 @@ export function useAriaActivedescendant(
 
   // --- Keyboard Navigation ----------------------------------------------------
 
+  function resolvePendingEntryIntent(): void {
+    if (!pendingEntryIntent.value) return;
+    const total = totalCount.value;
+    if (total === 0) return;
+
+    const intent = pendingEntryIntent.value;
+    pendingEntryIntent.value = null;
+
+    if (intent === "none") {
+      return;
+    }
+
+    const targetIdx = resolveNavigableIndexByIntent(
+      intent,
+      intent === "first" ? -1 : total,
+      total,
+      (i) => !isItemNavigable(i),
+      isLoop.value,
+      currentPageSize.value,
+    );
+
+    if (targetIdx !== null) {
+      setVirtualFocus(targetIdx);
+    }
+  }
+
+  watchPostEffect(() => {
+    if (!node.open.value || !pendingEntryIntent.value) return;
+    if (totalCount.value > 0) {
+      resolvePendingEntryIntent();
+    }
+  });
+
   function navigate(intent: NavigationIntent, focusOptions: NavigationTargetOptions = {}): void {
     const total = totalCount.value;
     if (total === 0) return;
@@ -545,11 +583,60 @@ export function useAriaActivedescendant(
     }
   }
 
+  function shouldOpenOnArrow(event: KeyboardEvent): boolean {
+    if (typeof openOnArrowKeyDown === "function") {
+      return openOnArrowKeyDown(event);
+    }
+    return Boolean(openOnArrowKeyDown);
+  }
+
   useEventListener(targetElement, "keydown", (e: KeyboardEvent) => {
     if (e.defaultPrevented || !isEnabled.value) return;
     if (isImeComposing(e)) return;
 
     if (isKeyHandled && !isKeyHandled(e)) return;
+
+    // Check closed-state arrow opening
+    if (!node.open.value) {
+      if (!shouldOpenOnArrow(e)) return;
+
+      // Alt + ArrowDown: open without moving virtual selection per WAI-ARIA Combobox
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === "ArrowDown") {
+        e.preventDefault();
+        pendingEntryIntent.value = "none";
+        node.open.value = true;
+        void nextTick(() => {
+          if (node.open.value && pendingEntryIntent.value) {
+            resolvePendingEntryIntent();
+          }
+        });
+        return;
+      }
+
+      if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        const intent = resolveAnchorArrowIntent(e, currentOrientation.value, isRtl.value);
+        if (intent) {
+          e.preventDefault();
+          pendingEntryIntent.value = intent;
+          node.open.value = true;
+          void nextTick(() => {
+            if (node.open.value && pendingEntryIntent.value) {
+              resolvePendingEntryIntent();
+            }
+          });
+          return;
+        }
+      }
+
+      return;
+    }
+
+    // Alt + ArrowUp: close open popup per WAI-ARIA Combobox
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === "ArrowUp") {
+      e.preventDefault();
+      node.open.value = false;
+      return;
+    }
 
     const target = e.target as Element | null;
     const editableTarget = isEditable.value || isTypeableElement(target);
@@ -743,6 +830,7 @@ export function useAriaActivedescendant(
     watch(node.open, (isOpen) => {
       if (!isOpen) {
         setVirtualFocus(-1);
+        pendingEntryIntent.value = null;
       }
     });
   }
@@ -872,6 +960,38 @@ function resolveBoundedScrollDelta(
   }
 
   return { dx, dy };
+}
+
+/**
+ * Resolves keyboard arrow intent for opening a closed widget from its anchor.
+ */
+function resolveAnchorArrowIntent(
+  event: KeyboardEvent,
+  orientation: "vertical" | "horizontal" | "both",
+  rtl: boolean,
+): "first" | "last" | null {
+  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return null;
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return null;
+
+  const key = event.key;
+  if (orientation === "vertical") {
+    if (key === "ArrowDown") return "first";
+    if (key === "ArrowUp") return "last";
+  } else if (orientation === "horizontal") {
+    if (key === "ArrowDown") return "first";
+    if (key === "ArrowUp") return "last";
+    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    if (key === forwardKey) return "first";
+    if (key === backwardKey) return "last";
+  } else if (orientation === "both") {
+    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    if (key === "ArrowDown" || key === forwardKey) return "first";
+    if (key === "ArrowUp" || key === backwardKey) return "last";
+  }
+
+  return null;
 }
 
 //=======================================================================================
@@ -1066,6 +1186,15 @@ export interface UseAriaActivedescendantOptions {
    * @default false
    */
   focusDisabledElements?: MaybeRefOrGetter<boolean>;
+
+  /**
+   * Whether pressing an arrow key on the target element opens the floating element when closed.
+   * - `true`: ArrowDown opens and targets first item; ArrowUp opens and targets last item; Alt+ArrowDown opens without moving virtual focus.
+   * - `false`: Arrow keys when closed are ignored.
+   * - Predicate: `(event: KeyboardEvent) => boolean`.
+   * @default true
+   */
+  openOnArrowKeyDown?: boolean | ((event: KeyboardEvent) => boolean);
 
   /**
    * Predicate determining if an item at a specific index is disabled.
