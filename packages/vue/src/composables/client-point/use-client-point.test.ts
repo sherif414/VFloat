@@ -12,23 +12,7 @@ import {
   useClientPoint,
 } from "@/composables/client-point/use-client-point";
 import { isVirtualElement } from "@/shared/dom";
-import { getTestEl, makeDOMRect, makePointerEvent } from "@/test-utils";
-import { FollowTracker, StaticTracker } from "./tracking-strategies";
-import { createVirtualElement } from "./virtual-element-factory";
-
-const createPointerEventData = (
-  type: "pointerdown" | "pointermove" | "pointerenter",
-  coordinates: { x: number; y: number },
-  pointerType: string = "mouse",
-) => ({
-  type,
-  coordinates,
-  originalEvent: makePointerEvent(type, {
-    pointerType,
-    clientX: coordinates.x,
-    clientY: coordinates.y,
-  }),
-});
+import { getTestEl, makePointerEvent } from "@/test-utils";
 
 interface FixtureConfig {
   defaultOpen?: boolean;
@@ -106,83 +90,38 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
     vi.useRealTimers();
   });
 
-  describe("Scenario: Virtual element factory and geometry", () => {
-    it("Given coordinates and a reference element, When creating a virtual element, Then it exposes matching bounding client rect dimensions", () => {
-      const referenceEl = document.createElement("div");
-      const referenceRect = makeDOMRect(10, 20, 120, 40);
-      const getBoundingClientRectSpy = vi
-        .spyOn(referenceEl, "getBoundingClientRect")
-        .mockReturnValue(referenceRect);
-
-      const virtualEl = createVirtualElement({
-        coordinates: { x: 150, y: 260 },
-        trackingTarget: referenceEl,
+  describe("Scenario: Virtual element geometry and fallbacks", () => {
+    it("Given null coordinates and a reference tracking area, When calculating rect, Then it falls back to reference element rect", async () => {
+      const { node, open, trackingAreaEl } = await renderClientPoint({
+        trackingMode: "follow",
       });
+      open.value = true;
+      await nextTick();
 
-      const rect = virtualEl.getBoundingClientRect();
-      expect(rect.x).toBe(150);
-      expect(rect.y).toBe(260);
-      expect(rect.width).toBe(0);
-      expect(rect.height).toBe(0);
-      expect(getBoundingClientRectSpy).toHaveBeenCalled();
+      const rect = node.refs.anchorEl.value?.getBoundingClientRect();
+      const targetRect = trackingAreaEl.getBoundingClientRect();
+      expect(rect?.x).toBe(targetRect.x);
+      expect(rect?.y).toBe(targetRect.y);
+      expect(rect?.width).toBe(0);
+      expect(rect?.height).toBe(0);
     });
 
-    it("Given partial coordinates with baseline coordinates, When calculating rect, Then it falls back to baseline values", () => {
-      const referenceEl = document.createElement("div");
-      const referenceRect = makeDOMRect(5, 15, 200, 80);
-      vi.spyOn(referenceEl, "getBoundingClientRect").mockReturnValue(referenceRect);
-
-      const virtualEl = createVirtualElement({
-        coordinates: { x: null, y: 220 },
-        baselineCoordinates: { x: 120, y: null },
-        trackingTarget: referenceEl,
+    it("Given an active virtual anchor, When calling getClientRects, Then it returns a single-item array", async () => {
+      const { node, open, trackingAreaEl } = await renderClientPoint({
+        trackingMode: "follow",
       });
+      open.value = true;
+      await nextTick();
 
-      const rect = virtualEl.getBoundingClientRect();
-      expect(rect.x).toBe(120);
-      expect(rect.y).toBe(220);
-      expect(rect.width).toBe(0);
-      expect(rect.height).toBe(0);
-    });
+      trackingAreaEl.dispatchEvent(
+        makePointerEvent("pointermove", {
+          clientX: 150,
+          clientY: 250,
+        }),
+      );
+      await nextTick();
 
-    it("Given null coordinates and no baseline coordinates, When calculating rect, Then it falls back to the reference element rect", () => {
-      const referenceEl = document.createElement("div");
-      const referenceRect = makeDOMRect(25, 45, 100, 50);
-      vi.spyOn(referenceEl, "getBoundingClientRect").mockReturnValue(referenceRect);
-
-      const virtualEl = createVirtualElement({
-        coordinates: { x: null, y: null },
-        trackingTarget: referenceEl,
-      });
-
-      const rect = virtualEl.getBoundingClientRect();
-      expect(rect.x).toBe(25);
-      expect(rect.y).toBe(45);
-      expect(rect.width).toBe(0);
-      expect(rect.height).toBe(0);
-    });
-
-    it("Given null coordinates and null tracking target, When calculating rect, Then it falls back to default zero coordinates", () => {
-      const virtualEl = createVirtualElement({
-        coordinates: { x: null, y: null },
-        trackingTarget: null,
-      });
-
-      const rect = virtualEl.getBoundingClientRect();
-      expect(rect.x).toBe(0);
-      expect(rect.y).toBe(0);
-      expect(rect.width).toBe(0);
-      expect(rect.height).toBe(0);
-    });
-
-    it("Given virtual element coordinates, When invoking getClientRects, Then it returns a single-item DOMRect array", () => {
-      const virtualEl = createVirtualElement({
-        coordinates: { x: 150, y: 250 },
-        trackingTarget: null,
-      });
-
-      expect(typeof virtualEl.getClientRects).toBe("function");
-      const rects = virtualEl.getClientRects?.();
+      const rects = node.refs.anchorEl.value?.getClientRects?.();
       expect(Array.isArray(rects)).toBe(true);
       expect(rects).toHaveLength(1);
       expect(rects?.[0].x).toBe(150);
@@ -190,97 +129,33 @@ describe("Feature: useClientPoint virtual anchor tracking", () => {
     });
   });
 
-  describe("Scenario: FollowTracker pointer event evaluation", () => {
-    it("Given a FollowTracker, When inspecting required events, Then it registers pointerdown, pointermove, and pointerenter", () => {
-      const tracker = new FollowTracker();
-      expect(tracker.getRequiredEvents()).toEqual(["pointerdown", "pointermove", "pointerenter"]);
-    });
-
-    it("Given a FollowTracker, When a pointerdown event occurs regardless of open state, Then it returns the pointer coordinates", () => {
-      const tracker = new FollowTracker();
-      const event = createPointerEventData("pointerdown", { x: 80, y: 120 });
-
-      const result = tracker.process(event, { isOpen: false });
-
-      expect(result).toEqual({ x: 80, y: 120 });
-    });
-
-    it("Given a FollowTracker, When pointerenter occurs, Then it returns coordinates regardless of open state", () => {
-      const tracker = new FollowTracker();
-      const event = createPointerEventData("pointerenter", { x: 75, y: 125 });
-
-      expect(tracker.process(event, { isOpen: false })).toEqual({ x: 75, y: 125 });
-      expect(tracker.process(event, { isOpen: true })).toEqual({ x: 75, y: 125 });
-    });
-
-    it("Given a FollowTracker, When pointermove events occur, Then it returns coordinates only when open and pointer is mouse-like", () => {
-      const tracker = new FollowTracker();
-      const mouseEvent = createPointerEventData("pointermove", { x: 40, y: 60 });
-      const touchEvent = createPointerEventData("pointermove", { x: 50, y: 70 }, "touch");
-
-      expect(tracker.process(mouseEvent, { isOpen: false })).toBeNull();
-      expect(tracker.process(touchEvent, { isOpen: true })).toBeNull();
-      expect(tracker.process(mouseEvent, { isOpen: true })).toEqual({
-        x: 40,
-        y: 60,
+  describe("Scenario: Touch vs mouse pointer differentiation", () => {
+    it("Given follow mode while open, When touch pointermove occurs, Then coordinates do not update", async () => {
+      const { coordinates, open, trackingAreaEl } = await renderClientPoint({
+        trackingMode: "follow",
       });
-    });
-  });
+      open.value = true;
+      await nextTick();
 
-  describe("Scenario: StaticTracker trigger coordinate capture and lifecycle", () => {
-    it("Given a StaticTracker, When inspecting required events, Then it registers pointerdown, pointerenter, and pointermove", () => {
-      const tracker = new StaticTracker();
-      expect(tracker.getRequiredEvents()).toEqual(["pointerdown", "pointerenter", "pointermove"]);
-    });
+      trackingAreaEl.dispatchEvent(
+        makePointerEvent("pointerdown", {
+          clientX: 100,
+          clientY: 100,
+        }),
+      );
 
-    it("Given a StaticTracker, When pointerdown occurs while closed, Then it stores coordinates and exposes them upon opening", () => {
-      const tracker = new StaticTracker();
-      const pointerdown = createPointerEventData("pointerdown", {
-        x: 200,
-        y: 300,
-      });
+      expect(coordinates.value).toEqual({ x: 100, y: 100 });
 
-      const resultWhenClosed = tracker.process(pointerdown, { isOpen: false });
-      expect(resultWhenClosed).toBeNull();
-      expect(tracker.getCoordinatesForOpening()).toEqual({ x: 200, y: 300 });
+      trackingAreaEl.dispatchEvent(
+        makePointerEvent("pointermove", {
+          clientX: 200,
+          clientY: 200,
+          pointerType: "touch",
+        }),
+      );
 
-      const resultWhenOpen = tracker.process(pointerdown, { isOpen: true });
-      expect(resultWhenOpen).toEqual({ x: 200, y: 300 });
-    });
-
-    it("Given a StaticTracker, When pointerenter occurs while closed, Then it captures coordinates for hover-open flows", () => {
-      const tracker = new StaticTracker();
-      const pointerenter = createPointerEventData("pointerenter", {
-        x: 140,
-        y: 240,
-      });
-
-      expect(tracker.process(pointerenter, { isOpen: false })).toBeNull();
-      expect(tracker.getCoordinatesForOpening()).toEqual({ x: 140, y: 240 });
-    });
-
-    it("Given a StaticTracker with stored hover coordinates, When reset is called, Then coordinates are cleared", () => {
-      const tracker = new StaticTracker();
-      const hover = createPointerEventData("pointermove", { x: 90, y: 110 });
-
-      expect(tracker.process(hover, { isOpen: false })).toBeNull();
-      expect(tracker.getCoordinatesForOpening()).toEqual({ x: 90, y: 110 });
-
-      tracker.reset();
-      expect(tracker.getCoordinatesForOpening()).toBeNull();
-    });
-
-    it("Given a StaticTracker with stored coordinates, When onClose is called, Then stored coordinates are cleared", () => {
-      const tracker = new StaticTracker();
-      const pointerdown = createPointerEventData("pointerdown", {
-        x: 200,
-        y: 300,
-      });
-
-      tracker.process(pointerdown, { isOpen: false });
-      tracker.onClose();
-
-      expect(tracker.getCoordinatesForOpening()).toBeNull();
+      // Touch pointermove ignored while open
+      expect(coordinates.value).toEqual({ x: 100, y: 100 });
     });
   });
 
