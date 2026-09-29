@@ -122,6 +122,11 @@ const currentPlacementLabel = computed(() => {
   return item ? item.label : props.placement;
 });
 
+const hasPlacementControl = computed(() => ["tooltip", "menu"].includes(props.modelValue));
+const hasKeepOpenControl = computed(() =>
+  ["tooltip", "menu", "combobox", "selection"].includes(props.modelValue),
+);
+
 const placementAnchorEl = shallowRef<HTMLElement | null>(null);
 const placementFloatingEl = shallowRef<HTMLElement | null>(null);
 
@@ -185,7 +190,7 @@ function selectPlacementOption(val: Placement) {
       <!-- Demo Options (Placement & Keep Open) -->
       <div class="header-actions__options">
         <!-- Small Placement Dropdown -->
-        <div class="placement-control">
+        <div v-show="hasPlacementControl" class="placement-control">
           <button
             ref="placementAnchorEl"
             type="button"
@@ -254,6 +259,7 @@ function selectPlacementOption(val: Placement) {
 
         <!-- Small Keep Open Toggle (Pushpin Icon) -->
         <button
+          v-if="hasKeepOpenControl"
           type="button"
           class="action-btn"
           :class="{ 'is-active': keepOpen }"

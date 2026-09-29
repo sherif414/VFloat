@@ -1,25 +1,21 @@
 <script setup lang="ts">
-import type { Placement, UsePositionMiddlewaresOptions } from "v-float";
-import { computed, shallowRef, watch } from "vue";
+import type { Placement } from "v-float";
 import {
   useArrow,
   useClick,
   useEscapeKey,
   useFloatingNode,
   useFocusTrap,
+  useHover,
   useOutsideClick,
   usePosition,
   useRole,
   useRovingFocus,
 } from "v-float";
+import { computed, nextTick, shallowRef, watch } from "vue";
 
 interface Props {
   placement: Placement;
-  middlewareConfig: UsePositionMiddlewaresOptions;
-  enableArrow: boolean;
-  anchorOffset: { x: number; y: number };
-  isDragging: boolean;
-  isActive: boolean;
   keepOpen?: boolean;
 }
 
@@ -27,134 +23,288 @@ const props = withDefaults(defineProps<Props>(), {
   keepOpen: false,
 });
 
-const emit = defineEmits<{
-  (e: "pointerdown", event: PointerEvent): void;
-  (e: "update:resolvedPlacement", placement: Placement): void;
-}>();
+// ============================================================================
+// 1. Menu Items Data Definitions
+// ============================================================================
+interface MenuItemDef {
+  id: string;
+  label: string;
+  shortcut?: string;
+  danger?: boolean;
+  hasSubmenu?: boolean;
+}
 
-const anchorEl = shallowRef<HTMLElement | null>(null);
-const floatingEl = shallowRef<HTMLElement | null>(null);
-const arrowEl = shallowRef<HTMLElement | null>(null);
+const rootMenuItems: MenuItemDef[] = [
+  { id: "duplicate", label: "Duplicate", shortcut: "⌘D" },
+  { id: "rename", label: "Rename", shortcut: "↵" },
+  { id: "share", label: "Share", hasSubmenu: true },
+  { id: "delete", label: "Delete", shortcut: "⌫", danger: true },
+];
 
-const context = useFloatingNode({
-  anchorEl,
-  floatingEl,
-  arrowEl,
+const subMenuItems: MenuItemDef[] = [
+  { id: "copy-link", label: "Copy Link", shortcut: "⌘C" },
+  { id: "email-invite", label: "Email Invite", shortcut: "⌘E" },
+  { id: "embed-widget", label: "Embed Widget", shortcut: "</>" },
+];
+
+// ============================================================================
+// 2. Floating Nodes Creation (Parent -> Child Order)
+// ============================================================================
+const rootAnchorEl = shallowRef<HTMLElement | null>(null);
+const rootFloatingEl = shallowRef<HTMLElement | null>(null);
+const rootArrowEl = shallowRef<HTMLElement | null>(null);
+
+const rootContext = useFloatingNode({
+  anchorEl: rootAnchorEl,
+  floatingEl: rootFloatingEl,
+  arrowEl: rootArrowEl,
 });
 
-const position = usePosition(context, {
+const subAnchorEl = shallowRef<HTMLElement | null>(null);
+const subFloatingEl = shallowRef<HTMLElement | null>(null);
+
+const subContext = useFloatingNode({
+  anchorEl: subAnchorEl,
+  floatingEl: subFloatingEl,
+  parent: rootContext,
+});
+
+// ============================================================================
+// 3. Positioning & Middlewares
+// ============================================================================
+const rootPosition = usePosition(rootContext, {
   placement: computed(() => props.placement),
-  middlewares: computed(() => props.middlewareConfig),
+  middlewares: {
+    offset: 6,
+    flip: { padding: 8 },
+    shift: { padding: 8 },
+  },
 });
 
-const { arrowStyles } = useArrow(context, {
+useArrow(rootContext, {
   offset: "-5px",
 });
 
-const side = computed(
-  () => (position.placement.value.split("-")[0] ?? "bottom") as "top" | "bottom" | "left" | "right",
+const rootSide = computed(
+  () =>
+    (rootPosition.placement.value.split("-")[0] ?? "bottom") as "top" | "bottom" | "left" | "right",
 );
 
+const subPosition = usePosition(subContext, {
+  placement: "right-start",
+  middlewares: {
+    offset: { mainAxis: 4, crossAxis: -4 },
+    flip: {
+      padding: 8,
+      fallbackPlacements: ["left-start", "bottom-start", "bottom-end"],
+    },
+    shift: { padding: 8, mainAxis: true },
+  },
+});
+
+// Safe Polygon Live Geometry State
+const polygonPoints = shallowRef<Array<[number, number]>>([]);
+
+const svgPolygonPoints = computed(() => polygonPoints.value.map(([x, y]) => `${x},${y}`).join(" "));
+
+// ============================================================================
+// 4. Reactive State Synchronizations
+// ============================================================================
 watch(
-  () => [props.keepOpen, props.isActive],
-  ([keep, active]) => {
-    if (active && keep) {
-      context.open.value = true;
+  () => props.keepOpen,
+  (keep) => {
+    if (keep) {
+      rootContext.open.value = true;
     } else {
-      context.open.value = false;
+      rootContext.open.value = false;
+      subContext.open.value = false;
+      polygonPoints.value = [];
     }
   },
   { immediate: true },
 );
 
-watch(
-  position.placement,
-  (val) => {
-    emit("update:resolvedPlacement", val);
-  },
-  { immediate: true },
-);
-
-const menuItems = [
-  { id: "duplicate", label: "Duplicate", shortcut: "⌘D" },
-  { id: "rename", label: "Rename", shortcut: "↵" },
-  { id: "share", label: "Copy Link", shortcut: "⌘C" },
-  { id: "delete", label: "Delete", shortcut: "⌫", danger: true },
-];
-
-useClick(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+watch(rootContext.open, (isOpen) => {
+  if (!isOpen) {
+    subContext.open.value = false;
+    polygonPoints.value = [];
+  }
 });
 
-useOutsideClick(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+// ============================================================================
+// 5. Root Menu Interactions
+// ============================================================================
+useClick(rootContext, {
+  enabled: () => !props.keepOpen,
 });
 
-useEscapeKey(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+useOutsideClick(rootContext, {
+  enabled: () => !props.keepOpen,
 });
 
-useFocusTrap(context, {
-  enabled: () => props.isActive,
+useEscapeKey(rootContext, {
+  enabled: () => !props.keepOpen,
+});
+
+useFocusTrap(rootContext, {
   modal: false,
-  initialFocus: floatingEl,
+  initialFocus: rootFloatingEl,
   returnFocus: true,
 });
 
-const menuItemEls = shallowRef<HTMLElement[]>([]);
-
-const { activeIndex, getTabindex, setActiveIndex } = useRovingFocus(context, {
-  elementsList: menuItemEls,
-  loop: true,
-  enabled: () => props.isActive,
-  onSelect: () => {
-    context.open.value = false;
-  },
-});
-
-useRole(context, {
+useRole(rootContext, {
   role: "menu",
 });
 
+// ============================================================================
+// 6. Submenu Interactions & Safe Polygon
+// ============================================================================
+useHover(subContext, {
+  delay: { open: 40, close: 300 },
+  safePolygon: {
+    buffer: 12,
+    requireIntent: false,
+    onPolygonChange: (poly) => {
+      polygonPoints.value = poly;
+    },
+  },
+});
+
+useClick(subContext, {
+  ignoreKeyboard: true,
+});
+
+useOutsideClick(subContext);
+
+useEscapeKey(subContext);
+
+useRole(subContext, {
+  role: "menu",
+});
+
+// ============================================================================
+// 7. Roving Focus & Element References
+// ============================================================================
+const rootMenuItemEls = shallowRef<Array<HTMLElement | null>>([]);
+const subMenuItemEls = shallowRef<Array<HTMLElement | null>>([]);
+
+function setRootItemRef(el: any, index: number, hasSubmenu?: boolean) {
+  rootMenuItemEls.value[index] = el as HTMLElement | null;
+  if (hasSubmenu) {
+    subAnchorEl.value = el as HTMLElement | null;
+  }
+}
+
+function setSubItemRef(el: any, index: number) {
+  subMenuItemEls.value[index] = el as HTMLElement | null;
+}
+
+const {
+  activeIndex: rootActiveIndex,
+  getTabindex: getRootTabindex,
+  setActiveIndex: setRootActiveIndex,
+} = useRovingFocus(rootContext, {
+  elementsList: rootMenuItemEls,
+  loop: true,
+  openOnArrowKeyDown: true,
+  onEnter: (index) => {
+    if (rootMenuItems[index]?.hasSubmenu) {
+      subContext.open.value = true;
+      void nextTick(() => {
+        subMenuItemEls.value[0]?.focus();
+        setSubActiveIndex(0);
+      });
+    }
+  },
+  onSelect: (index) => {
+    if (rootMenuItems[index]?.hasSubmenu) {
+      subContext.open.value = !subContext.open.value;
+      if (subContext.open.value) {
+        void nextTick(() => {
+          subMenuItemEls.value[0]?.focus();
+          setSubActiveIndex(0);
+        });
+      }
+    } else {
+      closeAllMenus();
+    }
+  },
+});
+
+const {
+  activeIndex: subActiveIndex,
+  getTabindex: getSubTabindex,
+  setActiveIndex: setSubActiveIndex,
+} = useRovingFocus(subContext, {
+  elementsList: subMenuItemEls,
+  loop: true,
+  onExit: () => {
+    // ArrowLeft: Collapse submenu and return focus to the parent 'Share' trigger
+    subContext.open.value = false;
+    subAnchorEl.value?.focus();
+    const shareIndex = rootMenuItems.findIndex((item) => item.id === "share");
+    if (shareIndex !== -1) {
+      setRootActiveIndex(shareIndex);
+    }
+  },
+  onSelect: () => {
+    closeAllMenus();
+  },
+});
+
+function closeAllMenus() {
+  subContext.open.value = false;
+  rootContext.open.value = false;
+  polygonPoints.value = [];
+}
+
+function onRootItemKeydown(e: KeyboardEvent, item: MenuItemDef) {
+  if (item.hasSubmenu && (e.key === "ArrowRight" || e.key === "Enter")) {
+    e.preventDefault();
+    subContext.open.value = true;
+    void nextTick(() => {
+      subMenuItemEls.value[0]?.focus();
+      setSubActiveIndex(0);
+    });
+  }
+}
+
+function onSubItemClick() {
+  closeAllMenus();
+}
+
+function onRootItemClick(item: MenuItemDef) {
+  if (!item.hasSubmenu) {
+    closeAllMenus();
+  }
+}
+
 defineExpose({
-  context,
-  position,
-  update: () => position.update(),
+  context: rootContext,
+  position: rootPosition,
+  update: () => {
+    void rootPosition.update();
+    if (subContext.open.value) {
+      void subPosition.update();
+    }
+  },
 });
 </script>
 
 <template>
   <div class="preset-wrapper">
-    <div
-      class="anchor-slot"
-      :style="{ transform: `translate(${anchorOffset.x}px, ${anchorOffset.y}px)` }"
-    >
+    <!-- Anchor Trigger Button -->
+    <div class="anchor-slot">
       <button
-        ref="anchorEl"
+        ref="rootAnchorEl"
         type="button"
         class="anchor-btn"
         :class="{
-          'is-active': context.open.value,
-          'is-dragging': isDragging,
+          'is-active': rootContext.open.value,
         }"
         aria-haspopup="menu"
-        :aria-expanded="context.open.value"
-        @pointerdown="emit('pointerdown', $event)"
+        :aria-expanded="rootContext.open.value"
       >
-        <svg
-          class="anchor-btn__drag-icon"
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-        >
-          <circle cx="5" cy="3" r="1.5" />
-          <circle cx="11" cy="3" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="13" r="1.5" />
-          <circle cx="11" cy="13" r="1.5" />
-        </svg>
         <span>Actions</span>
         <svg
           class="anchor-btn__chevron"
@@ -173,38 +323,102 @@ defineExpose({
       </button>
     </div>
 
+    <!-- Live Safe Polygon Visual Corridor (Teleported) -->
+    <Teleport to="body">
+      <svg v-if="polygonPoints.length > 0" class="safe-polygon-overlay" aria-hidden="true">
+        <polygon :points="svgPolygonPoints" class="safe-polygon-corridor" />
+      </svg>
+    </Teleport>
+
+    <!-- Safe Polygon Active Status Pill inside Sandbox -->
+    <Transition name="fade-fast">
+      <div v-if="polygonPoints.length > 0" class="safepolygon-indicator" aria-live="polite">
+        <span class="safepolygon-indicator__dot" />
+        <span class="safepolygon-indicator__text">Safe Polygon Active</span>
+      </div>
+    </Transition>
+
+    <!-- 1. Root Menu Panel -->
     <div
-      v-if="context.open.value"
-      ref="floatingEl"
+      v-if="rootContext.open.value"
+      ref="rootFloatingEl"
       role="menu"
       tabindex="-1"
-      class="floating-panel panel-menu"
-      :style="position.styles.value"
+      class="floating-panel panel-menu panel-menu--root"
     >
       <div
-        v-for="(item, index) in menuItems"
+        v-for="(item, index) in rootMenuItems"
         :key="item.id"
-        :ref="(el) => (menuItemEls[index] = el as HTMLElement)"
+        :ref="(el) => setRootItemRef(el, index, item.hasSubmenu)"
         role="menuitem"
         class="menu-item"
-        :tabindex="getTabindex(index)"
+        :tabindex="getRootTabindex(index)"
         :class="{
-          'is-active': activeIndex === index,
+          'is-active': rootActiveIndex === index || (item.hasSubmenu && subContext.open.value),
           'is-danger': item.danger,
+          'has-submenu': item.hasSubmenu,
         }"
-        @mouseenter="setActiveIndex(index)"
-        @click="context.open.value = false"
+        :aria-haspopup="item.hasSubmenu ? 'menu' : undefined"
+        :aria-expanded="item.hasSubmenu ? subContext.open.value : undefined"
+        @mouseenter="setRootActiveIndex(index)"
+        @click="onRootItemClick(item)"
+        @keydown="onRootItemKeydown($event, item)"
       >
         <span class="menu-item__label">{{ item.label }}</span>
-        <kbd class="menu-item__shortcut">{{ item.shortcut }}</kbd>
+
+        <template v-if="item.hasSubmenu">
+          <svg
+            class="menu-item__arrow"
+            width="12"
+            height="12"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 4l4 4-4 4" />
+          </svg>
+        </template>
+        <template v-else-if="item.shortcut">
+          <kbd class="menu-item__shortcut">{{ item.shortcut }}</kbd>
+        </template>
+      </div>
+
+      <!-- Arrow -->
+      <div ref="rootArrowEl" :class="['floating-arrow', `floating-arrow--${rootSide}`]" />
+    </div>
+
+    <!-- 2. Submenu Panel (Cascading child FloatingNode) -->
+    <div
+      v-if="subContext.open.value && rootContext.open.value"
+      ref="subFloatingEl"
+      role="menu"
+      tabindex="-1"
+      class="floating-panel panel-menu panel-menu--sub"
+    >
+      <div class="submenu-header">
+        <span class="submenu-header__title">Share with team</span>
       </div>
 
       <div
-        v-if="enableArrow"
-        ref="arrowEl"
-        :class="['floating-arrow', `floating-arrow--${side}`]"
-        :style="arrowStyles"
-      />
+        v-for="(subItem, subIndex) in subMenuItems"
+        :key="subItem.id"
+        :ref="(el) => setSubItemRef(el, subIndex)"
+        role="menuitem"
+        class="menu-item"
+        :tabindex="getSubTabindex(subIndex)"
+        :class="{
+          'is-active': subActiveIndex === subIndex,
+        }"
+        @mouseenter="setSubActiveIndex(subIndex)"
+        @click="onSubItemClick"
+      >
+        <span class="menu-item__label">{{ subItem.label }}</span>
+        <kbd v-if="subItem.shortcut" class="menu-item__shortcut">{{ subItem.shortcut }}</kbd>
+      </div>
     </div>
   </div>
 </template>
@@ -232,9 +446,9 @@ defineExpose({
   font: inherit;
   font-size: 0.88rem;
   font-weight: 500;
-  cursor: grab;
+  cursor: pointer;
   user-select: none;
-  touch-action: none;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
@@ -260,23 +474,8 @@ defineExpose({
   outline-offset: 2px;
 }
 
-.anchor-btn:hover .anchor-btn__drag-icon {
-  color: var(--vp-c-brand-1);
-}
-
 .anchor-btn.is-active {
   border-color: var(--vp-c-brand-1);
-}
-
-.anchor-btn.is-dragging {
-  cursor: grabbing;
-  border-color: var(--vp-c-brand-1);
-  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
-}
-
-.anchor-btn__drag-icon {
-  color: var(--vp-c-text-3);
-  opacity: 0.7;
 }
 
 .anchor-btn__chevron {
@@ -300,11 +499,11 @@ defineExpose({
   }
 }
 
+/* Floating Panels */
 .floating-panel {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 20;
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
@@ -313,18 +512,43 @@ defineExpose({
 }
 
 .panel-menu {
-  width: 184px;
+  outline: none;
+}
+
+.panel-menu--root {
+  z-index: 20;
+  width: 190px;
   max-width: calc(100% - 16px);
   padding: 0.35rem;
-  border-radius: 8px;
-  outline: none;
+}
+
+.panel-menu--sub {
+  z-index: 30;
+  width: 195px;
+  max-width: calc(100% - 16px);
+  padding: 0.35rem;
+  box-shadow: var(--vp-shadow-3, 0 12px 34px rgba(0, 0, 0, 0.16));
+}
+
+.submenu-header {
+  padding: 0.3rem 0.55rem 0.25rem;
+  margin-bottom: 0.2rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.submenu-header__title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vp-c-text-3);
 }
 
 .menu-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.4rem 0.55rem;
+  padding: 0.42rem 0.55rem;
   border-radius: 5px;
   font-size: 0.8rem;
   color: var(--vp-c-text-1);
@@ -346,17 +570,15 @@ defineExpose({
   background: var(--vp-c-bg-mute);
 }
 
-@media (pointer: coarse), (max-width: 640px) {
-  .panel-menu {
-    width: 200px;
-    padding: 0.4rem;
-  }
+.menu-item.has-submenu .menu-item__arrow {
+  color: var(--vp-c-text-3);
+  transition: transform 0.12s ease;
+}
 
-  .menu-item {
-    min-height: 38px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.84rem;
-  }
+.menu-item.has-submenu:hover .menu-item__arrow,
+.menu-item.has-submenu.is-active .menu-item__arrow {
+  color: var(--vp-c-brand-1);
+  transform: translateX(1px);
 }
 
 .menu-item.is-danger {
@@ -377,5 +599,95 @@ defineExpose({
   font-size: 0.7rem;
   font-family: var(--vp-font-family-mono, monospace);
   color: var(--vp-c-text-3);
+}
+
+/* Safe Polygon Live Indicator */
+.safepolygon-indicator {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.85rem;
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem;
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--vp-c-brand-1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+
+.safepolygon-indicator__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vp-c-brand-1);
+  box-shadow: 0 0 6px var(--vp-c-brand-1);
+  animation: dot-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+}
+
+.fade-fast-enter-active,
+.fade-fast-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.fade-fast-enter-from,
+.fade-fast-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .panel-menu--root {
+    width: 200px;
+  }
+  .panel-menu--sub {
+    width: 200px;
+  }
+  .menu-item {
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.84rem;
+  }
+}
+</style>
+
+<style>
+/* Teleported Safe Polygon SVG Corridor Overlay */
+.safe-polygon-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99999;
+}
+
+.safe-polygon-corridor {
+  fill: var(--vp-c-brand-1, #10b981);
+  fill-opacity: 0.14;
+  stroke: var(--vp-c-brand-1, #10b981);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  stroke-opacity: 0.65;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.35));
 }
 </style>

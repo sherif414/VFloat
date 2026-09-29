@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { Placement, UsePositionMiddlewaresOptions } from "v-float";
-import { computed, shallowRef, watch } from "vue";
+import type { Placement } from "v-float";
 import {
   useArrow,
   useClick,
@@ -11,24 +10,22 @@ import {
   usePosition,
   useRole,
 } from "v-float";
+import { computed, shallowRef, watch } from "vue";
 
-interface Props {
-  placement: Placement;
-  middlewareConfig: UsePositionMiddlewaresOptions;
-  enableArrow: boolean;
-  anchorOffset: { x: number; y: number };
-  isDragging: boolean;
-  isActive: boolean;
-  keepOpen?: boolean;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  keepOpen: false,
-});
+const props = withDefaults(
+  defineProps<{
+    placement: Placement;
+    anchorOffset: { x: number; y: number };
+    isDragging: boolean;
+    keepOpen?: boolean;
+  }>(),
+  {
+    keepOpen: false,
+  },
+);
 
 const emit = defineEmits<{
   (e: "pointerdown", event: PointerEvent): void;
-  (e: "update:resolvedPlacement", placement: Placement): void;
 }>();
 
 const anchorEl = shallowRef<HTMLElement | null>(null);
@@ -43,10 +40,14 @@ const context = useFloatingNode({
 
 const position = usePosition(context, {
   placement: computed(() => props.placement),
-  middlewares: computed(() => props.middlewareConfig),
+  middlewares: {
+    offset: 8,
+    flip: { padding: 8 },
+    shift: { padding: 8 },
+  },
 });
 
-const { arrowStyles } = useArrow(context, {
+useArrow(context, {
   offset: "-5px",
 });
 
@@ -55,40 +56,28 @@ const side = computed(
 );
 
 watch(
-  () => [props.keepOpen, props.isActive],
-  ([keep, active]) => {
-    if (active && keep) {
-      context.open.value = true;
-    } else {
-      context.open.value = false;
-    }
-  },
-  { immediate: true },
-);
-
-watch(
-  position.placement,
-  (val) => {
-    emit("update:resolvedPlacement", val);
+  () => props.keepOpen,
+  (keep) => {
+    context.open.value = keep;
   },
   { immediate: true },
 );
 
 useHover(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+  enabled: () => !props.keepOpen,
   delay: { open: 80, close: 120 },
 });
 
 useFocus(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+  enabled: () => !props.keepOpen,
 });
 
 useClick(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+  enabled: () => !props.keepOpen,
 });
 
 useOutsideClick(context, {
-  enabled: () => props.isActive && !props.keepOpen,
+  enabled: () => !props.keepOpen,
 });
 
 useRole(context, {
@@ -139,23 +128,10 @@ defineExpose({
       ref="floatingEl"
       role="tooltip"
       class="floating-panel panel-tooltip"
-      :style="[
-        position.styles.value,
-        {
-          pointerEvents: 'none',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        },
-      ]"
     >
       <span>Copy link to clipboard</span>
       <kbd class="shortcut-tag">⌘C</kbd>
-      <div
-        v-if="enableArrow"
-        ref="arrowEl"
-        :class="['floating-arrow', `floating-arrow--${side}`]"
-        :style="arrowStyles"
-      />
+      <div ref="arrowEl" :class="['floating-arrow', `floating-arrow--${side}`]" />
     </div>
   </div>
 </template>

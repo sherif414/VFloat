@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Placement } from "v-float";
 import { computed, nextTick, onMounted, ref, shallowRef } from "vue";
-import PresetCursor from "../showcase/preset-cursor.vue";
+import PresetCombobox from "../showcase/preset-combobox.vue";
+import PresetDialog from "../showcase/preset-dialog.vue";
 import PresetMenu from "../showcase/preset-menu.vue";
-import PresetPopover from "../showcase/preset-popover.vue";
+import PresetSelection from "../showcase/preset-selection.vue";
 import PresetTooltip from "../showcase/preset-tooltip.vue";
 import ShowcaseHeader from "../showcase/showcase-header.vue";
 import type { PresetType, ShowcasePresetMeta } from "../showcase/types";
@@ -12,18 +13,14 @@ import { useShowcaseDrag } from "../showcase/use-showcase-drag";
 const activePreset = ref<PresetType>("tooltip");
 
 const selectedPlacement = ref<Placement>("top");
-const offsetValue = ref<number>(8);
-const enableFlip = ref<boolean>(true);
-const enableShift = ref<boolean>(true);
-const enableArrow = ref<boolean>(true);
 const keepOpen = ref<boolean>(false);
-const resolvedPlacement = ref<string>("top");
 
 const presets: ShowcasePresetMeta[] = [
-  { id: "tooltip", label: "Tooltip", description: "Hover & focus triggers" },
-  { id: "popover", label: "Popover", description: "Click & modal dismissal" },
-  { id: "menu", label: "Menu", description: "Keyboard list navigation" },
-  { id: "cursor", label: "Virtual Anchor", description: "Cursor client point" },
+  { id: "tooltip", label: "Tooltip", description: "Hover & collision physics" },
+  { id: "menu", label: "Advanced Menu", description: "Submenu & safe polygon" },
+  { id: "combobox", label: "Combobox", description: "Search & virtual focus" },
+  { id: "selection", label: "Selection Bubble", description: "Dynamic virtual anchor" },
+  { id: "dialog", label: "Dialog", description: "Modal focus trap & overlay" },
 ];
 
 const sandboxEl = shallowRef<HTMLElement | null>(null);
@@ -31,26 +28,23 @@ const sandboxEl = shallowRef<HTMLElement | null>(null);
 const { anchorOffset, isDragging, onAnchorPointerDown, resetAnchorPosition } = useShowcaseDrag();
 
 const tooltipPresetRef = shallowRef<InstanceType<typeof PresetTooltip> | null>(null);
-const popoverPresetRef = shallowRef<InstanceType<typeof PresetPopover> | null>(null);
 const menuPresetRef = shallowRef<InstanceType<typeof PresetMenu> | null>(null);
-const cursorPresetRef = shallowRef<InstanceType<typeof PresetCursor> | null>(null);
-
-const middlewareConfig = computed(() => ({
-  offset: offsetValue.value,
-  flip: enableFlip.value ? { padding: 8 } : false,
-  shift: enableShift.value ? { padding: 8 } : false,
-}));
+const comboboxPresetRef = shallowRef<InstanceType<typeof PresetCombobox> | null>(null);
+const selectionPresetRef = shallowRef<InstanceType<typeof PresetSelection> | null>(null);
+const dialogPresetRef = shallowRef<InstanceType<typeof PresetDialog> | null>(null);
 
 function getActivePresetInstance() {
   switch (activePreset.value) {
     case "tooltip":
       return tooltipPresetRef.value;
-    case "popover":
-      return popoverPresetRef.value;
     case "menu":
       return menuPresetRef.value;
-    case "cursor":
-      return cursorPresetRef.value;
+    case "combobox":
+      return comboboxPresetRef.value;
+    case "selection":
+      return selectionPresetRef.value;
+    case "dialog":
+      return dialogPresetRef.value;
     default:
       return null;
   }
@@ -70,16 +64,25 @@ function handleResetPosition() {
   });
 }
 
+function getDefaultPlacement(preset: PresetType): Placement {
+  switch (preset) {
+    case "menu":
+      return "bottom-start";
+    default:
+      return "top";
+  }
+}
+
 function handleResetDemo() {
-  selectedPlacement.value = "top";
+  selectedPlacement.value = getDefaultPlacement(activePreset.value);
   keepOpen.value = false;
   handleResetPosition();
 }
 
 const isModified = computed(() => {
   const hasOffset =
-    activePreset.value !== "cursor" && (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
-  const hasCustomPlacement = selectedPlacement.value !== "top";
+    activePreset.value === "tooltip" && (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
+  const hasCustomPlacement = selectedPlacement.value !== getDefaultPlacement(activePreset.value);
   const isKeepOpen = keepOpen.value;
   return hasOffset || hasCustomPlacement || isKeepOpen;
 });
@@ -87,10 +90,6 @@ const isModified = computed(() => {
 function onSwitchPreset(preset: PresetType) {
   activePreset.value = preset;
   handleResetDemo();
-}
-
-function onResolvedPlacementUpdate(val: Placement) {
-  resolvedPlacement.value = val;
 }
 
 onMounted(() => {
@@ -117,11 +116,7 @@ onMounted(() => {
       <!-- 2. Main Workspace -->
       <div class="showcase-body">
         <!-- 1. Interactive Stage Canvas -->
-        <div
-          ref="sandboxEl"
-          class="sandbox"
-          :class="{ 'is-cursor-mode': activePreset === 'cursor' }"
-        >
+        <div ref="sandboxEl" :class="['sandbox', `sandbox--${activePreset}`]">
           <!-- Caption Helper -->
           <div class="sandbox-caption">
             <template v-if="activePreset === 'tooltip'">
@@ -132,27 +127,33 @@ onMounted(() => {
                 >Tap to open. Drag anchor to test collision flipping.</span
               >
             </template>
-            <template v-else-if="activePreset === 'popover'">
-              <span class="caption--desktop"
-                >Click to open card. Drag anchor near edges to observe placement adaptation.</span
-              >
-              <span class="caption--touch"
-                >Tap to open card. Drag anchor near edges to observe placement adaptation.</span
-              >
-            </template>
             <template v-else-if="activePreset === 'menu'">
               <span class="caption--desktop"
-                >Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items.</span
+                >Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items. Hover submenus
+                diagonally.</span
               >
-              <span class="caption--touch">Tap to open menu and choose an action.</span>
+              <span class="caption--touch">Tap to open menu and navigate submenus.</span>
             </template>
-            <template v-else>
+            <template v-else-if="activePreset === 'combobox'">
               <span class="caption--desktop"
-                >Move your cursor across this area to track coordinates.</span
+                >Type to filter results. Press <kbd>↑</kbd> <kbd>↓</kbd> to navigate with virtual
+                focus.</span
+              >
+              <span class="caption--touch">Tap to search and select options.</span>
+            </template>
+            <template v-else-if="activePreset === 'selection'">
+              <span class="caption--desktop"
+                >Select any text in the card to summon the dynamic formatting bubble.</span
               >
               <span class="caption--touch"
-                >Touch and drag across this area to track coordinates.</span
+                >Select text to summon the floating formatting bubble.</span
               >
+            </template>
+            <template v-else-if="activePreset === 'dialog'">
+              <span class="caption--desktop"
+                >Click to open modal dialog. Focus is trapped strictly inside.</span
+              >
+              <span class="caption--touch">Tap to open modal dialog with focus trap.</span>
             </template>
           </div>
 
@@ -179,61 +180,41 @@ onMounted(() => {
             </svg>
           </button>
 
-          <!-- Tooltip Preset -->
+          <!-- Tooltip Preset (Draggable anchor to test collision flipping) -->
           <PresetTooltip
             v-if="activePreset === 'tooltip'"
             ref="tooltipPresetRef"
             :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :enable-arrow="enableArrow"
             :anchor-offset="anchorOffset"
             :is-dragging="isDragging"
-            :is-active="activePreset === 'tooltip'"
             :keep-open="keepOpen"
             @pointerdown="handlePointerDown"
-            @update:resolved-placement="onResolvedPlacementUpdate"
           />
 
-          <!-- Popover Preset -->
-          <PresetPopover
-            v-if="activePreset === 'popover'"
-            ref="popoverPresetRef"
-            :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :enable-arrow="enableArrow"
-            :anchor-offset="anchorOffset"
-            :is-dragging="isDragging"
-            :is-active="activePreset === 'popover'"
-            :keep-open="keepOpen"
-            @pointerdown="handlePointerDown"
-            @update:resolved-placement="onResolvedPlacementUpdate"
-          />
-
-          <!-- Menu Preset -->
+          <!-- Menu Preset (Cascading submenus with safe polygon) -->
           <PresetMenu
             v-if="activePreset === 'menu'"
             ref="menuPresetRef"
             :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :enable-arrow="enableArrow"
-            :anchor-offset="anchorOffset"
-            :is-dragging="isDragging"
-            :is-active="activePreset === 'menu'"
             :keep-open="keepOpen"
-            @pointerdown="handlePointerDown"
-            @update:resolved-placement="onResolvedPlacementUpdate"
           />
 
-          <!-- Cursor Follower Preset -->
-          <PresetCursor
-            v-if="activePreset === 'cursor'"
-            ref="cursorPresetRef"
-            :placement="selectedPlacement"
-            :middleware-config="middlewareConfig"
-            :is-active="activePreset === 'cursor'"
+          <!-- Combobox Preset (Search & virtual focus with maximized height) -->
+          <PresetCombobox
+            v-if="activePreset === 'combobox'"
+            ref="comboboxPresetRef"
             :keep-open="keepOpen"
-            @update:resolved-placement="onResolvedPlacementUpdate"
           />
+
+          <!-- Selection Bubble Preset (Dynamic virtual anchor) -->
+          <PresetSelection
+            v-if="activePreset === 'selection'"
+            ref="selectionPresetRef"
+            :keep-open="keepOpen"
+          />
+
+          <!-- Dialog Preset (Modal focus trap) -->
+          <PresetDialog v-if="activePreset === 'dialog'" ref="dialogPresetRef" />
         </div>
       </div>
     </div>
@@ -253,13 +234,13 @@ onMounted(() => {
 
 .showcase-body {
   position: relative;
-  min-height: 380px;
+  min-height: 520px;
   background: var(--vp-c-bg-elv);
 }
 
 .sandbox {
   position: relative;
-  height: 380px;
+  height: 520px;
   width: 100%;
   overflow: hidden;
   display: grid;
@@ -267,6 +248,22 @@ onMounted(() => {
   background-color: var(--vp-c-bg-alt);
   background-image: radial-gradient(var(--vp-c-divider) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+.sandbox--combobox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 2.75rem;
+}
+
+.sandbox--menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 3.5rem;
 }
 
 .sandbox-caption {
@@ -357,11 +354,19 @@ onMounted(() => {
   }
 
   .showcase-body {
-    min-height: 320px;
+    min-height: 420px;
   }
 
   .sandbox {
-    height: 320px;
+    height: 420px;
+  }
+
+  .sandbox--combobox {
+    padding-top: 1.75rem;
+  }
+
+  .sandbox--menu {
+    padding-top: 2rem;
   }
 
   .reset-icon-btn {
