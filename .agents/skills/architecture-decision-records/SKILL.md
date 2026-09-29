@@ -1,6 +1,6 @@
 ---
 name: architecture-decision-records
-description: Create, update, supersede, and review VFloat Architecture Decision Records (ADRs) using grouped directories, standard templates, and the repository ADR generator. Use when documenting durable architectural constraints, settled technical decisions, public API contracts, or evaluating cross-cutting tradeoffs in ADR/.
+description: Create, update, supersede, and review VFloat Architecture Decision Records (ADRs) using grouped directories, standard templates, and the repository ADR generator. Use when documenting durable architectural constraints, settled technical decisions, public API contracts, evaluating cross-cutting tradeoffs in ADR/, or determining when to proactively suggest writing an ADR.
 ---
 
 # VFloat architecture decision records
@@ -27,6 +27,46 @@ Format | Location | When to use | Lifecycle
 **Documentation** | `docs/` | Complete, friendly guides and API references for users | Living documentation kept constantly up to date
 
 Do not create an ADR for everyday bug fixes, small refactors, dependency updates, or internal helper details.
+
+---
+
+## When to suggest an ADR (Agent proactivity rubric)
+
+Agents must proactively identify when a task or conversation produces a decision that warrants an ADR. Never draft or commit an ADR silently—raise a concise suggestion to the user with the concrete rationale, proposed group, and title.
+
+### Trigger criteria (When to propose)
+
+Propose an ADR when a decision meets **at least one** of these conditions:
+1. **Durable architecture & state model**: Settling core reactive state patterns (e.g. direct reactive property mutation vs returning getter/setter tuples, stack/portal coordination mechanisms).
+2. **Platform & environment boundaries**: Adopting specific cross-realm DOM resolution (same-origin iframes, detached windows), SSR safety boundaries, or browser quirk workarounds that constrain future PRs.
+3. **Core interaction & event models**: Establishing interaction algorithms (e.g. hover corridor pointer shielding, watchdog intent timers, dismiss event lifecycle, focus trapping strategies).
+4. **Superseding prior decisions**: Changing or overturning an architectural rule previously documented in an existing ADR.
+5. **Non-obvious technical trade-offs**: Rejecting an intuitive or standard approach for subtle technical reasons (e.g. why `WeakMap<Document, Manager>` fails in cross-realm scenarios, why global listeners fail with iframes) to prevent future regression or re-litigation.
+
+### Negative filter (When NOT to propose)
+
+Do **not** propose an ADR for:
+- Routine bug fixes or edge-case patches conforming to existing patterns.
+- Internal helper refactoring, function renaming, or file reorganizations.
+- Additive options or props that follow established composable conventions.
+- Tooling, script, or configuration updates (Vite, Oxlint, Vitest).
+- In-progress exploratory ideas (recommend an RFC instead).
+
+### Workflow timing (When to prompt the user)
+
+Suggest an ADR at one of two natural points in the conversation:
+- **Design alignment (Pre-implementation)**: When comparing approaches and settling on a direction that permanently constrains future architecture.
+- **Milestone completion (Post-implementation)**: Right after completing and verifying a feature or refactor that introduced a durable technical decision or uncovered unexpected browser constraints.
+
+### Standard suggestion format
+
+When suggesting an ADR, use this concise format:
+
+> "This change settles [concrete decision / trade-off / rejected alternative]. Because this defines rules for future code, it meets our ADR criteria.
+>
+> Would you like me to draft an ADR for this?
+> - **Group**: `<architecture | positioning | interactions | runtime>`
+> - **Proposed Title**: `<Short descriptive title>`"
 
 ---
 
