@@ -363,6 +363,13 @@ export function useFocusTrap(
       return;
     }
 
+    // If focus has already landed inside the floating surface (e.g. via roving focus
+    // navigation on open or autofocus), do not hijack or reset it.
+    const activeEl = targetDocument.value?.activeElement ?? null;
+    if (activeEl && floating.contains(activeEl) && activeEl !== floating) {
+      return;
+    }
+
     // Default: first tabbable element, fallback to floating container
     const firstTabbable = getFirstTabbableElement(floating);
     if (firstTabbable) {
