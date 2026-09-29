@@ -21,6 +21,7 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
   let activePointerId: number | null = null;
   let capturedTarget: HTMLElement | null = null;
   let hasMoved = false;
+  let dragBounds = { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
 
   function onPointerMove(e: PointerEvent) {
     if (!isDragging.value || !currentSandboxEl) return;
@@ -33,16 +34,12 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
       hasMoved = true;
     }
 
-    const sandboxRect = currentSandboxEl.getBoundingClientRect();
-    const maxExtentX = Math.max(0, sandboxRect.width / 2 - 30);
-    const maxExtentY = Math.max(0, sandboxRect.height / 2 - 25);
-
     const rawX = dragStartOffset.x + dx;
     const rawY = dragStartOffset.y + dy;
 
     anchorOffset.value = {
-      x: Math.max(-maxExtentX, Math.min(maxExtentX, rawX)),
-      y: Math.max(-maxExtentY, Math.min(maxExtentY, rawY)),
+      x: Math.max(dragBounds.minX, Math.min(dragBounds.maxX, rawX)),
+      y: Math.max(dragBounds.minY, Math.min(dragBounds.maxY, rawY)),
     };
 
     updateCallback?.();
@@ -99,14 +96,48 @@ export function useShowcaseDrag(): ShowcaseDragReturn {
     dragStartPointer = { x: e.clientX, y: e.clientY };
     dragStartOffset = { ...anchorOffset.value };
 
-    const target = e.currentTarget as HTMLElement | null;
-    if (target?.setPointerCapture) {
+    const anchorEl = ((e.currentTarget as HTMLElement | null)?.closest?.(".anchor-btn") ??
+      (e.target as HTMLElement | null)?.closest?.(".anchor-btn") ??
+      e.target) as HTMLElement | null;
+
+    if (anchorEl?.setPointerCapture && activePointerId !== null) {
       try {
-        target.setPointerCapture(e.pointerId);
-        capturedTarget = target;
+        anchorEl.setPointerCapture(e.pointerId);
+        capturedTarget = anchorEl;
       } catch {
         capturedTarget = null;
       }
+    }
+
+    if (currentSandboxEl && anchorEl) {
+      const sandboxRect = currentSandboxEl.getBoundingClientRect();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const padding = 16;
+
+      const baseLeft = anchorRect.left - anchorOffset.value.x;
+      const baseTop = anchorRect.top - anchorOffset.value.y;
+
+      const minX = sandboxRect.left + padding - baseLeft;
+      const maxX = sandboxRect.right - padding - anchorRect.width - baseLeft;
+      const minY = sandboxRect.top + padding - baseTop;
+      const maxY = sandboxRect.bottom - padding - anchorRect.height - baseTop;
+
+      dragBounds = {
+        minX: Math.min(minX, maxX),
+        maxX: Math.max(minX, maxX),
+        minY: Math.min(minY, maxY),
+        maxY: Math.max(minY, maxY),
+      };
+    } else if (currentSandboxEl) {
+      const sandboxRect = currentSandboxEl.getBoundingClientRect();
+      const maxExtentX = Math.max(0, sandboxRect.width / 2 - 30);
+      const maxExtentY = Math.max(0, sandboxRect.height / 2 - 25);
+      dragBounds = {
+        minX: -maxExtentX,
+        maxX: maxExtentX,
+        minY: -maxExtentY,
+        maxY: maxExtentY,
+      };
     }
 
     if (typeof window !== "undefined") {

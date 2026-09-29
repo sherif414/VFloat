@@ -129,6 +129,7 @@ const filteredItems = computed(() => {
 const rootAnchorEl = shallowRef<HTMLElement | null>(null);
 const inputEl = shallowRef<HTMLInputElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
+const listboxEl = shallowRef<HTMLElement | null>(null);
 
 const context = useFloatingNode({
   anchorEl: rootAnchorEl,
@@ -183,7 +184,7 @@ function selectItem(item: ComboboxItemDef) {
 
 const descendant = useAriaActivedescendant(context, {
   targetEl: inputEl,
-  containerEl: floatingEl,
+  containerEl: listboxEl,
   elementsList: itemElements,
   loop: true,
   focusOnHover: true,
@@ -370,7 +371,7 @@ defineExpose({
       </div>
 
       <!-- Scrollable Items Container (constrained by Size middleware) -->
-      <div class="combobox-listbox" role="presentation">
+      <div ref="listboxEl" class="combobox-listbox" role="presentation">
         <div
           v-for="(item, index) in filteredItems"
           :id="descendant.getItemId(index)"
@@ -602,6 +603,9 @@ defineExpose({
 
 /* Scrollable Container (Clamped by Size middleware) */
 .combobox-listbox {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0.3rem;

@@ -81,7 +81,8 @@ function handleResetDemo() {
 
 const isModified = computed(() => {
   const hasOffset =
-    activePreset.value === "tooltip" && (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
+    (activePreset.value === "tooltip" || activePreset.value === "menu") &&
+    (anchorOffset.value.x !== 0 || anchorOffset.value.y !== 0);
   const hasCustomPlacement = selectedPlacement.value !== getDefaultPlacement(activePreset.value);
   const isKeepOpen = keepOpen.value;
   return hasOffset || hasCustomPlacement || isKeepOpen;
@@ -129,10 +130,10 @@ onMounted(() => {
             </template>
             <template v-else-if="activePreset === 'menu'">
               <span class="caption--desktop"
-                >Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items. Hover submenus
-                diagonally.</span
+                >Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items. Drag anchor to test
+                collisions.</span
               >
-              <span class="caption--touch">Tap to open menu and navigate submenus.</span>
+              <span class="caption--touch">Tap to open menu. Drag anchor to test collisions.</span>
             </template>
             <template v-else-if="activePreset === 'combobox'">
               <span class="caption--desktop"
@@ -196,7 +197,10 @@ onMounted(() => {
             v-if="activePreset === 'menu'"
             ref="menuPresetRef"
             :placement="selectedPlacement"
+            :anchor-offset="anchorOffset"
+            :is-dragging="isDragging"
             :keep-open="keepOpen"
+            @pointerdown="handlePointerDown"
           />
 
           <!-- Combobox Preset (Search & virtual focus with maximized height) -->

@@ -16,12 +16,20 @@ import { computed, nextTick, shallowRef, watch } from "vue";
 
 interface Props {
   placement: Placement;
+  anchorOffset?: { x: number; y: number };
+  isDragging?: boolean;
   keepOpen?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  anchorOffset: () => ({ x: 0, y: 0 }),
+  isDragging: false,
   keepOpen: false,
 });
+
+const emit = defineEmits<{
+  (e: "pointerdown", event: PointerEvent): void;
+}>();
 
 // ============================================================================
 // 1. Menu Items Data Definitions
@@ -294,17 +302,37 @@ defineExpose({
 <template>
   <div class="preset-wrapper">
     <!-- Anchor Trigger Button -->
-    <div class="anchor-slot">
+    <div
+      class="anchor-slot"
+      :style="{ transform: `translate(${anchorOffset.x}px, ${anchorOffset.y}px)` }"
+    >
       <button
         ref="rootAnchorEl"
         type="button"
         class="anchor-btn"
         :class="{
           'is-active': rootContext.open.value,
+          'is-dragging': isDragging,
         }"
         aria-haspopup="menu"
         :aria-expanded="rootContext.open.value"
+        @pointerdown="emit('pointerdown', $event)"
       >
+        <svg
+          class="anchor-btn__drag-icon"
+          width="12"
+          height="12"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="5" cy="3" r="1.5" />
+          <circle cx="11" cy="3" r="1.5" />
+          <circle cx="5" cy="8" r="1.5" />
+          <circle cx="11" cy="8" r="1.5" />
+          <circle cx="5" cy="13" r="1.5" />
+          <circle cx="11" cy="13" r="1.5" />
+        </svg>
         <span>Actions</span>
         <svg
           class="anchor-btn__chevron"
@@ -446,9 +474,9 @@ defineExpose({
   font: inherit;
   font-size: 0.88rem;
   font-weight: 500;
-  cursor: pointer;
+  cursor: grab;
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
   box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
   transition:
@@ -464,6 +492,10 @@ defineExpose({
   box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
+.anchor-btn:hover .anchor-btn__drag-icon {
+  color: var(--vp-c-brand-1);
+}
+
 .anchor-btn:active {
   transform: scale(0.98);
   background: var(--vp-c-bg-soft);
@@ -476,6 +508,18 @@ defineExpose({
 
 .anchor-btn.is-active {
   border-color: var(--vp-c-brand-1);
+}
+
+.anchor-btn.is-dragging {
+  cursor: grabbing;
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
+}
+
+.anchor-btn__drag-icon {
+  color: var(--vp-c-text-3);
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .anchor-btn__chevron {
