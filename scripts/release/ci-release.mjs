@@ -133,10 +133,9 @@ run("git", ["add", "packages/vue/package.json", "package.json", "CHANGELOG.md"])
 run("git", ["commit", "-m", `chore: release v${targetVersion}`]);
 run("git", ["tag", "-a", `v${targetVersion}`, "-m", `v${targetVersion}`]);
 
-// Step 2: Push commit and tag to origin/main (required for npm provenance attestation)
+// Step 2: Push commit and tag atomically (if the tag is rejected, the commit is also rejected)
 console.log("[release] Pushing commit and tag to origin/main...");
-run("git", ["push", "origin", "main"]);
-run("git", ["push", "origin", `v${targetVersion}`]);
+run("git", ["push", "--atomic", "origin", "main", `v${targetVersion}`]);
 
 // Step 3: Publish to npm FIRST with fail-safe rollback
 if (!skipNpm) {
