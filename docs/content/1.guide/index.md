@@ -1,8 +1,7 @@
 ---
+title: Introduction
 description: What VFloat is, what problem it solves, and how the pieces fit together.
 ---
-
-# Introduction
 
 ## What is VFloat?
 
