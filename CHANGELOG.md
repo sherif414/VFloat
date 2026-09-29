@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.15.0
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.14.0...v0.15.0)
+
+### 🚀 Enhancements
+
+- **floating-node:** Add cascadeClose option to close open descendants ([b0ce45e](https://github.com/sherif414/VFloat/commit/b0ce45e))
+- **floating-node:** ⚠️  Invert parenting default to standalone with opt-in DI ([f1b5a4a](https://github.com/sherif414/VFloat/commit/f1b5a4a))
+- **focus-trap:** ⚠️  Remove focus guards and streamline options ([25b1ac4](https://github.com/sherif414/VFloat/commit/25b1ac4))
+- **floating-context:** ⚠️  Remove redundant defaultOpen option from useFloatingNode ([9073d79](https://github.com/sherif414/VFloat/commit/9073d79))
+- **outside-click:** ⚠️  Streamline options reactivity and rename for symmetry ([7aab466](https://github.com/sherif414/VFloat/commit/7aab466))
+- **outside-click:** ⚠️  Unify touch, pointer, and virtual click dismissal ([e56e152](https://github.com/sherif414/VFloat/commit/e56e152))
+- **hover:** Enhance safe polygon with scope shielding and intent watchdog ([495885e](https://github.com/sherif414/VFloat/commit/495885e))
+- **playground:** Add minimal useClick demo ([aee9d19](https://github.com/sherif414/VFloat/commit/aee9d19))
+- **keyboard-navigation:** Support opening floating elements on arrow keydown ([40e7996](https://github.com/sherif414/VFloat/commit/40e7996))
+
+### 🩹 Fixes
+
+- **hover:** Resolve owner document and window for safe polygon and timers ([c86dab2](https://github.com/sherif414/VFloat/commit/c86dab2))
+- **hover:** Prevent safe polygon activation on floating exit ([9f5d301](https://github.com/sherif414/VFloat/commit/9f5d301))
+- **dismiss:** Resolve outside scrollbar detection and enforce realm safety ([2994e7b](https://github.com/sherif414/VFloat/commit/2994e7b))
+- **escape-key:** Prevent premature dismissal during IME composition on WebKit ([e60dc37](https://github.com/sherif414/VFloat/commit/e60dc37))
+- **escape-key:** Unwind to nearest registered ancestor and break sibling ties with LIFO order ([e73f508](https://github.com/sherif414/VFloat/commit/e73f508))
+- **outside-click:** Refine capture option type and narrow predicate target ([eea9efb](https://github.com/sherif414/VFloat/commit/eea9efb))
+- **outside-click:** Resolve cross-phase suppression and drag tracking race ([cd527f3](https://github.com/sherif414/VFloat/commit/cd527f3))
+- **outside-click:** Support root viewport scrollbar detection in ltr and rtl ([498a1b1](https://github.com/sherif414/VFloat/commit/498a1b1))
+- **outside-click:** Dismiss descendant branches when clicking ancestor elements ([8862590](https://github.com/sherif414/VFloat/commit/8862590))
+- **escape-key:** Synchronize composition reset on standard browsers and prevent scope leaks ([02d207a](https://github.com/sherif414/VFloat/commit/02d207a))
+- **escape-key:** Stop propagation for custom onEscape handlers ([0528403](https://github.com/sherif414/VFloat/commit/0528403))
+- **focus-trap:** Realm-safe timers and cross-realm element checks ([ed92374](https://github.com/sherif414/VFloat/commit/ed92374))
+- **dismiss:** ⚠️  Make outside-click capture static and share composedPath target resolution ([a0424fd](https://github.com/sherif414/VFloat/commit/a0424fd))
+- **focus-trap:** Harden modal containment, stacking, and tabbable detection ([76d80f7](https://github.com/sherif414/VFloat/commit/76d80f7))
+- **dom:** Make element checks and environment resolution cross-realm safe ([1175399](https://github.com/sherif414/VFloat/commit/1175399))
+- **outside-click:** Restore static option configuration ([993cb0b](https://github.com/sherif414/VFloat/commit/993cb0b))
+- **outside-click:** Resolve touch dismissal via native pointer lifecycle on mobile webkit ([e01dbd2](https://github.com/sherif414/VFloat/commit/e01dbd2))
+- **use-click:** Bound button and link target detection to anchor and traverse shadow roots ([7463582](https://github.com/sherif414/VFloat/commit/7463582))
+- **vue:** Scope click trigger targets and optimize keydown handling ([8db4ce0](https://github.com/sherif414/VFloat/commit/8db4ce0))
+- **vue:** Scope click trigger targets and optimize keydown handling ([1055cff](https://github.com/sherif414/VFloat/commit/1055cff))
+- **click:** Bound target checks to anchor and optimize keydown handling ([7917cad](https://github.com/sherif414/VFloat/commit/7917cad))
+- **focus-trap:** Preserve active focus when already within floating element on open ([7fb1f20](https://github.com/sherif414/VFloat/commit/7fb1f20))
+- **release:** Use atomic push to prevent orphaned commits on tag rejection ([e836ff7](https://github.com/sherif414/VFloat/commit/e836ff7))
+
+#### ⚠️ Breaking Changes
+
+- **floating-node:** ⚠️  Invert parenting default to standalone with opt-in DI ([f1b5a4a](https://github.com/sherif414/VFloat/commit/f1b5a4a))
+- **focus-trap:** ⚠️  Remove focus guards and streamline options ([25b1ac4](https://github.com/sherif414/VFloat/commit/25b1ac4))
+- **floating-context:** ⚠️  Remove redundant defaultOpen option from useFloatingNode ([9073d79](https://github.com/sherif414/VFloat/commit/9073d79))
+- **outside-click:** ⚠️  Streamline options reactivity and rename for symmetry ([7aab466](https://github.com/sherif414/VFloat/commit/7aab466))
+- **outside-click:** ⚠️  Unify touch, pointer, and virtual click dismissal ([e56e152](https://github.com/sherif414/VFloat/commit/e56e152))
+- **dismiss:** ⚠️  Make outside-click capture static and share composedPath target resolution ([a0424fd](https://github.com/sherif414/VFloat/commit/a0424fd))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.14.0
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.13.3...v0.14.0)
