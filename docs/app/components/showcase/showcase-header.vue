@@ -19,7 +19,7 @@ const emit = defineEmits<{
   (e: "update:keepOpen", value: boolean): void;
 }>();
 
-// Preset Tabs Navigation Indicator
+// Tabs Indicator
 const tabNavEl = ref<HTMLElement | null>(null);
 const tabButtonRefs = ref<Record<string, HTMLElement | null>>({});
 const isPositioned = ref(false);
@@ -98,9 +98,7 @@ function onSelectPreset(preset: PresetType) {
   emit("update:modelValue", preset);
 }
 
-// ============================================================================
-// Small & Non-flashy Placement Dropdown
-// ============================================================================
+// Placement Control
 interface PlacementOption {
   value: Placement;
   label: string;
@@ -158,7 +156,7 @@ function selectPlacementOption(val: Placement) {
 
 <template>
   <div class="showcase-header">
-    <!-- 1. Preset Navigation -->
+    <!-- Preset Navigation -->
     <div ref="tabNavEl" class="preset-nav" role="tablist" aria-label="Component examples">
       <div
         class="preset-tab-indicator"
@@ -185,103 +183,101 @@ function selectPlacementOption(val: Placement) {
       </button>
     </div>
 
-    <!-- 2. Header Actions -->
+    <!-- Header Actions -->
     <div class="header-actions">
-      <!-- Demo Options (Placement & Keep Open) -->
-      <div class="header-actions__options">
-        <!-- Small Placement Dropdown -->
-        <div v-show="hasPlacementControl" class="placement-control">
-          <button
-            ref="placementAnchorEl"
-            type="button"
-            class="placement-btn"
-            :class="{ 'is-open': placementContext.open.value }"
-            aria-haspopup="listbox"
-            :aria-expanded="placementContext.open.value"
-            title="Placement alignment"
-          >
-            <span class="placement-btn__label">{{ currentPlacementLabel }}</span>
-            <svg
-              class="placement-btn__chevron"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 6l4 4 4-4" />
-            </svg>
-          </button>
-
-          <Teleport to="body">
-            <div
-              v-if="placementContext.open.value"
-              ref="placementFloatingEl"
-              class="placement-floating-wrapper"
-              :style="[
-                placementPosition.styles.value,
-                { visibility: placementPosition.isPositioned.value ? 'visible' : 'hidden' },
-              ]"
-            >
-              <Transition name="dropdown-pop" appear>
-                <div class="placement-dropdown-menu" role="listbox">
-                  <button
-                    v-for="opt in placementOptions"
-                    :key="opt.value"
-                    type="button"
-                    role="option"
-                    :aria-selected="placement === opt.value"
-                    class="placement-dropdown-item"
-                    :class="{ 'is-active': placement === opt.value }"
-                    @click="selectPlacementOption(opt.value)"
-                  >
-                    <span>{{ opt.label }}</span>
-                    <svg
-                      v-if="placement === opt.value"
-                      class="check-icon"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-                    </svg>
-                  </button>
-                </div>
-              </Transition>
-            </div>
-          </Teleport>
-        </div>
-
-        <!-- Small Keep Open Toggle (Pushpin Icon) -->
+      <!-- Placement Selector -->
+      <div v-show="hasPlacementControl" class="placement-control">
         <button
-          v-if="hasKeepOpenControl"
+          ref="placementAnchorEl"
           type="button"
-          class="action-btn"
-          :class="{ 'is-active': keepOpen }"
-          :title="keepOpen ? 'Disable keep open' : 'Keep open to inspect in devtools'"
-          :aria-pressed="keepOpen"
-          @click="emit('update:keepOpen', !keepOpen)"
+          class="control-btn"
+          :class="{ 'is-open': placementContext.open.value }"
+          aria-haspopup="listbox"
+          :aria-expanded="placementContext.open.value"
+          title="Placement alignment"
         >
+          <span class="control-btn__label">{{ currentPlacementLabel }}</span>
           <svg
-            class="action-btn__icon"
+            class="control-btn__chevron"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            stroke-width="1.7"
+            stroke-width="1.8"
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path d="M4.5 2.5h7l-.5 4.5 2 2v1h-4.5v4.5l-.5.5-.5-.5V10H3v-1l2-2-.5-4.5z" />
+            <path d="M4 6l4 4 4-4" />
           </svg>
-          <span class="action-btn__text">Keep open</span>
         </button>
+
+        <Teleport to="body">
+          <div
+            v-if="placementContext.open.value"
+            ref="placementFloatingEl"
+            class="placement-floating-wrapper"
+            :style="[
+              placementPosition.styles.value,
+              { visibility: placementPosition.isPositioned.value ? 'visible' : 'hidden' },
+            ]"
+          >
+            <Transition name="dropdown-fade" appear>
+              <div class="placement-dropdown-menu" role="listbox">
+                <button
+                  v-for="opt in placementOptions"
+                  :key="opt.value"
+                  type="button"
+                  role="option"
+                  :aria-selected="placement === opt.value"
+                  class="placement-dropdown-item"
+                  :class="{ 'is-active': placement === opt.value }"
+                  @click="selectPlacementOption(opt.value)"
+                >
+                  <span>{{ opt.label }}</span>
+                  <svg
+                    v-if="placement === opt.value"
+                    class="check-icon"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
+                  </svg>
+                </button>
+              </div>
+            </Transition>
+          </div>
+        </Teleport>
       </div>
+
+      <!-- Keep Open Toggle -->
+      <button
+        v-if="hasKeepOpenControl"
+        type="button"
+        class="control-btn"
+        :class="{ 'is-active': keepOpen }"
+        :title="keepOpen ? 'Dismiss keep open' : 'Keep floating UI open'"
+        :aria-pressed="keepOpen"
+        @click="emit('update:keepOpen', !keepOpen)"
+      >
+        <svg
+          class="control-btn__icon"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4.5 2.5h7l-.5 4.5 2 2v1h-4.5v4.5l-.5.5-.5-.5V10H3v-1l2-2-.5-4.5z" />
+        </svg>
+        <span class="control-btn__label">Keep open</span>
+      </button>
     </div>
   </div>
 </template>
@@ -292,23 +288,20 @@ function selectPlacementOption(val: Placement) {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  background: var(--vp-c-bg-elv);
 }
 
-/* ============================================================================
-   1. Preset Navigation
-   ============================================================================ */
+/* 1. Preset Navigation */
 .preset-nav {
   position: relative;
   display: flex;
-  gap: 0.2rem;
-  padding: 3px;
+  gap: 2px;
+  padding: 2px;
   border-radius: 8px;
-  background: var(--vp-c-bg-alt);
-  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -320,13 +313,12 @@ function selectPlacementOption(val: Placement) {
 
 .preset-tab-indicator {
   position: absolute;
-  top: 3px;
+  top: 2px;
   left: 0;
-  height: calc(100% - 6px);
-  border: 1px solid var(--vp-c-divider);
+  height: calc(100% - 4px);
   border-radius: 6px;
   background: var(--vp-c-bg-elv);
-  box-shadow: var(--vp-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.08));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   pointer-events: none;
   z-index: 1;
   opacity: 0;
@@ -338,27 +330,33 @@ function selectPlacementOption(val: Placement) {
 
 .preset-tab-indicator.is-animated {
   transition:
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .preset-tab {
   position: relative;
   z-index: 2;
   padding: 0.35rem 0.65rem;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--vp-c-text-2);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
   flex-shrink: 0;
   touch-action: manipulation;
-  transition: color 0.18s ease;
+  outline: none;
+  transition: color 0.15s ease;
+}
+
+.preset-tab:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: -2px;
 }
 
 .preset-tab:hover {
@@ -366,78 +364,27 @@ function selectPlacementOption(val: Placement) {
 }
 
 .preset-tab.is-active {
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-text-1);
   font-weight: 500;
 }
 
 .preset-nav:not(:has(.preset-tab-indicator.is-positioned)) .preset-tab.is-active {
   background: var(--vp-c-bg-elv);
-  border-color: var(--vp-c-divider);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* ============================================================================
-   2. Header Actions
-   ============================================================================ */
+/* 2. Header Actions */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
-.header-actions__options {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-/* Small Placement Select Button */
 .placement-control {
   position: relative;
 }
 
-.placement-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  height: 28px;
-  padding: 0 0.55rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-1);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 500;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.placement-btn:hover {
-  border-color: var(--vp-c-text-3);
-  background: var(--vp-c-bg);
-}
-
-.placement-btn.is-open {
-  border-color: var(--vp-c-brand-1);
-}
-
-.placement-btn__chevron {
-  width: 10px;
-  height: 10px;
-  color: var(--vp-c-text-3);
-  transition: transform 0.18s ease;
-}
-
-.placement-btn.is-open .placement-btn__chevron {
-  transform: rotate(180deg);
-  color: var(--vp-c-brand-1);
-}
-
-/* Small Action Button (Keep Open) */
-.action-btn {
+.control-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -448,88 +395,78 @@ function selectPlacementOption(val: Placement) {
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-2);
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all 0.15s ease;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
-.action-btn:hover {
+.control-btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
+}
+
+.control-btn:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-soft);
 }
 
-.action-btn.is-active {
-  background: var(--vp-c-brand-soft);
-  border-color: var(--vp-c-brand-1);
-  color: var(--vp-c-brand-1);
-  font-weight: 500;
+.control-btn.is-open {
+  border-color: var(--vp-c-text-2);
+  color: var(--vp-c-text-1);
 }
 
-.action-btn__icon {
-  width: 12px;
-  height: 12px;
+.control-btn.is-active {
+  border-color: var(--vp-c-brand-text, #18794e);
+  background: var(--vp-c-brand-soft, rgba(16, 185, 129, 0.12));
+  color: var(--vp-c-brand-text, #18794e);
+}
+
+.control-btn__chevron {
+  width: 9px;
+  height: 9px;
+  color: var(--vp-c-text-3);
+  transition: transform 0.15s ease;
+}
+
+.control-btn.is-open .control-btn__chevron {
+  transform: rotate(180deg);
+  color: var(--vp-c-text-1);
+}
+
+.control-btn__icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
   .showcase-header {
     flex-direction: column;
     align-items: stretch;
-    padding: 0.5rem;
-    gap: 0.5rem;
+    padding: 0.45rem;
+    gap: 0.45rem;
   }
 
   .preset-nav {
     width: 100%;
-    background: var(--vp-c-bg-alt);
-    border: 1px solid var(--vp-c-divider);
-    border-radius: 8px;
-    padding: 3px;
   }
 
   .preset-tab {
     flex: 1 0 auto;
     text-align: center;
-    min-height: 34px;
-    padding: 0.4rem 0.55rem;
-    font-size: 0.8rem;
-    -webkit-tap-highlight-color: transparent;
+    padding: 0.35rem 0.5rem;
   }
 
   .header-actions {
     width: 100%;
-    justify-content: space-between;
-    gap: 0.4rem;
-  }
-
-  .header-actions__options {
-    gap: 0.45rem;
-    width: 100%;
     justify-content: flex-end;
-  }
-
-  .placement-btn,
-  .action-btn {
-    height: 32px;
-    padding: 0 0.65rem;
-    font-size: 0.78rem;
-    -webkit-tap-highlight-color: transparent;
-  }
-}
-
-@media (max-width: 380px) {
-  .preset-tab {
-    padding: 0.35rem 0.45rem;
-    font-size: 0.76rem;
-  }
-
-  .placement-btn,
-  .action-btn {
-    height: 30px;
-    padding: 0 0.5rem;
-    font-size: 0.74rem;
-    gap: 0.25rem;
   }
 }
 </style>
@@ -545,16 +482,15 @@ function selectPlacementOption(val: Placement) {
 }
 
 .placement-dropdown-menu {
-  width: 150px;
-  padding: 4px;
+  width: 140px;
+  padding: 3px;
   background: var(--vp-c-bg-elv);
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  box-shadow: var(--vp-shadow-3, 0 8px 24px rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  transform-origin: top left;
+  gap: 1px;
 }
 
 .placement-dropdown-item {
@@ -562,19 +498,27 @@ function selectPlacementOption(val: Placement) {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 32px;
-  padding: 0.4rem 0.65rem;
+  min-height: 28px;
+  padding: 0.3rem 0.55rem;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   background: transparent;
   color: var(--vp-c-text-2);
   font-family: var(--vp-font-family-base, sans-serif);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
+  outline: none;
   -webkit-tap-highlight-color: transparent;
-  transition: all 0.12s ease;
+  transition:
+    background-color 0.1s ease,
+    color 0.1s ease;
+}
+
+.placement-dropdown-item:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: -1px;
 }
 
 .placement-dropdown-item:hover {
@@ -582,55 +526,28 @@ function selectPlacementOption(val: Placement) {
   color: var(--vp-c-text-1);
 }
 
-.placement-dropdown-item:active {
-  background: var(--vp-c-bg-mute);
-}
-
-@media (pointer: coarse) {
-  .placement-dropdown-menu {
-    width: 160px;
-    padding: 6px;
-    gap: 3px;
-  }
-
-  .placement-dropdown-item {
-    min-height: 38px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.82rem;
-  }
-}
-
 .placement-dropdown-item.is-active {
-  background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1);
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-brand-text, #18794e);
   font-weight: 600;
 }
 
 .placement-dropdown-item .check-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--vp-c-brand-1);
+  width: 11px;
+  height: 11px;
+  color: var(--vp-c-brand-text, #18794e);
 }
 
-.dropdown-pop-enter-active {
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
   transition:
-    opacity 0.14s ease-out,
-    transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.12s ease,
+    transform 0.12s ease;
 }
 
-.dropdown-pop-leave-active {
-  transition:
-    opacity 0.1s ease-in,
-    transform 0.1s ease-in;
-}
-
-.dropdown-pop-enter-from {
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
   opacity: 0;
-  transform: scale(0.96) translateY(-4px);
-}
-
-.dropdown-pop-leave-to {
-  opacity: 0;
-  transform: scale(0.96) translateY(-4px);
+  transform: translateY(-3px);
 }
 </style>

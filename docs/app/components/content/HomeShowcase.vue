@@ -17,9 +17,9 @@ const keepOpen = ref<boolean>(false);
 
 const presets: ShowcasePresetMeta[] = [
   { id: "tooltip", label: "Tooltip", description: "Hover & collision physics" },
-  { id: "menu", label: "Advanced Menu", description: "Submenu & safe polygon" },
+  { id: "menu", label: "Menu", description: "Submenu & safe polygon" },
   { id: "combobox", label: "Combobox", description: "Search & virtual focus" },
-  { id: "selection", label: "Selection Bubble", description: "Dynamic virtual anchor" },
+  { id: "selection", label: "Selection", description: "Dynamic virtual anchor" },
   { id: "dialog", label: "Dialog", description: "Modal focus trap & overlay" },
 ];
 
@@ -103,7 +103,7 @@ onMounted(() => {
 <template>
   <div class="home-showcase-section">
     <div class="showcase-card">
-      <!-- 1. Unified Single Header Navigation -->
+      <!-- 1. Header Navigation -->
       <ShowcaseHeader
         :model-value="activePreset"
         :presets="presets"
@@ -116,72 +116,8 @@ onMounted(() => {
 
       <!-- 2. Main Workspace -->
       <div class="showcase-body">
-        <!-- 1. Interactive Stage Canvas -->
         <div ref="sandboxEl" :class="['sandbox', `sandbox--${activePreset}`]">
-          <!-- Caption Helper -->
-          <div class="sandbox-caption">
-            <template v-if="activePreset === 'tooltip'">
-              <span class="caption--desktop"
-                >Hover to open. Drag anchor to test collision flipping.</span
-              >
-              <span class="caption--touch"
-                >Tap to open. Drag anchor to test collision flipping.</span
-              >
-            </template>
-            <template v-else-if="activePreset === 'menu'">
-              <span class="caption--desktop"
-                >Click or press <kbd>↑</kbd> <kbd>↓</kbd> to navigate items. Drag anchor to test
-                collisions.</span
-              >
-              <span class="caption--touch">Tap to open menu. Drag anchor to test collisions.</span>
-            </template>
-            <template v-else-if="activePreset === 'combobox'">
-              <span class="caption--desktop"
-                >Type to filter results. Press <kbd>↑</kbd> <kbd>↓</kbd> to navigate with virtual
-                focus.</span
-              >
-              <span class="caption--touch">Tap to search and select options.</span>
-            </template>
-            <template v-else-if="activePreset === 'selection'">
-              <span class="caption--desktop"
-                >Select any text in the card to summon the dynamic formatting bubble.</span
-              >
-              <span class="caption--touch"
-                >Select text to summon the floating formatting bubble.</span
-              >
-            </template>
-            <template v-else-if="activePreset === 'dialog'">
-              <span class="caption--desktop"
-                >Click to open modal dialog. Focus is trapped strictly inside.</span
-              >
-              <span class="caption--touch">Tap to open modal dialog with focus trap.</span>
-            </template>
-          </div>
-
-          <!-- Reset Button (Icon-Only, Resets Position & Options) -->
-          <button
-            v-if="isModified"
-            type="button"
-            class="reset-icon-btn"
-            title="Reset position and settings"
-            aria-label="Reset position and settings"
-            @click="handleResetDemo"
-          >
-            <svg
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M2.5 2.5v4h4" />
-              <path d="M2.8 10a6 6 0 1 0 1.4-6.3L2.5 6.5" />
-            </svg>
-          </button>
-
-          <!-- Tooltip Preset (Draggable anchor to test collision flipping) -->
+          <!-- Interactive Components -->
           <PresetTooltip
             v-if="activePreset === 'tooltip'"
             ref="tooltipPresetRef"
@@ -192,7 +128,6 @@ onMounted(() => {
             @pointerdown="handlePointerDown"
           />
 
-          <!-- Menu Preset (Cascading submenus with safe polygon) -->
           <PresetMenu
             v-if="activePreset === 'menu'"
             ref="menuPresetRef"
@@ -203,22 +138,67 @@ onMounted(() => {
             @pointerdown="handlePointerDown"
           />
 
-          <!-- Combobox Preset (Search & virtual focus with maximized height) -->
           <PresetCombobox
             v-if="activePreset === 'combobox'"
             ref="comboboxPresetRef"
             :keep-open="keepOpen"
           />
 
-          <!-- Selection Bubble Preset (Dynamic virtual anchor) -->
           <PresetSelection
             v-if="activePreset === 'selection'"
             ref="selectionPresetRef"
             :keep-open="keepOpen"
           />
 
-          <!-- Dialog Preset (Modal focus trap) -->
           <PresetDialog v-if="activePreset === 'dialog'" ref="dialogPresetRef" />
+
+          <!-- Minimal Footer Instructions & Reset -->
+          <div class="sandbox-footer">
+            <div class="sandbox-caption">
+              <template v-if="activePreset === 'tooltip'">
+                <span>Hover or drag anchor to test collision flipping</span>
+              </template>
+              <template v-else-if="activePreset === 'menu'">
+                <span
+                  >Click or use <kbd>↑</kbd><kbd>↓</kbd> to navigate · Drag to test boundary
+                  collisions</span
+                >
+              </template>
+              <template v-else-if="activePreset === 'combobox'">
+                <span>Type to search · Use <kbd>↑</kbd><kbd>↓</kbd> for virtual focus</span>
+              </template>
+              <template v-else-if="activePreset === 'selection'">
+                <span>Select text within the card to summon the floating toolbar</span>
+              </template>
+              <template v-else-if="activePreset === 'dialog'">
+                <span>Open modal dialog with isolated focus trapping</span>
+              </template>
+            </div>
+
+            <!-- Reset Button -->
+            <button
+              v-if="isModified"
+              type="button"
+              class="reset-btn"
+              title="Reset position and settings"
+              aria-label="Reset position and settings"
+              @click="handleResetDemo"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M2.5 2.5v4h4" />
+                <path d="M2.8 10a6 6 0 1 0 1.4-6.3L2.5 6.5" />
+              </svg>
+              <span>Reset</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -231,27 +211,37 @@ onMounted(() => {
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   background: var(--vp-c-bg-elv);
-  box-shadow: var(--vp-shadow-2, 0 4px 20px rgba(0, 0, 0, 0.08));
   overflow: hidden;
   font-family: var(--vp-font-family-base, sans-serif);
 }
 
 .showcase-body {
   position: relative;
-  min-height: 520px;
-  background: var(--vp-c-bg-elv);
+  min-height: 480px;
+  background: var(--vp-c-bg-soft);
 }
 
 .sandbox {
   position: relative;
-  height: 520px;
+  height: 480px;
   width: 100%;
   overflow: hidden;
   display: grid;
   place-items: center;
-  background-color: var(--vp-c-bg-alt);
-  background-image: radial-gradient(var(--vp-c-divider) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background: var(--vp-c-bg-soft);
+}
+
+.sandbox::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--vp-c-divider) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center center;
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 50%, #000 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 50%, #000 30%, transparent 85%);
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .sandbox--combobox {
@@ -259,7 +249,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 2.75rem;
+  padding-top: 3.5rem;
 }
 
 .sandbox--menu {
@@ -267,96 +257,78 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 3.5rem;
+  padding-top: 4.5rem;
+}
+
+.sandbox-footer {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.85rem;
+  right: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
 }
 
 .sandbox-caption {
-  position: absolute;
-  bottom: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 1.5rem);
-  max-width: 440px;
-  pointer-events: none;
-  font-size: 0.76rem;
-  line-height: 1.35;
+  font-size: 0.75rem;
+  line-height: 1.4;
   color: var(--vp-c-text-3);
-  text-align: center;
-  white-space: normal;
   text-wrap: balance;
 }
 
 .sandbox-caption kbd {
   display: inline-block;
-  padding: 0.05rem 0.3rem;
-  font-size: 0.72rem;
+  padding: 0.05rem 0.25rem;
+  font-size: 0.6875rem;
   font-family: var(--vp-font-family-mono, monospace);
   background: var(--vp-c-bg-elv);
   border: 1px solid var(--vp-c-divider);
   border-radius: 3px;
   color: var(--vp-c-text-2);
+  margin: 0 0.15rem;
 }
 
-.caption--touch {
-  display: none;
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .caption--desktop {
-    display: none;
-  }
-  .caption--touch {
-    display: inline;
-  }
-}
-
-.reset-icon-btn {
-  position: absolute;
-  bottom: 0.75rem;
-  right: 0.85rem;
-  z-index: 10;
+.reset-btn {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-2);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  outline: none;
   transition:
     color 0.15s ease,
     border-color 0.15s ease,
-    background-color 0.15s ease,
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background-color 0.15s ease;
 }
 
-.reset-icon-btn:hover {
+.reset-btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
+}
+
+.reset-btn:hover {
   color: var(--vp-c-text-1);
   border-color: var(--vp-c-text-3);
   background: var(--vp-c-bg-soft);
-  transform: rotate(-30deg);
 }
 
-.reset-icon-btn:active {
-  transform: rotate(-90deg);
-}
-
-.reset-icon-btn svg {
-  width: 13px;
-  height: 13px;
+.reset-btn svg {
+  width: 11px;
+  height: 11px;
 }
 
 @media (max-width: 640px) {
-  .showcase-card {
-    margin: 0;
-    border-radius: 10px;
-  }
-
   .showcase-body {
     min-height: 420px;
   }
@@ -366,30 +338,19 @@ onMounted(() => {
   }
 
   .sandbox--combobox {
-    padding-top: 1.75rem;
-  }
-
-  .sandbox--menu {
     padding-top: 2rem;
   }
 
-  .reset-icon-btn {
-    bottom: 0.6rem;
-    right: 0.6rem;
-    width: 32px;
-    height: 32px;
-    border-radius: 7px;
+  .sandbox--menu {
+    padding-top: 2.5rem;
   }
 
-  .reset-icon-btn svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  .sandbox-caption {
-    bottom: 0.55rem;
-    font-size: 0.73rem;
-    padding: 0 2.2rem;
+  .sandbox-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    text-align: center;
+    bottom: 0.5rem;
   }
 }
 </style>

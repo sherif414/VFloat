@@ -1,5 +1,3 @@
-import type { Placement } from "v-float";
-
 export type PresetType = "tooltip" | "menu" | "combobox" | "selection" | "dialog";
 
 export interface ShowcasePresetMeta {
@@ -7,13 +5,3 @@ export interface ShowcasePresetMeta {
   label: string;
   description: string;
 }
-
-export interface ShowcasePositionOptions {
-  placement: Placement;
-  offset: number;
-  flip: boolean;
-  shift: boolean;
-  arrow: boolean;
-}
-
-export type Side = "top" | "bottom" | "left" | "right";

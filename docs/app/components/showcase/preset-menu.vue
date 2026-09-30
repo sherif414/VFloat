@@ -31,9 +31,6 @@ const emit = defineEmits<{
   (e: "pointerdown", event: PointerEvent): void;
 }>();
 
-// ============================================================================
-// 1. Menu Items Data Definitions
-// ============================================================================
 interface MenuItemDef {
   id: string;
   label: string;
@@ -50,14 +47,11 @@ const rootMenuItems: MenuItemDef[] = [
 ];
 
 const subMenuItems: MenuItemDef[] = [
-  { id: "copy-link", label: "Copy Link", shortcut: "⌘C" },
-  { id: "email-invite", label: "Email Invite", shortcut: "⌘E" },
-  { id: "embed-widget", label: "Embed Widget", shortcut: "</>" },
+  { id: "copy-link", label: "Copy link", shortcut: "⌘C" },
+  { id: "email-invite", label: "Email invite", shortcut: "⌘E" },
+  { id: "embed-widget", label: "Embed code", shortcut: "</>" },
 ];
 
-// ============================================================================
-// 2. Floating Nodes Creation (Parent -> Child Order)
-// ============================================================================
 const rootAnchorEl = shallowRef<HTMLElement | null>(null);
 const rootFloatingEl = shallowRef<HTMLElement | null>(null);
 const rootArrowEl = shallowRef<HTMLElement | null>(null);
@@ -77,9 +71,6 @@ const subContext = useFloatingNode({
   parent: rootContext,
 });
 
-// ============================================================================
-// 3. Positioning & Middlewares
-// ============================================================================
 const rootPosition = usePosition(rootContext, {
   placement: computed(() => props.placement),
   middlewares: {
@@ -110,14 +101,6 @@ const subPosition = usePosition(subContext, {
   },
 });
 
-// Safe Polygon Live Geometry State
-const polygonPoints = shallowRef<Array<[number, number]>>([]);
-
-const svgPolygonPoints = computed(() => polygonPoints.value.map(([x, y]) => `${x},${y}`).join(" "));
-
-// ============================================================================
-// 4. Reactive State Synchronizations
-// ============================================================================
 watch(
   () => props.keepOpen,
   (keep) => {
@@ -126,7 +109,6 @@ watch(
     } else {
       rootContext.open.value = false;
       subContext.open.value = false;
-      polygonPoints.value = [];
     }
   },
   { immediate: true },
@@ -135,13 +117,9 @@ watch(
 watch(rootContext.open, (isOpen) => {
   if (!isOpen) {
     subContext.open.value = false;
-    polygonPoints.value = [];
   }
 });
 
-// ============================================================================
-// 5. Root Menu Interactions
-// ============================================================================
 useClick(rootContext, {
   enabled: () => !props.keepOpen,
 });
@@ -164,18 +142,9 @@ useRole(rootContext, {
   role: "menu",
 });
 
-// ============================================================================
-// 6. Submenu Interactions & Safe Polygon
-// ============================================================================
 useHover(subContext, {
-  delay: { open: 40, close: 300 },
-  safePolygon: {
-    buffer: 12,
-    requireIntent: false,
-    onPolygonChange: (poly) => {
-      polygonPoints.value = poly;
-    },
-  },
+  delay: { open: 0, close: 100 },
+  safePolygon: true,
 });
 
 useClick(subContext, {
@@ -183,16 +152,12 @@ useClick(subContext, {
 });
 
 useOutsideClick(subContext);
-
 useEscapeKey(subContext);
 
 useRole(subContext, {
   role: "menu",
 });
 
-// ============================================================================
-// 7. Roving Focus & Element References
-// ============================================================================
 const rootMenuItemEls = shallowRef<Array<HTMLElement | null>>([]);
 const subMenuItemEls = shallowRef<Array<HTMLElement | null>>([]);
 
@@ -247,7 +212,6 @@ const {
   elementsList: subMenuItemEls,
   loop: true,
   onExit: () => {
-    // ArrowLeft: Collapse submenu and return focus to the parent 'Share' trigger
     subContext.open.value = false;
     subAnchorEl.value?.focus();
     const shareIndex = rootMenuItems.findIndex((item) => item.id === "share");
@@ -260,10 +224,94 @@ const {
   },
 });
 
+// Animated Moving Background Indicators
+const rootIndicatorStyle = shallowRef<{ transform: string; height: string; opacity: number }>({
+  transform: "translateY(0px)",
+  height: "0px",
+  opacity: 0,
+});
+
+const subIndicatorStyle = shallowRef<{ transform: string; height: string; opacity: number }>({
+  transform: "translateY(0px)",
+  height: "0px",
+  opacity: 0,
+});
+
+function updateRootIndicator() {
+  const index = rootActiveIndex.value;
+  if (index === -1 || index === null || !rootFloatingEl.value) {
+    rootIndicatorStyle.value = { ...rootIndicatorStyle.value, opacity: 0 };
+    return;
+  }
+  const targetEl = rootMenuItemEls.value[index];
+  if (!targetEl) {
+    rootIndicatorStyle.value = { ...rootIndicatorStyle.value, opacity: 0 };
+    return;
+  }
+  const top = targetEl.offsetTop;
+  const height = targetEl.offsetHeight;
+  rootIndicatorStyle.value = {
+    transform: `translateY(${top}px)`,
+    height: `${height}px`,
+    opacity: 1,
+  };
+}
+
+function updateSubIndicator() {
+  const index = subActiveIndex.value;
+  if (index === -1 || index === null || !subFloatingEl.value) {
+    subIndicatorStyle.value = { ...subIndicatorStyle.value, opacity: 0 };
+    return;
+  }
+  const targetEl = subMenuItemEls.value[index];
+  if (!targetEl) {
+    subIndicatorStyle.value = { ...subIndicatorStyle.value, opacity: 0 };
+    return;
+  }
+  const top = targetEl.offsetTop;
+  const height = targetEl.offsetHeight;
+  subIndicatorStyle.value = {
+    transform: `translateY(${top}px)`,
+    height: `${height}px`,
+    opacity: 1,
+  };
+}
+
+watch(rootActiveIndex, () => {
+  void nextTick(() => {
+    updateRootIndicator();
+  });
+});
+
+watch(rootContext.open, (isOpen) => {
+  if (isOpen) {
+    void nextTick(() => {
+      updateRootIndicator();
+    });
+  } else {
+    rootIndicatorStyle.value = { ...rootIndicatorStyle.value, opacity: 0 };
+  }
+});
+
+watch(subActiveIndex, () => {
+  void nextTick(() => {
+    updateSubIndicator();
+  });
+});
+
+watch(subContext.open, (isOpen) => {
+  if (isOpen) {
+    void nextTick(() => {
+      updateSubIndicator();
+    });
+  } else {
+    subIndicatorStyle.value = { ...subIndicatorStyle.value, opacity: 0 };
+  }
+});
+
 function closeAllMenus() {
   subContext.open.value = false;
   rootContext.open.value = false;
-  polygonPoints.value = [];
 }
 
 function onRootItemKeydown(e: KeyboardEvent, item: MenuItemDef) {
@@ -301,7 +349,7 @@ defineExpose({
 
 <template>
   <div class="preset-wrapper">
-    <!-- Anchor Trigger Button -->
+    <!-- Anchor Trigger -->
     <div
       class="anchor-slot"
       :style="{ transform: `translate(${anchorOffset.x}px, ${anchorOffset.y}px)` }"
@@ -318,30 +366,13 @@ defineExpose({
         :aria-expanded="rootContext.open.value"
         @pointerdown="emit('pointerdown', $event)"
       >
-        <svg
-          class="anchor-btn__drag-icon"
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <circle cx="5" cy="3" r="1.5" />
-          <circle cx="11" cy="3" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="13" r="1.5" />
-          <circle cx="11" cy="13" r="1.5" />
-        </svg>
         <span>Actions</span>
         <svg
           class="anchor-btn__chevron"
-          width="10"
-          height="10"
           viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.8"
           stroke-linecap="round"
           stroke-linejoin="round"
           aria-hidden="true"
@@ -351,22 +382,7 @@ defineExpose({
       </button>
     </div>
 
-    <!-- Live Safe Polygon Visual Corridor (Teleported) -->
-    <Teleport to="body">
-      <svg v-if="polygonPoints.length > 0" class="safe-polygon-overlay" aria-hidden="true">
-        <polygon :points="svgPolygonPoints" class="safe-polygon-corridor" />
-      </svg>
-    </Teleport>
-
-    <!-- Safe Polygon Active Status Pill inside Sandbox -->
-    <Transition name="fade-fast">
-      <div v-if="polygonPoints.length > 0" class="safepolygon-indicator" aria-live="polite">
-        <span class="safepolygon-indicator__dot" />
-        <span class="safepolygon-indicator__text">Safe Polygon Active</span>
-      </div>
-    </Transition>
-
-    <!-- 1. Root Menu Panel -->
+    <!-- Root Menu -->
     <div
       v-if="rootContext.open.value"
       ref="rootFloatingEl"
@@ -374,6 +390,13 @@ defineExpose({
       tabindex="-1"
       class="floating-panel panel-menu panel-menu--root"
     >
+      <!-- Moving Animated Active Indicator -->
+      <div
+        class="menu-active-indicator"
+        :class="{ 'is-danger': rootMenuItems[rootActiveIndex]?.danger }"
+        :style="rootIndicatorStyle"
+      />
+
       <div
         v-for="(item, index) in rootMenuItems"
         :key="item.id"
@@ -382,13 +405,13 @@ defineExpose({
         class="menu-item"
         :tabindex="getRootTabindex(index)"
         :class="{
-          'is-active': rootActiveIndex === index || (item.hasSubmenu && subContext.open.value),
+          'is-active': rootActiveIndex === index,
           'is-danger': item.danger,
           'has-submenu': item.hasSubmenu,
         }"
         :aria-haspopup="item.hasSubmenu ? 'menu' : undefined"
         :aria-expanded="item.hasSubmenu ? subContext.open.value : undefined"
-        @mouseenter="setRootActiveIndex(index)"
+        @pointermove="setRootActiveIndex(index)"
         @click="onRootItemClick(item)"
         @keydown="onRootItemKeydown($event, item)"
       >
@@ -397,12 +420,10 @@ defineExpose({
         <template v-if="item.hasSubmenu">
           <svg
             class="menu-item__arrow"
-            width="12"
-            height="12"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="1.8"
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
@@ -419,7 +440,7 @@ defineExpose({
       <div ref="rootArrowEl" :class="['floating-arrow', `floating-arrow--${rootSide}`]" />
     </div>
 
-    <!-- 2. Submenu Panel (Cascading child FloatingNode) -->
+    <!-- Submenu Panel -->
     <div
       v-if="subContext.open.value && rootContext.open.value"
       ref="subFloatingEl"
@@ -427,9 +448,8 @@ defineExpose({
       tabindex="-1"
       class="floating-panel panel-menu panel-menu--sub"
     >
-      <div class="submenu-header">
-        <span class="submenu-header__title">Share with team</span>
-      </div>
+      <!-- Moving Animated Active Indicator -->
+      <div class="menu-active-indicator" :style="subIndicatorStyle" />
 
       <div
         v-for="(subItem, subIndex) in subMenuItems"
@@ -441,7 +461,7 @@ defineExpose({
         :class="{
           'is-active': subActiveIndex === subIndex,
         }"
-        @mouseenter="setSubActiveIndex(subIndex)"
+        @pointermove="setSubActiveIndex(subIndex)"
         @click="onSubItemClick"
       >
         <span class="menu-item__label">{{ subItem.label }}</span>
@@ -466,65 +486,49 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.55rem 0.95rem;
+  padding: 0.5rem 0.85rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: grab;
   user-select: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  outline: none;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
+    box-shadow 0.15s ease;
 }
 
 .anchor-btn:hover {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-bg-soft);
-  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
-}
-
-.anchor-btn:hover .anchor-btn__drag-icon {
-  color: var(--vp-c-brand-1);
-}
-
-.anchor-btn:active {
-  transform: scale(0.98);
-  background: var(--vp-c-bg-soft);
+  border-color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-elv);
 }
 
 .anchor-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
 }
 
 .anchor-btn.is-active {
-  border-color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-text-2);
 }
 
 .anchor-btn.is-dragging {
   cursor: grabbing;
-  border-color: var(--vp-c-brand-1);
-  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
-}
-
-.anchor-btn__drag-icon {
-  color: var(--vp-c-text-3);
-  opacity: 0.7;
-  flex-shrink: 0;
+  border-color: var(--vp-c-brand-text, #18794e);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .anchor-btn__chevron {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   color: var(--vp-c-text-3);
   transition: transform 0.15s ease;
   flex-shrink: 0;
@@ -532,15 +536,7 @@ defineExpose({
 
 .anchor-btn.is-active .anchor-btn__chevron {
   transform: rotate(180deg);
-  color: var(--vp-c-brand-1);
-}
-
-@media (pointer: coarse), (max-width: 640px) {
-  .anchor-btn {
-    min-height: 42px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-  }
+  color: var(--vp-c-text-1);
 }
 
 /* Floating Panels */
@@ -551,187 +547,124 @@ defineExpose({
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
-  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
-  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
 }
 
 .panel-menu {
   outline: none;
+  position: absolute;
 }
 
 .panel-menu--root {
   z-index: 20;
-  width: 190px;
-  max-width: calc(100% - 16px);
-  padding: 0.35rem;
+  width: 175px;
+  padding: 3px;
 }
 
 .panel-menu--sub {
   z-index: 30;
-  width: 195px;
-  max-width: calc(100% - 16px);
-  padding: 0.35rem;
-  box-shadow: var(--vp-shadow-3, 0 12px 34px rgba(0, 0, 0, 0.16));
+  width: 175px;
+  padding: 3px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.submenu-header {
-  padding: 0.3rem 0.55rem 0.25rem;
-  margin-bottom: 0.2rem;
-  border-bottom: 1px solid var(--vp-c-divider);
+/* Moving Animated Active Indicator */
+.menu-active-indicator {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  right: 3px;
+  border-radius: 4px;
+  background: var(--vp-c-bg-soft);
+  pointer-events: none;
+  z-index: 1;
+  transition:
+    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.12s ease;
 }
 
-.submenu-header__title {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--vp-c-text-3);
+.menu-active-indicator.is-danger {
+  background: var(--vp-c-danger-soft, rgba(229, 72, 77, 0.08));
 }
 
 .menu-item {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.42rem 0.55rem;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  color: var(--vp-c-text-1);
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.78125rem;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
   cursor: pointer;
   touch-action: manipulation;
+  background: transparent;
+  outline: none;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    background-color 0.1s ease,
-    color 0.1s ease;
+  transition: color 0.12s ease;
 }
 
-.menu-item:hover,
 .menu-item.is-active {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-brand-1);
-}
-
-.menu-item:active {
-  background: var(--vp-c-bg-mute);
+  color: var(--vp-c-text-1);
 }
 
 .menu-item.has-submenu .menu-item__arrow {
+  width: 10px;
+  height: 10px;
   color: var(--vp-c-text-3);
-  transition: transform 0.12s ease;
+  transition: color 0.12s ease;
 }
 
-.menu-item.has-submenu:hover .menu-item__arrow,
 .menu-item.has-submenu.is-active .menu-item__arrow {
-  color: var(--vp-c-brand-1);
-  transform: translateX(1px);
+  color: var(--vp-c-text-1);
 }
 
 .menu-item.is-danger {
-  color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
+  color: var(--vp-c-danger-1, #e5484d);
 }
 
-.menu-item.is-danger:hover,
 .menu-item.is-danger.is-active {
-  background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.1)));
-  color: var(--vp-c-danger-1, var(--vp-c-red-1, #e5484d));
-}
-
-.menu-item.is-danger:active {
-  background: var(--vp-c-danger-soft, var(--vp-c-red-soft, rgba(229, 72, 77, 0.15)));
+  color: var(--vp-c-danger-1, #e5484d);
 }
 
 .menu-item__shortcut {
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   font-family: var(--vp-font-family-mono, monospace);
   color: var(--vp-c-text-3);
 }
 
-/* Safe Polygon Live Indicator */
-.safepolygon-indicator {
+/* Arrow */
+.floating-arrow {
   position: absolute;
-  top: 0.75rem;
-  left: 0.85rem;
-  z-index: 15;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.55rem;
+  width: 8px;
+  height: 8px;
   background: var(--vp-c-bg-elv);
-  border: 1px solid var(--vp-c-brand-1);
-  border-radius: 9999px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--vp-c-brand-1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  pointer-events: none;
+  transform: rotate(45deg);
+  border: 1px solid var(--vp-c-divider);
+  z-index: 0;
 }
 
-.safepolygon-indicator__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--vp-c-brand-1);
-  box-shadow: 0 0 6px var(--vp-c-brand-1);
-  animation: dot-pulse 1.2s infinite ease-in-out;
+.floating-arrow--top {
+  border-top: none;
+  border-left: none;
 }
 
-@keyframes dot-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-  50% {
-    transform: scale(1.4);
-    opacity: 1;
-  }
+.floating-arrow--bottom {
+  border-bottom: none;
+  border-right: none;
 }
 
-.fade-fast-enter-active,
-.fade-fast-leave-active {
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+.floating-arrow--left {
+  border-left: none;
+  border-bottom: none;
 }
 
-.fade-fast-enter-from,
-.fade-fast-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (pointer: coarse), (max-width: 640px) {
-  .panel-menu--root {
-    width: 200px;
-  }
-  .panel-menu--sub {
-    width: 200px;
-  }
-  .menu-item {
-    min-height: 38px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.84rem;
-  }
-}
-</style>
-
-<style>
-/* Teleported Safe Polygon SVG Corridor Overlay */
-.safe-polygon-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 99999;
-}
-
-.safe-polygon-corridor {
-  fill: var(--vp-c-brand-1, #10b981);
-  fill-opacity: 0.14;
-  stroke: var(--vp-c-brand-1, #10b981);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 4;
-  stroke-opacity: 0.65;
-  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.35));
+.floating-arrow--right {
+  border-right: none;
+  border-top: none;
 }
 </style>

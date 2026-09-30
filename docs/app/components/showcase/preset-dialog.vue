@@ -9,9 +9,6 @@ import {
 } from "v-float";
 import { ref, shallowRef } from "vue";
 
-// ============================================================================
-// 1. Floating Node Setup (Centered Modal Dialog)
-// ============================================================================
 const anchorEl = shallowRef<HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 const fileNameInputEl = shallowRef<HTMLInputElement | null>(null);
@@ -21,9 +18,6 @@ const node = useFloatingNode({
   floatingEl,
 });
 
-// ============================================================================
-// 2. Focus Management & Accessibility Primitives
-// ============================================================================
 useFocusTrap(node, {
   initialFocus: fileNameInputEl,
 });
@@ -39,20 +33,15 @@ useRole(node, {
   describedBy: "export-dialog-desc",
 });
 
-// ============================================================================
-// 3. Modal State & Actions
-// ============================================================================
 interface FormatOption {
   id: "json" | "csv" | "md";
   name: string;
-  badge: string;
-  description: string;
 }
 
 const formatOptions: FormatOption[] = [
-  { id: "json", name: "JSON", badge: "JSON", description: "Complete state tree snapshot" },
-  { id: "csv", name: "CSV", badge: "CSV", description: "Tabular metrics & node list" },
-  { id: "md", name: "Markdown", badge: "MD", description: "Formatted summary documentation" },
+  { id: "json", name: "JSON" },
+  { id: "csv", name: "CSV" },
+  { id: "md", name: "Markdown" },
 ];
 
 const fileName = ref("workspace-export");
@@ -70,7 +59,7 @@ function handleConfirm() {
   setTimeout(() => {
     isExporting.value = false;
     closeDialog();
-  }, 450);
+  }, 400);
 }
 
 defineExpose({
@@ -81,7 +70,7 @@ defineExpose({
 
 <template>
   <div class="preset-wrapper">
-    <!-- Visual Anchor Trigger Button in Sandbox -->
+    <!-- Anchor Trigger -->
     <div class="anchor-slot">
       <button
         ref="anchorEl"
@@ -94,41 +83,59 @@ defineExpose({
         :aria-expanded="node.open.value"
       >
         <svg
-          class="dialog-trigger-icon"
+          class="btn-icon"
           width="14"
           height="14"
-          viewBox="0 0 24 24"
+          viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.6"
           stroke-linecap="round"
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <line x1="9" y1="3" x2="9" y2="21" />
+          <rect x="2" y="3" width="12" height="10" rx="2" />
+          <line x1="2" y1="7" x2="14" y2="7" />
         </svg>
         <span>Open Dialog</span>
       </button>
     </div>
 
-    <!-- Centered Modal Dialog with Backdrop Overlay -->
+    <!-- Centered Modal Dialog (Teleported) -->
     <Teleport to="body">
       <div v-if="node.open.value" class="dialog-overlay" @click.self="closeDialog">
         <div ref="floatingEl" class="dialog-card" tabindex="-1">
-          <!-- Dialog Header -->
+          <!-- Header -->
           <div class="dialog-header">
-            <div class="dialog-header-text">
-              <h2 id="export-dialog-title" class="dialog-title">Export Workspace</h2>
-              <p id="export-dialog-desc" class="dialog-description">
-                Configure your export settings and file details for this workspace.
-              </p>
+            <div class="header-main">
+              <div class="header-icon" aria-hidden="true">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M14 10v2.5a1.5 1.5 0 0 1-1.5 1.5H3.5A1.5 1.5 0 0 1 2 12.5V10" />
+                  <polyline points="5 6 8 9 11 6" />
+                  <line x1="8" y1="9" x2="8" y2="1.5" />
+                </svg>
+              </div>
+              <div class="header-text">
+                <h2 id="export-dialog-title" class="dialog-title">Export Workspace</h2>
+                <p id="export-dialog-desc" class="dialog-description">
+                  Save node tree and middleware configuration.
+                </p>
+              </div>
             </div>
             <button
               type="button"
               class="dialog-close-btn"
               aria-label="Close dialog"
-              title="Close dialog"
+              title="Close dialog (Esc)"
               @click="closeDialog"
             >
               <svg
@@ -137,45 +144,23 @@ defineExpose({
                 viewBox="0 0 16 16"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
+                stroke-width="1.75"
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 aria-hidden="true"
               >
-                <line x1="3" y1="3" x2="13" y2="13" />
-                <line x1="13" y1="3" x2="3" y2="13" />
+                <line x1="3.5" y1="3.5" x2="12.5" y2="12.5" />
+                <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" />
               </svg>
             </button>
           </div>
 
-          <!-- Dialog Form Body -->
+          <!-- Body Form -->
           <form class="dialog-body" @submit.prevent="handleConfirm">
-            <!-- File Name Field -->
+            <!-- Format Cards -->
             <div class="form-group">
-              <label for="export-filename" class="form-label">File name</label>
-              <div class="input-addon-group">
-                <input
-                  id="export-filename"
-                  ref="fileNameInputEl"
-                  v-model="fileName"
-                  type="text"
-                  class="form-input"
-                  placeholder="workspace-export"
-                  required
-                />
-                <span class="input-addon">.{{ selectedFormat }}</span>
-              </div>
-              <span class="form-hint">Default storage location: Downloads</span>
-            </div>
-
-            <!-- Export Format Radiogroup -->
-            <div class="form-group">
-              <span class="form-label" id="format-group-label">Export format</span>
-              <div
-                class="format-options-grid"
-                role="radiogroup"
-                aria-labelledby="format-group-label"
-              >
+              <label id="export-format-label" class="form-label">Format</label>
+              <div class="format-grid" role="radiogroup" aria-labelledby="export-format-label">
                 <label
                   v-for="format in formatOptions"
                   :key="format.id"
@@ -185,53 +170,91 @@ defineExpose({
                   <input
                     v-model="selectedFormat"
                     type="radio"
-                    name="export-format"
+                    name="format"
                     :value="format.id"
                     class="sr-only"
                   />
-                  <div class="format-card__badge-row">
-                    <span class="format-badge">{{ format.badge }}</span>
-                  </div>
-                  <div class="format-card__content">
-                    <span class="format-card__title">{{ format.name }}</span>
-                    <span class="format-card__desc">{{ format.description }}</span>
-                  </div>
+                  <span class="format-ext">.{{ format.id }}</span>
+                  <span class="format-name">{{ format.name }}</span>
                 </label>
               </div>
             </div>
 
-            <!-- Attachments Toggle -->
-            <div class="form-group checkbox-group">
-              <label class="checkbox-label">
-                <input v-model="includeAttachments" type="checkbox" class="form-checkbox" />
-                <span>Include media attachments and computed cache</span>
+            <!-- Filename Field -->
+            <div class="form-group">
+              <label for="export-filename" class="form-label">Filename</label>
+              <div class="input-shell">
+                <span class="input-prefix" aria-hidden="true">
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-3-4z" />
+                    <path d="M9 2v4h4" />
+                  </svg>
+                </span>
+                <input
+                  id="export-filename"
+                  ref="fileNameInputEl"
+                  v-model="fileName"
+                  type="text"
+                  class="form-input"
+                  required
+                  spellcheck="false"
+                />
+                <span class="input-suffix">.{{ selectedFormat }}</span>
+              </div>
+            </div>
+
+            <!-- Options Checkbox / Toggle -->
+            <div class="form-options">
+              <label class="option-row">
+                <div class="option-info">
+                  <span class="option-title">Include geometry cache</span>
+                  <span class="option-desc">Embed computed layout and bounding rectangles</span>
+                </div>
+                <input v-model="includeAttachments" type="checkbox" class="toggle-switch" />
               </label>
             </div>
 
-            <!-- Footer Action Buttons -->
+            <!-- Actions -->
             <div class="dialog-footer">
-              <button type="button" class="dialog-btn dialog-btn--secondary" @click="closeDialog">
-                Cancel
-              </button>
-              <button type="submit" class="dialog-btn dialog-btn--primary" :disabled="isExporting">
-                <svg
-                  v-if="!isExporting"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
+              <div class="footer-hint" aria-hidden="true">
+                <kbd class="kbd-key">esc</kbd>
+                <span>cancel</span>
+              </div>
+              <div class="footer-actions">
+                <button type="button" class="dialog-btn dialog-btn--secondary" @click="closeDialog">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="dialog-btn dialog-btn--primary"
+                  :disabled="isExporting"
                 >
-                  <path d="M8 2v9m-4-4l4 4 4-4" />
-                  <path d="M2 14h12" />
-                </svg>
-                <span v-if="isExporting">Exporting...</span>
-                <span v-else>Confirm Export</span>
-              </button>
+                  <svg
+                    v-if="isExporting"
+                    class="spinner-icon"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <circle cx="8" cy="8" r="6" stroke-opacity="0.25" />
+                    <path d="M14 8a6 6 0 0 0-6-6" stroke-linecap="round" />
+                  </svg>
+                  <span>{{ isExporting ? "Exporting..." : "Export" }}</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -245,9 +268,6 @@ defineExpose({
   display: contents;
 }
 
-/* ============================================================================
- * Anchor Trigger Button (Consistent with other showcase presets)
- * ============================================================================ */
 .anchor-slot {
   position: relative;
   touch-action: none;
@@ -257,64 +277,47 @@ defineExpose({
 .anchor-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.95rem;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  outline: none;
   transition:
     border-color 0.15s ease,
-    background-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
+    background-color 0.15s ease;
+}
+
+.btn-icon {
+  color: var(--vp-c-text-3);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
 }
 
 .anchor-btn:hover {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-bg-soft);
-  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
+  border-color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-elv);
 }
 
-.anchor-btn:active {
-  transform: scale(0.98);
-  background: var(--vp-c-bg-soft);
+.anchor-btn:hover .btn-icon {
+  color: var(--vp-c-text-1);
 }
 
 .anchor-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
 }
 
-.anchor-btn.is-active {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-bg-soft);
-  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
-}
-
-.dialog-trigger-icon {
-  color: var(--vp-c-brand-1);
-}
-
-@media (pointer: coarse), (max-width: 640px) {
-  .anchor-btn {
-    min-height: 42px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-  }
-}
-
-/* ============================================================================
- * Modal Dialog Overlay (Scrim) & Centered Card
- * ============================================================================ */
+/* Modal Scrim & Card */
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -323,30 +326,17 @@ defineExpose({
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  background: rgba(0, 0, 0, 0.48);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  animation: dialogFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: overlay-fade 0.15s ease-out;
 }
 
 :root.dark .dialog-overlay {
-  background: rgba(0, 0, 0, 0.68);
+  background: rgba(0, 0, 0, 0.65);
 }
 
-.dialog-card {
-  position: relative;
-  width: 100%;
-  max-width: 460px;
-  background: var(--vp-c-bg-elv);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
-  box-shadow: var(--vp-shadow-4, 0 16px 36px rgba(0, 0, 0, 0.18));
-  overflow: hidden;
-  outline: none;
-  animation: dialogScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes dialogFadeIn {
+@keyframes overlay-fade {
   from {
     opacity: 0;
   }
@@ -355,10 +345,24 @@ defineExpose({
   }
 }
 
-@keyframes dialogScaleIn {
+.dialog-card {
+  position: relative;
+  width: 100%;
+  max-width: 410px;
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  box-shadow:
+    0 16px 40px -8px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  outline: none;
+  animation: card-scale 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes card-scale {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(6px);
+    transform: scale(0.96) translateY(4px);
   }
   to {
     opacity: 1;
@@ -366,106 +370,191 @@ defineExpose({
   }
 }
 
-/* ============================================================================
- * Dialog Header
- * ============================================================================ */
 .dialog-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 1.25rem 0.75rem;
+  gap: 0.75rem;
+  padding: 1.15rem 1.15rem 0.6rem;
+}
+
+.header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-brand-text, #18794e);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .dialog-title {
   margin: 0;
-  font-size: 1.12rem;
+  font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--vp-c-text-1);
   line-height: 1.3;
+  color: var(--vp-c-text-1);
 }
 
 .dialog-description {
-  margin: 0.3rem 0 0;
-  font-size: 0.83rem;
+  margin: 0;
+  font-size: 0.78125rem;
+  line-height: 1.4;
   color: var(--vp-c-text-2);
-  line-height: 1.45;
 }
 
 .dialog-close-btn {
-  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
   color: var(--vp-c-text-3);
   cursor: pointer;
-  transition: all 0.15s ease;
+  outline: none;
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.dialog-close-btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
 }
 
 .dialog-close-btn:hover {
   color: var(--vp-c-text-1);
   background: var(--vp-c-bg-soft);
-  border-color: var(--vp-c-divider);
 }
 
-.dialog-close-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
-}
-
-/* ============================================================================
- * Dialog Form Content
- * ============================================================================ */
 .dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
-  padding: 0.5rem 1.25rem 1.25rem;
+  gap: 0.85rem;
+  padding: 0.6rem 1.15rem 1.15rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .form-label {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+}
+
+/* Format Cards */
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.format-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.format-card:hover {
+  border-color: var(--vp-c-text-3);
+}
+
+.format-card:focus-within {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
+}
+
+.format-card.is-selected {
+  background: var(--vp-c-bg-elv);
+  border-color: var(--vp-c-brand-solid, #30a46c);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.format-ext {
+  font-family: var(--vp-font-family-mono, monospace);
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--vp-c-text-1);
 }
 
-.form-hint {
-  font-size: 0.75rem;
+.format-card.is-selected .format-ext {
+  color: var(--vp-c-brand-text, #18794e);
+}
+
+.format-name {
+  font-size: 0.6875rem;
   color: var(--vp-c-text-3);
 }
 
-.input-addon-group {
+.format-card.is-selected .format-name {
+  color: var(--vp-c-text-2);
+}
+
+/* Input Shell */
+.input-shell {
   display: flex;
   align-items: center;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--vp-c-bg-soft);
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
-.input-addon-group:focus-within {
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 0 0 2px var(--vp-c-brand-soft);
+.input-shell:focus-within {
+  border-color: var(--vp-c-brand-text, #18794e);
+}
+
+.input-prefix {
+  display: flex;
+  align-items: center;
+  padding-left: 0.65rem;
+  color: var(--vp-c-text-3);
 }
 
 .form-input {
   flex: 1;
   min-width: 0;
-  padding: 0.55rem 0.75rem;
-  font-size: 0.88rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.8125rem;
   font-family: inherit;
   background: transparent;
   color: var(--vp-c-text-1);
@@ -473,176 +562,173 @@ defineExpose({
   outline: none;
 }
 
-.form-input::placeholder {
-  color: var(--vp-c-text-3);
-}
-
-.input-addon {
-  padding: 0.55rem 0.75rem;
-  font-size: 0.82rem;
+.input-suffix {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
   font-family: var(--vp-font-family-mono, monospace);
-  font-weight: 500;
-  color: var(--vp-c-text-2);
-  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-text-3);
   border-left: 1px solid var(--vp-c-divider);
-  border-top-right-radius: 7px;
-  border-bottom-right-radius: 7px;
   user-select: none;
 }
 
-/* Format Options Radio Grid */
-.format-options-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.55rem;
+/* Option Row / Switch */
+.form-options {
+  padding: 0.2rem 0;
 }
 
-.format-card {
+.option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s ease;
+}
+
+.option-row:hover {
+  border-color: var(--vp-c-text-3);
+}
+
+.option-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: var(--vp-c-bg-soft);
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-  user-select: none;
+  gap: 0.1rem;
 }
 
-.format-card:hover {
-  border-color: var(--vp-c-brand-2);
-  background: var(--vp-c-bg-alt);
-}
-
-.format-card.is-selected {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-brand-soft);
-}
-
-.format-card:focus-within {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 1px;
-}
-
-.format-card__badge-row {
-  margin-bottom: 0.35rem;
-}
-
-.format-badge {
-  display: inline-block;
-  font-family: var(--vp-font-family-mono, monospace);
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  background: var(--vp-c-bg-alt);
-  border: 1px solid var(--vp-c-divider);
-  color: var(--vp-c-text-2);
-}
-
-.format-card.is-selected .format-badge {
-  background: var(--vp-c-brand-1);
-  color: var(--vp-c-neutral-inverse, #fff);
-  border-color: var(--vp-c-brand-1);
-}
-
-.format-card__title {
-  display: block;
-  font-size: 0.84rem;
-  font-weight: 600;
+.option-title {
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--vp-c-text-1);
 }
 
-.format-card__desc {
-  display: block;
-  font-size: 0.72rem;
+.option-desc {
+  font-size: 0.6875rem;
   color: var(--vp-c-text-3);
-  line-height: 1.3;
-  margin-top: 0.15rem;
 }
 
-/* Checkbox */
-.checkbox-group {
-  margin-top: 0.15rem;
-}
-
-.checkbox-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.82rem;
-  color: var(--vp-c-text-2);
+/* Minimalist Toggle Switch */
+.toggle-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 32px;
+  height: 18px;
+  background: var(--vp-c-divider);
+  border-radius: 999px;
+  position: relative;
   cursor: pointer;
-  user-select: none;
+  outline: none;
+  flex-shrink: 0;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.form-checkbox {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1px solid var(--vp-c-divider);
-  accent-color: var(--vp-c-brand-1);
-  cursor: pointer;
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Dialog Footer Buttons */
+.toggle-switch:checked {
+  background: var(--vp-c-brand-solid, #30a46c);
+}
+
+.toggle-switch:checked::after {
+  transform: translateX(14px);
+}
+
+.toggle-switch:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
+}
+
+/* Footer & Hints */
 .dialog-footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.65rem;
-  margin-top: 0.35rem;
-  padding-top: 1rem;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  padding-top: 0.8rem;
   border-top: 1px solid var(--vp-c-divider);
+}
+
+.footer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.6875rem;
+  color: var(--vp-c-text-3);
+}
+
+.kbd-key {
+  padding: 0.1rem 0.3rem;
+  font-size: 0.625rem;
+  font-family: var(--vp-font-family-mono, monospace);
+  color: var(--vp-c-text-2);
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .dialog-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1rem;
-  font-size: 0.85rem;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78125rem;
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  outline: none;
   font-family: inherit;
+  transition: all 0.12s ease;
+}
+
+.dialog-btn:focus-visible {
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
 }
 
 .dialog-btn--secondary {
   border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
 }
 
 .dialog-btn--secondary:hover {
-  background: var(--vp-c-bg-alt);
+  background: var(--vp-c-bg-soft);
   border-color: var(--vp-c-text-3);
-}
-
-.dialog-btn--secondary:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
 }
 
 .dialog-btn--primary {
   border: 1px solid transparent;
-  background: var(--vp-c-brand-1);
-  color: var(--vp-c-neutral-inverse, #fff);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: var(--vp-c-brand-solid, #30a46c);
+  color: #fff;
 }
 
 .dialog-btn--primary:hover:not(:disabled) {
-  background: var(--vp-c-brand-2);
-}
-
-.dialog-btn--primary:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
+  background: var(--vp-c-brand-hover, #299764);
 }
 
 .dialog-btn--primary:disabled {
@@ -650,7 +736,19 @@ defineExpose({
   cursor: not-allowed;
 }
 
-/* Accessibility helper */
+.spinner-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -661,25 +759,5 @@ defineExpose({
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
-}
-
-/* Responsive Mobile Layout */
-@media (max-width: 640px) {
-  .dialog-card {
-    max-width: 100%;
-  }
-
-  .format-options-grid {
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
-  }
-
-  .dialog-footer {
-    flex-direction: column-reverse;
-  }
-
-  .dialog-btn {
-    width: 100%;
-  }
 }
 </style>

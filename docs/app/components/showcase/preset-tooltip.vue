@@ -65,7 +65,7 @@ watch(
 
 useHover(context, {
   enabled: () => !props.keepOpen,
-  delay: { open: 80, close: 120 },
+  delay: 0,
 });
 
 useFocus(context, {
@@ -104,22 +104,7 @@ defineExpose({
         :class="{ 'is-dragging': isDragging }"
         @pointerdown="emit('pointerdown', $event)"
       >
-        <svg
-          class="anchor-btn__drag-icon"
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-        >
-          <circle cx="5" cy="3" r="1.5" />
-          <circle cx="11" cy="3" r="1.5" />
-          <circle cx="5" cy="8" r="1.5" />
-          <circle cx="11" cy="8" r="1.5" />
-          <circle cx="5" cy="13" r="1.5" />
-          <circle cx="11" cy="13" r="1.5" />
-        </svg>
-        <span class="anchor-btn__text-hover">Hover me</span>
-        <span class="anchor-btn__text-touch">Tap me</span>
+        <span class="anchor-btn__label">Interactive Anchor</span>
       </button>
     </div>
 
@@ -129,7 +114,7 @@ defineExpose({
       role="tooltip"
       class="floating-panel panel-tooltip"
     >
-      <span>Copy link to clipboard</span>
+      <span class="tooltip-text">Copy link to clipboard</span>
       <kbd class="shortcut-tag">⌘C</kbd>
       <div ref="arrowEl" :class="['floating-arrow', `floating-arrow--${side}`]" />
     </div>
@@ -150,77 +135,41 @@ defineExpose({
 .anchor-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 0.95rem;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: grab;
   user-select: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: var(--vp-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.04));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  outline: none;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
+    box-shadow 0.15s ease;
 }
 
 .anchor-btn:hover {
-  border-color: var(--vp-c-brand-1);
-  background: var(--vp-c-bg-soft);
-  box-shadow: var(--vp-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.08));
-}
-
-.anchor-btn:active {
-  transform: scale(0.98);
-  background: var(--vp-c-bg-soft);
+  border-color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-elv);
 }
 
 .anchor-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
-}
-
-.anchor-btn:hover .anchor-btn__drag-icon {
-  color: var(--vp-c-brand-1);
+  outline: 2px solid var(--vp-c-brand-text, #18794e);
+  outline-offset: 1px;
 }
 
 .anchor-btn.is-dragging {
   cursor: grabbing;
-  border-color: var(--vp-c-brand-1);
-  box-shadow: var(--vp-shadow-3, 0 8px 20px rgba(0, 0, 0, 0.12));
-}
-
-.anchor-btn__drag-icon {
-  color: var(--vp-c-text-3);
-  opacity: 0.7;
-}
-
-.anchor-btn__text-touch {
-  display: none;
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .anchor-btn__text-hover {
-    display: none;
-  }
-  .anchor-btn__text-touch {
-    display: inline;
-  }
-}
-
-@media (pointer: coarse), (max-width: 640px) {
-  .anchor-btn {
-    min-height: 42px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-  }
+  border-color: var(--vp-c-brand-text, #18794e);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .floating-panel {
@@ -231,36 +180,63 @@ defineExpose({
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-elv);
   color: var(--vp-c-text-1);
-  box-shadow: var(--vp-shadow-3, 0 10px 30px rgba(0, 0, 0, 0.12));
-  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
 }
 
 .panel-tooltip {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  max-width: calc(100% - 16px);
-  padding: 0.4rem 0.75rem;
-  font-size: 0.82rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none !important;
   user-select: none !important;
-  -webkit-user-select: none !important;
 }
 
-.panel-tooltip * {
-  pointer-events: none !important;
-  user-select: none !important;
+.tooltip-text {
+  color: var(--vp-c-text-1);
 }
 
 .shortcut-tag {
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   font-family: var(--vp-font-family-mono, monospace);
-  padding: 0.08rem 0.3rem;
+  padding: 0.05rem 0.3rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 3px;
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
+}
+
+/* Arrow */
+.floating-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--vp-c-bg-elv);
+  transform: rotate(45deg);
+  border: 1px solid var(--vp-c-divider);
+}
+
+.floating-arrow--top {
+  border-top: none;
+  border-left: none;
+}
+
+.floating-arrow--bottom {
+  border-bottom: none;
+  border-right: none;
+}
+
+.floating-arrow--left {
+  border-left: none;
+  border-bottom: none;
+}
+
+.floating-arrow--right {
+  border-right: none;
+  border-top: none;
 }
 </style>
