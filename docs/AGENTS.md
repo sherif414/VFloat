@@ -77,7 +77,7 @@ When implementing interactive floating menus, dropdowns, or tooltips inside demo
 - Top-level folders:
   - `docs/content/1.guide/` (`.navigation.yml`: `title: Guide`, `icon: i-lucide-book-open`)
   - `docs/content/2.api/` (`.navigation.yml`: `title: API Reference`, `icon: i-lucide-code-xml`)
-- Subcategories use numbered directories (e.g., `1.getting-started/`, `2.core-concepts/`, `1.overview/`, `2.core/`) with `.navigation.yml` to define titles and order.
+- Subcategories use numbered directories (e.g., `1.getting-started/`, `2.core-concepts/`, `1.overview/`, `2.core/`) with `.navigation.yml` to define titles, icons (`icon: i-lucide-<name>`), and order.
 - When adding or moving markdown files:
   1. Place them in the appropriate category subfolder in `docs/content/`.
   2. If preserving a legacy flat route, add the corresponding redirect to `routeRules` in `docs/nuxt.config.ts`.

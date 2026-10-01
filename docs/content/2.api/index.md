@@ -1,11 +1,13 @@
 ---
 title: API Reference
 description: Canonical API reference and composable index for VFloat.
+navigation:
+  icon: i-lucide-file-text
 ---
 
 VFloat provides composable primitives for building anchored floating interfaces in Vue 3. Each composable handles one focused responsibility: lifecycle and refs, positioning calculations, interaction listeners, accessibility semantics, or keyboard navigation.
 
-Use the [Guides](/guide/) to learn end-to-end workflows and architectural principles. Use these API reference pages when you need exact signatures, options, return shapes, and integration contracts.
+Use the [Guides](/guide/getting-started/introduction) to learn end-to-end workflows and architectural principles. Use these API reference pages when you need exact signatures, options, return shapes, and integration contracts.
 
 ## Choose Primitives by Goal
 

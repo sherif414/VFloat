@@ -96,6 +96,12 @@ export default defineNuxtConfig({
 
   routeRules: {
     // Guide section redirects from legacy flat URLs
+    "/guide": {
+      redirect: { to: "/guide/getting-started/introduction", statusCode: 301 },
+    },
+    "/guide/introduction": {
+      redirect: { to: "/guide/getting-started/introduction", statusCode: 301 },
+    },
     "/guide/first-tooltip": {
       redirect: { to: "/guide/getting-started/first-tooltip", statusCode: 301 },
     },
