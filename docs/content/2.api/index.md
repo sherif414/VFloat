@@ -2,6 +2,7 @@
 title: API Reference
 description: Canonical API reference and composable index for VFloat.
 navigation:
+  title: Overview
   icon: i-lucide-file-text
 ---
 
@@ -13,15 +14,15 @@ Use the [Guides](/guide/getting-started/introduction) to learn end-to-end workfl
 
 Pick the combination of composables and middleware that matches your interface pattern:
 
-| Interface Pattern           | Primary Composables                                                                                                                                                                                            | Suggested Middleware               | Guide                                                               |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------- |
-| **Tooltip**                 | [`useFloatingNode`](/api/use-floating-node), [`useHover`](/api/use-hover), [`usePosition`](/api/use-position)                                                                                                  | `offset`, `flip`, `shift`, `arrow` | [Build Accessible Tooltips](/guide/build-accessible-tooltips)       |
-| **Popover / Dropdown**      | [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`usePosition`](/api/use-position)              | `offset`, `flip`, `shift`          | [Build Popovers and Dropdowns](/guide/build-popovers-and-dropdowns) |
-| **Dialog / Modal**          | [`useFloatingNode`](/api/use-floating-node), [`useFocusTrap`](/api/use-focus-trap), [`useEscapeKey`](/api/use-escape-key), [`useOutsideClick`](/api/use-outside-click), [`useRole`](/api/use-role)             | None (CSS centered)                | [Build Dialogs and Modals](/guide/build-dialogs-and-modals)         |
-| **ContextMenu / Cursor**    | [`useFloatingNode`](/api/use-floating-node), [`useClientPoint`](/api/use-client-point), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`usePosition`](/api/use-position) | `flip`, `shift`                    | [Use Virtual Anchors](/guide/use-virtual-anchors)                   |
-| **Menu with Roving Focus**  | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key)       | `offset`, `flip`, `shift`          | [Keyboard Navigation](/guide/keyboard-navigation)                   |
-| **Nested Menu Tree**        | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key)                                     | `offset`, `flip`                   | [Build Nested Menus](/guide/build-nested-menus)                     |
-| **Combobox / Autocomplete** | [`useAriaActivedescendant`](/api/use-aria-activedescendant), [`useTypeahead`](/api/use-typeahead), [`usePosition`](/api/use-position)                                                                          | `offset`, `flip`, `size`           | [Keyboard Navigation](/guide/keyboard-navigation)                   |
+| Interface Pattern           | Primary Composables                                                                                                                                                                                            | Suggested Middleware               | Guide                                                       |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------- |
+| **Tooltip**                 | [`useFloatingNode`](/api/use-floating-node), [`useHover`](/api/use-hover), [`usePosition`](/api/use-position)                                                                                                  | `offset`, `flip`, `shift`, `arrow` | [Tooltips](/guide/build-accessible-tooltips)                |
+| **Popover / Dropdown**      | [`useFloatingNode`](/api/use-floating-node), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`usePosition`](/api/use-position)              | `offset`, `flip`, `shift`          | [Popovers & Dropdowns](/guide/build-popovers-and-dropdowns) |
+| **Dialog / Modal**          | [`useFloatingNode`](/api/use-floating-node), [`useFocusTrap`](/api/use-focus-trap), [`useEscapeKey`](/api/use-escape-key), [`useOutsideClick`](/api/use-outside-click), [`useRole`](/api/use-role)             | None (CSS centered)                | [Dialogs & Modals](/guide/build-dialogs-and-modals)         |
+| **ContextMenu / Cursor**    | [`useFloatingNode`](/api/use-floating-node), [`useClientPoint`](/api/use-client-point), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key), [`usePosition`](/api/use-position) | `flip`, `shift`                    | [Virtual Anchors](/guide/use-virtual-anchors)               |
+| **Menu with Roving Focus**  | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useClick`](/api/use-click), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key)       | `offset`, `flip`, `shift`          | [Keyboard Navigation](/guide/keyboard-navigation)           |
+| **Nested Menu Tree**        | [`useFloatingNode`](/api/use-floating-node), [`useRovingFocus`](/api/use-roving-focus), [`useOutsideClick`](/api/use-outside-click), [`useEscapeKey`](/api/use-escape-key)                                     | `offset`, `flip`                   | [Nested Menus](/guide/build-nested-menus)                   |
+| **Combobox / Autocomplete** | [`useAriaActivedescendant`](/api/use-aria-activedescendant), [`useTypeahead`](/api/use-typeahead), [`usePosition`](/api/use-position)                                                                          | `offset`, `flip`, `size`           | [Keyboard Navigation](/guide/keyboard-navigation)           |
 
 ## Core
 
@@ -30,7 +31,7 @@ Core primitives manage node identity, shared element references, open/close life
 | Composable                                  | Description                                                                                      |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | [`useFloatingNode`](/api/use-floating-node) | Creates a composite floating node managing element refs, open state, and parent-child hierarchy. |
-| [Types & Interfaces](/api/types)            | Canonical types, navigation protocols, and data structures exported by VFloat.                   |
+| [Types](/api/types)                         | Canonical types, navigation protocols, and data structures exported by VFloat.                   |
 
 ## Positioning
 
