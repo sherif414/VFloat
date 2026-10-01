@@ -80,6 +80,8 @@ function flattenLinksWithLevel(links, level = 0) {
 }
 
 const linkHeight = 1.75;
+const sliderHeight = 0.875; // 0.875rem (14px), matching word glyph height
+const sliderOffset = (linkHeight - sliderHeight) / 2; // 0.4375rem (7px), centers indicator on the word
 
 // Single-item active tracking: find the first visible heading from top
 const activeIndex = computed(() => {
@@ -98,18 +100,38 @@ const activeId = computed(() => {
   return flattenLinks(props.links || [])[activeIndex.value]?.id ?? null;
 });
 
+const activeLevel = computed(() => {
+  if (activeIndex.value < 0) {
+    return 0;
+  }
+  return flattenLinksWithLevel(props.links || [])[activeIndex.value]?.level ?? 0;
+});
+
 const listStyle = computed(() => ({
   "--list-height": `${flattenLinks(props.links || []).length * linkHeight}rem`,
 }));
 
-// Indicator bar is locked to a single link height and tracks the activeIndex
+// Indicator bar is locked to word height and centered within the link item
 const indicatorStyle = computed(() => {
   if (activeIndex.value < 0) {
     return undefined;
   }
   return {
-    "--indicator-size": `${linkHeight}rem`,
-    "--indicator-position": `${activeIndex.value * linkHeight}rem`,
+    "--indicator-size": `${sliderHeight}rem`,
+    "--indicator-position": `${activeIndex.value * linkHeight + sliderOffset}rem`,
+    "--indicator-x": activeLevel.value > 0 ? "10.5px" : "0.5px",
+  };
+});
+
+const indicatorContainerStyle = computed(() => {
+  if (!props.highlight || !props.links?.length) {
+    return undefined;
+  }
+  const flatLinks = flattenLinks(props.links);
+  return {
+    width: props.highlightVariant === "circuit" ? "0.75rem" : undefined,
+    height: `${flatLinks.length * linkHeight}rem`,
+    ...indicatorStyle.value,
   };
 });
 
@@ -164,9 +186,23 @@ const circuitMaskStyle = computed(() => {
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 ${svgHeight}'><path d='${path}' stroke='black' stroke-width='1' fill='none'/></svg>`,
   );
   return {
-    width: "0.75rem",
-    height: `${flatLinks.length * linkHeight}rem`,
     maskImage: `url("data:image/svg+xml,${svgPath}")`,
+    WebkitMaskImage: `url("data:image/svg+xml,${svgPath}")`,
+  };
+});
+
+const indicatorActiveStyle = computed(() => {
+  if (!indicatorStyle.value) {
+    return undefined;
+  }
+  const isCircuit = props.highlightVariant === "circuit";
+  return {
+    width: "2.5px",
+    height: "var(--indicator-size)",
+    position: "absolute",
+    top: "0",
+    left: isCircuit ? "var(--indicator-x)" : "0.5px",
+    transform: "translateX(-50%)",
   };
 });
 
@@ -262,16 +298,21 @@ onUnmounted(() => {
       v-if="props.highlight"
       data-slot="indicator"
       :class="tocUi.indicator({ class: props.ui?.indicator })"
-      :style="{ ...indicatorStyle, ...(circuitMaskStyle || {}) }"
+      :style="indicatorContainerStyle"
     >
       <div
         data-slot="indicatorLine"
         :class="tocUi.indicatorLine({ class: props.ui?.indicatorLine })"
+        :style="circuitMaskStyle"
       />
       <div
         v-if="indicatorStyle"
         data-slot="indicatorActive"
-        :class="tocUi.indicatorActive({ class: props.ui?.indicatorActive })"
+        :class="[
+          tocUi.indicatorActive({ class: props.ui?.indicatorActive }),
+          'rounded-full transition-all duration-200 ease-out motion-reduce:transition-none',
+        ]"
+        :style="indicatorActiveStyle"
       />
     </div>
 

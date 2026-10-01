@@ -59,7 +59,7 @@ export default defineAppConfig({
       slots: {
         trigger:
           "group text-[13px] font-medium text-muted flex-1 flex items-center gap-1.5 py-1 -mt-1.5 rounded-sm outline-primary/25 focus-visible:outline-3 lg:shrink-0",
-        link: "group relative text-[13px] text-muted hover:text-highlighted flex items-center rounded-sm outline-primary/25 focus-visible:outline-3 py-1 transition-colors",
+        link: "group relative text-[13px] leading-5 text-muted hover:text-highlighted flex items-center rounded-sm outline-primary/25 focus-visible:outline-3 py-1 transition-colors",
       },
     },
     prose: {
