@@ -161,12 +161,12 @@ function selectPlacementOption(val: Placement) {
     <!-- Preset Navigation -->
     <div
       ref="tabNavEl"
-      class="relative flex items-center gap-[2px] p-[2px] rounded-lg bg-muted overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full sm:w-auto"
+      class="relative flex items-center gap-0.5 p-0.5 rounded-lg bg-muted overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full sm:w-auto"
       role="tablist"
       aria-label="Component examples"
     >
       <div
-        class="absolute top-[2px] left-0 h-[calc(100%-4px)] rounded-md bg-elevated shadow-xs pointer-events-none z-[1] transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        class="absolute top-0.5 left-0 h-[calc(100%-4px)] rounded-md bg-elevated shadow-xs pointer-events-none z-1 transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
         :class="[isPositioned ? 'opacity-100' : 'opacity-0', !isAnimated && 'transition-none']"
         :style="indicatorStyle"
       />
@@ -181,7 +181,7 @@ function selectPlacementOption(val: Placement) {
         "
         type="button"
         role="tab"
-        class="relative z-[2] px-2.5 py-1 text-center rounded-md text-[13px] font-medium select-none whitespace-nowrap shrink-0 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 flex-1 sm:flex-initial"
+        class="relative z-2 px-2.5 py-1 text-center rounded-md text-[13px] font-medium select-none whitespace-nowrap shrink-0 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 flex-1 sm:flex-initial"
         :class="
           modelValue === p.id ? 'text-highlighted font-medium' : 'text-muted hover:text-highlighted'
         "
@@ -229,7 +229,7 @@ function selectPlacementOption(val: Placement) {
           <div
             v-if="placementNode.open.value"
             ref="placementFloatingEl"
-            class="fixed z-[1000] top-0 left-0 pointer-events-auto"
+            class="fixed z-1000 top-0 left-0 pointer-events-auto"
             :style="[
               placementPosition.styles.value,
               { visibility: placementPosition.isPositioned.value ? 'visible' : 'hidden' },
@@ -253,7 +253,7 @@ function selectPlacementOption(val: Placement) {
                   role="option"
                   :aria-selected="placement === opt.value"
                   class="flex items-center justify-between w-full min-h-7 px-2 py-1 text-xs font-medium rounded text-muted hover:bg-muted hover:text-highlighted transition-colors duration-100 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-1 select-none"
-                  :class="{ '!bg-muted !text-primary font-semibold': placement === opt.value }"
+                  :class="{ 'bg-muted! text-primary! font-semibold': placement === opt.value }"
                   @click="selectPlacementOption(opt.value)"
                 >
                   <span>{{ opt.label }}</span>
