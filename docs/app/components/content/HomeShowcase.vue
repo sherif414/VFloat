@@ -101,8 +101,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-showcase-section">
-    <div class="showcase-card">
+  <div class="max-w-6xl mx-auto my-6 sm:my-8 px-4 sm:px-6">
+    <div class="m-0 border border-default rounded-xl bg-elevated overflow-hidden font-sans">
       <!-- 1. Header Navigation -->
       <ShowcaseHeader
         :model-value="activePreset"
@@ -115,8 +115,16 @@ onMounted(() => {
       />
 
       <!-- 2. Main Workspace -->
-      <div class="showcase-body">
-        <div ref="sandboxEl" :class="['sandbox', `sandbox--${activePreset}`]">
+      <div class="relative min-h-[420px] sm:min-h-[480px] bg-muted">
+        <div
+          ref="sandboxEl"
+          class="relative h-[420px] sm:h-[480px] w-full overflow-hidden grid place-items-center bg-muted before:absolute before:inset-0 before:bg-[radial-gradient(circle,var(--ui-border)_1px,transparent_1px)] before:bg-[size:20px_20px] before:bg-center before:[mask-image:radial-gradient(ellipse_75%_70%_at_50%_50%,#000_30%,transparent_85%)] before:opacity-70 before:pointer-events-none"
+          :class="{
+            '!flex !flex-col !items-center !justify-start pt-8 sm:pt-14':
+              activePreset === 'combobox',
+            '!flex !flex-col !items-center !justify-start pt-10 sm:pt-18': activePreset === 'menu',
+          }"
+        >
           <!-- Interactive Components -->
           <PresetTooltip
             v-if="activePreset === 'tooltip'"
@@ -153,8 +161,12 @@ onMounted(() => {
           <PresetDialog v-if="activePreset === 'dialog'" ref="dialogPresetRef" />
 
           <!-- Minimal Footer Instructions & Reset -->
-          <div class="sandbox-footer">
-            <div class="sandbox-caption">
+          <div
+            class="absolute bottom-2 sm:bottom-3 left-3.5 right-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none text-center sm:text-left"
+          >
+            <div
+              class="text-xs leading-relaxed text-muted text-balance [&>span>kbd]:inline-block [&>span>kbd]:px-1 [&>span>kbd]:py-0.5 [&>span>kbd]:text-[11px] [&>span>kbd]:font-mono [&>span>kbd]:bg-elevated [&>span>kbd]:border [&>span>kbd]:border-default [&>span>kbd]:rounded [&>span>kbd]:text-toned [&>span>kbd]:mx-0.5"
+            >
               <template v-if="activePreset === 'tooltip'">
                 <span>Hover or drag anchor to test collision flipping</span>
               </template>
@@ -179,12 +191,13 @@ onMounted(() => {
             <button
               v-if="isModified"
               type="button"
-              class="reset-btn"
+              class="pointer-events-auto inline-flex items-center gap-1.5 px-2 py-1 border border-default rounded-md bg-elevated text-toned font-medium text-[11.5px] cursor-pointer touch-manipulation outline-none transition-colors hover:text-highlighted hover:border-muted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
               title="Reset position and settings"
               aria-label="Reset position and settings"
               @click="handleResetDemo"
             >
               <svg
+                class="size-3"
                 viewBox="0 0 16 16"
                 fill="none"
                 stroke="currentColor"
@@ -204,153 +217,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.showcase-card {
-  margin: 0;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
-  background: var(--vp-c-bg-elv);
-  overflow: hidden;
-  font-family: var(--vp-font-family-base, sans-serif);
-}
-
-.showcase-body {
-  position: relative;
-  min-height: 480px;
-  background: var(--vp-c-bg-soft);
-}
-
-.sandbox {
-  position: relative;
-  height: 480px;
-  width: 100%;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: var(--vp-c-bg-soft);
-}
-
-.sandbox::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, var(--vp-c-divider) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-position: center center;
-  mask-image: radial-gradient(ellipse 75% 70% at 50% 50%, #000 30%, transparent 85%);
-  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 50%, #000 30%, transparent 85%);
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.sandbox--combobox {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 3.5rem;
-}
-
-.sandbox--menu {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 4.5rem;
-}
-
-.sandbox-footer {
-  position: absolute;
-  bottom: 0.75rem;
-  left: 0.85rem;
-  right: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  pointer-events: none;
-}
-
-.sandbox-caption {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: var(--vp-c-text-3);
-  text-wrap: balance;
-}
-
-.sandbox-caption kbd {
-  display: inline-block;
-  padding: 0.05rem 0.25rem;
-  font-size: 0.6875rem;
-  font-family: var(--vp-font-family-mono, monospace);
-  background: var(--vp-c-bg-elv);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 3px;
-  color: var(--vp-c-text-2);
-  margin: 0 0.15rem;
-}
-
-.reset-btn {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 5px;
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-2);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 500;
-  cursor: pointer;
-  touch-action: manipulation;
-  outline: none;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.reset-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-  outline-offset: 1px;
-}
-
-.reset-btn:hover {
-  color: var(--vp-c-text-1);
-  border-color: var(--vp-c-text-3);
-  background: var(--vp-c-bg-soft);
-}
-
-.reset-btn svg {
-  width: 11px;
-  height: 11px;
-}
-
-@media (max-width: 640px) {
-  .showcase-body {
-    min-height: 420px;
-  }
-
-  .sandbox {
-    height: 420px;
-  }
-
-  .sandbox--combobox {
-    padding-top: 2rem;
-  }
-
-  .sandbox--menu {
-    padding-top: 2.5rem;
-  }
-
-  .sandbox-footer {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: center;
-    text-align: center;
-    bottom: 0.5rem;
-  }
-}
-</style>

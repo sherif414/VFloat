@@ -128,12 +128,12 @@ const hasKeepOpenControl = computed(() =>
 const placementAnchorEl = shallowRef<HTMLElement | null>(null);
 const placementFloatingEl = shallowRef<HTMLElement | null>(null);
 
-const placementContext = useFloatingNode({
+const placementNode = useFloatingNode({
   anchorEl: placementAnchorEl,
   floatingEl: placementFloatingEl,
 });
 
-const placementPosition = usePosition(placementContext, {
+const placementPosition = usePosition(placementNode, {
   placement: "bottom-start",
   strategy: "fixed",
   transform: true,
@@ -144,23 +144,30 @@ const placementPosition = usePosition(placementContext, {
   },
 });
 
-useClick(placementContext);
-useOutsideClick(placementContext);
-useEscapeKey(placementContext);
+useClick(placementNode);
+useOutsideClick(placementNode);
+useEscapeKey(placementNode);
 
 function selectPlacementOption(val: Placement) {
   emit("update:placement", val);
-  placementContext.open.value = false;
+  placementNode.open.value = false;
 }
 </script>
 
 <template>
-  <div class="showcase-header">
+  <div
+    class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2 sm:px-3 sm:py-2 border-b border-default bg-elevated"
+  >
     <!-- Preset Navigation -->
-    <div ref="tabNavEl" class="preset-nav" role="tablist" aria-label="Component examples">
+    <div
+      ref="tabNavEl"
+      class="relative flex items-center gap-[2px] p-[2px] rounded-lg bg-muted overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full sm:w-auto"
+      role="tablist"
+      aria-label="Component examples"
+    >
       <div
-        class="preset-tab-indicator"
-        :class="{ 'is-positioned': isPositioned, 'is-animated': isAnimated }"
+        class="absolute top-[2px] left-0 h-[calc(100%-4px)] rounded-md bg-elevated shadow-xs pointer-events-none z-[1] transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        :class="[isPositioned ? 'opacity-100' : 'opacity-0', !isAnimated && 'transition-none']"
         :style="indicatorStyle"
       />
 
@@ -174,31 +181,38 @@ function selectPlacementOption(val: Placement) {
         "
         type="button"
         role="tab"
-        class="preset-tab"
-        :class="{ 'is-active': modelValue === p.id }"
+        class="relative z-[2] px-2.5 py-1 text-center rounded-md text-[13px] font-medium select-none whitespace-nowrap shrink-0 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 flex-1 sm:flex-initial"
+        :class="
+          modelValue === p.id ? 'text-highlighted font-medium' : 'text-muted hover:text-highlighted'
+        "
         :aria-selected="modelValue === p.id"
         @click="onSelectPreset(p.id)"
       >
-        <span class="preset-tab__label">{{ p.label }}</span>
+        <span>{{ p.label }}</span>
       </button>
     </div>
 
     <!-- Header Actions -->
-    <div class="header-actions">
+    <div class="flex items-center justify-end gap-1.5 w-full sm:w-auto">
       <!-- Placement Selector -->
-      <div v-show="hasPlacementControl" class="placement-control">
+      <div v-show="hasPlacementControl" class="relative">
         <button
           ref="placementAnchorEl"
           type="button"
-          class="control-btn"
-          :class="{ 'is-open': placementContext.open.value }"
+          class="inline-flex items-center gap-1.5 h-7 px-2 text-xs font-medium rounded-md border border-default bg-elevated transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 select-none cursor-pointer"
+          :class="
+            placementNode.open.value
+              ? 'border-dimmed text-highlighted bg-muted'
+              : 'text-muted hover:text-highlighted hover:border-muted hover:bg-muted'
+          "
           aria-haspopup="listbox"
-          :aria-expanded="placementContext.open.value"
+          :aria-expanded="placementNode.open.value"
           title="Placement alignment"
         >
-          <span class="control-btn__label">{{ currentPlacementLabel }}</span>
+          <span>{{ currentPlacementLabel }}</span>
           <svg
-            class="control-btn__chevron"
+            class="w-2.5 h-2.5 transition-transform duration-150"
+            :class="placementNode.open.value ? 'rotate-180 text-highlighted' : 'text-dimmed'"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
@@ -213,30 +227,39 @@ function selectPlacementOption(val: Placement) {
 
         <Teleport to="body">
           <div
-            v-if="placementContext.open.value"
+            v-if="placementNode.open.value"
             ref="placementFloatingEl"
-            class="placement-floating-wrapper"
+            class="fixed z-[1000] top-0 left-0 pointer-events-auto"
             :style="[
               placementPosition.styles.value,
               { visibility: placementPosition.isPositioned.value ? 'visible' : 'hidden' },
             ]"
           >
-            <Transition name="dropdown-fade" appear>
-              <div class="placement-dropdown-menu" role="listbox">
+            <Transition
+              enter-active-class="transition duration-120 ease-out"
+              enter-from-class="opacity-0 -translate-y-1"
+              leave-active-class="transition duration-100 ease-in"
+              leave-to-class="opacity-0 -translate-y-1"
+              appear
+            >
+              <div
+                class="w-36 p-1 bg-elevated border border-default rounded-md shadow-md flex flex-col gap-0.5"
+                role="listbox"
+              >
                 <button
                   v-for="opt in placementOptions"
                   :key="opt.value"
                   type="button"
                   role="option"
                   :aria-selected="placement === opt.value"
-                  class="placement-dropdown-item"
-                  :class="{ 'is-active': placement === opt.value }"
+                  class="flex items-center justify-between w-full min-h-7 px-2 py-1 text-xs font-medium rounded text-muted hover:bg-muted hover:text-highlighted transition-colors duration-100 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-1 select-none"
+                  :class="{ '!bg-muted !text-primary font-semibold': placement === opt.value }"
                   @click="selectPlacementOption(opt.value)"
                 >
                   <span>{{ opt.label }}</span>
                   <svg
                     v-if="placement === opt.value"
-                    class="check-icon"
+                    class="w-3 h-3 text-primary shrink-0"
                     viewBox="0 0 16 16"
                     fill="none"
                     stroke="currentColor"
@@ -258,14 +281,18 @@ function selectPlacementOption(val: Placement) {
       <button
         v-if="hasKeepOpenControl"
         type="button"
-        class="control-btn"
-        :class="{ 'is-active': keepOpen }"
+        class="inline-flex items-center gap-1.5 h-7 px-2 text-xs font-medium rounded-md border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 select-none cursor-pointer"
+        :class="
+          keepOpen
+            ? 'border-primary bg-(--vf-brand-wash) text-primary'
+            : 'border-default bg-elevated text-muted hover:text-highlighted hover:border-muted hover:bg-muted'
+        "
         :title="keepOpen ? 'Dismiss keep open' : 'Keep floating UI open'"
         :aria-pressed="keepOpen"
         @click="emit('update:keepOpen', !keepOpen)"
       >
         <svg
-          class="control-btn__icon"
+          class="w-3 h-3 shrink-0"
           viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
@@ -276,278 +303,8 @@ function selectPlacementOption(val: Placement) {
         >
           <path d="M4.5 2.5h7l-.5 4.5 2 2v1h-4.5v4.5l-.5.5-.5-.5V10H3v-1l2-2-.5-4.5z" />
         </svg>
-        <span class="control-btn__label">Keep open</span>
+        <span>Keep open</span>
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.showcase-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv);
-}
-
-/* 1. Preset Navigation */
-.preset-nav {
-  position: relative;
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 8px;
-  background: var(--vp-c-bg-soft);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.preset-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.preset-tab-indicator {
-  position: absolute;
-  top: 2px;
-  left: 0;
-  height: calc(100% - 4px);
-  border-radius: 6px;
-  background: var(--vp-c-bg-elv);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-}
-
-.preset-tab-indicator.is-positioned {
-  opacity: 1;
-}
-
-.preset-tab-indicator.is-animated {
-  transition:
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.preset-tab {
-  position: relative;
-  z-index: 2;
-  padding: 0.35rem 0.65rem;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--vp-c-text-2);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-  touch-action: manipulation;
-  outline: none;
-  transition: color 0.15s ease;
-}
-
-.preset-tab:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-  outline-offset: -2px;
-}
-
-.preset-tab:hover {
-  color: var(--vp-c-text-1);
-}
-
-.preset-tab.is-active {
-  color: var(--vp-c-text-1);
-  font-weight: 500;
-}
-
-.preset-nav:not(:has(.preset-tab-indicator.is-positioned)) .preset-tab.is-active {
-  background: var(--vp-c-bg-elv);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-/* 2. Header Actions */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.placement-control {
-  position: relative;
-}
-
-.control-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  height: 28px;
-  padding: 0 0.55rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-2);
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  touch-action: manipulation;
-  outline: none;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.control-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-  outline-offset: 1px;
-}
-
-.control-btn:hover {
-  color: var(--vp-c-text-1);
-  border-color: var(--vp-c-text-3);
-  background: var(--vp-c-bg-soft);
-}
-
-.control-btn.is-open {
-  border-color: var(--vp-c-text-2);
-  color: var(--vp-c-text-1);
-}
-
-.control-btn.is-active {
-  border-color: var(--vp-c-brand-text, #18794e);
-  background: var(--vp-c-brand-soft, rgba(16, 185, 129, 0.12));
-  color: var(--vp-c-brand-text, #18794e);
-}
-
-.control-btn__chevron {
-  width: 9px;
-  height: 9px;
-  color: var(--vp-c-text-3);
-  transition: transform 0.15s ease;
-}
-
-.control-btn.is-open .control-btn__chevron {
-  transform: rotate(180deg);
-  color: var(--vp-c-text-1);
-}
-
-.control-btn__icon {
-  width: 11px;
-  height: 11px;
-  flex-shrink: 0;
-}
-
-@media (max-width: 640px) {
-  .showcase-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.45rem;
-    gap: 0.45rem;
-  }
-
-  .preset-nav {
-    width: 100%;
-  }
-
-  .preset-tab {
-    flex: 1 0 auto;
-    text-align: center;
-    padding: 0.35rem 0.5rem;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-</style>
-
-<style>
-/* Dropdown Positioning & Menu (Teleported) */
-.placement-floating-wrapper {
-  position: fixed;
-  z-index: 1000;
-  top: 0;
-  left: 0;
-  pointer-events: auto;
-}
-
-.placement-dropdown-menu {
-  width: 140px;
-  padding: 3px;
-  background: var(--vp-c-bg-elv);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.placement-dropdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 28px;
-  padding: 0.3rem 0.55rem;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--vp-c-text-2);
-  font-family: var(--vp-font-family-base, sans-serif);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  touch-action: manipulation;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background-color 0.1s ease,
-    color 0.1s ease;
-}
-
-.placement-dropdown-item:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-  outline-offset: -1px;
-}
-
-.placement-dropdown-item:hover {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-}
-
-.placement-dropdown-item.is-active {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-brand-text, #18794e);
-  font-weight: 600;
-}
-
-.placement-dropdown-item .check-icon {
-  width: 11px;
-  height: 11px;
-  color: var(--vp-c-brand-text, #18794e);
-}
-
-.dropdown-fade-enter-active,
-.dropdown-fade-leave-active {
-  transition:
-    opacity 0.12s ease,
-    transform 0.12s ease;
-}
-
-.dropdown-fade-enter-from,
-.dropdown-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-3px);
-}
-</style>

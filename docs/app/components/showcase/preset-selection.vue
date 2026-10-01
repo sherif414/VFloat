@@ -18,12 +18,12 @@ const samplePhraseEl = shallowRef<HTMLElement | null>(null);
 const anchorEl = shallowRef<VirtualElement | HTMLElement | null>(null);
 const floatingEl = shallowRef<HTMLElement | null>(null);
 
-const context = useFloatingNode({
+const node = useFloatingNode({
   anchorEl,
   floatingEl,
 });
 
-const position = usePosition(context, {
+const position = usePosition(node, {
   placement: "top",
   middlewares: {
     offset: 8,
@@ -142,7 +142,7 @@ function handleSelectionChange() {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
     if (!props.keepOpen) {
-      context.open.value = false;
+      node.open.value = false;
     }
     return;
   }
@@ -152,7 +152,7 @@ function handleSelectionChange() {
 
   if (!card || !card.contains(range.commonAncestorContainer)) {
     if (!props.keepOpen) {
-      context.open.value = false;
+      node.open.value = false;
     }
     return;
   }
@@ -160,7 +160,7 @@ function handleSelectionChange() {
   const rect = range.getBoundingClientRect();
   if (rect.width === 0 && rect.height === 0) {
     if (!props.keepOpen) {
-      context.open.value = false;
+      node.open.value = false;
     }
     return;
   }
@@ -172,7 +172,7 @@ function handleSelectionChange() {
   };
 
   anchorEl.value = virtualElement;
-  context.open.value = true;
+  node.open.value = true;
   updateActiveFormats();
   void position.update();
 }
@@ -221,14 +221,14 @@ watch(
       if (!anchorEl.value) {
         setFallbackAnchor();
       }
-      context.open.value = true;
+      node.open.value = true;
       void nextTick(() => {
         void position.update();
       });
     } else {
       const selection = typeof window !== "undefined" ? window.getSelection() : null;
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        context.open.value = false;
+        node.open.value = false;
       }
     }
   },
@@ -248,28 +248,40 @@ onBeforeUnmount(() => {
 });
 
 defineExpose({
-  context,
+  node,
+  context: node,
   position,
   update: () => position.update(),
 });
 </script>
 
 <template>
-  <div class="preset-wrapper">
+  <div class="contents">
     <!-- Selectable Prose Card -->
-    <div ref="cardEl" class="selection-card" @pointerup="handleCardPointerUp">
-      <div ref="quoteEl" contenteditable="true" spellcheck="false" class="prose-text">
+    <div
+      ref="cardEl"
+      class="relative z-[5] w-[calc(100%-2rem)] max-w-[480px] p-5 pb-4 bg-elevated border border-default rounded-lg shadow-xs select-text cursor-text"
+      @pointerup="handleCardPointerUp"
+    >
+      <div
+        ref="quoteEl"
+        contenteditable="true"
+        spellcheck="false"
+        class="text-[15px] leading-relaxed text-highlighted outline-none select-text [&_b]:font-semibold [&_strong]:font-semibold [&_b]:text-highlighted [&_strong]:text-highlighted [&_i]:italic [&_em]:italic [&_u]:underline [&_u]:underline-offset-[3px] [&_code]:font-mono [&_code]:text-[13px] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:bg-muted [&_code]:text-primary [&_.inline-code]:font-mono [&_.inline-code]:text-[13px] [&_.inline-code]:px-1 [&_.inline-code]:py-0.5 [&_.inline-code]:rounded [&_.inline-code]:bg-muted [&_.inline-code]:text-primary [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-[3px] [&_a]:cursor-pointer selection:bg-(--vf-brand-wash) selection:text-highlighted"
+      >
         VFloat is a lightweight, headless
-        <span ref="samplePhraseEl" class="quote-anchor-sample">floating UI engine</span>
+        <span ref="samplePhraseEl" class="inline">floating UI engine</span>
         built on Vue 3.5 reactivity, engineered for zero-compromise composable architecture and
         precision placement.
       </div>
 
-      <div class="quick-select-row">
-        <span class="quick-select-label">Select:</span>
+      <div
+        class="flex items-center flex-wrap gap-1.5 mt-4 pt-3 border-t border-default select-none"
+      >
+        <span class="text-[11.5px] text-muted mr-1">Select:</span>
         <button
           type="button"
-          class="text-chip"
+          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
           @mousedown.prevent
           @click="selectPhrase('lightweight')"
         >
@@ -277,7 +289,7 @@ defineExpose({
         </button>
         <button
           type="button"
-          class="text-chip"
+          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
           @mousedown.prevent
           @click="selectPhrase('floating UI engine')"
         >
@@ -285,7 +297,7 @@ defineExpose({
         </button>
         <button
           type="button"
-          class="text-chip"
+          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
           @mousedown.prevent
           @click="selectPhrase('Vue 3.5 reactivity')"
         >
@@ -296,17 +308,17 @@ defineExpose({
 
     <!-- Floating Formatting Toolbar -->
     <div
-      v-if="context.open.value"
+      v-if="node.open.value"
       ref="floatingEl"
       role="toolbar"
       aria-label="Text formatting toolbar"
-      class="floating-panel formatting-bubble"
+      class="absolute top-0 left-0 z-50 inline-flex items-center gap-0.5 p-0.5 border border-default bg-elevated text-highlighted shadow-lg rounded-md select-none touch-manipulation"
       @mousedown.prevent
     >
       <button
         type="button"
-        class="bubble-btn"
-        :class="{ 'is-active': activeStyles.bold }"
+        class="inline-flex items-center justify-center w-6.5 h-6.5 p-0 rounded border-0 bg-transparent text-muted cursor-pointer transition-colors duration-100 hover:bg-muted hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+        :class="{ '!bg-muted !text-primary': activeStyles.bold }"
         title="Bold"
         aria-label="Bold"
         :aria-pressed="activeStyles.bold"
@@ -314,6 +326,7 @@ defineExpose({
         @click="toggleFormat('bold')"
       >
         <svg
+          class="w-3 h-3"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -329,8 +342,8 @@ defineExpose({
 
       <button
         type="button"
-        class="bubble-btn"
-        :class="{ 'is-active': activeStyles.italic }"
+        class="inline-flex items-center justify-center w-6.5 h-6.5 p-0 rounded border-0 bg-transparent text-muted cursor-pointer transition-colors duration-100 hover:bg-muted hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+        :class="{ '!bg-muted !text-primary': activeStyles.italic }"
         title="Italic"
         aria-label="Italic"
         :aria-pressed="activeStyles.italic"
@@ -338,6 +351,7 @@ defineExpose({
         @click="toggleFormat('italic')"
       >
         <svg
+          class="w-3 h-3"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -354,8 +368,8 @@ defineExpose({
 
       <button
         type="button"
-        class="bubble-btn"
-        :class="{ 'is-active': activeStyles.underline }"
+        class="inline-flex items-center justify-center w-6.5 h-6.5 p-0 rounded border-0 bg-transparent text-muted cursor-pointer transition-colors duration-100 hover:bg-muted hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+        :class="{ '!bg-muted !text-primary': activeStyles.underline }"
         title="Underline"
         aria-label="Underline"
         :aria-pressed="activeStyles.underline"
@@ -363,6 +377,7 @@ defineExpose({
         @click="toggleFormat('underline')"
       >
         <svg
+          class="w-3 h-3"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -378,8 +393,8 @@ defineExpose({
 
       <button
         type="button"
-        class="bubble-btn"
-        :class="{ 'is-active': activeStyles.code }"
+        class="inline-flex items-center justify-center w-6.5 h-6.5 p-0 rounded border-0 bg-transparent text-muted cursor-pointer transition-colors duration-100 hover:bg-muted hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+        :class="{ '!bg-muted !text-primary': activeStyles.code }"
         title="Code"
         aria-label="Code"
         :aria-pressed="activeStyles.code"
@@ -387,6 +402,7 @@ defineExpose({
         @click="toggleCode"
       >
         <svg
+          class="w-3 h-3"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -400,12 +416,12 @@ defineExpose({
         </svg>
       </button>
 
-      <div class="bubble-divider" role="separator" aria-orientation="vertical" />
+      <div class="w-px h-3.5 mx-0.5 bg-default" role="separator" aria-orientation="vertical" />
 
       <button
         type="button"
-        class="bubble-btn"
-        :class="{ 'is-active': activeStyles.link }"
+        class="inline-flex items-center justify-center w-6.5 h-6.5 p-0 rounded border-0 bg-transparent text-muted cursor-pointer transition-colors duration-100 hover:bg-muted hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+        :class="{ '!bg-muted !text-primary': activeStyles.link }"
         title="Link"
         aria-label="Link"
         :aria-pressed="activeStyles.link"
@@ -413,6 +429,7 @@ defineExpose({
         @click="toggleLink"
       >
         <svg
+          class="w-3 h-3"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -428,185 +445,3 @@ defineExpose({
     </div>
   </div>
 </template>
-
-<style scoped>
-.preset-wrapper {
-  display: contents;
-}
-
-.selection-card {
-  position: relative;
-  z-index: 5;
-  width: calc(100% - 2rem);
-  max-width: 480px;
-  padding: 1.25rem 1.25rem 1rem;
-  background: var(--vp-c-bg-elv);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  user-select: text;
-  -webkit-user-select: text;
-  cursor: text;
-}
-
-.prose-text {
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: var(--vp-c-text-1);
-  outline: none;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-.prose-text :deep(b),
-.prose-text :deep(strong) {
-  font-weight: 600;
-  color: var(--vp-c-text-1);
-}
-
-.prose-text :deep(i),
-.prose-text :deep(em) {
-  font-style: italic;
-}
-
-.prose-text :deep(u) {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.prose-text :deep(code),
-.prose-text :deep(.inline-code) {
-  font-family: var(--vp-font-family-mono, monospace);
-  font-size: 0.8125rem;
-  padding: 0.1rem 0.3rem;
-  border-radius: 3px;
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-brand-text, #18794e);
-}
-
-.prose-text :deep(a) {
-  color: var(--vp-c-brand-text, #18794e);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.prose-text::selection,
-.prose-text *::selection {
-  background: var(--vp-c-brand-soft, rgba(16, 185, 129, 0.16));
-  color: var(--vp-c-text-1);
-}
-
-.quote-anchor-sample {
-  display: inline;
-}
-
-.quick-select-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--vp-c-divider);
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.quick-select-label {
-  font-size: 0.71875rem;
-  color: var(--vp-c-text-3);
-  margin-right: 0.2rem;
-}
-
-.text-chip {
-  padding: 0.15rem 0.4rem;
-  font-size: 0.71875rem;
-  font-family: var(--vp-font-family-mono, monospace);
-  color: var(--vp-c-text-2);
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 4px;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
-}
-
-.text-chip:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-}
-
-.text-chip:hover {
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-1);
-}
-
-/* Floating Toolbar */
-.floating-panel {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-1);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
-}
-
-.formatting-bubble {
-  z-index: 50;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 3px;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-}
-
-.bubble-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--vp-c-text-2);
-  cursor: pointer;
-  outline: none;
-  transition:
-    background-color 0.1s ease,
-    color 0.1s ease;
-}
-
-.bubble-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-}
-
-.bubble-btn:hover {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-}
-
-.bubble-btn.is-active {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-brand-text, #18794e);
-}
-
-.bubble-btn svg {
-  width: 12px;
-  height: 12px;
-}
-
-.bubble-divider {
-  width: 1px;
-  height: 14px;
-  margin: 0 2px;
-  background: var(--vp-c-divider);
-}
-</style>

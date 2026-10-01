@@ -45,20 +45,33 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="vf-install">
-    <div class="vf-install-row" role="group" aria-label="Install VFloat">
-      <span class="vf-install-prompt" aria-hidden="true">$</span>
-      <code class="vf-install-code">{{ COMMAND }}</code>
+  <div class="w-full max-w-[400px] mx-auto">
+    <div
+      class="flex items-center gap-2 p-1.5 pl-3.5 sm:p-2 sm:pl-3.5 border border-default rounded-xl bg-elevated transition-colors duration-150 focus-within:border-primary"
+      role="group"
+      aria-label="Install VFloat"
+    >
+      <span class="shrink-0 font-mono text-[13px] text-muted select-none" aria-hidden="true"
+        >$</span
+      >
+      <code
+        class="flex-1 min-w-0 overflow-x-auto whitespace-nowrap scrollbar-none text-left font-mono text-[13px] sm:text-[13.5px] leading-normal text-highlighted bg-transparent selection:bg-primary/10 selection:text-primary"
+        >{{ COMMAND }}</code
+      >
       <button
         type="button"
-        class="vf-install-copy"
-        :class="{ 'is-copied': status === 'copied' }"
+        class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 border rounded-lg font-medium text-[12px] leading-tight cursor-pointer touch-manipulation transition-colors duration-150 outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 motion-reduce:transition-none"
+        :class="
+          status === 'copied'
+            ? 'border-transparent bg-primary/10 text-primary'
+            : 'border-default bg-elevated text-toned hover:text-highlighted hover:border-muted hover:bg-muted'
+        "
         :aria-label="status === 'copied' ? 'Copied to clipboard' : 'Copy install command'"
         @click="onCopy"
       >
         <svg
           v-if="status !== 'copied'"
-          class="vf-install-icon"
+          class="block shrink-0"
           width="14"
           height="14"
           viewBox="0 0 16 16"
@@ -76,7 +89,7 @@ onUnmounted(() => {
         </svg>
         <svg
           v-else
-          class="vf-install-icon"
+          class="block shrink-0"
           width="14"
           height="14"
           viewBox="0 0 16 16"
@@ -89,176 +102,24 @@ onUnmounted(() => {
         >
           <path d="m3 8.5 3.2 3.2L13 5" />
         </svg>
-        <span class="vf-install-copy-label" aria-hidden="true">
+        <span aria-hidden="true">
           {{ status === "copied" ? "Copied" : status === "failed" ? "Failed" : "Copy" }}
         </span>
-        <span class="vf-install-status" role="status" aria-live="polite">
+        <span class="sr-only" role="status" aria-live="polite">
           {{
             status === "copied" ? "Copied to clipboard" : status === "failed" ? "Copy failed" : ""
           }}
         </span>
       </button>
     </div>
-    <p class="vf-install-caption">
+    <p
+      class="mt-2 text-[11.5px] sm:text-xs leading-normal text-muted text-center flex items-center justify-center gap-1.5 tracking-wide"
+    >
       <span>Requires Vue 3.5+</span>
-      <span class="vf-install-sep" aria-hidden="true">&middot;</span>
+      <span class="opacity-60 select-none" aria-hidden="true">&middot;</span>
       <span>ESM</span>
-      <span class="vf-install-sep" aria-hidden="true">&middot;</span>
+      <span class="opacity-60 select-none" aria-hidden="true">&middot;</span>
       <span>MIT</span>
     </p>
   </div>
 </template>
-
-<style scoped>
-.vf-install {
-  width: min(400px, 100%);
-  margin: 0 auto;
-}
-
-.vf-install-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.5rem 0.45rem 0.85rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
-  background: var(--vp-c-bg-alt);
-  transition: border-color 0.15s ease;
-}
-
-.vf-install-row:focus-within {
-  border-color: var(--vp-c-brand-2);
-}
-
-.vf-install-prompt {
-  flex-shrink: 0;
-  font-family: var(--vp-font-family-mono, ui-monospace, monospace);
-  font-size: 0.85rem;
-  color: var(--vp-c-text-3);
-  user-select: none;
-}
-
-.vf-install-code {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: none;
-  text-align: left;
-  font-family: var(--vp-font-family-mono, ui-monospace, monospace);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--vp-c-text-1);
-  background: transparent;
-}
-
-.vf-install-code::-webkit-scrollbar {
-  display: none;
-}
-
-.vf-install-code::selection {
-  background: var(--vp-c-brand-soft);
-}
-
-.vf-install-copy {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-2);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 500;
-  line-height: 1.2;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.vf-install-copy:hover {
-  color: var(--vp-c-text-1);
-  border-color: var(--vp-c-text-3);
-  background: var(--vp-c-bg-soft);
-}
-
-.vf-install-copy:focus-visible {
-  outline: 2px solid var(--vp-c-brand-1);
-  outline-offset: 2px;
-}
-
-.vf-install-copy.is-copied {
-  border-color: transparent;
-  background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1);
-}
-
-.vf-install-icon {
-  display: block;
-  flex-shrink: 0;
-}
-
-.vf-install-status {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.vf-install-caption {
-  margin: 0.5rem 0 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
-  color: var(--vp-c-text-3);
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  letter-spacing: 0.01em;
-}
-
-.vf-install-sep {
-  opacity: 0.6;
-  user-select: none;
-}
-
-@media (max-width: 480px) {
-  .vf-install {
-    width: 100%;
-  }
-
-  .vf-install-row {
-    padding: 0.4rem 0.4rem 0.4rem 0.75rem;
-    gap: 0.4rem;
-  }
-
-  .vf-install-code {
-    font-size: 0.8rem;
-  }
-
-  .vf-install-copy {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.72rem;
-  }
-
-  .vf-install-caption {
-    font-size: 0.7rem;
-    gap: 0.35rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vf-install-copy {
-    transition: none;
-  }
-}
-</style>

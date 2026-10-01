@@ -56,7 +56,7 @@ const rootAnchorEl = shallowRef<HTMLElement | null>(null);
 const rootFloatingEl = shallowRef<HTMLElement | null>(null);
 const rootArrowEl = shallowRef<HTMLElement | null>(null);
 
-const rootContext = useFloatingNode({
+const rootNode = useFloatingNode({
   anchorEl: rootAnchorEl,
   floatingEl: rootFloatingEl,
   arrowEl: rootArrowEl,
@@ -65,13 +65,13 @@ const rootContext = useFloatingNode({
 const subAnchorEl = shallowRef<HTMLElement | null>(null);
 const subFloatingEl = shallowRef<HTMLElement | null>(null);
 
-const subContext = useFloatingNode({
+const subNode = useFloatingNode({
   anchorEl: subAnchorEl,
   floatingEl: subFloatingEl,
-  parent: rootContext,
+  parent: rootNode,
 });
 
-const rootPosition = usePosition(rootContext, {
+const rootPosition = usePosition(rootNode, {
   placement: computed(() => props.placement),
   middlewares: {
     offset: 6,
@@ -80,7 +80,7 @@ const rootPosition = usePosition(rootContext, {
   },
 });
 
-useArrow(rootContext, {
+useArrow(rootNode, {
   offset: "-5px",
 });
 
@@ -89,7 +89,7 @@ const rootSide = computed(
     (rootPosition.placement.value.split("-")[0] ?? "bottom") as "top" | "bottom" | "left" | "right",
 );
 
-const subPosition = usePosition(subContext, {
+const subPosition = usePosition(subNode, {
   placement: "right-start",
   middlewares: {
     offset: { mainAxis: 4, crossAxis: -4 },
@@ -105,56 +105,56 @@ watch(
   () => props.keepOpen,
   (keep) => {
     if (keep) {
-      rootContext.open.value = true;
+      rootNode.open.value = true;
     } else {
-      rootContext.open.value = false;
-      subContext.open.value = false;
+      rootNode.open.value = false;
+      subNode.open.value = false;
     }
   },
   { immediate: true },
 );
 
-watch(rootContext.open, (isOpen) => {
+watch(rootNode.open, (isOpen) => {
   if (!isOpen) {
-    subContext.open.value = false;
+    subNode.open.value = false;
   }
 });
 
-useClick(rootContext, {
+useClick(rootNode, {
   enabled: () => !props.keepOpen,
 });
 
-useOutsideClick(rootContext, {
+useOutsideClick(rootNode, {
   enabled: () => !props.keepOpen,
 });
 
-useEscapeKey(rootContext, {
+useEscapeKey(rootNode, {
   enabled: () => !props.keepOpen,
 });
 
-useFocusTrap(rootContext, {
+useFocusTrap(rootNode, {
   modal: false,
   initialFocus: rootFloatingEl,
   returnFocus: true,
 });
 
-useRole(rootContext, {
+useRole(rootNode, {
   role: "menu",
 });
 
-useHover(subContext, {
+useHover(subNode, {
   delay: { open: 0, close: 100 },
   safePolygon: true,
 });
 
-useClick(subContext, {
+useClick(subNode, {
   ignoreKeyboard: true,
 });
 
-useOutsideClick(subContext);
-useEscapeKey(subContext);
+useOutsideClick(subNode);
+useEscapeKey(subNode);
 
-useRole(subContext, {
+useRole(subNode, {
   role: "menu",
 });
 
@@ -176,13 +176,13 @@ const {
   activeIndex: rootActiveIndex,
   getTabindex: getRootTabindex,
   setActiveIndex: setRootActiveIndex,
-} = useRovingFocus(rootContext, {
+} = useRovingFocus(rootNode, {
   elementsList: rootMenuItemEls,
   loop: true,
   openOnArrowKeyDown: true,
   onEnter: (index) => {
     if (rootMenuItems[index]?.hasSubmenu) {
-      subContext.open.value = true;
+      subNode.open.value = true;
       void nextTick(() => {
         subMenuItemEls.value[0]?.focus();
         setSubActiveIndex(0);
@@ -191,8 +191,8 @@ const {
   },
   onSelect: (index) => {
     if (rootMenuItems[index]?.hasSubmenu) {
-      subContext.open.value = !subContext.open.value;
-      if (subContext.open.value) {
+      subNode.open.value = !subNode.open.value;
+      if (subNode.open.value) {
         void nextTick(() => {
           subMenuItemEls.value[0]?.focus();
           setSubActiveIndex(0);
@@ -208,11 +208,11 @@ const {
   activeIndex: subActiveIndex,
   getTabindex: getSubTabindex,
   setActiveIndex: setSubActiveIndex,
-} = useRovingFocus(subContext, {
+} = useRovingFocus(subNode, {
   elementsList: subMenuItemEls,
   loop: true,
   onExit: () => {
-    subContext.open.value = false;
+    subNode.open.value = false;
     subAnchorEl.value?.focus();
     const shareIndex = rootMenuItems.findIndex((item) => item.id === "share");
     if (shareIndex !== -1) {
@@ -283,7 +283,7 @@ watch(rootActiveIndex, () => {
   });
 });
 
-watch(rootContext.open, (isOpen) => {
+watch(rootNode.open, (isOpen) => {
   if (isOpen) {
     void nextTick(() => {
       updateRootIndicator();
@@ -299,7 +299,7 @@ watch(subActiveIndex, () => {
   });
 });
 
-watch(subContext.open, (isOpen) => {
+watch(subNode.open, (isOpen) => {
   if (isOpen) {
     void nextTick(() => {
       updateSubIndicator();
@@ -310,14 +310,14 @@ watch(subContext.open, (isOpen) => {
 });
 
 function closeAllMenus() {
-  subContext.open.value = false;
-  rootContext.open.value = false;
+  subNode.open.value = false;
+  rootNode.open.value = false;
 }
 
 function onRootItemKeydown(e: KeyboardEvent, item: MenuItemDef) {
   if (item.hasSubmenu && (e.key === "ArrowRight" || e.key === "Enter")) {
     e.preventDefault();
-    subContext.open.value = true;
+    subNode.open.value = true;
     void nextTick(() => {
       subMenuItemEls.value[0]?.focus();
       setSubActiveIndex(0);
@@ -336,11 +336,12 @@ function onRootItemClick(item: MenuItemDef) {
 }
 
 defineExpose({
-  context: rootContext,
+  node: rootNode,
+  context: rootNode,
   position: rootPosition,
   update: () => {
     void rootPosition.update();
-    if (subContext.open.value) {
+    if (subNode.open.value) {
       void subPosition.update();
     }
   },
@@ -348,27 +349,28 @@ defineExpose({
 </script>
 
 <template>
-  <div class="preset-wrapper">
+  <div class="contents">
     <!-- Anchor Trigger -->
     <div
-      class="anchor-slot"
+      class="relative touch-none z-[5]"
       :style="{ transform: `translate(${anchorOffset.x}px, ${anchorOffset.y}px)` }"
     >
       <button
         ref="rootAnchorEl"
         type="button"
-        class="anchor-btn"
-        :class="{
-          'is-active': rootContext.open.value,
-          'is-dragging': isDragging,
-        }"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md bg-elevated text-highlighted text-[13px] font-medium shadow-xs select-none touch-none outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+        :class="[
+          isDragging ? 'cursor-grabbing border-primary shadow-md' : 'cursor-grab',
+          rootNode.open.value ? 'border-dimmed' : 'border-default hover:border-muted',
+        ]"
         aria-haspopup="menu"
-        :aria-expanded="rootContext.open.value"
+        :aria-expanded="rootNode.open.value"
         @pointerdown="emit('pointerdown', $event)"
       >
         <span>Actions</span>
         <svg
-          class="anchor-btn__chevron"
+          class="w-2.5 h-2.5 shrink-0 transition-transform duration-150"
+          :class="rootNode.open.value ? 'rotate-180 text-highlighted' : 'text-muted'"
           viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
@@ -384,16 +386,16 @@ defineExpose({
 
     <!-- Root Menu -->
     <div
-      v-if="rootContext.open.value"
+      v-if="rootNode.open.value"
       ref="rootFloatingEl"
       role="menu"
       tabindex="-1"
-      class="floating-panel panel-menu panel-menu--root"
+      class="absolute top-0 left-0 z-20 w-[175px] p-1 border border-default bg-elevated text-highlighted shadow-lg rounded-md outline-none"
     >
       <!-- Moving Animated Active Indicator -->
       <div
-        class="menu-active-indicator"
-        :class="{ 'is-danger': rootMenuItems[rootActiveIndex]?.danger }"
+        class="absolute top-0 left-1 right-1 rounded pointer-events-none z-[1] transition-[transform,height] duration-160 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        :class="rootMenuItems[rootActiveIndex]?.danger ? 'bg-red-500/10' : 'bg-muted'"
         :style="rootIndicatorStyle"
       />
 
@@ -402,24 +404,27 @@ defineExpose({
         :key="item.id"
         :ref="(el) => setRootItemRef(el, index, item.hasSubmenu)"
         role="menuitem"
-        class="menu-item"
+        class="relative z-[2] flex items-center justify-between px-2 py-1.5 rounded text-[12.5px] font-medium cursor-pointer touch-manipulation bg-transparent outline-none transition-colors duration-120 select-none"
         :tabindex="getRootTabindex(index)"
-        :class="{
-          'is-active': rootActiveIndex === index,
-          'is-danger': item.danger,
-          'has-submenu': item.hasSubmenu,
-        }"
+        :class="[
+          item.danger
+            ? 'text-red-500'
+            : rootActiveIndex === index
+              ? 'text-highlighted'
+              : 'text-muted',
+        ]"
         :aria-haspopup="item.hasSubmenu ? 'menu' : undefined"
-        :aria-expanded="item.hasSubmenu ? subContext.open.value : undefined"
+        :aria-expanded="item.hasSubmenu ? subNode.open.value : undefined"
         @pointermove="setRootActiveIndex(index)"
         @click="onRootItemClick(item)"
         @keydown="onRootItemKeydown($event, item)"
       >
-        <span class="menu-item__label">{{ item.label }}</span>
+        <span>{{ item.label }}</span>
 
         <template v-if="item.hasSubmenu">
           <svg
-            class="menu-item__arrow"
+            class="w-2.5 h-2.5 transition-colors duration-120"
+            :class="rootActiveIndex === index ? 'text-highlighted' : 'text-muted'"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
@@ -432,7 +437,7 @@ defineExpose({
           </svg>
         </template>
         <template v-else-if="item.shortcut">
-          <kbd class="menu-item__shortcut">{{ item.shortcut }}</kbd>
+          <kbd class="text-[11px] font-mono text-muted">{{ item.shortcut }}</kbd>
         </template>
       </div>
 
@@ -442,229 +447,34 @@ defineExpose({
 
     <!-- Submenu Panel -->
     <div
-      v-if="subContext.open.value && rootContext.open.value"
+      v-if="subNode.open.value && rootNode.open.value"
       ref="subFloatingEl"
       role="menu"
       tabindex="-1"
-      class="floating-panel panel-menu panel-menu--sub"
+      class="absolute top-0 left-0 z-30 w-[175px] p-1 border border-default bg-elevated text-highlighted shadow-xl rounded-md outline-none"
     >
       <!-- Moving Animated Active Indicator -->
-      <div class="menu-active-indicator" :style="subIndicatorStyle" />
+      <div
+        class="absolute top-0 left-1 right-1 rounded bg-muted pointer-events-none z-[1] transition-[transform,height] duration-160 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        :style="subIndicatorStyle"
+      />
 
       <div
         v-for="(subItem, subIndex) in subMenuItems"
         :key="subItem.id"
         :ref="(el) => setSubItemRef(el, subIndex)"
         role="menuitem"
-        class="menu-item"
+        class="relative z-[2] flex items-center justify-between px-2 py-1.5 rounded text-[12.5px] font-medium cursor-pointer touch-manipulation bg-transparent outline-none transition-colors duration-120 select-none"
         :tabindex="getSubTabindex(subIndex)"
-        :class="{
-          'is-active': subActiveIndex === subIndex,
-        }"
+        :class="subActiveIndex === subIndex ? 'text-highlighted' : 'text-muted'"
         @pointermove="setSubActiveIndex(subIndex)"
         @click="onSubItemClick"
       >
-        <span class="menu-item__label">{{ subItem.label }}</span>
-        <kbd v-if="subItem.shortcut" class="menu-item__shortcut">{{ subItem.shortcut }}</kbd>
+        <span>{{ subItem.label }}</span>
+        <kbd v-if="subItem.shortcut" class="text-[11px] font-mono text-muted">{{
+          subItem.shortcut
+        }}</kbd>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.preset-wrapper {
-  display: contents;
-}
-
-.anchor-slot {
-  position: relative;
-  touch-action: none;
-  z-index: 5;
-}
-
-.anchor-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.85rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-1);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  outline: none;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.anchor-btn:hover {
-  border-color: var(--vp-c-text-3);
-  background: var(--vp-c-bg-elv);
-}
-
-.anchor-btn:focus-visible {
-  outline: 2px solid var(--vp-c-brand-text, #18794e);
-  outline-offset: 1px;
-}
-
-.anchor-btn.is-active {
-  border-color: var(--vp-c-text-2);
-}
-
-.anchor-btn.is-dragging {
-  cursor: grabbing;
-  border-color: var(--vp-c-brand-text, #18794e);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-}
-
-.anchor-btn__chevron {
-  width: 9px;
-  height: 9px;
-  color: var(--vp-c-text-3);
-  transition: transform 0.15s ease;
-  flex-shrink: 0;
-}
-
-.anchor-btn.is-active .anchor-btn__chevron {
-  transform: rotate(180deg);
-  color: var(--vp-c-text-1);
-}
-
-/* Floating Panels */
-.floating-panel {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-elv);
-  color: var(--vp-c-text-1);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
-}
-
-.panel-menu {
-  outline: none;
-  position: absolute;
-}
-
-.panel-menu--root {
-  z-index: 20;
-  width: 175px;
-  padding: 3px;
-}
-
-.panel-menu--sub {
-  z-index: 30;
-  width: 175px;
-  padding: 3px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-/* Moving Animated Active Indicator */
-.menu-active-indicator {
-  position: absolute;
-  top: 0;
-  left: 3px;
-  right: 3px;
-  border-radius: 4px;
-  background: var(--vp-c-bg-soft);
-  pointer-events: none;
-  z-index: 1;
-  transition:
-    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-    height 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.12s ease;
-}
-
-.menu-active-indicator.is-danger {
-  background: var(--vp-c-danger-soft, rgba(229, 72, 77, 0.08));
-}
-
-.menu-item {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.35rem 0.55rem;
-  border-radius: 4px;
-  font-size: 0.78125rem;
-  font-weight: 500;
-  color: var(--vp-c-text-2);
-  cursor: pointer;
-  touch-action: manipulation;
-  background: transparent;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.12s ease;
-}
-
-.menu-item.is-active {
-  color: var(--vp-c-text-1);
-}
-
-.menu-item.has-submenu .menu-item__arrow {
-  width: 10px;
-  height: 10px;
-  color: var(--vp-c-text-3);
-  transition: color 0.12s ease;
-}
-
-.menu-item.has-submenu.is-active .menu-item__arrow {
-  color: var(--vp-c-text-1);
-}
-
-.menu-item.is-danger {
-  color: var(--vp-c-danger-1, #e5484d);
-}
-
-.menu-item.is-danger.is-active {
-  color: var(--vp-c-danger-1, #e5484d);
-}
-
-.menu-item__shortcut {
-  font-size: 0.6875rem;
-  font-family: var(--vp-font-family-mono, monospace);
-  color: var(--vp-c-text-3);
-}
-
-/* Arrow */
-.floating-arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: var(--vp-c-bg-elv);
-  transform: rotate(45deg);
-  border: 1px solid var(--vp-c-divider);
-  z-index: 0;
-}
-
-.floating-arrow--top {
-  border-top: none;
-  border-left: none;
-}
-
-.floating-arrow--bottom {
-  border-bottom: none;
-  border-right: none;
-}
-
-.floating-arrow--left {
-  border-left: none;
-  border-bottom: none;
-}
-
-.floating-arrow--right {
-  border-right: none;
-  border-top: none;
-}
-</style>

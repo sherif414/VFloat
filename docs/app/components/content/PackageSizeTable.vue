@@ -24,78 +24,31 @@ const packageSize = (config.public.packageSize ?? {
 </script>
 
 <template>
-  <div class="package-size-badges">
-    <span class="size-badge">
-      <span class="badge-label">Minified</span>
-      <span class="badge-value">{{ packageSize.minifiedFormatted }}</span>
+  <div class="flex flex-wrap items-center gap-2 my-5">
+    <span
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-default text-[13px] leading-tight transition-colors duration-200"
+    >
+      <span class="text-toned font-medium">Minified</span>
+      <span class="font-mono font-semibold text-highlighted">{{
+        packageSize.minifiedFormatted
+      }}</span>
     </span>
 
-    <span class="size-badge is-highlight">
-      <span class="badge-dot" />
-      <span class="badge-label">Gzip</span>
-      <span class="badge-value">{{ packageSize.gzipFormatted }}</span>
+    <span
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary text-[13px] leading-tight transition-colors duration-200"
+    >
+      <span class="size-1.5 rounded-full bg-primary" />
+      <span class="text-primary font-semibold">Gzip</span>
+      <span class="font-mono font-semibold text-primary">{{ packageSize.gzipFormatted }}</span>
     </span>
 
-    <span class="size-badge">
-      <span class="badge-label">Brotli</span>
-      <span class="badge-value">{{ packageSize.brotliFormatted }}</span>
+    <span
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-default text-[13px] leading-tight transition-colors duration-200"
+    >
+      <span class="text-toned font-medium">Brotli</span>
+      <span class="font-mono font-semibold text-highlighted">{{
+        packageSize.brotliFormatted
+      }}</span>
     </span>
   </div>
 </template>
-
-<style>
-.package-size-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 1.25rem 0;
-}
-
-.package-size-badges .size-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 8px;
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
-  font-size: 0.8125rem;
-  line-height: 1.2;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.package-size-badges .badge-label {
-  color: var(--vp-c-text-2);
-  font-weight: 500;
-}
-
-.package-size-badges .badge-value {
-  font-family: var(--vp-font-family-mono, monospace);
-  font-weight: 600;
-  color: var(--vp-c-text-1);
-}
-
-.package-size-badges .size-badge.is-highlight {
-  background: var(--vp-c-brand-soft);
-  border-color: var(--vp-c-brand-1);
-}
-
-.package-size-badges .size-badge.is-highlight .badge-label {
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
-}
-
-.package-size-badges .size-badge.is-highlight .badge-value {
-  color: var(--vp-c-brand-1);
-}
-
-.package-size-badges .badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--vp-c-brand-1);
-}
-</style>
