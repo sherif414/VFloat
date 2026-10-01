@@ -12,6 +12,7 @@
     "format": "oxfmt -c oxfmt.json --write ."
   },
   "dependencies": {
+    "@nuxt/ui": "4.11.1",
     "better-sqlite3": "^12.2.0",
     "docus": "^5.13.0",
     "nuxt": "^4.1.0",

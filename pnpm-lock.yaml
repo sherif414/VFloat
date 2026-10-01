@@ -38,6 +38,9 @@ importers:
 
   docs:
     dependencies:
+      '@nuxt/ui':
+        specifier: 4.11.1
+        version: 4.11.1(ef403c2bfd5823cc49ada78d5ea43f36)
       better-sqlite3:
         specifier: ^12.2.0
         version: 12.11.1

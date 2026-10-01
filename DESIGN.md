@@ -13,10 +13,14 @@ colors:
   quiet-fill: "#ebebef"
   hairline: "#e2e2e3"
   control-edge: "#c2c2c4"
-  ink: "#3c3c43"
-  ink-muted: "#67676c"
-  ink-faint: "#929295"
+  ink: "#09090b"
+  ink-body: "#52525b"
+  ink-muted: "#71717a"
+  ink-faint: "#a1a1aa"
   white: "#ffffff"
+  code-text: "#18181b"
+  code-bg: "rgba(0, 0, 0, 0.05)"
+  code-border: "rgba(0, 0, 0, 0.1)"
   signal-cyan: "#00e5ff"
   signal-cyan-pale: "#c3f5ff"
   mark-ink: "#0c0e11"
@@ -24,23 +28,23 @@ colors:
 typography:
   display:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "56px"
+    fontSize: "44px"
     fontWeight: 700
-    lineHeight: "64px"
+    lineHeight: "52px"
     letterSpacing: "-0.4px"
   headline:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "38px"
+    fontSize: "26px"
     fontWeight: 600
-    letterSpacing: "-0.76px"
+    letterSpacing: "-0.5px"
   body:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "16px"
+    fontSize: "13px"
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 1.6
   label:
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "14px"
+    fontSize: "13px"
     fontWeight: 600
 rounded:
   pill: "20px"
@@ -121,9 +125,11 @@ A Vue-green scale does all the interface work; the mark's cyan stays inside its 
 - **Quiet Fill** (#ebebef; dark #32363f): secondary button fill.
 - **Hairline** (#e2e2e3; dark #2e2e32): every divider and component border.
 - **Control Edge** (#c2c2c4; dark #3c3f44): borders on interactive outlines.
-- **Ink** (#3c3c43; dark #dfdfd6): primary text.
-- **Muted Ink** (#67676c; dark #98989f): secondary text, captions, inactive controls.
-- **Faint Ink** (#929295; dark #6a6a71): placeholders, captions, drag icons.
+- **High-Contrast Ink** (#09090b; dark #ffffff): titles, headings (H1-H4), strong emphasis, active states. Crisp foreground with maximum contrast.
+- **Body Ink** (#52525b; dark #9ca3af): sustained reading prose, list copy, paragraph text. Soft silver tone in dark mode that prevents reading glare and creates immediate depth against pure white headings.
+- **Muted Ink** (#71717a; dark #787882): lead descriptions, inactive navigation, TOC anchors, secondary labels.
+- **Faint Ink** (#a1a1aa; dark #52525b): group headers, placeholders, shortcuts, and subtle metadata.
+- **Code Chip Token** (#18181b; dark #e4e4e7): sleek monochromatic chip on subtle translucent fill (`rgba(0, 0, 0, 0.05)` / dark `rgba(255, 255, 255, 0.07)`) with a delicate hairline border. Delivers clean technical elegance without distraction.
 
 ### Brand mark accents (from `docs/public/vfloat-mark.svg`, the only bespoke artwork)
 - **Signal Cyan** (#00e5ff): the mark's glow accent. Independent of the interface scale; never used in the UI.
@@ -144,11 +150,12 @@ A Vue-green scale does all the interface work; the mark's cyan stays inside its 
 **Character:** One workhorse sans for everything prose, one honest mono for everything code. Weight and size do the hierarchy work; there is no display face.
 
 ### Hierarchy
-- **Display** (700, 56px/64px, -0.4px): the home hero name only.
-- **Headline** (600, 38px, -0.76px): doc page titles.
-- **Body** (400, 16px/24px): doc prose, captions, demo copy.
-- **Label** (600, 14px): hero buttons, tabs, badges, control labels.
-- **Code** (mono, 16px in blocks): fenced code uses the palenight scheme on sunken paper; inline code is a 4px-radius chip with pale-blue text.
+- **Display** (700, 44px/52px, -0.4px): the home hero name only.
+- **Headline** (600, 26px, -0.5px): doc page titles.
+- **Body** (400, 13px/21px): doc prose, captions, demo copy, and sidebar navigation items.
+- **Label** (600, 13px): hero buttons, tabs, badges, control labels.
+- **Code** (mono, 12px in blocks): fenced code uses the palenight scheme on sunken paper; inline code is a 4px-radius chip at 12px.
+- **Micro / Kbd** (mono, 11px): kbd tags and metadata tags.
 
 ### Named Rules
 **The Balance Rule.** Display lines and captions use balanced wrapping (`text-wrap: balance`) — hero name, tagline, sandbox captions.
