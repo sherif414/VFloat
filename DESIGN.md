@@ -11,7 +11,7 @@ colors:
   paper-sunken: "#f6f6f7"
   paper-raised: "#ffffff"
   quiet-fill: "#ebebef"
-  hairline: "#e2e2e3"
+  hairline: "rgba(0, 0, 0, 0.07)"
   control-edge: "#c2c2c4"
   ink: "#09090b"
   ink-body: "#52525b"
@@ -19,8 +19,8 @@ colors:
   ink-faint: "#a1a1aa"
   white: "#ffffff"
   code-text: "#18181b"
-  code-bg: "rgba(0, 0, 0, 0.05)"
-  code-border: "rgba(0, 0, 0, 0.1)"
+  code-bg: "rgba(0, 0, 0, 0.04)"
+  code-border: "rgba(0, 0, 0, 0.04)"
   signal-cyan: "#00e5ff"
   signal-cyan-pale: "#c3f5ff"
   mark-ink: "#0c0e11"
@@ -99,13 +99,13 @@ components:
 
 The docs are a quiet room for reading first and touching second. Prose explains like a friendly mentor — plain language, gotcha guides that warn before you stumble — and every behavioral claim is proven within arm's reach by a live demo, a code panel, or an interactive sandbox. Nothing performs; the demos carry the conviction.
 
-Controls stay small and restrained: hairline borders, muted text, green reserved for the active state. Surfaces are flat and paper-like; depth appears only where the product itself floats. There is no marketing shine anywhere — no decorative gradients, no glow effects, no illustration. The one glow in the system lives inside the brand-mark asset and never leaks into the interface.
+Controls stay small and restrained: whisper-soft borders, muted text, green reserved for the active state. Surfaces rely on layered elevation rather than rigid wireframe borders: code blocks, interactive sandboxes, and primary cards lift gently with soft ambient shadows. There is no marketing shine anywhere — no decorative gradients, no glow effects, no illustration. The one glow in the system lives inside the brand-mark asset and never leaks into the interface.
 
 **Key Characteristics:**
 - Read-first, live-proof: prose mentors, demos demonstrate.
 - Restrained controls: quiet at rest, green only when active.
-- Flat paper surfaces; shadows belong to floating things.
-- Token-honest: stock VitePress default chrome under a thin VFloat skin.
+- Layered elevation & soft boundaries: ambient depth for containers and code blocks, whisper-soft translucent hairlines.
+- Token-honest: stock Nuxt UI / Docus chrome under a refined VFloat skin.
 
 ## Colors
 
@@ -123,13 +123,13 @@ A Vue-green scale does all the interface work; the mark's cyan stays inside its 
 - **Sunken Paper** (#f6f6f7; dark #161618): recessed surfaces — sidebar, code blocks, sandbox floor.
 - **Raised Paper** (#ffffff; dark #202127): elevated faces — floating panels, tab indicators, copy buttons.
 - **Quiet Fill** (#ebebef; dark #32363f): secondary button fill.
-- **Hairline** (#e2e2e3; dark #2e2e32): every divider and component border.
+- **Hairline** (rgba(0, 0, 0, 0.07); dark rgba(255, 255, 255, 0.07)): whisper-soft translucent boundary across all dividers, card rims, and component edges. Blends organically into underlying surfaces without creating stark wireframes.
 - **Control Edge** (#c2c2c4; dark #3c3f44): borders on interactive outlines.
 - **High-Contrast Ink** (#09090b; dark #ffffff): titles, headings (H1-H4), strong emphasis, active states. Crisp foreground with maximum contrast.
 - **Body Ink** (#52525b; dark #9ca3af): sustained reading prose, list copy, paragraph text. Soft silver tone in dark mode that prevents reading glare and creates immediate depth against pure white headings.
 - **Muted Ink** (#71717a; dark #787882): lead descriptions, inactive navigation, TOC anchors, secondary labels.
 - **Faint Ink** (#a1a1aa; dark #52525b): group headers, placeholders, shortcuts, and subtle metadata.
-- **Code Chip Token** (#18181b; dark #e4e4e7): sleek monochromatic chip on subtle translucent fill (`rgba(0, 0, 0, 0.05)` / dark `rgba(255, 255, 255, 0.07)`) with a delicate hairline border. Delivers clean technical elegance without distraction.
+- **Code Chip Token** (#18181b; dark #e4e4e7): sleek monochromatic chip on subtle translucent fill (`rgba(0, 0, 0, 0.04)` / dark `rgba(255, 255, 255, 0.07)`) with an ultra-soft translucent rim (`rgba(0, 0, 0, 0.04)` / dark `rgba(255, 255, 255, 0.05)`). Delivers clean technical elegance without distraction.
 
 ### Brand mark accents (from `docs/public/vfloat-mark.svg`, the only bespoke artwork)
 - **Signal Cyan** (#00e5ff): the mark's glow accent. Independent of the interface scale; never used in the UI.
@@ -168,9 +168,11 @@ Density is airy: 1.5–2rem separates showcase and demo sections, 1rem pads pane
 
 ## Elevation & Depth
 
-Flat by default. Pages, cards, and controls render with hairlines and tonal fills; shadows appear only as a response to state or floating.
+Elevation-first hierarchy with soft boundaries. Content containers—fenced code blocks, interactive showcase instruments, demo sandboxes, and cards—rely on subtle ambient and directional elevation rather than heavy structural borders. Borders are whisper-soft translucent rims (4–7% opacity) providing crisp optical edge definition on high-density displays without caging content.
 
 ### Shadow Vocabulary
+- **Code Block Elevation** (`0 1px 3px rgba(0, 0, 0, 0.025), 0 1px 2px -1px rgba(0, 0, 0, 0.02)`; dark `0 2px 8px -1px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12)`): fenced code blocks, lifting with a delicate, whisper-soft glow.
+- **Container Elevation** (`0 2px 8px -2px rgba(0, 0, 0, 0.03), 0 1px 3px -1px rgba(0, 0, 0, 0.02)`; dark `0 4px 16px -2px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15)`): home showcase card, install command card, demo sandboxes.
 - **Rest** (`0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)`): tabs, anchors, tab indicators at rest.
 - **Hover lift** (`0 3px 12px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.07)`): anchor buttons on hover.
 - **Float** (`0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08)`): floating tooltip/popover panels, dragging anchors.
@@ -178,14 +180,15 @@ Flat by default. Pages, cards, and controls render with hairlines and tonal fill
 - **Control lift** (`0 8px 18px rgba(0, 0, 0, 0.12)`, deepening to 0.16 on hover): the demo copy button, which floats above code.
 
 ### Named Rules
-**The Flat-By-Default Rule.** Static content never casts shadows. If it doesn't float or respond, it gets a hairline, not a shadow.
+**The Soft-Elevation Rule.** Containers and code blocks rely on soft ambient elevation and tone for separation rather than heavy borders. Structural borders remain translucent whispers (4–7% opacity) for optical crispness.
 
 ## Shapes
 
 Corners are rounded and purposeful, largest on calls to action, smallest on metadata. Hero buttons are full pills (20px); demo cards are softly rectangular (16px); the showcase card sits at 12px; controls, tabs, badges, anchors, and floating panels share a friendly 8px; the view switch and reset button tighten to 6px; inline code chips take 4px; kbd tags take 3px. The brand mark is a squircle tile (28px radius on 128px) — the only bespoke geometry in the system.
 
 ### Named Rules
-**The Hairline Rule.** Separation is always a 1px divider, never a shadow or a gap. Borders, tab strips, panel edges, and table rules all use the hairline token.
+**The Soft-Boundary Rule.** Separation balances soft layered elevation with whisper-soft 1px translucent hairlines. Heavy solid borders and wireframes are prohibited.
+**The Architectural Dotted Accent Rule.** Dotted borders are reserved for technical sub-elements: interactive heading code symbols (`h2/h3 > a > code`), keyboard shortcut chips (`kbd`), internal card sub-dividers, and thematic breaks (`hr`). They bring delicate blueprint precision without cluttering primary container edges.
 
 ## Components
 
@@ -199,7 +202,7 @@ The stock local-search box lives in the nav (minisearch provider, no external se
 Small quiet tabs on a soft strip. **Shape:** 8px, transparent at rest with muted 500 text; hover warms to paper with ink text; active takes a hairline border, paper fill, ink text. The code variant adds a floating copy button (raised paper, 8px, control lift shadow) that reports Copy, Copied, or Failed.
 
 ### Showcase card (signature)
-The home page instrument: a 12px hairline card stacking a preset nav (Tooltip, Popover, Menu, Virtual Anchor) with a sliding elevated indicator pill, a Preview/Code view switch with its own sliding highlight, a controls toolbar (placement, offset, flip, shift, arrow, keep-open), a 380px sandbox floor with caption and reset-anchor control, and a live code panel. Active states speak green; motion is a 0.24s expo-out slide.
+The home page instrument: a 12px softly elevated card stacking a preset nav (Tooltip, Popover, Menu, Virtual Anchor) with a sliding elevated indicator pill, a Preview/Code view switch with its own sliding highlight, a controls toolbar (placement, offset, flip, shift, arrow, keep-open), a 380px sandbox floor with caption and reset-anchor control, and a live code panel. Active states speak green; motion is a 0.24s expo-out slide.
 
 ### Size badges
 Proof-of-lightweight chips: quiet fill with muted label and mono value at 8px; the highlighted badge (gzip) switches to Vue Wash fill with brand text and a 6px brand dot.
@@ -208,10 +211,10 @@ Proof-of-lightweight chips: quiet fill with muted label and mono value at 8px; t
 The product demonstrating itself: elevated-paper panels (8px radius, hairline border, float shadow) with per-pattern padding — tooltips are compact inline-flex rows with shortcut tags. Arrows are 10px rotated squares in raised paper with per-side hairline borders. Hovering an anchor rims it in brand; dragging deepens its shadow.
 
 ### Kbd tags
-Tiny 3px instruction chips: sunken fill, hairline border, mono 0.72rem muted text.
+Tiny 3px instruction chips: sunken fill, delicate dotted border, mono 0.72rem muted text.
 
 ### Code panels
-Fenced code renders the palenight scheme on sunken paper; inline code is a 4px chip with pale-blue text. Code tabs are never the default view — preview first, code on request.
+Fenced code renders on elevated sunken paper with soft ambient shadow and an ultra-soft translucent rim, lifting code gently from the reading flow. Inline code is a 4px chip with pale-blue text and subtle micro-shadow. Code tabs are never the default view — preview first, code on request.
 
 ### Navigation
 Docus header chrome with a clean, logo-less typographic wordmark (`VFloat`) and local search. Sidebar groupings follow the config; no further custom visual rules. Leave the rest alone.
@@ -220,6 +223,7 @@ Docus header chrome with a clean, logo-less typographic wordmark (`VFloat`) and 
 
 ### Do:
 - **Do** pair every behavioral claim with a live demo, sandbox, or code panel within the same page.
+- **Do** rely on layered elevation to give code blocks and primary showcase containers tactile presence on the page.
 - **Do** reserve green for active and actionable states; rest is muted ink on paper.
 - **Do** keep focus visible with the 2px brand outline on all custom controls.
 - **Do** use translucent washes for tinted backgrounds so layers compose.
@@ -229,5 +233,5 @@ Docus header chrome with a clean, logo-less typographic wordmark (`VFloat`) and 
 - **Don't** add marketing gradients, glow effects, or decorative illustration — the mark's glow stays inside its asset.
 - **Don't** use the mark's cyan anywhere in the interface; it lives only inside its asset.
 - **Don't** introduce any accent hue beyond the green scale.
-- **Don't** shadow static content; flat pages, floating panels.
+- **Don't** use heavy opaque wireframe borders to separate containers; use soft elevation with translucent hairline rims.
 - **Don't** restyle stock nav, search, and sidebar chrome beyond the skin tokens.

@@ -49,7 +49,7 @@
       "refersTo": "size-badge-highlight"
     },
     {
-      "css": ".ds-kbd { display: inline-block; padding: 0.05rem 0.3rem; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 3px; background: var(--vp-c-bg-soft, #f6f6f7); color: var(--vp-c-text-2, #67676c); font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-size: 0.72rem; }",
+      "css": ".ds-kbd { display: inline-block; padding: 0.05rem 0.3rem; border: 1px dotted var(--vp-c-divider, rgba(0, 0, 0, 0.15)); border-radius: 3px; background: var(--vp-c-bg-soft, #f6f6f7); color: var(--vp-c-text-2, #67676c); font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-size: 0.72rem; }",
       "description": "Tiny instruction chip for keys and shortcuts.",
       "html": "<kbd class=\"ds-kbd\">⌘C</kbd>",
       "kind": "custom",
@@ -166,7 +166,7 @@
         ]
       },
       "hairline": {
-        "canonical": "#e2e2e3",
+        "canonical": "rgba(0, 0, 0, 0.07)",
         "displayName": "Hairline",
         "role": "neutral",
         "tonalRamp": [
@@ -380,6 +380,16 @@
     ],
     "shadows": [
       {
+        "name": "code-elevation",
+        "purpose": "Layered elevation for code blocks, lifting them with a delicate, whisper-soft glow.",
+        "value": "0 1px 3px rgba(0, 0, 0, 0.025), 0 1px 2px -1px rgba(0, 0, 0, 0.02)"
+      },
+      {
+        "name": "container-elevation",
+        "purpose": "Soft ambient elevation for showcase cards, demo sandboxes, and content containers.",
+        "value": "0 2px 8px -2px rgba(0, 0, 0, 0.03), 0 1px 3px -1px rgba(0, 0, 0, 0.02)"
+      },
+      {
         "name": "rest",
         "purpose": "Tabs, anchors, and indicators at rest.",
         "value": "0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)"
@@ -428,6 +438,7 @@
   "narrative": {
     "dos": [
       "Do pair every behavioral claim with a live demo, sandbox, or code panel within the same page.",
+      "Do rely on layered elevation to give code blocks and primary showcase containers tactile presence on the page.",
       "Do reserve green for active and actionable states; rest is muted ink on paper.",
       "Do keep focus visible with the 2px brand outline on all custom controls.",
       "Do use translucent washes for tinted backgrounds so layers compose.",
@@ -437,17 +448,17 @@
       "Don't add marketing gradients, glow effects, or decorative illustration — the mark's glow stays inside its asset.",
       "Don't use the mark's cyan anywhere in the interface; it lives only inside its asset.",
       "Don't introduce any accent hue beyond the green scale.",
-      "Don't shadow static content; flat pages, floating panels.",
+      "Don't use heavy opaque wireframe borders to separate containers; use soft elevation with translucent hairline rims.",
       "Don't restyle stock nav, search, and sidebar chrome beyond the skin tokens."
     ],
     "keyCharacteristics": [
       "Read-first, live-proof: prose mentors, demos demonstrate.",
       "Restrained controls: quiet at rest, green only when active.",
-      "Flat paper surfaces; shadows belong to floating things.",
-      "Token-honest: stock VitePress default chrome under a thin VFloat skin."
+      "Layered elevation & soft boundaries: ambient depth for containers and code blocks, whisper-soft translucent hairlines.",
+      "Token-honest: stock Nuxt UI / Docus chrome under a refined VFloat skin."
     ],
     "northStar": "The Reading Room",
-    "overview": "The docs are a quiet room for reading first and touching second. Prose explains like a friendly mentor — plain language, gotcha guides that warn before you stumble — and every behavioral claim is proven within arm's reach by a live demo, a code panel, or an interactive sandbox. Nothing performs; the demos carry the conviction. Controls stay small and restrained: hairline borders, muted text, green reserved for the active state. Surfaces are flat and paper-like; depth appears only where the product itself floats. There is no marketing shine anywhere — no decorative gradients, no glow effects, no illustration. The one glow in the system lives inside the brand-mark asset and never leaks into the interface.",
+    "overview": "The docs are a quiet room for reading first and touching second. Prose explains like a friendly mentor — plain language, gotcha guides that warn before you stumble — and every behavioral claim is proven within arm's reach by a live demo, a code panel, or an interactive sandbox. Nothing performs; the demos carry the conviction. Controls stay small and restrained: whisper-soft borders, muted text, green reserved for the active state. Surfaces rely on layered elevation rather than rigid wireframe borders: code blocks, interactive sandboxes, and primary cards lift gently with soft ambient shadows. There is no marketing shine anywhere — no decorative gradients, no glow effects, no illustration. The one glow in the system lives inside the brand-mark asset and never leaks into the interface.",
     "rules": [
       {
         "body": "Vue green is the interface accent. The mark's cyan lives only inside its asset and never appears in the UI.",
@@ -465,13 +476,18 @@
         "section": "typography"
       },
       {
-        "body": "Static content never casts shadows. If it doesn't float or respond, it gets a hairline, not a shadow.",
-        "name": "The Flat-By-Default Rule",
+        "body": "Containers and code blocks rely on soft ambient elevation and tone for separation rather than heavy borders. Structural borders remain translucent whispers (4–7% opacity) for optical crispness.",
+        "name": "The Soft-Elevation Rule",
         "section": "elevation"
       },
       {
-        "body": "Separation is always a 1px divider, never a shadow or a gap. Borders, tab strips, panel edges, and table rules all use the hairline token.",
-        "name": "The Hairline Rule",
+        "body": "Separation balances soft layered elevation with whisper-soft 1px translucent hairlines. Heavy solid borders and wireframes are prohibited.",
+        "name": "The Soft-Boundary Rule",
+        "section": "shapes"
+      },
+      {
+        "body": "Dotted borders are reserved for technical sub-elements: interactive heading code symbols (h2/h3 > a > code), keyboard shortcut chips (kbd), internal card sub-dividers, and thematic breaks (hr). They bring delicate blueprint precision without cluttering primary container edges.",
+        "name": "The Architectural Dotted Accent Rule",
         "section": "shapes"
       }
     ]

@@ -74,7 +74,7 @@ export default defineAppConfig({
       h2: {
         slots: {
           base: [
-            "relative text-[28px] text-highlighted font-medium mt-9 mb-3 tracking-tight scroll-mt-[calc(48px+45px+var(--ui-header-height))] lg:scroll-mt-[calc(48px+var(--ui-header-height))] [&>a]:rounded-sm [&>a]:outline-primary/25 [&>a]:focus-visible:outline-3 [&>a>code]:border-dashed hover:[&>a>code]:border-primary hover:[&>a>code]:text-primary [&>a>code]:text-base/6 [&>a>code]:font-medium",
+            "relative text-[28px] text-highlighted font-medium mt-9 mb-3 tracking-tight scroll-mt-[calc(48px+45px+var(--ui-header-height))] lg:scroll-mt-[calc(48px+var(--ui-header-height))] [&>a]:rounded-sm [&>a]:outline-primary/25 [&>a]:focus-visible:outline-3 [&>a>code]:border-dotted hover:[&>a>code]:border-primary hover:[&>a>code]:text-primary [&>a>code]:text-base/6 [&>a>code]:font-medium",
             "[&>a>code]:transition-colors",
           ],
         },
@@ -82,7 +82,7 @@ export default defineAppConfig({
       h3: {
         slots: {
           base: [
-            "relative text-[16px] text-highlighted font-medium mt-7 mb-2 tracking-tight scroll-mt-[calc(32px+45px+var(--ui-header-height))] lg:scroll-mt-[calc(32px+var(--ui-header-height))] [&>a]:rounded-sm [&>a]:outline-primary/25 [&>a]:focus-visible:outline-3 [&>a>code]:border-dashed hover:[&>a>code]:border-primary hover:[&>a>code]:text-primary [&>a>code]:text-sm/5 [&>a>code]:font-medium",
+            "relative text-[16px] text-highlighted font-medium mt-7 mb-2 tracking-tight scroll-mt-[calc(32px+45px+var(--ui-header-height))] lg:scroll-mt-[calc(32px+var(--ui-header-height))] [&>a]:rounded-sm [&>a]:outline-primary/25 [&>a]:focus-visible:outline-3 [&>a>code]:border-dotted hover:[&>a>code]:border-primary hover:[&>a>code]:text-primary [&>a>code]:text-sm/5 [&>a>code]:font-medium",
             "[&>a>code]:transition-colors",
           ],
         },
@@ -92,6 +92,9 @@ export default defineAppConfig({
           base: "text-[14px] text-highlighted font-medium mt-5 mb-1.5 scroll-mt-[calc(24px+45px+var(--ui-header-height))] lg:scroll-mt-[calc(24px+var(--ui-header-height))] [&>a]:rounded-sm [&>a]:outline-primary/25 [&>a]:focus-visible:outline-3",
         },
       },
+      hr: {
+        base: "my-8 border-t border-dotted border-default",
+      },
       a: {
         base: "text-highlighted underline decoration-dimmed underline-offset-[3px] transition-colors hover:text-primary hover:decoration-primary",
       },
@@ -99,11 +102,11 @@ export default defineAppConfig({
         base: "font-medium text-highlighted",
       },
       code: {
-        base: "px-1.5 py-0.5 text-[12.5px] font-mono font-medium rounded-md inline-block text-(--vf-code-text) bg-(--vf-code-bg) border border-(--vf-code-border)",
+        base: "px-1.5 py-0.5 text-[12.5px] font-mono font-medium rounded-md inline-block text-(--vf-code-text) bg-(--vf-code-bg) border border-(--vf-code-border) shadow-2xs",
       },
       pre: {
         slots: {
-          base: "group font-mono text-[12.5px]/relaxed border border-default bg-muted/40 rounded-lg px-4 py-3 whitespace-pre-wrap wrap-break-word overflow-x-auto outline-primary/25 focus-visible:outline-3 focus-visible:border-primary **:[.line]:block **:[.line.highlight]:-mx-4 **:[.line.highlight]:px-4 **:[.line.highlight]:bg-accented/50!",
+          base: "group font-mono text-[12.5px]/relaxed border border-(--vf-code-border) bg-muted/60 shadow-(--vf-elevation-code) rounded-xl px-4 py-3.5 whitespace-pre-wrap wrap-break-word overflow-x-auto outline-primary/25 focus-visible:outline-3 focus-visible:border-primary **:[.line]:block **:[.line.highlight]:-mx-4 **:[.line.highlight]:px-4 **:[.line.highlight]:bg-accented/50!",
           filename: "text-muted text-xs/5 font-mono",
         },
       },

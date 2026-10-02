@@ -260,7 +260,7 @@ defineExpose({
     <!-- Selectable Prose Card -->
     <div
       ref="cardEl"
-      class="relative z-[5] w-[calc(100%-2rem)] max-w-[480px] p-5 pb-4 bg-elevated border border-default rounded-lg shadow-xs select-text cursor-text"
+      class="relative z-[5] w-[calc(100%-2rem)] max-w-[480px] p-5 pb-4 bg-elevated border border-default rounded-lg shadow-(--vf-elevation-card) select-text cursor-text"
       @pointerup="handleCardPointerUp"
     >
       <div
@@ -276,12 +276,12 @@ defineExpose({
       </div>
 
       <div
-        class="flex items-center flex-wrap gap-1.5 mt-4 pt-3 border-t border-default select-none"
+        class="flex items-center flex-wrap gap-1.5 mt-4 pt-3 border-t border-dotted border-default select-none"
       >
         <span class="text-[11.5px] text-muted mr-1">Select:</span>
         <button
           type="button"
-          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-dotted border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
           @mousedown.prevent
           @click="selectPhrase('lightweight')"
         >
@@ -289,7 +289,7 @@ defineExpose({
         </button>
         <button
           type="button"
-          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-dotted border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
           @mousedown.prevent
           @click="selectPhrase('floating UI engine')"
         >
@@ -297,7 +297,7 @@ defineExpose({
         </button>
         <button
           type="button"
-          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+          class="px-1.5 py-0.5 text-[11.5px] font-mono text-muted bg-muted border border-dotted border-default rounded cursor-pointer transition-colors duration-120 hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
           @mousedown.prevent
           @click="selectPhrase('Vue 3.5 reactivity')"
         >

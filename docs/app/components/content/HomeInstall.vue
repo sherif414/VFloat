@@ -47,7 +47,7 @@ onUnmounted(() => {
 <template>
   <div class="w-full max-w-[400px] mx-auto">
     <div
-      class="flex items-center gap-2 p-1.5 pl-3.5 sm:p-2 sm:pl-3.5 border border-default rounded-xl bg-elevated transition-colors duration-150 focus-within:border-primary"
+      class="flex items-center gap-2 p-1.5 pl-3.5 sm:p-2 sm:pl-3.5 border border-default rounded-xl bg-elevated shadow-(--vf-elevation-card) transition-colors duration-150 focus-within:border-primary"
       role="group"
       aria-label="Install VFloat"
     >

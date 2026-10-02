@@ -102,7 +102,9 @@ onMounted(() => {
 
 <template>
   <div class="max-w-6xl mx-auto my-6 sm:my-8 px-4 sm:px-6">
-    <div class="m-0 border border-default rounded-xl bg-elevated overflow-hidden font-sans">
+    <div
+      class="m-0 border border-default rounded-xl bg-elevated overflow-hidden font-sans shadow-(--vf-elevation-card)"
+    >
       <!-- 1. Header Navigation -->
       <ShowcaseHeader
         :model-value="activePreset"
@@ -165,7 +167,7 @@ onMounted(() => {
             class="absolute bottom-2 sm:bottom-3 left-3.5 right-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none text-center sm:text-left"
           >
             <div
-              class="text-xs leading-relaxed text-muted text-balance [&>span>kbd]:inline-block [&>span>kbd]:px-1 [&>span>kbd]:py-0.5 [&>span>kbd]:text-[11px] [&>span>kbd]:font-mono [&>span>kbd]:bg-elevated [&>span>kbd]:border [&>span>kbd]:border-default [&>span>kbd]:rounded [&>span>kbd]:text-toned [&>span>kbd]:mx-0.5"
+              class="text-xs leading-relaxed text-muted text-balance [&>span>kbd]:inline-block [&>span>kbd]:px-1 [&>span>kbd]:py-0.5 [&>span>kbd]:text-[11px] [&>span>kbd]:font-mono [&>span>kbd]:bg-elevated [&>span>kbd]:border [&>span>kbd]:border-dotted [&>span>kbd]:border-default [&>span>kbd]:rounded [&>span>kbd]:text-toned [&>span>kbd]:mx-0.5"
             >
               <template v-if="activePreset === 'tooltip'">
                 <span>Hover or drag anchor to test collision flipping</span>
