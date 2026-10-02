@@ -56,6 +56,12 @@ function loadPackageSize() {
 export default defineNuxtConfig({
   extends: ["docus"],
 
+  ui: {
+    theme: {
+      colors: ["primary", "secondary", "tertiary", "success", "info", "warning", "error"],
+    },
+  },
+
   app: {
     head: {
       link: [{ rel: "icon", href: "data:," }],

@@ -2,10 +2,10 @@
 name: VFloat Docs
 description: Friendly-mentor Read-mode docs where every floating primitive is proven live.
 colors:
-  brand-text: "#18794e"
-  brand-hover: "#299764"
-  brand-solid: "#30a46c"
-  brand-wash: "rgba(16, 185, 129, 0.14)"
+  brand-text: "#ffffff"
+  brand-hover: "#f4f4f5"
+  brand-solid: "#ffffff"
+  brand-wash: "rgba(255, 255, 255, 0.08)"
   paper: "#ffffff"
   paper-soft: "#f6f6f7"
   paper-sunken: "#f6f6f7"
@@ -18,6 +18,8 @@ colors:
   ink-muted: "#71717a"
   ink-faint: "#a1a1aa"
   white: "#ffffff"
+  tertiary: "oklch(70.4% 0.191 22.216)"
+  tertiary-wash: "oklch(70.4% 0.191 22.216 / 0.14)"
   code-text: "#18181b"
   code-bg: "rgba(0, 0, 0, 0.04)"
   code-border: "rgba(0, 0, 0, 0.04)"
@@ -57,7 +59,7 @@ rounded:
 components:
   button-brand:
     backgroundColor: "{colors.brand-solid}"
-    textColor: "{colors.white}"
+    textColor: "{colors.ink}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     padding: "0 20px"
@@ -85,8 +87,8 @@ components:
     rounded: "{rounded.control}"
     padding: "0.4rem 0.65rem"
   size-badge-highlight:
-    backgroundColor: "{colors.brand-wash}"
-    textColor: "{colors.brand-text}"
+    backgroundColor: "{colors.tertiary-wash}"
+    textColor: "{colors.tertiary}"
     rounded: "{rounded.control}"
     padding: "0.35rem 0.75rem"
 ---
@@ -99,23 +101,27 @@ components:
 
 The docs are a quiet room for reading first and touching second. Prose explains like a friendly mentor — plain language, gotcha guides that warn before you stumble — and every behavioral claim is proven within arm's reach by a live demo, a code panel, or an interactive sandbox. Nothing performs; the demos carry the conviction.
 
-Controls stay small and restrained: whisper-soft borders, muted text, green reserved for the active state. Surfaces rely on layered elevation rather than rigid wireframe borders: code blocks, interactive sandboxes, and primary cards lift gently with soft ambient shadows. There is no marketing shine anywhere — no decorative gradients, no glow effects, no illustration. The one glow in the system lives inside the brand-mark asset and never leaks into the interface.
+Controls stay small and restrained: whisper-soft borders, muted text, crisp white reserved for the active state, and a rare warm coral tertiary accent used with maximum restraint. Surfaces rely on layered elevation rather than rigid wireframe borders: code blocks, interactive sandboxes, and primary cards lift gently with soft ambient shadows. There is no marketing shine anywhere — no decorative gradients, no glow effects, no illustration. The one glow in the system lives inside the brand-mark asset and never leaks into the interface.
 
 **Key Characteristics:**
 - Read-first, live-proof: prose mentors, demos demonstrate.
-- Restrained controls: quiet at rest, green only when active.
+- Restrained controls: quiet at rest, crisp white only when active.
 - Layered elevation & soft boundaries: ambient depth for containers and code blocks, whisper-soft translucent hairlines.
 - Token-honest: stock Nuxt UI / Docus chrome under a refined VFloat skin.
 
 ## Colors
 
-A Vue-green scale does all the interface work; the mark's cyan stays inside its asset.
+A high-contrast monochrome white scale does the primary interface work; a radiant vermilion coral (`oklch(70.4% 0.191 22.216)`) serves as a rare tertiary accent; the mark's cyan stays inside its asset.
 
-### Primary
-- **Deep Vue Green** (#18794e; dark #3dd68c): links, active tab and preset text, tip containers, the hero name. The most solid step, used for colored text on washes.
-- **Vue Hover** (#299764; dark #30a46c): hover state of brand buttons and links.
-- **Vue Solid** (#30a46c; dark #298459): solid fills that must carry white text — the primary hero button.
-- **Vue Wash** (rgba(16, 185, 129, 0.14); dark rgba(16, 185, 129, 0.16)): subtle tinted backgrounds — highlight badges, tip containers, active pills.
+### Primary (White Accent)
+- **Stark White** (#ffffff; dark #ffffff): links, active tab and preset text, primary button fill, focus outlines, key selection indicators.
+- **White Hover** (#f4f4f5; dark #e4e4e7): hover state of brand buttons and primary links.
+- **Brand Solid** (#ffffff; dark #ffffff): solid fills that carry high-contrast inverted dark text — the primary hero button.
+- **White Wash** (rgba(0, 0, 0, 0.05); dark rgba(255, 255, 255, 0.08)): subtle translucent backgrounds — active pills, keep-open toggle active state, selection highlights.
+
+### Tertiary (Warm Vermilion Coral)
+- **Electric Coral** (`oklch(70.4% 0.191 22.216)`): reserved exclusively for micro-focal accents used very sparingly — such as the benchmark proof dot.
+- **Coral Wash** (`oklch(70.4% 0.191 22.216 / 0.14)`): delicate translucent background wash for rare tertiary focal elements like the Gzip proof badge.
 
 ### Neutral
 - **Paper** (#ffffff; dark #1b1b1f): main page background; also the resting face of tabs and buttons.
@@ -131,14 +137,15 @@ A Vue-green scale does all the interface work; the mark's cyan stays inside its 
 - **Faint Ink** (#a1a1aa; dark #52525b): group headers, placeholders, shortcuts, and subtle metadata.
 - **Code Chip Token** (#18181b; dark #e4e4e7): sleek monochromatic chip on subtle translucent fill (`rgba(0, 0, 0, 0.04)` / dark `rgba(255, 255, 255, 0.07)`) with an ultra-soft translucent rim (`rgba(0, 0, 0, 0.04)` / dark `rgba(255, 255, 255, 0.05)`). Delivers clean technical elegance without distraction.
 
-### Brand mark accents (from `docs/public/vfloat-mark.svg`, the only bespoke artwork)
+### Brand mark accents (from `public/vfloat-mark.svg`, the only bespoke artwork)
 - **Signal Cyan** (#00e5ff): the mark's glow accent. Independent of the interface scale; never used in the UI.
 - **Pale Signal** (#c3f5ff): the bright end of the mark gradient.
 - **Mark Ink** (#0c0e11): the mark's near-black tile.
 - **Glyph Paper** (#e2e2e6): the mark's off-white V glyph.
 
 ### Named Rules
-**The Green Accent Rule.** Vue green is the interface accent. The mark's cyan lives only inside its asset and never appears in the UI.
+**The White Accent Rule.** Crisp stark white is the primary interface accent across the dark reading room canvas; controls and active states speak in high-contrast monochrome clarity.
+**The Sparingly-Used Tertiary Rule.** The warm vermilion coral (`oklch(70.4% 0.191 22.216)`) is an electric micro-accent deployed with extreme restraint—reserved strictly for high-value focal moments (such as live proof dots or status beacons) so its rarity preserves its maximum visual force.
 **The Wash Rule.** Tinted backgrounds are always translucent washes, never solids, so layered softs compose instead of clashing.
 
 ## Typography
@@ -193,45 +200,46 @@ Corners are rounded and purposeful, largest on calls to action, smallest on meta
 ## Components
 
 ### Buttons
-Restrained pills with two voices. **Shape:** full pill (20px). **Primary:** Vue Solid fill with white 600 14px text and `0 20px` padding; hover deepens to Vue Hover. **Secondary:** Quiet Fill with ink text; hover follows the stock theme. Focus is always a 2px brand outline with 2px offset — never removed, never restyled.
+Restrained pills with two voices. **Shape:** full pill (20px). **Primary:** Brand Solid (white) fill with dark ink 600 14px text and `0 20px` padding; hover deepens to White Hover (`#f4f4f5`). **Secondary:** Quiet Fill with ink text; hover follows the stock theme. Focus is always a 2px outline with 2px offset — never removed, never restyled.
 
 ### Search
-The stock local-search box lives in the nav (minisearch provider, no external service). It inherits theme chrome; the skin does not restyle it beyond the brand wash for highlighted matches.
+The stock local-search box lives in the nav (minisearch provider, no external service). It inherits theme chrome; the skin does not restyle it beyond the white wash for highlighted matches.
 
 ### Demo tabs
 Small quiet tabs on a soft strip. **Shape:** 8px, transparent at rest with muted 500 text; hover warms to paper with ink text; active takes a hairline border, paper fill, ink text. The code variant adds a floating copy button (raised paper, 8px, control lift shadow) that reports Copy, Copied, or Failed.
 
 ### Showcase card (signature)
-The home page instrument: a 12px softly elevated card stacking a preset nav (Tooltip, Popover, Menu, Virtual Anchor) with a sliding elevated indicator pill, a Preview/Code view switch with its own sliding highlight, a controls toolbar (placement, offset, flip, shift, arrow, keep-open), a 380px sandbox floor with caption and reset-anchor control, and a live code panel. Active states speak green; motion is a 0.24s expo-out slide.
+The home page instrument: a 12px softly elevated card stacking a preset nav (Tooltip, Menu, Combobox, Selection, Dialog) with a sliding elevated indicator pill, a controls toolbar (placement, keep-open), a 420–480px sandbox floor with caption and reset-anchor control, and interactive live presets. Active states speak crisp white; motion is a 0.24s expo-out slide.
 
 ### Size badges
-Proof-of-lightweight chips: quiet fill with muted label and mono value at 8px; the highlighted badge (gzip) switches to Vue Wash fill with brand text and a 6px brand dot.
+Proof-of-lightweight chips: quiet fill with muted label and mono value at 8px; the highlighted badge (gzip) switches to Coral Wash fill with electric coral text and a 6px tertiary coral dot (`oklch(70.4% 0.191 22.216)`).
 
 ### Floating panels and arrows (signature)
-The product demonstrating itself: elevated-paper panels (8px radius, hairline border, float shadow) with per-pattern padding — tooltips are compact inline-flex rows with shortcut tags. Arrows are 10px rotated squares in raised paper with per-side hairline borders. Hovering an anchor rims it in brand; dragging deepens its shadow.
+The product demonstrating itself: elevated-paper panels (8px radius, hairline border, float shadow) with per-pattern padding — tooltips are compact inline-flex rows with shortcut tags. Arrows are 10px rotated squares in raised paper with per-side hairline borders. Hovering an anchor rims it in white; dragging deepens its shadow.
 
 ### Kbd tags
 Tiny 3px instruction chips: sunken fill, delicate dotted border, mono 0.72rem muted text.
 
 ### Code panels
-Fenced code renders on elevated sunken paper with soft ambient shadow and an ultra-soft translucent rim, lifting code gently from the reading flow. Inline code is a 4px chip with pale-blue text and subtle micro-shadow. Code tabs are never the default view — preview first, code on request.
+Fenced code renders on elevated sunken paper with soft ambient shadow and an ultra-soft translucent rim, lifting code gently from the reading flow. Inline code is a 4px chip with highlighted text and subtle micro-shadow. Code tabs are never the default view — preview first, code on request.
 
 ### Navigation
-Docus header chrome with a clean, logo-less typographic wordmark (`VFloat`) and local search. Sidebar groupings follow the config; no further custom visual rules. Leave the rest alone.
+Docus header chrome with a clean, logo-less typographic wordmark (`VFloat`), navigation links, and local search. Sidebar groupings follow the config; no further custom visual rules. Leave the rest alone.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** pair every behavioral claim with a live demo, sandbox, or code panel within the same page.
 - **Do** rely on layered elevation to give code blocks and primary showcase containers tactile presence on the page.
-- **Do** reserve green for active and actionable states; rest is muted ink on paper.
-- **Do** keep focus visible with the 2px brand outline on all custom controls.
+- **Do** reserve crisp white for active and actionable states; rest is muted ink on paper.
+- **Do** reserve tertiary coral (`oklch(70.4% 0.191 22.216)`) strictly for rare micro-focal anchors (such as benchmark proof dots or status beacons).
+- **Do** keep focus visible with the 2px outline on all custom controls.
 - **Do** use translucent washes for tinted backgrounds so layers compose.
 - **Do** balance-wrap display lines and captions.
 
 ### Don't:
 - **Don't** add marketing gradients, glow effects, or decorative illustration — the mark's glow stays inside its asset.
 - **Don't** use the mark's cyan anywhere in the interface; it lives only inside its asset.
-- **Don't** introduce any accent hue beyond the green scale.
+- **Don't** overuse the tertiary coral color; its strength and delight come directly from its extreme scarcity.
 - **Don't** use heavy opaque wireframe borders to separate containers; use soft elevation with translucent hairline rims.
 - **Don't** restyle stock nav, search, and sidebar chrome beyond the skin tokens.

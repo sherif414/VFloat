@@ -35,11 +35,11 @@ const packageSize = (config.public.packageSize ?? {
     </span>
 
     <span
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary text-[13px] leading-tight transition-colors duration-200"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-tertiary/10 border border-tertiary/30 text-[13px] leading-tight transition-colors duration-200"
     >
-      <span class="size-1.5 rounded-full bg-primary" />
-      <span class="text-primary font-semibold">Gzip</span>
-      <span class="font-mono font-semibold text-primary">{{ packageSize.gzipFormatted }}</span>
+      <span class="size-1.5 rounded-full bg-tertiary shadow-[0_0_8px_var(--color-tertiary)]" />
+      <span class="text-tertiary font-semibold">Gzip</span>
+      <span class="font-mono font-semibold text-highlighted">{{ packageSize.gzipFormatted }}</span>
     </span>
 
     <span

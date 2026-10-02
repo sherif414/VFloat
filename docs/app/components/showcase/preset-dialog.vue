@@ -284,7 +284,7 @@ defineExpose({
                 </button>
                 <button
                   type="submit"
-                  class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-transparent bg-primary text-white hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-120 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+                  class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-transparent bg-primary text-inverted hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-120 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
                   :disabled="isExporting"
                 >
                   <svg

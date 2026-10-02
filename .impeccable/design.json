@@ -1,15 +1,15 @@
 {
   "components": [
     {
-      "css": ".ds-btn-brand { display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; height: 36px; border: none; border-radius: 20px; background: var(--vp-c-brand-3, #30a46c); color: #ffffff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; } .ds-btn-brand:hover { background: var(--vp-c-brand-2, #299764); } .ds-btn-brand:focus-visible { outline: 2px solid var(--vp-c-brand-1, #18794e); outline-offset: 2px; }",
-      "description": "Primary call to action. Vue solid pill, white label, hover deepens.",
+      "css": ".ds-btn-brand { display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; height: 36px; border: none; border-radius: 20px; background: #ffffff; color: #09090b; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; } .ds-btn-brand:hover { background: #f4f4f5; } .ds-btn-brand:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }",
+      "description": "Primary call to action. Solid white pill, ink label, hover soft off-white.",
       "html": "<button class=\"ds-btn-brand\">Start with the guide</button>",
       "kind": "button",
       "name": "Primary Button",
       "refersTo": "button-brand"
     },
     {
-      "css": ".ds-btn-alt { display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; height: 36px; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 20px; background: var(--vp-c-gray-3, #ebebef); color: var(--vp-c-text-1, #3c3c43); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; } .ds-btn-alt:hover { background: var(--vp-c-gray-2, #e4e4e9); } .ds-btn-alt:focus-visible { outline: 2px solid var(--vp-c-brand-1, #18794e); outline-offset: 2px; }",
+      "css": ".ds-btn-alt { display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; height: 36px; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 20px; background: var(--vp-c-gray-3, #ebebef); color: var(--vp-c-text-1, #3c3c43); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; } .ds-btn-alt:hover { background: var(--vp-c-gray-2, #e4e4e9); } .ds-btn-alt:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }",
       "description": "Secondary action. Quiet fill pill with ink text.",
       "html": "<button class=\"ds-btn-alt\">Browse the API</button>",
       "kind": "button",
@@ -17,7 +17,7 @@
       "refersTo": "button-alt"
     },
     {
-      "css": ".ds-demo-tab { border: 1px solid transparent; border-radius: 8px; padding: 0.4rem 0.7rem; background: transparent; color: var(--vp-c-text-2, #67676c); font: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; } .ds-demo-tab:hover { color: var(--vp-c-text-1, #3c3c43); background: var(--vp-c-bg, #ffffff); } .ds-demo-tab.is-active { border-color: var(--vp-c-divider, #e2e2e3); color: var(--vp-c-text-1, #3c3c43); background: var(--vp-c-bg, #ffffff); } .ds-demo-tab:focus-visible { outline: 2px solid var(--vp-c-brand-1, #18794e); outline-offset: 2px; }",
+      "css": ".ds-demo-tab { border: 1px solid transparent; border-radius: 8px; padding: 0.4rem 0.7rem; background: transparent; color: var(--vp-c-text-2, #67676c); font: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; } .ds-demo-tab:hover { color: var(--vp-c-text-1, #3c3c43); background: var(--vp-c-bg, #ffffff); } .ds-demo-tab.is-active { border-color: var(--vp-c-divider, #e2e2e3); color: var(--vp-c-text-1, #3c3c43); background: var(--vp-c-bg, #ffffff); } .ds-demo-tab:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }",
       "description": "Demo container tab. Quiet at rest, paper face when active.",
       "html": "<button class=\"ds-demo-tab is-active\">Demo</button>",
       "kind": "button",
@@ -25,8 +25,8 @@
       "refersTo": "demo-tab-active"
     },
     {
-      "css": ".ds-anchor-btn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 0.95rem; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 8px; background: var(--vp-c-bg, #ffffff); color: var(--vp-c-text-1, #3c3c43); font: inherit; font-size: 0.88rem; font-weight: 500; cursor: grab; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06); transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-anchor-btn:hover { border-color: var(--vp-c-brand-1, #18794e); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.07); } .ds-anchor-btn:focus-visible { outline: 2px solid var(--vp-c-brand-1, #18794e); outline-offset: 2px; }",
-      "description": "Showcase drag anchor. Rests quiet, rims green on hover.",
+      "css": ".ds-anchor-btn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 0.95rem; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 8px; background: var(--vp-c-bg, #ffffff); color: var(--vp-c-text-1, #3c3c43); font: inherit; font-size: 0.88rem; font-weight: 500; cursor: grab; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06); transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-anchor-btn:hover { border-color: #ffffff; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.07); } .ds-anchor-btn:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }",
+      "description": "Showcase drag anchor. Rests quiet, rims white on hover.",
       "html": "<button class=\"ds-anchor-btn\">Hover me</button>",
       "kind": "button",
       "name": "Anchor Button",
@@ -41,8 +41,8 @@
       "refersTo": "floating-tooltip"
     },
     {
-      "css": ".ds-size-badge { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.75rem; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 8px; background: var(--vp-c-bg-soft, #f6f6f7); font: inherit; font-size: 0.8125rem; line-height: 1.2; } .ds-size-badge .ds-size-badge-label { color: var(--vp-c-text-2, #67676c); font-weight: 500; } .ds-size-badge .ds-size-badge-value { font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-weight: 600; color: var(--vp-c-text-1, #3c3c43); } .ds-size-badge.is-highlight { background: rgba(16, 185, 129, 0.14); border-color: var(--vp-c-brand-1, #18794e); } .ds-size-badge.is-highlight .ds-size-badge-label, .ds-size-badge.is-highlight .ds-size-badge-value { color: var(--vp-c-brand-1, #18794e); font-weight: 600; }",
-      "description": "Bundle-size proof chip. Highlight voice is green wash with brand text.",
+      "css": ".ds-size-badge { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.75rem; border: 1px solid var(--vp-c-divider, #e2e2e3); border-radius: 8px; background: var(--vp-c-bg-soft, #f6f6f7); font: inherit; font-size: 0.8125rem; line-height: 1.2; } .ds-size-badge .ds-size-badge-label { color: var(--vp-c-text-2, #67676c); font-weight: 500; } .ds-size-badge .ds-size-badge-value { font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-weight: 600; color: var(--vp-c-text-1, #3c3c43); } .ds-size-badge.is-highlight { background: oklch(70.4% 0.191 22.216 / 0.14); border-color: oklch(70.4% 0.191 22.216 / 0.4); } .ds-size-badge.is-highlight .ds-size-badge-label, .ds-size-badge.is-highlight .ds-size-badge-value { color: oklch(70.4% 0.191 22.216); font-weight: 600; }",
+      "description": "Bundle-size proof chip. Highlight voice is tertiary coral wash with coral text.",
       "html": "<span class=\"ds-size-badge is-highlight\"><span class=\"ds-size-badge-label\">Gzip</span><span class=\"ds-size-badge-value\">14.7 kB</span></span>",
       "kind": "chip",
       "name": "Size Badge",
@@ -56,8 +56,8 @@
       "name": "Kbd Tag"
     },
     {
-      "css": ".ds-preset-tab { padding: 0.4rem 0.75rem; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--vp-c-text-2, #67676c); font: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.18s ease; } .ds-preset-tab:hover { color: var(--vp-c-text-1, #3c3c43); } .ds-preset-tab.is-active { color: var(--vp-c-brand-1, #18794e); font-weight: 600; } .ds-preset-tab:focus-visible { outline: 2px solid var(--vp-c-brand-1, #18794e); outline-offset: 2px; }",
-      "description": "Showcase preset nav tab. Green text marks the active preset.",
+      "css": ".ds-preset-tab { padding: 0.4rem 0.75rem; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--vp-c-text-2, #67676c); font: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.18s ease; } .ds-preset-tab:hover { color: var(--vp-c-text-1, #3c3c43); } .ds-preset-tab.is-active { color: #ffffff; font-weight: 600; } .ds-preset-tab:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }",
+      "description": "Showcase preset nav tab. White text marks the active preset.",
       "html": "<button class=\"ds-preset-tab is-active\">Tooltip</button>",
       "kind": "button",
       "name": "Preset Tab"
@@ -76,63 +76,64 @@
     ],
     "colorMeta": {
       "brand-hover": {
-        "canonical": "#299764",
-        "displayName": "Vue Hover",
+        "canonical": "#f4f4f5",
+        "displayName": "White Hover",
         "role": "primary",
         "tonalRamp": [
-          "oklch(25% 0.09 160)",
-          "oklch(38% 0.12 160)",
-          "oklch(52% 0.13 162)",
-          "oklch(65% 0.12 163)",
-          "oklch(75% 0.10 164)",
-          "oklch(83% 0.08 165)",
-          "oklch(90% 0.05 166)",
-          "oklch(95% 0.03 167)"
+          "oklch(96% 0 0)",
+          "oklch(98% 0 0)",
+          "oklch(100% 0 0)"
         ]
       },
       "brand-solid": {
-        "canonical": "#30a46c",
-        "displayName": "Vue Solid",
+        "canonical": "#ffffff",
+        "displayName": "Brand Solid",
         "role": "primary",
         "tonalRamp": [
-          "oklch(25% 0.09 160)",
-          "oklch(38% 0.12 160)",
-          "oklch(52% 0.13 162)",
-          "oklch(65% 0.12 163)",
-          "oklch(75% 0.10 164)",
-          "oklch(83% 0.08 165)",
-          "oklch(90% 0.05 166)",
-          "oklch(95% 0.03 167)"
+          "oklch(96% 0 0)",
+          "oklch(98% 0 0)",
+          "oklch(100% 0 0)"
         ]
       },
       "brand-text": {
-        "canonical": "#18794e",
-        "displayName": "Deep Vue Green",
+        "canonical": "#ffffff",
+        "displayName": "Stark White",
         "role": "primary",
         "tonalRamp": [
-          "oklch(25% 0.09 160)",
-          "oklch(38% 0.12 160)",
-          "oklch(52% 0.13 162)",
-          "oklch(65% 0.12 163)",
-          "oklch(75% 0.10 164)",
-          "oklch(83% 0.08 165)",
-          "oklch(90% 0.05 166)",
-          "oklch(95% 0.03 167)"
+          "oklch(96% 0 0)",
+          "oklch(98% 0 0)",
+          "oklch(100% 0 0)"
         ]
       },
       "brand-wash": {
-        "canonical": "rgba(16, 185, 129, 0.14)",
-        "displayName": "Vue Wash",
+        "canonical": "rgba(255, 255, 255, 0.08)",
+        "displayName": "White Wash",
         "role": "primary",
         "tonalRamp": [
-          "oklch(25% 0.09 160)",
-          "oklch(38% 0.12 160)",
-          "oklch(52% 0.13 162)",
-          "oklch(65% 0.12 163)",
-          "oklch(75% 0.10 164)",
-          "oklch(83% 0.08 165)",
-          "oklch(90% 0.05 166)",
-          "oklch(95% 0.03 167)"
+          "oklch(96% 0 0 / 0.08)"
+        ]
+      },
+      "tertiary": {
+        "canonical": "oklch(70.4% 0.191 22.216)",
+        "displayName": "Electric Coral",
+        "role": "tertiary",
+        "tonalRamp": [
+          "oklch(34% 0.10 22.216)",
+          "oklch(44% 0.14 22.216)",
+          "oklch(54% 0.17 22.216)",
+          "oklch(63% 0.19 22.216)",
+          "oklch(70.4% 0.191 22.216)",
+          "oklch(80% 0.14 22.216)",
+          "oklch(90% 0.08 22.216)",
+          "oklch(97% 0.03 22.216)"
+        ]
+      },
+      "tertiary-wash": {
+        "canonical": "oklch(70.4% 0.191 22.216 / 0.14)",
+        "displayName": "Coral Wash",
+        "role": "tertiary",
+        "tonalRamp": [
+          "oklch(70.4% 0.191 22.216 / 0.14)"
         ]
       },
       "control-edge": {
