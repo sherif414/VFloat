@@ -164,10 +164,10 @@ onMounted(() => {
 
           <!-- Minimal Footer Instructions & Reset -->
           <div
-            class="absolute bottom-2 sm:bottom-3 left-3.5 right-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none text-center sm:text-left"
+            class="absolute bottom-2 sm:bottom-3 left-3.5 right-3.5 flex items-center justify-between gap-2 pointer-events-none min-h-7 text-left"
           >
             <div
-              class="text-xs leading-relaxed text-muted text-balance [&>span>kbd]:inline-block [&>span>kbd]:px-1 [&>span>kbd]:py-0.5 [&>span>kbd]:text-[11px] [&>span>kbd]:font-mono [&>span>kbd]:bg-elevated [&>span>kbd]:border [&>span>kbd]:border-dotted [&>span>kbd]:border-default [&>span>kbd]:rounded [&>span>kbd]:text-toned [&>span>kbd]:mx-0.5"
+              class="text-xs leading-relaxed text-muted text-balance min-w-0 [&>span>kbd]:inline-block [&>span>kbd]:px-1 [&>span>kbd]:py-0.5 [&>span>kbd]:text-[11px] [&>span>kbd]:font-mono [&>span>kbd]:bg-elevated [&>span>kbd]:border [&>span>kbd]:border-dotted [&>span>kbd]:border-default [&>span>kbd]:rounded [&>span>kbd]:text-toned [&>span>kbd]:mx-0.5"
             >
               <template v-if="activePreset === 'tooltip'">
                 <span>Hover or drag anchor to test collision flipping</span>
@@ -191,9 +191,15 @@ onMounted(() => {
 
             <!-- Reset Button -->
             <button
-              v-if="isModified"
               type="button"
-              class="pointer-events-auto inline-flex items-center gap-1.5 px-2 py-1 border border-default rounded-md bg-elevated text-toned font-medium text-[11.5px] cursor-pointer touch-manipulation outline-none transition-colors hover:text-highlighted hover:border-muted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+              class="inline-flex items-center gap-1.5 px-2 h-7 border border-default rounded-md bg-elevated text-toned font-medium text-[11.5px] cursor-pointer touch-manipulation outline-none transition-all duration-150 hover:text-highlighted hover:border-muted hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 shrink-0"
+              :class="
+                isModified
+                  ? 'opacity-100 pointer-events-auto visible'
+                  : 'opacity-0 pointer-events-none invisible'
+              "
+              :tabindex="isModified ? 0 : -1"
+              :aria-hidden="!isModified"
               title="Reset position and settings"
               aria-label="Reset position and settings"
               @click="handleResetDemo"

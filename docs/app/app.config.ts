@@ -7,8 +7,18 @@ export default defineAppConfig({
     sub: "header",
   },
 
+  search: {
+    fts: true,
+  },
+
   socials: {
     github: "https://github.com/sherif414/VFloat",
+  },
+
+  github: {
+    url: "https://github.com/sherif414/VFloat",
+    branch: "main",
+    rootDir: "docs",
   },
 
   toc: {
@@ -42,12 +52,15 @@ export default defineAppConfig({
     pageHeader: {
       slots: {
         root: "relative border-b border-default py-6",
-        headline: "mb-2 text-xs font-semibold text-primary flex items-center gap-1.5",
+        headline: "mb-2 text-xs font-semibold text-tertiary flex items-center gap-1.5",
         title: "text-2xl sm:text-[28px] text-pretty font-medium text-highlighted tracking-tight",
         description: "text-[14px] leading-relaxed text-pretty text-muted",
       },
     },
     contentNavigation: {
+      defaultVariants: {
+        highlightColor: "tertiary",
+      },
       slots: {
         trigger: "text-[12px] font-semibold text-highlighted/90 py-1.5 flex items-center gap-2",
         link: "group relative w-full px-2.5 py-1.5 before:inset-y-px before:inset-x-0 flex items-center gap-2 text-[13px] leading-normal text-muted hover:text-highlighted before:absolute before:z-[-1] before:rounded-md focus:outline-none focus-visible:outline-none focus-visible:before:outline-3",
@@ -57,6 +70,9 @@ export default defineAppConfig({
       },
     },
     contentToc: {
+      defaultVariants: {
+        highlightColor: "tertiary",
+      },
       slots: {
         trigger:
           "group text-[13px] font-medium text-muted flex-1 flex items-center gap-1.5 py-1 -mt-1.5 rounded-sm outline-primary/25 focus-visible:outline-3 lg:shrink-0",

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "nuxt-ui": {
+      "source": "nuxt/ui",
+      "sourceType": "github",
+      "skillPath": "skills/nuxt-ui/SKILL.md",
+      "computedHash": "a8ed5a007283e0edfa15113e60a2c15063345a1b34876c29c7a5289a298f2928"
+    }
+  }
+}

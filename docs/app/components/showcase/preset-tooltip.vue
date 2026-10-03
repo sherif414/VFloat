@@ -95,7 +95,7 @@ defineExpose({
 <template>
   <div class="contents">
     <div
-      class="relative touch-none z-[5]"
+      class="relative touch-none z-5"
       :style="{ transform: `translate(${anchorOffset.x}px, ${anchorOffset.y}px)` }"
     >
       <button
@@ -109,7 +109,7 @@ defineExpose({
         "
         @pointerdown="emit('pointerdown', $event)"
       >
-        <span>Interactive Anchor</span>
+        <span>Hover me</span>
       </button>
     </div>
 
