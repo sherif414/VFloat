@@ -36,7 +36,7 @@ links:
 ::
 
 ::u-container{class="pt-2 pb-20 sm:pb-28"}
-:::u-page-grid
+:::u-page-grid{class="lg:grid-cols-2 xl:grid-cols-4"}
 ::::u-page-card
 ---
 
@@ -52,7 +52,7 @@ spotlight: true
 ---
 
 title: Lightweight & Tree-Shakable
-description: Minimal bundle footprint (~14.7 kB gzip for the entire library) — import only the composables and middlewares you use.
+description: Pure ESM with zero styling baggage. Fully tree-shakable so you only ship the specific composables and middlewares your components import.
 icon: i-lucide-cpu
 spotlight: true
 ---
@@ -62,9 +62,20 @@ spotlight: true
 ::::u-page-card
 ---
 
-title: Composable Primitives
-description: Independent composables for positioning, hover, click, focus management, and keyboard navigation that connect cleanly through unified composite floating nodes.
-icon: i-lucide-component
+title: SSR-Friendly
+description: Built for modern frameworks like Nuxt. Enjoy seamless server-side rendering with zero hydration mismatches and safe DOM guards.
+icon: i-lucide-server
+spotlight: true
+---
+
+::::
+
+::::u-page-card
+---
+
+title: Accessible by Default
+description: Built-in keyboard navigation, roving focus, ARIA role management, and focus trapping designed for inclusive, screen-reader-friendly floating interfaces.
+icon: i-lucide-person-standing
 spotlight: true
 ---
 
