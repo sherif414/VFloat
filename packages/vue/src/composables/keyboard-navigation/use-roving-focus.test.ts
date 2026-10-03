@@ -628,7 +628,7 @@ describe("Feature: useRovingFocus", () => {
 
   describe("Scenario: Pointer hover focus orchestration", () => {
     it("Given focusOnHover is enabled, When hovering an item with a mouse pointer, Then focus moves to the hovered item", async () => {
-      const { Component } = createTestComponent({ focusOnHover: true });
+      const { Component, getRoving } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
       const option1El = page.getByRole("option", { name: "option 1" });
@@ -638,7 +638,29 @@ describe("Feature: useRovingFocus", () => {
       await expect.element(option1El).toHaveFocus();
 
       await userEvent.hover(option3El);
+      // Focus follows hover for menus/submenus: physical DOM focus moves to hovered item
+      expect(getRoving().activeIndex.value).toBe(2);
+      await expect.element(option3El).toHaveAttribute("tabindex", "0");
       await expect.element(option3El).toHaveFocus();
+    });
+
+    it("Given an item was hovered with focusOnHover enabled, When arrow key navigation occurs, Then DOM focus resumes from the hovered item", async () => {
+      const { Component, getRoving } = createTestComponent({ focusOnHover: true });
+      await render(Component);
+
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option3El = page.getByRole("option", { name: "option 3" });
+      const option4El = page.getByRole("option", { name: "option 4" });
+
+      await userEvent.click(option1El);
+      await userEvent.hover(option3El);
+      await expect.element(option3El).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(2);
+
+      // Keyboard navigation takes over and moves DOM focus to next item relative to hovered item
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(option4El).toHaveFocus();
+      expect(getRoving().activeIndex.value).toBe(3);
     });
 
     it("Given focusOnHover is disabled by default, When hovering an item, Then DOM focus remains on the previously focused item", async () => {
@@ -656,7 +678,10 @@ describe("Feature: useRovingFocus", () => {
     });
 
     it("Given focusOnHover is enabled, When hovering a disabled item, Then focus does not move to the disabled item", async () => {
-      const { Component } = createTestComponent({ focusOnHover: true }, { disabledIndices: [1] });
+      const { Component, getRoving } = createTestComponent(
+        { focusOnHover: true },
+        { disabledIndices: [1] },
+      );
       await render(Component);
 
       const option1El = page.getByRole("option", { name: "option 1" });
@@ -665,6 +690,7 @@ describe("Feature: useRovingFocus", () => {
       await userEvent.click(option1El);
       await userEvent.hover(option2El);
 
+      expect(getRoving().activeIndex.value).toBe(0);
       await expect.element(option1El).toHaveFocus();
     });
 
@@ -684,6 +710,43 @@ describe("Feature: useRovingFocus", () => {
         }),
       );
 
+      await expect.element(option1El).toHaveFocus();
+    });
+
+    it("Given focusOnHover is enabled, When synthetic pointermove occurs with identical coordinates, Then it is ignored", async () => {
+      const { Component, getRoving } = createTestComponent({ focusOnHover: true });
+      await render(Component);
+
+      const option1El = page.getByRole("option", { name: "option 1" });
+      const option2El = page.getByRole("option", { name: "option 2" });
+
+      await userEvent.click(option1El);
+      await expect.element(option1El).toHaveFocus();
+
+      // First dispatch records coordinates and moves focus to item 1
+      option2El.element().dispatchEvent(
+        new PointerEvent("pointermove", {
+          clientX: 100,
+          clientY: 200,
+          bubbles: true,
+        }),
+      );
+      expect(getRoving().activeIndex.value).toBe(1);
+      await expect.element(option2El).toHaveFocus();
+
+      // Move focus back to option 1 programmatically
+      getRoving().focusIndex(0);
+      await expect.element(option1El).toHaveFocus();
+
+      // Stationary synthetic event with same clientX and clientY should be ignored
+      option2El.element().dispatchEvent(
+        new PointerEvent("pointermove", {
+          clientX: 100,
+          clientY: 200,
+          bubbles: true,
+        }),
+      );
+      expect(getRoving().activeIndex.value).toBe(0);
       await expect.element(option1El).toHaveFocus();
     });
   });
@@ -1177,7 +1240,7 @@ describe("Feature: useRovingFocus", () => {
     });
 
     it("Given focusOnHover and focusDisabledElements are both true, When hovering disabled items, Then disabled items receive focus", async () => {
-      const { Component } = createTestComponent(
+      const { Component, getRoving } = createTestComponent(
         { focusOnHover: true, focusDisabledElements: true },
         { ariaDisabledIndices: [1] },
       );
@@ -1190,6 +1253,8 @@ describe("Feature: useRovingFocus", () => {
       await expect.element(option1El).toHaveFocus();
 
       await userEvent.hover(option2El);
+      expect(getRoving().activeIndex.value).toBe(1);
+      await expect.element(option2El).toHaveAttribute("tabindex", "0");
       await expect.element(option2El).toHaveFocus();
     });
 
@@ -1465,7 +1530,7 @@ describe("Feature: useRovingFocus", () => {
 
   describe("Scenario: Pointer hover scroll stability", () => {
     it("Given focusOnHover is true, When hovering an item, Then focus moves to the item without calling scrollIntoView", async () => {
-      const { Component } = createTestComponent({ focusOnHover: true });
+      const { Component, getRoving } = createTestComponent({ focusOnHover: true });
       await render(Component);
 
       const option1El = page.getByRole("option", { name: "option 1" });
@@ -1478,6 +1543,7 @@ describe("Feature: useRovingFocus", () => {
       await userEvent.click(option1El);
       await userEvent.hover(option3El);
 
+      expect(getRoving().activeIndex.value).toBe(2);
       await expect.element(option3El).toHaveFocus();
       expect(scrollSpy).not.toHaveBeenCalled();
     });
@@ -2000,6 +2066,103 @@ describe("Feature: useRovingFocus", () => {
 
       // Parent activeIndex should NOT be cleared to -1
       expect(rootRoving.activeIndex.value).toBe(0);
+    });
+
+    it("Given nested parent and child floating nodes with focusOnHover, When hovering into child submenu, Then DOM focus moves into submenu item and arrow keys navigate within submenu", async () => {
+      let rootRoving!: UseRovingFocusReturn;
+      let childRoving!: UseRovingFocusReturn;
+
+      const RootWithChildHover = defineComponent(() => {
+        const rootContainerEl = useTemplateRef<HTMLDivElement>("rootContainer");
+        const rootElementsList = ref<(HTMLElement | null)[]>([]);
+        const childContainerEl = useTemplateRef<HTMLDivElement>("childContainer");
+        const childElementsList = ref<(HTMLElement | null)[]>([]);
+
+        const rootAnchorEl = ref<HTMLElement | null>(null);
+        const rootNode = useFloatingNode({
+          anchorEl: rootAnchorEl,
+          floatingEl: rootContainerEl,
+          open: ref(true),
+        });
+
+        rootRoving = useRovingFocus(rootNode, {
+          elementsList: rootElementsList,
+          focusOnHover: true,
+        });
+
+        const childAnchorEl = ref<HTMLElement | null>(null);
+        const childNode = useFloatingNode({
+          anchorEl: childAnchorEl,
+          floatingEl: childContainerEl,
+          open: ref(true),
+          parent: rootNode,
+        });
+
+        childRoving = useRovingFocus(childNode, {
+          elementsList: childElementsList,
+          focusOnHover: true,
+        });
+
+        return () =>
+          h("div", [
+            h("div", { ref: "rootContainer", id: "root-menu" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    rootElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: rootRoving.getTabindex(0),
+                },
+                "Root Option 1",
+              ),
+            ]),
+            h("div", { ref: "childContainer", id: "child-submenu" }, [
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    childElementsList.value[0] = el as HTMLElement;
+                  },
+                  tabindex: childRoving.getTabindex(0),
+                },
+                "Child Option 1",
+              ),
+              h(
+                "button",
+                {
+                  role: "option",
+                  ref: (el) => {
+                    childElementsList.value[1] = el as HTMLElement;
+                  },
+                  tabindex: childRoving.getTabindex(1),
+                },
+                "Child Option 2",
+              ),
+            ]),
+          ]);
+      });
+
+      await render(RootWithChildHover);
+
+      const rootOption1El = page.getByRole("option", { name: "Root Option 1" });
+      const childOption1El = page.getByRole("option", { name: "Child Option 1" });
+      const childOption2El = page.getByRole("option", { name: "Child Option 2" });
+
+      await userEvent.click(rootOption1El);
+      await expect.element(rootOption1El).toHaveFocus();
+
+      // Hover over Child Option 1 in the teleported submenu
+      await userEvent.hover(childOption1El);
+      await expect.element(childOption1El).toHaveFocus();
+      expect(childRoving.activeIndex.value).toBe(0);
+
+      // Keyboard navigation now operates directly inside the child submenu
+      await userEvent.keyboard("{ArrowDown}");
+      await expect.element(childOption2El).toHaveFocus();
+      expect(childRoving.activeIndex.value).toBe(1);
     });
 
     it("Given focus leaves the entire floating tree, When focusout fires, Then activeIndex clears to -1", async () => {

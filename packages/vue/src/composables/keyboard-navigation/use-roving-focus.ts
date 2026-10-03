@@ -485,12 +485,22 @@ export function useRovingFocus(
 
   // --- Pointer Hover Navigation -----------------------------------------------
 
+  let lastPointerX = -1;
+  let lastPointerY = -1;
+
   useEventListener(
     () => (isFocusOnHover.value ? containerEl.value : null),
     "pointermove",
     (e: PointerEvent) => {
       if (e.defaultPrevented || !isEnabled.value) return;
       if (e.pointerType === "touch") return;
+
+      // Ignore synthetic pointermove events fired when elements scroll under a stationary cursor
+      if (e.clientX === lastPointerX && e.clientY === lastPointerY) {
+        return;
+      }
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
 
       const target = e.target as Node | null;
       if (!target) return;
@@ -505,8 +515,10 @@ export function useRovingFocus(
         if (!elements[idx]?.contains(target)) continue;
 
         if (idx !== activeIdx && isNavigable(idx)) {
-          // Supports the "focus follows hover" exception (e.g. active menubar / open submenu).
-          // preventScroll is to avoid viewport jumps while moving the mouse.
+          // Supports the "focus follows hover" requirement for menus and teleported submenus.
+          // Moving physical DOM focus ensures subsequent keyboard navigation and exit intents
+          // route directly to the hovered item's composite surface.
+          // preventScroll ensures viewport and container scroll stability during mouse movement.
           focusIndex(idx, { preventScroll: true });
         }
         return;
@@ -518,6 +530,9 @@ export function useRovingFocus(
     () => (isFocusOnHover.value ? containerEl.value : null),
     "pointerleave",
     (e: PointerEvent) => {
+      lastPointerX = -1;
+      lastPointerY = -1;
+
       if (!isEnabled.value) return;
       if (e.pointerType === "touch") return;
 
@@ -833,8 +848,9 @@ export interface UseRovingFocusOptions {
    * Whether moving the pointer over an item moves DOM focus and the active
    * index to that item.
    *
-   * Useful for widgets whose interaction pattern requires focus to follow
-   * pointer movement, such as certain menubar and menu interactions.
+   * Crucial for widgets whose interaction pattern requires focus to follow
+   * pointer movement, such as menubars, menus, and teleported submenus, ensuring
+   * seamless transition between mouse hover and keyboard navigation.
    *
    * @default false
    */
