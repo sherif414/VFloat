@@ -5,7 +5,6 @@ import {
   useClick,
   useEscapeKey,
   useFloatingNode,
-  useFocusTrap,
   useHover,
   useOutsideClick,
   usePosition,
@@ -132,12 +131,6 @@ useEscapeKey(rootNode, {
   enabled: () => !props.keepOpen,
 });
 
-useFocusTrap(rootNode, {
-  modal: false,
-  initialFocus: rootFloatingEl,
-  returnFocus: true,
-});
-
 useRole(rootNode, {
   role: "menu",
 });
@@ -172,20 +165,16 @@ function setSubItemRef(el: any, index: number) {
   subMenuItemEls.value[index] = el as HTMLElement | null;
 }
 
-const {
-  activeIndex: rootActiveIndex,
-  getTabindex: getRootTabindex,
-  setActiveIndex: setRootActiveIndex,
-} = useRovingFocus(rootNode, {
+const { activeIndex: rootActiveIndex, getTabindex: getRootTabindex } = useRovingFocus(rootNode, {
   elementsList: rootMenuItemEls,
   loop: true,
   openOnArrowKeyDown: true,
+  focusOnHover: true,
   onEnter: (index) => {
     if (rootMenuItems[index]?.hasSubmenu) {
       subNode.open.value = true;
       void nextTick(() => {
-        subMenuItemEls.value[0]?.focus();
-        setSubActiveIndex(0);
+        subFocusIndex(0);
       });
     }
   },
@@ -194,8 +183,7 @@ const {
       subNode.open.value = !subNode.open.value;
       if (subNode.open.value) {
         void nextTick(() => {
-          subMenuItemEls.value[0]?.focus();
-          setSubActiveIndex(0);
+          subFocusIndex(0);
         });
       }
     } else {
@@ -207,18 +195,11 @@ const {
 const {
   activeIndex: subActiveIndex,
   getTabindex: getSubTabindex,
-  setActiveIndex: setSubActiveIndex,
+  focusIndex: subFocusIndex,
 } = useRovingFocus(subNode, {
   elementsList: subMenuItemEls,
   loop: true,
-  onExit: () => {
-    subNode.open.value = false;
-    subAnchorEl.value?.focus();
-    const shareIndex = rootMenuItems.findIndex((item) => item.id === "share");
-    if (shareIndex !== -1) {
-      setRootActiveIndex(shareIndex);
-    }
-  },
+  focusOnHover: true,
   onSelect: () => {
     closeAllMenus();
   },
@@ -314,17 +295,6 @@ function closeAllMenus() {
   rootNode.open.value = false;
 }
 
-function onRootItemKeydown(e: KeyboardEvent, item: MenuItemDef) {
-  if (item.hasSubmenu && (e.key === "ArrowRight" || e.key === "Enter")) {
-    e.preventDefault();
-    subNode.open.value = true;
-    void nextTick(() => {
-      subMenuItemEls.value[0]?.focus();
-      setSubActiveIndex(0);
-    });
-  }
-}
-
 function onSubItemClick() {
   closeAllMenus();
 }
@@ -415,9 +385,7 @@ defineExpose({
         ]"
         :aria-haspopup="item.hasSubmenu ? 'menu' : undefined"
         :aria-expanded="item.hasSubmenu ? subNode.open.value : undefined"
-        @pointermove="setRootActiveIndex(index)"
         @click="onRootItemClick(item)"
-        @keydown="onRootItemKeydown($event, item)"
       >
         <span>{{ item.label }}</span>
 
@@ -467,7 +435,6 @@ defineExpose({
         class="relative z-[2] flex items-center justify-between px-2 py-1.5 rounded text-[12.5px] font-medium cursor-pointer touch-manipulation bg-transparent outline-none transition-colors duration-120 select-none"
         :tabindex="getSubTabindex(subIndex)"
         :class="subActiveIndex === subIndex ? 'text-highlighted' : 'text-muted'"
-        @pointermove="setSubActiveIndex(subIndex)"
         @click="onSubItemClick"
       >
         <span>{{ subItem.label }}</span>
