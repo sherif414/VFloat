@@ -130,6 +130,14 @@ export default defineAppConfig({
       li: {
         base: "my-1 ps-1 text-[14px] leading-relaxed [&>ul]:my-0",
       },
+      codePreview: {
+        slots: {
+          root: "my-6 rounded-xl border border-(--vf-code-border) shadow-(--vf-elevation-code) overflow-hidden",
+          preview:
+            "flex items-center justify-center p-6 bg-default relative min-h-[140px] border-0 rounded-none",
+          code: "[&>div>pre]:rounded-none [&>div>pre]:border-x-0 [&>div>pre]:border-b-0 [&>div>pre]:border-t [&>div>pre]:border-(--vf-code-border) [&>div>pre]:shadow-none [&>div]:my-0",
+        },
+      },
     },
   },
 });
