@@ -65,25 +65,6 @@ export function isInside(point: Point, rect: Rect): boolean {
 }
 
 /**
- * Fast axis-aligned bounding box containment test without allocations.
- */
-export function isInsideAxisAlignedRect(
-  x: number,
-  y: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): boolean {
-  const minX = Math.min(x1, x2);
-  const maxX = Math.max(x1, x2);
-  const minY = Math.min(y1, y2);
-  const maxY = Math.max(y1, y2);
-
-  return x >= minX && x <= maxX && y >= minY && y <= maxY;
-}
-
-/**
  * Ray-casting point-in-polygon test used by the safe-polygon bridge.
  */
 export function isPointInPolygon(point: Point, polygon: Polygon) {
@@ -92,8 +73,8 @@ export function isPointInPolygon(point: Point, polygon: Polygon) {
   const length = polygon.length;
 
   for (let i = 0, j = length - 1; i < length; j = i++) {
-    const [xi, yi] = polygon[i] || [0, 0];
-    const [xj, yj] = polygon[j] || [0, 0];
+    const [xi, yi] = polygon[i]!;
+    const [xj, yj] = polygon[j]!;
     const intersect = yi >= y !== yj >= y && x <= ((xj - xi) * (y - yi)) / (yj - yi) + xi;
 
     if (intersect) {
@@ -125,174 +106,81 @@ export function isPointerLeavingOppositeSide(
 }
 
 /**
- * Builds the intent polygon that extends from the leave point toward the
- * floating element.
+ * Builds the travel cone: the convex hull of the leave point (padded by
+ * `buffer` on every side) and the floating rect. Any point inside it lies on
+ * a straight path from the leave point to some point of the floating element.
+ *
+ * Unlike a per-side vertex recipe, the hull is exact for every placement and
+ * alignment, so the cone never grows wider than the floating element itself.
  */
-export function buildSafePolygon(
+export function buildCorridor([x, y]: Point, rect: DOMRect, buffer: number): Polygon {
+  return convexHull([
+    [x - buffer, y - buffer],
+    [x + buffer, y - buffer],
+    [x + buffer, y + buffer],
+    [x - buffer, y + buffer],
+    [rect.left, rect.top],
+    [rect.right, rect.top],
+    [rect.right, rect.bottom],
+    [rect.left, rect.bottom],
+  ]);
+}
+
+/**
+ * Euclidean distance from a point to the nearest edge of a rect (0 inside).
+ */
+export function distanceToRect([x, y]: Point, rect: DOMRect): number {
+  return Math.hypot(
+    Math.max(rect.left - x, 0, x - rect.right),
+    Math.max(rect.top - y, 0, y - rect.bottom),
+  );
+}
+
+/**
+ * Checks whether a point sits in the gap strictly between the anchor and the
+ * floating element, limited to the span where both elements overlap.
+ */
+export function isInsideGap(
   side: Side,
-  leaveX: number,
-  leaveY: number,
-  rect: DOMRect | undefined,
-  refRect: DOMRect | undefined,
-  buffer: number,
-): Polygon {
-  const isFloatingWider = (rect?.width ?? 0) > (refRect?.width ?? 0);
-  const isFloatingTaller = (rect?.height ?? 0) > (refRect?.height ?? 0);
-  const cursorLeaveFromRight = leaveX > (rect?.right ?? 0) - (rect?.width ?? 0) / 2;
-  const cursorLeaveFromBottom = leaveY > (rect?.bottom ?? 0) - (rect?.height ?? 0) / 2;
+  [x, y]: Point,
+  anchor: DOMRect,
+  floating: DOMRect,
+): boolean {
+  const isVertical = side === "top" || side === "bottom";
+  const cross = isVertical ? x : y;
+  const crossStart = isVertical
+    ? Math.max(anchor.left, floating.left)
+    : Math.max(anchor.top, floating.top);
+  const crossEnd = isVertical
+    ? Math.min(anchor.right, floating.right)
+    : Math.min(anchor.bottom, floating.bottom);
+  const main = isVertical ? y : x;
+  const [mainStart, mainEnd] = {
+    bottom: [anchor.bottom, floating.top],
+    top: [floating.bottom, anchor.top],
+    right: [anchor.right, floating.left],
+    left: [floating.right, anchor.left],
+  }[side];
 
-  switch (side) {
-    case "top": {
-      const cursorPointOne: Point = [
-        isFloatingWider
-          ? leaveX + buffer / 2
-          : cursorLeaveFromRight
-            ? leaveX + buffer * 4
-            : leaveX - buffer * 4,
-        leaveY + buffer + 1,
-      ];
-      const cursorPointTwo: Point = [
-        isFloatingWider
-          ? leaveX - buffer / 2
-          : cursorLeaveFromRight
-            ? leaveX + buffer * 4
-            : leaveX - buffer * 4,
-        leaveY + buffer + 1,
-      ];
-      const commonPoints: [Point, Point] = [
-        [
-          rect?.left ?? 0,
-          cursorLeaveFromRight
-            ? (rect?.bottom ?? 0) - buffer
-            : isFloatingWider
-              ? (rect?.bottom ?? 0) - buffer
-              : (rect?.top ?? 0),
-        ],
-        [
-          rect?.right ?? 0,
-          cursorLeaveFromRight
-            ? isFloatingWider
-              ? (rect?.bottom ?? 0) - buffer
-              : (rect?.top ?? 0)
-            : (rect?.bottom ?? 0) - buffer,
-        ],
-      ];
+  return cross >= crossStart && cross <= crossEnd && main >= mainStart && main <= mainEnd;
+}
 
-      return [cursorPointOne, cursorPointTwo, ...commonPoints];
+/**
+ * Andrew's monotone chain convex hull.
+ */
+function convexHull(points: Point[]): Polygon {
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Point, a: Point, b: Point) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const chain = (pts: Point[]): Polygon => {
+    const hull: Polygon = [];
+    for (const p of pts) {
+      while (hull.length >= 2 && cross(hull.at(-2)!, hull.at(-1)!, p) <= 0) hull.pop();
+      hull.push(p);
     }
-    case "bottom": {
-      const cursorPointOne: Point = [
-        isFloatingWider
-          ? leaveX + buffer / 2
-          : cursorLeaveFromRight
-            ? leaveX + buffer * 4
-            : leaveX - buffer * 4,
-        leaveY - buffer,
-      ];
-      const cursorPointTwo: Point = [
-        isFloatingWider
-          ? leaveX - buffer / 2
-          : cursorLeaveFromRight
-            ? leaveX + buffer * 4
-            : leaveX - buffer * 4,
-        leaveY - buffer,
-      ];
-      const commonPoints: [Point, Point] = [
-        [
-          rect?.left ?? 0,
-          cursorLeaveFromRight
-            ? (rect?.top ?? 0) + buffer
-            : isFloatingWider
-              ? (rect?.top ?? 0) + buffer
-              : (rect?.bottom ?? 0),
-        ],
-        [
-          rect?.right ?? 0,
-          cursorLeaveFromRight
-            ? isFloatingWider
-              ? (rect?.top ?? 0) + buffer
-              : (rect?.bottom ?? 0)
-            : (rect?.top ?? 0) + buffer,
-        ],
-      ];
+    hull.pop();
+    return hull;
+  };
 
-      return [cursorPointOne, cursorPointTwo, ...commonPoints];
-    }
-    case "left": {
-      const cursorPointOne: Point = [
-        leaveX + buffer + 1,
-        isFloatingTaller
-          ? leaveY + buffer / 2
-          : cursorLeaveFromBottom
-            ? leaveY + buffer * 4
-            : leaveY - buffer * 4,
-      ];
-      const cursorPointTwo: Point = [
-        leaveX + buffer + 1,
-        isFloatingTaller
-          ? leaveY - buffer / 2
-          : cursorLeaveFromBottom
-            ? leaveY + buffer * 4
-            : leaveY - buffer * 4,
-      ];
-      const commonPoints: [Point, Point] = [
-        [
-          cursorLeaveFromBottom
-            ? (rect?.right ?? 0) - buffer
-            : isFloatingTaller
-              ? (rect?.right ?? 0) - buffer
-              : (rect?.left ?? 0),
-          rect?.top ?? 0,
-        ],
-        [
-          cursorLeaveFromBottom
-            ? isFloatingTaller
-              ? (rect?.right ?? 0) - buffer
-              : (rect?.left ?? 0)
-            : (rect?.right ?? 0) - buffer,
-          rect?.bottom ?? 0,
-        ],
-      ];
-
-      return [...commonPoints, cursorPointOne, cursorPointTwo];
-    }
-    case "right": {
-      const cursorPointOne: Point = [
-        leaveX - buffer,
-        isFloatingTaller
-          ? leaveY + buffer / 2
-          : cursorLeaveFromBottom
-            ? leaveY + buffer * 4
-            : leaveY - buffer * 4,
-      ];
-      const cursorPointTwo: Point = [
-        leaveX - buffer,
-        isFloatingTaller
-          ? leaveY - buffer / 2
-          : cursorLeaveFromBottom
-            ? leaveY + buffer * 4
-            : leaveY - buffer * 4,
-      ];
-      const commonPoints: [Point, Point] = [
-        [
-          cursorLeaveFromBottom
-            ? (rect?.left ?? 0) + buffer
-            : isFloatingTaller
-              ? (rect?.left ?? 0) + buffer
-              : (rect?.right ?? 0),
-          rect?.top ?? 0,
-        ],
-        [
-          cursorLeaveFromBottom
-            ? isFloatingTaller
-              ? (rect?.left ?? 0) + buffer
-              : (rect?.right ?? 0)
-            : (rect?.left ?? 0) + buffer,
-          rect?.bottom ?? 0,
-        ],
-      ];
-
-      return [cursorPointOne, cursorPointTwo, ...commonPoints];
-    }
-  }
+  return [...chain(sorted), ...chain(sorted.toReversed())];
 }

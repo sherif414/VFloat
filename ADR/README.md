@@ -30,5 +30,6 @@ pnpm adr:index
 | [ADR-interactions-0002](./interactions/0002-unified-touch-pointer-and-virtual-click-model-for-outside-click-dismissal.md) | Unified touch, pointer, and virtual click model for outside-click dismissal | superseded | 2026-09-24 |
 | [ADR-interactions-0003](./interactions/0003-native-pointer-lifecycle-for-touch-outside-click-dismissal.md) | Native pointer lifecycle for touch outside click dismissal | accepted | 2026-09-25 |
 | [ADR-interactions-0004](./interactions/0004-scoped-pointer-events-shielding-and-watchdog-intent-model-for-hover-corridors.md) | Scoped pointer-events shielding and watchdog intent model for hover corridors | accepted | 2026-09-26 |
+| [ADR-interactions-0005](./interactions/0005-hull-cone-geometry-and-per-move-target-progress-for-hover-corridors.md) | Hull cone geometry and per-move target progress for hover corridors | accepted | 2026-10-04 |
 
 <!-- adr-index:end -->

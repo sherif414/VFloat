@@ -2,10 +2,10 @@ import type { AnchorElement, FloatingElement } from "@/composables/floating-node
 import { clearTimeoutIfSet, contains, getCurrentTime, getTarget, isElement } from "@/shared/dom";
 import { getWindow } from "@/shared/env";
 import {
-  buildSafePolygon,
+  buildCorridor,
+  distanceToRect,
   isInside,
-  isInsideAxisAlignedRect,
-  isPointerLeavingOppositeSide,
+  isInsideGap,
   isPointInPolygon,
   type Point,
   type Polygon,
@@ -14,16 +14,22 @@ import {
 } from "./geometry";
 
 /**
- * Default corridor padding in pixels. Mirrors the upstream Floating UI
- * heuristic; larger values make the corridor noticeably more forgiving.
+ * Default apex padding in pixels around the leave point.
  */
 const DEFAULT_BUFFER = 0.5;
 
 /**
- * Cursor speed in px/ms below which the pointer counts as parked rather than
- * actively traversing toward the floating element.
+ * Default time in milliseconds the cursor may go without progress toward the
+ * floating element before the corridor closes.
  */
-const MIN_INTENT_SPEED = 0.1;
+const DEFAULT_INTENT_TIMEOUT = 100;
+
+/**
+ * Minimum travel in pixels before a move is judged. Smaller moves are hand
+ * tremor or sub-pixel noise: they neither close the corridor nor count as
+ * progress. Matches the rest-detection threshold in `useHover`.
+ */
+const MIN_STEP = 4;
 
 /**
  * Anchor and floating rects are reused for at most one frame so a burst of
@@ -48,25 +54,31 @@ const shieldHolds = new WeakMap<HTMLElement, { count: number; previous: string }
 
 /**
  * Builds a pointer-move handler that keeps hover interactions open while the
- * cursor travels through the "safe" area between the anchor and floating panel.
+ * cursor travels from the anchor toward the floating panel.
+ *
+ * A move keeps the corridor open only when it stays inside the travel cone
+ * (leave point → floating rect) AND brings the cursor closer to the floating
+ * element. The gap directly between both elements is exempt from the
+ * direction check so small corrections there never close the panel.
  */
 export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
-  const { requireIntent = true, intentTimeout = 40, blockPointerEvents = false } = options;
+  const {
+    requireIntent = true,
+    intentTimeout = DEFAULT_INTENT_TIMEOUT,
+    blockPointerEvents = false,
+  } = options;
 
   return function createSafePolygonHandler(node: CreateSafePolygonHandlerContext) {
     const { x, y, elements, onClose, hasOpenChild, side: contextSide } = node;
     const referenceEl = resolveReferenceElement(elements.domReference);
     const buffer = options.buffer ?? node.buffer ?? DEFAULT_BUFFER;
     const ownerWin = getWindow(referenceEl);
+    const leavePoint: Point = [x, y];
 
-    // Traversal state is scoped to a single corridor traversal. Hoisting it into
-    // the `safePolygon()` closure would leak `hasLanded` into the next
-    // traversal, which would then close immediately instead of entering the
-    // corridor and skip the intent watchdog entirely.
+    // Traversal state is scoped to a single corridor traversal so a reused
+    // `safePolygon()` factory never leaks landing or progress state.
     let hasLanded = false;
-    let lastSampleX: number | null = null;
-    let lastSampleY: number | null = null;
-    let lastSampleTime = 0;
+    let lastPoint: Point = leavePoint;
 
     let timeoutId = -1;
     let cachedAnchorRect: DOMRect | null = null;
@@ -80,42 +92,19 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
      */
     const readTime = (): number => ownerWin?.performance?.now() ?? getCurrentTime();
 
-    /**
-     * Detects a pointer that has effectively stopped between two samples.
-     *
-     * Distance is compared against elapsed time rather than a fixed pixel
-     * delta, so a continuous crawl below `MIN_INTENT_SPEED` is rejected the
-     * same way a full stop is. Without this, such a crawl would rearm the
-     * intent watchdog on every event and hold the panel open indefinitely.
-     */
-    const isCursorMovingSlowly = (nextX: number, nextY: number): boolean => {
-      const currentTime = readTime();
-      const elapsedTime = currentTime - lastSampleTime;
-
-      if (lastSampleX === null || lastSampleY === null || elapsedTime === 0) {
-        lastSampleX = nextX;
-        lastSampleY = nextY;
-        lastSampleTime = currentTime;
-        return false;
-      }
-
-      const deltaX = nextX - lastSampleX;
-      const deltaY = nextY - lastSampleY;
-      const threshold = elapsedTime * MIN_INTENT_SPEED;
-      const isSlow = deltaX * deltaX + deltaY * deltaY < threshold * threshold;
-
-      lastSampleX = nextX;
-      lastSampleY = nextY;
-      lastSampleTime = currentTime;
-
-      return isSlow;
+    const stopWatchdog = (): void => {
+      clearTimeoutIfSet(timeoutId);
+      timeoutId = -1;
     };
 
-    const restoreInlinePointerEvents = (el: HTMLElement, value: string): void => {
-      if (value) {
-        el.style.pointerEvents = value;
-      } else {
-        el.style.removeProperty("pointer-events");
+    /**
+     * Rearmed only by real progress, so a parked cursor, a crawl below
+     * `MIN_STEP` per `intentTimeout`, or a stalled event stream all close.
+     */
+    const armWatchdog = (): void => {
+      stopWatchdog();
+      if (requireIntent && ownerWin) {
+        timeoutId = ownerWin.setTimeout(closeIfNoOpenChild, intentTimeout);
       }
     };
 
@@ -123,7 +112,11 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       if (!shieldTargets) return;
 
       for (const [el, previous] of releaseShieldHolds(shieldTargets)) {
-        restoreInlinePointerEvents(el, previous);
+        if (previous) {
+          el.style.pointerEvents = previous;
+        } else {
+          el.style.removeProperty("pointer-events");
+        }
       }
 
       shieldTargets = null;
@@ -131,7 +124,7 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
 
     const startShield = (): void => {
       const floatingEl = elements.floating;
-      if (shieldTargets || !blockPointerEvents || !referenceEl || !floatingEl) return;
+      if (!blockPointerEvents || !referenceEl || !floatingEl) return;
 
       const scope = options.getScope?.() ?? referenceEl.ownerDocument.body;
       const targets = [scope, referenceEl, floatingEl];
@@ -148,137 +141,87 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
       shieldTargets = targets;
     };
 
-    const close = () => {
-      clearTimeoutIfSet(timeoutId);
-      timeoutId = -1;
+    const dispose = (): void => {
+      stopWatchdog();
       releaseShield();
-      onClose();
     };
 
-    const closeIfNoOpenChild = () => {
+    function closeIfNoOpenChild(): void {
       if (hasOpenChild?.()) return;
-      close();
-    };
+      dispose();
+      onClose();
+    }
 
     startShield();
+    // A cursor that stops right after leaving the anchor dispatches no further
+    // events, so the watchdog must already be running.
+    armWatchdog();
 
     const onMouseMove = function onMouseMove(event: MouseEvent) {
-      clearTimeoutIfSet(timeoutId);
-      timeoutId = -1;
-
-      if (hasOpenChild?.()) {
-        return;
-      }
-
-      if (!elements.domReference || !elements.floating || x == null || y == null) {
-        return;
-      }
-
-      if (!referenceEl) {
-        return;
-      }
+      const floatingEl = elements.floating;
+      if (hasOpenChild?.() || !referenceEl || !floatingEl) return;
 
       const now = readTime();
       if (!cachedAnchorRect || !cachedFloatingRect || now - lastRectTime > RECT_CACHE_MS) {
         cachedAnchorRect = referenceEl.getBoundingClientRect();
-        cachedFloatingRect = elements.floating.getBoundingClientRect();
+        cachedFloatingRect = floatingEl.getBoundingClientRect();
         lastRectTime = now;
       }
-
       const anchorRect = cachedAnchorRect;
       const floatingRect = cachedFloatingRect;
 
-      if (!anchorRect || !floatingRect) {
+      const point: Point = [event.clientX, event.clientY];
+      const target = getTarget(event) as Element | null;
+
+      // The geometric tests back up `contains` because a shielded background
+      // element becomes the event target while the cursor sits over an end.
+      if (contains(floatingEl, target) || isInside(point, floatingRect)) {
+        hasLanded = true;
+        stopWatchdog();
+        releaseShield();
         return;
       }
 
-      const { clientX, clientY } = event;
-      const clientPoint: Point = [clientX, clientY];
-      const target = getTarget(event) as Element | null;
-      const isLeave = event.type === "mouseleave";
-      // The geometric test backs up `contains` because a shielded background
-      // element becomes the event target while the cursor sits over the anchor.
-      const isOverFloatingEl =
-        (elements.floating && contains(elements.floating, target)) ||
-        isInside(clientPoint, floatingRect);
-      const isOverReferenceEl =
-        (referenceEl && contains(referenceEl, target)) || isInside(clientPoint, anchorRect);
+      if (contains(referenceEl, target) || isInside(point, anchorRect)) {
+        hasLanded = false;
+        lastPoint = point;
+        stopWatchdog();
+        releaseShield();
+        return;
+      }
 
       const side = contextSide ?? resolveSide(floatingRect, anchorRect);
-      const isOverReferenceRect = isInside(clientPoint, anchorRect);
+      const isInGap = isInsideGap(side, point, anchorRect, floatingRect);
 
-      if (isOverFloatingEl) {
-        hasLanded = true;
-        releaseShield();
-
-        if (!isLeave) {
-          return;
-        }
-      }
-
-      if (isOverReferenceEl) {
-        hasLanded = false;
-        releaseShield();
-      }
-
-      if (isOverReferenceEl && !isLeave) {
+      // Once on the panel, only the gap back to the anchor stays safe.
+      if (hasLanded) {
+        if (!isInGap) closeIfNoOpenChild();
         return;
       }
+
+      const corridor = buildCorridor(leavePoint, floatingRect, buffer);
+      options.onPolygonChange?.(corridor);
+
+      if (!isInGap && !isPointInPolygon(point, corridor)) {
+        closeIfNoOpenChild();
+        return;
+      }
+
+      if (Math.hypot(point[0] - lastPoint[0], point[1] - lastPoint[1]) < MIN_STEP) return;
 
       if (
-        isLeave &&
-        isElement(event.relatedTarget) &&
-        elements.floating &&
-        contains(elements.floating, event.relatedTarget)
+        !isInGap &&
+        distanceToRect(point, floatingRect) >= distanceToRect(lastPoint, floatingRect)
       ) {
-        return;
-      }
-
-      if (isPointerLeavingOppositeSide(side, x, y, anchorRect)) {
         closeIfNoOpenChild();
         return;
       }
 
-      // Safe polygon corridor vertices notification
-      const polygon = buildSafePolygon(side, x, y, floatingRect, anchorRect, buffer);
-      options.onPolygonChange?.(polygon);
-
-      // 1. Trough check: rectangular corridor between anchor and floating element
-      if (isInsideTrough(side, clientX, clientY, floatingRect, anchorRect)) {
-        return;
-      }
-
-      // 2. Landing check: once landed on floating element, leaving it should close unless returning to reference
-      if (hasLanded && !isOverReferenceRect) {
-        closeIfNoOpenChild();
-        return;
-      }
-
-      // 3. Intent check: a decelerating cursor is not heading for the floating
-      //    element, so the corridor no longer applies.
-      if (!isLeave && requireIntent && isCursorMovingSlowly(clientX, clientY)) {
-        closeIfNoOpenChild();
-        return;
-      }
-
-      // 4. Safe polygon corridor check with intent detection
-      if (isPointInPolygon(clientPoint, polygon)) {
-        if (!hasLanded && requireIntent) {
-          // Watchdog: each move clears and resets the timer. If the cursor
-          // stops inside the polygon (no further pointermove events), the
-          // timeout fires and closes the floating element.
-          if (ownerWin) {
-            timeoutId = ownerWin.setTimeout(closeIfNoOpenChild, intentTimeout);
-          }
-        }
-        return;
-      }
-
-      // Outside both safe areas: close immediately.
-      closeIfNoOpenChild();
+      lastPoint = point;
+      armWatchdog();
     };
 
-    onMouseMove.cleanup = releaseShield;
+    onMouseMove.cleanup = dispose;
 
     return onMouseMove;
   };
@@ -287,63 +230,6 @@ export function safePolygon(options: SafePolygonOptions = {}): SafePolygon {
 //=======================================================================================
 // 📌 Helpers
 //=======================================================================================
-
-/**
- * Fast axis-aligned trough containment test between anchor and floating elements.
- */
-function isInsideTrough(
-  side: Side,
-  clientX: number,
-  clientY: number,
-  floatingRect: DOMRect,
-  anchorRect: DOMRect,
-): boolean {
-  const isFloatingWider = floatingRect.width > anchorRect.width;
-  const isFloatingTaller = floatingRect.height > anchorRect.height;
-  const left = (isFloatingWider ? anchorRect : floatingRect).left;
-  const right = (isFloatingWider ? anchorRect : floatingRect).right;
-  const top = (isFloatingTaller ? anchorRect : floatingRect).top;
-  const bottom = (isFloatingTaller ? anchorRect : floatingRect).bottom;
-
-  switch (side) {
-    case "top":
-      return isInsideAxisAlignedRect(
-        clientX,
-        clientY,
-        left,
-        anchorRect.top + 1,
-        right,
-        floatingRect.bottom - 1,
-      );
-    case "bottom":
-      return isInsideAxisAlignedRect(
-        clientX,
-        clientY,
-        left,
-        floatingRect.top + 1,
-        right,
-        anchorRect.bottom - 1,
-      );
-    case "left":
-      return isInsideAxisAlignedRect(
-        clientX,
-        clientY,
-        floatingRect.right - 1,
-        bottom,
-        anchorRect.left + 1,
-        top,
-      );
-    case "right":
-      return isInsideAxisAlignedRect(
-        clientX,
-        clientY,
-        anchorRect.right - 1,
-        bottom,
-        floatingRect.left + 1,
-        top,
-      );
-  }
-}
 
 /**
  * Resolves the underlying HTMLElement from an AnchorElement (HTMLElement or VirtualElement).
@@ -402,23 +288,24 @@ function releaseShieldHolds(targets: HTMLElement[]): Array<[HTMLElement, string]
  */
 export interface SafePolygonOptions {
   /**
-   * Expands the polygon around the cursor leave point.
+   * Pads the cone apex around the cursor leave point, in pixels.
    * @default 0.5
    */
   buffer?: number;
 
   /**
-   * Requires the cursor to keep moving toward the floating element before the
-   * polygon protection fully applies. When disabled, a parked cursor holds the
-   * floating element open until it leaves the corridor.
+   * Closes the corridor when the cursor stops making progress toward the
+   * floating element for `intentTimeout` ms. When disabled, a parked cursor
+   * holds the floating element open until it moves the wrong way or leaves
+   * the corridor.
    * @default true
    */
   requireIntent?: boolean;
 
   /**
-   * Delay in milliseconds before closing when the cursor stops dispatching
-   * pointermove events inside the corridor.
-   * @default 40
+   * Milliseconds the cursor may go without advancing at least 4px toward the
+   * floating element before the corridor closes.
+   * @default 100
    */
   intentTimeout?: number;
 
@@ -455,7 +342,7 @@ export interface CreateSafePolygonHandlerContext {
     floating: FloatingElement | null;
   };
   /**
-   * Corridor padding. Overridden by `SafePolygonOptions.buffer` when set.
+   * Cone apex padding. Overridden by `SafePolygonOptions.buffer` when set.
    * @default 0.5
    */
   buffer?: number;
