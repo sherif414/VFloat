@@ -5,7 +5,7 @@ description: Use this skill when creating, updating, reviewing, or syncing VFloa
 
 # Documentation Writer
 
-Use this skill to write accurate VFloat docs quickly. Default to problem-first, persuasive prose that teaches VFloat by making the reader understand the shape of the system — not just the steps or API contracts. The voice should be calm, direct, teacherly, and confident in its opinions without sounding like product marketing.
+Use this skill to write accurate VFloat docs quickly. Default to clear, matter-of-fact prose that teaches VFloat by explaining the shape and mechanics of the system plainly. The voice should be calm, direct, teacherly, and objective: state information cleanly without hyping features, pitching an ideology, or admonishing alternative approaches.
 
 ## Default Behavior
 
@@ -31,12 +31,12 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
    - Use the matching family: composable API page, middleware API page, tutorial, how-to guide, or concept guide.
    - If the page type and the page family disagree, fix the page type first.
 4. Draft the page.
-   - Start from the reader's concrete pain, friction, or decision. Make the reader feel why the page exists before naming the abstraction.
+   - Start from the reader's concrete task, context, or technical scope before naming the abstraction.
    - Turn the page around one clear mental model, such as the three VFloat layers: node, positioning, and interaction.
    - In tutorials, show the complete working example first, then disassemble it section by section. Readers need the whole picture before the explanation lands.
    - Name sections after what the code does, not after step numbers. Prefer "The Node Ties Everything Together" over "Step 2: Create The Floating Node."
-   - Use contrast to define boundaries: what VFloat handles, what the user owns, and what should not be assumed from Floating UI.
-   - Argue for the design, don't just describe it. "That three-layer split is the whole idea" is stronger than "VFloat uses three layers."
+   - Define boundaries neutrally: what VFloat handles, what the user's template owns, and how it relates to Floating UI.
+   - Explain the design plainly rather than pitching it. Describe how the pieces connect and what responsibilities each layer has without marketing slogans or sales language.
    - Introduce every code block with one sentence.
    - Prefer `<script setup lang="ts">` examples.
    - Use the smallest runnable example that proves the point.
@@ -65,35 +65,36 @@ Use this skill to write accurate VFloat docs quickly. Default to problem-first, 
 
 ## Tone
 
-- Aim for the voice of a thoughtful solo maintainer explaining the system clearly: calm, practical, human, and confident.
-- Persuade, don't just describe. The docs should make a case for why VFloat is structured this way, not merely report that it is.
-- Prefer short sentences, short paragraphs, and plain language over polished or corporate-sounding copy.
-- Start with a concrete pain, task, or decision. Make the reader feel why the page exists before naming the abstraction.
-- Use sharper declarative sentences when they clarify the model. Example rhythm: "They don't know about positioning. They don't need to."
-- Explain through contrast when it helps: components vs composables, node vs positioning, VFloat concepts vs Floating UI call sites. Contrast gives the docs identity without becoming marketing copy.
+- Aim for the voice of a thoughtful engineer explaining the system clearly: calm, practical, objective, and direct.
+- Inform, don't pitch. Never try to sell an idea or persuade the reader through rhetoric. State how things work and let the design speak for itself.
+- Do not admonish other approaches. Avoid criticizing hand-rolled code ("fragile glue code") or component libraries ("monolithic lock-in"). State what VFloat does without creating strawmen or adversarial comparisons.
+- Prefer short sentences, short paragraphs, and plain language over dramatic or corporate-sounding copy.
+- Avoid dramatic narrative setups ("Then you ship it", "looks simple until you actually build one"). State technical problems, constraints, and behaviors factually.
+- Do not use em dashes (—) or en dashes (–) in prose. Use colons, commas, or parentheses instead.
+- Use contrast neutrally when it clarifies boundaries: components vs composables, node vs positioning, VFloat concepts vs Floating UI call sites. Contrast defines scope, not superiority.
+- Reserve "Floating UI" strictly for the upstream library. Use "floating elements", "floating surfaces", or "floating interfaces" when referring to the general UI concepts.
 - Introduce terminology right before the reader needs it. Do not front-load a glossary unless the page genuinely depends on it.
 - In tutorials, show the complete working example first, then walk backward through it. Assemble-then-disassemble beats step-by-step assembly because the reader has something concrete to anchor the explanation.
 - In concept pages, give the reader a durable frame they can reuse across the library. Avoid merely listing parts.
 - In routing sections such as `Where To Go Next`, map reader intent to the next page instead of dumping related links. Each link should say what changes from the current page.
 - Use light reassurance when helpful, such as telling the reader not to worry about a detail yet or that a later page will cover it.
-- Do not add hype, filler, sales language, or generic advice that is not specific to VFloat.
-- Do not sound like product copy, internal marketing, or formal enterprise documentation.
+- Do not add hype, filler, sales slogans ("handles the physics", "takes the third path"), or generic advice.
+- Do not sound like product copy, internal marketing, or sales pitches.
 
 ## Style Model
 
-Use `docs/guide/index.md` and `docs/guide/first-tooltip.md` as the current style models for guide and explanation pages.
+Use `docs/content/1.guide/1.getting-started/1.introduction.md` and `docs/content/1.guide/1.getting-started/2.first-tooltip.md` as the current style models for guide and explanation pages.
 
 Good VFloat docs in this style usually:
 
-- Open with the user's real-world friction before introducing VFloat's abstraction.
+- Open with clear context and the technical scope before introducing abstractions.
 - Show a complete working example early, then take it apart to explain each piece.
-- Make the library's architecture feel simple and inevitable by naming the few pieces that matter.
+- Describe the library's architecture cleanly by naming the few pieces that matter.
 - Use section names that describe what the code does rather than numbered steps.
 - Teach through small examples that prove one point at a time.
-- Argue for the design: "That separation is the whole idea" over "VFloat uses separation."
-- Use responsibility boundaries explicitly: "VFloat handles this; you still own that."
+- State responsibility boundaries neutrally: "VFloat handles positioning and DOM listeners; you provide the template markup and styles."
 - Include a lifecycle trace when the page teaches a behavior-driven surface (hover in → open → position → hover out → close).
-- Avoid pretending VFloat is Floating UI with renamed exports. Say what transfers conceptually and what does not.
+- Distinguish VFloat from Floating UI accurately: state what transfers conceptually and how Vue reactivity is integrated.
 - End by routing readers by intent: first-time path, pattern-specific guide, or API reference for exact contracts.
 
 Do not force this voice onto compact API reference pages. API pages should stay exact, scannable, and restrained, but their summaries and examples can still use the same plain, concrete language.

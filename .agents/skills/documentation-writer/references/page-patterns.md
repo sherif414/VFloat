@@ -141,20 +141,20 @@ Examples:
 
 Typical shape:
 
-- Problem-first opening
+- Clear definition and functional scope opening
 - One memorable architecture model
 - Small examples for each major piece
-- Boundary-setting section such as "What VFloat Is Not"
+- Neutral boundary-setting section clarifying headless scope
 - Relationship to adjacent tools or concepts when relevant
 - Intent-based `## Where To Go Next`
 
 Rules:
 
-- Make the reader understand why floating UI gets hard before explaining VFloat.
+- State the technical responsibilities of anchored floating elements factually without dramatic or pitching narratives.
 - Present VFloat as composable primitives, not prebuilt components or named modes.
 - Keep the central model compact enough to remember. For VFloat, prefer node, positioning, and interaction.
 - Use code blocks as proof points, not as exhaustive examples.
-- Say explicitly which details transfer from Floating UI and which call-site assumptions do not.
+- Reserve "Floating UI" strictly for the upstream library, and state what transfers conceptually versus what is native to Vue reactivity.
 - Route readers by what they are trying to build next.
 
 ## Choosing Between API And Guide

@@ -23,18 +23,21 @@ Use this file before finalizing a docs edit or when the task is explicitly a doc
 
 ## Tone And Readability
 
-- Prefer a calm, direct, teacherly voice with a clear point of view. The docs should feel like a maintainer explaining the system, not product copy.
-- Check that the page argues for the design rather than merely describing it. "That separation is the whole idea" over "VFloat uses separation."
-- Keep intros short and useful. Get to the example, concept, or next step quickly.
-- Check that guide intros start from a concrete problem, task, or confusion before introducing abstractions.
+- Prefer a calm, direct, teacherly voice with an objective, neutral tone. The docs should feel like an engineer explaining the system plainly, not a sales pitch.
+- State information plainly. Explain the mechanics and let the architecture speak for itself rather than arguing for the design or pitching an ideology.
+- Keep intros short and informative. State context and get to the concept or example quickly.
+- Avoid dramatic narrative setups ("Then you ship it", "looks simple until you actually build one").
+- Ensure no alternative approaches are admonished (avoid criticizing hand-rolled code or component libraries).
+- Check that no em dashes (—) or en dashes (–) are used.
+- Check that "Floating UI" is reserved strictly for the upstream library, and "floating elements", "floating surfaces", or "floating interfaces" are used for UI concepts.
 - Check that concept pages teach a reusable mental model rather than listing pieces.
-- Use contrast where it clarifies boundaries: components vs composables, node vs positioning, VFloat concepts vs Floating UI call sites.
-- Make responsibility boundaries explicit when relevant: what VFloat handles and what the user's app still owns.
+- Use contrast neutrally to clarify boundaries: components vs composables, node vs positioning, VFloat concepts vs Floating UI call sites.
+- Make responsibility boundaries explicit neutrally: what VFloat handles and what the user's template owns.
 - Explain terms near first use instead of front-loading a large glossary.
 - In tutorials, check that the complete working example appears before the disassembly begins.
 - In tutorials and concept pages, check for a lifecycle trace that walks through runtime behavior.
 - Use plain language, short paragraphs, and concrete wording.
-- Cut hype, filler, and corporate-sounding phrasing before finalizing.
+- Cut hype, filler, sales slogans ("handles the physics", "takes the third path"), and corporate-sounding phrasing before finalizing.
 
 ## Examples And Markdown
 
