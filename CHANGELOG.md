@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## v0.15.1
+
+[compare changes](https://github.com/sherif414/VFloat/compare/v0.15.0...v0.15.1)
+
+### 🩹 Fixes
+
+- **keyboard-navigation:** Ignore synthetic pointermove and ensure DOM focus follows hover in submenus ([6db4022](https://github.com/sherif414/VFloat/commit/6db4022))
+- **hover:** Rewrite safe polygon with hull cone and progress detection ([9b2fa7f](https://github.com/sherif414/VFloat/commit/9b2fa7f))
+
+### ❤️ Contributors
+
+- Shareef
+
 ## v0.15.0
 
 [compare changes](https://github.com/sherif414/VFloat/compare/v0.14.0...v0.15.0)
