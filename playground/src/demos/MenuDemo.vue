@@ -61,9 +61,8 @@ const subPosition = usePosition(subNode, {
 useClick(rootNode);
 useClick(subNode, { toggle: false });
 useHover(subNode, {
-  delay: { open: 120, close: 150 },
+  // delay: { open: 120, close: 150 },
   safePolygon: {
-    buffer: 4,
     blockPointerEvents: true,
     onPolygonChange: (points) => {
       if (showCorridor.value) {

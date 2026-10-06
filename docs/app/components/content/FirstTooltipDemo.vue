@@ -17,7 +17,7 @@ useHover(node);
 </script>
 
 <template>
-  <div class="relative flex items-center justify-center w-full h-full min-h-[120px]">
+  <div class="relative flex items-center justify-center">
     <button
       ref="anchorEl"
       class="inline-flex items-center gap-2 px-3.5 py-2 border border-default rounded-lg bg-elevated text-highlighted text-sm font-medium cursor-pointer select-none touch-manipulation shadow-xs hover:border-primary hover:bg-muted hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 transition-all duration-150"

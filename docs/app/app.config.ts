@@ -113,13 +113,13 @@ export default defineAppConfig({
         base: "my-8 border-t border-dotted border-default",
       },
       a: {
-        base: "text-highlighted underline decoration-dimmed underline-offset-[3px] transition-colors hover:text-primary hover:decoration-primary",
+        base: "text-highlighted underline decoration-dimmed underline-offset-[3px] has-[>code]:no-underline transition-colors hover:text-primary hover:decoration-primary",
       },
       strong: {
         base: "font-medium text-highlighted",
       },
       code: {
-        base: "px-1.5 py-0.5 text-[12.5px] font-mono font-medium rounded-md inline-block text-(--vf-code-text) bg-(--vf-code-bg) border border-(--vf-code-border) shadow-2xs",
+        base: "px-1.5 py-[1.5px] text-[12px] font-mono font-medium rounded leading-none inline-block align-baseline",
       },
       pre: {
         slots: {
@@ -132,9 +132,9 @@ export default defineAppConfig({
       },
       codePreview: {
         slots: {
-          root: "my-6 rounded-xl border border-(--vf-code-border) shadow-(--vf-elevation-code) overflow-hidden",
+          root: "my-6 rounded-xl border border-(--vf-code-border) bg-muted/60 shadow-(--vf-elevation-code) overflow-hidden",
           preview:
-            "flex items-center justify-center p-6 bg-default relative min-h-[140px] border-0 rounded-none",
+            "flex items-center justify-center p-6 sm:p-8 bg-muted/30 relative min-h-[130px] border-0 rounded-none",
           code: "[&>div>pre]:rounded-none [&>div>pre]:border-x-0 [&>div>pre]:border-b-0 [&>div>pre]:border-t [&>div>pre]:border-(--vf-code-border) [&>div>pre]:shadow-none [&>div]:my-0",
         },
       },
