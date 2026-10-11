@@ -21,6 +21,10 @@ export default defineNuxtConfig({
     url: "https://vfloat.pages.dev",
   },
 
+  ogImage: {
+    enabled: false,
+  },
+
   alias: {
     "@": fileURLToPath(new URL("../packages/vue/src", import.meta.url)),
     "v-float": fileURLToPath(new URL("../packages/vue/src/index.ts", import.meta.url)),

@@ -17,6 +17,21 @@ This guide applies to all documentation pages, Docus/Nuxt configuration, and the
 > [!NOTE]
 > `pnpm test` (Vitest) and `pnpm lint` (oxlint) target library source files (`src/`). For documentation files (`docs/`), use `pnpm docs:lint` and `pnpm docs:format`. Always run `pnpm docs:build` to ensure zero compilation or SSR hydration errors.
 
+### Sandboxed Verification (Windows Sandbox & Fast CI)
+
+In restrictive environments where global package manager wrappers or external home directories trigger sandbox restrictions (`EPERM`):
+
+- **Oxlint & Oxfmt**: Run repository local binaries directly:
+  ```powershell
+  .\node_modules\.bin\oxlint -c docs/oxlint.json docs
+  .\node_modules\.bin\oxfmt -c docs/oxfmt.json --check docs
+  ```
+- **Nuxt / Nitro Build**: Run Node with local environment profile redirection to avoid external `~/.nuxtrc` access checks:
+  ```powershell
+  $env:USERPROFILE="C:\projects\VFloat"; $env:HOME="C:\projects\VFloat"; node ./node_modules/nuxt/bin/nuxt.mjs generate docs
+  ```
+- **Takumi OG Image Generator**: OG image generation is disabled (`ogImage: { enabled: false }` in `docs/nuxt.config.ts`) because native bindings (`@takumi-rs/core`) fail in sandboxed/Windows environments, which previously caused repeated 500 retry delays across prerendered routes.
+
 ---
 
 ## Theme & Showcase Component Architecture
@@ -61,6 +76,19 @@ When implementing interactive floating menus, dropdowns, or tooltips inside demo
 - Keep demo interfaces minimal, quiet, focused, and non-flashy.
 - Avoid bulky control decks, heavy overlays, or unnecessary toggle knobs when subtle, context-aware controls suffice.
 - Ensure all interactive elements have visible focus-visible rings and proper ARIA semantics (`aria-expanded`, `aria-haspopup`, `role="listbox"` / `role="menu"`).
+
+### 4. SEO & Title Template Architecture (`defuFn` Quirk)
+
+- Docus uses `defuFn` during configuration merging. If `seo.titleTemplate` is defined as a function in `docs/app.config.ts`, `defuFn` executes it at build time with the upstream default template (`"%s - VFloat"`), resulting in doubled title suffixes (e.g., `"%s - VFloat · VFloat"`).
+- **Rule**: Never define `titleTemplate` as a function in `docs/app.config.ts`.
+- Dynamic title formatting (such as displaying `VFloat` on the homepage while appending `· VFloat` to subpages) must be handled at runtime via a Nuxt plugin in `docs/app/plugins/seo.ts` by updating `(appConfig.seo as { titleTemplate?: unknown }).titleTemplate`:
+  ```ts
+  export default defineNuxtPlugin(() => {
+    const appConfig = useAppConfig();
+    (appConfig.seo as { titleTemplate?: unknown }).titleTemplate = (title?: string) =>
+      title && title !== "VFloat" ? `${title} · VFloat` : "VFloat";
+  });
+  ```
 
 ---
 

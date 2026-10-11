@@ -49,6 +49,13 @@ This project uses `pnpm` alongside **OXC** (`oxlint` and `oxfmt`), **Vitest** (B
   - Run SSR tests: `pnpm run test:ssr`
 - **Documentation**: `pnpm docs:build`, `pnpm docs:lint`, `pnpm docs:format`
 
+### Sandboxed Command Execution (Windows Sandbox)
+
+When running commands inside the sandbox environment where global CLI wrappers or home directory accesses may trigger sandbox restrictions (`EPERM`):
+- Run repo-local binaries directly via `.\node_modules\.bin\` (e.g. `.\node_modules\.bin\oxlint`, `.\node_modules\.bin\oxfmt`, `.\node_modules\.bin\vitest`).
+- For Nuxt documentation commands, isolate the user profile to the workspace root to prevent `~/.nuxtrc` sandbox permission errors:
+  `$env:USERPROFILE="C:\projects\VFloat"; $env:HOME="C:\projects\VFloat"; node ./node_modules/nuxt/bin/nuxt.mjs generate docs`
+
 ### Proportional Validation Policy
 
 - **Non-executable edits** (markdown docs, comments, rules, skills, configuration notes): Run no tests.
