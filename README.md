@@ -1,4 +1,4 @@
-# VFloat
+# <img src="./docs/public/logo.svg" alt="VFloat" width="32" height="32" align="top" /> VFloat
 
 [status: WIP](#project-status)
 
